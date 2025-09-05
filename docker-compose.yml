@@ -1,15 +1,17 @@
 services:
-  postgres:
+  postgres-dev:
     image: postgres:15
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: moodies
+      POSTGRES_PASSWORD: Admin@123
+      POSTGRES_DB: moodies-postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5434:5432"
+    networks:
+      - moodies-net
 
   mongo:
     image: mongo:6
@@ -26,7 +28,7 @@ services:
     env_file:
       - ./server/.env
     depends_on:
-      - postgres
+      - postgres-dev
       - mongo
     ports:
       - "4000:4000"
@@ -36,11 +38,14 @@ services:
       context: ./client
       dockerfile: Dockerfile
     env_file:
-      - ./client/.env.local
+      - ./client/.env
     depends_on:
       - server
     ports:
       - "3000:3000"
+
+networks:
+  moodies-net:
 
 volumes:
   pgdata:
