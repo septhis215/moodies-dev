@@ -1,0 +1,8 @@
+/* src/components/Hero/hero.css */
+:root {
+  --hero-gradient: linear-gradient(90deg, rgba(6,6,7,0.78) 6%, rgba(6,6,7,0.45) 28%, rgba(0,0,0,0.0) 60%);
+}
+
+.hero-backdrop {
+  background: var(--hero-gradient);
+}
