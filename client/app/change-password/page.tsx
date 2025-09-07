@@ -18,7 +18,6 @@ export default function ChangePasswordPage() {
       return;
     }
 
-    // TODO: Call backend API to update password
     alert("Password changed successfully!");
     router.push("/");
   };

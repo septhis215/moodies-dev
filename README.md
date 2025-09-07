@@ -9,3 +9,4 @@ DATABASE_URL="postgresql://postgres:Admin@123@localhost:5434/moodies-postgres?sc
 JWT_SECRET='super-secret'
 TMDB_API_KEY=(GET FROM POSTMAN ENVIRONMENT VARIABLES, STAGING API)
 PORT=4000
+MONGO_URI=mongodb+srv://moodies:<qwer>@moodies.ihdu91g.mongodb.net/?retryWrites=true&w=majority&appName=moodies
