@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String      @id @default(uuid())
+  username           String      @unique
+  email              String      @unique
+  password           String
+  avatarUrl          String?
+  age                Int?
+  preferredGenres    String[]    @default([])
+  preferredLanguages String[]    @default([])
+  createdAt          DateTime    @default(now())
+  Quiz               Quiz[]
+  Badge              Badge[]
+  Watchlist          Watchlist[]
+}
+
+model Quiz {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  answers    Json
+  resultMood String
+  createdAt  DateTime @default(now())
+}
+
+model Badge {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  badgeType String
+  awardedAt DateTime @default(now())
+}
+
+model Watchlist {
+  id       String   @id @default(uuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+  movieId  String[] @default([])
+  seriesId String[] @default([])
+  addedAt  DateTime @default(now())
+}
+
+model Series {
+  id          String   @id @default(uuid())
+  tmdbId      String   @unique
+  title       String
+  overview    String
+  posterUrl   String?
+  backdropUrl String?
+  releaseDate String?
+  genres      String[] @default([])
+  rating      Float?
+  moodTags    String[] @default([])
+  createdAt   DateTime @default(now())
+}
+
+model Movie {
+  id          String   @id @default(uuid())
+  tmdbId      String   @unique
+  title       String
+  overview    String
+  posterUrl   String?
+  backdropUrl String?
+  releaseDate String?
+  genres      String[] @default([])
+  rating      Float?
+  moodTags    String[] @default([])
+  createdAt   DateTime @default(now())
+}
