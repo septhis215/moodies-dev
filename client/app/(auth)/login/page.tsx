@@ -1,17 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import Background from "../background";
+import Background from "../background"; 
+import Link from "next/link";
 
-export default function SignupPage() {
+export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       {/* Background */}
-      <Background />
+       <Background />
 
-      {/* Card */}
       <div className="bg-black/70 backdrop-blur-md p-8 rounded-2xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row items-center gap-6">
-        {/* Left side: Poster */}
+        {/* Left Poster */}
         <div className="w-full md:w-1/2">
           <Image
             src="/ironmanposter.jpeg" 
@@ -24,20 +24,14 @@ export default function SignupPage() {
 
         {/* Right side: Form */}
         <div className="w-full md:w-1/2 text-white">
-          <h2 className="text-2xl font-bold mb-2">Create an account</h2>
+          <h2 className="text-2xl font-bold mb-2">Login</h2>
           <p className="mb-6 text-sm">
-            Already have an account?{" "}
-            <a href="/" className="text-orange-400 hover:underline">
-              Log In
-            </a>
+            Don’t have an account yet?{" "}
+            <Link href="/signup" className="text-orange-400 hover:underline">
+              Sign up
+            </Link>
           </p>
 
-          {/* Name */}
-            <input
-              type="text"
-              placeholder="Username"
-              className="w-full p-3 mb-4 rounded-lg bg-transparent border border-gray-600 focus:border-blue-400 outline-none"
-            />
           {/* Email */}
           <input
             type="email"
@@ -49,29 +43,23 @@ export default function SignupPage() {
           <input
             type="password"
             placeholder="Enter Your Password"
-            className="w-full p-3 mb-4 rounded-lg bg-transparent border border-gray-600 focus:border-blue-400 outline-none"
+            className="w-full p-3 mb-2 rounded-lg bg-transparent border border-gray-600 focus:border-blue-400 outline-none"
           />
-
-          {/* Terms */}
-          <div className="flex items-center mb-6 text-sm text-gray-400">
-            <input type="checkbox" id="terms" className="mr-2" />
-            <label htmlFor="terms">
-              I agree to the{" "}
-              <a href="/terms" className="text-orange-400 hover:underline">
-                Terms & Conditions
-              </a>
-            </label>
+          <div className="text-right mb-6">
+            <Link href="/forgot-password" className="text-sm text-gray-400 hover:underline">
+              Forgot Password?
+            </Link>
           </div>
 
-          {/* Create button */}
+          {/* Login button */}
           <button className="w-full bg-black hover:bg-gray-700 py-3 rounded-lg font-semibold">
-            Create
+            Login
           </button>
 
           {/* Divider */}
           <div className="flex items-center my-6">
             <hr className="flex-1 border-gray-600" />
-            <span className="px-3 text-sm text-gray-400">Or register with</span>
+            <span className="px-3 text-sm text-gray-400">Or login with</span>
             <hr className="flex-1 border-gray-600" />
           </div>
 

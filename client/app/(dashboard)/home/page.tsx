@@ -12,13 +12,13 @@ async function fetchFeatured() {
   return json as General[];
 }
 
-export default async function LandingPage() {
+export default async function HomePage() {
   const generals = await fetchFeatured();
 
   return (
     <main>
       <HeroCarousel generals={generals} />
-      {/* rest of landing */}
+      {/* rest of home */}
     </main>
   );
 }
