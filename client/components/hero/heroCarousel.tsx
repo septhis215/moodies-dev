@@ -53,8 +53,7 @@ export default function HeroCarousel({ generals = [], cycleMs = 7000 }: Props) {
 
     return (
         <section
-            className=" h-screen md:h-[80vh] w-full overflow-hidden"
-            onMouseEnter={pause}
+            className="relative w-full overflow-hidden h-screen" onMouseEnter={pause}
             onMouseLeave={resume}
             aria-roledescription="carousel"
         >
@@ -76,7 +75,7 @@ export default function HeroCarousel({ generals = [], cycleMs = 7000 }: Props) {
                                 src={src}
                                 alt={m.title ?? 'Featured general backdrop'}
                                 className="w-full h-full object-cover"
-                                style={{ filter: 'brightness(0.42) contrast(1.05)' }}
+                                style={{ filter: 'brightness(0.72) contrast(1.05)' }}
                                 fill
                                 // only mark active image as priority to avoid forcing all images to load
                                 priority={active}
@@ -91,7 +90,7 @@ export default function HeroCarousel({ generals = [], cycleMs = 7000 }: Props) {
                     className="absolute inset-0 pointer-events-none"
                     style={{
                         background:
-                            'linear-gradient(90deg, rgba(6,6,7,0.78) 6%, rgba(6,6,7,0.45) 28%, rgba(0,0,0,0.0) 60%)',
+                            "radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0.6) 70%)",
                     }}
                 />
             </div>
@@ -101,24 +100,24 @@ export default function HeroCarousel({ generals = [], cycleMs = 7000 }: Props) {
                 <div className="flex justify-between items-end max-w-6xl mx-auto">
                     {/* Left: Foreground text */}
                     <div className="w-full md:w-2/3 lg:w-1/2 text-white">
-                        <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight drop-shadow-lg">
+                        <h1 className="font-extrabold leading-tight drop-shadow-lg text-[clamp(1.75rem,4vw,3.5rem)]">
                             {generals[index].title}
                         </h1>
-                        <p className="mt-3 text-sm sm:text-base text-gray-200 max-w-2xl line-clamp-3">
+                        <p className="mt-3 text-[clamp(0.875rem,1.5vw,1.125rem)] text-gray-200 max-w-2xl line-clamp-3">
                             {generals[index].overview}
                         </p>
                         <div className="mt-6 flex gap-3">
-                            <button className="px-4 py-2 bg-white text-black rounded-md shadow">
-                                Watch Now
+                            <button className="px-[clamp(0.75rem,2vw,1.5rem)] py-[clamp(0.4rem,1vw,0.75rem)] text-[clamp(0.875rem,1.2vw,1rem)] bg-white text-black rounded-md shadow">
+                                More Info
                             </button>
-                            <button className="px-4 py-2 bg-transparent border border-white rounded-md">
+                            <button className="px-[clamp(0.75rem,2vw,1.5rem)] py-[clamp(0.4rem,1vw,0.75rem)] text-[clamp(0.875rem,1.2vw,1rem)] px-4 py-2 bg-transparent border border-white rounded-md">
                                 + Playlist
                             </button>
                         </div>
                     </div>
 
                     {/* Right: Thumbnails */}
-                    <div className="flex gap-3 items-end py-2 px-1">
+                    <div className="flex gap-3 items-end py-2 px-1 flex-wrap md:flex-nowrap justify-center md:justify-end">
                         {thumbnailWindow.map((m) => {
                             const i = generals.findIndex((g) => g.id === m.id);
                             return (
