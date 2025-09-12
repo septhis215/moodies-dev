@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Background from "../background";
+import Link from "next/link";
 
 export default function SignupPage() {
   return (
@@ -14,7 +15,7 @@ export default function SignupPage() {
         {/* Left side: Poster */}
         <div className="w-full md:w-1/2">
           <Image
-            src="/ironmanposter.jpeg" 
+            src="/images/ironmanposter.jpeg" 
             alt="Iron Man Poster"
             width={500}
             height={700}
@@ -27,9 +28,9 @@ export default function SignupPage() {
           <h2 className="text-2xl font-bold mb-2">Create an account</h2>
           <p className="mb-6 text-sm">
             Already have an account?{" "}
-            <a href="/" className="text-orange-400 hover:underline">
+            <Link href="/" className="text-orange-400 hover:underline">
               Log In
-            </a>
+            </Link>
           </p>
 
           {/* Name */}
@@ -57,9 +58,9 @@ export default function SignupPage() {
             <input type="checkbox" id="terms" className="mr-2" />
             <label htmlFor="terms">
               I agree to the{" "}
-              <a href="/terms" className="text-orange-400 hover:underline">
+              <Link href="/terms" className="text-orange-400 hover:underline">
                 Terms & Conditions
-              </a>
+              </Link>
             </label>
           </div>
 
@@ -78,11 +79,11 @@ export default function SignupPage() {
           {/* Social buttons */}
           <div className="flex gap-4">
             <button className="flex-1 flex items-center justify-center gap-2 bg-black text-white py-3 rounded-lg hover:bg-gray-700">
-              <Image src="/google.png" alt="Google" width={20} height={20} />
+              <Image src="/images/google.png" alt="Google" width={20} height={20} />
               Google
             </button>
             <button className="flex-1 flex items-center justify-center gap-2 bg-black text-white py-3 rounded-lg hover:bg-gray-700">
-              <Image src="/facebook.png" alt="Facebook" width={20} height={20} />
+              <Image src="/images/facebook.png" alt="Facebook" width={20} height={20} />
               Facebook
             </button>
           </div>

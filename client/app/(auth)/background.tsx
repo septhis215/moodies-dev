@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 
-const backgrounds = ["/ironmanbg.jpg", "/ironmanbg2.jpg"];
+const backgrounds = ["/images/ironmanbg.jpg", "/images/ironmanbg2.jpg"];
 
 export default function Background() {
   const [bgIndex, setBgIndex] = useState(0);
