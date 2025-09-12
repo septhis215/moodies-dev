@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
         {/* Left side: Poster */}
         <div className="w-full md:w-1/2">
           <Image
-            src="/ironmanposter.jpeg"
+            src="/images/ironmanposter.jpeg"
             alt="Poster"
             width={500}
             height={700}

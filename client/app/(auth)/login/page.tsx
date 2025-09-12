@@ -14,7 +14,7 @@ export default function LoginPage() {
         {/* Left Poster */}
         <div className="w-full md:w-1/2">
           <Image
-            src="/ironmanposter.jpeg" 
+            src="/images/ironmanposter.jpeg" 
             alt="Iron Man Poster"
             width={500}
             height={700}
@@ -66,11 +66,11 @@ export default function LoginPage() {
           {/* Social buttons */}
           <div className="flex gap-4">
             <button className="flex-1 flex items-center justify-center gap-2 bg-black text-white py-3 rounded-lg hover:bg-gray-700">
-              <Image src="/google.png" alt="Google" width={20} height={20} />
+              <Image src="/images/google.png" alt="Google" width={20} height={20} />
               Google
             </button>
             <button className="flex-1 flex items-center justify-center gap-2 bg-black text-white py-3 rounded-lg hover:bg-gray-700">
-              <Image src="/facebook.png" alt="Facebook" width={20} height={20} />
+              <Image src="/images/facebook.png" alt="Facebook" width={20} height={20} />
               Facebook
             </button>
           </div>
