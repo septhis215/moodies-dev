@@ -96,28 +96,46 @@ export default function HeroCarousel({ generals = [], cycleMs = 7000 }: Props) {
             </div>
 
             {/* Foreground content + Thumbnails in one row */}
-            <div className="absolute bottom-8 left-0 right-0 z-20 px-6">
-                <div className="flex justify-between items-end max-w-6xl mx-auto">
-                    {/* Left: Foreground text */}
-                    <div className="w-full md:w-2/3 lg:w-1/2 text-white">
-                        <h1 className="font-extrabold leading-tight drop-shadow-lg text-[clamp(1.75rem,4vw,3.5rem)]">
+            <div className="absolute bottom-8 left-0 right-0 z-20 px-6 w-full">
+                <div className="flex flex-col md:flex-row justify-between items-center md:items-end w-full gap-6">
+                    {/* Foreground Content */}
+                    <div className="flex-1 text-white relative z-10 max-w-3xl">
+                        {/* Title */}
+                        <h1 className="font-bold leading-tight drop-shadow-2xl text-[clamp(1.75rem,5vw,3rem)] tracking-tight">
                             {generals[index].title}
                         </h1>
-                        <p className="mt-3 text-[clamp(0.875rem,1.5vw,1.125rem)] text-gray-200 max-w-2xl line-clamp-3">
+
+                        {/* Overview */}
+                        <p className="mt-4 text-[clamp(0.9rem,1.4vw,1.35rem)] text-gray-200/90 drop-shadow-lg max-w-2xl line-clamp-3">
                             {generals[index].overview}
                         </p>
-                        <div className="mt-6 flex gap-3">
-                            <button className="px-[clamp(0.75rem,2vw,1.5rem)] py-[clamp(0.4rem,1vw,0.75rem)] text-[clamp(0.875rem,1.2vw,1rem)] bg-white text-black rounded-md shadow">
+
+                        {/* Buttons */}
+                        <div className="mt-6 flex flex-wrap gap-4">
+                            {/* Primary CTA */}
+                            <button className="px-[clamp(1rem,2.5vw,1.75rem)] py-[clamp(0.5rem,1vw,0.9rem)] 
+      text-[clamp(0.9rem,1.2vw,1rem)] font-semibold
+      bg-gradient-to-r from-red-600 to-pink-600 text-white 
+      rounded-lg shadow-lg shadow-red-900/40
+      hover:from-red-700 hover:to-pink-700 transition-all duration-200">
                                 More Info
                             </button>
-                            <button className="px-[clamp(0.75rem,2vw,1.5rem)] py-[clamp(0.4rem,1vw,0.75rem)] text-[clamp(0.875rem,1.2vw,1rem)] px-4 py-2 bg-transparent border border-white rounded-md">
+
+                            {/* Secondary CTA */}
+                            <button className="px-[clamp(1rem,2.5vw,1.75rem)] py-[clamp(0.5rem,1vw,0.9rem)]
+      text-[clamp(0.9rem,1.2vw,1rem)] font-medium
+      bg-white/10 border border-white/20 text-white 
+      rounded-lg backdrop-blur-md hover:bg-white/20 
+      transition-all duration-200">
                                 + Playlist
                             </button>
                         </div>
                     </div>
 
+
+
                     {/* Right: Thumbnails */}
-                    <div className="flex gap-3 items-end py-2 px-1 flex-wrap md:flex-nowrap justify-center md:justify-end">
+                    <div className="flex-1 flex flex-wrap md:flex-nowrap gap-3 justify-center md:justify-end">
                         {thumbnailWindow.map((m) => {
                             const i = generals.findIndex((g) => g.id === m.id);
                             return (
@@ -132,6 +150,7 @@ export default function HeroCarousel({ generals = [], cycleMs = 7000 }: Props) {
                             );
                         })}
                     </div>
+
                 </div>
             </div>
         </section>
