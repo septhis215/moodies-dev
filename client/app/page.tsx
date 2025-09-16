@@ -2,6 +2,10 @@
 import React from 'react';
 import type { General } from '@/types/general';
 import HeroCarousel from '@/components/hero/heroCarousel';
+import TrendingSection from "@/components/sections/TrendingSection";
+import PremiereHighlights from "@/components/sections/PremiereHighlights";
+import FavoritesSection from "@/components/sections/FavoriteSection";
+import KoreaTrendingSection from '@/components/sections/KoreanSection';
 
 async function fetchFeatured() {
   const base = process.env.NEST_API_URL || 'http://localhost:4000';
@@ -16,9 +20,12 @@ export default async function LandingPage() {
   const generals = await fetchFeatured();
 
   return (
-    <main>
+    <main className="bg-black min-h-screen overflow-x-hidden">
       <HeroCarousel generals={generals} />
-      {/* rest of landing */}
+      <TrendingSection />
+      <PremiereHighlights />
+      <FavoritesSection />
+      <KoreaTrendingSection />
     </main>
   );
 }

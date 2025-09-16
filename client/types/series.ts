@@ -6,4 +6,5 @@ export type Series = {
     backdrop_path?: string | null;
     release_date?: string;
     vote_average?: number;
+    trailer_key?: string | null;
 };
