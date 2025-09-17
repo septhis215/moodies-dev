@@ -9,7 +9,7 @@ import {
 } from "framer-motion";
 import Image from "next/image";
 import React, { useRef, useState } from "react";
-
+import { createPortal } from "react-dom";
 
 interface NavbarProps {
   children: React.ReactNode;
@@ -23,10 +23,7 @@ interface NavBodyProps {
 }
 
 interface NavItemsProps {
-  items: {
-    name: string;
-    link: string;
-  }[];
+  items: { name: string; link: string }[];
   className?: string;
   onItemClick?: () => void;
 }
@@ -63,26 +60,28 @@ export const Navbar = ({ children, className }: NavbarProps) => {
       ref={ref}
       className={cn(
         "fixed inset-x-0 top-0 z-50 w-full flex items-center px-4",
-        "backdrop-blur-sm bg-black/20", // dark + transparent + slightly blur
-        "border-b border-white/10 shadow-lg shadow-black/30", // subtle separation
-        "h-12 md:h-14",
+        "backdrop-blur-md bg-gradient-to-b to-transparent",
+        "h-32 md:h-24",
         className
       )}
+      style={{
+        // CSS mask to create a much longer fade effect
+        maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
+        WebkitMaskImage:
+          "linear-gradient(to bottom, black 50%, transparent 100%)",
+      }}
     >
       {React.Children.map(children, (child) =>
         React.isValidElement(child)
           ? React.cloneElement(
-            child as React.ReactElement<{ visible?: boolean }>,
-            { visible }
-          )
+              child as React.ReactElement<{ visible?: boolean }>,
+              { visible }
+            )
           : child
       )}
     </motion.div>
   );
 };
-
-
-
 
 export const NavBody = ({ children, className, visible }: NavBodyProps) => {
   return (
@@ -93,14 +92,17 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         boxShadow: visible ? "0 6px 20px rgba(0,0,0,0.25)" : "none",
       }}
       transition={{ type: "spring", stiffness: 200, damping: 30 }}
-      className={cn("relative mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-3 lg:px-10 text-white", className)}
+      className={cn(
+        "relative mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 lg:px-10 text-white",
+        // Ensure content is above the fade mask
+        "z-20",
+        className
+      )}
     >
       {children}
     </motion.div>
   );
 };
-
-
 
 export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
   return (
@@ -125,7 +127,6 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
   );
 };
 
-
 export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
   return (
     <motion.div
@@ -146,10 +147,16 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         damping: 50,
       }}
       className={cn(
-        "relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-0 py-2 lg:hidden",
+        "relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-0 py-3 lg:hidden",
         visible && "bg-transparent dark:bg-transparent",
-        className,
+        className
       )}
+      style={{
+        // Add the same extended fade effect to mobile nav
+        maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
+        WebkitMaskImage:
+          "linear-gradient(to bottom, black 50%, transparent 100%)",
+      }}
     >
       {children}
     </motion.div>
@@ -164,7 +171,7 @@ export const MobileNavHeader = ({
     <div
       className={cn(
         "flex w-full flex-row items-center justify-between",
-        className,
+        className
       )}
     >
       {children}
@@ -176,23 +183,40 @@ export const MobileNavMenu = ({
   children,
   className,
   isOpen,
+  onClose,
 }: MobileNavMenuProps) => {
-  return (
+  if (!isOpen) return null;
+
+  return createPortal(
     <AnimatePresence>
-      {isOpen && (
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-[9998] bg-black/50"
+        onClick={onClose} // click backdrop to close
+      >
+        {/* Menu */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.2 }}
           className={cn(
-            "absolute inset-x-0 top-16 z-50 flex w-full flex-col items-start justify-start gap-4 rounded-lg bg-transparent px-4 py-8 shadow-none dark:bg-transparent", // <-- changed from bg-white/dark:bg-neutral-950
-            className,
+            "absolute inset-x-0 top-16 z-[9999] flex w-full flex-col items-start justify-start gap-4",
+            "bg-black/90 backdrop-blur-md border-t border-white/10 px-4 py-6 rounded-b-lg",
+            "shadow-lg shadow-black/25",
+            className
           )}
         >
           {children}
         </motion.div>
-      )}
-    </AnimatePresence>
+      </motion.div>
+    </AnimatePresence>,
+    document.body
   );
 };
 
@@ -203,65 +227,70 @@ export const MobileNavToggle = ({
   isOpen: boolean;
   onClick: () => void;
 }) => {
-  return isOpen ? (
-    <IconX className="text-black dark:text-white" onClick={onClick} />
-  ) : (
-    <IconMenu2 className="text-black dark:text-white" onClick={onClick} />
+  return (
+    <button
+      onClick={onClick}
+      className="lg:hidden p-2 text-white hover:text-gray-300 transition-colors z-30"
+      aria-label={isOpen ? "Close menu" : "Open menu"}
+    >
+      {isOpen ? (
+        <IconX className="h-6 w-6" />
+      ) : (
+        <IconMenu2 className="h-6 w-6" />
+      )}
+    </button>
   );
 };
 
-export const NavbarLogo = () => {
+export const NavbarLogo = ({ className }: { className?: string }) => {
   return (
     <a
       href="#"
-      className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
+      className={cn(
+        "relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal",
+        className
+      )}
     >
+      {" "}
       <img
         src="https://assets.aceternity.com/logo-dark.png"
         alt="logo"
         width={30}
         height={30}
-      />
-      <span className="font-medium text-white">Moodies</span>
+      />{" "}
+      <span className="font-medium text-white">Moodies</span>{" "}
     </a>
   );
 };
 
 export const NavbarButton = ({
-  href,
-  as: Tag = "a",
   children,
+  href,
   className,
   variant = "primary",
-  ...props
 }: {
-  href?: string;
-  as?: React.ElementType;
   children: React.ReactNode;
+  href?: string;
   className?: string;
   variant?: "primary" | "secondary";
-} & (
-    | React.ComponentPropsWithoutRef<"a">
-    | React.ComponentPropsWithoutRef<"button">
-  )) => {
-  const baseStyles =
-    "px-5 py-2 rounded-lg font-medium text-sm transition-all duration-200 backdrop-blur-md border border-white/10 shadow-sm";
+}) => {
+  const base =
+    "inline-flex items-center rounded-full px-4 py-2 text-sm font-medium";
+  const variantClass =
+    variant === "secondary"
+      ? "border border-white/20 bg-white/5 text-white hover:bg-white/10"
+      : "bg-primary text-white";
 
-  const variantStyles = {
-    primary:
-      "bg-gradient-to-r from-blue-500/90 to-purple-500/90 text-white hover:from-blue-600 hover:to-purple-600",
-    secondary:
-      "bg-white/10 text-white hover:bg-white/20 border border-white/20",
-  };
+  if (href)
+    return (
+      <a href={href} className={`${base} ${variantClass} ${className ?? ""}`}>
+        {children}
+      </a>
+    );
 
   return (
-    <Tag
-      href={href || undefined}
-      className={cn(baseStyles, variantStyles[variant], className)}
-      {...props}
-    >
+    <button className={`${base} ${variantClass} ${className ?? ""}`}>
       {children}
-    </Tag>
+    </button>
   );
 };
-
