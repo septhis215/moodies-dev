@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import type { General } from "@/types/general";
+import type { All } from "@/types/all";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 async function fetchFavorites() {
     const base = process.env.NEST_API_URL || "http://localhost:4000";
-    const res = await fetch(`${base}/api/general/favorites`, { next: { revalidate: 60 } });
+    const res = await fetch(`${base}/all/favorites`, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const json = await res.json();
-    return json as General[];
+    return json as All[];
 }
 
 export default function FavoritesSection() {
-    const [favorites, setFavorites] = useState<General[]>([]);
+    const [favorites, setFavorites] = useState<All[]>([]);
     const carouselRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {

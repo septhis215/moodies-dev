@@ -2,18 +2,18 @@
 
 import MovieCarousel from "./MovieCarousel";
 import { useEffect, useState } from "react";
-import type { General } from "@/types/general";
+import type { All } from "@/types/all";
 
 async function fetchTrending() {
     const base = process.env.NEST_API_URL || 'http://localhost:4000';
-    const res = await fetch(`${base}/api/general/trending`, { next: { revalidate: 60 } });
+    const res = await fetch(`${base}/all/trending`, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const json = await res.json();
-    return json as General[];
+    return json as All[];
 }
 
 export default function TrendingSection() {
-    const [trending, setTrending] = useState<General[]>([]);
+    const [trending, setTrending] = useState<All[]>([]);
 
     useEffect(() => {
         fetchTrending().then(setTrending);

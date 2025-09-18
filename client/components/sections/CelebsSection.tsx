@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 async function fetchPeople() {
   const base = process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
-  const res = await fetch(`${base}/api/general/peoples`, { next: { revalidate: 60 } });
+  const res = await fetch(`${base}/all/peoples`, { next: { revalidate: 60 } });
   if (!res.ok) return [];
   const json = await res.json();
   return json as Person[];
@@ -55,7 +55,10 @@ export default function CelebSection() {
             {celebs
               .slice(index * visibleCards, index * visibleCards + visibleCards)
               .map((celeb) => (
-                <div className="bg-gray-900 rounded-xl flex items-center gap-3 p-3 shadow-md hover:scale-[1.02] transition-transform">
+                <div
+                  key={celeb.id}
+                  className="bg-gray-900 rounded-xl flex items-center gap-3 p-3 shadow-md hover:scale-[1.02] transition-transform"
+                >
                   <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
                     <Image
                       src={
@@ -69,15 +72,16 @@ export default function CelebSection() {
                     />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-sm font-semibold truncate">{celeb.name}</h3>
+                    <h3 className="text-sm font-semibold truncate">
+                      {celeb.name}
+                    </h3>
                     <p className="text-gray-400 text-xs line-clamp-1">
-                      {celeb.known_for.map((work) => work.title || work.name).join(", ")}
+                      {celeb.known_for
+                        .map((work) => work.title || work.name)
+                        .join(", ")}
                     </p>
                   </div>
                 </div>
-
-
-
               ))}
           </motion.div>
         </div>

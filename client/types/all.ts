@@ -1,4 +1,4 @@
-export type General = {
+export type All = {
     id: number;
     title: string;
     overview: string;

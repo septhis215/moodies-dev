@@ -2,14 +2,14 @@
 "use client";
 import React, { useEffect } from "react";
 import Image from "next/image";
-import type { General } from "@/types/general";
+import type { All } from "@/types/all";
 import { tmdbImage } from "@/lib/tmdb";
 import useCarousel from "@/hooks/useCarousel";
 import HeroThumbnail from "./heroThumbnail";
 import { IconInfoCircle, IconPlus } from "@tabler/icons-react";
 import "./hero.css";
 
-type Props = { generals: General[]; cycleMs?: number };
+type Props = { all: All[]; cycleMs?: number };
 
 function getThumbnailWindow<T>(items: T[], index: number, windowSize = 5): T[] {
   const half = Math.floor(windowSize / 2);
@@ -17,18 +17,18 @@ function getThumbnailWindow<T>(items: T[], index: number, windowSize = 5): T[] {
   return items.slice(start, start + windowSize);
 }
 
-export default function HeroCarousel({ generals = [], cycleMs = 7000 }: Props) {
+export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
   const { index, setIndex, pause, resume } = useCarousel({
-    length: generals.length,
+    length: all.length,
     intervalMs: cycleMs,
   });
 
   // preload current + next (use browser Image object; not next/image)
   useEffect(() => {
-    if (!generals || generals.length === 0) return;
-    const indices = [index, (index + 1) % generals.length];
+    if (!all || all.length === 0) return;
+    const indices = [index, (index + 1) % all.length];
     indices.forEach((i) => {
-      const m = generals[i];
+      const m = all[i];
       if (!m) return;
       const b =
         tmdbImage(m.backdrop_path, "w1280") ||
@@ -43,16 +43,16 @@ export default function HeroCarousel({ generals = [], cycleMs = 7000 }: Props) {
         img.src = p;
       }
     });
-  }, [index, generals]);
+  }, [index, all]);
 
-  if (!generals || generals.length === 0) {
+  if (!all || all.length === 0) {
     return (
       <section className="h-[60vh] flex items-center justify-center bg-gray-900 text-white">
-        No featured generals
+        No featured all
       </section>
     );
   }
-  const thumbnailWindow = getThumbnailWindow(generals, index, 5);
+  const thumbnailWindow = getThumbnailWindow(all, index, 5);
 
   return (
     <section
@@ -63,7 +63,7 @@ export default function HeroCarousel({ generals = [], cycleMs = 7000 }: Props) {
     >
       {/* Stacked background images */}
       <div className="absolute inset-0">
-        {generals.map((m, i) => {
+        {all.map((m, i) => {
           const active = i === index;
           // prefer backdrop, fallback to poster; fall back to placeholder in public/
           const src =
@@ -111,12 +111,12 @@ export default function HeroCarousel({ generals = [], cycleMs = 7000 }: Props) {
           <div className="flex-1 text-white relative z-10 max-w-3xl">
             {/* Title */}
             <h1 className="font-bold leading-tight drop-shadow-2xl text-[clamp(1.75rem,5vw,3rem)] tracking-tight">
-              {generals[index].title}
+              {all[index].title}
             </h1>
 
             {/* Overview */}
             <p className="mt-4 text-[clamp(0.9rem,1.4vw,1.35rem)] text-gray-200/90 drop-shadow-lg max-w-2xl line-clamp-3">
-              {generals[index].overview}
+              {all[index].overview}
             </p>
 
             {/* Buttons */}
@@ -154,11 +154,11 @@ export default function HeroCarousel({ generals = [], cycleMs = 7000 }: Props) {
           {/* Right: Thumbnails */}
           <div className="flex-1 flex flex-wrap md:flex-nowrap gap-3 justify-center md:justify-end">
             {thumbnailWindow.map((m) => {
-              const i = generals.findIndex((g) => g.id === m.id);
+              const i = all.findIndex((g) => g.id === m.id);
               return (
                 <HeroThumbnail
                   key={m.id}
-                  general={m}
+                  all={m}
                   active={i === index}
                   onClick={() => setIndex(i)}
                   width={110}

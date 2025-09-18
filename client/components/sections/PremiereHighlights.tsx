@@ -1,20 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { General } from "@/types/general";
+import type { All } from "@/types/all";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react"; // icon library
 
 async function fetchTrailer() {
     const base = process.env.NEST_API_URL || "http://localhost:4000";
-    const res = await fetch(`${base}/api/general/trailers`);
+    const res = await fetch(`${base}/all/trailers`);
     if (!res.ok) return [];
-    return (await res.json()) as General[];
+    return (await res.json()) as All[];
 }
 
 export default function PremiereHighlights() {
-    const [trailers, setTrailers] = useState<General[]>([]);
+    const [trailers, setTrailers] = useState<All[]>([]);
     const [selectedTrailer, setSelectedTrailer] = useState<string | null>(null);
     const [isExpanded, setIsExpanded] = useState(false);
     const carouselRef = useRef<HTMLDivElement>(null);
