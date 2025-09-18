@@ -10,6 +10,7 @@ import {
   IconX,
   IconUsers,
   IconMoodSmile,
+  IconSearch,
 } from "@tabler/icons-react";
 import {
   Navbar,
@@ -17,8 +18,13 @@ import {
   NavItems,
   NavbarLogo,
   NavbarButton,
+  MobileNav,
+  MobileNavHeader,
+  MobileNavMenu,
+  MobileNavToggle,
 } from "./ui/resizable-navbar";
 import SearchBar from "./ui/searchbar";
+import { Fragment } from "react";
 
 const routes = [
   { name: "Home", href: "/" },
@@ -32,6 +38,8 @@ export function NavbarComponent() {
   const [isOpen, setIsOpen] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const createdPortalRef = useRef<boolean>(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   // Create (or find) a portal root on mount. Clean up if we created it.
   useEffect(() => {
@@ -56,7 +64,11 @@ export function NavbarComponent() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsOpen(false);
+      if (e.key === "Escape") {
+        setIsOpen(false);
+        setIsMobileOpen(false);
+        setIsMobileSearchOpen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -75,18 +87,39 @@ export function NavbarComponent() {
         <motion.div
           key="menu-dropdown"
           id="site-menu"
-          initial={{ y: "-100%", opacity: 0 }}
-          animate={{ y: "0%", opacity: 1 }}
-          exit={{ y: "-100%", opacity: 0 }}
-          transition={{ type: "spring", stiffness: 140, damping: 20 }}
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 32,
+            mass: 0.8,
+          }}
+          initial={{ y: "-12%", opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: "-12%", opacity: 0 }}
           className="fixed inset-0 z-[9999] flex items-stretch"
           style={{
-            backdropFilter: "blur(12px)",
+            // slightly darker backdrop to make the panel pop more
+            backdropFilter: "blur(14px)",
             background:
-              "linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.6) 100%)",
+              "linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.65) 100%)",
+            willChange: "transform, opacity",
           }}
         >
-          <div className="relative flex w-full max-w-7xl mx-auto my-12 h-[calc(100%-96px)] rounded-2xl overflow-hidden shadow-2xl">
+          {/* inner panel gets a subtle pop + stronger shadow + faint border */}
+          <motion.div
+            initial={{ scale: 0.995, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.995, opacity: 0 }}
+            transition={{ duration: 0.26, ease: "easeOut" }}
+            className="relative flex w-full max-w-7xl mx-auto my-12 h-[calc(100%-96px)] rounded-2xl overflow-hidden"
+            style={{
+              boxShadow: "0 30px 80px rgba(0,0,0,0.65)",
+              border: "1px solid rgba(255,255,255,0.04)",
+              background:
+                "linear-gradient(180deg, rgba(6,6,8,0.94), rgba(8,8,10,0.9))",
+              willChange: "transform, opacity",
+            }}
+          >
             {/* Left 2/3: routes */}
             <div className="w-2/3 bg-[linear-gradient(90deg,rgba(255,255,255,0.02),transparent)] px-10 py-12 flex flex-col gap-8">
               <div className="flex items-start justify-between">
@@ -123,7 +156,6 @@ export function NavbarComponent() {
               <div className="w-full h-full flex items-center justify-center">
                 <div className="w-full max-w-xs text-center">
                   <div className="mx-auto h-24 w-24 rounded-full overflow-hidden bg-white/5 ring-1 ring-white/10">
-                    {/* If next/image causes trouble, swap to <img /> temporarily */}
                     <Image
                       src="/images/facebook.png"
                       alt="avatar"
@@ -154,11 +186,13 @@ export function NavbarComponent() {
             <button
               onClick={() => setIsOpen(false)}
               aria-label="Close menu"
-              className="absolute right-6 top-6 rounded-full bg-white/6 p-2 hover:bg-white/10 focus:outline-none"
+              className="absolute right-6 top-6 rounded-full bg-white/10 p-2 hover:bg-white/20 focus:outline-none"
+              style={{ backdropFilter: "blur(6px)" }}
             >
-              <IconX />
+              {/* make the icon explicitly white */}
+              <IconX className="text-white" />
             </button>
-          </div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
@@ -199,7 +233,7 @@ export function NavbarComponent() {
               }}
             />
           </div>
-          
+
           <button
             aria-expanded={isOpen}
             aria-controls="site-menu"
@@ -211,9 +245,133 @@ export function NavbarComponent() {
           </button>
         </div>
       </NavBody>
+      {/* MOBILE NAV — show on small screens */}
+      <MobileNav visible>
+        <MobileNavHeader className="w-full px-4">
+          {/* Left: logo (smaller) */}
+          <div className="flex items-center">
+            <NavbarLogo className="mr-0" />
+          </div>
 
+          {/* Right: small icons — community, moods, search icon, menu toggle */}
+          <div className="flex items-center gap-2">
+            {/* Community & moods kept as icons (tap to open page) */}
+            <a
+              href="/community"
+              className="inline-flex items-center p-2 text-gray-200 hover:text-white"
+            >
+              <IconUsers size={20} />
+            </a>
+
+            <a
+              href="/your-moods"
+              className="inline-flex items-center p-2 text-gray-200 hover:text-white"
+            >
+              <IconMoodSmile size={20} />
+            </a>
+
+            {/* Mobile search icon: toggles a simple full-screen search overlay */}
+            <div className="inline-flex">
+              <SearchBar
+                placeholder="Search movies, series..."
+                onSearch={(q) => console.log("search", q)}
+              />
+            </div>
+
+            {/* Mobile menu toggle */}
+            <MobileNavToggle
+              isOpen={isMobileOpen}
+              onClick={() => setIsMobileOpen((s) => !s)}
+            />
+          </div>
+        </MobileNavHeader>
+      </MobileNav>
+      {/* Mobile menu overlay — uses same routes/profile content but stacked for mobile */}
+      <MobileNavMenu
+        isOpen={isMobileOpen}
+        onClose={() => setIsMobileOpen(false)}
+      >
+        <div className="w-full px-4">
+          <div className="flex flex-col gap-6 py-2">
+            <h3 className="text-2xl font-semibold text-white">Explore</h3>
+            <p className="text-sm text-gray-300">Quick links</p>
+
+            <nav className="flex flex-col gap-3 mt-4">
+              {routes.map((r) => (
+                <a
+                  key={r.href}
+                  href={r.href}
+                  onClick={() => setIsMobileOpen(false)}
+                  className="py-3 px-2 rounded-md text-lg text-gray-100 hover:text-white hover:bg-white/3 transition"
+                >
+                  {r.name}
+                </a>
+              ))}
+            </nav>
+
+            <div className="mt-6 border-t border-white/6 pt-4">
+              {/* Profile card simplified for mobile */}
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-white/5 overflow-hidden" />
+                <div>
+                  <div className="text-sm font-medium text-white">Guest</div>
+                  <div className="text-xs text-gray-300">guest@example.com</div>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <a
+                  href="/auth/login"
+                  onClick={() => setIsMobileOpen(false)}
+                  className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
+                >
+                  Login
+                </a>
+              </div>
+            </div>
+
+            <div className="mt-6 text-xs text-gray-400">
+              © {new Date().getFullYear()} Your App
+            </div>
+          </div>
+        </div>
+      </MobileNavMenu>
       {/* Portal render: menuNode is mounted into portalRoot (body-level) to avoid clipping */}
       {portalRoot ? createPortal(menuNode, portalRoot) : null}
+
+      {/* Mobile search full-screen modal */}
+      <AnimatePresence>
+        {isMobileSearchOpen && (
+          <motion.div
+            key="mobile-search"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+            className="fixed inset-0 z-[9999] flex items-start justify-center pt-20 bg-[rgba(0,0,0,0.65)]"
+            onClick={() => setIsMobileSearchOpen(false)}
+          >
+            <motion.form
+              onClick={(e) => e.stopPropagation()}
+              initial={{ y: -20 }}
+              animate={{ y: 0 }}
+              exit={{ y: -20 }}
+              transition={{ type: "spring", stiffness: 220, damping: 26 }}
+              className="w-full max-w-xl px-6"
+              onSubmit={(e) => {
+                e.preventDefault();
+                /* handle search */ setIsMobileSearchOpen(false);
+              }}
+            >
+              <input
+                autoFocus
+                placeholder="Search movies, series..."
+                className="w-full rounded-full px-4 py-3 bg-white/6 text-white placeholder:text-gray-300 outline-none"
+              />
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Navbar>
   );
 }
