@@ -140,4 +140,40 @@ export class MoviesService {
     await this.redisService.set(cacheKey, JSON.stringify(movies), 60);
     return movies;
   }
+
+
+  // Specific Movie Details
+  async movieTrailer(id: number) {
+    const movies = await this.tmdb(`movie/${id}/videos?language=en-US`);
+    const filtered = movies.results.find(
+      (video: any) => video.type === 'Trailer' && video.site === 'YouTube'
+    )
+    return filtered;
+  }
+
+  async movieInfo(id: number) {
+    const movie = await this.tmdb(`movie/${id}?language=en-US`);
+    return movie;
+  }
+
+  async movieCredits(id: number) {
+    const credits = await this.tmdb(`movie/${id}/credits?language=en-US`);
+    return credits;
+  }
+
+  async movieReviews(id: number) {
+    const reviews = await this.tmdb(`movie/${id}/reviews?language=en-US`);
+    return reviews;
+  }
+
+  // where movies can be streamed or premiered
+  async movieProviders(id: number) {
+    const providers = await this.tmdb(`movie/${id}/watch/providers`);
+    return providers;
+  }
+
+  async similarMovies(id: number) {
+    const movies = await this.tmdb(`movie/${id}/similar?language=en-US&page=1`);
+    return movies;
+  }
 }
