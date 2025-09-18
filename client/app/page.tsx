@@ -6,6 +6,7 @@ import TrendingSection from "@/components/sections/TrendingSection";
 import PremiereHighlights from "@/components/sections/PremiereHighlights";
 import FavoritesSection from "@/components/sections/FavoriteSection";
 import KoreaTrendingSection from '@/components/sections/KoreanSection';
+import CelebSection from '@/components/sections/CelebsSection';
 
 async function fetchFeatured() {
   const base = process.env.NEST_API_URL || 'http://localhost:4000';
@@ -26,6 +27,7 @@ export default async function LandingPage() {
       <PremiereHighlights />
       <FavoritesSection />
       <KoreaTrendingSection />
+      <CelebSection />
     </main>
   );
 }

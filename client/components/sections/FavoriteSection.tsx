@@ -6,7 +6,7 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 async function fetchFavorites() {
-    const base = process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
+    const base = process.env.NEST_API_URL || "http://localhost:4000";
     const res = await fetch(`${base}/api/general/favorites`, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const json = await res.json();

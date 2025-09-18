@@ -27,4 +27,8 @@ export class GeneralController {
     async koreaTrending() {
         return this.generalService.getKoreaTrending(25);
     }
+    @Get('peoples')
+    async peoples() {
+        return this.generalService.getPeople(25);
+    }
 }
