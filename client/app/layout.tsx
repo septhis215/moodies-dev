@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { NavbarComponent } from "@/components/Navbar";
+import ClientLayout from "./client-layout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,36 +18,21 @@ export const metadata: Metadata = {
     default: "Moodies – Movie & Series Recommendations",
     template: "%s | Moodies",
   },
-  description: "Discover trending movies, series, and personalized recommendations on Moodies.",
-  openGraph: {
-    title: "Moodies – Movie & Series Recommendations",
-    description: "Discover trending movies, series, and personalized recommendations on Moodies.",
-    url: "https://your-domain.com",
-    siteName: "Moodies",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Moodies – Movie & Series Recommendations",
-    description: "Discover trending movies, series, and personalized recommendations on Moodies.",
-  },
-  icons: {
-    icon: "/favicon.ico",
-  },
+  description:
+    "Discover trending movies, series, and personalized recommendations on Moodies.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NavbarComponent />
-        <main>{children}</main>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );

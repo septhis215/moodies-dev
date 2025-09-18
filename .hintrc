@@ -3,6 +3,15 @@
     "development"
   ],
   "hints": {
-    "typescript-config/is-valid": "off"
+    "typescript-config/is-valid": "off",
+    "axe/aria": "off",
+    "compat-api/css": [
+      "default",
+      {
+        "ignore": [
+          "backdrop-filter"
+        ]
+      }
+    ]
   }
 }
