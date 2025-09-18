@@ -187,32 +187,46 @@ export const MobileNavMenu = ({
 }: MobileNavMenuProps) => {
   if (!isOpen) return null;
 
+  // Render full-screen modal via portal. Note: backdrop DOES NOT close on click.
   return createPortal(
     <AnimatePresence>
-      {/* Backdrop */}
       <motion.div
+        key="mobile-fullscreen-menu-backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-[9998] bg-black/50"
-        onClick={onClose} // click backdrop to close
+        transition={{ duration: 0.18 }}
+        className="fixed inset-0 z-[9998] bg-black/60"
+        // no onClick here — we don't close when pressing outside
+        aria-hidden={!isOpen}
       >
-        {/* Menu */}
+        {/* Inner container holds the full content and the top-right close button */}
         <motion.div
-          onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.2 }}
+          initial={{ y: -12, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -12, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 220, damping: 26 }}
           className={cn(
-            "absolute inset-x-0 top-16 z-[9999] flex w-full flex-col items-start justify-start gap-4",
-            "bg-black/90 backdrop-blur-md border-t border-white/10 px-4 py-6 rounded-b-lg",
-            "shadow-lg shadow-black/25",
+            "absolute inset-0 z-[9999] flex flex-col overflow-auto",
+            "bg-[linear-gradient(180deg,rgba(6,6,8,0.98),rgba(0,0,0,0.95))] backdrop-blur-md",
+            "p-6",
             className
           )}
+          onClick={(e) => e.stopPropagation()} // stop propagation so outer backdrop doesn't react
         >
-          {children}
+          {/* Close X in top-right */}
+          <div className="w-full flex justify-end">
+            <button
+              onClick={onClose}
+              aria-label="Close menu"
+              className="rounded-full bg-white/6 p-2 hover:bg-white/10 focus:outline-none ml-auto"
+            >
+              <IconX className="h-5 w-5 text-white" />
+            </button>
+          </div>
+
+          {/* Actual children (your menu content) */}
+          <div className="mt-4 flex-1">{children}</div>
         </motion.div>
       </motion.div>
     </AnimatePresence>,
