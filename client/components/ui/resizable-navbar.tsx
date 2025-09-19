@@ -49,15 +49,27 @@ interface MobileNavMenuProps {
 export const Navbar = ({ children, className }: NavbarProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
-  const [visible, setVisible] = useState<boolean>(false);
+  const [hidden, setHidden] = useState(false);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
-    setVisible(latest > 50);
+    const previous = scrollY.getPrevious();
+    if (previous === undefined) return;
+
+    if (latest > previous && latest > 80) {
+      // scrolling down
+      setHidden(true);
+    } else {
+      // scrolling up
+      setHidden(false);
+    }
   });
 
   return (
     <motion.div
       ref={ref}
+      initial={false}
+      animate={{ y: hidden ? "-100%" : "0%" }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
       className={cn(
         "fixed inset-x-0 top-0 z-50 w-full flex items-center px-4",
         "backdrop-blur-md bg-gradient-to-b to-transparent",
@@ -65,20 +77,13 @@ export const Navbar = ({ children, className }: NavbarProps) => {
         className
       )}
       style={{
-        // CSS mask to create a much longer fade effect
+        // keep your gradient mask styling
         maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
         WebkitMaskImage:
           "linear-gradient(to bottom, black 50%, transparent 100%)",
       }}
     >
-      {React.Children.map(children, (child) =>
-        React.isValidElement(child)
-          ? React.cloneElement(
-              child as React.ReactElement<{ visible?: boolean }>,
-              { visible }
-            )
-          : child
-      )}
+      {children}
     </motion.div>
   );
 };
