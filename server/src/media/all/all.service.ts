@@ -262,6 +262,7 @@ export class AllService implements OnModuleInit {
               release_date: m.release_date ?? m.first_air_date ?? null,
               vote_average: m.vote_average,
               trailer_key: trailer ? trailer.key : null,
+              recommendations: await this.getRecommendations(type, m.id, 3)
             } as TmdbAll;
           } catch {
             return {
@@ -273,6 +274,7 @@ export class AllService implements OnModuleInit {
               release_date: m.release_date ?? m.first_air_date ?? null,
               vote_average: m.vote_average,
               trailer_key: null,
+              recommendations: []
             } as TmdbAll;
           }
         }),
@@ -396,64 +398,101 @@ export class AllService implements OnModuleInit {
   async getRecommendations(type: 'movie' | 'tv', id: number, limit = 10): Promise<TmdbAll[]> {
     const ttlSec = 60 * 10;
     const cacheKey = `${type}-${id}-recommendations`;
+
     const cached = await this.redisService.get(cacheKey);
     if (cached) {
       try {
-        return JSON.parse(cached) as TmdbAll[];
-      } catch { }
+        const parsed = JSON.parse(cached) as TmdbAll[];
+        return parsed;
+      } catch (e) {
+        console.log(`❌ Cache parse error for ${cacheKey}:`, e);
+      }
+    } else {
+      console.log(`❌ Cache miss for ${cacheKey}`);
     }
 
     if (!this.token) {
-      this.logger.warn('TMDB_API_KEY not set; returning empty recommendations');
       return [];
     }
 
     try {
       const url = `${this.baseUrl}/${type}/${id}/recommendations?language=en-US&page=1`;
+
       const data = await this.tmdb(url);
+
       const results = data?.results ?? [];
 
+      if (results.length === 0) {
+        console.log(`❌ No recommendations returned from TMDB for ${type}/${id}`);
+        return [];
+      }
+
       const recs: TmdbAll[] = [];
+      let skippedNoDate = 0;
+      let skippedNoTrailer = 0;
+
       for (const m of results) {
         const rd = m.release_date ?? m.first_air_date;
-        if (!rd) continue;
+        if (!rd) {
+          skippedNoDate++;
+          continue;
+        }
 
-        const videosUrl = `${this.baseUrl}/${type}/${m.id}/videos?language=en-US`;
-        const videosData = await this.tmdb(videosUrl);
-        const trailer = (videosData?.results ?? []).find(
-          (v: any) => v.type === 'Trailer' && v.site === 'YouTube'
-        );
-        if (!trailer) continue;
+        try {
+          const videosUrl = `${this.baseUrl}/${type}/${m.id}/videos?language=en-US`;
+          const videosData = await this.tmdb(videosUrl);
+          const trailer = (videosData?.results ?? []).find(
+            (v: any) => v.type === 'Trailer' && v.site === 'YouTube'
+          );
 
-        recs.push({
-          id: m.id,
-          title: m.title ?? m.name ?? 'Untitled',
-          overview: m.overview ?? '',
-          poster_path: m.poster_path ?? null,
-          backdrop_path: m.backdrop_path ?? null,
-          release_date: rd,
-          vote_average: m.vote_average,
-          trailer_key: trailer.key,
-          vote_count: m.vote_count,
-          popularity: m.popularity,
-          origin_country: m.origin_country ?? [],
-          genres: m.genre_ids
-            ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
-            : [],
-          type,
-        } as TmdbAll);
+          if (!trailer) {
+            skippedNoTrailer++;
+            continue;
+          }
 
-        if (recs.length >= limit) break;
+          recs.push({
+            id: m.id,
+            title: m.title ?? m.name ?? 'Untitled',
+            overview: m.overview ?? '',
+            poster_path: m.poster_path ?? null,
+            backdrop_path: m.backdrop_path ?? null,
+            release_date: rd,
+            vote_average: m.vote_average,
+            trailer_key: trailer.key,
+            vote_count: m.vote_count,
+            popularity: m.popularity,
+            origin_country: m.origin_country ?? [],
+            genres: m.genre_ids
+              ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
+              : [],
+            type,
+          } as TmdbAll);
+
+          console.log(`✅ Added recommendation: ${m.title || m.name} (ID: ${m.id})`);
+
+          if (recs.length >= limit) break;
+        } catch (videoErr) {
+          console.log(`❌ Error fetching videos for ${m.id}:`, videoErr);
+          continue;
+        }
       }
+
+      console.log(`📈 Processing complete:`, {
+        totalFromAPI: results.length,
+        skippedNoDate,
+        skippedNoTrailer,
+        finalCount: recs.length
+      });
 
       await this.redisService.set(cacheKey, JSON.stringify(recs), ttlSec);
       return recs;
+
     } catch (err) {
+      console.log('❌ Failed to fetch recommendations:', err);
       this.logger.error('Failed to fetch recommendations', err as any);
       return [];
     }
   }
-
 
   // People
   async getPeople(limit = 30): Promise<TmdbPerson[]> {
