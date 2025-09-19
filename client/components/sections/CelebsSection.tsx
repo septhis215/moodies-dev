@@ -50,16 +50,17 @@ export default function CelebSection() {
         <div className="relative">
           <div
             ref={scrollRef}
-            className="flex gap-5 overflow-x-auto scroll-smooth scrollbar-hide snap-x snap-mandatory"
-     
+            className="flex gap-5 overflow-x-auto scroll-smooth scrollbar-hide snap-x snap-mandatory px-1"
+          >
             {celebs.map((celeb) => (
               <motion.div
                 key={celeb.id}
                 whileHover={{ scale: 1.05 }}
-                className="relative w-32 sm:w-36 flex-shrink-0 snap-start rounded-lg overflow-hidden shadow-md"
+                transition={{ type: "spring", stiffness: 300 }}
+                className="relative w-28 sm:w-32 flex-shrink-0 snap-start rounded-xl overflow-hidden shadow-lg bg-zinc-900"
               >
                 {/* Image */}
-                <div className="relative aspect-[2/3] w-full">
+                <div className="relative aspect-[2/3]">
                   <Image
                     src={
                       celeb.profile_path
@@ -69,14 +70,15 @@ export default function CelebSection() {
                     alt={celeb.name}
                     fill
                     className="object-cover"
+                    sizes="(max-width: 640px) 112px, 128px"
                   />
 
-                  {/* Gradient + Info Overlay */}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2">
-                    <h3 className="text-xs font-semibold text-white truncate">
+                  {/* Overlay Gradient */}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-2">
+                    <h3 className="text-sm font-semibold text-white truncate">
                       {celeb.name}
                     </h3>
-                    <p className="text-[10px] text-gray-300 line-clamp-1">
+                    <p className="text-[11px] text-gray-300 truncate">
                       {celeb.known_for
                         .map((work) => work.title || work.name)
                         .slice(0, 1)}
@@ -89,13 +91,13 @@ export default function CelebSection() {
 
           {/* Navigation Buttons */}
           <button
-            onClick={() => scrollByAmount(-200)}
+            onClick={() => scrollByAmount(-600)}
             className="absolute top-1/2 left-0 -translate-y-1/2 p-3 rounded-full bg-gray-800/80 hover:bg-gray-700 transition shadow-md"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <button
-            onClick={() => scrollByAmount(200)}
+            onClick={() => scrollByAmount(600)}
             className="absolute top-1/2 right-0 -translate-y-1/2 p-3 rounded-full bg-gray-800/80 hover:bg-gray-700 transition shadow-md"
           >
             <ChevronRight className="w-5 h-5" />
