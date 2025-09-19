@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 async function fetchPeople() {
   const base = process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
-  const res = await fetch(`${base}/api/general/peoples`, { next: { revalidate: 60 } });
+  const res = await fetch(`${base}/all/peoples`, { next: { revalidate: 60 } });
   if (!res.ok) return [];
   const json = await res.json();
   return json as Person[];
@@ -51,7 +51,7 @@ export default function CelebSection() {
           <div
             ref={scrollRef}
             className="flex gap-5 overflow-x-auto scroll-smooth scrollbar-hide snap-x snap-mandatory"
-          >
+     
             {celebs.map((celeb) => (
               <motion.div
                 key={celeb.id}

@@ -2,11 +2,11 @@
 'use client';
 import React from 'react';
 import Image from 'next/image';
-import type { General } from '@/types/general';
+import type { All } from '@/types/all';
 import { tmdbImage } from '@/lib/tmdb';
 
 type Props = {
-    general: General;
+    all: All;
     active?: boolean;
     onClick?: () => void;
     width?: number;
@@ -14,13 +14,13 @@ type Props = {
 };
 
 export default function HeroThumbnail({
-    general,
+    all,
     active,
     onClick,
     width = 110,
     height = 160,
 }: Props) {
-    const src = tmdbImage(general.poster_path, 'w342') || tmdbImage(general.backdrop_path, 'w500');
+    const src = tmdbImage(all.poster_path, 'w342') || tmdbImage(all.backdrop_path, 'w500');
 
     return (
         <button
@@ -28,14 +28,14 @@ export default function HeroThumbnail({
             className={`relative flex-shrink-0 rounded-md overflow-hidden transition-transform transform focus:outline-none ${active ? 'scale-105 ring-2 ring-white' : 'scale-100'
                 }`}
             aria-pressed={!!active}
-            aria-label={`Show ${general.title ?? 'general'}`}
+            aria-label={`Show ${all.title ?? 'all'}`}
             style={{ width, height }}
         >
             {/* Image with fill requires a positioned parent (the button is relative) */}
             {src ? (
                 <Image
                     src={src}
-                    alt={general.title ?? 'general poster'}
+                    alt={all.title ?? 'all poster'}
                     fill
                     style={{ objectFit: 'cover' }}
                     // thumbnails shouldn't be priority to avoid many preloads

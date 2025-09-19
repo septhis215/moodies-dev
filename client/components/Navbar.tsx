@@ -105,91 +105,133 @@ export function NavbarComponent() {
             willChange: "transform, opacity",
           }}
         >
-          {/* inner panel gets a subtle pop + stronger shadow + faint border */}
+          {/* inner panel: responsive scaling but capped maximums */}
+          {/* inner panel: slightly smaller overall, still responsive and fits all screens */}
           <motion.div
             initial={{ scale: 0.995, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.995, opacity: 0 }}
             transition={{ duration: 0.26, ease: "easeOut" }}
-            className="relative flex w-full max-w-7xl mx-auto my-12 h-[calc(100%-96px)] rounded-2xl overflow-hidden"
+            className="relative flex flex-col md:flex-row w-full mx-auto my-4 md:my-8 rounded-2xl"
             style={{
               boxShadow: "0 30px 80px rgba(0,0,0,0.65)",
               border: "1px solid rgba(255,255,255,0.04)",
               background:
                 "linear-gradient(180deg, rgba(6,6,8,0.94), rgba(8,8,10,0.9))",
+              // slightly smaller than before: caps at 1100px and also keeps a 48px margin each side on narrow viewports
+              maxWidth: "min(1100px, calc(100vw - 96px))",
+              // give more breathing room vertically while still fitting the viewport
+              maxHeight: "calc(100vh - 96px)",
+              overflow: "hidden",
               willChange: "transform, opacity",
             }}
           >
-            {/* Left 2/3: routes */}
-            <div className="w-2/3 bg-[linear-gradient(90deg,rgba(255,255,255,0.02),transparent)] px-10 py-12 flex flex-col gap-8">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h2 className="text-4xl md:text-5xl font-semibold text-white">
-                    Explore
-                  </h2>
-                  <p className="mt-2 text-gray-300">
-                    Quick links to the main sections
-                  </p>
-                </div>
+            {/* LEFT: routes — occupies full width on small screens (since right pane hidden) */}
+            <div
+              className="flex-1 md:basis-2/3 min-w-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.02),transparent)] px-5 md:px-8 py-5 md:py-8 flex flex-col justify-between gap-3 md:gap-6"
+              style={{ boxSizing: "border-box" }}
+            >
+              {/* Header */}
+              <div className="pb-1">
+                <h2
+                  className="font-semibold text-white leading-tight"
+                  style={{
+                    // MIN 1.75rem, ideal 6.5vh, MAX 3rem
+                    fontSize: "clamp(1.75rem, 6.5vh, 3rem)",
+                  }}
+                >
+                  Explore
+                </h2>
+                <p
+                  className="mt-1 text-gray-300"
+                  style={{ fontSize: "clamp(0.9rem, 1.6vh, 1.05rem)" }}
+                >
+                  Quick links to the main sections
+                </p>
               </div>
 
-              <nav className="mt-6 flex flex-col gap-6">
+              {/* Center nav — capped so it doesn't grow infinitely on large screens */}
+              <nav className="flex-1 flex flex-col justify-center gap-2 md:gap-4">
                 {routes.map((r) => (
                   <a
                     key={r.href}
                     href={r.href}
                     onClick={() => setIsOpen(false)}
-                    className="text-2xl md:text-3xl font-medium text-gray-100 hover:text-white transition-colors"
+                    className="font-medium text-gray-100 hover:text-white transition-colors leading-snug"
+                    style={{
+                      // MIN ~18px, ideal scales, MAX ~28px
+                      fontSize: "clamp(1.125rem, 4.2vh, 2rem)",
+                      paddingTop: "0.35rem",
+                      paddingBottom: "0.35rem",
+                    }}
                   >
                     {r.name}
                   </a>
                 ))}
               </nav>
 
-              <div className="mt-auto text-sm text-gray-400">
+              {/* Footer */}
+              <div
+                className="pt-1 text-sm text-gray-400"
+                style={{ fontSize: "clamp(0.8rem,1.2vh,0.95rem)" }}
+              >
                 © {new Date().getFullYear()} Your App
               </div>
             </div>
 
-            {/* Right 1/3: user profile card centered */}
-            <div className="w-1/3 bg-[rgba(255,255,255,0.02)] px-8 py-12 flex items-center justify-center">
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="w-full max-w-xs text-center">
-                  <div className="mx-auto h-24 w-24 rounded-full overflow-hidden bg-white/5 ring-1 ring-white/10">
-                    <Image
-                      src="/images/facebook.png"
-                      alt="avatar"
-                      width={96}
-                      height={96}
-                      style={{ objectFit: "cover" }}
-                    />
-                  </div>
-                  <h3 className="mt-4 text-lg font-medium text-white">Guest</h3>
-                  <p className="mt-1 text-sm text-gray-300">
-                    guest@example.com
-                  </p>
+            {/* RIGHT: profile — hidden on small/medium screens so nav never needs to shrink/scroll */}
+            <div
+              className="hidden lg:flex w-1/3 flex-none min-w-0 bg-[rgba(255,255,255,0.02)] px-6 py-8 items-center justify-center"
+              style={{ boxSizing: "border-box" }}
+            >
+              <div className="w-full max-w-xs text-center">
+                <div
+                  className="mx-auto rounded-full overflow-hidden"
+                  style={{ height: 88, width: 88 }}
+                >
+                  <Image
+                    src="/images/facebook.png"
+                    alt="avatar"
+                    width={96}
+                    height={96}
+                    style={{ objectFit: "cover" }}
+                  />
+                </div>
+                <h3
+                  className="mt-3 font-medium text-white"
+                  style={{ fontSize: "clamp(0.95rem,1.6vh,1.15rem)" }}
+                >
+                  Guest
+                </h3>
+                <p
+                  className="mt-1"
+                  style={{
+                    color: "rgba(255,255,255,0.75)",
+                    fontSize: "clamp(0.85rem,1.2vh,0.95rem)",
+                  }}
+                >
+                  guest@example.com
+                </p>
 
-                  <div className="mt-6">
-                    <a
-                      href="/auth/login"
-                      onClick={() => setIsOpen(false)}
-                      className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-2 text-white hover:bg-white/5 transition"
-                    >
-                      Login
-                    </a>
-                  </div>
+                <div className="mt-4">
+                  <a
+                    href="/auth/login"
+                    onClick={() => setIsOpen(false)}
+                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-5 py-2 text-sm text-white hover:bg-white/5 transition"
+                  >
+                    Login
+                  </a>
                 </div>
               </div>
             </div>
 
-            {/* Close X - top right corner (inside card) */}
+            {/* Close X */}
             <button
               onClick={() => setIsOpen(false)}
               aria-label="Close menu"
-              className="absolute right-6 top-6 rounded-full bg-white/10 p-2 hover:bg-white/20 focus:outline-none"
+              className="absolute right-4 top-4 md:right-6 md:top-6 rounded-full bg-white/10 p-2 hover:bg-white/20 focus:outline-none"
               style={{ backdropFilter: "blur(6px)" }}
             >
-              {/* make the icon explicitly white */}
               <IconX className="text-white" />
             </button>
           </motion.div>
