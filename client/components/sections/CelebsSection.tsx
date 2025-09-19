@@ -100,7 +100,7 @@ export default function CelebSection() {
             onClick={() => scrollByAmount(600)}
             className="absolute top-1/2 right-0 -translate-y-1/2 p-3 rounded-full bg-gray-800/80 hover:bg-gray-700 transition shadow-md"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-5 h-5 " />
           </button>
         </div>
       </div>

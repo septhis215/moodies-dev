@@ -177,7 +177,11 @@ export function NavbarComponent() {
             {/* LEFT: routes */}
             <div
               className="flex-1 md:basis-1/2 min-w-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.02),transparent)] px-6 md:px-10 py-6 md:py-10 flex flex-col justify-between gap-3 md:gap-6"
-              style={{ boxSizing: "border-box" }}
+              style={{
+                boxSizing: "border-box",
+                background:
+                  "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
+              }}
             >
               <div className="pb-1">
                 <h2
@@ -203,13 +207,25 @@ export function NavbarComponent() {
                     onMouseEnter={() => setActiveRoute(r.href)}
                     onFocus={() => setActiveRoute(r.href)}
                     onClick={() => setIsOpen(false)}
-                    className="font-medium text-gray-100 hover:text-white transition-colors leading-snug"
+                    className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${
+                      activeRoute === r.href
+                        ? "text-[#e94f37]"
+                        : "text-gray-100 hover:text-[#e94f37]"
+                    } pl-4`} // ⬅️ padding-left so line sits outside
                     style={{
                       fontSize: "clamp(1.125rem, 4.2vh, 1.75rem)",
                       paddingTop: "0.35rem",
                       paddingBottom: "0.35rem",
                     }}
                   >
+                    {/* active/hover indicator line */}
+                    <span
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full bg-[#e94f37] transition-all duration-200 ${
+                        activeRoute === r.href
+                          ? "h-6 opacity-100"
+                          : "h-0 opacity-0 group-hover:h-4 group-hover:opacity-100"
+                      }`}
+                    />
                     {r.name}
                   </a>
                 ))}
@@ -225,46 +241,46 @@ export function NavbarComponent() {
 
             {/* CENTER: options panel (uses the gap). Visible on md+ only. */}
             <div
-              className="hidden md:flex md:basis-1/3 flex-col items-start justify-center px-6 py-6"
+              className="hidden md:flex md:basis-1/2 flex-col items-start justify-center p-6"
               style={{
-                borderLeft: "1px solid rgba(255,255,255,0.02)",
-                borderRight: "1px solid rgba(255,255,255,0.02)",
-                boxSizing: "border-box",
-                minWidth: 0,
                 background:
-                  "linear-gradient(90deg, rgba(255,255,255,0.008), transparent)",
+                  "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
+                borderLeft: "1px solid rgba(255,255,255,0.1)",
+                borderRight: "1px solid rgba(255,255,255,0.1)",
               }}
             >
-              <div className="w-full max-w-[220px]">
-                <h4
-                  className="text-sm font-semibold text-gray-300 mb-3"
-                  style={{ fontSize: "clamp(0.8rem,1.2vh,0.95rem)" }}
-                >
+              <div className="w-full max-w-[260px]">
+                <h3 className="text-md font-semibold text-[#e94f37] mb-4">
                   {routes.find((x) => x.href === activeRoute)?.name ??
                     "Options"}
-                </h4>
+                </h3>
 
-                <ul className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   {(routeOptions[activeRoute] || []).map((opt) => (
-                    <li key={opt}>
-                      <a
-                        href="#"
-                        onClick={(e) => e.preventDefault()}
-                        className="block text-left text-gray-100 hover:text-white transition-colors rounded-md px-1 py-1"
-                        style={{ fontSize: "clamp(0.95rem, 1.8vh, 1.05rem)" }}
-                      >
-                        {opt}
-                      </a>
-                    </li>
+                    <a
+                      key={opt}
+                      href="#"
+                      className="relative px-4 py-2 rounded-lg text-gray-200
+           hover:text-white transition-all duration-300
+           before:absolute before:inset-0 before:rounded-lg before:border
+           before:border-[#e94f37]/30 hover:before:border-[#e94f37]
+           before:transition-all before:duration-300"
+                    >
+                      {opt}
+                    </a>
                   ))}
-                </ul>
+                </div>
               </div>
             </div>
 
             {/* RIGHT: profile — visible on lg and above */}
             <div
               className="hidden lg:flex w-1/3 flex-none min-w-0 bg-[rgba(255,255,255,0.02)] px-6 py-8 items-center justify-center"
-              style={{ boxSizing: "border-box" }}
+              style={{
+                boxSizing: "border-box",
+                background:
+                  "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
+              }}
             >
               <div className="w-full max-w-xs text-center">
                 <div
@@ -360,10 +376,10 @@ export function NavbarComponent() {
             aria-expanded={isOpen}
             aria-controls="site-menu"
             onClick={() => setIsOpen((s) => !s)}
-            className="ml-2 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="ml-2 rounded-md border border-[#e94f37]/40 bg-[#e94f37]/10 px-3 py-2 text-white hover:bg-[#e94f37]/20 focus:outline-none focus:ring-2 focus:ring-[#e94f37]"
             title="Open menu"
           >
-            <IconMenu2 />
+            <IconMenu2 className="text-[#e94f37]" />
           </button>
         </div>
       </NavBody>
@@ -410,10 +426,14 @@ export function NavbarComponent() {
                         prev === r.href ? null : r.href
                       )
                     }
-                    className="flex justify-between items-center py-3 px-2 rounded-md text-lg text-gray-100 hover:text-white hover:bg-white/3 transition"
+                    className={`flex justify-between items-center py-3 px-2 rounded-md text-lg transition ${
+                      activeMobileRoute === r.href
+                        ? "text-[#e94f37] bg-[#e94f37]/10"
+                        : "text-gray-100 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
+                    }`}
                   >
                     <span>{r.name}</span>
-                    <span className="text-gray-400">
+                    <span className="text-[#e94f37]">
                       {activeMobileRoute === r.href ? "−" : "+"}
                     </span>
                   </button>
@@ -429,7 +449,8 @@ export function NavbarComponent() {
                               e.preventDefault();
                               setIsMobileOpen(false);
                             }}
-                            className="block text-sm text-gray-300 hover:text-white px-2 py-1 rounded-md transition"
+                            className="block text-sm px-2 py-1 rounded-md transition
+    text-gray-300 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
                           >
                             {opt}
                           </a>
