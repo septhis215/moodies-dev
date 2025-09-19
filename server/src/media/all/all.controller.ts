@@ -42,4 +42,12 @@ export class AllController {
   async peoples() {
     return this.allService.getPeople(25);
   }
+  @Get('trending-reviews')
+  async reviews() {
+    return this.allService.getTrendingReviews(20);
+  }
+  @Get('upcoming-trailers')
+  async upcomingTrailers() {
+    return this.allService.getUpcomingTrailers(30);
+  }
 }

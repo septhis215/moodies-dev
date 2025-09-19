@@ -41,8 +41,32 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  @keyframes scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-100%);
+    }
+  }
+}
+.text-anti-flicker {
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
+.animate-scroll {
+  animation: scroll var(--animation-duration, 200s) linear infinite;
+
+  /* Force GPU layer */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+.scroller ul:hover {
+  animation-play-state: paused;
+}
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);

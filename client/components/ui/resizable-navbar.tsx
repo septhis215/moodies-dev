@@ -8,6 +8,7 @@ import {
   useMotionValueEvent,
 } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import React, { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -260,7 +261,7 @@ export const MobileNavToggle = ({
 
 export const NavbarLogo = ({ className }: { className?: string }) => {
   return (
-    <a
+    <Link
       href="/"
       className={cn(
         "relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal",
@@ -268,14 +269,14 @@ export const NavbarLogo = ({ className }: { className?: string }) => {
       )}
     >
       {" "}
-      <img
-        src="https://assets.aceternity.com/logo-dark.png"
+      <Image
+        src="images/globe.svg"
         alt="logo"
         width={30}
         height={30}
       />{" "}
       <span className="font-medium text-white">Moodies</span>{" "}
-    </a>
+    </Link>
   );
 };
 

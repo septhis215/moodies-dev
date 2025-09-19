@@ -10,21 +10,17 @@ import {
   IconX,
   IconUsers,
   IconMoodSmile,
-  IconSearch,
 } from "@tabler/icons-react";
 import {
   Navbar,
   NavBody,
-  NavItems,
   NavbarLogo,
-  NavbarButton,
   MobileNav,
   MobileNavHeader,
   MobileNavMenu,
   MobileNavToggle,
 } from "./ui/resizable-navbar";
 import SearchBar from "./ui/searchbar";
-import { Fragment } from "react";
 
 const routes = [
   { name: "Home", href: "/" },

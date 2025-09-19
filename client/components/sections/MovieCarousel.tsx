@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { tmdbImage } from "@/lib/tmdb";
 import { ChevronLeft, ChevronRight, Info } from "lucide-react";
 import {
     Tooltip,
@@ -43,7 +42,6 @@ export default function MovieCarousel<T extends MovieLike>({
     title,
     subtitle,
     items,
-    getPoster,
 }: MovieCarouselProps<T>) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -223,6 +221,7 @@ export default function MovieCarousel<T extends MovieLike>({
                                                                         alt={rec.title}
                                                                         width={52}
                                                                         height={77}
+                                                                        sizes="52px" 
                                                                         className="rounded-md object-cover hover:scale-105 transition cursor-pointer"
                                                                     />
                                                                 </TooltipTrigger>

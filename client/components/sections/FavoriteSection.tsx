@@ -55,10 +55,10 @@ export default function FavoritesSection() {
             <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
                 <div>
                     <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                        Moodies Favorites
+                        Your Moodies Mix
                     </h2>
                     <p className="text-gray-400 text-sm mt-1">
-                        Must-watch hits from across the world.
+                        A playlist of your personal faves, because your taste deserves the spotlight.
                     </p>
                 </div>
                 {/* Controls */}

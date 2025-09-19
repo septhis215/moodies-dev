@@ -36,10 +36,9 @@ export default function PremiereHighlights() {
     return (
         <section className="px-6 py-12 mx-auto relative">
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                Premiere Highlights
+                Fresh Off the Screen
             </h2>
-            <p className="text-gray-400 text-sm mt-1">Movies and shows selected based on your mood — whether you’re up for a
-                laugh, a cry, or something thrilling.</p>
+            <p className="text-gray-400 text-sm mt-1">Brand-new releases to set the mood — straight from the big screen to your watchlist.</p>
 
 
             {/* Carousel wrapper */}
