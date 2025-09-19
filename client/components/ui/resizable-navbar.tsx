@@ -70,9 +70,12 @@ export const Navbar = ({ children, className }: NavbarProps) => {
       initial={false}
       animate={{ y: hidden ? "-100%" : "0%" }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-
-      className={cn("fixed inset-x-0 top-0 z-50 w-full flex items-center px-4", "backdrop-blur-md bg-gradient-to-b to-transparent", "h-32 md:h-24", className)}
-
+      className={cn(
+        "fixed inset-x-0 top-0 z-50 w-full flex items-center px-4",
+        "backdrop-blur-md bg-gradient-to-b to-transparent",
+        "h-32 md:h-24",
+        className
+      )}
       style={{
         // keep your gradient mask styling
         maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
@@ -141,7 +144,7 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         paddingRight: visible ? "12px" : "0px",
         paddingLeft: visible ? "12px" : "0px",
         borderRadius: visible ? "4px" : "2rem",
-        y: visible ? 20 : 0,
+        y: visible ? -10 : 0,
       }}
       transition={{
         type: "spring",
@@ -214,6 +217,10 @@ export const MobileNavMenu = ({
             "p-6",
             className
           )}
+          style={{
+            background:
+              "radial-gradient(circle at top left, rgba(233,79,55,0.1), black)",
+          }}
           onClick={(e) => e.stopPropagation()} // stop propagation so outer backdrop doesn't react
         >
           {/* Close X in top-right */}
@@ -246,14 +253,10 @@ export const MobileNavToggle = ({
   return (
     <button
       onClick={onClick}
-      className="lg:hidden p-2 text-white hover:text-gray-300 transition-colors z-30"
-      aria-label={isOpen ? "Close menu" : "Open menu"}
+      className="ml-2 rounded-md border border-[#e94f37]/40 bg-[#e94f37]/10 px-3 py-2 text-white hover:bg-[#e94f37]/20 focus:outline-none focus:ring-2 focus:ring-[#e94f37]"
+      aria-label="Open menu"
     >
-      {isOpen ? (
-        <IconX className="h-6 w-6" />
-      ) : (
-        <IconMenu2 className="h-6 w-6" />
-      )}
+      <IconMenu2 className="h-6 w-6 text-[#e94f37]" />
     </button>
   );
 };

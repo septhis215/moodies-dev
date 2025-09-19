@@ -1,7 +1,7 @@
 // File: Navbar.tsx
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, Fragment } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { createPortal } from "react-dom";
@@ -24,7 +24,6 @@ import {
   MobileNavToggle,
 } from "./ui/resizable-navbar";
 import SearchBar from "./ui/searchbar";
-import { Fragment } from "react";
 
 const routes = [
   { name: "Home", href: "/" },
@@ -40,10 +39,61 @@ export function NavbarComponent() {
   const createdPortalRef = useRef<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [activeRoute, setActiveRoute] = useState<string>(routes[0].href);
+  const [activeMobileRoute, setActiveMobileRoute] = useState<string | null>(
+    null
+  );
 
-  // Create (or find) a portal root on mount. Clean up if we created it.
+  const routeOptions: Record<string, string[]> = {
+    "/": [
+      "Overview",
+      "Highlights",
+      "Recommendations",
+      "What's New",
+      "Trending Now",
+      "Staff Picks",
+    ],
+    "/movies": [
+      "Now Playing",
+      "Top Rated",
+      "Upcoming",
+      "Genres",
+      "Box Office",
+      "Trailers",
+      "Collections",
+      "Browse by Year",
+    ],
+    "/series": [
+      "Trending",
+      "Top Rated",
+      "New Seasons",
+      "By Network",
+      "Watchlist",
+      "New Episodes",
+      "Top Comedies",
+    ],
+    "/community": [
+      "Forums",
+      "Events",
+      "Guides",
+      "User Reviews",
+      "Clubs",
+      "Contests",
+      "Meetups",
+    ],
+    "/your-moods": [
+      "Saved Moods",
+      "Create Mood",
+      "History",
+      "Recommendations",
+      "Shared Moods",
+      "Export",
+      "Reset Moods",
+    ],
+  };
+
+  // Create/find portal root on mount. Clean up if we created it.
   useEffect(() => {
-    // avoid running on server
     if (typeof document === "undefined") return;
 
     let el = document.getElementById("menu-portal") as HTMLElement | null;
@@ -62,6 +112,7 @@ export function NavbarComponent() {
     };
   }, []);
 
+  // close on Escape
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -74,13 +125,13 @@ export function NavbarComponent() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // lock body scroll while menu is open
+  // lock body scroll while desktop menu is open
   useEffect(() => {
     if (isOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
   }, [isOpen]);
 
-  // The actual dropdown markup (keeps your original design)
+  // The full dropdown panel (rendered into portalRoot)
   const menuNode = (
     <AnimatePresence>
       {isOpen && (
@@ -98,15 +149,13 @@ export function NavbarComponent() {
           exit={{ y: "-12%", opacity: 0 }}
           className="fixed inset-0 z-[9999] flex items-stretch"
           style={{
-            // slightly darker backdrop to make the panel pop more
             backdropFilter: "blur(14px)",
             background:
               "linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.65) 100%)",
             willChange: "transform, opacity",
           }}
         >
-          {/* inner panel: responsive scaling but capped maximums */}
-          {/* inner panel: slightly smaller overall, still responsive and fits all screens */}
+          {/* inner card: 3-column layout (left nav / center options / right profile) */}
           <motion.div
             initial={{ scale: 0.995, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -118,27 +167,26 @@ export function NavbarComponent() {
               border: "1px solid rgba(255,255,255,0.04)",
               background:
                 "linear-gradient(180deg, rgba(6,6,8,0.94), rgba(8,8,10,0.9))",
-              // slightly smaller than before: caps at 1100px and also keeps a 48px margin each side on narrow viewports
+              // slightly smaller overall but still fits
               maxWidth: "min(1100px, calc(100vw - 96px))",
-              // give more breathing room vertically while still fitting the viewport
               maxHeight: "calc(100vh - 96px)",
               overflow: "hidden",
               willChange: "transform, opacity",
             }}
           >
-            {/* LEFT: routes — occupies full width on small screens (since right pane hidden) */}
+            {/* LEFT: routes */}
             <div
-              className="flex-1 md:basis-2/3 min-w-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.02),transparent)] px-5 md:px-8 py-5 md:py-8 flex flex-col justify-between gap-3 md:gap-6"
-              style={{ boxSizing: "border-box" }}
+              className="flex-1 md:basis-1/2 min-w-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.02),transparent)] px-6 md:px-10 py-6 md:py-10 flex flex-col justify-between gap-3 md:gap-6"
+              style={{
+                boxSizing: "border-box",
+                background:
+                  "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
+              }}
             >
-              {/* Header */}
               <div className="pb-1">
                 <h2
                   className="font-semibold text-white leading-tight"
-                  style={{
-                    // MIN 1.75rem, ideal 6.5vh, MAX 3rem
-                    fontSize: "clamp(1.75rem, 6.5vh, 3rem)",
-                  }}
+                  style={{ fontSize: "clamp(1.75rem, 6.5vh, 3rem)" }}
                 >
                   Explore
                 </h2>
@@ -150,27 +198,39 @@ export function NavbarComponent() {
                 </p>
               </div>
 
-              {/* Center nav — capped so it doesn't grow infinitely on large screens */}
+              {/* nav — on hover/focus set activeRoute */}
               <nav className="flex-1 flex flex-col justify-center gap-2 md:gap-4">
                 {routes.map((r) => (
                   <a
                     key={r.href}
                     href={r.href}
+                    onMouseEnter={() => setActiveRoute(r.href)}
+                    onFocus={() => setActiveRoute(r.href)}
                     onClick={() => setIsOpen(false)}
-                    className="font-medium text-gray-100 hover:text-white transition-colors leading-snug"
+                    className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${
+                      activeRoute === r.href
+                        ? "text-[#e94f37]"
+                        : "text-gray-100 hover:text-[#e94f37]"
+                    } pl-4`} // ⬅️ padding-left so line sits outside
                     style={{
-                      // MIN ~18px, ideal scales, MAX ~28px
-                      fontSize: "clamp(1.125rem, 4.2vh, 2rem)",
+                      fontSize: "clamp(1.125rem, 4.2vh, 1.75rem)",
                       paddingTop: "0.35rem",
                       paddingBottom: "0.35rem",
                     }}
                   >
+                    {/* active/hover indicator line */}
+                    <span
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full bg-[#e94f37] transition-all duration-200 ${
+                        activeRoute === r.href
+                          ? "h-6 opacity-100"
+                          : "h-0 opacity-0 group-hover:h-4 group-hover:opacity-100"
+                      }`}
+                    />
                     {r.name}
                   </a>
                 ))}
               </nav>
 
-              {/* Footer */}
               <div
                 className="pt-1 text-sm text-gray-400"
                 style={{ fontSize: "clamp(0.8rem,1.2vh,0.95rem)" }}
@@ -179,10 +239,48 @@ export function NavbarComponent() {
               </div>
             </div>
 
-            {/* RIGHT: profile — hidden on small/medium screens so nav never needs to shrink/scroll */}
+            {/* CENTER: options panel (uses the gap). Visible on md+ only. */}
+            <div
+              className="hidden md:flex md:basis-1/2 flex-col items-start justify-center p-6"
+              style={{
+                background:
+                  "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
+                borderLeft: "1px solid rgba(255,255,255,0.1)",
+                borderRight: "1px solid rgba(255,255,255,0.1)",
+              }}
+            >
+              <div className="w-full max-w-[260px]">
+                <h3 className="text-md font-semibold text-[#e94f37] mb-4">
+                  {routes.find((x) => x.href === activeRoute)?.name ??
+                    "Options"}
+                </h3>
+
+                <div className="flex flex-col gap-3">
+                  {(routeOptions[activeRoute] || []).map((opt) => (
+                    <a
+                      key={opt}
+                      href="#"
+                      className="relative px-4 py-2 rounded-lg text-gray-200
+           hover:text-white transition-all duration-300
+           before:absolute before:inset-0 before:rounded-lg before:border
+           before:border-[#e94f37]/30 hover:before:border-[#e94f37]
+           before:transition-all before:duration-300"
+                    >
+                      {opt}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT: profile — visible on lg and above */}
             <div
               className="hidden lg:flex w-1/3 flex-none min-w-0 bg-[rgba(255,255,255,0.02)] px-6 py-8 items-center justify-center"
-              style={{ boxSizing: "border-box" }}
+              style={{
+                boxSizing: "border-box",
+                background:
+                  "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
+              }}
             >
               <div className="w-full max-w-xs text-center">
                 <div
@@ -245,7 +343,7 @@ export function NavbarComponent() {
       <NavBody className="hidden lg:flex">
         <NavbarLogo />
 
-        {/* Placeholder - we keep inline nav empty since menu contains links */}
+        {/* Placeholder - inline nav left empty since menu contains links */}
         <div />
 
         <div className="flex items-center gap-3">
@@ -265,12 +363,10 @@ export function NavbarComponent() {
             <span className="sr-only">Your Moods</span>
           </a>
 
-          {/* Add search bar here */}
           <div className="hidden sm:inline-flex items-center">
             <SearchBar
               placeholder="Search movies, series..."
               onSearch={(q) => {
-                // example: navigate or call your search handler
                 console.log("search:", q);
               }}
             />
@@ -280,39 +376,22 @@ export function NavbarComponent() {
             aria-expanded={isOpen}
             aria-controls="site-menu"
             onClick={() => setIsOpen((s) => !s)}
-            className="ml-2 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="ml-2 rounded-md border border-[#e94f37]/40 bg-[#e94f37]/10 px-3 py-2 text-white hover:bg-[#e94f37]/20 focus:outline-none focus:ring-2 focus:ring-[#e94f37]"
             title="Open menu"
           >
-            <IconMenu2 />
+            <IconMenu2 className="text-[#e94f37]" />
           </button>
         </div>
       </NavBody>
-      {/* MOBILE NAV — show on small screens */}
+
+      {/* MOBILE NAV */}
       <MobileNav visible>
         <MobileNavHeader className="w-full px-4">
-          {/* Left: logo (smaller) */}
           <div className="flex items-center">
             <NavbarLogo className="mr-0" />
           </div>
 
-          {/* Right: small icons — community, moods, search icon, menu toggle */}
           <div className="flex items-center gap-2">
-            {/* Community & moods kept as icons (tap to open page) */}
-            <a
-              href="/community"
-              className="inline-flex items-center p-2 text-gray-200 hover:text-white"
-            >
-              <IconUsers size={20} />
-            </a>
-
-            <a
-              href="/your-moods"
-              className="inline-flex items-center p-2 text-gray-200 hover:text-white"
-            >
-              <IconMoodSmile size={20} />
-            </a>
-
-            {/* Mobile search icon: toggles a simple full-screen search overlay */}
             <div className="inline-flex">
               <SearchBar
                 placeholder="Search movies, series..."
@@ -320,7 +399,6 @@ export function NavbarComponent() {
               />
             </div>
 
-            {/* Mobile menu toggle */}
             <MobileNavToggle
               isOpen={isMobileOpen}
               onClick={() => setIsMobileOpen((s) => !s)}
@@ -328,7 +406,8 @@ export function NavbarComponent() {
           </div>
         </MobileNavHeader>
       </MobileNav>
-      {/* Mobile menu overlay — uses same routes/profile content but stacked for mobile */}
+
+      {/* Mobile menu content */}
       <MobileNavMenu
         isOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
@@ -340,19 +419,50 @@ export function NavbarComponent() {
 
             <nav className="flex flex-col gap-3 mt-4">
               {routes.map((r) => (
-                <a
-                  key={r.href}
-                  href={r.href}
-                  onClick={() => setIsMobileOpen(false)}
-                  className="py-3 px-2 rounded-md text-lg text-gray-100 hover:text-white hover:bg-white/3 transition"
-                >
-                  {r.name}
-                </a>
+                <div key={r.href} className="flex flex-col">
+                  <button
+                    onClick={() =>
+                      setActiveMobileRoute((prev) =>
+                        prev === r.href ? null : r.href
+                      )
+                    }
+                    className={`flex justify-between items-center py-3 px-2 rounded-md text-lg transition ${
+                      activeMobileRoute === r.href
+                        ? "text-[#e94f37] bg-[#e94f37]/10"
+                        : "text-gray-100 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
+                    }`}
+                  >
+                    <span>{r.name}</span>
+                    <span className="text-[#e94f37]">
+                      {activeMobileRoute === r.href ? "−" : "+"}
+                    </span>
+                  </button>
+
+                  {/* Sub-options (routeOptions) */}
+                  {activeMobileRoute === r.href && (
+                    <ul className="pl-4 mt-1 flex flex-col gap-2">
+                      {(routeOptions[r.href] || []).map((opt) => (
+                        <li key={opt}>
+                          <a
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setIsMobileOpen(false);
+                            }}
+                            className="block text-sm px-2 py-1 rounded-md transition
+    text-gray-300 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
+                          >
+                            {opt}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               ))}
             </nav>
 
             <div className="mt-6 border-t border-white/6 pt-4">
-              {/* Profile card simplified for mobile */}
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-full bg-white/5 overflow-hidden" />
                 <div>
@@ -378,7 +488,8 @@ export function NavbarComponent() {
           </div>
         </div>
       </MobileNavMenu>
-      {/* Portal render: menuNode is mounted into portalRoot (body-level) to avoid clipping */}
+
+      {/* Portal render */}
       {portalRoot ? createPortal(menuNode, portalRoot) : null}
 
       {/* Mobile search full-screen modal */}
@@ -402,7 +513,7 @@ export function NavbarComponent() {
               className="w-full max-w-xl px-6"
               onSubmit={(e) => {
                 e.preventDefault();
-                /* handle search */ setIsMobileSearchOpen(false);
+                setIsMobileSearchOpen(false);
               }}
             >
               <input
