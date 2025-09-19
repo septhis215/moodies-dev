@@ -5,6 +5,13 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { tmdbImage } from "@/lib/tmdb";
 import { ChevronLeft, ChevronRight, Info } from "lucide-react";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { TooltipArrow } from "@radix-ui/react-tooltip";
 
 type MovieLike = {
     id: string | number;
@@ -195,7 +202,7 @@ export default function MovieCarousel<T extends MovieLike>({
                                             <p className="text-gray-500 italic text-xs">No genres</p>
                                         )}
 
-                                
+
                                         {/* Ratings Info */}
                                         <p className="text-xs text-gray-400">
                                             {m.vote_count ? `${m.vote_count.toLocaleString()} ratings` : ""}
@@ -207,24 +214,37 @@ export default function MovieCarousel<T extends MovieLike>({
                                                 <p className="text-xs text-gray-400 mb-1">You might also like</p>
                                                 <div className="flex gap-2 overflow-hidden">
                                                     {m.recommendations.slice(0, 3).map((rec) => (
-                                                        <Image
-                                                            key={rec.id}
-                                                            src={posterGetter(rec)}
-                                                            alt={rec.title}
-                                                            width={52}
-                                                            height={77}
-                                                            className="rounded-md object-cover hover:scale-105 transition cursor-pointer"
-                                                        />
+                                                        <TooltipProvider key={rec.id}>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <Image
+                                                                        key={rec.id}
+                                                                        src={posterGetter(rec)}
+                                                                        alt={rec.title}
+                                                                        width={52}
+                                                                        height={77}
+                                                                        className="rounded-md object-cover hover:scale-105 transition cursor-pointer"
+                                                                    />
+                                                                </TooltipTrigger>
+                                                                <TooltipContent
+                                                                    side="bottom"
+                                                                    sideOffset={6}
+                                                                    className="rounded-lg bg-white/30 backdrop-blur-md px-3 py-2 shadow-lg border border-white/20 animate-in fade-in zoom-in-95 duration-200"
+                                                                >
+                                                                    <TooltipArrow className="fill-white/30 stroke-white/20" />
+                                                                    <div className="text-sm font-medium text-white drop-shadow max-w-[220px] truncate">
+                                                                        {rec.title}
+                                                                    </div>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
                                                     ))}
                                                 </div>
                                             </div>
                                         ) : null}
                                     </div>
                                 </div>
-
-
                             </motion.div>
-
                         ))
                     ) : (
                         <p className="text-gray-500">No movies available.</p>

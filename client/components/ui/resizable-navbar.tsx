@@ -70,12 +70,9 @@ export const Navbar = ({ children, className }: NavbarProps) => {
       initial={false}
       animate={{ y: hidden ? "-100%" : "0%" }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
-      className={cn(
-        "fixed inset-x-0 top-0 z-50 w-full flex items-center px-4",
-        "backdrop-blur-md bg-gradient-to-b to-transparent",
-        "h-32 md:h-24",
-        className
-      )}
+
+      className={cn("fixed inset-x-0 top-0 z-50 w-full flex items-center px-4", "backdrop-blur-md bg-gradient-to-b to-transparent", "h-32 md:h-24", className)}
+
       style={{
         // keep your gradient mask styling
         maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
@@ -264,7 +261,7 @@ export const MobileNavToggle = ({
 export const NavbarLogo = ({ className }: { className?: string }) => {
   return (
     <a
-      href="#"
+      href="/"
       className={cn(
         "relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal",
         className

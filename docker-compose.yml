@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: Admin@123
-      POSTGRES_DB: moodies_postgres
+      POSTGRES_DB: moodies-postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:

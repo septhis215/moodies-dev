@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Person } from "@/types/person";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -16,26 +16,29 @@ async function fetchPeople() {
 
 export default function CelebSection() {
   const [celebs, setCelebs] = useState<Person[]>([]);
-  const [index, setIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchPeople().then(setCelebs);
   }, []);
 
-  const visibleCards = 4; // how many celebs to show per slide
-  const totalSlides = Math.ceil(celebs.length / visibleCards);
-
-  const next = () => setIndex((prev) => (prev + 1) % totalSlides);
-  const prev = () => setIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
-
   if (!celebs.length) return null;
+
+  const scrollByAmount = (amount: number) => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({
+        left: amount,
+        behavior: "smooth",
+      });
+    }
+  };
 
   return (
     <section className="py-12 bg-gray-950 text-white">
       <div className="max-w-7xl mx-auto px-4 relative">
         {/* Heading */}
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+        <div className="mb-6">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
             Popular Celebs
           </h2>
           <p className="text-gray-400 text-sm mt-1">
@@ -43,62 +46,59 @@ export default function CelebSection() {
           </p>
         </div>
 
-        {/* Carousel Container */}
-        <div className="relative overflow-hidden">
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-          >
-            {celebs
-              .slice(index * visibleCards, index * visibleCards + visibleCards)
-              .map((celeb) => (
-                <div
-                  key={celeb.id}
-                  className="bg-gray-900 rounded-xl flex items-center gap-3 p-3 shadow-md hover:scale-[1.02] transition-transform"
-                >
-                  <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                    <Image
-                      src={
-                        celeb.profile_path
-                          ? `https://image.tmdb.org/t/p/w200${celeb.profile_path}`
-                          : "/placeholder-person.png"
-                      }
-                      alt={celeb.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-semibold truncate">
+        {/* Scrollable Row */}
+        <div className="relative">
+          <div
+            ref={scrollRef}
+            className="flex gap-5 overflow-x-auto scroll-smooth scrollbar-hide snap-x snap-mandatory"
+     
+            {celebs.map((celeb) => (
+              <motion.div
+                key={celeb.id}
+                whileHover={{ scale: 1.05 }}
+                className="relative w-32 sm:w-36 flex-shrink-0 snap-start rounded-lg overflow-hidden shadow-md"
+              >
+                {/* Image */}
+                <div className="relative aspect-[2/3] w-full">
+                  <Image
+                    src={
+                      celeb.profile_path
+                        ? `https://image.tmdb.org/t/p/w300${celeb.profile_path}`
+                        : "/placeholder-person.png"
+                    }
+                    alt={celeb.name}
+                    fill
+                    className="object-cover"
+                  />
+
+                  {/* Gradient + Info Overlay */}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2">
+                    <h3 className="text-xs font-semibold text-white truncate">
                       {celeb.name}
                     </h3>
-                    <p className="text-gray-400 text-xs line-clamp-1">
+                    <p className="text-[10px] text-gray-300 line-clamp-1">
                       {celeb.known_for
                         .map((work) => work.title || work.name)
-                        .join(", ")}
+                        .slice(0, 1)}
                     </p>
                   </div>
                 </div>
-              ))}
-          </motion.div>
-        </div>
+              </motion.div>
+            ))}
+          </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-center gap-4 mt-8">
+          {/* Navigation Buttons */}
           <button
-            onClick={prev}
-            className="p-3 rounded-full bg-gray-800 hover:bg-gray-700 transition"
+            onClick={() => scrollByAmount(-200)}
+            className="absolute top-1/2 left-0 -translate-y-1/2 p-3 rounded-full bg-gray-800/80 hover:bg-gray-700 transition shadow-md"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <button
-            onClick={next}
-            className="p-3 rounded-full bg-gray-800 hover:bg-gray-700 transition"
+            onClick={() => scrollByAmount(200)}
+            className="absolute top-1/2 right-0 -translate-y-1/2 p-3 rounded-full bg-gray-800/80 hover:bg-gray-700 transition shadow-md"
           >
-            <ChevronRight className="w-6 h-6" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
