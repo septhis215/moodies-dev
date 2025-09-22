@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -9,6 +9,7 @@ import { RedisService } from 'src/redis/redis.service';
 export class MoviesService {
   private readonly baseUrl: string;
   private readonly token: string;
+  private readonly logger = new Logger(MoviesService.name);
 
   constructor(
     private readonly httpService: HttpService,
@@ -21,10 +22,10 @@ export class MoviesService {
       this.configService.get<string>('TMDB_API_KEY') ?? 'null tmdb api key';
   }
 
+  // Return full response.data (raw). Caller decides whether to use .results
   private async tmdb(endpoint: string) {
     const url = `${this.baseUrl}${endpoint}`;
 
-    // test getting first value
     const response = await firstValueFrom(
       this.httpService.get(url, {
         headers: {
@@ -34,9 +35,10 @@ export class MoviesService {
       }),
     );
 
-    return response.data.results;
+    return response.data; // <-- return full payload
   }
 
+  // Trending with caching
   async trending(type: string) {
     const cacheKey = `trending/movies/${type}`;
     const cached = await this.redisService.get(cacheKey);
@@ -45,23 +47,19 @@ export class MoviesService {
       return JSON.parse(cached);
     }
 
-    const movies = await this.tmdb(`trending/movie/${type}`);
-
-    await this.redisService.set(cacheKey, JSON.stringify(movies), 60); // <number> hour life duration
-    // console.log('From Redis Movies: ', movies);
+    const data = await this.tmdb(`trending/movie/${type}`);
+    const movies = data?.results ?? data; // works if tmdb returned results or array
+    await this.redisService.set(cacheKey, JSON.stringify(movies), 60);
     return movies;
   }
 
   async premieres() {
     const cacheKey = `premiere/movies`;
     const cached = await this.redisService.get(cacheKey);
+    if (cached) return JSON.parse(cached);
 
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    const movies = await this.tmdb(`movie/now_playing?language=en-US&page=1`);
-
+    const data = await this.tmdb(`movie/now_playing?language=en-US&page=1`);
+    const movies = data?.results ?? data;
     await this.redisService.set(cacheKey, JSON.stringify(movies), 60);
     return movies;
   }
@@ -69,13 +67,10 @@ export class MoviesService {
   async favorites() {
     const cacheKey = `favorite/movies`;
     const cached = await this.redisService.get(cacheKey);
+    if (cached) return JSON.parse(cached);
 
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    const movies = await this.tmdb(`movie/top_rated?language=en-US&page=1`);
-
+    const data = await this.tmdb(`movie/top_rated?language=en-US&page=1`);
+    const movies = data?.results ?? data;
     await this.redisService.set(cacheKey, JSON.stringify(movies), 60);
     return movies;
   }
@@ -83,13 +78,10 @@ export class MoviesService {
   async popular() {
     const cacheKey = `popular/movies`;
     const cached = await this.redisService.get(cacheKey);
+    if (cached) return JSON.parse(cached);
 
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    const movies = await this.tmdb(`movie/popular?language=en-US&page=1`);
-
+    const data = await this.tmdb(`movie/popular?language=en-US&page=1`);
+    const movies = data?.results ?? data;
     await this.redisService.set(cacheKey, JSON.stringify(movies), 60);
     return movies;
   }
@@ -97,63 +89,54 @@ export class MoviesService {
   async specificReviews(id: number) {
     const cacheKey = `reviews/movies/${id}`;
     const cached = await this.redisService.get(cacheKey);
+    if (cached) return JSON.parse(cached);
 
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    const movies = await this.tmdb(`movie/${id}/reviews?language=en-US&page=1`);
-
-    await this.redisService.set(cacheKey, JSON.stringify(movies), 60);
-    return movies;
+    const data = await this.tmdb(`movie/${id}/reviews?language=en-US&page=1`);
+    const reviews = data?.results ?? data;
+    await this.redisService.set(cacheKey, JSON.stringify(reviews), 60);
+    return reviews;
   }
 
   async revenue() {
     const cacheKey = `revenue/movies`;
     const cached = await this.redisService.get(cacheKey);
+    if (cached) return JSON.parse(cached);
 
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    const movies = await this.tmdb(
+    const data = await this.tmdb(
       `discover/movie?language=en-US&sort_by=revenue.desc&page=1`,
     );
-
+    const movies = data?.results ?? data;
     await this.redisService.set(cacheKey, JSON.stringify(movies), 60);
     return movies;
   }
 
   async moviesByGenres(ids: string, useAnd: boolean = false) {
-    const genresParam = useAnd ? ids : ids.replace(/,/g, '|'); // replace commas with pipes (,) => (|)
+    const genresParam = useAnd ? ids : ids.replace(/,/g, '|');
     const cacheKey = `movies/genres/${genresParam}`;
     const cached = await this.redisService.get(cacheKey);
+    if (cached) return JSON.parse(cached);
 
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    const movies = await this.tmdb(
+    const data = await this.tmdb(
       `discover/movie?language=en-US&page=1&with_genres=${genresParam}`,
     );
-
+    const movies = data?.results ?? data;
     await this.redisService.set(cacheKey, JSON.stringify(movies), 60);
     return movies;
   }
 
-
-  // Specific Movie Details
+  // Specific Movie Details helpers - note these now assume tmdb returns raw payload
   async movieTrailer(id: number) {
-    const movies = await this.tmdb(`movie/${id}/videos?language=en-US`);
-    const filtered = movies.results.find(
+    const data = await this.tmdb(`movie/${id}/videos?language=en-US`);
+    const videos = data?.results ?? data;
+    const filtered = (videos || []).find(
       (video: any) => video.type === 'Trailer' && video.site === 'YouTube'
-    )
-    return filtered;
+    );
+    return filtered ?? null;
   }
 
   async movieInfo(id: number) {
-    const movie = await this.tmdb(`movie/${id}?language=en-US`);
-    return movie;
+    const info = await this.tmdb(`movie/${id}?language=en-US`);
+    return info;
   }
 
   async movieCredits(id: number) {
@@ -162,18 +145,72 @@ export class MoviesService {
   }
 
   async movieReviews(id: number) {
-    const reviews = await this.tmdb(`movie/${id}/reviews?language=en-US`);
+    const data = await this.tmdb(`movie/${id}/reviews?language=en-US&page=1`);
+    const reviews = data?.results ?? data;
     return reviews;
   }
 
-  // where movies can be streamed or premiered
   async movieProviders(id: number) {
     const providers = await this.tmdb(`movie/${id}/watch/providers`);
     return providers;
   }
 
   async similarMovies(id: number) {
-    const movies = await this.tmdb(`movie/${id}/similar?language=en-US&page=1`);
+    const data = await this.tmdb(`movie/${id}/similar?language=en-US&page=1`);
+    const movies = data?.results ?? data;
     return movies;
+  }
+
+  // -----------------------
+  // Aggregated details endpoint
+  // -----------------------
+  async movieDetails(id: number) {
+    const cacheKey = `movie/details/${id}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (err) {
+        this.logger.warn('Failed to parse cached movie details, refetching', err);
+      }
+    }
+
+    // Fetch in parallel
+    const [
+      info,
+      credits,
+      videosRaw,
+      providers,
+      reviewsRaw,
+      similarRaw,
+    ] = await Promise.all([
+      this.movieInfo(id),
+      this.movieCredits(id),
+      this.tmdb(`movie/${id}/videos?language=en-US`),
+      this.movieProviders(id),
+      this.tmdb(`movie/${id}/reviews?language=en-US&page=1`),
+      this.tmdb(`movie/${id}/similar?language=en-US&page=1`),
+    ]);
+
+    const trailer = (videosRaw?.results ?? []).find(
+      (v: any) => v.type === 'Trailer' && v.site === 'YouTube'
+    ) ?? null;
+
+    const reviews = reviewsRaw?.results ?? reviewsRaw ?? [];
+    const similar = similarRaw?.results ?? similarRaw ?? [];
+
+    const payload = {
+      info,
+      credits,
+      trailer,
+      providers,
+      reviews,
+      similar,
+    };
+
+    // cache for 5 minutes (300s) or whatever TTL suits you
+    await this.redisService.set(cacheKey, JSON.stringify(payload), 300);
+
+    return payload;
   }
 }
