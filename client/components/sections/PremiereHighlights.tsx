@@ -5,6 +5,7 @@ import type { All } from "@/types/all";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react"; // icon library
+import { IconCalendar, IconClock, IconDeviceTv, IconX } from "@tabler/icons-react";
 
 async function fetchTrailer() {
   const base = process.env.NEST_API_URL || "http://localhost:4000";
@@ -13,12 +14,82 @@ async function fetchTrailer() {
   return (await res.json()) as All[];
 }
 
+async function fetchRecommendations(type: "movie" | "tv", id: number) {
+  if (!type || !id) return []; // early return if invalid
+
+  const base = process.env.NEST_API_URL || "http://localhost:4000/";
+  const res = await fetch(`${base}all/${type}/${id}/recommendations`, {
+    next: { revalidate: 60 * 5 },
+  });
+  if (!res.ok) return [];
+  return (await res.json()) as All[];
+}
 export default function PremiereHighlights() {
   const [trailers, setTrailers] = useState<All[]>([]);
-  const [selectedTrailer, setSelectedTrailer] = useState<string | null>(null);
+  const [selectedTrailer, setSelectedTrailer] = useState<All | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isStacked, setIsStacked] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const trailerItem = selectedTrailer;
+  const [recommendationsCache, setRecommendationsCache] = useState<Record<number, All[]>>({});
 
+  // threshold (container width in px) to decide stacking
+  const STACK_AT = 900;
+
+  useEffect(() => {
+    fetchTrailer().then(setTrailers);
+  }, []);
+
+  useEffect(() => {
+    if (selectedTrailer) {
+      // Disable background scroll
+      document.body.style.overflow = "hidden";
+    } else {
+      // Re-enable scroll
+      document.body.style.overflow = "";
+    }
+
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [selectedTrailer]);
+
+  const handleSelectTrailer = async (trailer: All) => {
+    // Determine the type (fallback to parent if missing)
+    const type = trailer.type || selectedTrailer?.type || 'movie';
+    const id = trailer.id;
+
+    if (!id || !type) return;
+
+    // Check cache first
+    let recs = recommendationsCache[id];
+    if (!recs && type !== 'person') {
+      recs = await fetchRecommendations(type, id);
+      setRecommendationsCache(prev => ({ ...prev, [id]: recs }));
+    }
+
+    // Update selected trailer with recommendations
+    setSelectedTrailer({ ...trailer, type, recommendations: recs || [] });
+  };
+
+
+
+  // Auto switch between side-by-side and stacked using ResizeObserver
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const ro = new ResizeObserver(() => {
+      const width = container.getBoundingClientRect().width;
+      setIsStacked(width < STACK_AT);
+    });
+
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [containerRef]);
   useEffect(() => {
     fetchTrailer().then(setTrailers);
   }, []);
@@ -65,7 +136,7 @@ export default function PremiereHighlights() {
                   key={item.id}
                   whileHover={{ scale: 1.05 }}
                   className="relative flex-shrink-0 w-84 h-52 cursor-pointer rounded-lg overflow-hidden"
-                  onClick={() => setSelectedTrailer(item.trailer_key!)}
+                  onClick={() => setSelectedTrailer(item)}
                 >
                   <Image
                     src={
@@ -97,137 +168,219 @@ export default function PremiereHighlights() {
         </button>
       </div>
 
-      {selectedTrailer &&
-        (() => {
-          const trailerItem = trailers.find(
-            (t) => t.trailer_key === selectedTrailer
-          );
-          return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
-              {/* Dark overlay that can close modal when clicked */}
-              <div
-                className="absolute inset-0 cursor-pointer"
-                onClick={() => setSelectedTrailer(null)}
-              />
+      {selectedTrailer && (() => {
+        const trailerItem = selectedTrailer;
 
-              {/* Modal container */}
-              <div
-                className="relative w-full h-screen flex flex-col sm:flex-row justify-center items-center 
-    px-2 sm:px-8 lg:px-12 animate-fadeIn 
-    max-w-[95vw] sm:max-w-5xl md:max-w-6xl lg:max-w-7xl xl:max-w-[90vw] mx-auto overflow-hidden"
-              >
-                {/* Trailer iframe wrapper */}
-                <div
-                  className="w-full sm:w-3/4 aspect-video rounded-xl overflow-hidden shadow-2xl border border-gray-700 bg-black 
-        max-w-full max-h-[80vh] flex"
-                >
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+            <div
+              className="absolute inset-0 cursor-pointer"
+              onClick={() => setSelectedTrailer(null)}
+            />
+
+            {/* Main container with proper responsive layout */}
+            <div className="relative w-full max-w-[90vw] mx-auto h-[85vh] max-h-[90vh] flex flex-col xl:flex-row gap-6 items-stretch">
+
+              {/* Trailer Container - 2/3 width */}
+              <div className="flex-none w-full xl:flex-[2] flex justify-center items-center min-h-0">
+                <div className="w-full h-full max-h-[60vh] xl:max-h-full flex justify-center items-center">
                   <iframe
-                    className="w-full h-full rounded-xl"
-                    src={`https://www.youtube.com/embed/${selectedTrailer}?autoplay=1&controls=1`}
+                    className="w-full h-full rounded-xl shadow-2xl border border-gray-700 bg-black"
+                    src={`https://www.youtube.com/embed/${selectedTrailer.trailer_key}?autoplay=0&controls=1`}
                     title="Trailer"
                     allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
+                    style={{ aspectRatio: "16/9" }}
                   />
                 </div>
+              </div>
 
-                {trailerItem && (
+              {/* Details Panel */}
+              {trailerItem && (
+                <div
+                  ref={panelRef}
+                  className="
+    flex-none w-full xl:flex-[1]
+    bg-gradient-to-b from-black/95 to-black/85 backdrop-blur-xl
+    rounded-l-2xl  /* only round left side */
+    border border-gray-600/50 shadow-2xl
+    flex flex-col
+    min-h-0
+    h-[35vh] xl:h-full
+    max-h-[35vh] xl:max-h-full
+  "
+                >
+                  {/* Scrollable Content */}
                   <div
-                    className="w-full sm:w-1/3 mt-6 sm:mt-0 sm:ml-8 flex flex-col sm:flex-row items-center sm:items-start text-left
-                                bg-black/60 rounded-xl p-4 sm:p-6 shadow-lg border border-gray-700 max-w-full 
-                                overflow-y-auto max-h-[80vh]"
+                    className="
+        flex-1 overflow-y-auto overflow-x-hidden
+        scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800
+        hover:scrollbar-thumb-gray-400
+        scrollbar-thumb-rounded-lg
+        scrollbar-track-rounded-lg
+        px-1
+      "
                   >
-                    {/* Poster image */}
-                    {trailerItem.poster_path && (
-                      <Image
-                        src={`https://image.tmdb.org/t/p/w342${trailerItem.poster_path}`}
-                        alt={trailerItem.title}
-                        width={342}
-                        height={513}
-                        className="mb-4 sm:mb-0 sm:mr-6 rounded-lg shadow-md w-32 sm:w-28 object-cover flex-shrink-0"
-                      />
-                    )}
-                    {/* Text content */}
-                    <div className="flex flex-col justify-start items-start w-full">
-                      <h2 className="text-base sm:text-xl md:text-2xl font-bold text-white mb-2 sm:mb-4 text-center sm:text-left">
-                        {trailerItem.title}
-                      </h2>
-                      {/* Overview with expand/collapse */}
-                      {trailerItem.overview && (
-                        <div className="mb-4 sm:mb-6 text-gray-300 text-xs sm:text-base">
-                          <p>
-                            {isExpanded
-                              ? trailerItem.overview
-                              : trailerItem.overview.slice(0, 250) +
-                                (trailerItem.overview.length > 250
-                                  ? "..."
-                                  : "")}
-                          </p>
-                          {trailerItem.overview.length > 250 && (
-                            <button
-                              onClick={() => setIsExpanded(!isExpanded)}
-                              className="mt-1 text-blue-400 hover:text-blue-500 text-xs sm:text-sm font-semibold"
-                            >
-                              {isExpanded ? "Show less" : "Read more"}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      {trailerItem.release_date && (
-                        <div className="text-xs sm:text-base text-gray-400 mb-2 sm:mb-3">
-                          <span className="font-semibold">Release:</span>{" "}
-                          {trailerItem.release_date}
-                        </div>
-                      )}
-                      {trailerItem.vote_average && (
-                        <div className="text-xs sm:text-base text-yellow-400 mb-2 sm:mb-3">
-                          <span className="font-semibold">Rating:</span>{" "}
-                          {trailerItem.vote_average}/10
-                        </div>
-                      )}
-                      {trailerItem.recommendations?.length > 0 && (
-                        <div className="mt-4">
-                          <h3 className="text-white font-bold mb-2">
-                            More Trailers Like This
-                          </h3>
-                          <div className="flex gap-2 overflow-x-auto">
-                            {trailerItem.recommendations.map((rec) => (
-                              <div
-                                key={rec.id}
-                                className="w-28 flex-shrink-0 cursor-pointer"
-                                onClick={() =>
-                                  setSelectedTrailer(rec.trailer_key!)
-                                }
+                    {/* Header Section */}
+                    <div className="flex-shrink-0 p-4 xl:p-6 border-b border-gray-700/50 relative">
+                      <div className="flex gap-4 xl:gap-6 items-start">
+                        {/* Poster */}
+                        {trailerItem.poster_path && (
+                          <div className="w-20 xl:w-32 flex-shrink-0">
+                            <img
+                              src={`https://image.tmdb.org/t/p/w300${trailerItem.poster_path}`}
+                              alt={trailerItem.title}
+                              className="rounded-lg shadow-xl object-cover w-full h-auto"
+                            />
+                          </div>
+                        )}
+
+                        {/* Cinematic Title + Info Panel */}
+                        <div className="flex flex-col flex-1 min-w-0 relative z-10">
+                          {/* Title */}
+                          <h2 className="text-xl xl:text-2xl 2xl:text-3xl font-extrabold text-white drop-shadow-2xl leading-tight">
+                            {trailerItem.title}
+                          </h2>
+
+                          {/* Top Badges Row */}
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {/* Release Date Badge */}
+                            {trailerItem.release_date && (
+                              <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-blue-600/90 shadow-lg text-xs xl:text-xs font-medium text-white">
+                                <IconCalendar size={14} />
+                                {new Date(trailerItem.release_date).toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                })}
+                              </span>
+                            )}
+
+                            {/* Runtime Badge */}
+                            {trailerItem.runtime && (
+                              <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-600/90 shadow-lg text-xs xl:text-xs font-medium text-white">
+                                <IconClock size={14} />
+                                {Math.floor(trailerItem.runtime / 60)}h {trailerItem.runtime % 60}m
+                              </span>
+                            )}
+
+                            {/* Episodes Badge */}
+                            {trailerItem.number_of_episodes && (
+                              <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-500/90 shadow-lg text-xs xl:text-xs font-medium text-white">
+                                <IconDeviceTv size={14} />
+                                {trailerItem.number_of_episodes} Episodes
+                              </span>
+                            )}
+
+                            {trailerItem.genres?.slice(0, 3).map((genre, i) => (
+                              <span
+                                key={i}
+                                className="relative px-3 py-1 rounded-full text-white font-semibold text-xs shadow-lg overflow-hidden"
                               >
-                                <Image
-                                  src={`https://image.tmdb.org/t/p/w185${rec.poster_path}`}
-                                  alt={rec.title}
-                                  width={185}
-                                  height={278}
-                                  className="rounded-md object-cover"
-                                />
-                                <p className="text-xs text-white line-clamp-2 mt-1">
-                                  {rec.title}
-                                </p>
-                              </div>
+                                {/* Animated gradient overlay */}
+                                <span className="absolute inset-0 bg-gradient-to-r from-[#e94f37] via-pink-500 to-orange-500 opacity-40 animate-gradient-x rounded-full"></span>
+                                <span className="relative z-10">{genre}</span>
+                              </span>
                             ))}
                           </div>
                         </div>
-                      )}
+                      </div>
                     </div>
+
+                    {/* Synopsis */}
+                    {trailerItem.overview && (
+                      <div className="flex-shrink-0 px-4 xl:px-6 py-3 xl:py-4 border-b border-gray-700/30">
+                        <h3 className="text-gray-400 font-semibold text-sm xl:text-base mb-2 xl:mb-3 uppercase tracking-wide">
+                          Synopsis
+                        </h3>
+                        {trailerItem.overview && (
+                          <p className="text-gray-300 text-sm leading-relaxed break-words">
+                            {isExpanded
+                              ? trailerItem.overview
+                              : trailerItem.overview.slice(0, 200) +
+                              (trailerItem.overview.length > 200
+                                ? "..."
+                                : "")}
+                            {trailerItem.overview.length > 200 && (
+                              <button
+                                onClick={() => setIsExpanded(!isExpanded)}
+                                className="ml-2 text-blue-400 hover:text-blue-500 text-xs font-semibold"
+                              >
+                                {isExpanded ? "Show less" : "Read more"}
+                              </button>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Recommendations */}
+                    {trailerItem.recommendations?.length > 0 && (
+                      <div className="p-4 xl:p-6">
+                        <div className="flex items-center justify-between mb-3 xl:mb-4">
+                          <h3 className="text-gray-400 font-semibold text-sm xl:text-base uppercase tracking-wide">
+                            You Might Also Like
+                          </h3>
+                          <span className="text-sm xl:text-base text-gray-500 bg-gray-800/50 px-2 py-1 rounded-full">
+                            {trailerItem.recommendations.length}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3 gap-3 xl:gap-4">
+                          {trailerItem.recommendations.slice(0, 20).map((rec) => (
+                            <div
+                              key={rec.id}
+                              className="group relative cursor-pointer rounded-2xl overflow-hidden border border-gray-700/40 bg-gray-900/40 backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:border-blue-500/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)]"
+                              onClick={() => handleSelectTrailer(rec)}
+                              title={rec.title}
+                            >
+                              {/* Poster Image */}
+                              <div className="aspect-[2/3] relative overflow-hidden">
+                                <Image
+                                  src={`https://image.tmdb.org/t/p/w300${rec.poster_path}`}
+                                  alt={rec.title}
+                                  width={300}
+                                  height={450}
+                                  className="object-cover w-full h-full transform transition-transform duration-500 group-hover:scale-110"
+                                />
+
+                                {/* Gradient Overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-70 group-hover:opacity-80 transition-opacity duration-500" />
+
+                                {/* Example Badge (optional) */}
+                                <span className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-blue-500/80 text-white text-[10px] font-semibold tracking-wide shadow-md">
+                                  {rec.vote_average?.toFixed(1) ?? "N/A"}
+                                </span>
+                              </div>
+
+                              {/* Title */}
+                              <div className="p-2 text-center">
+                                <p className="text-white text-sm font-semibold line-clamp-2 leading-snug group-hover:text-blue-400 transition-colors duration-300">
+                                  {rec.title}
+                                </p>
+                              </div>
+                            </div>
+
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-                {/* Close button */}
-                <button
-                  onClick={() => setSelectedTrailer(null)}
-                  className="absolute top-3 right-3 sm:top-4 sm:right-4 text-white hover:text-red-500 transition text-2xl sm:text-3xl z-50"
-                  aria-label="Close trailer"
-                >
-                  ✕
-                </button>
-              </div>
+                </div>
+              )}
             </div>
-          );
-        })()}
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedTrailer(null)}
+              className="absolute top-3 right-3 rounded-full bg-white/20 p-2 hover:bg-white/40 focus:outline-none"
+              style={{ backdropFilter: "blur(6px)" }}
+            >
+              <IconX className="text-white w-5 h-5" />
+            </button>
+
+          </div>
+        );
+      })()}
     </section>
   );
 }

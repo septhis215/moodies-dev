@@ -171,3 +171,26 @@
   -ms-overflow-style: none; /* IE + Edge */
   scrollbar-width: none; /* Firefox */
 }
+/* Netflix-style scrollbar */
+::-webkit-scrollbar {
+  width: 6px; /* very slim */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent; /* no visible track */
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2); /* subtle light thumb */
+  border-radius: 9999px;
+  transition: background 0.3s ease, width 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5); /* more visible on hover */
+  width: 8px; /* expand slightly on hover */
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

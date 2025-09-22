@@ -1,9 +1,9 @@
 "use client";
-
 import { useEffect, useState, useRef } from "react";
 import type { All } from "@/types/all";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { IconClock, IconTimeDuration0 } from "@tabler/icons-react";
 
 async function fetchFavorites() {
     const base = process.env.NEST_API_URL || "http://localhost:4000";
@@ -41,7 +41,7 @@ export default function FavoritesSection() {
         };
         const ref = carouselRef.current;
         if (ref) {
-            ref.addEventListener("scroll", handleScroll);
+            ref.addEventListener("scroll", handleScroll, { passive: true });
             handleScroll();
         }
         return () => {
@@ -93,6 +93,7 @@ export default function FavoritesSection() {
                         key={item.id}
                         className="relative group flex-shrink-0 w-64 snap-start rounded-2xl overflow-hidden shadow-lg cursor-pointer"
                     >
+                        {/* Poster */}
                         <Image
                             src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
                             alt={item.title}
@@ -104,29 +105,47 @@ export default function FavoritesSection() {
                         {/* Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
 
-                        {/* Text */}
+                        {/* Rating - Top Right */}
+                        {typeof item.vote_average === "number" && (
+                            <div className={`absolute top-2 right-2 z-20 text-xs px-2 py-1 rounded-lg font-bold shadow
+      ${item.vote_average && item.vote_average >= 7
+                                    ? "bg-green-500 text-white"
+                                    : item.vote_average && item.vote_average >= 5
+                                        ? "bg-yellow-400 text-black"
+                                        : "bg-red-500 text-white"
+                                }`}>
+                                {item.vote_average.toFixed(1)}
+                            </div>
+                        )}
+
+                        {/* Text Info - Bottom Left */}
                         <div className="absolute bottom-4 left-4 right-4">
-                            <h3 className="text-lg font-bold text-white">{item.title}</h3>
+                            <h3 className="text-lg font-bold text-white line-clamp-2">{item.title}</h3>
+
+                            {/* Genres */}
                             {item.genres && item.genres.length > 0 && (
-                                <div className="text-xs text-blue-300 mb-1">
-                                    {item.genres.join(", ")}
+                                <div className="text-xs text-blue-300 mb-1 line-clamp-1">
+                                    {item.genres.slice(0,3).join(", ")}
                                 </div>
                             )}
+
+                            {/* Release Date with Icon */}
                             {item.release_date && (
-                                <div className="text-xs text-gray-300 mb-1">
-                                    <span className="font-semibold">Release:</span> {item.release_date}
-                                </div>
-                            )}
-                            {typeof item.vote_average === "number" && (
-                                <div className="text-xs text-yellow-400">
-                                    <span className="font-semibold">Rating:</span> {item.vote_average}/10
+                                <div className="flex items-center text-xs text-gray-300 mb-1 gap-1">
+                                    <IconClock size={12} />
+                                    <span>{new Date(item.release_date).toLocaleDateString(undefined, {
+                                        month: "long",
+                                        day: "numeric",
+                                        year: "numeric",
+                                    })}</span>
                                 </div>
                             )}
                         </div>
                     </div>
+
                 ))}
             </div>
-        </section>
+        </section >
 
     );
 }

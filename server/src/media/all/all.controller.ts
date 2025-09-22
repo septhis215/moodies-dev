@@ -1,9 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 import { AllService } from './all.service';
 
 @Controller('all')
 export class AllController {
-  constructor(private readonly allService: AllService) {}
+  constructor(private readonly allService: AllService) { }
 
   @Get('trending/day')
   async getTrendingAllDay() {
@@ -19,7 +19,7 @@ export class AllController {
   async featured() {
     return this.allService.getFeatured(25); // number of items in the carousel row
   }
-  
+
   @Get('trending')
   async trending() {
     return this.allService.getTrending(25);
@@ -50,4 +50,13 @@ export class AllController {
   async upcomingTrailers() {
     return this.allService.getUpcomingTrailers(30);
   }
+
+  @Get(':type/:id/recommendations')
+  async getRecommendations(
+    @Param('type') type: 'movie' | 'tv',
+    @Param('id', ParseIntPipe) id: number
+  ) {
+    return this.allService.getSmartRecommendations(type, id, 3);
+  }
+
 }

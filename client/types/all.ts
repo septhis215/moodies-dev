@@ -2,7 +2,7 @@ export type All = {
     id: number;
     title: string;
     overview: string;
-    genres: string[];
+    genres?: string[];
     poster_path?: string | null;
     backdrop_path?: string | null;
     release_date?: string;
@@ -10,6 +10,9 @@ export type All = {
     trailer_key?: string | null;
     recommendations: All[];
     type: 'movie' | 'tv' | 'person';
+    runtime?: number; // for movie
+    number_of_episodes?: number; // for tv
+    first_air_date?: string; // for tv
     name?: string; // for person
     profile_path?: string | null; // for person
 };

@@ -25,7 +25,7 @@ export default function HeroThumbnail({
     return (
         <button
             onClick={onClick}
-            className={`relative flex-shrink-0 rounded-md overflow-hidden transition-transform transform focus:outline-none ${active ? 'scale-105 ring-2 ring-white' : 'scale-100'
+            className={`relative flex-shrink-0 rounded-md overflow-hidden transition-transform transform cursor-pointer focus:outline-none ${active ? 'scale-105 ring-2 ring-[#e94f37]' : 'scale-100'
                 }`}
             aria-pressed={!!active}
             aria-label={`Show ${all.title ?? 'all'}`}

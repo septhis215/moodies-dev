@@ -20,6 +20,7 @@ export type TmdbAll = {
   recommendations?: TmdbAll[];
   type?: 'movie' | 'tv';
   trailer_key?: string | null;
+  runtime?: number; // for movie
 };
 
 export type TmdbPerson = {
@@ -143,7 +144,7 @@ export class AllService implements OnModuleInit {
           vote_average: m.vote_average,
           vote_count: m.vote_count,
           popularity: m.popularity,
-          origin_country: m.origin_country ?? [],
+          origin_country: m.origin_country ,
           genres: m.genre_ids
             ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
             : [],
@@ -252,6 +253,12 @@ export class AllService implements OnModuleInit {
             const trailer = (videosData?.results ?? []).find(
               (v: any) => v.type === 'Trailer' && v.site === 'YouTube',
             );
+            const detailsUrl =
+              type === "movie"
+                ? `${this.baseUrl}/movie/${m.id}?language=en-US`
+                : `${this.baseUrl}/tv/${m.id}?language=en-US`;
+
+            const details = await this.tmdb(detailsUrl);
 
             return {
               id: m.id,
@@ -262,7 +269,10 @@ export class AllService implements OnModuleInit {
               release_date: m.release_date ?? m.first_air_date ?? null,
               vote_average: m.vote_average,
               trailer_key: trailer ? trailer.key : null,
-              recommendations: await this.getRecommendations(type, m.id, 3)
+              recommendations: await this.getRecommendations(type, m.id, 3),
+              runtime: type === "movie" ? details.runtime ?? null : null,
+              number_of_episodes: type === "tv" ? details.number_of_episodes ?? null : null,
+              genres: details.genres ? details.genres.map((g: any) => g.name) : [],
             } as TmdbAll;
           } catch {
             return {
@@ -274,8 +284,9 @@ export class AllService implements OnModuleInit {
               release_date: m.release_date ?? m.first_air_date ?? null,
               vote_average: m.vote_average,
               trailer_key: null,
-              recommendations: []
-            } as TmdbAll;
+              recommendations: [], runtime: null,
+              genres: [],
+            };
           }
         }),
       );
@@ -381,6 +392,7 @@ export class AllService implements OnModuleInit {
             : [],
           recommendations: await this.getRecommendations('tv', m.id, 5),
           type: 'tv',
+
         };
         all.push(item);
       }
@@ -404,11 +416,8 @@ export class AllService implements OnModuleInit {
       try {
         const parsed = JSON.parse(cached) as TmdbAll[];
         return parsed;
-      } catch (e) {
-        console.log(`❌ Cache parse error for ${cacheKey}:`, e);
-      }
+      } catch { }
     } else {
-      console.log(`❌ Cache miss for ${cacheKey}`);
     }
 
     if (!this.token) {
@@ -423,7 +432,6 @@ export class AllService implements OnModuleInit {
       const results = data?.results ?? [];
 
       if (results.length === 0) {
-        console.log(`❌ No recommendations returned from TMDB for ${type}/${id}`);
         return [];
       }
 
@@ -468,31 +476,21 @@ export class AllService implements OnModuleInit {
             type,
           } as TmdbAll);
 
-          console.log(`✅ Added recommendation: ${m.title || m.name} (ID: ${m.id})`);
-
           if (recs.length >= limit) break;
         } catch (videoErr) {
-          console.log(`❌ Error fetching videos for ${m.id}:`, videoErr);
           continue;
         }
       }
-
-      console.log(`📈 Processing complete:`, {
-        totalFromAPI: results.length,
-        skippedNoDate,
-        skippedNoTrailer,
-        finalCount: recs.length
-      });
-
       await this.redisService.set(cacheKey, JSON.stringify(recs), ttlSec);
       return recs;
 
     } catch (err) {
-      console.log('❌ Failed to fetch recommendations:', err);
       this.logger.error('Failed to fetch recommendations', err as any);
       return [];
     }
   }
+
+
 
   // People
   async getPeople(limit = 30): Promise<TmdbPerson[]> {
@@ -648,7 +646,7 @@ export class AllService implements OnModuleInit {
     }
   }
   async getUpcomingTrailers(limit = 30): Promise<TmdbAll[]> {
-    const ttlSec = 60 * 5; // 5 minutes
+    const ttlSec = 60 * 5;
     const cacheKey = `trailers-upcoming-${limit}`;
 
     const cached = await this.redisService.get(cacheKey);
@@ -666,20 +664,15 @@ export class AllService implements OnModuleInit {
     try {
       const items: TmdbAll[] = [];
       const today = new Date();
-      const maxPages = 20; // increase if needed to ensure enough trailers
+      const todayStr = today.toISOString().split("T")[0];
+      const maxPages = 20;
 
       const fetchTrailers = async (mediaType: "movie" | "tv") => {
         for (let page = 1; page <= maxPages; page++) {
-          let url: string;
-          if (mediaType === "movie") {
-            // Discover upcoming movies sorted by popularity
-            const todayStr = today.toISOString().split("T")[0]; // YYYY-MM-DD
-            url = `${this.baseUrl}/discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${todayStr}&page=${page}`;
-          } else {
-            // Discover TV shows currently airing
-            const todayStr = today.toISOString().split("T")[0];
-            url = `${this.baseUrl}/discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&page=${page}`;
-          }
+          const url =
+            mediaType === "movie"
+              ? `${this.baseUrl}/discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${todayStr}&page=${page}`
+              : `${this.baseUrl}/discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&page=${page}`;
 
           const data = await this.tmdb(url);
           const results = data?.results ?? [];
@@ -688,57 +681,188 @@ export class AllService implements OnModuleInit {
             const rd = m.release_date ?? m.first_air_date;
             if (!rd || new Date(rd) < today) continue;
 
-            try {
-              const videosUrl = `${this.baseUrl}/${mediaType}/${m.id}/videos?language=en-US`;
-              const videosData = await this.tmdb(videosUrl);
+            const videosUrl = `${this.baseUrl}/${mediaType}/${m.id}/videos?language=en-US`;
+            const videosData = await this.tmdb(videosUrl);
+            const trailer = (videosData?.results ?? []).find(
+              (v: any) => v.type === "Trailer" && v.site === "YouTube"
+            );
+            if (!trailer) continue;
 
-              // Only take items with a YouTube trailer
-              const trailer = (videosData?.results ?? []).find(
-                (v: any) => v.type === "Trailer" && v.site === "YouTube"
-              );
-              if (!trailer) continue;
+            // fetch full details
+            const detailsUrl =
+              mediaType === "movie"
+                ? `${this.baseUrl}/movie/${m.id}?language=en-US`
+                : `${this.baseUrl}/tv/${m.id}?language=en-US`;
 
-              items.push({
-                id: m.id,
-                title: m.title ?? m.name ?? "Untitled",
-                overview: m.overview ?? "",
-                poster_path: m.poster_path ?? null,
-                backdrop_path: m.backdrop_path ?? null,
-                release_date: rd,
-                vote_average: m.vote_average,
-                trailer_key: trailer.key,
-                type: mediaType,
-                recommendations: await this.getRecommendations(mediaType, m.id, 3),
-              } as TmdbAll);
+            const details = await this.tmdb(detailsUrl);
 
-              if (items.length >= limit) break;
-            } catch {
-              // skip if videos fetch fails
-              continue;
-            }
+            items.push({
+              id: m.id,
+              title: m.title ?? m.name ?? "Untitled",
+              overview: m.overview ?? "",
+              poster_path: m.poster_path ?? null,
+              backdrop_path: m.backdrop_path ?? null,
+              release_date: rd,
+              vote_average: m.vote_average,
+              trailer_key: trailer.key,
+              type: mediaType,
+              recommendations: [],
+              runtime: mediaType === "movie" ? details.runtime ?? null : null,
+              number_of_episodes: mediaType === "tv" ? details.number_of_episodes ?? null : null,
+              genres: details.genres ? details.genres.map((g: any) => g.name) : [],
+            } as TmdbAll);
+
+            if (items.length >= limit) break;
           }
-
           if (items.length >= limit) break;
         }
       };
 
-      // Fetch movies and TV concurrently
+      // Fetch both concurrently
       await Promise.all([fetchTrailers("movie"), fetchTrailers("tv")]);
 
-      // Sort by release date ascending and trim to limit
+      // Sort by release date
       const sorted = items
-        .sort((a, b) => {
-          const da = a.release_date ? new Date(a.release_date).getTime() : Infinity;
-          const db = b.release_date ? new Date(b.release_date).getTime() : Infinity;
-          return da - db;
-        })
+        .sort(
+          (a, b) =>
+            (a.release_date ? new Date(a.release_date).getTime() : Infinity) -
+            (b.release_date ? new Date(b.release_date).getTime() : Infinity)
+        )
         .slice(0, limit);
 
+      // Fetch recommendations concurrently
+      await Promise.all(
+        sorted.map(async (item) => {
+          item.recommendations = await this.getSmartRecommendations(
+            item.type!,
+            item.id,
+            3
+          );
+        })
+      );
+
       await this.redisService.set(cacheKey, JSON.stringify(sorted), ttlSec);
-      const shuffled = sorted.sort(() => Math.random() - 0.5);
-      return shuffled;
+      return sorted;
     } catch (err) {
       this.logger.error("Failed to fetch upcoming trailers", err as any);
+      return [];
+    }
+  }
+
+
+  // Try recommendations -> collection -> similar
+
+  async getSmartRecommendations(
+    type: "movie" | "tv",
+    id: number,
+    limit = 10
+  ): Promise<TmdbAll[]> {
+    try {
+      let collected: any[] = [];
+
+      // 1. Try TMDB recommendations
+      const recUrl = `${this.baseUrl}/${type}/${id}/recommendations?language=en-US&page=1`;
+      const recData = await this.tmdb(recUrl);
+      if (recData?.results?.length) {
+        collected.push(...recData.results);
+      }
+
+      // 2. If it's a movie, check collection (franchise)
+      if (collected.length < limit && type === "movie") {
+        const detailsUrl = `${this.baseUrl}/movie/${id}?language=en-US`;
+        const details = await this.tmdb(detailsUrl);
+        if (details?.belongs_to_collection?.id) {
+          const collId = details.belongs_to_collection.id;
+          const collUrl = `${this.baseUrl}/collection/${collId}?language=en-US`;
+          const collData = await this.tmdb(collUrl);
+          if (collData?.parts?.length) {
+            const parts = collData.parts
+              .sort(
+                (a: any, b: any) =>
+                  new Date(a.release_date).getTime() -
+                  new Date(b.release_date).getTime()
+              )
+              .filter((p: any) => p.id !== id); // exclude self
+
+            collected.push(...parts);
+          }
+        }
+      }
+
+      // 3. Fallback: use similar if not enough
+      if (collected.length < limit) {
+        const simUrl = `${this.baseUrl}/${type}/${id}/similar?language=en-US&page=1`;
+        const simData = await this.tmdb(simUrl);
+        if (simData?.results?.length) {
+          collected.push(...simData.results);
+        }
+      }
+
+      // 4. Still not enough? Use popular as absolute fallback
+      if (collected.length < limit) {
+        const popularUrl = `${this.baseUrl}/${type}/popular?language=en-US&page=1`;
+        const popularData = await this.tmdb(popularUrl);
+        if (popularData?.results?.length) {
+          collected.push(...popularData.results);
+        }
+      }
+
+
+      // 4. Deduplicate by ID, keep order
+      const unique = collected.filter(
+        (m, i, arr) => arr.findIndex((x) => x.id === m.id) === i
+      );
+
+      // 5. Fetch trailers for all candidates
+      const withTrailers = await Promise.allSettled(
+        unique.map(async (m) => {
+          const videosUrl = `${this.baseUrl}/${type}/${m.id}/videos?language=en-US`;
+          const videosData = await this.tmdb(videosUrl);
+          const trailer = (videosData?.results ?? []).find(
+            (v: any) => v.type === "Trailer" && v.site === "YouTube"
+          );
+
+          if (!trailer) return null; // mark as null if no trailer
+
+          // fetch full details
+          const detailsUrl =
+            type === "movie"
+              ? `${this.baseUrl}/movie/${m.id}?language=en-US`
+              : `${this.baseUrl}/tv/${m.id}?language=en-US`;
+
+          const details = await this.tmdb(detailsUrl);
+
+          return {
+            id: m.id,
+            title: m.title ?? m.name ?? "Untitled",
+            overview: m.overview ?? "",
+            poster_path: m.poster_path ?? null,
+            backdrop_path: m.backdrop_path ?? null,
+            release_date: m.release_date ?? m.first_air_date ?? null,
+            vote_average: m.vote_average,
+            vote_count: m.vote_count,
+            popularity: m.popularity,
+            origin_country: m.origin_country ?? [],
+            genres: m.genre_ids
+              ? m.genre_ids.map((gid: number) => this.genreMap[gid] || "Unknown")
+              : [],
+            runtime: type === "movie" ? details.runtime ?? null : null,
+            number_of_episodes: type === "tv" ? details.number_of_episodes ?? null : null,
+            trailer_key: trailer.key,
+            type,
+          } as TmdbAll;
+        })
+      );
+
+      // 6. Keep only fulfilled results with trailer
+      const valid = withTrailers
+        .filter((r) => r.status === "fulfilled" && r.value !== null)
+        .map((r: any) => r.value);
+
+      // 7. Limit to requested number of recommendations
+      return valid.slice(0, limit);
+    } catch (err) {
+      this.logger.error("getSmartRecommendations failed", err as any);
       return [];
     }
   }
