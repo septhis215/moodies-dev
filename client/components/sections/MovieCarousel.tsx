@@ -32,9 +32,9 @@ type MovieLike = {
     poster_path?: string | null;
     rating?: string | number;
     vote_average?: number;
-    overview?: string;
-    release_date?: string;
-    year?: number;
+    overview?: string | null;
+    release_date?: string | null;
+    year?: number | 0;
     genres?: string[];
     vote_count?: number;
     popularity?: number;

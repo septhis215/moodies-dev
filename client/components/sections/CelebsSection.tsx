@@ -3,11 +3,32 @@
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import type { Person } from "@/types/person";
-import { ChevronLeft, ChevronRight, Star, Heart, Award, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star, Users, Award, TrendingUp, Info } from "lucide-react";
+import { useRouter } from "next/navigation";
+
+// Type definitions
+export interface Person {
+  id: number;
+  name: string;
+  known_for_department: string;
+  profile_path: string | null;
+  popularity: number;
+  known_for: {
+    id: number;
+    title?: string;
+    name?: string;
+    media_type: "movie" | "tv";
+    poster_path?: string | null;
+    overview?: string;
+    vote_average?: number;
+    release_date?: string;
+    first_air_date?: string;
+  }[];
+}
+
 
 async function fetchPeople() {
-  const base = process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
+  const base = process.env.NEST_API_URL || 'http://localhost:4000';
   const res = await fetch(`${base}/all/peoples`, { next: { revalidate: 60 } });
   if (!res.ok) return [];
   const json = await res.json();
@@ -16,271 +37,273 @@ async function fetchPeople() {
 
 export default function CelebSection() {
   const [celebs, setCelebs] = useState<Person[]>([]);
-  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  const handleOpenPerson = (celeb: Person) => {
+    // replace with your modal if you prefer (this navigates)
+    router.push(`/person/${celeb.id}`);
+  };
+
+  const handleOpenWork = (work: any) => {
+    if (work.media_type === "movie") {
+      router.push(`/movies/${work.id}`);
+    } else if (work.media_type === "tv") {
+      router.push(`/series/${work.id}`);
+    }
+  };
 
   useEffect(() => {
-    fetchPeople().then(setCelebs);
+    fetchPeople().then(setCelebs).catch(() => setError('Failed to load celebrities')).finally(() => setLoading(false));
   }, []);
 
-  if (!celebs.length) return null;
-
   const scrollByAmount = (amount: number) => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({
-        left: amount,
-        behavior: "smooth",
-      });
-    }
+    scrollRef.current?.scrollBy({ left: amount, behavior: "smooth" });
   };
 
   const getDepartmentIcon = (department: string) => {
     switch (department?.toLowerCase()) {
       case 'acting':
-        return <Users size={12} />;
+        return <Users size={16} className="text-blue-400" />;
       case 'directing':
-        return <Award size={12} />;
+        return <Award size={16} className="text-purple-400" />;
       default:
-        return <Star size={12} />;
+        return <Star size={16} className="text-yellow-400" />;
     }
   };
 
   const getPopularityLevel = (popularity: number) => {
-    if (popularity >= 50) return { level: "Superstar", color: "text-yellow-400", bg: "bg-yellow-400/20" };
-    if (popularity >= 25) return { level: "Rising", color: "text-green-400", bg: "bg-green-400/20" };
-    if (popularity >= 10) return { level: "Popular", color: "text-blue-400", bg: "bg-blue-400/20" };
-    return { level: "Talent", color: "text-purple-400", bg: "bg-purple-400/20" };
+    if (popularity >= 40) return { level: "Top Tier", color: "text-red-400", bg: "bg-red-500/10" };
+    if (popularity >= 20) return { level: "Popular", color: "text-orange-400", bg: "bg-orange-500/10" };
+    if (popularity >= 10) return { level: "Rising", color: "text-green-400", bg: "bg-green-500/10" };
+    return { level: "Emerging", color: "text-blue-400", bg: "bg-blue-500/10" };
   };
 
-  return (
-    <section className="relative w-full px-4 sm:px-6 py-8 sm:py-12 mx-auto overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-900/10 via-transparent to-pink-900/10 pointer-events-none" />
-      <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-yellow-400/10 to-orange-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-40 h-40 bg-gradient-to-br from-pink-500/10 to-purple-600/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Section header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="mb-8 text-center sm:text-left"
-      >
-        <div className="flex items-center gap-3 justify-center sm:justify-start mb-2">
-          <motion.div
-            animate={{ rotate: [0, 360] }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="p-2 rounded-full bg-gradient-to-r from-yellow-400/20 to-pink-500/20 backdrop-blur-sm border border-white/10"
-          >
-            <Star className="w-5 h-5 text-yellow-400" fill="currentColor" />
-          </motion.div>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
-            Your Moodies Icons
-          </h2>
+  if (loading) {
+    return (
+      <section className="relative w-full px-6 py-16 mx-auto">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse space-y-8">
+            <div className="space-y-4">
+              <div className="h-8 bg-gray-700 rounded-lg w-64"></div>
+              <div className="h-4 bg-gray-800 rounded w-96"></div>
+            </div>
+            <div className="flex gap-6 overflow-hidden">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-72 h-96 bg-gray-800 rounded-2xl"></div>
+              ))}
+            </div>
+          </div>
         </div>
-        <p className="text-gray-400 text-sm sm:text-base max-w-2xl mx-auto sm:mx-0">
-          From red carpets to your screens — the stars shaping your moods and defining entertainment.
-        </p>
-      </motion.div>
+      </section>
+    );
+  }
 
-      {/* Scrollable Row */}
-      <div className="relative">
+  if (error) {
+    return (
+      <section className="relative w-full px-6 py-16 mx-auto">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="p-8 bg-gray-800/50 rounded-2xl border border-gray-700">
+            <p className="text-gray-400 text-lg mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors duration-200"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!celebs.length) return null;
+
+  return (
+    <section className="relative w-full px-6 py-16 mx-auto">
+      <div className="max-w-7xl mx-auto">
+
+        {/* Section Header */}
         <motion.div
-          ref={scrollRef}
-          className="flex gap-4 sm:gap-6 overflow-x-auto scroll-smooth scrollbar-hide snap-x snap-mandatory px-2 pb-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-12"
         >
-          {celebs.map((celeb, index) => {
-            const popularityInfo = getPopularityLevel(celeb.popularity || 0);
-
-
-            return (
-              <motion.div
-                key={celeb.id}
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.6,
-                  delay: index * 0.1,
-                  type: "spring",
-                  stiffness: 100
-                }}
-                whileHover={{
-                  scale: 1.05,
-                  rotateY: 5,
-                  z: 50
-                }}
-                onHoverStart={() => setHoveredCard(celeb.id)}
-                onHoverEnd={() => setHoveredCard(null)}
-                className="relative w-36 sm:w-40 lg:w-44 flex-shrink-0 snap-start group cursor-pointer"
-                style={{ transformStyle: "preserve-3d" }}
-              >
-                {/* Main Card */}
-                <div className="relative rounded-2xl overflow-hidden border border-white/20 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl shadow-2xl hover:shadow-3xl transition-all duration-500">
-                  {/* Image Container */}
-                  <div className="relative aspect-[3/4] overflow-hidden">
-                    <Image
-                      src={
-                        celeb.profile_path
-                          ? `https://image.tmdb.org/t/p/w300${celeb.profile_path}`
-                          : "/placeholder-person.png"
-                      }
-                      alt={celeb.name}
-                      fill
-                      className="object-cover transition-all duration-700 group-hover:scale-110"
-                      sizes="(max-width: 640px) 144px, (max-width: 1024px) 160px, 176px"
-                    />
-
-                    {/* Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-500" />
-
-                    {/* Popularity Badge */}
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.1 + 0.3 }}
-                      className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-bold backdrop-blur-md border border-white/20 ${popularityInfo.bg} ${popularityInfo.color}`}
-                    >
-                      {popularityInfo.level}
-                    </motion.div>
-
-                    {/* Department Icon */}
-                    <div className="absolute top-3 left-3 p-2 rounded-full bg-black/40 backdrop-blur-sm border border-white/20">
-                      {getDepartmentIcon(celeb.known_for_department)}
-                    </div>
-
-                    {/* Basic Info - Always Visible */}
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <motion.h3
-                        className="text-base sm:text-lg font-bold text-white mb-1 line-clamp-2 drop-shadow-lg"
-                        layout
-                      >
-                        {celeb.name}
-                      </motion.h3>
-                      <p className="text-xs sm:text-sm text-gray-300 truncate drop-shadow">
-                        {celeb.known_for_department || "Actor"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Hover Overlay with Extended Info */}
-                  <AnimatePresence>
-                    {hoveredCard === celeb.id && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 20 }}
-                        transition={{ duration: 0.3 }}
-                        className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/85 to-transparent backdrop-blur-sm p-4 pt-8"
-                      >
-                        {/* Known For Works */}
-                        <div className="space-y-2 mb-3">
-                          <h4 className="text-sm font-semibold text-white flex items-center gap-2">
-                            <Heart size={12} className="text-pink-400" />
-                            Known For
-                          </h4>
-                          <div className="space-y-1">
-                            {celeb.known_for?.slice(0, 2).map((work, idx) => (
-                              <div key={idx} className="flex items-center justify-between">
-                                <span className="text-xs text-gray-300 truncate flex-1 mr-2">
-                                  {work.title || work.name}
-                                </span>
-                                {work.vote_average && (
-                                  <div className="flex items-center gap-1 text-xs text-yellow-400">
-                                    <Star size={10} fill="currentColor" />
-                                    <span>{work.vote_average.toFixed(1)}</span>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Stats */}
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="bg-white/10 rounded-lg p-2 backdrop-blur-sm border border-white/10">
-                            <div className="text-gray-400 mb-1">Popularity</div>
-                            <div className="text-white font-semibold">
-                              {Math.round(celeb.popularity || 0)}
-                            </div>
-                          </div>
-                          <div className="bg-white/10 rounded-lg p-2 backdrop-blur-sm border border-white/10">
-                            <div className="text-gray-400 mb-1">Works</div>
-                            <div className="text-white font-semibold">
-                              {celeb.known_for?.length || 0}+
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Action Button */}
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className="w-full mt-3 px-3 py-2 bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white text-xs font-semibold rounded-lg backdrop-blur-sm border border-white/20 hover:from-purple-500 hover:to-pink-500 transition-all duration-300"
-                        >
-                          View Profile
-                        </motion.button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Subtle Glow Effect */}
-                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/20 via-transparent to-pink-500/20 blur-xl" />
-                  </div>
-                </div>
-
-                {/* Floating Elements */}
-                <motion.div
-                  className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full opacity-0 group-hover:opacity-100"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    rotate: [0, 180, 360]
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                />
-              </motion.div>
-            );
-          })}
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+              Your Moodies Icons
+            </h2>
+          </div>
+          <p className="text-gray-400 text-sm mt-1">
+            Discover the most popular stars and rising talents in entertainment
+          </p>
         </motion.div>
 
+        {/* Celebrity Cards */}
+        <div className="relative">
+          <motion.div
+            ref={scrollRef}
+            className="flex gap-6 overflow-x-auto scroll-smooth scrollbar-hide pb-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            {celebs.map((celeb) => {
+              const popularityInfo = getPopularityLevel(celeb.popularity || 0);
 
-        {/* Enhanced Navigation Buttons */}
-        <motion.button
-          onClick={() => scrollByAmount(-400)}
-          whileHover={{ scale: 1.1, x: -2 }}
-          whileTap={{ scale: 0.9 }}
-          className="absolute top-1/2 -left-2 -translate-y-1/2 p-3 rounded-full bg-gradient-to-r from-gray-800/90 to-gray-700/90 hover:from-gray-700 hover:to-gray-600 text-white backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </motion.button>
+              return (
+                <motion.div
+                  key={celeb.id}
+                  className="relative flex-shrink-0 w-44 group"
+                  style={{ minHeight: "380px", maxHeight: "400px" }}
+                >
+                  {/* Main Card */}
+                  <div className="flex flex-col h-full bg-black/70 backdrop-blur-md rounded-2xl overflow-hidden border border-gray-800/60 shadow-md hover:shadow-xl transition-all duration-300">
 
-        <motion.button
-          onClick={() => scrollByAmount(400)}
-          whileHover={{ scale: 1.1, x: 2 }}
-          whileTap={{ scale: 0.9 }}
-          className="absolute top-1/2 -right-2 -translate-y-1/2 p-3 rounded-full bg-gradient-to-r from-gray-800/90 to-gray-700/90 hover:from-gray-700 hover:to-gray-600 text-white backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </motion.button>
+                    {/* --- Top: Profile Section --- */}
+                    <div
+                      onClick={() => handleOpenPerson(celeb)}
+                      className="relative w-full h-48 cursor-pointer flex-shrink-0"
+                    >
+                      {/* Profile Image */}
+                      <Image
+                        src={
+                          celeb.profile_path
+                            ? `https://image.tmdb.org/t/p/w400${celeb.profile_path}`
+                            : "/placeholder-person.png"
+                        }
+                        alt={celeb.name}
+                        fill
+                        className="object-cover object-top brightness-105 contrast-105 group-hover: opacity-100 transition-transform duration-500"
+                        sizes="256px"
+                      />
+
+                      {/* Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-40 group-hover:opacity-80 transition" />
+
+                      {/* Popularity Badge */}
+                      <div
+                        className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium 
+      border border-white/10 backdrop-blur-sm 
+      ${popularityInfo.bg} ${popularityInfo.color}`}
+                      >
+                        {popularityInfo.level}
+                      </div>
+
+                      {/* Department Icon */}
+                      <div className="absolute top-3 left-3 p-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10">
+                        {getDepartmentIcon(celeb.known_for_department)}
+                      </div>
+                    </div>
+
+
+                    {/* --- Bottom: Content Section --- */}
+                    <div className="flex-1 flex flex-col p-4 justify-between bg-black/50 h-[calc(400px-192px)]">
+                      {/* Name & Info */}
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h3
+                            className="text-md font-semibold text-white line-clamp-2 cursor-pointer hover:text-[#e94f37] transition"
+                            onClick={() => handleOpenPerson(celeb)}
+                          >
+                            {celeb.name}
+                          </h3>
+                          <button
+                            onClick={() => handleOpenPerson(celeb)}
+                            className="ml-1 shrink-0 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white"
+                            aria-label={`More info about ${celeb.name}`}
+                          >
+                            <Info className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <p className="text-xs text-gray-400 mb-2">
+                          {celeb.known_for_department || "Entertainment"}
+                        </p>
+                      </div>
+
+                      {/* Notable Works */}
+                      {celeb.known_for && celeb.known_for.length > 0 ? (
+                        <div className="space-y-1 overflow-hidden">
+                          <p className="text-xs text-gray-500">Notable Works</p>
+                          {celeb.known_for.slice(0, 1).map((work: any, idx: number) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleOpenWork(work)}
+                              className="flex items-center gap-2 p-2 rounded-md bg-gray-800/50 border border-gray-700/30 hover:bg-gray-700/50 cursor-pointer transition"
+                            >
+                              {/* Thumbnail */}
+                              <div className="w-10 h-14 rounded-md overflow-hidden bg-gray-700">
+                                {work.poster_path ? (
+                                  <Image
+                                    src={`https://image.tmdb.org/t/p/w154${work.poster_path}`}
+                                    alt={work.title || work.name}
+                                    width={40}
+                                    height={56}
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-300">N/A</div>
+                                )}
+                              </div>
+
+                              {/* Work Meta */}
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm text-white font-medium truncate block">
+                                  {work.title || work.name}
+                                </span>
+                                {work.release_date || work.first_air_date ? (
+                                  <span className="text-[11px] text-gray-400">
+                                    {new Date(work.release_date ?? work.first_air_date).getFullYear()}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-gray-500">No notable works</div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+
+          {/* Navigation Buttons */}
+          <button
+            onClick={() => scrollByAmount(-400)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 p-3 rounded-full bg-gray-900/80 hover:bg-gray-800 text-white backdrop-blur-sm border border-gray-700 shadow-lg transition-all duration-200 hover:scale-110"
+            aria-label="Previous celebrities"
+          >
+            <ChevronLeft size={20} />
+          </button>
+
+          <button
+            onClick={() => scrollByAmount(400)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 p-3 rounded-full bg-gray-900/80 hover:bg-gray-800 text-white backdrop-blur-sm border border-gray-700 shadow-lg transition-all duration-200 hover:scale-110"
+            aria-label="Next celebrities"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
       </div>
 
-      {/* Custom Scrollbar Styles */}
+      {/* Custom scrollbar styles */}
       <style jsx>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+    `}</style>
     </section>
   );
+
 }
