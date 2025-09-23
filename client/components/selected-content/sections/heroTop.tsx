@@ -2,7 +2,8 @@
 
 import React from "react";
 
-export type Movie = {
+// Original Content type for internal use
+export type Content = {
   id: number;
   title: string;
   year: number | string;
@@ -14,6 +15,50 @@ export type Movie = {
   overview: string;
   director?: string;
   ageRating?: string;
+};
+
+// Movie API data structure (matching your MovieDetailsData)
+export type MovieDetailsData = {
+  info: {
+    id: number;
+    title: string;
+    overview: string;
+    release_date: string;
+    runtime: number;
+    budget: number;
+    revenue: number;
+    vote_average: number;
+    vote_count: number;
+    genres: Array<{ id: number; name: string }>;
+    production_companies: Array<{
+      id: number;
+      name: string;
+      logo_path?: string;
+    }>;
+    production_countries: Array<{ iso_3166_1: string; name: string }>;
+    spoken_languages: Array<{ iso_639_1: string; name: string }>;
+    status: string;
+    tagline?: string;
+    homepage?: string;
+    poster_path?: string;
+    backdrop_path?: string;
+  };
+  credits: {
+    cast: Array<{
+      id: number;
+      name: string;
+      character: string;
+      profile_path?: string;
+      order: number;
+    }>;
+    crew: Array<{
+      id: number;
+      name: string;
+      job: string;
+      department: string;
+      profile_path?: string;
+    }>;
+  };
 };
 
 function StarRating({ rating }: { rating: number }) {
@@ -50,13 +95,66 @@ function GenreBadge({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function SpecificMovieCard({ movie }: { movie: Movie }) {
+// Helper function to format runtime from minutes to hours and minutes
+function formatRuntime(minutes: number): string {
+  if (!minutes) return "Unknown";
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+}
+
+// Helper function to extract year from date string
+function extractYear(dateString: string): string {
+  if (!dateString) return "Unknown";
+  return new Date(dateString).getFullYear().toString();
+}
+
+// Helper function to find director from crew
+function findDirector(crew: MovieDetailsData["credits"]["crew"]): string {
+  const director = crew.find((person) => person.job === "Director");
+  return director?.name || "Unknown";
+}
+
+// Component that accepts either Content or MovieDetailsData
+interface HeroContentCardProps {
+  content?: Content;
+  data?: MovieDetailsData;
+}
+
+export function HeroContentCard({ content, data }: HeroContentCardProps) {
+  // If data prop is provided, map it to the Content format
+  const mappedContent: Content = React.useMemo(() => {
+    if (content) return content;
+
+    if (!data) {
+      throw new Error("Either content or data prop must be provided");
+    }
+
+    return {
+      id: data.info.id,
+      title: data.info.title,
+      year: extractYear(data.info.release_date),
+      poster: data.info.poster_path
+        ? `https://image.tmdb.org/t/p/w500${data.info.poster_path}`
+        : "/placeholder-poster.jpg",
+      backdrop: data.info.backdrop_path
+        ? `https://image.tmdb.org/t/p/original${data.info.backdrop_path}`
+        : "/placeholder-backdrop.jpg",
+      genres: data.info.genres.map((g) => g.name),
+      runtime: formatRuntime(data.info.runtime),
+      rating: data.info.vote_average,
+      overview: data.info.overview,
+      director: findDirector(data.credits.crew),
+      ageRating: undefined, // This would need to come from certification data if available
+    };
+  }, [content, data]);
+
   return (
     <div className="w-full min-h-screen relative text-white font-inter overflow-hidden">
       <div
         className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: `url(${movie.backdrop})`,
+          backgroundImage: `url(${mappedContent.backdrop})`,
           backgroundSize: "cover",
           backgroundPosition: "center center",
         }}
@@ -75,8 +173,8 @@ export function SpecificMovieCard({ movie }: { movie: Movie }) {
             <div className="flex-shrink-0 w-48 sm:w-56 lg:w-64 xl:w-72 mx-auto lg:mx-0">
               <div className="rounded-lg shadow-2xl overflow-hidden transform transition-transform hover:scale-105">
                 <img
-                  src={movie.poster}
-                  alt={`${movie.title} poster`}
+                  src={mappedContent.poster}
+                  alt={`${mappedContent.title} poster`}
                   className="w-full h-auto block"
                 />
               </div>
@@ -87,15 +185,15 @@ export function SpecificMovieCard({ movie }: { movie: Movie }) {
               {/* Title and Year */}
               <div>
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold tracking-tight leading-tight">
-                  {movie.title}
+                  {mappedContent.title}
                 </h1>
                 <div className="mt-3 flex items-center justify-center lg:justify-start gap-3 flex-wrap">
                   <span className="text-sm bg-white/10 border border-white/20 px-3 py-1 rounded-md">
-                    {movie.year}
+                    {mappedContent.year}
                   </span>
-                  {movie.ageRating && (
+                  {mappedContent.ageRating && (
                     <span className="text-xs bg-green-600 text-black px-3 py-1 rounded-md font-medium">
-                      {movie.ageRating}
+                      {mappedContent.ageRating}
                     </span>
                   )}
                   <span className="text-sm text-white/70 flex items-center gap-2">
@@ -108,7 +206,7 @@ export function SpecificMovieCard({ movie }: { movie: Movie }) {
                     >
                       <path strokeWidth={1.5} d="M12 3v18m9-9H3" />
                     </svg>
-                    {movie.runtime}
+                    {mappedContent.runtime}
                   </span>
                 </div>
               </div>
@@ -118,22 +216,22 @@ export function SpecificMovieCard({ movie }: { movie: Movie }) {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-white/70">Directed by</span>
                   <span className="text-sm font-medium text-white">
-                    {movie.director ?? "Unknown"}
+                    {mappedContent.director ?? "Unknown"}
                   </span>
                 </div>
-                <StarRating rating={movie.rating} />
+                <StarRating rating={mappedContent.rating} />
               </div>
 
               {/* Genres */}
               <div className="flex items-center justify-center lg:justify-start gap-2 flex-wrap">
-                {movie.genres.map((g) => (
+                {mappedContent.genres.map((g) => (
                   <GenreBadge key={g}>{g}</GenreBadge>
                 ))}
               </div>
 
               {/* Overview */}
               <p className="max-w-3xl text-white/90 leading-relaxed text-sm sm:text-base lg:text-lg">
-                {movie.overview}
+                {mappedContent.overview}
               </p>
 
               {/* Actions */}
@@ -199,4 +297,4 @@ export function SpecificMovieCard({ movie }: { movie: Movie }) {
   );
 }
 
-export default SpecificMovieCard;
+export default HeroContentCard;

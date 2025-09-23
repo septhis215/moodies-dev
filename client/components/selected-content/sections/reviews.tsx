@@ -23,16 +23,24 @@ type Review = {
 };
 
 interface ReviewsSectionProps {
-  reviews: Review[];
-  movieId?: string; // <-- new optional prop (used to build the "view all" link)
+  // accept either an array or TMDB-style object { results: Review[] }
+  reviews: Review[] | { results?: Review[] } | undefined;
+  movieId?: string; // optional id used to build the "view all" link
+  contentType?: "movie" | "tv"; // default is movie; pass "tv" from your tv page
 }
 
 export default function ReviewsSection({
   reviews,
   movieId,
+  contentType = "movie",
 }: ReviewsSectionProps) {
+  // Normalize incoming reviews to an array
+  const reviewsArray: Review[] = Array.isArray(reviews)
+    ? reviews
+    : (reviews && (reviews as any).results) || [];
+
   const [localReviews, setLocalReviews] = useState<Review[]>(
-    reviews ? [...reviews] : []
+    reviewsArray ? [...reviewsArray] : []
   );
   const [sortBy, setSortBy] = useState<"latest" | "highest" | "popularity">(
     "latest"
@@ -130,15 +138,18 @@ export default function ReviewsSection({
     setMarkedHelpful((m) => ({ ...m, [newReview.id]: false }));
   }
 
-  // base path for "view all" — fallback to "#" if movieId not provided
-  const viewAllHref = movieId ? `/movies/${movieId}/reviews` : "#";
+  // build base path depending on contentType (movie or tv)
+  const basePath = contentType === "tv" ? "tv" : "movies";
+  const viewAllHref = movieId ? `/${basePath}/${movieId}/reviews` : "#";
 
   return (
     <section className="space-y-6">
       {/* Header + controls */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-semibold">Audience Reviews</h2>
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+            Audience Reviews
+          </h2>
           <p className="text-slate-400 text-sm mt-1">
             Top community picks & latest opinions
           </p>
@@ -249,7 +260,6 @@ export default function ReviewsSection({
                           whileTap={{ scale: 0.92 }}
                           className="flex items-center gap-2"
                         >
-                          {/* local inline ThumbUp */}
                           <svg
                             width={14}
                             height={14}
@@ -268,7 +278,7 @@ export default function ReviewsSection({
                       {/* Link to the dedicated all-reviews page; include highlight param */}
                       {movieId ? (
                         <Link
-                          href={`/movies/${movieId}/reviews?highlight=${encodeURIComponent(
+                          href={`/${basePath}/${movieId}/reviews?highlight=${encodeURIComponent(
                             r.id
                           )}`}
                           className="text-xs text-indigo-400 hover:underline"
@@ -310,7 +320,7 @@ export default function ReviewsSection({
         </AnimatePresence>
       </div>
 
-      {/* REPLACED: 'View all' button that navigates to the dedicated page */}
+      {/* 'View all' button that navigates to the dedicated page */}
       <div className="pt-4">
         {movieId ? (
           <Link href={viewAllHref} className="inline-block">

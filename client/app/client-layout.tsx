@@ -10,10 +10,11 @@ export default function ClientLayout({
 }) {
   const pathname = usePathname();
   const isAuthRoute = pathname.startsWith("/auth");
+  const isAllReviewsRoute = pathname.includes("/reviews")
 
   return (
     <>
-      {!isAuthRoute && <NavbarComponent />}
+      {!isAuthRoute && !isAllReviewsRoute && <NavbarComponent />}
       <main>{children}</main>
     </>
   );

@@ -1,0 +1,2584 @@
+{
+  "info": {
+    "adult": false,
+    "backdrop_path": "/mNHRGO1gFpR2CYZdANe72kcKq7G.jpg",
+    "created_by": [
+      {
+        "id": 1215399,
+        "credit_id": "630d77d35ab81a007a85a9ee",
+        "name": "Taylor Sheridan",
+        "original_name": "Taylor Sheridan",
+        "gender": 2,
+        "profile_path": "/vdGTrPJG95AhBXr3xId5Fj8cTCu.jpg"
+      }
+    ],
+    "episode_run_time": [],
+    "first_air_date": "2022-11-13",
+    "genres": [
+      {
+        "id": 80,
+        "name": "Crime"
+      },
+      {
+        "id": 18,
+        "name": "Drama"
+      },
+      {
+        "id": 35,
+        "name": "Comedy"
+      }
+    ],
+    "homepage": "https://www.paramountplus.com/shows/tulsa-king",
+    "id": 153312,
+    "in_production": true,
+    "languages": [
+      "en"
+    ],
+    "last_air_date": "2025-09-21",
+    "last_episode_to_air": {
+      "id": 6057789,
+      "name": "Blood and Bourbon",
+      "overview": "Dwight tries to secure a distillery deal.",
+      "vote_average": 9.75,
+      "vote_count": 4,
+      "air_date": "2025-09-21",
+      "episode_number": 1,
+      "episode_type": "standard",
+      "production_code": "",
+      "runtime": 47,
+      "season_number": 3,
+      "show_id": 153312,
+      "still_path": "/kVcIMFusIwWQrVwRidDJKBDoqYX.jpg"
+    },
+    "name": "Tulsa King",
+    "next_episode_to_air": {
+      "id": 6432115,
+      "name": "The Fifty",
+      "overview": "",
+      "vote_average": 0,
+      "vote_count": 0,
+      "air_date": "2025-09-28",
+      "episode_number": 2,
+      "episode_type": "standard",
+      "production_code": "",
+      "runtime": null,
+      "season_number": 3,
+      "show_id": 153312,
+      "still_path": "/9k8RE6Gi70HRQQMKpQReysY0XqH.jpg"
+    },
+    "networks": [
+      {
+        "id": 4330,
+        "logo_path": "/fi83B1oztoS47xxcemFdPMhIzK.png",
+        "name": "Paramount+",
+        "origin_country": "US"
+      }
+    ],
+    "number_of_episodes": 29,
+    "number_of_seasons": 3,
+    "origin_country": [
+      "US"
+    ],
+    "original_language": "en",
+    "original_name": "Tulsa King",
+    "overview": "Just after he is released from prison after 25 years, New York mafia capo Dwight “The General” Manfredi is unceremoniously exiled by his boss to set up shop in Tulsa, Okla. Realizing that his mob family may not have his best interests in mind, Dwight slowly builds a “crew” from a group of unlikely characters, to help him establish a new criminal empire in a place that to him might as well be another planet.",
+    "popularity": 132.9502,
+    "poster_path": "/rOYLWCdAifpUtPlTf1WHxyaxeMt.jpg",
+    "production_companies": [
+      {
+        "id": 124254,
+        "logo_path": "/Aq2pCS1mXg4AiVwLTkh4bhcejmt.png",
+        "name": "101 Studios",
+        "origin_country": "US"
+      },
+      {
+        "id": 6329,
+        "logo_path": "/4lZJiVHPClma8YB9hXodraFXSwi.png",
+        "name": "MTV Entertainment Studios",
+        "origin_country": "US"
+      },
+      {
+        "id": 106789,
+        "logo_path": "/oEgUdRh5YWF6Il705WnpwauirIj.png",
+        "name": "Bosque Ranch Productions",
+        "origin_country": "US"
+      },
+      {
+        "id": 166120,
+        "logo_path": "/otEUziHlND4he9VvTtQU2gdULSS.png",
+        "name": "Balboa Productions",
+        "origin_country": "US"
+      },
+      {
+        "id": 105968,
+        "logo_path": null,
+        "name": "Cold Front Productions",
+        "origin_country": "US"
+      },
+      {
+        "id": 270146,
+        "logo_path": null,
+        "name": "Paramount Television Studios",
+        "origin_country": "US"
+      }
+    ],
+    "production_countries": [
+      {
+        "iso_3166_1": "US",
+        "name": "United States of America"
+      }
+    ],
+    "seasons": [
+      {
+        "air_date": "2022-11-11",
+        "episode_count": 1,
+        "id": 316060,
+        "name": "Specials",
+        "overview": "",
+        "poster_path": "/8eosbtcbJW87DmF6epumt85QmU4.jpg",
+        "season_number": 0,
+        "vote_average": 0
+      },
+      {
+        "air_date": "2022-11-13",
+        "episode_count": 9,
+        "id": 235574,
+        "name": "Season 1",
+        "overview": "",
+        "poster_path": "/qJ579ciJ2vZxVVBJUbz8UwvIGkh.jpg",
+        "season_number": 1,
+        "vote_average": 8.1
+      },
+      {
+        "air_date": "2024-09-15",
+        "episode_count": 10,
+        "id": 400029,
+        "name": "Season 2",
+        "overview": "In season two, Dwight and his crew continue to build up and defend their growing empire in Tulsa but, just as they get their bearings, they realize that they're not the only ones who want to stake their claim. With looming threats from the Kansas City mob and a very powerful local businessman, Dwight struggles to keep his family and crew safe while keeping track of all his affairs. Plus, he still has unfinished business back in New York.",
+        "poster_path": "/fGvZspAOXxpbcU5TGnJjK9KS3YZ.jpg",
+        "season_number": 2,
+        "vote_average": 7.9
+      },
+      {
+        "air_date": "2025-09-21",
+        "episode_count": 10,
+        "id": 446906,
+        "name": "Season 3",
+        "overview": "In season three, as Dwight's empire expands, so do his enemies and the risks to his crew. Now, he faces his most dangerous adversaries in Tulsa yet: the Dunmires, a powerful old-money family that doesn't play by old-world rules, forcing Dwight to fight for everything he's built and protect his family.",
+        "poster_path": "/5lMDStjZVv2gRyV3etjJ5NuHKyT.jpg",
+        "season_number": 3,
+        "vote_average": 9.8
+      }
+    ],
+    "spoken_languages": [
+      {
+        "english_name": "English",
+        "iso_639_1": "en",
+        "name": "English"
+      }
+    ],
+    "status": "Returning Series",
+    "tagline": "More power, more problems.",
+    "type": "Scripted",
+    "vote_average": 8.3,
+    "vote_count": 2233
+  },
+  "credits": {
+    "cast": [
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 16483,
+        "known_for_department": "Acting",
+        "name": "Sylvester Stallone",
+        "original_name": "Sylvester Stallone",
+        "popularity": 6.7883,
+        "profile_path": "/gn3pDWthJqR0VDYGViGD3048og7.jpg",
+        "character": "Dwight 'The General' Manfredi",
+        "credit_id": "61b47a64aafebd00606af4f7",
+        "order": 0
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 41089,
+        "known_for_department": "Acting",
+        "name": "Martin Starr",
+        "original_name": "Martin Starr",
+        "popularity": 1.4819,
+        "profile_path": "/gNyCdend3C5gY3ucq42Zt3swfg2.jpg",
+        "character": "Lawrence 'Bodhi' Geigerman",
+        "credit_id": "63190af3caef2d00794a9b20",
+        "order": 1
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 3479133,
+        "known_for_department": "Acting",
+        "name": "Jay Will",
+        "original_name": "Jay Will",
+        "popularity": 0.8806,
+        "profile_path": "/6ABA1136deiDOBMOHAtJIMsOnSM.jpg",
+        "character": "Tyson Mitchell",
+        "credit_id": "623d4cf8efca000047aed712",
+        "order": 2
+      },
+      {
+        "adult": false,
+        "gender": 1,
+        "id": 18750,
+        "known_for_department": "Acting",
+        "name": "Annabella Sciorra",
+        "original_name": "Annabella Sciorra",
+        "popularity": 2.733,
+        "profile_path": "/p2dnBSjLzKxldrHCQZYmVq0LcFw.jpg",
+        "character": "Joanne",
+        "credit_id": "638c73a115376c3e0ff3cab9",
+        "order": 6
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 2203,
+        "known_for_department": "Acting",
+        "name": "Neal McDonough",
+        "original_name": "Neal McDonough",
+        "popularity": 3.2975,
+        "profile_path": "/3mI3i1CpjATSCta1Tb2qsyl1KCh.jpg",
+        "character": "Cal Thresher",
+        "credit_id": "66d074b1181f96b34a032e5b",
+        "order": 8
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 81685,
+        "known_for_department": "Acting",
+        "name": "Frank Grillo",
+        "original_name": "Frank Grillo",
+        "popularity": 3.3577,
+        "profile_path": "/br2nPzelch2Tb3pZHnYAbXng7cz.jpg",
+        "character": "Bill Bevilaqua",
+        "credit_id": "66d074b87fc4dbcb00992dce",
+        "order": 9
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 9828,
+        "known_for_department": "Acting",
+        "name": "Garrett Hedlund",
+        "original_name": "Garrett Hedlund",
+        "popularity": 1.7237,
+        "profile_path": "/9zec61HuFJgiUEzPSt0NfPIj0Xv.jpg",
+        "character": "Mitch Keller",
+        "credit_id": "63190b30fac50200a2c13067",
+        "order": 12
+      },
+      {
+        "adult": false,
+        "gender": 1,
+        "id": 65002,
+        "known_for_department": "Acting",
+        "name": "Dana Delany",
+        "original_name": "Dana Delany",
+        "popularity": 3.2058,
+        "profile_path": "/tVYfBLQVtUvUr2iqQLdjijmKlZO.jpg",
+        "character": "Margaret Devereaux",
+        "credit_id": "62b0fbacc58acd00511cf1eb",
+        "order": 13
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 418,
+        "known_for_department": "Acting",
+        "name": "Robert Patrick",
+        "original_name": "Robert Patrick",
+        "popularity": 2.7007,
+        "profile_path": "/qRv2Es9rZoloullTbzss3I5j1Mp.jpg",
+        "character": "Jeremiah Dunmire",
+        "credit_id": "68cfde5e6403e73f8d7a4dfa",
+        "order": 14
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 1078613,
+        "known_for_department": "Acting",
+        "name": "Beau Knapp",
+        "original_name": "Beau Knapp",
+        "popularity": 0.9865,
+        "profile_path": "/r6JgtWTgM5ISdSV586hERKz4lD4.jpg",
+        "character": "Cole Dunmire",
+        "credit_id": "68cfdea406de89146597d615",
+        "order": 15
+      },
+      {
+        "adult": false,
+        "gender": 1,
+        "id": 234982,
+        "known_for_department": "Acting",
+        "name": "Bella Heathcote",
+        "original_name": "Bella Heathcote",
+        "popularity": 1.0027,
+        "profile_path": "/dsgF7nkt3KKliQD74065ouAMsp.jpg",
+        "character": "Cleo Montague",
+        "credit_id": "68cfdef0133d09d9d7fe943e",
+        "order": 16
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 7166,
+        "known_for_department": "Acting",
+        "name": "Kevin Pollak",
+        "original_name": "Kevin Pollak",
+        "popularity": 0.9668,
+        "profile_path": "/jWhKIVtmc3vIoS2l1VsdNwMAMJB.jpg",
+        "character": "Special Agent Musso",
+        "credit_id": "68cfdf5cb29b8a6d72cec263",
+        "order": 17
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 1184094,
+        "known_for_department": "Acting",
+        "name": "Chris Caldovino",
+        "original_name": "Chris Caldovino",
+        "popularity": 0.4816,
+        "profile_path": "/m1c4zItCH0LQccJZ3oTjCww4xJ.jpg",
+        "character": "Dennis 'Goodie' Carangi",
+        "credit_id": "68cfdf810d67e7728374987e",
+        "order": 18
+      },
+      {
+        "adult": false,
+        "gender": 1,
+        "id": 3783745,
+        "known_for_department": "Acting",
+        "name": "McKenna Quigley Harrington",
+        "original_name": "McKenna Quigley Harrington",
+        "popularity": 1.065,
+        "profile_path": "/zCucjO9kk169oOMn4jeoB1vAgBf.jpg",
+        "character": "Grace",
+        "credit_id": "6370bd9121621b00777dca20",
+        "order": 19
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 2521055,
+        "known_for_department": "Acting",
+        "name": "Michael Walden",
+        "original_name": "Michael Walden",
+        "popularity": 0.1147,
+        "profile_path": "/bFPr7XLkk9QL7Lb3NQAIeZL6ey5.jpg",
+        "character": "Bigfoot",
+        "credit_id": "66e68696e8211ecd22b06702",
+        "order": 20
+      }
+    ],
+    "crew": [
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 63554,
+        "known_for_department": "Writing",
+        "name": "Dave Erickson",
+        "original_name": "Dave Erickson",
+        "popularity": 0.2279,
+        "profile_path": "/3xI9ngMIgBKoxXPvPsjmPny49bb.jpg",
+        "credit_id": "67d9ba4e23b7f503b90e8600",
+        "department": "Production",
+        "job": "Executive Producer"
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 62635,
+        "known_for_department": "Writing",
+        "name": "Terence Winter",
+        "original_name": "Terence Winter",
+        "popularity": 0.2269,
+        "profile_path": "/6zXJtYwjH9njuAcyCIeZXngVOgR.jpg",
+        "credit_id": "61b4774ad144430092c78a23",
+        "department": "Production",
+        "job": "Executive Producer"
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 1654005,
+        "known_for_department": "Production",
+        "name": "Braden Aftergood",
+        "original_name": "Braden Aftergood",
+        "popularity": 0.1391,
+        "profile_path": "/857BhJFFN2dtPX78hD6DvkmIPTK.jpg",
+        "credit_id": "61b47772bd32090060ee075a",
+        "department": "Production",
+        "job": "Executive Producer"
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 1215399,
+        "known_for_department": "Writing",
+        "name": "Taylor Sheridan",
+        "original_name": "Taylor Sheridan",
+        "popularity": 2.5352,
+        "profile_path": "/vdGTrPJG95AhBXr3xId5Fj8cTCu.jpg",
+        "credit_id": "61b47724894ed6005e910e03",
+        "department": "Production",
+        "job": "Executive Producer"
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 4232,
+        "known_for_department": "Production",
+        "name": "Bob Yari",
+        "original_name": "Bob Yari",
+        "popularity": 0.2577,
+        "profile_path": "/8PecTVSJk5uJmndCGTLwgsLPEhP.jpg",
+        "credit_id": "61b47790f9183a008d0f35f4",
+        "department": "Production",
+        "job": "Executive Producer"
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 16483,
+        "known_for_department": "Acting",
+        "name": "Sylvester Stallone",
+        "original_name": "Sylvester Stallone",
+        "popularity": 6.7883,
+        "profile_path": "/gn3pDWthJqR0VDYGViGD3048og7.jpg",
+        "credit_id": "61b4770a7d5f4b0091225baf",
+        "department": "Production",
+        "job": "Executive Producer"
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 228247,
+        "known_for_department": "Production",
+        "name": "Ron Burkle",
+        "original_name": "Ron Burkle",
+        "popularity": 0.0908,
+        "profile_path": null,
+        "credit_id": "61b4778703726400635e636d",
+        "department": "Production",
+        "job": "Executive Producer"
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 21390,
+        "known_for_department": "Production",
+        "name": "David C. Glasser",
+        "original_name": "David C. Glasser",
+        "popularity": 0.4373,
+        "profile_path": "/4Wr4VdSwVDbwWwenVuOooH1cX9Z.jpg",
+        "credit_id": "61b4777f58efd30041784b10",
+        "department": "Production",
+        "job": "Executive Producer"
+      },
+      {
+        "adult": false,
+        "gender": 2,
+        "id": 1890532,
+        "known_for_department": "Production",
+        "name": "David Hutkin",
+        "original_name": "David Hutkin",
+        "popularity": 0.1713,
+        "profile_path": null,
+        "credit_id": "66d07636c91bdc6d1b2bafe3",
+        "department": "Production",
+        "job": "Executive Producer"
+      }
+    ],
+    "id": 153312
+  },
+  "trailer": null,
+  "providers": {
+    "id": 153312,
+    "results": {
+      "AD": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=AD",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 22
+          }
+        ]
+      },
+      "AE": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=AE",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 14
+          }
+        ]
+      },
+      "AL": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=AL",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 24
+          }
+        ]
+      },
+      "AR": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=AR",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 6
+          },
+          {
+            "logo_path": "/tRNA2CRgA4XHvd7Mx9dH3sFtDVb.jpg",
+            "provider_id": 339,
+            "provider_name": "MovistarTV",
+            "display_priority": 7
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 32
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 46
+          }
+        ]
+      },
+      "AT": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=AT",
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 3
+          },
+          {
+            "logo_path": "/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+            "provider_id": 3,
+            "provider_name": "Google Play Movies",
+            "display_priority": 7
+          }
+        ],
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 48
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 49
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 53
+          }
+        ]
+      },
+      "AU": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=AU",
+        "buy": [
+          {
+            "logo_path": "/9ghgSC0MA082EL6HLCW3GalykFD.jpg",
+            "provider_id": 2,
+            "provider_name": "Apple TV",
+            "display_priority": 9
+          },
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 11
+          },
+          {
+            "logo_path": "/9B7l9ZSos54kFrZbliVExt2z9C9.jpg",
+            "provider_id": 436,
+            "provider_name": "Fetch TV",
+            "display_priority": 29
+          }
+        ],
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 4
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 5
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 51
+          },
+          {
+            "logo_path": "/fts6X10Jn4QT0X6ac3udKEn2tJA.jpg",
+            "provider_id": 2303,
+            "provider_name": "Paramount Plus Premium",
+            "display_priority": 81
+          },
+          {
+            "logo_path": "/rl6zez5rCeyelt1I46JRYk6B9Ed.jpg",
+            "provider_id": 2304,
+            "provider_name": "Paramount Plus Basic with Ads",
+            "display_priority": 82
+          }
+        ]
+      },
+      "BA": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=BA",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 24
+          }
+        ]
+      },
+      "BE": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=BE",
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 33
+          }
+        ]
+      },
+      "BG": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=BG",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 18
+          }
+        ]
+      },
+      "BH": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=BH",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 22
+          }
+        ]
+      },
+      "BO": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=BO",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 5
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 29
+          }
+        ]
+      },
+      "BR": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=BR",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 5
+          },
+          {
+            "logo_path": "/7EpFKOCMrlo3bjsyBMrec64c7Wb.jpg",
+            "provider_id": 484,
+            "provider_name": "Claro tv+",
+            "display_priority": 21
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 35
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 42
+          },
+          {
+            "logo_path": "/fts6X10Jn4QT0X6ac3udKEn2tJA.jpg",
+            "provider_id": 2303,
+            "provider_name": "Paramount Plus Premium",
+            "display_priority": 72
+          }
+        ]
+      },
+      "CA": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=CA",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 9
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 11
+          },
+          {
+            "logo_path": "/cQjWvOiKRPeSuWRNGegcBjyqVbR.jpg",
+            "provider_id": 469,
+            "provider_name": "Club Illico",
+            "display_priority": 50
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 95
+          },
+          {
+            "logo_path": "/fts6X10Jn4QT0X6ac3udKEn2tJA.jpg",
+            "provider_id": 2303,
+            "provider_name": "Paramount Plus Premium",
+            "display_priority": 122
+          },
+          {
+            "logo_path": "/rl6zez5rCeyelt1I46JRYk6B9Ed.jpg",
+            "provider_id": 2304,
+            "provider_name": "Paramount Plus Basic with Ads",
+            "display_priority": 123
+          }
+        ],
+        "buy": [
+          {
+            "logo_path": "/9ghgSC0MA082EL6HLCW3GalykFD.jpg",
+            "provider_id": 2,
+            "provider_name": "Apple TV",
+            "display_priority": 5
+          },
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 55
+          }
+        ]
+      },
+      "CH": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=CH",
+        "flatrate": [
+          {
+            "logo_path": "/ytApMa9fThUQUFTn696AeNBrB8f.jpg",
+            "provider_id": 210,
+            "provider_name": "Sky",
+            "display_priority": 6
+          },
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 42
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 44
+          }
+        ]
+      },
+      "CI": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=CI",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 19
+          }
+        ]
+      },
+      "CL": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=CL",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 6
+          },
+          {
+            "logo_path": "/tRNA2CRgA4XHvd7Mx9dH3sFtDVb.jpg",
+            "provider_id": 339,
+            "provider_name": "MovistarTV",
+            "display_priority": 8
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 29
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 40
+          }
+        ]
+      },
+      "CM": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=CM",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 0
+          }
+        ]
+      },
+      "CO": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=CO",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 7
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 30
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 41
+          }
+        ]
+      },
+      "CR": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=CR",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 6
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 30
+          }
+        ]
+      },
+      "CZ": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=CZ",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 22
+          }
+        ]
+      },
+      "DE": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=DE",
+        "buy": [
+          {
+            "logo_path": "/9ghgSC0MA082EL6HLCW3GalykFD.jpg",
+            "provider_id": 2,
+            "provider_name": "Apple TV",
+            "display_priority": 4
+          },
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 7
+          }
+        ],
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 10
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 88
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 92
+          }
+        ]
+      },
+      "DK": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=DK",
+        "flatrate": [
+          {
+            "logo_path": "/ddwrbKxlX8n7TasdvrauFijCmEm.jpg",
+            "provider_id": 383,
+            "provider_name": "TV 2",
+            "display_priority": 7
+          },
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 33
+          },
+          {
+            "logo_path": "/a6z85DKGuPOyTg03TlJ6ShzzFO6.jpg",
+            "provider_id": 1961,
+            "provider_name": "Allente",
+            "display_priority": 37
+          }
+        ]
+      },
+      "DO": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=DO",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 23
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 27
+          }
+        ]
+      },
+      "DZ": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=DZ",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 24
+          }
+        ]
+      },
+      "EC": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=EC",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 3
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 29
+          }
+        ]
+      },
+      "EG": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=EG",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 28
+          }
+        ]
+      },
+      "ES": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=ES",
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 32
+          }
+        ],
+        "flatrate": [
+          {
+            "logo_path": "/f6TRLB3H4jDpFEZ0z2KWSSvu1SB.jpg",
+            "provider_id": 149,
+            "provider_name": "Movistar Plus+ Ficción Total ",
+            "display_priority": 6
+          },
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 10
+          }
+        ]
+      },
+      "FI": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=FI",
+        "flatrate": [
+          {
+            "logo_path": "/c7SqVo4DFrbK3RwhGbxvQ9SRco2.jpg",
+            "provider_id": 338,
+            "provider_name": "Ruutu",
+            "display_priority": 5
+          },
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 32
+          }
+        ],
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 54
+          }
+        ]
+      },
+      "FR": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=FR",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 59
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 60
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 62
+          },
+          {
+            "logo_path": "/fts6X10Jn4QT0X6ac3udKEn2tJA.jpg",
+            "provider_id": 2303,
+            "provider_name": "Paramount Plus Premium",
+            "display_priority": 84
+          }
+        ],
+        "buy": [
+          {
+            "logo_path": "/9ghgSC0MA082EL6HLCW3GalykFD.jpg",
+            "provider_id": 2,
+            "provider_name": "Apple TV",
+            "display_priority": 4
+          },
+          {
+            "logo_path": "/cAUTwxqoI7zc9XtYr1SMtWZEsXg.jpg",
+            "provider_id": 58,
+            "provider_name": "Canal VOD",
+            "display_priority": 8
+          },
+          {
+            "logo_path": "/9Fyo6njYvroAIxAzTBbLgnjgYga.jpg",
+            "provider_id": 61,
+            "provider_name": "Orange VOD",
+            "display_priority": 11
+          },
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 39
+          }
+        ]
+      },
+      "GB": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=GB",
+        "buy": [
+          {
+            "logo_path": "/9ghgSC0MA082EL6HLCW3GalykFD.jpg",
+            "provider_id": 2,
+            "provider_name": "Apple TV",
+            "display_priority": 4
+          },
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 7
+          },
+          {
+            "logo_path": "/6AKbY2ayaEuH4zKg2prqoVQ9iaY.jpg",
+            "provider_id": 130,
+            "provider_name": "Sky Store",
+            "display_priority": 15
+          }
+        ],
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 8
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 75
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 87
+          },
+          {
+            "logo_path": "/fts6X10Jn4QT0X6ac3udKEn2tJA.jpg",
+            "provider_id": 2303,
+            "provider_name": "Paramount Plus Premium",
+            "display_priority": 119
+          },
+          {
+            "logo_path": "/rl6zez5rCeyelt1I46JRYk6B9Ed.jpg",
+            "provider_id": 2304,
+            "provider_name": "Paramount Plus Basic with Ads",
+            "display_priority": 120
+          }
+        ]
+      },
+      "GG": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=GG",
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 83
+          }
+        ],
+        "flatrate": [
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 65
+          }
+        ]
+      },
+      "GH": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=GH",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 7
+          }
+        ]
+      },
+      "GQ": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=GQ",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 7
+          }
+        ]
+      },
+      "GT": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=GT",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 5
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 30
+          }
+        ]
+      },
+      "HN": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=HN",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 6
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 29
+          }
+        ]
+      },
+      "HR": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=HR",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 30
+          }
+        ]
+      },
+      "HU": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=HU",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 22
+          }
+        ]
+      },
+      "ID": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=ID",
+        "flatrate": [
+          {
+            "logo_path": "/9qSVItdgkVHH3Rrl9db2yRWsgBq.jpg",
+            "provider_id": 159,
+            "provider_name": "Catchplay",
+            "display_priority": 5
+          }
+        ]
+      },
+      "IE": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=IE",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 6
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 39
+          },
+          {
+            "logo_path": "/fts6X10Jn4QT0X6ac3udKEn2tJA.jpg",
+            "provider_id": 2303,
+            "provider_name": "Paramount Plus Premium",
+            "display_priority": 45
+          },
+          {
+            "logo_path": "/rl6zez5rCeyelt1I46JRYk6B9Ed.jpg",
+            "provider_id": 2304,
+            "provider_name": "Paramount Plus Basic with Ads",
+            "display_priority": 46
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 58
+          }
+        ],
+        "buy": [
+          {
+            "logo_path": "/6AKbY2ayaEuH4zKg2prqoVQ9iaY.jpg",
+            "provider_id": 130,
+            "provider_name": "Sky Store",
+            "display_priority": 9
+          },
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 42
+          }
+        ]
+      },
+      "IN": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=IN",
+        "flatrate": [
+          {
+            "logo_path": "/8b7I3EzWGQqi0Y1sJBmvQPf58Yd.jpg",
+            "provider_id": 2336,
+            "provider_name": "JioHotstar",
+            "display_priority": 5
+          }
+        ]
+      },
+      "IQ": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=IQ",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 23
+          }
+        ]
+      },
+      "IT": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=IT",
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 33
+          }
+        ],
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 9
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 48
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 52
+          }
+        ]
+      },
+      "JO": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=JO",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 22
+          }
+        ]
+      },
+      "JP": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=JP",
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 5
+          }
+        ],
+        "flatrate": [
+          {
+            "logo_path": "/4KZlGfHQEza2dBf3HVk4oWmh611.jpg",
+            "provider_id": 589,
+            "provider_name": "TELETOON+ Amazon Channel",
+            "display_priority": 74
+          }
+        ]
+      },
+      "KE": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=KE",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 7
+          }
+        ]
+      },
+      "KW": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=KW",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 23
+          }
+        ]
+      },
+      "LB": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=LB",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 23
+          }
+        ]
+      },
+      "LY": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=LY",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 24
+          }
+        ]
+      },
+      "MA": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=MA",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 23
+          }
+        ]
+      },
+      "MG": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=MG",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 0
+          }
+        ]
+      },
+      "MK": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=MK",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 23
+          }
+        ]
+      },
+      "ML": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=ML",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 0
+          }
+        ]
+      },
+      "MU": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=MU",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 5
+          }
+        ]
+      },
+      "MX": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=MX",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 8
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 17
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 19
+          },
+          {
+            "logo_path": "/fts6X10Jn4QT0X6ac3udKEn2tJA.jpg",
+            "provider_id": 2303,
+            "provider_name": "Paramount Plus Premium",
+            "display_priority": 63
+          }
+        ]
+      },
+      "MZ": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=MZ",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 7
+          }
+        ]
+      },
+      "NE": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=NE",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 19
+          }
+        ]
+      },
+      "NG": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=NG",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 21
+          }
+        ]
+      },
+      "NI": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=NI",
+        "flatrate": [
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 9
+          },
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 12
+          }
+        ]
+      },
+      "NL": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=NL",
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 34
+          }
+        ],
+        "flatrate": [
+          {
+            "logo_path": "/ozUfbWZXVdymn8iC3zze0cQPeUi.jpg",
+            "provider_id": 297,
+            "provider_name": "Ziggo TV",
+            "display_priority": 5
+          },
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 10
+          }
+        ]
+      },
+      "NO": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=NO",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 7
+          },
+          {
+            "logo_path": "/3ZigBD8WTEPcEHAvMWiJGUsv5u4.jpg",
+            "provider_id": 578,
+            "provider_name": "Strim",
+            "display_priority": 27
+          }
+        ]
+      },
+      "NZ": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=NZ",
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 59
+          }
+        ],
+        "flatrate": [
+          {
+            "logo_path": "/kZRT6tkMn7zzRy8PjPuB3g3TItL.jpg",
+            "provider_id": 395,
+            "provider_name": "TVNZ+",
+            "display_priority": 10
+          }
+        ]
+      },
+      "OM": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=OM",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 22
+          }
+        ]
+      },
+      "PA": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=PA",
+        "flatrate": [
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 28
+          },
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 29
+          }
+        ]
+      },
+      "PE": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=PE",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 5
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 30
+          }
+        ]
+      },
+      "PL": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=PL",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 6
+          }
+        ],
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 27
+          }
+        ]
+      },
+      "PS": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=PS",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 22
+          }
+        ]
+      },
+      "PT": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=PT",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 27
+          }
+        ],
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 43
+          }
+        ]
+      },
+      "PY": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=PY",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 3
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 28
+          }
+        ]
+      },
+      "QA": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=QA",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 22
+          }
+        ]
+      },
+      "RO": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=RO",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 18
+          }
+        ]
+      },
+      "RS": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=RS",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 25
+          }
+        ]
+      },
+      "SA": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=SA",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 27
+          }
+        ]
+      },
+      "SC": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=SC",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 6
+          }
+        ]
+      },
+      "SE": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=SE",
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 39
+          }
+        ],
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 7
+          }
+        ]
+      },
+      "SI": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=SI",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 25
+          }
+        ]
+      },
+      "SK": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=SK",
+        "flatrate": [
+          {
+            "logo_path": "/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+            "provider_id": 1773,
+            "provider_name": "SkyShowtime",
+            "display_priority": 32
+          }
+        ]
+      },
+      "SN": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=SN",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 7
+          }
+        ]
+      },
+      "SV": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=SV",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 24
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 28
+          }
+        ]
+      },
+      "TD": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=TD",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 0
+          }
+        ]
+      },
+      "TH": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=TH",
+        "flatrate": [
+          {
+            "logo_path": "/kwuUSaCoI9XN0ofHGVTkRm4BMYt.jpg",
+            "provider_id": 2283,
+            "provider_name": "Monomax",
+            "display_priority": 28
+          }
+        ]
+      },
+      "TN": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=TN",
+        "flatrate": [
+          {
+            "logo_path": "/bFxDjHDXP02u1dLPZfTsTC1L6EA.jpg",
+            "provider_id": 1750,
+            "provider_name": "TOD",
+            "display_priority": 24
+          }
+        ]
+      },
+      "TR": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=TR",
+        "flatrate": [
+          {
+            "logo_path": "/c8ryDZroFQtuyRVPBwXq5PLpTWV.jpg",
+            "provider_id": 1904,
+            "provider_name": "TV+",
+            "display_priority": 9
+          }
+        ]
+      },
+      "TW": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=TW",
+        "flatrate": [
+          {
+            "logo_path": "/9qSVItdgkVHH3Rrl9db2yRWsgBq.jpg",
+            "provider_id": 159,
+            "provider_name": "Catchplay",
+            "display_priority": 13
+          }
+        ]
+      },
+      "TZ": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=TZ",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 6
+          }
+        ]
+      },
+      "UG": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=UG",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 7
+          }
+        ]
+      },
+      "US": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=US",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 16
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 18
+          },
+          {
+            "logo_path": "/hExO4PtimLIYn3kBOrzsejNv7cT.jpg",
+            "provider_id": 582,
+            "provider_name": "Paramount+ Amazon Channel",
+            "display_priority": 22
+          },
+          {
+            "logo_path": "/ywIoxSjoYJGUIbR6BfxUiCHdPi3.jpg",
+            "provider_id": 633,
+            "provider_name": "Paramount+ Roku Premium Channel",
+            "display_priority": 26
+          },
+          {
+            "logo_path": "/pHk7EWuTXHVtwi4TuenmpgL6yQ3.jpg",
+            "provider_id": 2474,
+            "provider_name": "Paramount+ Originals Amazon Channel",
+            "display_priority": 327
+          },
+          {
+            "logo_path": "/p0dh0SEsxoEPRB7Z4ZuUbqqLoHQ.jpg",
+            "provider_id": 2475,
+            "provider_name": "Paramount+ MTV Amazon Channel",
+            "display_priority": 328
+          }
+        ],
+        "buy": [
+          {
+            "logo_path": "/seGSXajazLMCKGB5hnRCidtjay1.jpg",
+            "provider_id": 10,
+            "provider_name": "Amazon Video",
+            "display_priority": 4
+          },
+          {
+            "logo_path": "/9ghgSC0MA082EL6HLCW3GalykFD.jpg",
+            "provider_id": 2,
+            "provider_name": "Apple TV",
+            "display_priority": 5
+          },
+          {
+            "logo_path": "/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+            "provider_id": 3,
+            "provider_name": "Google Play Movies",
+            "display_priority": 14
+          },
+          {
+            "logo_path": "/19fkcOz0xeUgCVW8tO85uOYnYK9.jpg",
+            "provider_id": 7,
+            "provider_name": "Fandango At Home",
+            "display_priority": 35
+          }
+        ]
+      },
+      "UY": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=UY",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 2
+          }
+        ]
+      },
+      "VE": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=VE",
+        "flatrate": [
+          {
+            "logo_path": "/h5DcR0J2EESLitnhR8xLG1QymTE.jpg",
+            "provider_id": 531,
+            "provider_name": "Paramount Plus",
+            "display_priority": 6
+          },
+          {
+            "logo_path": "/tJqmTmQ8jp9WfyaZfApHK8lSywA.jpg",
+            "provider_id": 1853,
+            "provider_name": "Paramount Plus Apple TV Channel ",
+            "display_priority": 26
+          }
+        ]
+      },
+      "ZM": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=ZM",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 7
+          }
+        ]
+      },
+      "ZW": {
+        "link": "https://www.themoviedb.org/tv/153312-tulsa-king/watch?locale=ZW",
+        "flatrate": [
+          {
+            "logo_path": "/ilR8XFZOr3e3wETQ4ZXLjXQXrts.jpg",
+            "provider_id": 55,
+            "provider_name": "ShowMax",
+            "display_priority": 0
+          }
+        ]
+      }
+    }
+  },
+  "reviews": [
+    {
+      "author": "MovieGuys",
+      "author_details": {
+        "name": "",
+        "username": "MovieGuys",
+        "avatar_path": null,
+        "rating": 6
+      },
+      "content": "I have to confess I stumbled across this, quite by chance. I don't watch a lot of US entertainment these days. I did however, grow up watching my share of Stallone action films, so a dash of nostalgia and curiosity, drew me in. \r\n\r\nThere's nothing terribly original by now about the plot of Tulsa King. Its  Mafia style antics are noting new. I think it was a smart move, playing this as a dark comedy. It fits the well worn character, Stallone, inhabits. \r\n\r\nThat said, I guess the key question is, is it entertaining? I'd say \"sort of\". I like seeing Stallone back on the small screen. Regrettably, thus far and I appreciate its early days, the story is a little basic. Even for a comedy, it stretches credulity at times and lacks an intelligent wit and charm, that would have rendered it, more appealing. \r\n\r\nIn summary, Stallone's star power will probably draw people in but will viewers keep watching? Unless it ups the stakes, by crafting a more witty, clever tale of a long in tooth mobster, I for one, have my reservations.",
+      "created_at": "2022-11-14T21:14:35.733Z",
+      "id": "6372afbbed2ac2009b9f60e9",
+      "updated_at": "2022-11-14T21:15:39.434Z",
+      "url": "https://www.themoviedb.org/review/6372afbbed2ac2009b9f60e9"
+    },
+    {
+      "author": "Emily",
+      "author_details": {
+        "name": "Emily",
+        "username": "EmilyTX",
+        "avatar_path": null,
+        "rating": 9
+      },
+      "content": "It's not Shakespeare but it's a fun show to watch after you get home from work or school. Plus it's nice to see a show that is set somewhere other then usual: NYC or LA. I really liked it and I'm looking forward to next season.",
+      "created_at": "2025-09-03T00:59:11.013Z",
+      "id": "68b792df55ff55b5e58cd610",
+      "updated_at": "2025-09-04T20:10:53.173Z",
+      "url": "https://www.themoviedb.org/review/68b792df55ff55b5e58cd610"
+    }
+  ],
+  "similar": [
+    {
+      "adult": false,
+      "backdrop_path": "/clP2gGn1NYnn9IH0yN2qkA7hv4V.jpg",
+      "genre_ids": [
+        35
+      ],
+      "id": 507,
+      "origin_country": [
+        "GB"
+      ],
+      "original_language": "en",
+      "original_name": "How Do You Want Me?",
+      "overview": "Following their marriage, Ian and Lisa move back to the village where she grew up, a village still dominated by her family. In order to try to fit in, Ian takes a job as the village photographer, a profession for which he is not really cut out.",
+      "popularity": 0.7927,
+      "poster_path": "/4yD3s2z73gb64fJzkHGWWzvZT5z.jpg",
+      "first_air_date": "1998-02-24",
+      "name": "How Do You Want Me?",
+      "vote_average": 7.7,
+      "vote_count": 7
+    },
+    {
+      "adult": false,
+      "backdrop_path": null,
+      "genre_ids": [
+        35,
+        18
+      ],
+      "id": 273918,
+      "origin_country": [
+        "ES"
+      ],
+      "original_language": "es",
+      "original_name": "Yo siempre a veces",
+      "overview": "",
+      "popularity": 0.5168,
+      "poster_path": null,
+      "first_air_date": "",
+      "name": "Yo siempre a veces",
+      "vote_average": 0,
+      "vote_count": 0
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/luNxYNQXO8qbUe1ZRYeAJ8QVduW.jpg",
+      "genre_ids": [
+        35,
+        18
+      ],
+      "id": 60782,
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Married",
+      "overview": "Married is a half hour comedy about being miserably in love. Russ and Lina Bowman can barely remember what life was like before kids, debt, and suburbia rained on their romance -- but every once in a while, in between the arguments about their declining sex life and who's driving carpool, they are reminded what drew them together in the first place -- they're best friends. The show also features Russ and Lina's friend AJ, who is recently divorced and pretending he's over his wife, and their other friend Jess, who is married to a much older man who can't keep up with her.",
+      "popularity": 2.0446,
+      "poster_path": "/oRZsQ730CC1TzuRSaHoqBwcR2Sw.jpg",
+      "first_air_date": "2014-07-17",
+      "name": "Married",
+      "vote_average": 6.5,
+      "vote_count": 31
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/jEDILaZtJOqNTEnFqWnYsCEVHpr.jpg",
+      "genre_ids": [
+        35,
+        10759,
+        18
+      ],
+      "id": 94244,
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Obliterated",
+      "overview": "A special forces team thwarts a deadly plot in Sin City and parties accordingly. But when the real threat emerges, they must sober up to save Las Vegas.",
+      "popularity": 7.9436,
+      "poster_path": "/tWPAKr5RaZCQ1jaO2VRmvcIOrKh.jpg",
+      "first_air_date": "2023-11-30",
+      "name": "Obliterated",
+      "vote_average": 7,
+      "vote_count": 185
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/s9yIJIsGDJoqLzC7pHubL4Z9j0L.jpg",
+      "genre_ids": [
+        35
+      ],
+      "id": 60901,
+      "origin_country": [
+        "SE"
+      ],
+      "original_language": "en",
+      "original_name": "Welcome to Sweden",
+      "overview": "The fish-out-of-water story of New York accountant Bruce, who falls in love with a Swedish girl named Emma and follows her to Sweden.",
+      "popularity": 1.5629,
+      "poster_path": "/pS1Jl528VugcZmBsWicNed5gWO1.jpg",
+      "first_air_date": "2014-03-21",
+      "name": "Welcome to Sweden",
+      "vote_average": 6.2,
+      "vote_count": 42
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/udwNRDcncW5fYBc8l7FfUBFWOn4.jpg",
+      "genre_ids": [
+        18,
+        35
+      ],
+      "id": 2283,
+      "origin_country": [
+        "GB"
+      ],
+      "original_language": "en",
+      "original_name": "Supernova",
+      "overview": "Supernova is a British comedy series produced by Hartswood Films and jointly commissioned by the BBC in the UK and UKTV in Australia. It follows Dr Paul Hamilton, a Welsh astronomer, who leaves a dull academic post and unloved girlfriend for a new job at the Royal Australian Observatory, deep in the Australian outback. The comedy centres around his difficulties adjusting to life in the outback and his eccentric fellow astronomers. The first series was released in the United Kingdom and Australia in October 2005 and consisted of six 30-minute episodes. The second series began airing on 3 August 2006 in the UK.\n\nThe exterior scenes were shot at Broken Hill in New South Wales, Australia. The observatory itself is a CGI creation, according to the DVD commentary, and only a partial doorway was constructed on site for filming purposes.",
+      "popularity": 1.0582,
+      "poster_path": "/9cmNKVnlCyWaZysgIBFK5OvJ1QZ.jpg",
+      "first_air_date": "2005-10-11",
+      "name": "Supernova",
+      "vote_average": 7,
+      "vote_count": 1
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/bxOsPJ76bawgLzOE54ZnyIUROp0.jpg",
+      "genre_ids": [
+        10759,
+        35,
+        80,
+        18
+      ],
+      "id": 2332,
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "L.A. Heat",
+      "overview": "Meet Chase McDonald and August Brooks. Two guys who will do anything to keep L.A. safe . . . even if it means blowing half of it up. An explosive crime drama that follows the action-packed cases of robbery/homicide detectives McDonald and Brooks, who are as different as night and day.  L.A. Heat is an American action series starring Wolf Larson and Steven Williams as Los Angeles police detectives, in the tradition of films like Lethal Weapon. The series aired on TNT from March 15, 1999.",
+      "popularity": 2.98,
+      "poster_path": "/zQ0kZUZvKuVObrfVFWxjueHNfFH.jpg",
+      "first_air_date": "1999-03-15",
+      "name": "L.A. Heat",
+      "vote_average": 7.3,
+      "vote_count": 15
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/bwSmgmd90hCWwqOKQYTEraeOZhJ.jpg",
+      "genre_ids": [
+        18,
+        10768
+      ],
+      "id": 126308,
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Shōgun",
+      "overview": "In Japan in the year 1600, at the dawn of a century-defining civil war, Lord Yoshii Toranaga is fighting for his life as his enemies on the Council of Regents unite against him, when a mysterious European ship is found marooned in a nearby fishing village.",
+      "popularity": 15.1942,
+      "poster_path": "/7O4iVfOMQmdCSxhOg1WnzG1AgYT.jpg",
+      "first_air_date": "2024-02-27",
+      "name": "Shōgun",
+      "vote_average": 8.459,
+      "vote_count": 1465
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/nA19z9LnWYebUt3iqoYvkwRKIUI.jpg",
+      "genre_ids": [
+        35,
+        10751
+      ],
+      "id": 1930,
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "The Beverly Hillbillies",
+      "overview": "Jed Clampett's swamp is loaded with oil. When a wildcatter discovers the huge pool, Jed sells his land to the O.K. Oil Company and at the urging of cousin Pearl, moves his family to a 35-room mansion in Beverly Hills, California.",
+      "popularity": 17.5512,
+      "poster_path": "/sEZs4szkwBXIK3DOm37MnQN9fIe.jpg",
+      "first_air_date": "1962-09-26",
+      "name": "The Beverly Hillbillies",
+      "vote_average": 6.9,
+      "vote_count": 123
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/adsc78pBssCRr3iTgzxgdCPI1v2.jpg",
+      "genre_ids": [
+        10751,
+        10765,
+        35,
+        18
+      ],
+      "id": 155,
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "3rd Rock from the Sun",
+      "overview": "The high commander of an alien expedition lands on Earth -- what he considers to be the least-important planet -- in human form as Dick Solomon. Along for the ride are his alien compatriots Harry, Sally and Tommy -- who is the eldest of the group but is now angrily trapped in a teen's body.",
+      "popularity": 14.7916,
+      "poster_path": "/sUB4lZghNnwQywKqgjIfJsyBqI2.jpg",
+      "first_air_date": "1996-01-09",
+      "name": "3rd Rock from the Sun",
+      "vote_average": 7.477,
+      "vote_count": 526
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/rk8nWUkxstXSYCq6M6DNmu2BQF1.jpg",
+      "genre_ids": [
+        18,
+        10765
+      ],
+      "id": 91520,
+      "origin_country": [
+        "NO"
+      ],
+      "original_language": "no",
+      "original_name": "Beforeigners",
+      "overview": "In the near future a new phenomenon starts happening all over the world with powerful flashes of light occurring in the ocean and people from the past mysteriously reappearing. Called \"beforeigners,\" these people come from three separate time periods: the Stone Age, the Viking era and late 19th century. A couple of years later, Alfhildr – who comes from the Viking Age – has to partner up with a burned-out police officer, Lars Haaland, to investigate the murder of a beforeigner. The pair begins to unravel a larger conspiracy behind the origin of the mysterious mass arrivals.",
+      "popularity": 1.8142,
+      "poster_path": "/iVX1jUchy3zTaZeL12Lo7HqDEly.jpg",
+      "first_air_date": "2019-08-21",
+      "name": "Beforeigners",
+      "vote_average": 7.6,
+      "vote_count": 254
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/2Q5jGREd9xUISF75EGZl1pNA9k4.jpg",
+      "genre_ids": [
+        35,
+        10759,
+        80
+      ],
+      "id": 91445,
+      "origin_country": [
+        "GB"
+      ],
+      "original_language": "en",
+      "original_name": "Two Weeks to Live",
+      "overview": "When strange young misfit Kim Noakes was just a little girl, her father died in murky circumstances and her mother Tina whisked her away to a remote rural life of seclusion and bizarre survival techniques. Now all grown up, Kim sets out into the real world for the first time to begin a secret mission of honouring her father’s memory.",
+      "popularity": 1.4124,
+      "poster_path": "/cOhQYHbHVo03elgWA4mTW5bzNAg.jpg",
+      "first_air_date": "2020-09-02",
+      "name": "Two Weeks to Live",
+      "vote_average": 7.3,
+      "vote_count": 216
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/dJAAtG8r93DaS7mtvlj6XtBcWvp.jpg",
+      "genre_ids": [
+        18
+      ],
+      "id": 273247,
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "The Lowdown",
+      "overview": "Follow the gritty exploits of citizen journalist Lee Raybon, a self-proclaimed Tulsa \"truthstorian\" whose obsession with the truth is always getting him into trouble.",
+      "popularity": 4.6425,
+      "poster_path": "/fDybS3CmF2O3Qp5ANKqkk2rX1TD.jpg",
+      "first_air_date": "2025-09-23",
+      "name": "The Lowdown",
+      "vote_average": 0,
+      "vote_count": 0
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/z2CwqBhXDjxGAc9VfHswQxiXGrE.jpg",
+      "genre_ids": [
+        9648,
+        35,
+        18
+      ],
+      "id": 123856,
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Florida Man",
+      "overview": "A disgraced cop in debt is forced to return to his home state of Florida for a shady mission only to get swept up in a wild — and deadly — treasure hunt.",
+      "popularity": 1.8202,
+      "poster_path": "/bn4qHIxbmZOC4AqlDUbgcKYld7r.jpg",
+      "first_air_date": "2023-04-13",
+      "name": "Florida Man",
+      "vote_average": 6.7,
+      "vote_count": 102
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/gHZ0m4CVV64GROPLBy8iQOJy0Dr.jpg",
+      "genre_ids": [
+        10765,
+        18
+      ],
+      "id": 219,
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Kyle XY",
+      "overview": "A suburban family that takes in a mysterious teen naive to the world around him. As Kyle begins to show signs of brilliance, solving the mystery of his origin and potential abilities becomes the family's mission.",
+      "popularity": 7.3022,
+      "poster_path": "/4omwjf3HgGx4nZXcA0Avmd9bQny.jpg",
+      "first_air_date": "2006-06-26",
+      "name": "Kyle XY",
+      "vote_average": 7.1,
+      "vote_count": 360
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/jKGb5G9bCeGjN7m6B6ir1NmVFi6.jpg",
+      "genre_ids": [
+        10765,
+        18
+      ],
+      "id": 2746,
+      "origin_country": [
+        "ZA",
+        "CA"
+      ],
+      "original_language": "en",
+      "original_name": "Charlie Jade",
+      "overview": "Charlie Jade is a science fiction television program filmed mainly in Cape Town, South Africa. It stars Jeffrey Pierce in the title role, as a detective from a parallel universe who finds himself trapped in our universe. This is a Canadian and South African co-production filmed in conjunction with CHUM Television and the South African Industrial Development Corporation. The special effects were produced by the Montreal-based company Cinegroupe led by Michel Lemire.\n\nThe show started in 2004 and was aired on the Canadian Space Channel. It premiered on the Space Channel April 16, 2005 and aired in Eastern Europe, France, Italy, on SABC 3 in South Africa, on Fox Japan, and on AXN in Hong Kong. The show began airing in the United Kingdom in October 2007, on FX. The Sci Fi Channel in the United States premiered the show on June 6, 2008, but after 2 episodes on Friday prime-time, moved it to overnight Mon/Tue.",
+      "popularity": 0.9142,
+      "poster_path": "/2hOs2u7GmXpdjxLD5mbaQdjg2a.jpg",
+      "first_air_date": "2005-04-16",
+      "name": "Charlie Jade",
+      "vote_average": 7,
+      "vote_count": 15
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/iWQMxRDCTruFjbQ79qxpHAmklNw.jpg",
+      "genre_ids": [
+        35
+      ],
+      "id": 61671,
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Unbreakable Kimmy Schmidt",
+      "overview": "When a woman is rescued from a doomsday cult and lands in New York City, she must navigate a world she didn’t think even existed anymore.",
+      "popularity": 11.8014,
+      "poster_path": "/eMFHl0HyLg7k04OVeE4xPvT6XhY.jpg",
+      "first_air_date": "2015-03-06",
+      "name": "Unbreakable Kimmy Schmidt",
+      "vote_average": 7.144,
+      "vote_count": 573
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/cfpEjMTT3BZxa7ohtK4fY7ETL81.jpg",
+      "genre_ids": [
+        18,
+        80,
+        35
+      ],
+      "id": 1527,
+      "origin_country": [
+        "CA"
+      ],
+      "original_language": "en",
+      "original_name": "Due South",
+      "overview": "Constable Benton Fraser, an officer of the Royal Canadian Mounted Police, is attached to the Canadian consulate but works with Chicago Police Department to solve crimes.",
+      "popularity": 11.3846,
+      "poster_path": "/zspyArCSKZj8bykYUdNYdhQBirI.jpg",
+      "first_air_date": "1994-09-22",
+      "name": "Due South",
+      "vote_average": 7.5,
+      "vote_count": 75
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/onJsk0SgdIeUDoX7kOEnfyhx9TO.jpg",
+      "genre_ids": [
+        10765,
+        35,
+        10751,
+        10762
+      ],
+      "id": 1528,
+      "origin_country": [
+        "US"
+      ],
+      "original_language": "en",
+      "original_name": "Phil of the Future",
+      "overview": "Meet the Diffy family, a futuristic family from the year 2121. When the eccentric dad, Lloyd, rents a time machine for their family vacation, everyone is excited. But then something goes wrong. Their time machine malfunctions and they are thrown out of the space/time continuum in the year 2004.",
+      "popularity": 4.2971,
+      "poster_path": "/Aq3GfvfcWnaI8IgQwocz6mhNkzb.jpg",
+      "first_air_date": "2004-06-18",
+      "name": "Phil of the Future",
+      "vote_average": 6.8,
+      "vote_count": 69
+    },
+    {
+      "adult": false,
+      "backdrop_path": "/l8Hmd9SiN4dMtWIKeyqzljTuP6Z.jpg",
+      "genre_ids": [
+        18,
+        35
+      ],
+      "id": 274645,
+      "origin_country": [
+        "DE"
+      ],
+      "original_language": "de",
+      "original_name": "Schwarze Früchte",
+      "overview": "When Lalo is thrown off course by the sudden death of his father, he suppresses his loss with impulsive actions that disrupt his life. While he and his best friend Karla, both in their mid-twenties, queer and Black in Germany, try to shape who they want to become, they are forced to grapple with the limits of their flexibility.",
+      "popularity": 0.7799,
+      "poster_path": "/jKpqFLtrYbqWdNqXFGQ56yNfFiI.jpg",
+      "first_air_date": "2024-10-18",
+      "name": "Black Fruit",
+      "vote_average": 7.4,
+      "vote_count": 4
+    }
+  ]
+}
