@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Info } from "lucide-react";
 import {
@@ -46,8 +47,10 @@ export default function MovieCarousel<T extends MovieLike>({
   const containerRef = useRef<HTMLDivElement>(null);
   const [cardWidth, setCardWidth] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
+  const router = useRouter();
 
   function posterGetter(item: MovieLike): string {
+    if (typeof getPoster === "function") return getPoster(item as T);
     return item.poster_path
       ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
       : item.poster ?? "/placeholder.jpg";
@@ -58,7 +61,7 @@ export default function MovieCarousel<T extends MovieLike>({
       if (containerRef.current) {
         const firstCard =
           containerRef.current.querySelector<HTMLDivElement>(".movie-card");
-        if (firstCard) setCardWidth(firstCard.offsetWidth + 16);
+        if (firstCard) setCardWidth(firstCard.offsetWidth + 16); // gap accounted
         setContainerWidth(containerRef.current.offsetWidth);
       }
     };
@@ -84,12 +87,6 @@ export default function MovieCarousel<T extends MovieLike>({
     e.stopPropagation();
     // Open modal or quick preview
     console.log("Open quick info modal for", movieId);
-  };
-
-  const handleRecommendationClick = (e: React.MouseEvent, recHref: string) => {
-    e.stopPropagation();
-    // Let the Link handle navigation naturally
-    console.log("Open recommendation href:", recHref);
   };
 
   return (
@@ -137,24 +134,30 @@ export default function MovieCarousel<T extends MovieLike>({
                   whileHover={{ scale: 1.05 }}
                   className="movie-card relative w-40 sm:w-52 lg:w-60 flex-shrink-0 rounded-xl overflow-hidden group"
                 >
-                  <Link
-                    href={href}
-                    onClick={() => {
-                      console.log("Link clicked, href:", href);
+                  {/*
+                    OUTER CARD: not an anchor anymore to avoid nested <a>.
+                    It's keyboard accessible and uses router.push for navigation.
+                  */}
+                  <div
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => router.push(href)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") router.push(href);
                     }}
+                    className="relative group w-full h-full rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all cursor-pointer"
                   >
-                    <div className="relative group w-[200px] rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all cursor-pointer">
-                      <Image
-                        src={posterGetter(m)}
-                        alt={m.title}
-                        width={200}
-                        height={300}
-                        className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
+                    <Image
+                      src={posterGetter(m)}
+                      alt={m.title}
+                      width={500}
+                      height={750}
+                      className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
 
-                      {/* Rating Badge (non-navigating control) */}
-                      <div
-                        className={`absolute top-2 right-2 z-20 text-xs px-2 py-1 rounded-lg font-bold shadow
+                    {/* Rating Badge (non-navigating control) */}
+                    <div
+                      className={`absolute top-2 right-2 z-20 text-xs px-2 py-1 rounded-lg font-bold shadow
                           ${
                             m.vote_average && m.vote_average >= 7
                               ? "bg-green-500 text-white"
@@ -162,109 +165,108 @@ export default function MovieCarousel<T extends MovieLike>({
                               ? "bg-yellow-400 text-black"
                               : "bg-red-500 text-white"
                           }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                      >
-                        {m.vote_average?.toFixed(1)}
-                      </div>
-
-                      {/* Title bar */}
-                      <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-black/40 p-2 flex items-center justify-between transition-opacity duration-300 group-hover:opacity-0 group-hover:invisible">
-                        <h3 className="text-white text-sm font-semibold truncate">
-                          {m.title}
-                        </h3>
-                        <button
-                          className="text-white/80 hover:text-white transition"
-                          aria-label="More Info"
-                          onClick={(e) => handleQuickInfo(e, m.id)}
-                        >
-                          <Info size={16} />
-                        </button>
-                      </div>
-
-                      {/* Hover overlay content */}
-                      <div className="absolute inset-x-0 bottom-0 z-10 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out bg-black/80 text-white p-3 text-xs space-y-2 pointer-events-auto">
-                        <h3 className="text-base font-bold">{m.title}</h3>
-                        <p className="text-xs text-gray-300">
-                          {m.year ?? m.release_date}{" "}
-                          {m.origin_country?.length
-                            ? `• ${m.origin_country.join(", ")}`
-                            : ""}
-                        </p>
-                        {m.genres?.length ? (
-                          <p className="text-gray-300 text-xs">
-                            {m.genres.join(", ")}
-                          </p>
-                        ) : (
-                          <p className="text-gray-500 italic text-xs">
-                            No genres
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-400">
-                          {m.vote_count
-                            ? `${m.vote_count.toLocaleString()} ratings`
-                            : ""}
-                          {m.popularity
-                            ? ` • Popularity: ${Math.round(m.popularity)}`
-                            : ""}
-                        </p>
-
-                        {m.recommendations?.length ? (
-                          <div className="mt-3 mb-3">
-                            <p className="text-xs text-gray-400 mb-1">
-                              You might also like
-                            </p>
-                            <div className="flex gap-2 overflow-hidden">
-                              {m.recommendations.slice(0, 3).map((rec) => {
-                                const recType =
-                                  rec.type === "tv" ? "tv" : "movies";
-                                const recHref = `/${recType}/${rec.id}`;
-                                return (
-                                  <TooltipProvider key={rec.id}>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="relative">
-                                          <Link
-                                            href={recHref}
-                                            onClick={(e) =>
-                                              handleRecommendationClick(
-                                                e,
-                                                recHref
-                                              )
-                                            }
-                                          >
-                                            <Image
-                                              src={posterGetter(rec)}
-                                              alt={rec.title}
-                                              width={52}
-                                              height={77}
-                                              className="rounded-md object-cover hover:scale-105 transition cursor-pointer"
-                                            />
-                                          </Link>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        side="bottom"
-                                        sideOffset={6}
-                                        className="rounded-lg bg-white/30 backdrop-blur-md px-3 py-2 shadow-lg border border-white/20"
-                                      >
-                                        <TooltipArrow className="fill-white/30 stroke-white/20" />
-                                        <div className="text-sm font-medium text-white drop-shadow max-w-[220px] truncate">
-                                          {rec.title}
-                                        </div>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    >
+                      {m.vote_average?.toFixed(1)}
                     </div>
-                  </Link>
+
+                    {/* Title bar */}
+                    <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-black/40 p-2 flex items-center justify-between transition-opacity duration-300 group-hover:opacity-0 group-hover:invisible">
+                      <h3 className="text-white text-sm font-semibold truncate">
+                        {m.title}
+                      </h3>
+                      <button
+                        className="text-white/80 hover:text-white transition"
+                        aria-label="More Info"
+                        onClick={(e) => handleQuickInfo(e, m.id)}
+                      >
+                        <Info size={16} />
+                      </button>
+                    </div>
+
+                    {/* Hover overlay content */}
+                    <div className="absolute inset-x-0 bottom-0 z-10 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out bg-black/80 text-white p-3 text-xs space-y-2 pointer-events-auto">
+                      <h3 className="text-base font-bold">{m.title}</h3>
+                      <p className="text-xs text-gray-300">
+                        {m.year ?? m.release_date}{" "}
+                        {m.origin_country?.length
+                          ? `• ${m.origin_country.join(", ")}`
+                          : ""}
+                      </p>
+                      {m.genres?.length ? (
+                        <p className="text-gray-300 text-xs">
+                          {m.genres.join(", ")}
+                        </p>
+                      ) : (
+                        <p className="text-gray-500 italic text-xs">
+                          No genres
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-400">
+                        {m.vote_count
+                          ? `${m.vote_count.toLocaleString()} ratings`
+                          : ""}
+                        {m.popularity
+                          ? ` • Popularity: ${Math.round(m.popularity)}`
+                          : ""}
+                      </p>
+
+                      {m.recommendations?.length ? (
+                        <div className="mt-3 mb-3">
+                          <p className="text-xs text-gray-400 mb-1">
+                            You might also like
+                          </p>
+                          <div className="flex gap-2 overflow-hidden">
+                            {m.recommendations.slice(0, 3).map((rec) => {
+                              const recType =
+                                rec.type === "tv" ? "tv" : "movies";
+                              const recHref = `/${recType}/${rec.id}`;
+                              return (
+                                <TooltipProvider key={rec.id}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      {/*
+                                        KEEP inner Links as real anchors (good for SEO / open-in-new-tab)
+                                        but STOP propagation so the outer card's onClick doesn't fire.
+                                      */}
+                                      <Link
+                                        href={recHref}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                        }}
+                                        className="relative"
+                                      >
+                                        <Image
+                                          src={posterGetter(rec)}
+                                          alt={rec.title}
+                                          width={52}
+                                          height={77}
+                                          className="rounded-md object-cover hover:scale-105 transition cursor-pointer"
+                                        />
+                                      </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                      side="bottom"
+                                      sideOffset={6}
+                                      className="rounded-lg bg-white/30 backdrop-blur-md px-3 py-2 shadow-lg border border-white/20"
+                                    >
+                                      <TooltipArrow className="fill-white/30 stroke-white/20" />
+                                      <div className="text-sm font-medium text-white drop-shadow max-w-[220px] truncate">
+                                        {rec.title}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
                 </motion.div>
               );
             })

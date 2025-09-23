@@ -161,9 +161,6 @@ export class MoviesService {
     return movies;
   }
 
-  // -----------------------
-  // Aggregated details endpoint
-  // -----------------------
   async movieDetails(id: number) {
     const cacheKey = `movie/details/${id}`;
     const cached = await this.redisService.get(cacheKey);
@@ -175,7 +172,6 @@ export class MoviesService {
       }
     }
 
-    // Fetch in parallel
     const [
       info,
       credits,
@@ -186,10 +182,10 @@ export class MoviesService {
     ] = await Promise.all([
       this.movieInfo(id),
       this.movieCredits(id),
-      this.tmdb(`movie/${id}/videos?language=en-US`),
+      this.movieTrailer(id),
       this.movieProviders(id),
-      this.tmdb(`movie/${id}/reviews?language=en-US&page=1`),
-      this.tmdb(`movie/${id}/similar?language=en-US&page=1`),
+      this.movieReviews(id),
+      this.similarMovies(id),
     ]);
 
     const trailer = (videosRaw?.results ?? []).find(

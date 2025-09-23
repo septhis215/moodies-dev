@@ -5,6 +5,8 @@ import SpecificMovieCard, {
 import MovieDetails, {
   MovieDetailsData,
 } from "@/components/selected-movie/movieDetails";
+import ReviewsSection from "@/components/selected-movie/reviewsSection";
+import MovieCarousel from "@/components/sections/MovieCarousel";
 import type { Metadata } from "next";
 
 type Params = Promise<{ id: string }>;
@@ -92,12 +94,29 @@ export default async function MoviePage({ params }: { params: Params }) {
       crew: credits?.crew ?? [],
     },
     providers: data.providers ?? { results: {} },
+    reviews: data.reviews ?? { results: {} },
+    similar: data.similar ?? { results: {} },
   };
 
   return (
     <main>
       <SpecificMovieCard movie={mappedMovie} />
-      <MovieDetails data={movieDetailsData} />
+      <div className="min-h-screen bg-black text-slate-100">
+        <div className="max-w-7xl mx-auto px-6 py-16 space-y-14">
+          <MovieDetails data={movieDetailsData} />
+
+          <hr className="border-white/8 my-14" />
+          <ReviewsSection reviews={data.reviews} movieId={id}/>
+
+          {/* Similar Movies Section */}
+          <hr className="border-white/8 my-14" />
+          <MovieCarousel
+            title="Similar Movies"
+            subtitle="Films you may also enjoy"
+            items={data.similar}
+          />
+        </div>
+      </div>
     </main>
   );
 }

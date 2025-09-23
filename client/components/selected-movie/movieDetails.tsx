@@ -63,6 +63,31 @@ export type MovieDetailsData = {
       }
     >;
   };
+  reviews: Array<{
+    id: string;
+    author: string;
+    author_details: {
+      name?: string;
+      username?: string;
+      avatar_path?: string;
+      rating?: number;
+    };
+    content: string;
+    created_at: string;
+    updated_at: string;
+    url: string;
+  }>;
+  similar: Array<{
+    id: number;
+    title: string;
+    overview: string;
+    poster_path?: string;
+    backdrop_path?: string;
+    release_date: string;
+    vote_average: number;
+    vote_count: number;
+    genre_ids: number[];
+  }>;
 };
 
 interface MovieDetailsProps {
@@ -188,466 +213,460 @@ export default function MovieDetails({ data }: MovieDetailsProps) {
   const roi = info.budget ? info.revenue / Math.max(1, info.budget) : 0;
 
   return (
-    <div className="min-h-screen bg-black text-slate-100">
-      <div className="max-w-7xl mx-auto px-6 py-16 space-y-14">
-        {/* Cast carousel: single-row horizontal scroll */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-3xl font-medium tracking-wide">
-                Featured Cast
-              </h2>
-              <p className="text-slate-400 text-sm">
-                The faces behind the story
+    <>
+      {/* Cast carousel: single-row horizontal scroll */}
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-3xl font-medium tracking-wide">
+              Featured Cast
+            </h2>
+            <p className="text-slate-400 text-sm">The faces behind the story</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={scrollPrev}
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 border border-white/10 flex items-center justify-center shadow-md transition"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              onClick={scrollNext}
+              className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 border border-white/10 flex items-center justify-center shadow-md transition"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div
+          ref={scrollRef}
+          className="flex gap-8 overflow-x-auto snap-x snap-mandatory pb-8 scrollbar-none"
+        >
+          {credits.cast.map((actor) => (
+            <div
+              key={actor.id}
+              className="snap-start flex-shrink-0 min-w-[180px] text-center group"
+            >
+              <div
+                className="relative w-44 h-64 mx-auto rounded-xl overflow-hidden shadow-xl border border-white/10 bg-gradient-to-b from-slate-800/80 to-slate-900/90 
+                        group-hover:scale-105 group-hover:rotate-1 transition-all duration-500"
+              >
+                {/* Glow behind */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
+                {actor.profile_path ? (
+                  <Image
+                    src={`https://image.tmdb.org/t/p/w500${actor.profile_path}`}
+                    alt={actor.name}
+                    fill
+                    style={{ objectFit: "cover" }}
+                    sizes="176px"
+                    className="group-hover:scale-110 transition-transform duration-500"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-slate-700/40">
+                    <Users2 size={40} className="text-slate-400" />
+                  </div>
+                )}
+
+                {/* Overlay for name & role */}
+                <div className="absolute bottom-0 left-0 right-0 p-3 text-left bg-gradient-to-t from-black/70 via-black/40 to-transparent">
+                  <h3 className="font-semibold text-slate-100 truncate">
+                    {actor.name}
+                  </h3>
+                  <p className="text-slate-300 text-xs truncate italic">
+                    {actor.character}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <hr className="border-white/8" />
+
+      <section className="space-y-12">
+        {/* Director / Producer Spotlight */}
+        <div>
+          <h2 className="text-3xl font-medium mb-4">Key Personnel</h2>
+          <p className="text-slate-400 text-sm mb-8">
+            The creative visionaries behind the film
+          </p>
+
+          <div className="flex flex-wrap gap-10">
+            {getKeyCrewMembers()
+              .filter((item) => ["Director", "Producer"].includes(item.job))
+              .map((item) =>
+                item.people.slice(0, 2).map((person) => (
+                  <div
+                    key={person.id}
+                    className="flex flex-col items-center text-center"
+                  >
+                    <div className="w-28 h-28 rounded-full overflow-hidden bg-white/10 ring-2 ring-white/20 mb-3">
+                      {person.profile_path ? (
+                        <Image
+                          src={`https://image.tmdb.org/t/p/w185${person.profile_path}`}
+                          alt={person.name}
+                          width={112}
+                          height={112}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Users2 size={28} className="text-slate-500" />
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="text-slate-100 font-semibold text-base">
+                      {person.name}
+                    </h3>
+                    <p className="text-xs uppercase text-slate-400 mt-1">
+                      {item.job}
+                    </p>
+                  </div>
+                ))
+              )}
+          </div>
+        </div>
+
+        {/* Timeline Style Crew List */}
+        <div>
+          <h2 className="text-2xl font-medium mb-4">Creative Team</h2>
+          <div className="divide-y divide-white/10">
+            {getKeyCrewMembers()
+              .filter((item) => !["Director", "Producer"].includes(item.job))
+              .slice(0, 6) // limit for preview
+              .map((item) => (
+                <div
+                  key={item.job}
+                  className="flex justify-between py-3 text-sm"
+                >
+                  <span className="text-slate-400 uppercase tracking-wide font-medium">
+                    {item.job}
+                  </span>
+                  <div className="text-slate-100 font-medium">
+                    {item.people
+                      .map((person) => person.name)
+                      .slice(0, 3)
+                      .join(", ")}
+                    {item.people.length > 3 && (
+                      <button className="ml-2 text-xs text-blue-400 hover:text-blue-300">
+                        View All
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* Studio Partners */}
+        {info.production_companies?.length > 0 && (
+          <div className="relative mt-20">
+            <div className="mb-8">
+              <h2 className="text-3xl font-medium mb-4">Studio Partners</h2>
+              <p className="text-slate-400 text-sm mb-8">
+                In collaboration with industry leaders
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={scrollPrev}
-                className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 border border-white/10 flex items-center justify-center shadow-md transition"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <button
-                onClick={scrollNext}
-                className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 border border-white/10 flex items-center justify-center shadow-md transition"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+            {/* Banner Strip */}
+            <div className="relative bg-gradient-to-r from-black via-slate-900 to-black py-8 px-4 rounded-2xl border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.7)] overflow-hidden">
+              {/* subtle spotlight effect */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_70%)] pointer-events-none"></div>
 
-          <div
-            ref={scrollRef}
-            className="flex gap-8 overflow-x-auto snap-x snap-mandatory pb-8 scrollbar-none"
-          >
-            {credits.cast.map((actor) => (
-              <div
-                key={actor.id}
-                className="snap-start flex-shrink-0 min-w-[180px] text-center group"
-              >
-                <div
-                  className="relative w-44 h-64 mx-auto rounded-xl overflow-hidden shadow-xl border border-white/10 bg-gradient-to-b from-slate-800/80 to-slate-900/90 
-                        group-hover:scale-105 group-hover:rotate-1 transition-all duration-500"
-                >
-                  {/* Glow behind */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
-                  {actor.profile_path ? (
-                    <Image
-                      src={`https://image.tmdb.org/t/p/w500${actor.profile_path}`}
-                      alt={actor.name}
-                      fill
-                      style={{ objectFit: "cover" }}
-                      sizes="176px"
-                      className="group-hover:scale-110 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-slate-700/40">
-                      <Users2 size={40} className="text-slate-400" />
+              <div className="flex flex-wrap items-center justify-center gap-12 relative z-10">
+                {info.production_companies.map((company) => (
+                  <div
+                    key={company.id}
+                    className="flex flex-col items-center group"
+                  >
+                    <div className="relative flex items-center justify-center">
+                      {company.logo_path ? (
+                        <Image
+                          src={`https://image.tmdb.org/t/p/w300${company.logo_path}`}
+                          alt={company.name}
+                          width={180}
+                          height={90}
+                          className="object-contain opacity-80 group-hover:opacity-100 transition-all duration-300"
+                        />
+                      ) : (
+                        <Building2 size={40} className="text-slate-500" />
+                      )}
+                      {/* Underline accent */}
+                      <div className="absolute -bottom-2 w-0 group-hover:w-full h-[2px] bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 transition-all duration-500"></div>
                     </div>
-                  )}
-
-                  {/* Overlay for name & role */}
-                  <div className="absolute bottom-0 left-0 right-0 p-3 text-left bg-gradient-to-t from-black/70 via-black/40 to-transparent">
-                    <h3 className="font-semibold text-slate-100 truncate">
-                      {actor.name}
-                    </h3>
-                    <p className="text-slate-300 text-xs truncate italic">
-                      {actor.character}
+                    <p className="mt-4 text-xs text-slate-400 group-hover:text-slate-100 transition-colors text-center max-w-[140px]">
+                      {company.name}
                     </p>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <hr className="border-white/8" />
-
-        <section className="space-y-12">
-          {/* Director / Producer Spotlight */}
-          <div>
-            <h2 className="text-3xl font-medium mb-4">Key Personnel</h2>
-            <p className="text-slate-400 text-sm mb-8">
-              The creative visionaries behind the film
-            </p>
-
-            <div className="flex flex-wrap gap-10">
-              {getKeyCrewMembers()
-                .filter((item) => ["Director", "Producer"].includes(item.job))
-                .map((item) =>
-                  item.people.slice(0, 2).map((person) => (
-                    <div
-                      key={person.id}
-                      className="flex flex-col items-center text-center"
-                    >
-                      <div className="w-28 h-28 rounded-full overflow-hidden bg-white/10 ring-2 ring-white/20 mb-3">
-                        {person.profile_path ? (
-                          <Image
-                            src={`https://image.tmdb.org/t/p/w185${person.profile_path}`}
-                            alt={person.name}
-                            width={112}
-                            height={112}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Users2 size={28} className="text-slate-500" />
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="text-slate-100 font-semibold text-base">
-                        {person.name}
-                      </h3>
-                      <p className="text-xs uppercase text-slate-400 mt-1">
-                        {item.job}
-                      </p>
-                    </div>
-                  ))
-                )}
-            </div>
-          </div>
-
-          {/* Timeline Style Crew List */}
-          <div>
-            <h2 className="text-2xl font-medium mb-4">Creative Team</h2>
-            <div className="divide-y divide-white/10">
-              {getKeyCrewMembers()
-                .filter((item) => !["Director", "Producer"].includes(item.job))
-                .slice(0, 6) // limit for preview
-                .map((item) => (
-                  <div
-                    key={item.job}
-                    className="flex justify-between py-3 text-sm"
-                  >
-                    <span className="text-slate-400 uppercase tracking-wide font-medium">
-                      {item.job}
-                    </span>
-                    <div className="text-slate-100 font-medium">
-                      {item.people
-                        .map((person) => person.name)
-                        .slice(0, 3)
-                        .join(", ")}
-                      {item.people.length > 3 && (
-                        <button className="ml-2 text-xs text-blue-400 hover:text-blue-300">
-                          View All
-                        </button>
-                      )}
-                    </div>
-                  </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <hr className="border-white/8" />
+
+      {/* Film Analytics: dashboard layout with highlights + charts */}
+      <section>
+        <div className="mb-6">
+          <h2 className="text-3xl font-medium">Film Analytics</h2>
+          <p className="text-slate-400 text-sm">
+            Key performance metrics & insights
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Left column: KPI highlights */}
+          <div className="col-span-1 xl:col-span-1 space-y-4">
+            <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+              <div className="text-xs text-slate-400">Budget</div>
+              <div className="text-2xl font-semibold text-slate-100">
+                {formatCurrency(info.budget)}
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+              <div className="text-xs text-slate-400">Revenue</div>
+              <div
+                className={`text-2xl font-semibold ${getRevenueColor(
+                  info.budget,
+                  info.revenue
+                )}`}
+              >
+                {formatCurrency(info.revenue)}
+              </div>
+              <div className="text-xs text-slate-400">
+                ROI: {roi ? `${roi.toFixed(2)}x` : "—"}
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+              <div className="text-xs text-slate-400">Audience Rating</div>
+              <div
+                className={`text-2xl font-semibold ${getRatingColor(
+                  info.vote_average
+                )}`}
+              >
+                {info.vote_average.toFixed(1)} / 10
+              </div>
+              <div className="text-xs text-slate-400">
+                {info.vote_count.toLocaleString()} votes
+              </div>
             </div>
           </div>
 
-          {/* Studio Partners */}
-          {info.production_companies?.length > 0 && (
-            <div className="relative mt-20">
-              <div className="mb-8">
-                <h2 className="text-3xl font-medium mb-4">Studio Partners</h2>
-                <p className="text-slate-400 text-sm mb-8">
-                  In collaboration with industry leaders
-                </p>
+          {/* Middle column: performance visuals */}
+          <div className="col-span-1 xl:col-span-1 space-y-4">
+            {/* Revenue vs Budget */}
+            <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+              <div className="text-sm text-slate-300 mb-2">
+                Revenue vs Budget
               </div>
+              <div className="relative h-3 bg-white/6 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{
+                    width: `${
+                      info.budget > 0
+                        ? Math.min(100, (info.revenue / info.budget) * 100)
+                        : 0
+                    }%`,
+                  }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className="absolute top-0 left-0 h-full bg-green-500"
+                />
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                {roi >= 1.2
+                  ? "Strong performance"
+                  : roi >= 0.8
+                  ? "Average"
+                  : "Underperforming"}
+              </div>
+            </div>
 
-              {/* Banner Strip */}
-              <div className="relative bg-gradient-to-r from-black via-slate-900 to-black py-8 px-4 rounded-2xl border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.7)] overflow-hidden">
-                {/* subtle spotlight effect */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_70%)] pointer-events-none"></div>
+            {/* Rating bar */}
+            <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+              <div className="text-sm text-slate-300 mb-2">
+                Rating Distribution
+              </div>
+              <div className="h-3 bg-white/6 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(info.vote_average / 10) * 100}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className={`h-full ${
+                    info.vote_average < 5
+                      ? "bg-red-500"
+                      : info.vote_average < 7
+                      ? "bg-yellow-400"
+                      : "bg-green-500"
+                  }`}
+                />
+              </div>
+              <div className="text-xs text-slate-400 mt-1">
+                {info.vote_average >= 7.5
+                  ? "Well received"
+                  : info.vote_average >= 5
+                  ? "Mixed reception"
+                  : "Poor reception"}
+              </div>
+            </div>
+          </div>
 
-                <div className="flex flex-wrap items-center justify-center gap-12 relative z-10">
-                  {info.production_companies.map((company) => (
+          {/* Right column: quick insights */}
+          <div className="col-span-1 xl:col-span-1">
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-800/70 to-slate-900/70 border border-white/12 shadow-md">
+              <h3 className="text-sm font-medium text-slate-100 mb-3">
+                Quick Insights
+              </h3>
+              <ul className="list-disc list-inside text-sm text-slate-300 space-y-2">
+                <li>
+                  ROI: {roi ? `${roi.toFixed(2)}x` : "—"} (
+                  {roi >= 1 ? "Profitable" : "Loss"})
+                </li>
+                <li>
+                  Audience sentiment:{" "}
+                  <span
+                    className={`${
+                      info.vote_average >= 7.5
+                        ? "text-green-400"
+                        : info.vote_average >= 5
+                        ? "text-yellow-300"
+                        : "text-red-400"
+                    }`}
+                  >
+                    {info.vote_average >= 7.5
+                      ? "Positive"
+                      : info.vote_average >= 5
+                      ? "Neutral"
+                      : "Negative"}
+                  </span>
+                </li>
+                <li>
+                  {info.production_companies?.length
+                    ? `${info.production_companies.length} production partner(s)`
+                    : "No studio info"}
+                </li>
+                <li>
+                  Top genres:{" "}
+                  {info.genres
+                    ?.map((g) => g.name)
+                    .slice(0, 2)
+                    .join(", ") || "—"}
+                </li>
+              </ul>
+              <div className="mt-4 text-xs text-slate-400">
+                <strong className="text-slate-100">Tip:</strong> Bars & colors
+                indicate performance tiers — green = strong, yellow = average,
+                red = weak.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <hr className="border-white/8" />
+
+      {/* Global Distribution: Passport stamp style */}
+      <section>
+        <div className="mb-10">
+          <h2 className="text-3xl font-medium">Global Distribution</h2>
+          <p className="text-slate-400 text-sm">
+            International premieres & streaming availability
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          {/* Countries */}
+          <div className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/70 border border-white/10 shadow-lg p-6 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-[0.03] bg-[url('/textures/world-map.svg')] bg-cover bg-center"></div>
+
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-200 mb-6">
+              Release Countries
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              {info.production_countries.map((country) => (
+                <span
+                  key={country.iso_3166_1}
+                  className="px-3 py-1.5 rounded-full border border-indigo-400/40 text-xs font-medium text-slate-100 bg-indigo-500/10 backdrop-blur-sm hover:bg-indigo-500/20 transition"
+                >
+                  {country.name}
+                </span>
+              ))}
+            </div>
+
+            <div className="mt-6 text-xs text-slate-400">
+              ✦ {info.production_countries.length} countries released
+            </div>
+          </div>
+
+          {/* Streaming Platforms */}
+          <div className="rounded-2xl bg-gradient-to-br from-indigo-900/60 to-slate-900/70 border border-white/10 shadow-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-200">
+                Streaming Platforms
+              </h3>
+              <span className="text-xs text-slate-400">
+                {allProviders.length} providers
+              </span>
+            </div>
+
+            {/* Search */}
+            <div className="mb-6">
+              <input
+                type="search"
+                value={providerSearch}
+                onChange={(e) => setProviderSearch(e.target.value)}
+                placeholder="Search Netflix, Prime, Disney+..."
+                className="w-full bg-slate-800/60 text-slate-100 placeholder-slate-400 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
+              />
+            </div>
+
+            {/* Providers */}
+            <div className="max-h-72 overflow-y-auto pr-1">
+              {filteredProviders.length === 0 ? (
+                <div className="text-slate-400 text-sm text-center py-6">
+                  No providers match your search.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-4">
+                  {filteredProviders.map((provider, idx) => (
                     <div
-                      key={company.id}
-                      className="flex flex-col items-center group"
+                      key={`${provider.provider_name}-${idx}`}
+                      className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-indigo-400/60 hover:shadow-md transition-all"
                     >
-                      <div className="relative flex items-center justify-center">
-                        {company.logo_path ? (
+                      {provider.logo_path ? (
+                        <div className="w-14 h-8 relative">
                           <Image
-                            src={`https://image.tmdb.org/t/p/w300${company.logo_path}`}
-                            alt={company.name}
-                            width={180}
-                            height={90}
-                            className="object-contain opacity-80 group-hover:opacity-100 transition-all duration-300"
+                            src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`}
+                            alt={provider.provider_name}
+                            fill
+                            style={{ objectFit: "contain" }}
                           />
-                        ) : (
-                          <Building2 size={40} className="text-slate-500" />
-                        )}
-                        {/* Underline accent */}
-                        <div className="absolute -bottom-2 w-0 group-hover:w-full h-[2px] bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 transition-all duration-500"></div>
-                      </div>
-                      <p className="mt-4 text-xs text-slate-400 group-hover:text-slate-100 transition-colors text-center max-w-[140px]">
-                        {company.name}
-                      </p>
+                        </div>
+                      ) : (
+                        <div className="w-14 h-8 flex items-center justify-center bg-white/10 rounded">
+                          <GlobeIconFallback />
+                        </div>
+                      )}
+                      <span className="text-xs font-medium text-slate-200">
+                        {provider.provider_name}
+                      </span>
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <hr className="border-white/8" />
-
-        {/* Film Analytics: dashboard layout with highlights + charts */}
-        <section>
-          <div className="mb-6">
-            <h2 className="text-3xl font-medium">Film Analytics</h2>
-            <p className="text-slate-400 text-sm">
-              Key performance metrics & insights
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Left column: KPI highlights */}
-            <div className="col-span-1 xl:col-span-1 space-y-4">
-              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-                <div className="text-xs text-slate-400">Budget</div>
-                <div className="text-2xl font-semibold text-slate-100">
-                  {formatCurrency(info.budget)}
-                </div>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-                <div className="text-xs text-slate-400">Revenue</div>
-                <div
-                  className={`text-2xl font-semibold ${getRevenueColor(
-                    info.budget,
-                    info.revenue
-                  )}`}
-                >
-                  {formatCurrency(info.revenue)}
-                </div>
-                <div className="text-xs text-slate-400">
-                  ROI: {roi ? `${roi.toFixed(2)}x` : "—"}
-                </div>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-                <div className="text-xs text-slate-400">Audience Rating</div>
-                <div
-                  className={`text-2xl font-semibold ${getRatingColor(
-                    info.vote_average
-                  )}`}
-                >
-                  {info.vote_average.toFixed(1)} / 10
-                </div>
-                <div className="text-xs text-slate-400">
-                  {info.vote_count.toLocaleString()} votes
-                </div>
-              </div>
-            </div>
-
-            {/* Middle column: performance visuals */}
-            <div className="col-span-1 xl:col-span-1 space-y-4">
-              {/* Revenue vs Budget */}
-              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-                <div className="text-sm text-slate-300 mb-2">
-                  Revenue vs Budget
-                </div>
-                <div className="relative h-3 bg-white/6 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{
-                      width: `${
-                        info.budget > 0
-                          ? Math.min(100, (info.revenue / info.budget) * 100)
-                          : 0
-                      }%`,
-                    }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                    className="absolute top-0 left-0 h-full bg-green-500"
-                  />
-                </div>
-                <div className="text-xs text-slate-400 mt-1">
-                  {roi >= 1.2
-                    ? "Strong performance"
-                    : roi >= 0.8
-                    ? "Average"
-                    : "Underperforming"}
-                </div>
-              </div>
-
-              {/* Rating bar */}
-              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-                <div className="text-sm text-slate-300 mb-2">
-                  Rating Distribution
-                </div>
-                <div className="h-3 bg-white/6 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(info.vote_average / 10) * 100}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                    className={`h-full ${
-                      info.vote_average < 5
-                        ? "bg-red-500"
-                        : info.vote_average < 7
-                        ? "bg-yellow-400"
-                        : "bg-green-500"
-                    }`}
-                  />
-                </div>
-                <div className="text-xs text-slate-400 mt-1">
-                  {info.vote_average >= 7.5
-                    ? "Well received"
-                    : info.vote_average >= 5
-                    ? "Mixed reception"
-                    : "Poor reception"}
-                </div>
-              </div>
-            </div>
-
-            {/* Right column: quick insights */}
-            <div className="col-span-1 xl:col-span-1">
-              <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-800/70 to-slate-900/70 border border-white/12 shadow-md">
-                <h3 className="text-sm font-medium text-slate-100 mb-3">
-                  Quick Insights
-                </h3>
-                <ul className="list-disc list-inside text-sm text-slate-300 space-y-2">
-                  <li>
-                    ROI: {roi ? `${roi.toFixed(2)}x` : "—"} (
-                    {roi >= 1 ? "Profitable" : "Loss"})
-                  </li>
-                  <li>
-                    Audience sentiment:{" "}
-                    <span
-                      className={`${
-                        info.vote_average >= 7.5
-                          ? "text-green-400"
-                          : info.vote_average >= 5
-                          ? "text-yellow-300"
-                          : "text-red-400"
-                      }`}
-                    >
-                      {info.vote_average >= 7.5
-                        ? "Positive"
-                        : info.vote_average >= 5
-                        ? "Neutral"
-                        : "Negative"}
-                    </span>
-                  </li>
-                  <li>
-                    {info.production_companies?.length
-                      ? `${info.production_companies.length} production partner(s)`
-                      : "No studio info"}
-                  </li>
-                  <li>
-                    Top genres:{" "}
-                    {info.genres
-                      ?.map((g) => g.name)
-                      .slice(0, 2)
-                      .join(", ") || "—"}
-                  </li>
-                </ul>
-                <div className="mt-4 text-xs text-slate-400">
-                  <strong className="text-slate-100">Tip:</strong> Bars & colors
-                  indicate performance tiers — green = strong, yellow = average,
-                  red = weak.
-                </div>
-              </div>
+              )}
             </div>
           </div>
-        </section>
-
-        <hr className="border-white/8" />
-
-        {/* Global Distribution: Passport stamp style */}
-        <section>
-          <div className="mb-10">
-            <h2 className="text-3xl font-medium">
-              Global Distribution
-            </h2>
-            <p className="text-slate-400 text-sm">
-              International premieres & streaming availability
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            {/* Countries */}
-            <div className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/70 border border-white/10 shadow-lg p-6 relative overflow-hidden">
-              <div className="absolute inset-0 opacity-[0.03] bg-[url('/textures/world-map.svg')] bg-cover bg-center"></div>
-
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-200 mb-6">
-                Release Countries
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {info.production_countries.map((country) => (
-                  <span
-                    key={country.iso_3166_1}
-                    className="px-3 py-1.5 rounded-full border border-indigo-400/40 text-xs font-medium text-slate-100 bg-indigo-500/10 backdrop-blur-sm hover:bg-indigo-500/20 transition"
-                  >
-                    {country.name}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-6 text-xs text-slate-400">
-                ✦ {info.production_countries.length} countries released
-              </div>
-            </div>
-
-            {/* Streaming Platforms */}
-            <div className="rounded-2xl bg-gradient-to-br from-indigo-900/60 to-slate-900/70 border border-white/10 shadow-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-200">
-                  Streaming Platforms
-                </h3>
-                <span className="text-xs text-slate-400">
-                  {allProviders.length} providers
-                </span>
-              </div>
-
-              {/* Search */}
-              <div className="mb-6">
-                <input
-                  type="search"
-                  value={providerSearch}
-                  onChange={(e) => setProviderSearch(e.target.value)}
-                  placeholder="Search Netflix, Prime, Disney+..."
-                  className="w-full bg-slate-800/60 text-slate-100 placeholder-slate-400 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
-                />
-              </div>
-
-              {/* Providers */}
-              <div className="max-h-72 overflow-y-auto pr-1">
-                {filteredProviders.length === 0 ? (
-                  <div className="text-slate-400 text-sm text-center py-6">
-                    No providers match your search.
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-4">
-                    {filteredProviders.map((provider, idx) => (
-                      <div
-                        key={`${provider.provider_name}-${idx}`}
-                        className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-indigo-400/60 hover:shadow-md transition-all"
-                      >
-                        {provider.logo_path ? (
-                          <div className="w-14 h-8 relative">
-                            <Image
-                              src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`}
-                              alt={provider.provider_name}
-                              fill
-                              style={{ objectFit: "contain" }}
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-14 h-8 flex items-center justify-center bg-white/10 rounded">
-                            <GlobeIconFallback />
-                          </div>
-                        )}
-                        <span className="text-xs font-medium text-slate-200">
-                          {provider.provider_name}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>
+        </div>
+      </section>
+    </>
   );
 }
 
