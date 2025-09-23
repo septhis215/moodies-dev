@@ -13,7 +13,7 @@ import {
 import { motion } from "framer-motion";
 
 // Types based on your API structure
-export type MovieDetailsData = {
+export type ContentData = {
   info: {
     id: number;
     title: string;
@@ -35,6 +35,7 @@ export type MovieDetailsData = {
     status: string;
     tagline?: string;
     homepage?: string;
+    type?: string;
   };
   credits: {
     cast: Array<{
@@ -90,11 +91,11 @@ export type MovieDetailsData = {
   }>;
 };
 
-interface MovieDetailsProps {
-  data: MovieDetailsData;
+interface DetailsProp {
+  data: ContentData;
 }
 
-export default function MovieDetails({ data }: MovieDetailsProps) {
+export default function ExtraDetails({ data }: DetailsProp) {
   // carousel uses a ref-driven single-row scroll
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [providerSearch, setProviderSearch] = useState("");
@@ -218,7 +219,7 @@ export default function MovieDetails({ data }: MovieDetailsProps) {
       <section>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-3xl font-medium tracking-wide">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
               Featured Cast
             </h2>
             <p className="text-slate-400 text-sm">The faces behind the story</p>
@@ -290,7 +291,9 @@ export default function MovieDetails({ data }: MovieDetailsProps) {
       <section className="space-y-12">
         {/* Director / Producer Spotlight */}
         <div>
-          <h2 className="text-3xl font-medium mb-4">Key Personnel</h2>
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+            Key Personnel
+          </h2>
           <p className="text-slate-400 text-sm mb-8">
             The creative visionaries behind the film
           </p>
@@ -333,7 +336,9 @@ export default function MovieDetails({ data }: MovieDetailsProps) {
 
         {/* Timeline Style Crew List */}
         <div>
-          <h2 className="text-2xl font-medium mb-4">Creative Team</h2>
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+            Creative Team
+          </h2>
           <div className="divide-y divide-white/10">
             {getKeyCrewMembers()
               .filter((item) => !["Director", "Producer"].includes(item.job))
@@ -366,7 +371,9 @@ export default function MovieDetails({ data }: MovieDetailsProps) {
         {info.production_companies?.length > 0 && (
           <div className="relative mt-20">
             <div className="mb-8">
-              <h2 className="text-3xl font-medium mb-4">Studio Partners</h2>
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+                Studio Partners
+              </h2>
               <p className="text-slate-400 text-sm mb-8">
                 In collaboration with industry leaders
               </p>
@@ -414,7 +421,9 @@ export default function MovieDetails({ data }: MovieDetailsProps) {
       {/* Film Analytics: dashboard layout with highlights + charts */}
       <section>
         <div className="mb-6">
-          <h2 className="text-3xl font-medium">Film Analytics</h2>
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+            Film Analytics
+          </h2>
           <p className="text-slate-400 text-sm">
             Key performance metrics & insights
           </p>
@@ -447,13 +456,14 @@ export default function MovieDetails({ data }: MovieDetailsProps) {
 
             <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
               <div className="text-xs text-slate-400">Audience Rating</div>
-              <div
+              <span
                 className={`text-2xl font-semibold ${getRatingColor(
                   info.vote_average
                 )}`}
               >
-                {info.vote_average.toFixed(1)} / 10
-              </div>
+                {info.vote_average.toFixed(1)}
+              </span>
+              <span className={`text-1.5xl font-semibold`}> / 10</span>
               <div className="text-xs text-slate-400">
                 {info.vote_count.toLocaleString()} votes
               </div>
@@ -576,7 +586,9 @@ export default function MovieDetails({ data }: MovieDetailsProps) {
       {/* Global Distribution: Passport stamp style */}
       <section>
         <div className="mb-10">
-          <h2 className="text-3xl font-medium">Global Distribution</h2>
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+            Global Distribution
+          </h2>
           <p className="text-slate-400 text-sm">
             International premieres & streaming availability
           </p>

@@ -1,4 +1,4 @@
-// app/movies/[id]/reviews/page.tsx
+// app/tv/[id]/reviews/page.tsx
 import AllReviews from "@/components/selected-content/extended/allReviews";
 import type { Metadata } from "next";
 
@@ -13,7 +13,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  return { title: `Reviews for ${id}` }; // You could fetch movie title here too
+  return { title: `Reviews for ${id}` }; // You could fetch tv title here too
 }
 
 export default async function ReviewsPage({ params, searchParams }: Props) {
@@ -22,8 +22,8 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
 
   const base = process.env.NEST_API_URL ?? "http://localhost:4000";
 
-  // Fetch movie details (which includes reviews)
-  const res = await fetch(`${base}/movies/details/${id}`, {
+  // Fetch tv details (which includes reviews)
+  const res = await fetch(`${base}/tv/details/${id}`, {
     next: { revalidate: 60 },
   });
 
@@ -33,7 +33,7 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
         <div className="text-center">
           <h2 className="text-2xl font-bold">Reviews not available</h2>
           <p className="mt-2 text-gray-400">
-            Could not fetch reviews for this movie.
+            Could not fetch reviews for this tv.
           </p>
         </div>
       </main>
@@ -42,15 +42,11 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
 
   const data = await res.json();
   const reviews = data.reviews ?? [];
-  const movieInfo = data.info; // Get movie info from the response
+  const tvInfo = data.info; // Get tv info from the response
 
   return (
     <main className="min-h-screen bg-black text-slate-100">
-      <AllReviews
-        reviews={reviews}
-        info={movieInfo}
-        id={id}
-      />
+      <AllReviews reviews={reviews} info={tvInfo} id={id} />
     </main>
   );
 }

@@ -3,7 +3,7 @@ import { TvService } from './tv.service';
 
 @Controller('tv')
 export class TvController {
-  constructor(private readonly tvService: TvService) {}
+  constructor(private readonly tvService: TvService) { }
 
   @Get('trending/day')
   async getTrendingTVDay() {
@@ -51,5 +51,38 @@ export class TvController {
     @Query('mode') mode: 'and' | 'or' = 'or', // default is OR
   ) {
     return this.tvService.tvByGenres(ids, mode === 'and');
+  }
+
+  // Specific Movie Details
+  @Get('trailer/:id')
+  async getMovieTrailer(@Param('id') id: string) {
+    return this.tvService.tvTrailer(Number(id));
+  }
+
+  @Get('info/:id')
+  async getMovieInfo(@Param('id') id: string) {
+    return this.tvService.tvInfo(Number(id));
+  }
+
+  @Get('credits/:id')
+  async getMovieCredits(@Param('id') id: string) {
+    return this.tvService.tvCredits(Number(id));
+  }
+
+  // use the same reviews/:id endpoint from above
+
+  @Get('providers/:id')
+  async getMovieProviders(@Param('id') id: string) {
+    return this.tvService.tvProviders(Number(id));
+  }
+
+  @Get('similar/:id')
+  async getSimilarMovies(@Param('id') id: string) {
+    return this.tvService.similartvs(Number(id));
+  }
+
+  @Get('details/:id')
+  async getMovieDetails(@Param('id') id: string) {
+    return this.tvService.tvDetails(Number(id));
   }
 }
