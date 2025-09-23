@@ -95,6 +95,7 @@ export default function CelebSection() {
           {celebs.map((celeb, index) => {
             const popularityInfo = getPopularityLevel(celeb.popularity || 0);
 
+
             return (
               <motion.div
                 key={celeb.id}
@@ -248,6 +249,7 @@ export default function CelebSection() {
             );
           })}
         </motion.div>
+
 
         {/* Enhanced Navigation Buttons */}
         <motion.button
