@@ -76,4 +76,10 @@ export class MoviesController {
   async getSimilarMovies(@Param('id') id: string) {
     return this.movieService.similarMovies(Number(id));
   }
+
+
+  @Get('details/:id')
+  async getMovieDetails(@Param('id') id: string) {
+    return this.movieService.movieDetails(Number(id));
+  }
 }

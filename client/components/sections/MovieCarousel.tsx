@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
     ChevronLeft,
@@ -17,10 +19,10 @@ import {
     Heart
 } from "lucide-react";
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 
 type MovieLike = {
@@ -78,11 +80,11 @@ export default function MovieCarousel<T extends MovieLike>({
     const [cardWidth, setCardWidth] = useState(0);
     const [containerWidth, setContainerWidth] = useState(0);
 
-    function posterGetter(item: MovieLike): string {
-        return item.poster_path
-            ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-            : "/placeholder.jpg";
-    }
+  function posterGetter(item: MovieLike): string {
+    return item.poster_path
+      ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+      : item.poster ?? "/placeholder.jpg";
+  }
 
     // Initialize watchlist states
     useEffect(() => {
