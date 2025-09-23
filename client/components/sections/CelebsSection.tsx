@@ -51,7 +51,7 @@ export default function CelebSection() {
     if (work.media_type === "movie") {
       router.push(`/movies/${work.id}`);
     } else if (work.media_type === "tv") {
-      router.push(`/series/${work.id}`);
+      router.push(`/tv/${work.id}`);
     }
   };
 
@@ -123,7 +123,7 @@ export default function CelebSection() {
 
   return (
     <section className="relative w-full px-6 py-16 mx-auto">
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto">
 
         {/* Section Header */}
         <motion.div
