@@ -24,7 +24,7 @@ export default function SearchBar({
   const [targetWidth, setTargetWidth] = useState<number>(320);
 
   const prefersReduced = useReducedMotion();
-
+  const [mobileValue, setMobileValue] = useState<string>(value);
   // Compute mobile breakpoint & target width safely (client-only)
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -43,7 +43,7 @@ export default function SearchBar({
       try {
         if (mq.removeEventListener) mq.removeEventListener("change", onChange);
         else mq.removeListener(onChange);
-      } catch {}
+      } catch { }
     };
   }, []);
 
@@ -96,7 +96,7 @@ export default function SearchBar({
     if (typeof document === "undefined") return null;
 
     // local state for mobile input (isolated from desktop value)
-    const [mobileValue, setMobileValue] = useState<string>(value);
+
 
     return createPortal(
       <AnimatePresence>

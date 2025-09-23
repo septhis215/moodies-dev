@@ -21,8 +21,8 @@ export default function KoreaTrendingSection() {
 
     return (
         <MovieCarousel
-            title="Korean Trending"
-            subtitle="Fan favorites straight from Korea."
+            title="K-Drama & Beyond"
+            subtitle="From heart-fluttering romances to gripping thrillers, explore what’s trending in Korea, tailored for your mood."
             items={koreaTrending}
         />
     );

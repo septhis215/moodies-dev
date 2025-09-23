@@ -22,7 +22,7 @@ export default function TrendingSection() {
     return (
         <MovieCarousel
             title="Trending on Moodies"
-            subtitle="Review the latest movies in theatres today!"
+            subtitle="The movies and shows everyone’s buzzing about — don’t be the last to join the convo."
             items={trending}
         />
     );

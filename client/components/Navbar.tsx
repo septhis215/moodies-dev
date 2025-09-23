@@ -10,14 +10,11 @@ import {
   IconX,
   IconUsers,
   IconMoodSmile,
-  IconSearch,
 } from "@tabler/icons-react";
 import {
   Navbar,
   NavBody,
-  NavItems,
   NavbarLogo,
-  NavbarButton,
   MobileNav,
   MobileNavHeader,
   MobileNavMenu,
