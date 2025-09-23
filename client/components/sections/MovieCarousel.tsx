@@ -26,21 +26,20 @@ import {
 } from "@/components/ui/tooltip";
 
 type MovieLike = {
-  id: string | number;
-  title: string;
-  poster?: string | null;
-  poster_path?: string | null;
-  rating?: string | number;
-  vote_average?: number;
-  overview?: string;
-  release_date?: string;
-  year?: number;
-  genres?: string[];
-  vote_count?: number;
-  popularity?: number;
-  origin_country?: string[];
-  recommendations?: MovieLike[];
-  type?: "movies" | "tv" | string;
+    id: string | number;
+    title: string;
+    poster?: string | null;
+    poster_path?: string | null;
+    rating?: string | number;
+    vote_average?: number;
+    overview?: string | null;
+    release_date?: string | null;
+    year?: number | 0;
+    genres?: string[];
+    vote_count?: number;
+    popularity?: number;
+    origin_country?: string[];
+    recommendations?: MovieLike[];
 };
 
 interface MovieCarouselProps<T extends MovieLike> {

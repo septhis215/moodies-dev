@@ -91,8 +91,8 @@ export class AllController {
       throw new Error('Type must be either "movie" or "tv"');
     }
 
-    const parsedLimit = limit ? parseInt(limit, 10) : 5;
-    return this.allService.getItemRecommendations(type, id);
+    const parsedLimit = limit ? parseInt(limit, 10) : 3;
+    return this.allService.getItemRecommendations(type, id, parsedLimit);
   }
 
   // NEW: Batch trailer endpoint for multiple items

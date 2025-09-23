@@ -1,386 +1,309 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
-import type { All } from "@/types/all";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react"; // icon library
-import { IconCalendar, IconClock, IconDeviceTv, IconX } from "@tabler/icons-react";
+import { ChevronLeft, ChevronRight, Play, Star } from "lucide-react";
+import dynamic from "next/dynamic";
 
-async function fetchTrailer() {
+// Types
+interface All {
+  id: number;
+  title: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date: string | null;
+  vote_average: number;
+  vote_count: number;
+  popularity: number;
+  trailer_key: string | null;
+  type: "movie" | "tv";
+  genres: string[];
+  origin_country: string[];
+  recommendations?: All[];
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+}
+
+// Lazy load modal (SSR disabled)
+const TrailerModal = dynamic(() => import("./TrailerModal"), { ssr: false });
+
+async function fetchTrailer(): Promise<All[]> {
   const base = process.env.NEST_API_URL || "http://localhost:4000";
-  const res = await fetch(`${base}/all/trailers`);
-  if (!res.ok) return [];
-  return (await res.json()) as All[];
+  try {
+    const res = await fetch(`${base}/all/trailers`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.error("Failed to fetch trailers:", error);
+    return [];
+  }
 }
 
-async function fetchRecommendations(type: "movie" | "tv", id: number) {
-  if (!type || !id) return []; // early return if invalid
-
-  const base = process.env.NEST_API_URL || "http://localhost:4000/";
-  const res = await fetch(`${base}all/${type}/${id}/recommendations`, {
-    next: { revalidate: 60 * 5 },
-  });
-  if (!res.ok) return [];
-  return (await res.json()) as All[];
+async function fetchRecommendations(type: "movie" | "tv", id: number): Promise<All[]> {
+  const base = process.env.NEST_API_URL || "http://localhost:4000";
+  try {
+    const res = await fetch(`${base}/all/recommendations/${type}/${id}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    console.error(`Failed to fetch recommendations for ${type}/${id}:`, error);
+    return [];
+  }
 }
+
 export default function PremiereHighlights() {
   const [trailers, setTrailers] = useState<All[]>([]);
   const [selectedTrailer, setSelectedTrailer] = useState<All | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isStacked, setIsStacked] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const trailerItem = selectedTrailer;
   const [recommendationsCache, setRecommendationsCache] = useState<Record<number, All[]>>({});
-
-  // threshold (container width in px) to decide stacking
-  const STACK_AT = 900;
-
-  useEffect(() => {
-    fetchTrailer().then(setTrailers);
-  }, []);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (selectedTrailer) {
-      // Disable background scroll
-      document.body.style.overflow = "hidden";
-    } else {
-      // Re-enable scroll
-      document.body.style.overflow = "";
-    }
+    const loadTrailers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchTrailer();
 
-    // Cleanup on unmount
-    return () => {
-      document.body.style.overflow = "";
+        if (data.length === 0) {
+          setError("No trailers available at the moment");
+        } else {
+          setTrailers(data);
+        }
+      } catch (err) {
+        setError("Failed to load trailers. Please try again later.");
+        console.error("Error loading trailers:", err);
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [selectedTrailer]);
 
-  const handleSelectTrailer = async (trailer: All) => {
-    // Determine the type (fallback to parent if missing)
-    const type = trailer.type || selectedTrailer?.type || 'movie';
-    const id = trailer.id;
-
-    if (!id || !type) return;
-
-    // Check cache first
-    let recs = recommendationsCache[id];
-    if (!recs && type !== 'person') {
-      recs = await fetchRecommendations(type, id);
-      setRecommendationsCache(prev => ({ ...prev, [id]: recs }));
-    }
-
-    // Update selected trailer with recommendations
-    setSelectedTrailer({ ...trailer, type, recommendations: recs || [] });
-  };
-
-
-
-  // Auto switch between side-by-side and stacked using ResizeObserver
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const ro = new ResizeObserver(() => {
-      const width = container.getBoundingClientRect().width;
-      setIsStacked(width < STACK_AT);
-    });
-
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [containerRef]);
-  useEffect(() => {
-    fetchTrailer().then(setTrailers);
+    loadTrailers();
   }, []);
 
   const scroll = (direction: "left" | "right") => {
     if (!carouselRef.current) return;
     const { scrollLeft, clientWidth } = carouselRef.current;
-    const scrollAmount = direction === "left" ? -clientWidth : clientWidth;
+    const scrollAmount = direction === "left" ? -clientWidth * 0.8 : clientWidth * 0.8;
     carouselRef.current.scrollTo({
       left: scrollLeft + scrollAmount,
-      behavior: "smooth",
+      behavior: "smooth"
     });
   };
 
+  const handleSelectTrailer = async (trailer: All) => {
+    const type = trailer.type || "tv";
+    const id = trailer.id;
+
+    if (!id) {
+      console.warn("No ID found for trailer:", trailer.title);
+      return;
+    }
+
+    try {
+      let recs = recommendationsCache[id];
+
+      if (!recs) {
+        // Show loading state
+        setSelectedTrailer({ ...trailer, recommendations: [] });
+
+        // Fetch recommendations
+        recs = await fetchRecommendations(type, id);
+
+        // Update cache
+        setRecommendationsCache(prev => ({ ...prev, [id]: recs }));
+      }
+
+      setSelectedTrailer({ ...trailer, recommendations: recs });
+    } catch (error) {
+      console.error("Error fetching recommendations:", error);
+      // Still show modal even if recommendations fail
+      setSelectedTrailer({ ...trailer, recommendations: [] });
+    }
+  };
+
+  const formatRating = (rating: number) => {
+    return rating ? rating.toFixed(1) : "N/A";
+  };
+
+  const formatCountryFlags = (countries: string[]) => {
+    const flagMap: Record<string, string> = {
+      'KR': '🇰🇷',
+      'US': '🇺🇸',
+      'GB': '🇬🇧',
+      'JP': '🇯🇵',
+      'CN': '🇨🇳',
+      'FR': '🇫🇷',
+      'DE': '🇩🇪',
+      'IT': '🇮🇹',
+      'ES': '🇪🇸'
+    };
+
+    return countries.slice(0, 2).map(country => flagMap[country] || country).join(' ');
+  };
+
+  if (loading) {
+    return (
+      <section className="px-6 py-12 mx-auto relative">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Fresh Off the Screen</h2>
+        <p className="text-gray-400 text-sm mt-1">Loading brand-new releases...</p>
+
+        <div className="flex gap-4 mt-6 overflow-hidden">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex-shrink-0 w-80 h-52 bg-gray-800 animate-pulse rounded-lg" />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="px-6 py-12 mx-auto relative">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Fresh Off the Screen</h2>
+        <div className="mt-6 p-8 bg-gray-800 rounded-lg text-center">
+          <p className="text-gray-400 text-lg">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="px-6 py-12 mx-auto relative">
-      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-        Fresh Off the Screen
-      </h2>
-      <p className="text-gray-400 text-sm mt-1">
-        Brand-new releases to set the mood — straight from the big screen to
-        your watchlist.
-      </p>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Fresh Off the Screen</h2>
+        <div className="text-sm text-gray-500">
+          {trailers.length} shows available
+        </div>
+      </div>
+      <p className="text-gray-400 text-sm mt-1">Brand-new releases to set the mood.</p>
 
-      {/* Carousel wrapper */}
+      {/* Carousel */}
       <div className="relative mt-6">
-        {/* Left button */}
+        {/* Navigation Buttons */}
         <button
           onClick={() => scroll("left")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white"
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-black/70 text-white hover:bg-black/90 transition-all duration-200 shadow-lg"
+          aria-label="Scroll left"
         >
-          <ChevronLeft size={28} />
+          <ChevronLeft size={24} />
         </button>
 
-        {/* Scrollable content */}
         <div
           ref={carouselRef}
-          className="flex gap-4 overflow-hidden scroll-smooth"
+          className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          {trailers.map(
-            (item) =>
-              item.trailer_key && (
-                <motion.div
-                  key={item.id}
-                  whileHover={{ scale: 1.05 }}
-                  className="relative flex-shrink-0 w-84 h-52 cursor-pointer rounded-lg overflow-hidden"
-                  onClick={() => setSelectedTrailer(item)}
-                >
-                  <Image
-                    src={
-                      item.backdrop_path
-                        ? `https://image.tmdb.org/t/p/w500${item.backdrop_path}`
-                        : "/placeholder.jpg"
-                    }
-                    alt={item.title}
-                    width={500}
-                    height={280}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-3">
-                    <h3 className="text-white font-semibold text-sm line-clamp-2">
-                      {item.title}
-                    </h3>
-                  </div>
-                </motion.div>
-              )
-          )}
-        </div>
+          {trailers.map((item) => (
+            <motion.div
+              key={item.id}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.98 }}
+              className="relative flex-shrink-0 w-80 h-52 cursor-pointer rounded-lg overflow-hidden shadow-lg group"
+              onClick={() => handleSelectTrailer(item)}
+            >
+              {/* Background Image */}
+              <Image
+                src={
+                  item.backdrop_path
+                    ? `https://image.tmdb.org/t/p/w500${item.backdrop_path}`
+                    : "/placeholder.jpg"
+                }
+                alt={item.title}
+                width={500}
+                height={280}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                priority={trailers.indexOf(item) < 3} // Prioritize first 3 images
+              />
 
-        {/* Right button */}
-        <button
-          onClick={() => scroll("right")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white"
-        >
-          <ChevronRight size={28} />
-        </button>
-      </div>
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
-      {selectedTrailer && (() => {
-        const trailerItem = selectedTrailer;
-
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-            <div
-              className="absolute inset-0 cursor-pointer"
-              onClick={() => setSelectedTrailer(null)}
-            />
-
-            {/* Main container with proper responsive layout */}
-            <div className="relative w-full max-w-[90vw] mx-auto h-[85vh] max-h-[90vh] flex flex-col xl:flex-row gap-6 items-stretch">
-
-              {/* Trailer Container - 2/3 width */}
-              <div className="flex-none w-full xl:flex-[2] flex justify-center items-center min-h-0">
-                <div className="w-full h-full max-h-[60vh] xl:max-h-full flex justify-center items-center">
-                  <iframe
-                    className="w-full h-full rounded-xl shadow-2xl border border-gray-700 bg-black"
-                    src={`https://www.youtube.com/embed/${selectedTrailer.trailer_key}?autoplay=0&controls=1`}
-                    title="Trailer"
-                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    style={{ aspectRatio: "16/9" }}
-                  />
-                </div>
-              </div>
-
-              {/* Details Panel */}
-              {trailerItem && (
-                <div
-                  ref={panelRef}
-                  className="
-    flex-none w-full xl:flex-[1]
-    bg-gradient-to-b from-black/95 to-black/85 backdrop-blur-xl
-    rounded-l-2xl  /* only round left side */
-    border border-gray-600/50 shadow-2xl
-    flex flex-col
-    min-h-0
-    h-[35vh] xl:h-full
-    max-h-[35vh] xl:max-h-full
-  "
-                >
-                  {/* Scrollable Content */}
-                  <div
-                    className="
-        flex-1 overflow-y-auto overflow-x-hidden
-        scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800
-        hover:scrollbar-thumb-gray-400
-        scrollbar-thumb-rounded-lg
-        scrollbar-track-rounded-lg
-        px-1
-      "
-                  >
-                    {/* Header Section */}
-                    <div className="flex-shrink-0 p-4 xl:p-6 border-b border-gray-700/50 relative">
-                      <div className="flex gap-4 xl:gap-6 items-start">
-                        {/* Poster */}
-                        {trailerItem.poster_path && (
-                          <div className="w-20 xl:w-32 flex-shrink-0">
-                            <img
-                              src={`https://image.tmdb.org/t/p/w300${trailerItem.poster_path}`}
-                              alt={trailerItem.title}
-                              className="rounded-lg shadow-xl object-cover w-full h-auto"
-                            />
-                          </div>
-                        )}
-
-                        {/* Cinematic Title + Info Panel */}
-                        <div className="flex flex-col flex-1 min-w-0 relative z-10">
-                          {/* Title */}
-                          <h2 className="text-xl xl:text-2xl 2xl:text-3xl font-extrabold text-white drop-shadow-2xl leading-tight">
-                            {trailerItem.title}
-                          </h2>
-
-                          {/* Top Badges Row */}
-                          <div className="flex flex-wrap gap-2 mt-3">
-                            {/* Release Date Badge */}
-                            {trailerItem.release_date && (
-                              <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-blue-600/90 shadow-lg text-xs xl:text-xs font-medium text-white">
-                                <IconCalendar size={14} />
-                                {new Date(trailerItem.release_date).toLocaleDateString(undefined, {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })}
-                              </span>
-                            )}
-
-                            {/* Runtime Badge */}
-                            {trailerItem.runtime && (
-                              <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-600/90 shadow-lg text-xs xl:text-xs font-medium text-white">
-                                <IconClock size={14} />
-                                {Math.floor(trailerItem.runtime / 60)}h {trailerItem.runtime % 60}m
-                              </span>
-                            )}
-
-                            {/* Episodes Badge */}
-                            {trailerItem.number_of_episodes && (
-                              <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-500/90 shadow-lg text-xs xl:text-xs font-medium text-white">
-                                <IconDeviceTv size={14} />
-                                {trailerItem.number_of_episodes} Episodes
-                              </span>
-                            )}
-
-                            {trailerItem.genres?.slice(0, 3).map((genre, i) => (
-                              <span
-                                key={i}
-                                className="relative px-3 py-1 rounded-full text-white font-semibold text-xs shadow-lg overflow-hidden"
-                              >
-                                {/* Animated gradient overlay */}
-                                <span className="absolute inset-0 bg-gradient-to-r from-[#e94f37] via-pink-500 to-orange-500 opacity-40 animate-gradient-x rounded-full"></span>
-                                <span className="relative z-10">{genre}</span>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Synopsis */}
-                    {trailerItem.overview && (
-                      <div className="flex-shrink-0 px-4 xl:px-6 py-3 xl:py-4 border-b border-gray-700/30">
-                        <h3 className="text-gray-400 font-semibold text-sm xl:text-base mb-2 xl:mb-3 uppercase tracking-wide">
-                          Synopsis
-                        </h3>
-                        {trailerItem.overview && (
-                          <p className="text-gray-300 text-sm leading-relaxed break-words">
-                            {isExpanded
-                              ? trailerItem.overview
-                              : trailerItem.overview.slice(0, 200) +
-                              (trailerItem.overview.length > 200
-                                ? "..."
-                                : "")}
-                            {trailerItem.overview.length > 200 && (
-                              <button
-                                onClick={() => setIsExpanded(!isExpanded)}
-                                className="ml-2 text-blue-400 hover:text-blue-500 text-xs font-semibold"
-                              >
-                                {isExpanded ? "Show less" : "Read more"}
-                              </button>
-                            )}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Recommendations */}
-                    {trailerItem.recommendations?.length > 0 && (
-                      <div className="p-4 xl:p-6">
-                        <div className="flex items-center justify-between mb-3 xl:mb-4">
-                          <h3 className="text-gray-400 font-semibold text-sm xl:text-base uppercase tracking-wide">
-                            You Might Also Like
-                          </h3>
-                          <span className="text-sm xl:text-base text-gray-500 bg-gray-800/50 px-2 py-1 rounded-full">
-                            {trailerItem.recommendations.length}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3 gap-3 xl:gap-4">
-                          {trailerItem.recommendations.slice(0, 20).map((rec) => (
-                            <div
-                              key={rec.id}
-                              className="group relative cursor-pointer rounded-2xl overflow-hidden border border-gray-700/40 bg-gray-900/40 backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:border-blue-500/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)]"
-                              onClick={() => handleSelectTrailer(rec)}
-                              title={rec.title}
-                            >
-                              {/* Poster Image */}
-                              <div className="aspect-[2/3] relative overflow-hidden">
-                                <Image
-                                  src={`https://image.tmdb.org/t/p/w300${rec.poster_path}`}
-                                  alt={rec.title}
-                                  width={300}
-                                  height={450}
-                                  className="object-cover w-full h-full transform transition-transform duration-500 group-hover:scale-110"
-                                />
-
-                                {/* Gradient Overlay */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-70 group-hover:opacity-80 transition-opacity duration-500" />
-
-                                {/* Example Badge (optional) */}
-                                <span className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-blue-500/80 text-white text-[10px] font-semibold tracking-wide shadow-md">
-                                  {rec.vote_average?.toFixed(1) ?? "N/A"}
-                                </span>
-                              </div>
-
-                              {/* Title */}
-                              <div className="p-2 text-center">
-                                <p className="text-white text-sm font-semibold line-clamp-2 leading-snug group-hover:text-blue-400 transition-colors duration-300">
-                                  {rec.title}
-                                </p>
-                              </div>
-                            </div>
-
-                          ))}
-                        </div>
-                      </div>
-                    )}
+              {/* Play Button Overlay */}
+              {item.trailer_key && (
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+                    <Play size={32} className="text-white ml-1" fill="white" />
                   </div>
                 </div>
               )}
-            </div>
-            {/* Close Button */}
-            <button
-              onClick={() => setSelectedTrailer(null)}
-              className="absolute top-3 right-3 rounded-full bg-white/20 p-2 hover:bg-white/40 focus:outline-none"
-              style={{ backdropFilter: "blur(6px)" }}
-            >
-              <IconX className="text-white w-5 h-5" />
-            </button>
 
-          </div>
-        );
-      })()}
+              {/* Content */}
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="text-white font-semibold text-lg line-clamp-2 flex-1 pr-2">
+                    {item.title}
+                  </h3>
+                  {item.vote_average > 0 && (
+                    <div className="flex items-center gap-1 bg-black/50 rounded px-2 py-1">
+                      <Star size={14} className="text-yellow-400" fill="currentColor" />
+                      <span className="text-white text-sm font-medium">
+                        {formatRating(item.vote_average)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Metadata */}
+                <div className="flex items-center gap-3 text-xs text-gray-300">
+                  {item.origin_country.length > 0 && (
+                    <span>{formatCountryFlags(item.origin_country)}</span>
+                  )}
+                  {item.type === "tv" && item.number_of_seasons && (
+                    <span>{item.number_of_seasons} Season{item.number_of_seasons > 1 ? 's' : ''}</span>
+                  )}
+                  {item.genres.length > 0 && (
+                    <span className="truncate">{item.genres.slice(0, 2).join(', ')}</span>
+                  )}
+                </div>
+
+                {/* No Trailer Warning */}
+                {!item.trailer_key && (
+                  <div className="mt-1 text-xs text-amber-400">
+                    Preview not available
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <button
+          onClick={() => scroll("right")}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-black/70 text-white hover:bg-black/90 transition-all duration-200 shadow-lg"
+          aria-label="Scroll right"
+        >
+          <ChevronRight size={24} />
+        </button>
+      </div>
+
+      {/* Lazy modal */}
+      {selectedTrailer && (
+        <TrailerModal
+          trailer={selectedTrailer}
+          onClose={() => setSelectedTrailer(null)}
+          onSelectTrailer={handleSelectTrailer}
+        />
+      )}
+
+      {/* Custom scrollbar styles */}
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </section>
   );
 }
