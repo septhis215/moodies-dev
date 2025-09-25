@@ -8,6 +8,8 @@ import { MoviesModule } from './media/movies/movies.module';
 import { TvModule } from './media/tv/tv.module';
 import { AllModule } from './media/all/all.module';
 import { PeopleModule } from './media/people/people.module';
+import { SearchController } from './routes/search/search.controller';
+import { SearchModule } from './routes/search/search.module';
 
 @Module({
   imports: [
@@ -20,8 +22,9 @@ import { PeopleModule } from './media/people/people.module';
     TvModule,
     AllModule,
     PeopleModule,
+    SearchModule,
   ],
   providers: [],
-  controllers: [],
+  controllers: [SearchController],
 })
 export class AppModule {}

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import type { All } from "@/types/all";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Film, Tv } from "lucide-react";
 import { motion } from "framer-motion";
 import { IconCalendar, IconClock, IconDeviceTv, IconTags, IconX } from "@tabler/icons-react";
 
@@ -133,7 +133,7 @@ export const UpcomingTrailers = () => {
                                 <motion.div
                                     key={item.id}
                                     whileHover={{ scale: 1.05 }}
-                                    className="relative flex-shrink-0 w-84 h-52 cursor-pointer rounded-lg overflow-hidden bg-gray-800 brightness-85 hover:brightness-100 shadow-lg"
+                                    className="relative group flex-shrink-0 w-84 h-52 cursor-pointer rounded-lg overflow-hidden bg-gray-800 brightness-85 hover:brightness-100 shadow-lg"
                                     onClick={() => handleSelectTrailer(item)}
                                 >
                                     <Image
@@ -168,6 +168,19 @@ export const UpcomingTrailers = () => {
                                                     : "TBA"}
                                             </div>
                                         </span>
+                                    </div>
+                                    <div className="absolute bottom-3 right-3 z-20 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
+                                        <div
+                                            className={[
+                                                "flex items-center gap-1 px-2 py-0.5 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border",
+                                                item.type === "tv"
+                                                    ? "bg-blue-500/90 text-white border-blue-400/50"
+                                                    : "bg-purple-500/90 text-white border-purple-400/50",
+                                            ].join(" ")}
+                                        >
+                                            {item.type === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                                            {item.type === "tv" ? "Series" : "Movie"}
+                                        </div>
                                     </div>
                                 </motion.div>
                             )
@@ -294,6 +307,15 @@ export const UpcomingTrailers = () => {
                                                                 <span className="relative z-10">{genre}</span>
                                                             </span>
                                                         ))}
+                                                        {/* Content Type Badge */}
+                                                        <div
+                                                            className={[
+                                                                "flex items-center gap-1.5 px-2 py-1 rounded-full font-medium text-xs text-white shadow-md backdrop-blur-md border"
+                                                            ].join(" ")}
+                                                        >
+                                                            {trailerItem.type === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                                                            <span>{trailerItem.type === "tv" ? "Series" : "Movie"}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

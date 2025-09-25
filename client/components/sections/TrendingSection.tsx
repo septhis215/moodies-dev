@@ -1,9 +1,9 @@
 "use client";
-
 import MovieCarousel from "./MovieCarousel";
 import { useEffect, useState } from "react";
 import type { All } from "@/types/all";
 
+// Default fetch function for backwards compatibility
 async function fetchTrending() {
     const base = process.env.NEST_API_URL || 'http://localhost:4000';
     const res = await fetch(`${base}/all/trending`, { next: { revalidate: 60 } });
@@ -12,17 +12,77 @@ async function fetchTrending() {
     return json as All[];
 }
 
-export default function TrendingSection() {
-    const [trending, setTrending] = useState<All[]>([]);
+interface TrendingSectionProps {
+    data?: All[];
+    title?: string;
+    subtitle?: string;
+    endpoint?: string; // Custom endpoint for fetching
+}
+
+export default function TrendingSection({
+    data,
+    title = "Trending on Moodies",
+    subtitle = "The movies and shows everyone's buzzing about — don't be the last to join the convo.",
+    endpoint
+}: TrendingSectionProps) {
+    const [trending, setTrending] = useState<All[]>(data || []);
+    const [loading, setLoading] = useState(!data);
 
     useEffect(() => {
-        fetchTrending().then(setTrending);
-    }, []);
+        // If data is passed as props, use it directly
+        if (data) {
+            setTrending(data);
+            setLoading(false);
+            return;
+        }
+
+        // Otherwise fetch data
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                let result: All[];
+                
+                if (endpoint) {
+                    const base = process.env.NEST_API_URL || 'http://localhost:4000';
+                    const res = await fetch(`${base}${endpoint}`, { next: { revalidate: 60 } });
+                    if (!res.ok) throw new Error('Failed to fetch');
+                    result = await res.json();
+                } else {
+                    result = await fetchTrending();
+                }
+                
+                setTrending(result);
+            } catch (error) {
+                console.error('Error fetching trending data:', error);
+                setTrending([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [data, endpoint]);
+
+    if (loading) {
+        return (
+            <div className="px-6 py-12">
+                <div className="mb-6">
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{title}</h2>
+                    <p className="text-gray-400 text-sm mt-1">Loading...</p>
+                </div>
+                <div className="flex gap-4 overflow-hidden">
+                    {[...Array(6)].map((_, i) => (
+                        <div key={i} className="flex-shrink-0 w-48 h-72 bg-gray-800 animate-pulse rounded-lg" />
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <MovieCarousel
-            title="Trending on Moodies"
-            subtitle="The movies and shows everyone’s buzzing about — don’t be the last to join the convo."
+            title={title}
+            subtitle={subtitle}
             items={trending}
         />
     );

@@ -2,32 +2,14 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Play, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, Star, Tv, Film } from "lucide-react";
 import dynamic from "next/dynamic";
-
-// Types
-interface All {
-  id: number;
-  title: string;
-  overview: string;
-  poster_path: string | null;
-  backdrop_path: string | null;
-  release_date: string | null;
-  vote_average: number;
-  vote_count: number;
-  popularity: number;
-  trailer_key: string | null;
-  type: "movie" | "tv";
-  genres: string[];
-  origin_country: string[];
-  recommendations?: All[];
-  number_of_seasons?: number;
-  number_of_episodes?: number;
-}
+import type { All } from "@/types/all";
 
 // Lazy load modal (SSR disabled)
 const TrailerModal = dynamic(() => import("./TrailerModal"), { ssr: false });
 
+// Default fetch function for backwards compatibility
 async function fetchTrailer(): Promise<All[]> {
   const base = process.env.NEST_API_URL || "http://localhost:4000";
   try {
@@ -52,28 +34,57 @@ async function fetchRecommendations(type: "movie" | "tv", id: number): Promise<A
   }
 }
 
-export default function PremiereHighlights() {
-  const [trailers, setTrailers] = useState<All[]>([]);
+interface PremiereHighlightsProps {
+  data?: All[];
+  title?: string;
+  subtitle?: string;
+  endpoint?: string; // Custom endpoint for fetching
+}
+
+export default function PremiereHighlights({
+  data,
+  title = "Fresh Off the Screen",
+  subtitle = "Brand-new releases to set the mood.",
+  endpoint
+}: PremiereHighlightsProps) {
+  const [trailers, setTrailers] = useState<All[]>(data || []);
   const [selectedTrailer, setSelectedTrailer] = useState<All | null>(null);
   const [recommendationsCache, setRecommendationsCache] = useState<Record<number, All[]>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!data);
   const [error, setError] = useState<string | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // If data is passed as props, use it directly
+    if (data) {
+      setTrailers(data);
+      setLoading(false);
+      return;
+    }
+
+    // Otherwise fetch data
     const loadTrailers = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchTrailer();
 
-        if (data.length === 0) {
-          setError("No trailers available at the moment");
+        let result: All[];
+        if (endpoint) {
+          const base = process.env.NEST_API_URL || "http://localhost:4000";
+          const res = await fetch(`${base}${endpoint}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          result = await res.json();
         } else {
-          setTrailers(data);
+          result = await fetchTrailer();
+        }
+
+        if (result.length === 0) {
+          setError("No content available at the moment");
+        } else {
+          setTrailers(result);
         }
       } catch (err) {
-        setError("Failed to load trailers. Please try again later.");
+        setError("Failed to load content. Please try again later.");
         console.error("Error loading trailers:", err);
       } finally {
         setLoading(false);
@@ -81,7 +92,7 @@ export default function PremiereHighlights() {
     };
 
     loadTrailers();
-  }, []);
+  }, [data, endpoint]);
 
   const scroll = (direction: "left" | "right") => {
     if (!carouselRef.current) return;
@@ -105,7 +116,7 @@ export default function PremiereHighlights() {
     try {
       let recs = recommendationsCache[id];
 
-      if (!recs) {
+      if (!recs && type !== "person") {
         // Show loading state
         setSelectedTrailer({ ...trailer, recommendations: [] });
 
@@ -147,8 +158,8 @@ export default function PremiereHighlights() {
   if (loading) {
     return (
       <section className="px-6 py-12 mx-auto relative">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Fresh Off the Screen</h2>
-        <p className="text-gray-400 text-sm mt-1">Loading brand-new releases...</p>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{title}</h2>
+        <p className="text-gray-400 text-sm mt-1">Loading...</p>
 
         <div className="flex gap-4 mt-6 overflow-hidden">
           {[...Array(6)].map((_, i) => (
@@ -162,7 +173,7 @@ export default function PremiereHighlights() {
   if (error) {
     return (
       <section className="px-6 py-12 mx-auto relative">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Fresh Off the Screen</h2>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{title}</h2>
         <div className="mt-6 p-8 bg-gray-800 rounded-lg text-center">
           <p className="text-gray-400 text-lg">{error}</p>
           <button
@@ -176,15 +187,17 @@ export default function PremiereHighlights() {
     );
   }
 
+  if (trailers.length === 0) return null;
+
   return (
     <section className="px-6 py-12 mx-auto relative">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Fresh Off the Screen</h2>
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{title}</h2>
         <div className="text-sm text-gray-500">
           {trailers.length} shows available
         </div>
       </div>
-      <p className="text-gray-400 text-sm mt-1">Brand-new releases to set the mood.</p>
+      <p className="text-gray-400 text-sm mt-1">{subtitle}</p>
 
       {/* Carousel */}
       <div className="relative mt-6">
@@ -221,7 +234,7 @@ export default function PremiereHighlights() {
                 width={500}
                 height={280}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                priority={trailers.indexOf(item) < 3} // Prioritize first 3 images
+                priority={trailers.indexOf(item) < 3}
               />
 
               {/* Gradient Overlay */}
@@ -242,7 +255,7 @@ export default function PremiereHighlights() {
                   <h3 className="text-white font-semibold text-lg line-clamp-2 flex-1 pr-2">
                     {item.title}
                   </h3>
-                  {item.vote_average > 0 && (
+                  {item.vote_average && item.vote_average > 0 && (
                     <div className="flex items-center gap-1 bg-black/50 rounded px-2 py-1">
                       <Star size={14} className="text-yellow-400" fill="currentColor" />
                       <span className="text-white text-sm font-medium">
@@ -254,15 +267,30 @@ export default function PremiereHighlights() {
 
                 {/* Metadata */}
                 <div className="flex items-center gap-3 text-xs text-gray-300">
-                  {item.origin_country.length > 0 && (
+                  {item.origin_country && item.origin_country.length > 0 && (
                     <span>{formatCountryFlags(item.origin_country)}</span>
                   )}
                   {item.type === "tv" && item.number_of_seasons && (
                     <span>{item.number_of_seasons} Season{item.number_of_seasons > 1 ? 's' : ''}</span>
                   )}
-                  {item.genres.length > 0 && (
+                  {item.genres && item.genres.length > 0 && (
                     <span className="truncate">{item.genres.slice(0, 2).join(', ')}</span>
                   )}
+
+                </div>
+                
+                <div className="absolute bottom-3 right-3 z-20 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
+                  <div
+                    className={[
+                      "flex items-center gap-1 px-2 py-0.5 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border",
+                      item.type === "tv"
+                        ? "bg-blue-500/90 text-white border-blue-400/50"
+                        : "bg-purple-500/90 text-white border-purple-400/50",
+                    ].join(" ")}
+                  >
+                    {item.type === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                    {item.type === "tv" ? "Series" : "Movie"}
+                  </div>
                 </div>
 
                 {/* No Trailer Warning */}

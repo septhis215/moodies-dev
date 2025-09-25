@@ -23,11 +23,20 @@ export default function TrailerModal({ trailer, onClose, onSelectTrailer }: Prop
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
       {/* Close on background click */}
       <div className="absolute inset-0 cursor-pointer" onClick={onClose} />
 
-      <div className="relative w-full max-w-[90vw] mx-auto h-[85vh] max-h-[90vh] flex flex-col xl:flex-row gap-6 items-stretch">
+      <div className="relative w-full max-w-[90vw] mx-auto h-[85vh] max-h-[90vh] bg-black/80 backdrop-blur-md flex flex-col xl:flex-row gap-6 items-stretch">
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute -top-3 -right-3 z-50 rounded-full bg-[#e94f37]/70 hover:bg-[#e94f37]/100 p-2 drop-shadow-lg focus:outline-none focus:ring-2 focus:ring-[#e94f37]/40 cursor-pointer"
+          style={{ backdropFilter: "blur(6px)" }}
+        >
+          <IconX className="w-5 h-5 text-white" />
+        </button>
+
         {/* Trailer player */}
         <div className="flex-none w-full xl:flex-[2] flex justify-center items-center min-h-0">
           <div className="w-full h-full max-h-[60vh] xl:max-h-full flex justify-center items-center">
@@ -171,16 +180,8 @@ export default function TrailerModal({ trailer, onClose, onSelectTrailer }: Prop
             )}
           </div>
         </div>
-      </div>
 
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className="absolute top-3 right-3 rounded-full bg-white/20 p-2 hover:bg-white/40"
-        style={{ backdropFilter: "blur(6px)" }}
-      >
-        <IconX className="text-white w-5 h-5" />
-      </button>
+      </div>
     </div>
   );
 }

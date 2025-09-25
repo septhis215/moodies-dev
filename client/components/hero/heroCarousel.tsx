@@ -8,6 +8,7 @@ import useCarousel from "@/hooks/useCarousel";
 import HeroThumbnail from "./heroThumbnail";
 import { IconClock, IconInfoCircle, IconPlus, IconTags } from "@tabler/icons-react";
 import "./hero.css";
+import { Film, Tv } from "lucide-react";
 
 type Props = { all: All[]; cycleMs?: number };
 
@@ -183,6 +184,17 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                       </span>
                     </div>
                   )}
+                  <div
+                    className={[
+                      "flex items-center gap-1 px-2 py-1 rounded-full font-medium text-xs shadow-sm backdrop-blur-md border",
+                      all[index].type === "tv"
+                        ? "bg-blue-500/90 text-white border-blue-400/50"
+                        : "bg-purple-500/90 text-white border-purple-400/50",
+                    ].join(" ")}
+                  >
+                    {all[index].type === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                    {all[index].type === "tv" ? "Series" : "Movie"}
+                  </div>
                 </div>
 
                 {/* Overview - shorter on mobile */}
@@ -251,6 +263,17 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                       })}
                     </span>
                   )}
+                  <div
+                    className={[
+                      "flex items-center gap-1 px-2 py-1 rounded-full font-medium text-xs shadow-sm backdrop-blur-md border",
+                      all[index].type === "tv"
+                        ? "bg-blue-500/90 text-white border-blue-400/50"
+                        : "bg-purple-500/90 text-white border-purple-400/50",
+                    ].join(" ")}
+                  >
+                    {all[index].type === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                    {all[index].type === "tv" ? "Series" : "Movie"}
+                  </div>
                 </div>
 
 
@@ -305,6 +328,6 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           </div>
         </div>
       </div>
-    </section>
+    </section >
   );
 }

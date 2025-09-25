@@ -2,9 +2,10 @@
 import { useEffect, useState, useRef } from "react";
 import type { All } from "@/types/all";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { IconClock, IconTimeDuration0 } from "@tabler/icons-react";
+import { ChevronLeft, ChevronRight, Film, Tv } from "lucide-react";
+import { IconClock } from "@tabler/icons-react";
 
+// Default fetch function for backwards compatibility
 async function fetchFavorites() {
     const base = process.env.NEST_API_URL || "http://localhost:4000";
     const res = await fetch(`${base}/all/favorites`, { next: { revalidate: 60 } });
@@ -13,22 +14,67 @@ async function fetchFavorites() {
     return json as All[];
 }
 
-export default function FavoritesSection() {
-    const [favorites, setFavorites] = useState<All[]>([]);
+interface FavoritesSectionProps {
+    data?: All[];
+    title?: string;
+    subtitle?: string;
+    endpoint?: string; // Custom endpoint for fetching
+}
+
+export default function FavoritesSection({
+    data,
+    title = "Your Moodies Mix",
+    subtitle = "A playlist of your personal faves, because your taste deserves the spotlight.",
+    endpoint
+}: FavoritesSectionProps) {
+    const [favorites, setFavorites] = useState<All[]>(data || []);
+    const [loading, setLoading] = useState(!data);
     const carouselRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        fetchFavorites().then(setFavorites);
-    }, []);
+        // If data is passed as props, use it directly
+        if (data) {
+            setFavorites(data);
+            setLoading(false);
+            return;
+        }
+
+        // Otherwise fetch data
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                let result: All[];
+
+                if (endpoint) {
+                    const base = process.env.NEST_API_URL || "http://localhost:4000";
+                    const res = await fetch(`${base}${endpoint}`, { next: { revalidate: 60 } });
+                    if (!res.ok) throw new Error('Failed to fetch');
+                    result = await res.json();
+                } else {
+                    result = await fetchFavorites();
+                }
+
+                setFavorites(result);
+            } catch (error) {
+                console.error('Error fetching favorites:', error);
+                setFavorites([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [data, endpoint]);
 
     const scroll = (direction: "left" | "right") => {
         if (!carouselRef.current) return;
-        const scrollAmount = carouselRef.current.offsetWidth * 0.8; // slide ~80% width
+        const scrollAmount = carouselRef.current.offsetWidth * 0.8;
         carouselRef.current.scrollBy({
             left: direction === "left" ? -scrollAmount : scrollAmount,
             behavior: "smooth",
         });
     };
+
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
 
@@ -48,6 +94,25 @@ export default function FavoritesSection() {
             if (ref) ref.removeEventListener("scroll", handleScroll);
         };
     }, [favorites]);
+
+    if (loading) {
+        return (
+            <section className="relative px-6 py-6 bg-gradient-to-b from-gray-900 via-black to-gray-900">
+                <div className="mb-6">
+                    <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+                        {title}
+                    </h2>
+                    <p className="text-gray-400 text-sm mt-1">Loading...</p>
+                </div>
+                <div className="flex gap-6 overflow-hidden">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex-shrink-0 w-64 h-80 bg-gray-800 animate-pulse rounded-2xl" />
+                    ))}
+                </div>
+            </section>
+        );
+    }
+
     if (favorites.length === 0) return null;
 
     return (
@@ -55,32 +120,30 @@ export default function FavoritesSection() {
             <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
                 <div>
                     <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
-                        Your Moodies Mix
+                        {title}
                     </h2>
                     <p className="text-gray-400 text-sm mt-1">
-                        A playlist of your personal faves, because your taste deserves the spotlight.
+                        {subtitle}
                     </p>
                 </div>
                 {/* Controls */}
                 <div className="flex gap-2 mt-2 sm:mt-0">
                     <button
                         onClick={() => scroll("left")}
-                        className="px-3 py-1 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-30"
+                        className="px-3 py-1 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-30 transition-opacity"
                         disabled={!canScrollLeft}
                     >
                         <ChevronLeft size={28} />
                     </button>
                     <button
                         onClick={() => scroll("right")}
-                        className="px-3 py-1 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-30"
+                        className="px-3 py-1 rounded-full bg-gray-800 text-white hover:bg-gray-700 disabled:opacity-30 transition-opacity"
                         disabled={!canScrollRight}
                     >
                         <ChevronRight size={28} />
                     </button>
                 </div>
             </div>
-
-
 
             {/* Carousel */}
             <div
@@ -105,6 +168,20 @@ export default function FavoritesSection() {
                         {/* Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
 
+                        <div className="absolute top-3 left-3 z-20 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
+                            <div
+                                className={[
+                                    "flex items-center gap-1 px-2 py-0.5 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border",
+                                    item.type === "tv"
+                                        ? "bg-blue-500/90 text-white border-blue-400/50"
+                                        : "bg-purple-500/90 text-white border-purple-400/50",
+                                ].join(" ")}
+                            >
+                                {item.type === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                                {item.type === "tv" ? "Series" : "Movie"}
+                            </div>
+                        </div>
+                        
                         {/* Rating - Top Right */}
                         {typeof item.vote_average === "number" && (
                             <div className={`absolute top-2 right-2 z-20 text-xs px-2 py-1 rounded-lg font-bold shadow
@@ -125,7 +202,7 @@ export default function FavoritesSection() {
                             {/* Genres */}
                             {item.genres && item.genres.length > 0 && (
                                 <div className="text-xs text-blue-300 mb-1 line-clamp-1">
-                                    {item.genres.slice(0,3).join(", ")}
+                                    {item.genres.slice(0, 3).join(", ")}
                                 </div>
                             )}
 
@@ -142,10 +219,8 @@ export default function FavoritesSection() {
                             )}
                         </div>
                     </div>
-
                 ))}
             </div>
-        </section >
-
+        </section>
     );
 }

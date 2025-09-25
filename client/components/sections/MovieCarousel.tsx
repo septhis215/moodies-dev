@@ -17,6 +17,8 @@ import {
   Calendar,
   Users,
   Heart,
+  Tv,
+  Film,
 } from "lucide-react";
 import {
   Tooltip,
@@ -26,20 +28,28 @@ import {
 } from "@/components/ui/tooltip";
 
 type MovieLike = {
-    id: string | number;
-    title: string;
-    poster?: string | null;
-    poster_path?: string | null;
-    rating?: string | number;
-    vote_average?: number;
-    overview?: string | null;
-    release_date?: string | null;
-    year?: number | 0;
-    genres?: string[];
-    vote_count?: number;
-    popularity?: number;
-    origin_country?: string[];
-    recommendations?: MovieLike[];
+  id: string | number;
+  title: string;
+  name?: string; // For TV shows
+  poster?: string | null;
+  poster_path?: string | null;
+  rating?: string | number;
+  vote_average?: number;
+  overview?: string | null;
+  release_date?: string | null;
+  first_air_date?: string | null; // For TV shows
+  year?: number | 0;
+  type?: "movies" | "tv" | "movie" | null;
+  media_type?: "movie" | "tv"; // Alternative type field
+  genres?: string[];
+  vote_count?: number;
+  popularity?: number;
+  origin_country?: string[];
+  recommendations?: MovieLike[];
+  number_of_seasons?: number; // For TV shows
+  number_of_episodes?: number; // For TV shows
+  episode_run_time?: number[]; // For TV shows
+  runtime?: number; // For movies
 };
 
 interface MovieCarouselProps<T extends MovieLike> {
@@ -84,6 +94,34 @@ export default function MovieCarousel<T extends MovieLike>({
   const [cardWidth, setCardWidth] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
   const router = useRouter();
+
+  // Helper functions to determine content type and get appropriate data
+  const getContentType = (item: MovieLike): "movie" | "tv" => {
+    // Check various type fields
+    if (item.media_type) return item.media_type;
+    if (item.type === "movies" || item.type === "movie") return "movie";
+    if (item.type === "tv") return "tv";
+
+    // Fallback: check for TV-specific fields
+    if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
+
+    // Default to movie
+    return "movie";
+  };
+
+  const getTitle = (item: MovieLike): string => {
+    return item.name || item.title;
+  };
+
+  const getReleaseDate = (item: MovieLike): string | null => {
+    return item.first_air_date || item.release_date || null;
+  };
+
+  const getYear = (item: MovieLike): string => {
+    if (item.year) return item.year.toString();
+    const date = getReleaseDate(item);
+    return date ? date.slice(0, 4) : "";
+  };
 
   function posterGetter(item: MovieLike): string {
     return item.poster_path
@@ -173,9 +211,33 @@ export default function MovieCarousel<T extends MovieLike>({
   };
 
   const handleCardClick = (movie: T) => {
-    const type = movie.type === "tv" ? "tv" : "movies";
-    const href = `/${type}/${movie.id}`;
+    const contentType = getContentType(movie);
+    const routePath = contentType === "tv" ? "tv" : "movies";
+    const href = `/${routePath}/${movie.id}`;
     router.push(href);
+  };
+
+  const formatRuntime = (item: MovieLike): string => {
+    const contentType = getContentType(item);
+
+    if (contentType === "tv") {
+      if (item.number_of_seasons) {
+        const seasons = item.number_of_seasons;
+        const episodes = item.number_of_episodes || 0;
+        return `${seasons}S${episodes > 0 ? ` • ${episodes}E` : ""}`;
+      }
+      if (item.episode_run_time?.[0]) {
+        return `~${item.episode_run_time[0]}min/ep`;
+      }
+    } else {
+      if (item.runtime) {
+        const hours = Math.floor(item.runtime / 60);
+        const mins = item.runtime % 60;
+        return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+      }
+    }
+
+    return "";
   };
 
   return (
@@ -223,6 +285,10 @@ export default function MovieCarousel<T extends MovieLike>({
                   ? isInWatchlist(movie)
                   : watchlistStates[movie.id];
                 const isLoading = loadingStates[movie.id];
+                const contentType = getContentType(movie);
+                const movieTitle = getTitle(movie);
+                const year = getYear(movie);
+                const runtime = formatRuntime(movie);
 
                 return (
                   <motion.div
@@ -230,7 +296,6 @@ export default function MovieCarousel<T extends MovieLike>({
                     whileHover={{ scale: 1.03 }}
                     className="movie-card relative w-32 sm:w-40 md:w-48 lg:w-56 xl:w-64 flex-shrink-0 cursor-pointer group"
                   >
-                    {/* Main Card Container */}
                     {/* Main Card Container */}
                     <div
                       className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 bg-gray-900 cursor-pointer"
@@ -247,7 +312,7 @@ export default function MovieCarousel<T extends MovieLike>({
                       {/* Poster Image */}
                       <Image
                         src={posterGetter(movie)}
-                        alt={movie.title}
+                        alt={movieTitle}
                         fill
                         sizes="(max-width: 640px) 128px, (max-width: 768px) 160px, (max-width: 1024px) 192px, (max-width: 1280px) 224px, 256px"
                         className="object-cover transition-transform duration-700 group-hover:scale-110"
@@ -265,18 +330,16 @@ export default function MovieCarousel<T extends MovieLike>({
                                 onClick={(e) => handleWatchlistToggle(movie, e)}
                                 disabled={isLoading}
                                 className={`
-                                                                p-2 rounded-full shadow-lg backdrop-blur-md border transition-all duration-200
-                                                                ${
-                                                                  inWatchlist
-                                                                    ? "bg-green-500/90 border-green-400/50 text-white hover:bg-green-600/90"
-                                                                    : "bg-black/50 border-white/30 text-white hover:bg-black/70 hover:border-white/50"
-                                                                }
-                                                                ${
-                                                                  isLoading
-                                                                    ? "opacity-70 cursor-not-allowed"
-                                                                    : "hover:scale-110"
-                                                                }
-                                                            `}
+                                  p-2 rounded-full shadow-lg backdrop-blur-md border transition-all duration-200
+                                  ${inWatchlist
+                                    ? "bg-green-500/90 border-green-400/50 text-white hover:bg-green-600/90"
+                                    : "bg-black/50 border-white/30 text-white hover:bg-black/70 hover:border-white/50"
+                                  }
+                                  ${isLoading
+                                    ? "opacity-70 cursor-not-allowed"
+                                    : "hover:scale-110"
+                                  }
+                                `}
                                 whileTap={{ scale: 0.9 }}
                               >
                                 {isLoading ? (
@@ -305,8 +368,8 @@ export default function MovieCarousel<T extends MovieLike>({
                                 {isLoading
                                   ? "Updating..."
                                   : inWatchlist
-                                  ? "Remove from Watchlist"
-                                  : "Add to Watchlist"}
+                                    ? "Remove from Watchlist"
+                                    : "Add to Watchlist"}
                               </div>
                             </TooltipContent>
                           </Tooltip>
@@ -316,21 +379,33 @@ export default function MovieCarousel<T extends MovieLike>({
                         {movie.vote_average && (
                           <div
                             className={`
-                                                    flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-xs shadow-lg backdrop-blur-md border
-                                                    ${
-                                                      movie.vote_average >= 7.5
-                                                        ? "bg-green-500/90 text-white border-green-400/50"
-                                                        : movie.vote_average >=
-                                                          6
-                                                        ? "bg-yellow-500/90 text-black border-yellow-400/50"
-                                                        : "bg-red-500/90 text-white border-red-400/50"
-                                                    }
-                                                `}
+                              flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-xs shadow-lg backdrop-blur-md border
+                              ${movie.vote_average >= 7.5
+                                ? "bg-green-500/90 text-white border-green-400/50"
+                                : movie.vote_average >= 6
+                                  ? "bg-yellow-500/90 text-black border-yellow-400/50"
+                                  : "bg-red-500/90 text-white border-red-400/50"
+                              }
+                            `}
                           >
                             <Star size={12} fill="currentColor" />
                             {movie.vote_average.toFixed(1)}
                           </div>
                         )}
+                      </div>
+
+                      {/* Content Type Badge - Bottom Left */}
+                      <div className="absolute bottom-3 left-3 z-40">
+                        <div className={`
+                          flex items-center gap-1 px-2 py-1 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border group-hover:opacity-0 transition-opacity duration-300
+                          ${contentType === "tv"
+                            ? "bg-blue-500/90 text-white border-blue-400/50"
+                            : "bg-purple-500/90 text-white border-purple-400/50"
+                          }
+                        `}>
+                          {contentType === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                          {contentType === "tv" ? "Series" : "Movie"}
+                        </div>
                       </div>
 
                       {/* Hover Overlay - Better positioned and scrollable */}
@@ -351,12 +426,12 @@ export default function MovieCarousel<T extends MovieLike>({
                               <div className="space-y-2 bg-gradient-to-t from-black/80 via-black/60 to-transparent rounded-md p-2 backdrop-blur-sm">
                                 <div className="flex items-start justify-between gap-2">
                                   <h3 className="text-sm sm:text-base font-bold text-white line-clamp-2 leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] flex-1">
-                                    {movie.title}
+                                    {movieTitle}
                                   </h3>
 
                                   {/* Info button */}
                                   <button
-                                    className="shrink-0  rounded-full bg-white/20 hover:bg-white/30 text-white transition cursor-pointer p-1"
+                                    className="shrink-0 rounded-full bg-white/20 hover:bg-white/30 text-white transition cursor-pointer p-1"
                                     aria-label="More info"
                                   >
                                     <Info size={14} />
@@ -364,21 +439,22 @@ export default function MovieCarousel<T extends MovieLike>({
                                 </div>
 
                                 <div className="flex items-center gap-2 text-xs text-gray-200 flex-wrap drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                                  {(movie.year || movie.release_date) && (
+                                  {year && (
                                     <div className="flex items-center gap-1">
                                       <Calendar size={11} />
-                                      <span>
-                                        {movie.year ||
-                                          movie.release_date?.slice(0, 4)}
-                                      </span>
+                                      <span>{year}</span>
                                     </div>
                                   )}
                                   {movie.vote_count && (
                                     <div className="flex items-center gap-1">
                                       <Users size={11} />
-                                      <span>
-                                        {formatVoteCount(movie.vote_count)}
-                                      </span>
+                                      <span>{formatVoteCount(movie.vote_count)}</span>
+                                    </div>
+                                  )}
+                                  {runtime && (
+                                    <div className="flex items-center gap-1">
+                                      {contentType === "tv" ? <Tv size={11} /> : <Film size={11} />}
+                                      <span>{runtime}</span>
                                     </div>
                                   )}
                                   {movie.origin_country?.length ? (
@@ -390,6 +466,13 @@ export default function MovieCarousel<T extends MovieLike>({
                                       KR
                                     </span>
                                   )}
+                                    <div className={`
+                          flex items-center gap-1 px-2 py-0.5 rounded-full font-medium text-xs shadow-lg backdrop-blur-md  
+                         
+                        `}>
+                                      {contentType === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                                      {contentType === "tv" ? "Series" : "Movie"}
+                                    </div>
                                 </div>
 
                                 {/* Compact genres - only show top 2 */}
@@ -457,7 +540,7 @@ export default function MovieCarousel<T extends MovieLike>({
                                                 >
                                                   <Image
                                                     src={posterGetter(rec)}
-                                                    alt={rec.title}
+                                                    alt={getTitle(rec)}
                                                     fill
                                                     sizes="60px"
                                                     className="object-cover"
@@ -471,16 +554,14 @@ export default function MovieCarousel<T extends MovieLike>({
                                                 className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20 max-w-[180px]"
                                               >
                                                 <div className="text-xs font-medium text-white">
-                                                  {rec.title}
+                                                  {getTitle(rec)}
                                                   {rec.vote_average && (
                                                     <div className="flex items-center gap-1 mt-1 text-gray-300">
                                                       <Star
                                                         size={10}
                                                         fill="currentColor"
                                                       />
-                                                      {rec.vote_average.toFixed(
-                                                        1
-                                                      )}
+                                                      {rec.vote_average.toFixed(1)}
                                                     </div>
                                                   )}
                                                 </div>
