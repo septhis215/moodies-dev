@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 
-import { RedisService } from 'src/redis/redis.service';
+// import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class PeopleService {
@@ -12,7 +12,7 @@ export class PeopleService {
 
   constructor(
     private readonly httpService: HttpService,
-    private readonly redisService: RedisService,
+    // private readonly redisService: RedisService,
     private readonly configService: ConfigService,
   ) {
     this.baseUrl =
@@ -38,16 +38,16 @@ export class PeopleService {
   }
 
   async trending(type: string) {
-    const cacheKey = `trending/person/${type}`;
-    const cached = await this.redisService.get(cacheKey);
+    // const cacheKey = `trending/person/${type}`;
+    // const cached = await this.redisService.get(cacheKey);
 
-    if (cached) {
-      return JSON.parse(cached);
-    }
+    // if (cached) {
+    //   return JSON.parse(cached);
+    // }
 
     const person = await this.tmdb(`trending/person/${type}`);
 
-    await this.redisService.set(cacheKey, JSON.stringify(person), 60);
+    // await this.redisService.set(cacheKey, JSON.stringify(person), 60);
     return person;
   }
 }

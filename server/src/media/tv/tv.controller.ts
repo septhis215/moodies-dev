@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, HttpException, Param, Query } from '@nestjs/common';
 import { TvService } from './tv.service';
 
 @Controller('tv')
@@ -35,11 +35,6 @@ export class TvController {
     return this.tvService.popular();
   }
 
-  @Get('reviews/:id')
-  async getSpecificTVReviews(@Param('id') id: string) {
-    return this.tvService.specificReviews(Number(id));
-  }
-
   @Get('revenue')
   async getRevenue() {
     return this.tvService.revenue();
@@ -53,36 +48,14 @@ export class TvController {
     return this.tvService.tvByGenres(ids, mode === 'and');
   }
 
-  // Specific Movie Details
-  @Get('trailer/:id')
-  async getMovieTrailer(@Param('id') id: string) {
-    return this.tvService.tvTrailer(Number(id));
-  }
-
-  @Get('info/:id')
-  async getMovieInfo(@Param('id') id: string) {
-    return this.tvService.tvInfo(Number(id));
-  }
-
-  @Get('credits/:id')
-  async getMovieCredits(@Param('id') id: string) {
-    return this.tvService.tvCredits(Number(id));
-  }
-
-  // use the same reviews/:id endpoint from above
-
-  @Get('providers/:id')
-  async getMovieProviders(@Param('id') id: string) {
-    return this.tvService.tvProviders(Number(id));
-  }
-
-  @Get('similar/:id')
-  async getSimilarMovies(@Param('id') id: string) {
-    return this.tvService.similartvs(Number(id));
-  }
-
+  // Main TV details endpoint - matches movies approach
   @Get('details/:id')
-  async getMovieDetails(@Param('id') id: string) {
+  async getTVDetails(@Param('id') id: string) {
     return this.tvService.tvDetails(Number(id));
+  }
+
+  @Get('seasons/episodes/:id')
+  async getTvSeasonsEpisodes(@Param('id') id: string) {
+    return this.tvService.fetchSeasonsWithEpisodes(Number(id))
   }
 }

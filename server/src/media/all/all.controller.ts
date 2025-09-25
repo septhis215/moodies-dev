@@ -184,6 +184,19 @@ export class AllController {
       limit: limit ? parseInt(limit, 10) : 25
     };
   }
+
+  @Get('images/:type/:id')
+  async getTvImages(
+    @Param('type') type: 'movie' | 'tv',
+    @Param('id') id: string,
+  ) {
+    try {
+      const images = this.allService.images(Number(id), type);
+      return images;
+    } catch (err) {
+      console.log(err);
+    }
+  }
 }
 
 /*

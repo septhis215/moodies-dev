@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { RedisService } from 'src/redis/redis.service';
+// import { RedisService } from 'src/redis/redis.service';
 
 type ContentType = 'movie' | 'tv';
 
@@ -14,7 +14,7 @@ export class MoviesService {
 
   constructor(
     private readonly httpService: HttpService,
-    private readonly redisService: RedisService,
+    // private readonly redisService: RedisService,
     private readonly configService: ConfigService,
   ) {
     this.baseUrl = this.configService.get<string>('TMDB_BASE') ?? '';
@@ -45,55 +45,48 @@ export class MoviesService {
     }
   }
 
-  // Try movie then tv if preferredType not provided
-  async detectContentType(id: number): Promise<ContentType | null> {
-    const movie = await this.tmdb(`movie/${id}?language=en-US`);
-    if (movie) return 'movie';
-    const tv = await this.tmdb(`tv/${id}?language=en-US`);
-    if (tv) return 'tv';
-    return null;
-  }
-
-  // fetch info for movie or tv
-  private async fetchInfo(id: number, type: ContentType) {
+  private async fetchInfo(id: number, type: ContentType = 'movie') {
     return await this.tmdb(`${type}/${id}?language=en-US`);
   }
 
-  private async fetchCredits(id: number, type: ContentType) {
+  private async fetchCredits(id: number, type: ContentType = 'movie') {
     return await this.tmdb(`${type}/${id}/credits?language=en-US`);
   }
 
-  private async fetchVideos(id: number, type: ContentType) {
+  private async fetchVideos(id: number, type: ContentType = 'movie') {
     return await this.tmdb(`${type}/${id}/videos?language=en-US`);
   }
 
-  private async fetchProviders(id: number, type: ContentType) {
+  private async fetchProviders(id: number, type: ContentType = 'movie') {
     return await this.tmdb(`${type}/${id}/watch/providers`);
   }
 
-  private async fetchReviews(id: number, type: ContentType) {
+  private async fetchReviews(id: number, type: ContentType = 'movie') {
     return await this.tmdb(`${type}/${id}/reviews?language=en-US&page=1`);
   }
 
-  private async fetchSimilar(id: number, type: ContentType) {
+  private async fetchSimilar(id: number, type: ContentType = 'movie') {
     return await this.tmdb(`${type}/${id}/similar?language=en-US&page=1`);
+  }
+
+  private async fetchContentRatings(id: number, type: ContentType = 'movie') {
+    return await this.tmdb(`${type}/${id}/release_dates`);
   }
 
   // Public: prepared, normalized details payload
   async movieDetails(id: number, preferredType?: ContentType) {
     // allow frontend to force type via query param if it already knows it
-    const cacheKey = `movie/details/${id}/${preferredType ?? 'auto'}`;
-    const cached = await this.redisService.get(cacheKey);
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (err) {
-        this.logger.warn('Failed to parse cached movie details, will refetch', err);
-      }
-    }
+    // const cacheKey = `movie/details/${id}/${preferredType ?? 'auto'}`;
+    // const cached = await this.redisService.get(cacheKey);
+    // if (cached) {
+    //   try {
+    //     return JSON.parse(cached);
+    //   } catch (err) {
+    //     this.logger.warn('Failed to parse cached movie details, will refetch', err);
+    //   }
+    // }
 
-    const detectedType =
-      preferredType ?? (await this.detectContentType(id)) ?? 'movie';
+    const detectedType: ContentType = 'movie';
 
     // fetch in parallel from the appropriate endpoints
     const [
@@ -103,6 +96,7 @@ export class MoviesService {
       providersRaw,
       reviewsRaw,
       similarRaw,
+      contentRatingsRaw,
     ] = await Promise.all([
       this.fetchInfo(id, detectedType),
       this.fetchCredits(id, detectedType),
@@ -110,6 +104,7 @@ export class MoviesService {
       this.fetchProviders(id, detectedType),
       this.fetchReviews(id, detectedType),
       this.fetchSimilar(id, detectedType),
+      this.fetchContentRatings(id, detectedType),
     ]);
 
     // build trailer if available
@@ -139,6 +134,48 @@ export class MoviesService {
       (creditsRaw?.crew ?? []).find((c: any) => c.job === 'Director')?.name ??
       (infoRaw?.created_by && infoRaw.created_by[0]?.name) ??
       undefined;
+    // Movie-only: try US first, then fallback to other common countries, then any available cert
+    const getContentRating = (
+      ratingsData: any,
+      fallbackCountries: string[] = ['GB', 'CA', 'AU', 'FR', 'DE', 'IN', 'JP'],
+    ): string => {
+      if (!ratingsData) return 'NR';
+
+      const results = ratingsData?.results ?? [];
+
+      // helper: return the first non-empty certification for a country
+      const findCertForCountry = (countryCode: string) => {
+        const countryObj = results.find((r: any) => r.iso_3166_1 === countryCode);
+        if (!countryObj || !Array.isArray(countryObj.release_dates)) return null;
+        const entry = countryObj.release_dates.find(
+          (d: any) => d.certification && String(d.certification).trim() !== '',
+        );
+        return entry?.certification ?? null;
+      };
+
+      // 1) Try US only
+      const usCert = findCertForCountry('US');
+      if (usCert) return usCert;
+
+      // 2) Fallback to other common countries (in provided order)
+      for (const country of fallbackCountries) {
+        const cert = findCertForCountry(country);
+        if (cert) return cert;
+      }
+
+      // 3) Final fallback: first available certification across all countries
+      for (const countryObj of results) {
+        if (!Array.isArray(countryObj.release_dates)) continue;
+        const entry = countryObj.release_dates.find(
+          (d: any) => d.certification && String(d.certification).trim() !== '',
+        );
+        if (entry?.certification) return entry.certification;
+      }
+
+      return 'NR';
+    };
+
+    const contentRating = getContentRating(contentRatingsRaw);
 
     // normalized info object that frontend can consume directly
     const info = {
@@ -161,10 +198,10 @@ export class MoviesService {
       homepage: infoRaw?.homepage ?? null,
       poster_path: infoRaw?.poster_path ?? null,
       backdrop_path: infoRaw?.backdrop_path ?? null,
-      adult: infoRaw?.adult ?? false,
       created_by: infoRaw?.created_by ?? null,
       content_type: detectedType, // explicitly tell frontend the type
       director,
+      content_rating: contentRating
     };
 
     const credits = {
@@ -194,7 +231,7 @@ export class MoviesService {
     };
 
     // cache for 5 minutes
-    await this.redisService.set(cacheKey, JSON.stringify(payload), 300);
+    // await this.redisService.set(cacheKey, JSON.stringify(payload), 300);
 
     return payload;
   }

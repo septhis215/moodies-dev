@@ -12,8 +12,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
-// Types based on your API structure
-export type ContentData = {
+export type MovieDetailsData = {
   info: {
     id: number;
     title: string;
@@ -30,12 +29,16 @@ export type ContentData = {
       name: string;
       logo_path?: string;
     }>;
-    production_countries: Array<{ iso_3166_1: string; name: string }>;
+    production_countries: Array<{ iso_3166_1: string; name?: string }>;
     spoken_languages: Array<{ iso_639_1: string; name: string }>;
     status: string;
     tagline?: string;
     homepage?: string;
-    type?: string;
+    poster_path?: string;
+    backdrop_path?: string;
+    content_type: "movie";
+    director?: string;
+    content_rating?: string;
   };
   credits: {
     cast: Array<{
@@ -53,46 +56,80 @@ export type ContentData = {
       profile_path?: string;
     }>;
   };
-  providers: {
-    results: Record<
-      string,
-      {
-        link: string;
-        flatrate?: Array<{ provider_name: string; logo_path: string }>;
-        rent?: Array<{ provider_name: string; logo_path: string }>;
-        buy?: Array<{ provider_name: string; logo_path: string }>;
-      }
-    >;
-  };
-  reviews: Array<{
-    id: string;
-    author: string;
-    author_details: {
-      name?: string;
-      username?: string;
-      avatar_path?: string;
-      rating?: number;
-    };
-    content: string;
-    created_at: string;
-    updated_at: string;
-    url: string;
-  }>;
-  similar: Array<{
+  trailer?: any;
+  providers?: any;
+  reviews?: any[];
+  similar?: any[];
+  raw?: any;
+};
+
+// TV API data structure (matching your updated TvService)
+export type TvDetailsData = {
+  info: {
     id: number;
     title: string;
+    original_title?: string;
     overview: string;
-    poster_path?: string;
-    backdrop_path?: string;
-    release_date: string;
+    release_date: string; // maps to first_air_date
+    runtime: number; // normalized from episode_run_time
+    budget: number;
+    revenue: number;
     vote_average: number;
     vote_count: number;
-    genre_ids: number[];
-  }>;
+    genres: Array<{ id: number; name: string }>;
+    production_companies: Array<{
+      id: number;
+      name: string;
+      logo_path?: string;
+    }>;
+    production_countries: Array<{ iso_3166_1: string; name?: string }>;
+    spoken_languages: Array<{ iso_639_1: string; name: string }>;
+    status: string;
+    tagline?: string;
+    homepage?: string;
+    poster_path?: string;
+    backdrop_path?: string;
+    adult: boolean;
+    created_by?: Array<{ id: number; name: string }>;
+    content_type: "tv";
+    director?: string; // creator name
+    content_rating?: string;
+    // TV-specific fields
+    number_of_seasons?: number;
+    number_of_episodes?: number;
+    episode_run_time?: number[];
+    first_air_date?: string;
+    last_air_date?: string;
+    networks?: Array<{ id: number; name: string; logo_path?: string }>;
+    seasons?: Array<any>;
+  };
+  credits: {
+    cast: Array<{
+      id: number;
+      name: string;
+      character: string;
+      profile_path?: string;
+      order: number;
+    }>;
+    crew: Array<{
+      id: number;
+      name: string;
+      jobs: {
+        job: string;
+      };
+      department: string;
+      profile_path?: string;
+    }>;
+  };
+  trailer?: any;
+  providers?: any;
+  reviews?: any[];
+  similar?: any[];
+  raw?: any;
 };
 
 interface DetailsProp {
-  data: ContentData;
+  data: MovieDetailsData | TvDetailsData;
 }
 
 export default function ExtraDetails({ data }: DetailsProp) {
@@ -108,12 +145,6 @@ export default function ExtraDetails({ data }: DetailsProp) {
     if (amount >= 1e6) return `$${(amount / 1e6).toFixed(1)}M`;
     if (amount >= 1e3) return `$${(amount / 1e3).toFixed(1)}K`;
     return `$${amount.toLocaleString()}`;
-  };
-
-  const formatRuntime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
   };
 
   // Providers aggregation (unchanged)
@@ -170,11 +201,21 @@ export default function ExtraDetails({ data }: DetailsProp) {
       "Original Music Composer",
       "Director of Photography",
     ];
+
     return keyJobs
-      .map((job) => ({
-        job,
-        people: credits.crew.filter((person) => person.job === job),
-      }))
+      .map((job) => {
+        const people = credits.crew.filter((person) => {
+          if ("job" in person && person.job) {
+            return person.job === job;
+          }
+          if ("jobs" in person && Array.isArray(person.jobs)) {
+            return person.jobs.some((j: any) => j.job === job);
+          }
+          return false;
+        });
+
+        return { job, people };
+      })
       .filter((item) => item.people.length > 0);
   };
 
@@ -202,12 +243,6 @@ export default function ExtraDetails({ data }: DetailsProp) {
   const getRatingColor = (rating: number) => {
     if (rating >= 7.5) return "text-green-400";
     if (rating >= 5) return "text-yellow-300";
-    return "text-red-400";
-  };
-
-  const getVotesColor = (votes: number) => {
-    if (votes >= 10000) return "text-green-400";
-    if (votes >= 1000) return "text-yellow-300";
     return "text-red-400";
   };
 
@@ -290,82 +325,92 @@ export default function ExtraDetails({ data }: DetailsProp) {
 
       <section className="space-y-12">
         {/* Director / Producer Spotlight */}
-        <div>
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-            Key Personnel
-          </h2>
-          <p className="text-slate-400 text-sm mb-8">
-            The creative visionaries behind the film
-          </p>
+        {(getKeyCrewMembers() || [])
+          .filter((item) => item.job)
+          .some((item) => item.people?.length) && (
+          <div>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+              Key Personnel
+            </h2>
+            <p className="text-slate-400 text-sm mb-8">
+              The creative visionaries behind the film
+            </p>
 
-          <div className="flex flex-wrap gap-10">
-            {getKeyCrewMembers()
-              .filter((item) => ["Director", "Producer"].includes(item.job))
-              .map((item) =>
-                item.people.slice(0, 2).map((person) => (
-                  <div
-                    key={person.id}
-                    className="flex flex-col items-center text-center"
-                  >
-                    <div className="w-28 h-28 rounded-full overflow-hidden bg-white/10 ring-2 ring-white/20 mb-3">
-                      {person.profile_path ? (
-                        <Image
-                          src={`https://image.tmdb.org/t/p/w185${person.profile_path}`}
-                          alt={person.name}
-                          width={112}
-                          height={112}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Users2 size={28} className="text-slate-500" />
-                        </div>
-                      )}
+            <div className="flex flex-wrap gap-4">
+              {getKeyCrewMembers()
+                .filter((item) => item.job)
+                .map((item) =>
+                  item.people.map((person) => (
+                    <div
+                      key={person.id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
+                        {person.profile_path ? (
+                          <Image
+                            src={`https://image.tmdb.org/t/p/w92${person.profile_path}`}
+                            alt={person.name}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Users2 size={18} className="text-slate-500" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col">
+                        <span className="text-slate-100 text-sm font-medium leading-tight">
+                          {person.name}
+                        </span>
+                        <span className="text-[10px] uppercase text-slate-400 tracking-wide">
+                          {item.job}
+                        </span>
+                      </div>
                     </div>
-                    <h3 className="text-slate-100 font-semibold text-base">
-                      {person.name}
-                    </h3>
-                    <p className="text-xs uppercase text-slate-400 mt-1">
-                      {item.job}
-                    </p>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Timeline Style Crew List */}
-        <div>
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-            Creative Team
-          </h2>
-          <div className="divide-y divide-white/10">
-            {getKeyCrewMembers()
-              .filter((item) => !["Director", "Producer"].includes(item.job))
-              .slice(0, 6) // limit for preview
-              .map((item) => (
-                <div
-                  key={item.job}
-                  className="flex justify-between py-3 text-sm"
-                >
-                  <span className="text-slate-400 uppercase tracking-wide font-medium">
-                    {item.job}
-                  </span>
-                  <div className="text-slate-100 font-medium">
-                    {item.people
-                      .map((person) => person.name)
-                      .slice(0, 3)
-                      .join(", ")}
-                    {item.people.length > 3 && (
-                      <button className="ml-2 text-xs text-blue-400 hover:text-blue-300">
-                        View All
-                      </button>
-                    )}
+        {(getKeyCrewMembers() || [])
+          .filter((item) => item.job)
+          .some((item) => item.people?.length) && (
+          <div>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+              Creative Team
+            </h2>
+            <div className="divide-y divide-white/10">
+              {getKeyCrewMembers()
+                .filter((item) => item.job)
+                .map((item) => (
+                  <div
+                    key={item.job}
+                    className="flex justify-between py-3 text-sm"
+                  >
+                    <span className="text-slate-400 uppercase tracking-wide font-medium">
+                      {item.job}
+                    </span>
+                    <div className="text-slate-100 font-medium">
+                      {item.people
+                        .map((person) => person.name)
+                        .slice(0, 3)
+                        .join(", ")}
+                      {item.people.length > 3 && (
+                        <button className="ml-2 text-xs text-blue-400 hover:text-blue-300">
+                          View All
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Studio Partners */}
         {info.production_companies?.length > 0 && (
@@ -422,163 +467,342 @@ export default function ExtraDetails({ data }: DetailsProp) {
       <section>
         <div className="mb-6">
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-            Film Analytics
+            {info.content_type === "movie"
+              ? "Film Analytics"
+              : "Series Analytics"}
           </h2>
           <p className="text-slate-400 text-sm">
-            Key performance metrics & insights
+            {info.content_type === "movie"
+              ? "Key performance metrics & insights"
+              : "Production details & audience metrics"}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Left column: KPI highlights */}
-          <div className="col-span-1 xl:col-span-1 space-y-4">
-            <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-              <div className="text-xs text-slate-400">Budget</div>
-              <div className="text-2xl font-semibold text-slate-100">
-                {formatCurrency(info.budget)}
+        {info.content_type === "movie" ? (
+          // Movie Analytics (existing code)
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Left column: KPI highlights */}
+            <div className="col-span-1 xl:col-span-1 space-y-4">
+              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+                <div className="text-xs text-slate-400">Budget</div>
+                <div className="text-2xl font-semibold text-slate-100">
+                  {formatCurrency(info.budget)}
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+                <div className="text-xs text-slate-400">Revenue</div>
+                <div
+                  className={`text-2xl font-semibold ${getRevenueColor(
+                    info.budget,
+                    info.revenue
+                  )}`}
+                >
+                  {formatCurrency(info.revenue)}
+                </div>
+                <div className="text-xs text-slate-400">
+                  ROI: {roi ? `${roi.toFixed(2)}x` : "—"}
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+                <div className="text-xs text-slate-400">Audience Rating</div>
+                <span
+                  className={`text-2xl font-semibold ${getRatingColor(
+                    info.vote_average
+                  )}`}
+                >
+                  {info.vote_average.toFixed(1)}
+                </span>
+                <span className={`text-1.5xl font-semibold`}> / 10</span>
+                <div className="text-xs text-slate-400">
+                  {info.vote_count.toLocaleString()} votes
+                </div>
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-              <div className="text-xs text-slate-400">Revenue</div>
-              <div
-                className={`text-2xl font-semibold ${getRevenueColor(
-                  info.budget,
-                  info.revenue
-                )}`}
-              >
-                {formatCurrency(info.revenue)}
+            {/* Middle column: performance visuals */}
+            <div className="col-span-1 xl:col-span-1 space-y-4">
+              {/* Revenue vs Budget */}
+              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+                <div className="text-sm text-slate-300 mb-2">
+                  Revenue vs Budget
+                </div>
+                <div className="relative h-3 bg-white/6 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{
+                      width: `${
+                        info.budget > 0
+                          ? Math.min(100, (info.revenue / info.budget) * 100)
+                          : 0
+                      }%`,
+                    }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="absolute top-0 left-0 h-full bg-green-500"
+                  />
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  {roi >= 1.2
+                    ? "Strong performance"
+                    : roi >= 0.8
+                    ? "Average"
+                    : "Underperforming"}
+                </div>
               </div>
-              <div className="text-xs text-slate-400">
-                ROI: {roi ? `${roi.toFixed(2)}x` : "—"}
-              </div>
-            </div>
 
-            <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-              <div className="text-xs text-slate-400">Audience Rating</div>
-              <span
-                className={`text-2xl font-semibold ${getRatingColor(
-                  info.vote_average
-                )}`}
-              >
-                {info.vote_average.toFixed(1)}
-              </span>
-              <span className={`text-1.5xl font-semibold`}> / 10</span>
-              <div className="text-xs text-slate-400">
-                {info.vote_count.toLocaleString()} votes
-              </div>
-            </div>
-          </div>
-
-          {/* Middle column: performance visuals */}
-          <div className="col-span-1 xl:col-span-1 space-y-4">
-            {/* Revenue vs Budget */}
-            <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-              <div className="text-sm text-slate-300 mb-2">
-                Revenue vs Budget
-              </div>
-              <div className="relative h-3 bg-white/6 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{
-                    width: `${
-                      info.budget > 0
-                        ? Math.min(100, (info.revenue / info.budget) * 100)
-                        : 0
-                    }%`,
-                  }}
-                  transition={{ duration: 1, ease: "easeOut" }}
-                  className="absolute top-0 left-0 h-full bg-green-500"
-                />
-              </div>
-              <div className="text-xs text-slate-400 mt-1">
-                {roi >= 1.2
-                  ? "Strong performance"
-                  : roi >= 0.8
-                  ? "Average"
-                  : "Underperforming"}
-              </div>
-            </div>
-
-            {/* Rating bar */}
-            <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-              <div className="text-sm text-slate-300 mb-2">
-                Rating Distribution
-              </div>
-              <div className="h-3 bg-white/6 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(info.vote_average / 10) * 100}%` }}
-                  transition={{ duration: 1, ease: "easeOut" }}
-                  className={`h-full ${
-                    info.vote_average < 5
-                      ? "bg-red-500"
-                      : info.vote_average < 7
-                      ? "bg-yellow-400"
-                      : "bg-green-500"
-                  }`}
-                />
-              </div>
-              <div className="text-xs text-slate-400 mt-1">
-                {info.vote_average >= 7.5
-                  ? "Well received"
-                  : info.vote_average >= 5
-                  ? "Mixed reception"
-                  : "Poor reception"}
-              </div>
-            </div>
-          </div>
-
-          {/* Right column: quick insights */}
-          <div className="col-span-1 xl:col-span-1">
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-800/70 to-slate-900/70 border border-white/12 shadow-md">
-              <h3 className="text-sm font-medium text-slate-100 mb-3">
-                Quick Insights
-              </h3>
-              <ul className="list-disc list-inside text-sm text-slate-300 space-y-2">
-                <li>
-                  ROI: {roi ? `${roi.toFixed(2)}x` : "—"} (
-                  {roi >= 1 ? "Profitable" : "Loss"})
-                </li>
-                <li>
-                  Audience sentiment:{" "}
-                  <span
-                    className={`${
-                      info.vote_average >= 7.5
-                        ? "text-green-400"
-                        : info.vote_average >= 5
-                        ? "text-yellow-300"
-                        : "text-red-400"
+              {/* Rating bar */}
+              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+                <div className="text-sm text-slate-300 mb-2">
+                  Rating Distribution
+                </div>
+                <div className="h-3 bg-white/6 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(info.vote_average / 10) * 100}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className={`h-full ${
+                      info.vote_average < 5
+                        ? "bg-red-500"
+                        : info.vote_average < 7
+                        ? "bg-yellow-400"
+                        : "bg-green-500"
                     }`}
-                  >
-                    {info.vote_average >= 7.5
-                      ? "Positive"
-                      : info.vote_average >= 5
-                      ? "Neutral"
-                      : "Negative"}
-                  </span>
-                </li>
-                <li>
-                  {info.production_companies?.length
-                    ? `${info.production_companies.length} production partner(s)`
-                    : "No studio info"}
-                </li>
-                <li>
-                  Top genres:{" "}
-                  {info.genres
-                    ?.map((g) => g.name)
-                    .slice(0, 2)
-                    .join(", ") || "—"}
-                </li>
-              </ul>
-              <div className="mt-4 text-xs text-slate-400">
-                <strong className="text-slate-100">Tip:</strong> Bars & colors
-                indicate performance tiers — green = strong, yellow = average,
-                red = weak.
+                  />
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  {info.vote_average >= 7.5
+                    ? "Well received"
+                    : info.vote_average >= 5
+                    ? "Mixed reception"
+                    : "Poor reception"}
+                </div>
+              </div>
+            </div>
+
+            {/* Right column: quick insights */}
+            <div className="col-span-1 xl:col-span-1">
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-800/70 to-slate-900/70 border border-white/12 shadow-md">
+                <h3 className="text-sm font-medium text-slate-100 mb-3">
+                  Quick Insights
+                </h3>
+                <ul className="list-disc list-inside text-sm text-slate-300 space-y-2">
+                  <li>
+                    ROI: {roi ? `${roi.toFixed(2)}x` : "—"} (
+                    {roi >= 1 ? "Profitable" : "Loss"})
+                  </li>
+                  <li>
+                    Audience sentiment:{" "}
+                    <span
+                      className={`${
+                        info.vote_average >= 7.5
+                          ? "text-green-400"
+                          : info.vote_average >= 5
+                          ? "text-yellow-300"
+                          : "text-red-400"
+                      }`}
+                    >
+                      {info.vote_average >= 7.5
+                        ? "Positive"
+                        : info.vote_average >= 5
+                        ? "Neutral"
+                        : "Negative"}
+                    </span>
+                  </li>
+                  <li>
+                    {info.production_companies?.length
+                      ? `${info.production_companies.length} production partner(s)`
+                      : "No studio info"}
+                  </li>
+                  <li>
+                    Top genres:{" "}
+                    {info.genres
+                      ?.map((g) => g.name)
+                      .slice(0, 2)
+                      .join(", ") || "—"}
+                  </li>
+                </ul>
+                <div className="mt-4 text-xs text-slate-400">
+                  <strong className="text-slate-100">Tip:</strong> Bars & colors
+                  indicate performance tiers — green = strong, yellow = average,
+                  red = weak.
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          // TV Series Analytics (new)
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Left column: Series metrics */}
+            <div className="col-span-1 xl:col-span-1 space-y-4">
+              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+                <div className="text-xs text-slate-400">Seasons</div>
+                <div className="text-2xl font-semibold text-slate-100">
+                  {(info as TvDetailsData["info"]).number_of_seasons || 0}
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+                <div className="text-xs text-slate-400">Episodes</div>
+                <div className="text-2xl font-semibold text-purple-400">
+                  {(info as TvDetailsData["info"]).number_of_episodes || 0}
+                </div>
+                <div className="text-xs text-slate-400">
+                  Avg:{" "}
+                  {(info as TvDetailsData["info"]).episode_run_time?.[0] ||
+                    info.runtime}{" "}
+                  min/ep
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+                <div className="text-xs text-slate-400">Audience Rating</div>
+                <span
+                  className={`text-2xl font-semibold ${getRatingColor(
+                    info.vote_average
+                  )}`}
+                >
+                  {info.vote_average.toFixed(1)}
+                </span>
+                <span className={`text-1.5xl font-semibold`}> / 10</span>
+                <div className="text-xs text-slate-400">
+                  {info.vote_count.toLocaleString()} votes
+                </div>
+              </div>
+            </div>
+
+            {/* Middle column: Series progression */}
+            <div className="col-span-1 xl:col-span-1 space-y-4">
+              {/* Series Duration */}
+              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+                <div className="text-sm text-slate-300 mb-2">
+                  Series Longevity
+                </div>
+                <div className="relative h-3 bg-white/6 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{
+                      width: `${Math.min(
+                        100,
+                        ((info as TvDetailsData["info"]).number_of_seasons ||
+                          1) * 10
+                      )}%`,
+                    }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="absolute top-0 left-0 h-full bg-purple-500"
+                  />
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  {((info as TvDetailsData["info"]).number_of_seasons || 0) >= 5
+                    ? "Long-running series"
+                    : ((info as TvDetailsData["info"]).number_of_seasons ||
+                        0) >= 2
+                    ? "Multi-season"
+                    : "Limited series"}
+                </div>
+              </div>
+
+              {/* Rating progression */}
+              <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
+                <div className="text-sm text-slate-300 mb-2">
+                  Audience Reception
+                </div>
+                <div className="h-3 bg-white/6 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(info.vote_average / 10) * 100}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className={`h-full ${
+                      info.vote_average < 5
+                        ? "bg-red-500"
+                        : info.vote_average < 7
+                        ? "bg-yellow-400"
+                        : "bg-green-500"
+                    }`}
+                  />
+                </div>
+                <div className="text-xs text-slate-400 mt-1">
+                  {info.vote_average >= 7.5
+                    ? "Critically acclaimed"
+                    : info.vote_average >= 5
+                    ? "Mixed reviews"
+                    : "Poor reception"}
+                </div>
+              </div>
+            </div>
+
+            {/* Right column: Series insights */}
+            <div className="col-span-1 xl:col-span-1">
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-800/70 to-slate-900/70 border border-white/12 shadow-md">
+                <h3 className="text-sm font-medium text-slate-100 mb-3">
+                  Series Overview
+                </h3>
+                <ul className="list-disc list-inside text-sm text-slate-300 space-y-2">
+                  <li>
+                    Content volume:{" "}
+                    {(info as TvDetailsData["info"]).number_of_episodes || 0}{" "}
+                    episodes (
+                    {Math.round(
+                      ((((info as TvDetailsData["info"]).number_of_episodes ||
+                        0) *
+                        (info.runtime || 0)) /
+                        60) *
+                        10
+                    ) / 10}
+                    h total)
+                  </li>
+                  <li>
+                    Status:{" "}
+                    <span
+                      className={`${
+                        info.status === "Ended"
+                          ? "text-red-400"
+                          : info.status === "Returning Series"
+                          ? "text-green-400"
+                          : "text-yellow-300"
+                      }`}
+                    >
+                      {info.status}
+                    </span>
+                  </li>
+                  <li>
+                    Run period:{" "}
+                    {(info as TvDetailsData["info"]).first_air_date?.split(
+                      "-"
+                    )[0] || info.release_date.split("-")[0]}
+                    {(info as TvDetailsData["info"]).last_air_date &&
+                      ` - ${
+                        (info as TvDetailsData["info"]).last_air_date?.split(
+                          "-"
+                        )[0]
+                      }`}
+                  </li>
+                  <li>
+                    Networks:{" "}
+                    {((info as TvDetailsData["info"]).networks?.length || 0) > 0
+                      ? (info as TvDetailsData["info"]).networks
+                          ?.slice(0, 2)
+                          .map((n) => n.name)
+                          .join(", ")
+                      : "Unknown"}
+                  </li>
+                  <li>
+                    Top genres:{" "}
+                    {info.genres
+                      ?.map((g) => g.name)
+                      .slice(0, 2)
+                      .join(", ") || "—"}
+                  </li>
+                </ul>
+                <div className="mt-4 text-xs text-slate-400">
+                  <strong className="text-slate-100">Note:</strong> TV metrics
+                  focus on content volume, longevity, and audience engagement
+                  patterns.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       <hr className="border-white/8" />
