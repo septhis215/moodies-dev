@@ -87,7 +87,7 @@ const shuffleArray = <T,>(array: T[]): T[] => {
     return shuffled;
 };
 
-export default function CompactMoodDiscoveryWheel() {
+export default function MoodDiscoveryWheel() {
     const [moods, setMoods] = useState<MoodFromApi[]>([]);
     const [shuffledMoods, setShuffledMoods] = useState<MoodFromApi[]>([]);
     const [loadingMoods, setLoadingMoods] = useState(true);
