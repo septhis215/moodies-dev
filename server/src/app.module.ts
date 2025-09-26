@@ -10,6 +10,8 @@ import { AllModule } from './media/all/all.module';
 import { PeopleModule } from './media/people/people.module';
 import { SearchController } from './routes/search/search.controller';
 import { SearchModule } from './routes/search/search.module';
+import { MoodsController } from './routes/moods/moods.controller';
+import { MoodsModule } from './routes/moods/moods.module';
 
 @Module({
   imports: [
@@ -23,8 +25,9 @@ import { SearchModule } from './routes/search/search.module';
     AllModule,
     PeopleModule,
     SearchModule,
+    MoodsModule,
   ],
   providers: [],
-  controllers: [SearchController],
+  controllers: [SearchController, MoodsController],
 })
 export class AppModule {}

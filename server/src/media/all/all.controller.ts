@@ -17,49 +17,49 @@ export class AllController {
 
   @Get('featured')
   async featured(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 25;
+    const parsedLimit = limit ? parseInt(limit, 20) : 25;
     return this.allService.getFeatured(parsedLimit);
   }
 
   @Get('trending')
   async trending(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 25;
+    const parsedLimit = limit ? parseInt(limit, 20) : 25;
     return this.allService.getTrending(parsedLimit);
   }
 
   @Get('trailers')
   async trailers(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 25;
+    const parsedLimit = limit ? parseInt(limit, 20) : 25;
     return this.allService.getTrailers(parsedLimit);
   }
 
   @Get('favorites')
   async favorites(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 25;
+    const parsedLimit = limit ? parseInt(limit, 20) : 25;
     return this.allService.getFavorites(parsedLimit);
   }
 
   @Get('koreaTrending')
   async koreaTrending(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 25;
+    const parsedLimit = limit ? parseInt(limit, 20) : 25;
     return this.allService.getKoreaTrending(parsedLimit);
   }
 
   @Get('peoples')
   async peoples(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 25;
+    const parsedLimit = limit ? parseInt(limit, 20) : 25;
     return this.allService.getPeople(parsedLimit);
   }
 
   @Get('trending-reviews')
   async reviews(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 20;
+    const parsedLimit = limit ? parseInt(limit, 20) : 20;
     return this.allService.getTrendingReviews(parsedLimit);
   }
 
   @Get('upcoming-trailers')
   async upcomingTrailers(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 30;
+    const parsedLimit = limit ? parseInt(limit, 20) : 30;
     return this.allService.getUpcomingTrailers(parsedLimit);
   }
 
@@ -75,7 +75,7 @@ export class AllController {
       throw new Error('Type must be either "movie" or "tv"');
     }
 
-    const parsedLimit = limit ? parseInt(limit, 10) : 5;
+    const parsedLimit = limit ? parseInt(limit, 20) : 5;
     return this.allService.getSmartRecommendations(type, id, parsedLimit);
   }
 
@@ -91,7 +91,7 @@ export class AllController {
       throw new Error('Type must be either "movie" or "tv"');
     }
 
-    const parsedLimit = limit ? parseInt(limit, 10) : 3;
+    const parsedLimit = limit ? parseInt(limit, 20) : 3;
     return this.allService.getItemRecommendations(type, id, parsedLimit);
   }
 
@@ -148,7 +148,7 @@ export class AllController {
   // Useful for loading dashboard data in a single request
   @Get('bulk/dashboard')
   async getDashboardData(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 10;
+    const parsedLimit = limit ? parseInt(limit, 20) : 20;
 
     // Execute all requests in parallel for faster response
     const [featured, trending, trailers, koreaTrending, reviews] = await Promise.allSettled([
@@ -156,7 +156,7 @@ export class AllController {
       this.allService.getTrending(parsedLimit),
       this.allService.getTrailers(parsedLimit),
       this.allService.getKoreaTrending(parsedLimit),
-      this.allService.getTrendingReviews(Math.min(parsedLimit, 10)) // Limit reviews to 10 max
+      this.allService.getTrendingReviews(Math.min(parsedLimit, 20)) // Limit reviews to 10 max
     ]);
 
     return {

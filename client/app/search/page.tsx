@@ -22,7 +22,14 @@ import {
     SlidersHorizontal,
     Globe,
     Sparkles,
-    ExternalLink
+    ExternalLink,
+    TrendingUp,
+    Clock,
+    Award,
+    ChevronLeft,
+    ChevronRight,
+    MoreHorizontal,
+    RotateCcw
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +39,6 @@ import dynamic from "next/dynamic";
 
 // dynamic import (no SSR)
 const TrailerModal = dynamic(() => import("../../components/sections/TrailerModal"), { ssr: false });
-
 
 interface SearchResult {
     id: number;
@@ -101,6 +107,25 @@ const COUNTRY_OPTIONS = [
 
 const YEAR_OPTIONS = Array.from({ length: 2025 - 1950 + 1 }, (_, i) => 2025 - i);
 
+// Enhanced year presets
+const YEAR_PRESETS = [
+    { label: '2020s', min: 2020, max: 2025 },
+    { label: '2010s', min: 2010, max: 2019 },
+    { label: '2000s', min: 2000, max: 2009 },
+    { label: '90s', min: 1990, max: 1999 },
+    { label: '80s', min: 1980, max: 1989 },
+    { label: 'Classic', min: 1950, max: 1979 }
+];
+
+// Enhanced rating presets
+const RATING_PRESETS = [
+    { label: 'Masterpiece', min: 9, max: 10, color: 'from-yellow-400 to-orange-500' },
+    { label: 'Excellent', min: 8, max: 10, color: 'from-green-400 to-emerald-500' },
+    { label: 'Great', min: 7, max: 10, color: 'from-blue-400 to-cyan-500' },
+    { label: 'Good', min: 6, max: 10, color: 'from-purple-400 to-pink-500' },
+    { label: 'Any Rating', min: 0, max: 10, color: 'from-gray-400 to-gray-500' }
+];
+
 export default function SearchResultsPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -131,35 +156,32 @@ export default function SearchResultsPage() {
     const [ratingMax, setRatingMax] = useState<number | null>(null);
     const [includeAdult, setIncludeAdult] = useState(false);
 
-    // state to manage inline iframe trailer playback
+    // Enhanced UI states for sliders
+    const [yearRange, setYearRange] = useState<[number, number]>([1950, 2025]);
+    const [ratingRange, setRatingRange] = useState<[number, number]>([0, 10]);
+    const [tempYearRange, setTempYearRange] = useState<[number, number]>([1950, 2025]);
+    const [tempRatingRange, setTempRatingRange] = useState<[number, number]>([0, 10]);
+
     // Trailer modal state
     const [selectedTrailer, setSelectedTrailer] = useState<All | null>(null);
 
     // Convert SearchResult to All type for TrailerModal
     const convertToTrailerData = (item: SearchResult): All => {
-
         return {
             id: item.id,
             title: getTitle(item),
             overview: item.overview ?? "",
             poster_path: item.poster_path ?? null,
             backdrop_path: item.backdrop_path ?? null,
-            // keep same union shape as All; use null when unknown
             release_date: item.release_date ?? item.first_air_date ?? null,
-            // numeric fields with defaults
             vote_average: item.vote_average ?? 0,
             popularity: item.popularity ?? 0,
-            // arrays / optional maps
             origin_country: (item as any).origin_country ?? [],
             genres: item.genres,
-            // fields that may not be in SearchResult — default to null
             runtime: (item as any).runtime ?? null,
             number_of_episodes: (item as any).number_of_episodes ?? null,
-            // trailer key if you stored it in search results; null otherwise
             trailer_key: (item as any).trailer_key ?? null,
-            // recommendations default empty array
             recommendations: [] as All["recommendations"],
-            // THIS WAS MISSING and caused the TS error
             type: item.type,
         };
     };
@@ -168,14 +190,12 @@ export default function SearchResultsPage() {
     const handlePlayTrailer = async (item: SearchResult) => {
         try {
             console.log(item.trailer_key);
-            // First try to get trailer from the item itself
             if (item.trailer_key) {
                 const trailerData = convertToTrailerData({ ...item, trailer_key: item.trailer_key });
                 setSelectedTrailer(trailerData);
                 return;
             }
 
-            // If no trailer key, try to fetch it from the API
             const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
             const endpoint = item.type === 'tv' ? 'tv' : 'movies';
 
@@ -193,36 +213,27 @@ export default function SearchResultsPage() {
                     });
                     setSelectedTrailer(trailerData);
                 } else {
-                    // Fallback: open YouTube search
                     const searchQuery = encodeURIComponent(`${getTitle(item)} trailer`);
                     window.open(`https://www.youtube.com/results?search_query=${searchQuery}`, '_blank');
                 }
             } else {
-                // Fallback: open YouTube search
                 const searchQuery = encodeURIComponent(`${getTitle(item)} trailer`);
                 window.open(`https://www.youtube.com/results?search_query=${searchQuery}`, '_blank');
             }
         } catch (error) {
             console.error('Error fetching trailer:', error);
-            // Fallback: open YouTube search
             const searchQuery = encodeURIComponent(`${getTitle(item)} trailer`);
             window.open(`https://www.youtube.com/results?search_query=${searchQuery}`, '_blank');
         }
     };
 
-    // Handle trailer modal close
     const handleCloseTrailer = () => {
         setSelectedTrailer(null);
     };
 
-    // Handle selecting a trailer from recommendations
     const handleSelectTrailer = async (trailer: All) => {
         setSelectedTrailer(trailer);
     };
-
-
-
-
 
     // Load available genres and countries
     useEffect(() => {
@@ -247,6 +258,17 @@ export default function SearchResultsPage() {
         window.scrollTo({ top: 0, behavior: "smooth" });
     }, [currentPage]);
 
+    // Update filter states when range changes
+    useEffect(() => {
+        setYearMin(yearRange[0] === 1950 ? null : yearRange[0]);
+        setYearMax(yearRange[1] === 2025 ? null : yearRange[1]);
+    }, [yearRange]);
+
+    useEffect(() => {
+        setRatingMin(ratingRange[0] === 0 ? null : ratingRange[0]);
+        setRatingMax(ratingRange[1] === 10 ? null : ratingRange[1]);
+    }, [ratingRange]);
+
     // Fetch search results
     useEffect(() => {
         if (!query.trim()) {
@@ -270,7 +292,6 @@ export default function SearchResultsPage() {
                     include_adult: includeAdult.toString(),
                 });
 
-                // Add filter parameters
                 if (selectedGenres.length > 0) {
                     params.append('genres', selectedGenres.join(','));
                 }
@@ -361,25 +382,290 @@ export default function SearchResultsPage() {
     const clearAllFilters = () => {
         setSelectedGenres([]);
         setSelectedCountries([]);
-        setYearMin(null);
-        setYearMax(null);
-        setRatingMin(null);
-        setRatingMax(null);
+        setYearRange([1950, 2025]);
+        setRatingRange([0, 10]);
+        setTempYearRange([1950, 2025]);
+        setTempRatingRange([0, 10]);
         setFilterType('all');
         setSortBy('relevance');
         setIncludeAdult(false);
     };
 
     const hasActiveFilters = selectedGenres.length > 0 || selectedCountries.length > 0 ||
-        yearMin !== null || yearMax !== null || ratingMin !== null ||
-        ratingMax !== null || filterType !== 'all' || includeAdult;
+        yearRange[0] !== 1950 || yearRange[1] !== 2025 || ratingRange[0] !== 0 ||
+        ratingRange[1] !== 10 || filterType !== 'all' || includeAdult;
 
     const getActiveFilterCount = () => {
         return selectedGenres.length + selectedCountries.length +
-            (yearMin !== null ? 1 : 0) + (yearMax !== null ? 1 : 0) +
-            (ratingMin !== null ? 1 : 0) + (ratingMax !== null ? 1 : 0) +
+            (yearRange[0] !== 1950 ? 1 : 0) + (yearRange[1] !== 2025 ? 1 : 0) +
+            (ratingRange[0] !== 0 ? 1 : 0) + (ratingRange[1] !== 10 ? 1 : 0) +
             (filterType !== 'all' ? 1 : 0) + (includeAdult ? 1 : 0);
     };
+
+    // Enhanced pagination component
+    const renderPagination = () => {
+        if (totalPages <= 1) return null;
+
+        const getVisiblePages = () => {
+            const delta = 2;
+            const range = [];
+            const rangeWithDots = [];
+
+            for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+                range.push(i);
+            }
+
+            if (currentPage - delta > 2) {
+                rangeWithDots.push(1, '...');
+            } else {
+                rangeWithDots.push(1);
+            }
+
+            rangeWithDots.push(...range);
+
+            if (currentPage + delta < totalPages - 1) {
+                rangeWithDots.push('...', totalPages);
+            } else {
+                rangeWithDots.push(totalPages);
+            }
+
+            return rangeWithDots;
+        };
+
+        const visiblePages = getVisiblePages();
+
+        return (
+            <div className="flex flex-col items-center gap-6 mt-16">
+                {/* Main pagination controls */}
+                <div className="flex items-center gap-2">
+                    {/* Previous button */}
+                    <Button
+                        variant="outline"
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => p - 1)}
+                        className="h-12 px-4 bg-gray-800/60 border-gray-600/50 text-gray-300 hover:bg-gray-700/80 hover:text-white hover:border-orange-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 backdrop-blur-sm"
+                    >
+                        <ChevronLeft size={18} className="mr-1" />
+                        Previous
+                    </Button>
+
+                    {/* Page numbers */}
+                    <div className="flex items-center gap-1 mx-4">
+                        {visiblePages.map((page, index) => {
+                            if (page === '...') {
+                                return (
+                                    <div key={`dots-${index}`} className="flex items-center justify-center w-12 h-12 text-gray-500">
+                                        <MoreHorizontal size={16} />
+                                    </div>
+                                );
+                            }
+
+                            const isActive = page === currentPage;
+                            return (
+                                <Button
+                                    key={page}
+                                    variant={isActive ? "default" : "outline"}
+                                    onClick={() => setCurrentPage(page as number)}
+                                    className={`w-12 h-12 text-sm font-medium transition-all duration-300 backdrop-blur-sm ${isActive
+                                        ? "bg-gradient-to-r from-orange-500 to-red-500 text-white border-transparent shadow-lg hover:shadow-orange-500/30 scale-105"
+                                        : "bg-gray-800/60 border-gray-600/50 text-gray-300 hover:bg-gray-700/80 hover:text-white hover:border-orange-400/50 hover:scale-105"
+                                        }`}
+                                >
+                                    {page}
+                                </Button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Next button */}
+                    <Button
+                        variant="outline"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(p => p + 1)}
+                        className="h-12 px-4 bg-gray-800/60 border-gray-600/50 text-gray-300 hover:bg-gray-700/80 hover:text-white hover:border-orange-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 backdrop-blur-sm"
+                    >
+                        Next
+                        <ChevronRight size={18} className="ml-1" />
+                    </Button>
+                </div>
+
+                {/* Enhanced pagination info */}
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <span>Page {currentPage} of {totalPages.toLocaleString()}</span>
+                        <span>•</span>
+                        <span>{totalResults.toLocaleString()} total results</span>
+                    </div>
+
+                    {/* Quick jump controls */}
+                    <div className="flex items-center gap-2">
+                        {currentPage > 1 && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCurrentPage(1)}
+                                className="text-xs text-gray-400 hover:text-orange-400 hover:bg-orange-500/10 transition-all duration-200"
+                            >
+                                First page
+                            </Button>
+                        )}
+                        {currentPage < totalPages && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setCurrentPage(totalPages)}
+                                className="text-xs text-gray-400 hover:text-orange-400 hover:bg-orange-500/10 transition-all duration-200"
+                            >
+                                Last page
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Enhanced dual-range slider component
+    const DualRangeSlider = ({
+        min, max, step = 1, value, onChange, formatValue, label, icon: Icon, color = "orange"
+    }: {
+        min: number;
+        max: number;
+        step?: number;
+        value: [number, number];
+        onChange: (value: [number, number]) => void;
+        formatValue?: (value: number) => string;
+        label: string;
+        icon?: React.ComponentType<{ size?: number; className?: string }>;
+        color?: string;
+    }) => {
+        const [tempValue, setTempValue] = useState(value);
+
+        useEffect(() => {
+            setTempValue(value);
+        }, [value]);
+
+        const handleChange = (index: 0 | 1, newValue: number) => {
+            const newTempValue: [number, number] = [...tempValue];
+            newTempValue[index] = newValue;
+
+            // Ensure min <= max
+            if (index === 0 && newValue > newTempValue[1]) {
+                newTempValue[1] = newValue;
+            } else if (index === 1 && newValue < newTempValue[0]) {
+                newTempValue[0] = newValue;
+            }
+
+            setTempValue(newTempValue);
+            onChange(newTempValue);
+        };
+
+        const percentage1 = ((tempValue[0] - min) / (max - min)) * 100;
+        const percentage2 = ((tempValue[1] - min) / (max - min)) * 100;
+
+        const getColorClass = (colorName: string, type: 'bg' | 'text' = 'bg') => {
+            const colorMap = {
+                blue: type === 'bg' ? 'bg-blue-500' : 'text-blue-400',
+                yellow: type === 'bg' ? 'bg-yellow-500' : 'text-yellow-400',
+                orange: type === 'bg' ? 'bg-orange-500' : 'text-orange-400',
+            };
+            return colorMap[colorName as keyof typeof colorMap] || (type === 'bg' ? 'bg-orange-500' : 'text-orange-400');
+        };
+
+        const getGradientClass = (colorName: string) => {
+            const gradientMap = {
+                blue: 'from-blue-500 to-cyan-500',
+                yellow: 'from-yellow-500 to-orange-500',
+                orange: 'from-orange-500 to-red-500',
+            };
+            return gradientMap[colorName as keyof typeof gradientMap] || 'from-orange-500 to-red-500';
+        };
+
+        return (
+            <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-200 flex items-center gap-2">
+                    {Icon && <Icon size={14} className={getColorClass(color, 'text')} />}
+                    {label}
+                </label>
+
+                {/* Slider Track */}
+                <div className="relative h-1.5 bg-gray-700 rounded-full">
+                    {/* Active range */}
+                    <div
+                        className={`absolute h-1.5 bg-gradient-to-r ${getGradientClass(color)} rounded-full`}
+                        style={{
+                            left: `${percentage1}%`,
+                            right: `${100 - percentage2}%`
+                        }}
+                    />
+
+                    {/* Min handle - higher z-index */}
+                    <input
+                        type="range"
+                        min={min}
+                        max={max}
+                        step={step}
+                        value={tempValue[0]}
+                        onChange={(e) => handleChange(0, parseFloat(e.target.value))}
+                        className="absolute w-full h-1.5 opacity-0 cursor-pointer z-20 pointer-events-auto"
+                        style={{ zIndex: tempValue[0] > tempValue[1] - (max - min) * 0.05 ? 25 : 20 }}
+                    />
+
+                    {/* Max handle */}
+                    <input
+                        type="range"
+                        min={min}
+                        max={max}
+                        step={step}
+                        value={tempValue[1]}
+                        onChange={(e) => handleChange(1, parseFloat(e.target.value))}
+                        className="absolute w-full h-1.5 opacity-0 cursor-pointer z-10 pointer-events-auto"
+                    />
+
+                    {/* Custom handles */}
+                    <div
+                        className={`absolute w-4 h-4 ${getColorClass(color)} border-2 border-white rounded-full shadow-md transform -translate-y-1.5 -translate-x-2 cursor-pointer hover:scale-110 transition-transform z-30 pointer-events-none`}
+                        style={{ left: `${percentage1}%` }}
+                    />
+                    <div
+                        className={`absolute w-4 h-4 ${getColorClass(color)} border-2 border-white rounded-full shadow-md transform -translate-y-1.5 -translate-x-2 cursor-pointer hover:scale-110 transition-transform z-15 pointer-events-none`}
+                        style={{ left: `${percentage2}%` }}
+                    />
+                </div>
+
+                {/* Value displays */}
+                <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="number"
+                            min={min}
+                            max={max}
+                            step={step}
+                            value={tempValue[0]}
+                            onChange={(e) => handleChange(0, parseFloat(e.target.value) || min)}
+                            className="w-16 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-xs"
+                        />
+                        <span className="text-gray-500 text-xs">to</span>
+                        <input
+                            type="number"
+                            min={min}
+                            max={max}
+                            step={step}
+                            value={tempValue[1]}
+                            onChange={(e) => handleChange(1, parseFloat(e.target.value) || max)}
+                            className="w-16 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-xs"
+                        />
+                    </div>
+
+                    <div className="text-gray-500 text-xs">
+                        {formatValue ? `${formatValue(tempValue[0])} - ${formatValue(tempValue[1])}` :
+                            `${tempValue[0]} - ${tempValue[1]}`}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
 
     if (!query.trim()) {
         return (
@@ -394,8 +680,8 @@ export default function SearchResultsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-black  text-white">
-            <div className="container mx-auto px-15 pt-25 pb-8">
+        <div className="min-h-screen bg-black text-white">
+            <div className="container mx-auto px-4 pt-24 pb-8">
                 {/* Header */}
                 <div className="mb-8">
                     <div className="flex items-center justify-between mb-6">
@@ -416,13 +702,13 @@ export default function SearchResultsPage() {
                         </div>
                     </div>
 
-                    {/* Enhanced Filters Section */}
-                    <div className="bg-gray-800/40 backdrop-blur-md rounded-2xl p-6 border border-gray-700/50 shadow-xl mb-8">
+                    {/* Enhanced Advanced Filters Section */}
+                    <div className="bg-gray-800/40 backdrop-blur-md rounded-2xl p-6 border border-gray-700/50 shadow-2xl mb-8">
                         <div className="flex flex-wrap items-center gap-4">
                             <Button
                                 variant="outline"
                                 onClick={() => setShowFilters(!showFilters)}
-                                className={`bg-gradient-to-r from-gray-800/80 to-gray-700/80 backdrop-blur-sm border-gray-600 text-white hover:from-gray-700 hover:to-gray-600 transition-all duration-200 ${hasActiveFilters ? 'border-orange-500/50 text-orange-300 shadow-orange-500/20 shadow-lg' : ''
+                                className={`bg-gradient-to-r from-gray-800/80 to-gray-700/80 backdrop-blur-sm border-gray-600 text-white hover:from-gray-700 hover:to-gray-600 transition-all duration-300 ${hasActiveFilters ? 'border-orange-500/50 text-orange-300 shadow-orange-500/20 shadow-lg' : ''
                                     }`}
                             >
                                 <SlidersHorizontal size={16} className="mr-2" />
@@ -434,7 +720,7 @@ export default function SearchResultsPage() {
                                 )}
                                 <ChevronDown
                                     size={16}
-                                    className={`ml-2 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`}
+                                    className={`ml-2 transition-transform duration-300 ${showFilters ? 'rotate-180' : ''}`}
                                 />
                             </Button>
 
@@ -477,227 +763,247 @@ export default function SearchResultsPage() {
                                     onClick={clearAllFilters}
                                     className="text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
                                 >
-                                    <X size={14} className="mr-1" />
-                                    Clear all
+                                    <RotateCcw size={14} className="mr-1" />
+                                    Reset all
                                 </Button>
                             )}
                         </div>
 
-                        {/* Expanded Filters */}
+                        {/* Expanded Advanced Filters */}
                         <AnimatePresence>
                             {showFilters && (
                                 <motion.div
-                                    initial={{ height: 0, opacity: 0, y: -10 }}
+                                    initial={{ height: 0, opacity: 0, y: -20 }}
                                     animate={{ height: 'auto', opacity: 1, y: 0 }}
-                                    exit={{ height: 0, opacity: 0, y: -10 }}
-                                    transition={{ duration: 0.3, ease: "easeOut" }}
-                                    className="border-t border-gray-700/50 pt-6 mt-4"
+                                    exit={{ height: 0, opacity: 0, y: -20 }}
+                                    transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                                    className="border-t border-gray-700/50 pt-8 mt-6"
                                 >
-                                    <div className="grid gap-6">
-
-                                        {/* Top row: Sort + Reset */}
-                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-
-                                            {/* Sort */}
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-semibold text-gray-200 inline-flex items-center gap-2">
-                                                    <SlidersHorizontal size={14} className="text-orange-400" />
-                                                    Sort Results
+                                    <div className="grid gap-8">
+                                        {/* Sort & Content Type Row */}
+                                        <div className="flex flex-col lg:flex-row gap-8">
+                                            {/* Sort Options */}
+                                            <div className="flex-1 space-y-4">
+                                                <label className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                                                    <TrendingUp size={16} className="text-blue-400" />
+                                                    Sort Results By
                                                 </label>
-                                                <div className="inline-flex bg-gray-900/70 border border-gray-700 rounded-xl p-1 shadow-inner">
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                                     {[
-                                                        { key: "relevance", label: "Relevance" },
-                                                        { key: "rating", label: "Top Rated" },
-                                                        { key: "date", label: "Newest" },
-                                                        { key: "popularity", label: "Popular" },
-                                                    ].map((opt) => {
-                                                        const active = sortBy === opt.key;
+                                                        { key: "relevance", label: "Most Relevant", icon: Search },
+                                                        { key: "rating", label: "Highest Rated", icon: Award },
+                                                        { key: "date", label: "Most Recent", icon: Clock },
+                                                        { key: "popularity", label: "Most Popular", icon: TrendingUp },
+                                                    ].map((option) => {
+                                                        const Icon = option.icon;
+                                                        const isActive = sortBy === option.key;
                                                         return (
                                                             <button
-                                                                key={opt.key}
-                                                                onClick={() => setSortBy(opt.key as any)}
-                                                                className={`px-3 py-1.5 text-xs rounded-lg transition 
-                ${active
-                                                                        ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md"
-                                                                        : "text-gray-400 hover:bg-gray-800/80 hover:text-white"
+                                                                key={option.key}
+                                                                onClick={() => setSortBy(option.key as any)}
+                                                                className={`flex items-center gap-2 p-2 rounded-xl text-sm font-small transition-all duration-300 border ${isActive
+                                                                    ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400/50 shadow-lg scale-105"
+                                                                    : "bg-gray-800/60 text-gray-300 border-gray-600/50 hover:bg-gray-700/80 hover:text-white hover:border-blue-400/50 hover:scale-102"
                                                                     }`}
-                                                                aria-pressed={active}
                                                             >
-                                                                {opt.label}
+                                                                <Icon size={16} />
+                                                                {option.label}
                                                             </button>
                                                         );
                                                     })}
                                                 </div>
                                             </div>
 
-                                            {/* Content + Reset */}
-                                            <div className="flex items-center gap-3">
-                                                {/* Adult toggle */}
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs text-gray-300">Adult</span>
+                                            {/* Adult Content Toggle */}
+                                            <div className="flex flex-col items-start gap-4">
+                                                <label className="text-sm font-semibold text-gray-200">Content Rating</label>
+                                                <div className="flex items-center gap-3 bg-gray-800/60 p-2 rounded-xl border border-gray-600/50">
+                                                    <span className="text-sm text-gray-300">Include Adult Content</span>
                                                     <div
                                                         role="switch"
                                                         aria-checked={includeAdult}
-                                                        onClick={() => setIncludeAdult((s) => !s)}
-                                                        className={`relative inline-flex items-center h-5 w-10 rounded-full transition cursor-pointer 
-            ${includeAdult ? "bg-red-500/90" : "bg-gray-600/70"}`}
+                                                        onClick={() => setIncludeAdult(!includeAdult)}
+                                                        className={`relative inline-flex items-center h-5 w-10 rounded-full transition-all duration-300 cursor-pointer ${includeAdult ? "bg-red-500" : "bg-gray-600"
+                                                            }`}
                                                     >
                                                         <span
-                                                            className={`absolute left-1 h-3.5 w-3.5 rounded-full bg-white shadow transition-transform 
-              ${includeAdult ? "translate-x-5" : "translate-x-0"}`}
+                                                            className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform duration-300 ${includeAdult ? "translate-x-6" : "translate-x-0"
+                                                                }`}
                                                         />
                                                     </div>
                                                 </div>
-
-                                                {/* Reset button */}
-                                                <button
-                                                    onClick={clearAllFilters}
-                                                    className="px-3 py-1.5 rounded-lg text-xs font-medium 
-          bg-gradient-to-r from-gray-600 to-gray-700 text-white hover:from-red-500 hover:to-orange-500 
-          transition shadow"
-                                                >
-                                                    Reset
-                                                </button>
                                             </div>
                                         </div>
 
-                                        {/* Year Range */}
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-semibold text-gray-200 inline-flex items-center gap-2">
-                                                <Calendar size={14} className="text-blue-400" />
-                                                Year
-                                            </label>
-                                            <div className="flex items-center gap-2">
-                                                <select
-                                                    value={yearMin ?? ""}
-                                                    onChange={(e) => setYearMin(e.target.value ? parseInt(e.target.value) : null)}
-                                                    className="w-28 bg-gray-900/80 border border-gray-600 rounded-lg px-2 py-1.5 text-xs text-white"
-                                                >
-                                                    <option value="">From</option>
-                                                    {YEAR_OPTIONS.map((y) => (
-                                                        <option key={y} value={y}>{y}</option>
-                                                    ))}
-                                                </select>
+                                        {/* Enhanced Year Range Filter */}
+                                        <div className="space-y-4">
+                                            <DualRangeSlider
+                                                min={1950}
+                                                max={2025}
+                                                value={yearRange}
+                                                onChange={setYearRange}
+                                                label="Release Year"
+                                                icon={Calendar}
+                                                color="blue"
+                                                formatValue={(value) => value.toString()}
+                                            />
 
-                                                <span className="text-gray-400 text-xs">—</span>
-
-                                                <select
-                                                    value={yearMax ?? ""}
-                                                    onChange={(e) => setYearMax(e.target.value ? parseInt(e.target.value) : null)}
-                                                    className="w-28 bg-gray-900/80 border border-gray-600 rounded-lg px-2 py-1.5 text-xs text-white"
-                                                >
-                                                    <option value="">To</option>
-                                                    {YEAR_OPTIONS.map((y) => (
-                                                        <option key={y} value={y}>{y}</option>
-                                                    ))}
-                                                </select>
-
-                                                {/* Quick chips */}
-                                                <div className="flex gap-1 ml-2">
-                                                    {[2025, 2020, 2010].map((y) => (
-                                                        <button
-                                                            key={y}
-                                                            onClick={() => {
-                                                                setYearMin(y);
-                                                                setYearMax(y + 5);
-                                                            }}
-                                                            className="px-2 py-1 rounded bg-gray-800/70 border border-gray-700 text-xs text-gray-300 hover:bg-blue-600 hover:text-white"
-                                                        >
-                                                            {y}+
-                                                        </button>
-                                                    ))}
+                                            {/* Year Presets */}
+                                            <div>
+                                                <label className="text-xs text-gray-400 mb-2 block">Quick Presets</label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {YEAR_PRESETS.map((preset) => {
+                                                        const isActive = yearRange[0] === preset.min && yearRange[1] === preset.max;
+                                                        return (
+                                                            <button
+                                                                key={preset.label}
+                                                                onClick={() => setYearRange([preset.min, preset.max])}
+                                                                className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-all duration-200 ${isActive
+                                                                    ? "bg-blue-500 text-white shadow-md"
+                                                                    : "bg-gray-700/60 text-gray-300 hover:bg-blue-500/20 hover:text-blue-300 border border-gray-600/50"
+                                                                    }`}
+                                                            >
+                                                                {preset.label}
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Rating Range */}
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-semibold text-gray-200 inline-flex items-center gap-2">
-                                                <Star size={14} className="text-yellow-400" />
-                                                Rating
-                                            </label>
-                                            <div className="flex items-center gap-3">
-                                                <input
-                                                    type="number"
-                                                    min={0}
-                                                    max={10}
-                                                    step={0.5}
-                                                    value={ratingMin ?? 0}
-                                                    onChange={(e) => setRatingMin(e.target.value ? parseFloat(e.target.value) : null)}
-                                                    className="w-16 bg-gray-900/80 border border-gray-600 rounded-lg px-2 py-1 text-xs text-white"
-                                                />
-                                                <span className="text-gray-400 text-xs">—</span>
-                                                <input
-                                                    type="number"
-                                                    min={0}
-                                                    max={10}
-                                                    step={0.5}
-                                                    value={ratingMax ?? 10}
-                                                    onChange={(e) => setRatingMax(e.target.value ? parseFloat(e.target.value) : null)}
-                                                    className="w-16 bg-gray-900/80 border border-gray-600 rounded-lg px-2 py-1 text-xs text-white"
-                                                />
-                                                <div className="flex gap-1">
-                                                    {[2, 5, 8].map((v) => (
-                                                        <button
-                                                            key={v}
-                                                            onClick={() => {
-                                                                setRatingMin(v);
-                                                                setRatingMax(10);
-                                                            }}
-                                                            className="px-2 py-1 rounded bg-gray-800/70 border border-gray-700 text-xs text-gray-300 hover:bg-yellow-500 hover:text-black"
-                                                        >
-                                                            {v}+
-                                                        </button>
-                                                    ))}
+                                        {/* Enhanced Rating Range Filter */}
+                                        <div className="space-y-6">
+                                            <DualRangeSlider
+                                                min={0}
+                                                max={10}
+                                                step={0.1}
+                                                value={ratingRange}
+                                                onChange={setRatingRange}
+                                                label="IMDb Rating"
+                                                icon={Star}
+                                                color="yellow"
+                                                formatValue={(value) => `${value.toFixed(1)} ★`}
+                                            />
+
+                                            {/* Rating Presets */}
+                                            <div>
+                                                <label className="text-xs text-gray-400 mb-2 block">Quality Presets</label>
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                                                    {RATING_PRESETS.map((preset) => {
+                                                        const isActive = ratingRange[0] === preset.min && ratingRange[1] === preset.max;
+                                                        return (
+                                                            <button
+                                                                key={preset.label}
+                                                                onClick={() => setRatingRange([preset.min, preset.max])}
+                                                                className={`px-2 py-2 text-xs rounded-lg font-medium transition-all duration-300 border ${isActive
+                                                                    ? `bg-gradient-to-r ${preset.color} text-white shadow-lg scale-105`
+                                                                    : "bg-gray-700/60 text-gray-300 hover:scale-105 border-gray-600/50 hover:bg-yellow-500/20 hover:text-yellow-300"
+                                                                    }`}
+                                                            >
+                                                                <div className="flex items-center justify-between gap-1 w-full max-w-xs">
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Star size={10} fill="currentColor" /> {preset.label}
+                                                                    </span>
+                                                                    <span className="text-white text-xs">
+                                                                        {preset.min === 0 && preset.max === 10 ? 'All' : `${preset.min}+ Rating`}
+                                                                    </span>
+                                                                </div>
+
+
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </div>
-                                            </div>
-                                        </div>
-
-
-
-                                        {/* Countries */}
-                                        <div>
-                                            <label className="text-sm font-semibold text-gray-200 mb-4 block flex items-center gap-2">
-                                                <Globe size={16} className="text-green-400" />
-                                                Countries
-                                            </label>
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                                                {availableCountries.map((country) => (
-                                                    <Badge
-                                                        key={country.code}
-                                                        variant={selectedCountries.includes(country.code) ? 'default' : 'outline'}
-                                                        className={`cursor-pointer text-center justify-center transition-all duration-200 px-3 py-2 ${selectedCountries.includes(country.code)
-                                                            ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-transparent shadow-lg'
-                                                            : 'border-gray-600 text-gray-300 hover:text-white hover:border-green-400 hover:bg-green-500/20 hover:shadow-lg'
-                                                            }`}
-                                                        onClick={() => handleCountryToggle(country.code)}
-                                                    >
-                                                        {country.name}
-                                                    </Badge>
-                                                ))}
                                             </div>
                                         </div>
 
                                         {/* Genres */}
                                         <div>
-                                            <label className="text-sm font-semibold text-gray-200 mb-4 block flex items-center gap-2">
+                                            <label className="text-sm font-medium text-gray-200 mb-4 block flex items-center gap-2">
                                                 <Film size={16} className="text-purple-400" />
                                                 Genres
-                                            </label>
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                                                {availableGenres.map((genre) => (
-                                                    <Badge
-                                                        key={genre}
-                                                        variant={selectedGenres.includes(genre) ? 'default' : 'outline'}
-                                                        className={`cursor-pointer text-center justify-center transition-all duration-200 px-3 py-2 ${selectedGenres.includes(genre)
-                                                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-lg'
-                                                            : 'border-gray-600 text-gray-300 hover:text-white hover:border-purple-400 hover:bg-purple-500/20 hover:shadow-lg'
-                                                            }`}
-                                                        onClick={() => handleGenreToggle(genre)}
-                                                    >
-                                                        {genre}
+                                                {selectedGenres.length > 0 && (
+                                                    <Badge variant="outline" className="text-xs bg-purple-500/20 border-purple-400/50 text-purple-300">
+                                                        {selectedGenres.length} selected
                                                     </Badge>
-                                                ))}
+                                                )}
+                                            </label>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                                                {availableGenres.map((genre) => {
+                                                    const isSelected = selectedGenres.includes(genre);
+                                                    return (
+                                                        <Badge
+                                                            key={genre}
+                                                            variant={isSelected ? 'default' : 'outline'}
+                                                            className={`cursor-pointer text-center justify-center transition-all duration-300 px-2.5 py-2 font-small ${isSelected
+                                                                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-lg scale-105 hover:scale-110'
+                                                                : 'border-gray-600 text-gray-300 hover:text-white hover:border-purple-400 hover:bg-purple-500/20 hover:shadow-lg hover:scale-105'
+                                                                }`}
+                                                            onClick={() => handleGenreToggle(genre)}
+                                                        >
+                                                            {genre}
+                                                        </Badge>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Countries */}
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-200 mb-4 block flex items-center gap-2">
+                                                <Globe size={16} className="text-green-400" />
+                                                Countries
+                                                {selectedCountries.length > 0 && (
+                                                    <Badge variant="outline" className="text-xs bg-green-500/20 border-green-400/50 text-green-300">
+                                                        {selectedCountries.length} selected
+                                                    </Badge>
+                                                )}
+                                            </label>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                                                {availableCountries.map((country) => {
+                                                    const isSelected = selectedCountries.includes(country.code);
+                                                    return (
+                                                        <Badge
+                                                            key={country.code}
+                                                            variant={isSelected ? 'default' : 'outline'}
+                                                            className={`cursor-pointer text-center justify-center transition-all duration-300 px-2.5 py-2 font-small ${isSelected
+                                                                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-transparent shadow-lg scale-105 hover:scale-110'
+                                                                : 'border-gray-600 text-gray-300 hover:text-white hover:border-green-400 hover:bg-green-500/20 hover:shadow-lg hover:scale-105'
+                                                                }`}
+                                                            onClick={() => handleCountryToggle(country.code)}
+                                                        >
+                                                            {country.name}
+                                                        </Badge>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Filter Actions */}
+                                        <div className="flex justify-between items-center pt-4 border-t border-gray-700/50">
+                                            <div className="text-sm text-gray-400">
+                                                {hasActiveFilters ? `${getActiveFilterCount()} filters active` : 'No filters applied'}
+                                            </div>
+
+                                            <div className="flex gap-3">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={clearAllFilters}
+                                                    disabled={!hasActiveFilters}
+                                                    className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <RotateCcw size={14} className="mr-1" />
+                                                    Reset All
+                                                </Button>
+
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => setShowFilters(false)}
+                                                    className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                                                >
+                                                    Apply Filters
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>
@@ -781,7 +1087,7 @@ export default function SearchResultsPage() {
                             </div>
                         ) : (
                             <>
-                                {/* Your Best Match Section */}
+                                {/* Best Match Section */}
                                 {bestMatch && (
                                     <motion.div
                                         initial={{ opacity: 0, y: 20 }}
@@ -888,26 +1194,17 @@ export default function SearchResultsPage() {
                                                         <Button
                                                             onClick={() => handleCardClick(bestMatch)}
                                                             variant="outline"
-                                                            className="border-gray-600 text-black hover:bg-gray-700/50 hover:text-white"
+                                                            className="border-gray-600 text-gray-300 hover:bg-gray-700/50 hover:text-white"
                                                         >
                                                             <Info size={16} className="mr-2" />
                                                             More Info
                                                         </Button>
                                                     </div>
-                                                    {/* Lazy modal */}
-                                                    {selectedTrailer && (
-                                                        <TrailerModal
-                                                            trailer={selectedTrailer}
-                                                            onClose={() => setSelectedTrailer(null)}
-                                                            onSelectTrailer={handleSelectTrailer}
-                                                        />
-                                                    )}
                                                 </div>
                                             </div>
                                         </div>
                                     </motion.div>
                                 )}
-
 
                                 {/* Featured Results (Top 2) */}
                                 {results.length > 0 && (
@@ -995,20 +1292,21 @@ export default function SearchResultsPage() {
                                         </div>
                                     </div>
                                 )}
+
                                 {/* All Results */}
                                 <div className="mb-8">
                                     <div className="flex items-center justify-between mb-6">
-
-                                        <h2 className="text-2xl font-bold mb-6 text-gray-200 flex items-center gap-2">
+                                        <h2 className="text-2xl font-bold text-gray-200 flex items-center gap-2">
                                             <Search size={20} />
                                             All Results
                                         </h2>
+
                                         {/* View Toggle */}
                                         <div className="flex items-center gap-2">
                                             <div className="bg-gray-800/60 backdrop-blur-md rounded-xl p-1 flex border border-gray-600/50 shadow-lg">
                                                 <button
                                                     onClick={() => setViewMode('grid')}
-                                                    className={`p-3 rounded-lg transition-all duration-200 ${viewMode === 'grid'
+                                                    className={`p-3 rounded-lg transition-all duration-300 ${viewMode === 'grid'
                                                         ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg scale-105'
                                                         : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
                                                         }`}
@@ -1018,7 +1316,7 @@ export default function SearchResultsPage() {
                                                 </button>
                                                 <button
                                                     onClick={() => setViewMode('list')}
-                                                    className={`p-3 rounded-lg transition-all duration-200 ${viewMode === 'list'
+                                                    className={`p-3 rounded-lg transition-all duration-300 ${viewMode === 'list'
                                                         ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg scale-105'
                                                         : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
                                                         }`}
@@ -1029,6 +1327,7 @@ export default function SearchResultsPage() {
                                             </div>
                                         </div>
                                     </div>
+
                                     {viewMode === 'grid' ? (
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
                                             {results.map((item, index) => (
@@ -1179,86 +1478,36 @@ export default function SearchResultsPage() {
                             </>
                         )}
                     </>
-                )
-                }
+                )}
 
                 {/* Enhanced Pagination */}
-                {
-                    totalPages > 1 && (
-                        <div className="flex justify-center items-center gap-3 mt-12">
-                            <Button
-                                variant="outline"
-                                disabled={currentPage === 1}
-                                onClick={() => setCurrentPage(p => p - 1)}
-                                className="bg-gray-800/50 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Previous
-                            </Button>
-
-                            <div className="flex items-center gap-2">
-                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                    const page = Math.max(1, Math.min(totalPages, currentPage - 2 + i));
-                                    if (i > 0 && page === Math.max(1, Math.min(totalPages, currentPage - 2 + i - 1))) return null;
-
-                                    return (
-                                        <Button
-                                            key={page}
-                                            variant={page === currentPage ? "default" : "outline"}
-                                            onClick={() => setCurrentPage(page)}
-                                            className={`w-12 h-12 transition-all duration-200 ${page === currentPage
-                                                ? "bg-gradient-to-r from-orange-500 to-red-500 text-white border-transparent shadow-lg hover:shadow-orange-500/25"
-                                                : "bg-gray-800/50 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-orange-400"
-                                                }`}
-                                        >
-                                            {page}
-                                        </Button>
-                                    );
-                                })}
-
-                                {currentPage < totalPages - 2 && (
-                                    <>
-                                        <span className="text-gray-500 px-2">...</span>
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => setCurrentPage(totalPages)}
-                                            className="w-12 h-12 bg-gray-800/50 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-orange-400 transition-all duration-200"
-                                        >
-                                            {totalPages}
-                                        </Button>
-                                    </>
-                                )}
-                            </div>
-
-                            <Button
-                                variant="outline"
-                                disabled={currentPage === totalPages}
-                                onClick={() => setCurrentPage(p => p + 1)}
-                                className="bg-gray-800/50 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    )
-                }
+                {renderPagination()}
 
                 {/* Results Summary */}
-                {
-                    !loading && !error && results.length > 0 && (
-                        <div className="text-center mt-8">
-                            <div className="inline-flex items-center gap-2 bg-gray-800/40 backdrop-blur-sm rounded-lg px-6 py-3 border border-gray-700/50">
-                                <span className="text-gray-300">
-                                    Showing {((currentPage - 1) * 20) + 1} - {Math.min(currentPage * 20, totalResults)} of {totalResults.toLocaleString()} results
-                                </span>
-                                {hasActiveFilters && (
-                                    <Badge variant="outline" className="text-orange-400 border-orange-400/50 bg-orange-500/10 ml-2">
-                                        {getActiveFilterCount()} filters active
-                                    </Badge>
-                                )}
-                            </div>
+                {!loading && !error && results.length > 0 && (
+                    <div className="text-center mt-8">
+                        <div className="inline-flex items-center gap-2 bg-gray-800/40 backdrop-blur-sm rounded-lg px-6 py-3 border border-gray-700/50">
+                            <span className="text-gray-300">
+                                Showing {((currentPage - 1) * 20) + 1} - {Math.min(currentPage * 20, totalResults)} of {totalResults.toLocaleString()} results
+                            </span>
+                            {hasActiveFilters && (
+                                <Badge variant="outline" className="text-orange-400 border-orange-400/50 bg-orange-500/10 ml-2">
+                                    {getActiveFilterCount()} filters active
+                                </Badge>
+                            )}
                         </div>
-                    )
-                }
-            </div >
-        </div >
+                    </div>
+                )}
+
+                {/* Trailer Modal */}
+                {selectedTrailer && (
+                    <TrailerModal
+                        trailer={selectedTrailer}
+                        onClose={handleCloseTrailer}
+                        onSelectTrailer={handleSelectTrailer}
+                    />
+                )}
+            </div>
+        </div>
     );
 }

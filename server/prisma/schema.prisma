@@ -81,3 +81,128 @@ model Movie {
   moodTags    String[] @default([])
   createdAt   DateTime @default(now())
 }
+
+model Mood {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  color       String
+  icon        String
+  description String
+  keywords    String[]
+  tmdbGenres  Int[]
+  valence     Decimal  @db.Decimal(3, 2) @default(0)
+  arousal     Decimal  @db.Decimal(3, 2) @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  logs            MoodLog[]
+  recommendations Recommendation[]
+
+  @@map("moods")
+}
+
+model MoodLog {
+  id        String   @id @default(uuid())
+  userId    String
+  moodId    String
+  intensity Int      @default(5)
+  tags      String[]
+  context   String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  // Relations
+  mood Mood @relation(fields: [moodId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([userId, moodId])
+  @@map("mood_logs")
+}
+
+model Recommendation {
+  id           String      @id @default(uuid())
+  userId       String
+  moodId       String
+  tmdbId       Int
+  mediaType    MediaType
+  title        String
+  overview     String?
+  genreIds     Int[]
+  voteAverage  Decimal     @db.Decimal(3, 2)
+  voteCount    Int
+  releaseDate  String?
+  posterPath   String?
+  backdropPath String?
+  score        Decimal     @db.Decimal(4, 3)
+  reason       String
+  algorithm    String
+  metadata     Json?
+  viewed       Boolean     @default(false)
+  liked        Boolean     @default(false)
+  saved        Boolean     @default(false)
+  rating       Int?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Relations
+  mood Mood @relation(fields: [moodId], references: [id], onDelete: Cascade)
+
+  @@index([userId, moodId])
+  @@index([score])
+  @@index([createdAt])
+  @@index([tmdbId, mediaType])
+  @@map("recommendations")
+}
+
+model UserPreference {
+  id               String   @id @default(uuid())
+  userId           String
+  preferredGenres  Int[]
+  dislikedGenres   Int[]
+  preferredMoods   String[]
+  minRating        Decimal  @db.Decimal(3, 2) @default(6.0)
+  preferredRuntime Json? // {min: number, max: number}
+  languages        String[] @default(["en"])
+  includeAdult     Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([userId])
+  @@map("user_preferences")
+}
+
+model ContentCache {
+  id           String    @id @default(uuid())
+  tmdbId       Int
+  mediaType    MediaType
+  title        String
+  overview     String?
+  genreIds     Int[]
+  voteAverage  Decimal   @db.Decimal(3, 2)
+  voteCount    Int
+  releaseDate  String?
+  posterPath   String?
+  backdropPath String?
+  popularity   Decimal   @db.Decimal(8, 3)
+  adult        Boolean   @default(false)
+  originalLanguage String
+  metadata     Json?
+  lastFetched  DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([tmdbId, mediaType])
+  @@index([genreIds])
+  @@index([voteAverage])
+  @@index([popularity])
+  @@index([lastFetched])
+  @@map("content_cache")
+}
+
+enum MediaType {
+  MOVIE
+  TV
+}

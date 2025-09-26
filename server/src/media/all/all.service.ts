@@ -221,12 +221,12 @@ export class AllService implements OnModuleInit {
         try {
             // Get trending but only recent ones
             const data = await this.tmdb(
-                `/trending/all/day?include_adult=false`
+                `/trending/all/week?include_adult=false`
             );
 
             const results = (data?.results ?? []).filter((m: any) => {
                 const date = new Date(m.release_date ?? m.first_air_date ?? '');
-                return date >= new Date(this.getRecentDate(365)); // last 12 months
+                return date >= new Date(this.getRecentDate(730)); // last 12 months
             });
 
             const basicItems: TmdbAll[] = results.slice(0, limit).map((m: any) => ({
@@ -246,7 +246,7 @@ export class AllService implements OnModuleInit {
             }));
 
             const shuffled = shuffleArray(basicItems);
-            await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
+            // await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
 
             // populate recommendations in background
             this.populateRecommendationsBackground(basicItems, cacheKey);
