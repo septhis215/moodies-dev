@@ -49,17 +49,27 @@ async function fetchNewTVTrailers() {
     const json = await res.json();
     return json as All[];
 }
+
+async function fetchKoreanTV() {
+    const base = process.env.NEST_API_URL || 'http://localhost:4000';
+    const res = await fetch(`${base}/tv/koreaTrending`, { next: { revalidate: 60 } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json as All[];
+}
+
 export const metadata = {
     title: 'TV Shows - Moodies',
     description: 'Discover trending TV shows and series',
 };
 export default async function TVHomePage() {
-    const [trendingTV, popularTV, topRatedTV, TVTrailer, NewTVTrailer] = await Promise.all([
+    const [trendingTV, popularTV, topRatedTV, TVTrailer, NewTVTrailer, KoreanTV] = await Promise.all([
         fetchTrendingTV(),
         fetchPopularTV(),
         fetchTopRatedTV(),
         fetchTVTrailers(),
-        fetchNewTVTrailers()
+        fetchNewTVTrailers(),
+        fetchKoreanTV(),
     ]);
 
     return (
@@ -74,7 +84,7 @@ export default async function TVHomePage() {
 
             <FavoritesSection data={topRatedTV} title="Top Rated Series" />
 
-            <KoreaTrendingSection />
+            <KoreaTrendingSection data={KoreanTV}/>
 
             <section className="px-4 md:px-8 py-8">
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">Popular Series</h2>

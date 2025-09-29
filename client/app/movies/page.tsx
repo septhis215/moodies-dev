@@ -49,13 +49,22 @@ async function fetchNowPlayingMovies() {
   return json as All[];
 }
 
+async function fetchKoreanMovies() {
+  const base = process.env.NEST_API_URL || 'http://localhost:4000';
+  const res = await fetch(`${base}/movies/koreaTrending`, { next: { revalidate: 60 } });
+  if (!res.ok) return [];
+  const json = await res.json();
+  return json as All[];
+}
+
 export default async function MoviesHomePage() {
-  const [trendingMovies, popularMovies, topRatedMovies, upcomingMovies, nowPlayingMovies] = await Promise.all([
+  const [trendingMovies, popularMovies, topRatedMovies, upcomingMovies, nowPlayingMovies, KoreanMovies] = await Promise.all([
     fetchTrendingMovies(),
     fetchPopularMovies(),
     fetchTopRatedMovies(),
     fetchUpcomingMovies(),
-    fetchNowPlayingMovies()
+    fetchNowPlayingMovies(),
+    fetchKoreanMovies(),
   ]);
 
   return (

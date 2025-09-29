@@ -3,11 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 
-// import { RedisService } from 'src/redis/redis.service';
-
 type ContentType = 'tv';
 
-// Reuse the types from all.service.ts
 export type TmdbTv = {
   id: number;
   title: string;
@@ -50,18 +47,17 @@ export class TvService implements OnModuleInit {
   private readonly token: string;
   private genreMap: Record<number, string> = {};
   private readonly maxConcurrentRequests = 5;
+  private readonly MIN_REQUIRED_ITEMS = 25;
 
-  // Cache TTL constants
   private readonly CACHE_TTL = {
-    BASIC_DATA: 60 * 5, // 5 minutes for trending
-    RECOMMENDATIONS: 60 * 30, // 30 minutes for recommendations
-    TRAILERS: 60 * 60, // 1 hour for trailers
-    GENRES: 60 * 60 * 24, // 24 hours for genres
+    BASIC_DATA: 60 * 60 * 24,
+    RECOMMENDATIONS: 60 * 60 * 24,
+    TRAILERS: 60 * 60 * 24,
+    GENRES: 60 * 60 * 24,
   };
 
   constructor(
     private readonly httpService: HttpService,
-    // private readonly redisService: RedisService,
     private readonly configService: ConfigService,
   ) {
     this.baseUrl =
@@ -70,7 +66,6 @@ export class TvService implements OnModuleInit {
     this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
   }
 
-  // Concurrency control helper
   private async withConcurrencyLimit<T>(
     tasks: (() => Promise<T>)[],
     limit: number = this.maxConcurrentRequests,
@@ -91,21 +86,14 @@ export class TvService implements OnModuleInit {
     return results;
   }
 
-  // Generic helper: returns response.data
   private async tmdb(endpoint: string) {
     let normalizedEndpoint: string;
 
-    // If it's a full URL, use it as-is
     if (endpoint.startsWith('http')) {
       normalizedEndpoint = endpoint;
     } else {
-      // Remove leading slash from endpoint if present
       const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
-
-      // Remove trailing slash from baseUrl if present
       const cleanBase = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
-
-      // Combine with single slash
       normalizedEndpoint = `${cleanBase}/${cleanEndpoint}`;
     }
 
@@ -121,7 +109,6 @@ export class TvService implements OnModuleInit {
     return response.data;
   }
 
-  // Private fetch methods for TV (matching movies service pattern)
   private async fetchInfo(id: number, type: ContentType = 'tv') {
     return await this.tmdb(`${type}/${id}?language=en-US`);
   }
@@ -150,21 +137,9 @@ export class TvService implements OnModuleInit {
     return await this.tmdb(`${type}/${id}/content_ratings`);
   }
 
-  // Main TV details method - matches movies service exactly
   async tvDetails(id: number, p0: any) {
-    // const cacheKey = `tv/details/${id}`;
-    // const cached = await this.redisService.get(cacheKey);
-    // if (cached) {
-    //   try {
-    //     return JSON.parse(cached);
-    //   } catch (err) {
-    //     this.logger.warn('Failed to parse cached tv details, will refetch', err);
-    //   }
-    // }
-
     const detectedType: ContentType = 'tv';
 
-    // fetch in parallel from the appropriate endpoints
     const [
       infoRaw,
       creditsRaw,
@@ -183,28 +158,23 @@ export class TvService implements OnModuleInit {
       this.fetchContentRatings(id, detectedType),
     ]);
 
-    // build trailer if available
     const videos = videosRaw?.results ?? videosRaw ?? [];
     const trailer =
       (videos || []).find(
         (v: any) => v.type === 'Trailer' && v.site === 'YouTube',
       ) ?? null;
 
-    // normalise production countries for tv (uses origin_country)
     const production_countries =
       infoRaw?.production_countries ??
       (infoRaw?.origin_country
         ? (infoRaw.origin_country as string[]).map((c) => ({ iso_3166_1: c }))
         : []);
 
-    // creator (TV equivalent of director)
     const director =
       (creditsRaw?.crew ?? []).find((c: any) => c.job === 'Director')?.name ??
       (infoRaw?.created_by && infoRaw.created_by[0]?.name) ??
       undefined;
 
-    // Process content ratings to get standardized age rating
-    // TV-only: prefer US, then fallback to other common countries, then any available rating
     const getContentRating = (
       ratingsData: any,
       fallbackCountries: string[] = ['GB', 'CA', 'AU', 'FR', 'DE', 'IN', 'JP'],
@@ -213,7 +183,6 @@ export class TvService implements OnModuleInit {
 
       const results = ratingsData?.results ?? [];
 
-      // helper: get the rating string for a country if present and not empty
       const findRatingForCountry = (countryCode: string) => {
         const countryObj = results.find(
           (r: any) => r.iso_3166_1 === countryCode,
@@ -223,7 +192,6 @@ export class TvService implements OnModuleInit {
         return rating === '' ? null : rating;
       };
 
-      // normalizer for TV rating strings
       const normalizeTvRating = (rating: string | null | undefined): string => {
         if (!rating) return 'NR';
         const r = String(rating).toUpperCase();
@@ -235,21 +203,17 @@ export class TvService implements OnModuleInit {
         if (r.includes('Y7') || r === 'TV-Y7') return 'TV-Y7';
         if (r === 'Y' || r === 'TV-Y') return 'TV-Y';
 
-        // return the original rating if it did not match known forms
         return rating;
       };
 
-      // 1) try US
       const us = findRatingForCountry('US');
       if (us) return normalizeTvRating(us);
 
-      // 2) fallback to other common countries in order
       for (const country of fallbackCountries) {
         const r = findRatingForCountry(country);
         if (r) return normalizeTvRating(r);
       }
 
-      // 3) final fallback: first available rating in results
       for (const obj of results) {
         const r = obj?.rating;
         if (r && String(r).trim() !== '') return normalizeTvRating(r);
@@ -260,7 +224,6 @@ export class TvService implements OnModuleInit {
 
     const contentRating = getContentRating(contentRatingsRaw);
 
-    // normalized info object that frontend can consume directly
     const info = {
       id: infoRaw?.id,
       title: infoRaw?.title ?? infoRaw?.name ?? 'Untitled',
@@ -285,10 +248,9 @@ export class TvService implements OnModuleInit {
       backdrop_path: infoRaw?.backdrop_path ?? null,
       adult: infoRaw?.adult ?? false,
       created_by: infoRaw?.created_by ?? null,
-      content_type: detectedType, // explicitly tell frontend the type
+      content_type: detectedType,
       director,
-      content_rating: contentRating, // standardized content rating
-      // TV-specific fields
+      content_rating: contentRating,
       number_of_seasons: infoRaw?.number_of_seasons ?? null,
       number_of_episodes: infoRaw?.number_of_episodes ?? null,
       episode_run_time: infoRaw?.episode_run_time ?? [],
@@ -327,9 +289,6 @@ export class TvService implements OnModuleInit {
       },
     };
 
-    // cache for 5 minutes
-    // await this.redisService.set(cacheKey, JSON.stringify(payload), 300);
-
     return payload;
   }
 
@@ -355,7 +314,6 @@ export class TvService implements OnModuleInit {
       }));
     }
 
-    // fetch each season detail (episodes) in parallel but resiliently
     const promises = seasons.map((s: any) =>
       this.tmdb(`tv/${id}/season/${s.season_number}?language=en-US`),
     );
@@ -384,7 +342,6 @@ export class TvService implements OnModuleInit {
         };
       }
 
-      // fallback: return minimal season info if season detail failed
       return {
         season_number: basic.season_number,
         name: basic.name,
@@ -399,7 +356,6 @@ export class TvService implements OnModuleInit {
     return seasonDetails;
   }
 
-  // Load TV genres
   async loadGenres() {
     if (!this.token) {
       this.logger.warn('TMDB token not set; skipping loadGenres');
@@ -422,31 +378,15 @@ export class TvService implements OnModuleInit {
     await this.loadGenres();
   }
 
-  // Utility to get date X days ago
   private getRecentDate(days: number): string {
     const d = new Date();
     d.setDate(d.getDate() - days);
     return d.toISOString().split('T')[0];
   }
 
-  // Content filtering
   private readonly BANNED_WORDS = [
-    '에로',
-    '성인',
-    '야한',
-    '포르노',
-    '섹스',
-    '성적',
-    '노출',
-    '관음',
-    '야설',
-    'porn',
-    'sex',
-    'xxx',
-    'erotic',
-    'adult',
-    'nude',
-    'av',
+    '에로', '성인', '야한', '포르노', '섹스', '성적', '노출', '관음', '야설',
+    'porn', 'sex', 'xxx', 'erotic', 'adult', 'nude', 'av',
   ];
 
   private readonly BANNED_GENRE_IDS = new Set<number>([
@@ -459,12 +399,10 @@ export class TvService implements OnModuleInit {
     const title = (m.title ?? m.name ?? '').toString().toLowerCase();
     const overview = (m.overview ?? '').toString().toLowerCase();
 
-    // Keyword match
     for (const bad of this.BANNED_WORDS) {
       if (title.includes(bad) || overview.includes(bad)) return true;
     }
 
-    // Genre match
     if (
       Array.isArray(m.genre_ids) &&
       m.genre_ids.some((g: number) => this.BANNED_GENRE_IDS.has(g))
@@ -472,10 +410,8 @@ export class TvService implements OnModuleInit {
       return true;
     }
 
-    // Adult flag
     if (m.adult === true) return true;
 
-    // Low vote count
     if (
       typeof m.vote_count === 'number' &&
       m.vote_count < this.MIN_VOTE_COUNT
@@ -497,7 +433,6 @@ export class TvService implements OnModuleInit {
     });
   }
 
-  // Background recommendation population
   private async populateRecommendationsBackground(items: TmdbTv[]) {
     setTimeout(async () => {
       const tasks = items.map((item) => async () => {
@@ -518,7 +453,6 @@ export class TvService implements OnModuleInit {
     }, 100);
   }
 
-  // Convert TMDB result to TmdbTv
   private mapToTmdbTv(m: any, includeRecommendations = false): TmdbTv {
     return {
       id: m.id,
@@ -549,14 +483,7 @@ export class TvService implements OnModuleInit {
   }
 
   async getFeatured(limit = 30): Promise<TmdbTv[]> {
-    const ttlSec = this.CACHE_TTL.BASIC_DATA;
-    // const cacheKey = `featured`;
-    // const cached = await this.redisService.get(cacheKey);
-    // if (cached) {
-    //     try {
-    //         return (JSON.parse(cached) as TmdbTv[]).slice(0, limit);
-    //     } catch { }
-    // }
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty featured');
@@ -564,18 +491,23 @@ export class TvService implements OnModuleInit {
     }
 
     try {
-      // Pull from both TV + Movies with recent filters
-      const [tv] = await Promise.all([
-        this.tmdb(
-          `/discover/tv?sort_by=popularity.desc&include_adult=false&page=1
-                  &first_air_date.gte=${this.getRecentDate(365)} 
-                  &without_keywords=13090,190720`,
-        ),
-      ]);
+      let allResults: any[] = [];
+      let page = 1;
+      const maxPages = 5;
 
-      const results = [...(tv?.results ?? [])];
+      while (allResults.length < minRequired && page <= maxPages) {
+        const tv = await this.tmdb(
+          `/discover/tv?sort_by=popularity.desc&include_adult=false&page=${page}&first_air_date.gte=${this.getRecentDate(365)}&without_keywords=13090,190720`,
+        );
 
-      const tvContent: TmdbTv[] = results.map((m: any) => ({
+        const results = tv?.results ?? [];
+        allResults.push(...results);
+        page++;
+
+        if (results.length === 0) break;
+      }
+
+      const tvContent: TmdbTv[] = allResults.map((m: any) => ({
         id: m.id,
         title: m.title ?? m.name ?? 'Untitled',
         overview: m.overview ?? '',
@@ -596,9 +528,8 @@ export class TvService implements OnModuleInit {
       }));
 
       const shuffled = shuffleArray(tvContent);
-      const sliced = shuffled.slice(0, Math.max(0, limit));
+      const sliced = shuffled.slice(0, minRequired);
 
-      // await this.redisService.set(cacheKey, JSON.stringify(sliced), ttlSec);
       return sliced;
     } catch (err) {
       this.logger.error('Failed to fetch featured', err as any);
@@ -606,16 +537,8 @@ export class TvService implements OnModuleInit {
     }
   }
 
-  // Trending TV shows
   async getTrending(limit = 30): Promise<TmdbTv[]> {
-    const ttlSec = this.CACHE_TTL.BASIC_DATA;
-    // const cacheKey = `trending-${limit}`;
-    // const cached = await this.redisService.get(cacheKey);
-    // if (cached) {
-    //     try {
-    //         return (JSON.parse(cached) as TmdbTv[]).slice(0, limit);
-    //     } catch { }
-    // }
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty trending');
@@ -623,48 +546,56 @@ export class TvService implements OnModuleInit {
     }
 
     try {
-      // Get trending but only recent ones
-      const data = await this.tmdb(`/trending/tv/day?include_adult=false`);
+      let allResults: any[] = [];
+      let page = 1;
+      const maxPages = 5;
 
-      const results = (data?.results ?? []).filter((m: any) => {
-        const date = new Date(m.release_date ?? m.first_air_date ?? '');
-        return date >= new Date(this.getRecentDate(365)); // last 12 months
-      });
+      while (allResults.length < minRequired && page <= maxPages) {
+        const data = await this.tmdb(`/trending/tv/day?include_adult=false&page=${page}`);
 
-      const basicItems: TmdbTv[] = results.slice(0, limit).map((m: any) => ({
-        id: m.id,
-        title: m.title ?? m.name ?? 'Untitled',
-        overview: m.overview ?? '',
-        poster_path: m.poster_path ?? null,
-        backdrop_path: m.backdrop_path ?? null,
-        release_date: m.release_date ?? m.first_air_date ?? null,
-        vote_average: m.vote_average,
-        vote_count: m.vote_count,
-        popularity: m.popularity,
-        origin_country: m.origin_country ?? [],
-        genres: m.genre_ids
-          ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
-          : [],
-        type: m.media_type,
-        recommendations: [],
-      }));
+        const results = (data?.results ?? []).filter((m: any) => {
+          const date = new Date(m.release_date ?? m.first_air_date ?? '');
+          return date >= new Date(this.getRecentDate(365));
+        });
+
+        allResults.push(...results);
+        page++;
+
+        if (results.length === 0) break;
+      }
+
+      const basicItems: TmdbTv[] = allResults
+        .slice(0, minRequired)
+        .map((m: any) => ({
+          id: m.id,
+          title: m.title ?? m.name ?? 'Untitled',
+          overview: m.overview ?? '',
+          poster_path: m.poster_path ?? null,
+          backdrop_path: m.backdrop_path ?? null,
+          release_date: m.release_date ?? m.first_air_date ?? null,
+          vote_average: m.vote_average,
+          vote_count: m.vote_count,
+          popularity: m.popularity,
+          origin_country: m.origin_country ?? [],
+          genres: m.genre_ids
+            ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
+            : [],
+          type: m.media_type,
+          recommendations: [],
+        }));
 
       const shuffled = shuffleArray(basicItems);
-      // await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
+      this.populateRecommendationsBackground(shuffled);
 
-      // populate recommendations in background
-      this.populateRecommendationsBackground(basicItems);
-
-      return shuffled.slice(0, limit);
+      return shuffled;
     } catch (err) {
       this.logger.error('Failed to fetch trending', err as any);
       return [];
     }
   }
 
-  // Airing today
   async airingToday(limit = 30): Promise<TmdbTv[]> {
-    const ttlSec = this.CACHE_TTL.BASIC_DATA;
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty airing today');
@@ -672,15 +603,28 @@ export class TvService implements OnModuleInit {
     }
 
     try {
-      const data = await this.tmdb('/tv/airing_today?language=en-US&page=1');
-      const results = data?.results ?? [];
-      const filtered = this.filterAdultishContent(results);
-      const items: TmdbTv[] = filtered
-        .slice(0, limit)
-        .map((m) => this.mapToTmdbTv(m, true));
-      const shuffled = shuffleArray(items);
+      let allResults: any[] = [];
+      let page = 1;
+      const maxPages = 5;
 
+      while (allResults.length < minRequired && page <= maxPages) {
+        const data = await this.tmdb(`/tv/airing_today?language=en-US&page=${page}`);
+        const results = data?.results ?? [];
+        const filtered = this.filterAdultishContent(results);
+
+        allResults.push(...filtered);
+        page++;
+
+        if (filtered.length === 0) break;
+      }
+
+      const items: TmdbTv[] = allResults
+        .slice(0, minRequired)
+        .map((m) => this.mapToTmdbTv(m, true));
+
+      const shuffled = shuffleArray(items);
       this.populateRecommendationsBackground(shuffled);
+
       return shuffled;
     } catch (err) {
       this.logger.error('Failed to fetch airing today', err as any);
@@ -688,25 +632,37 @@ export class TvService implements OnModuleInit {
     }
   }
 
-  // Airing this week (on the air)
   async airingThisWeek(limit = 30): Promise<TmdbTv[]> {
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
+
     if (!this.token) {
-      this.logger.warn(
-        'TMDB_API_KEY not set; returning empty airing this week',
-      );
+      this.logger.warn('TMDB_API_KEY not set; returning empty airing this week');
       return [];
     }
 
     try {
-      const data = await this.tmdb('/tv/on_the_air?language=en-US&page=1');
-      const results = data?.results ?? [];
-      const filtered = this.filterAdultishContent(results);
-      const items: TmdbTv[] = filtered
-        .slice(0, limit)
-        .map((m) => this.mapToTmdbTv(m, true));
-      const shuffled = shuffleArray(items);
+      let allResults: any[] = [];
+      let page = 1;
+      const maxPages = 5;
 
+      while (allResults.length < minRequired && page <= maxPages) {
+        const data = await this.tmdb(`/tv/on_the_air?language=en-US&page=${page}`);
+        const results = data?.results ?? [];
+        const filtered = this.filterAdultishContent(results);
+
+        allResults.push(...filtered);
+        page++;
+
+        if (filtered.length === 0) break;
+      }
+
+      const items: TmdbTv[] = allResults
+        .slice(0, minRequired)
+        .map((m) => this.mapToTmdbTv(m, true));
+
+      const shuffled = shuffleArray(items);
       this.populateRecommendationsBackground(shuffled);
+
       return shuffled;
     } catch (err) {
       this.logger.error('Failed to fetch airing this week', err as any);
@@ -714,17 +670,8 @@ export class TvService implements OnModuleInit {
     }
   }
 
-  // Top rated TV shows
   async getFavorites(limit = 30): Promise<TmdbTv[]> {
-    const ttlSec = this.CACHE_TTL.BASIC_DATA;
-    // const cacheKey = `favorites`;
-    // const cached = await this.redisService.get(cacheKey);
-    // if (cached) {
-    //     try {
-    //         const parsed = JSON.parse(cached) as TmdbTv[];
-    //         return parsed.slice(0, limit);
-    //     } catch { }
-    // }
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty favorites');
@@ -732,14 +679,23 @@ export class TvService implements OnModuleInit {
     }
 
     try {
-      const data = await this.tmdb('/trending/tv/day');
-      const results = data?.results ?? [];
-      const filtered = results.filter((item: any) => item.media_type === 'tv');
+      let allResults: any[] = [];
+      let page = 1;
+      const maxPages = 5;
 
-      // apply adult-ish filter
-      const clean = this.filterAdultishContent(filtered);
+      while (allResults.length < minRequired && page <= maxPages) {
+        const data = await this.tmdb(`/trending/tv/day?page=${page}`);
+        const results = data?.results ?? [];
+        const filtered = results.filter((item: any) => item.media_type === 'tv');
+        const clean = this.filterAdultishContent(filtered);
 
-      const all: TmdbTv[] = clean.map((m: any) => ({
+        allResults.push(...clean);
+        page++;
+
+        if (clean.length === 0) break;
+      }
+
+      const all: TmdbTv[] = allResults.map((m: any) => ({
         id: m.id,
         title: m.title ?? m.name ?? 'Untitled',
         overview: m.overview ?? '',
@@ -754,34 +710,46 @@ export class TvService implements OnModuleInit {
       }));
 
       const shuffled = shuffleArray(all);
-      const sliced = shuffled.slice(0, Math.max(0, limit));
-      // await this.redisService.set(cacheKey, JSON.stringify(sliced), ttlSec);
-      return sliced;
+      return shuffled.slice(0, minRequired);
     } catch (err) {
       this.logger.error('Failed to fetch favorites', err as any);
       return [];
     }
   }
 
-  // TV by revenue (discover endpoint)
   async getRevenue(limit = 30): Promise<TmdbTv[]> {
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
+
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty revenue');
       return [];
     }
 
     try {
-      const data = await this.tmdb(
-        '/discover/tv?language=en-US&sort_by=revenue.desc&page=1',
-      );
-      const results = data?.results ?? [];
-      const filtered = this.filterAdultishContent(results);
-      const items: TmdbTv[] = filtered
-        .slice(0, limit)
-        .map((m) => this.mapToTmdbTv(m, true));
-      const shuffled = shuffleArray(items);
+      let allResults: any[] = [];
+      let page = 1;
+      const maxPages = 5;
 
+      while (allResults.length < minRequired && page <= maxPages) {
+        const data = await this.tmdb(
+          `/discover/tv?language=en-US&sort_by=revenue.desc&page=${page}`,
+        );
+        const results = data?.results ?? [];
+        const filtered = this.filterAdultishContent(results);
+
+        allResults.push(...filtered);
+        page++;
+
+        if (filtered.length === 0) break;
+      }
+
+      const items: TmdbTv[] = allResults
+        .slice(0, minRequired)
+        .map((m) => this.mapToTmdbTv(m, true));
+
+      const shuffled = shuffleArray(items);
       this.populateRecommendationsBackground(shuffled);
+
       return shuffled;
     } catch (err) {
       this.logger.error('Failed to fetch revenue TV', err as any);
@@ -789,12 +757,13 @@ export class TvService implements OnModuleInit {
     }
   }
 
-  // TV by genres
   async tvByGenres(
     ids: string,
     useAnd: boolean = false,
     limit = 30,
   ): Promise<TmdbTv[]> {
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
+
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty genre results');
       return [];
@@ -802,37 +771,41 @@ export class TvService implements OnModuleInit {
 
     try {
       const genresParam = useAnd ? ids : ids.replace(/,/g, '|');
-
-      // Auto-calculate "5 years ago"
       const today = new Date();
-      const fiveYearsAgo = new Date(
-        today.getFullYear() - 5,
-        0,
-        1, // always start from Jan 1 of that year
-      );
-      const gteDate = fiveYearsAgo.toISOString().split('T')[0]; // YYYY-MM-DD
+      const fiveYearsAgo = new Date(today.getFullYear() - 5, 0, 1);
+      const gteDate = fiveYearsAgo.toISOString().split('T')[0];
 
-      // Single inline query string
-      const url =
-        `/discover/tv?language=en-US&page=1` +
-        `&with_genres=${genresParam}` +
-        `&include_adult=false` +
-        `&include_null_first_air_dates=false` +
-        `&sort_by=first_air_date.desc` +
-        `&first_air_date.gte=${gteDate}` +
-        `&vote_count.gte=50`;
+      let allResults: any[] = [];
+      let page = 1;
+      const maxPages = 5;
 
-      const data = await this.tmdb(url);
-      const results = data?.results ?? [];
+      while (allResults.length < minRequired && page <= maxPages) {
+        const url =
+          `/discover/tv?language=en-US&page=${page}` +
+          `&with_genres=${genresParam}` +
+          `&include_adult=false` +
+          `&include_null_first_air_dates=false` +
+          `&sort_by=first_air_date.desc` +
+          `&first_air_date.gte=${gteDate}` +
+          `&vote_count.gte=50`;
 
-      const filtered = this.filterAdultishContent(results);
-      const items: TmdbTv[] = filtered
-        .slice(0, limit)
+        const data = await this.tmdb(url);
+        const results = data?.results ?? [];
+        const filtered = this.filterAdultishContent(results);
+
+        allResults.push(...filtered);
+        page++;
+
+        if (filtered.length === 0) break;
+      }
+
+      const items: TmdbTv[] = allResults
+        .slice(0, minRequired)
         .map((m) => this.mapToTmdbTv(m, true));
 
       const shuffled = shuffleArray(items);
-
       this.populateRecommendationsBackground(shuffled);
+
       return shuffled;
     } catch (err) {
       this.logger.error('Failed to fetch TV by genres', err as any);
@@ -880,7 +853,6 @@ export class TvService implements OnModuleInit {
       score += Math.min(15, (candidate.popularity || 0) / 20);
       score += Math.min(10, (candidate.vote_average || 0) * 1.2);
 
-      // Recency bonus
       const dateStr = candidate.release_date || candidate.first_air_date;
       if (dateStr) {
         const releaseDate = new Date(dateStr);
@@ -903,7 +875,7 @@ export class TvService implements OnModuleInit {
     const tasks = candidates.map((cand) => async (): Promise<any> => {
       try {
         const videosData = await this.tmdb(
-          `${this.baseUrl}/${type}/${cand.id}/videos?language=en-US`,
+          `${type}/${cand.id}/videos?language=en-US`,
         );
         const trailerTypes = ['Trailer', 'Teaser', 'Clip'];
         let trailer: any = null;
@@ -923,22 +895,16 @@ export class TvService implements OnModuleInit {
       }
     });
 
-    // withConcurrencyLimit expects array of functions returning promises
     return this.withConcurrencyLimit(tasks, 6);
   }
 
-  // Smart recommendations for TV shows
   async getSmartRecommendationsTv(
     id: number,
     limit = 10,
     minRequired = 3,
   ): Promise<TmdbTv[]> {
-    const cacheKey = `smart-rec-tv-v2-${id}-${limit}`;
-
     try {
-      const baseItem = await this.tmdb(
-        `${this.baseUrl}/tv/${id}?language=en-US`,
-      );
+      const baseItem = await this.tmdb(`tv/${id}?language=en-US`);
       if (!baseItem) return [];
 
       const baseLang = baseItem.original_language;
@@ -950,12 +916,9 @@ export class TvService implements OnModuleInit {
       const allCandidates: any[] = [];
       const seenIds = new Set<number>([id]);
 
-      // recommendations & similar in parallel
       const [recData, simData] = await Promise.allSettled([
-        this.tmdb(
-          `${this.baseUrl}/tv/${id}/recommendations?language=en-US&page=1`,
-        ),
-        this.tmdb(`${this.baseUrl}/tv/${id}/similar?language=en-US&page=1`),
+        this.tmdb(`tv/${id}/recommendations?language=en-US&page=1`),
+        this.tmdb(`tv/${id}/similar?language=en-US&page=1`),
       ]);
 
       if (recData.status === 'fulfilled' && recData.value?.results) {
@@ -980,11 +943,10 @@ export class TvService implements OnModuleInit {
         }
       }
 
-      // Genre discovery (tv)
       if (allCandidates.length < limit * 2 && baseGenreIds.length > 0) {
         try {
           const genreQuery = baseGenreIds.slice(0, 2).join(',');
-          const discoverUrl = `${this.baseUrl}/discover/tv?with_genres=${genreQuery}&sort_by=popularity.desc&page=1`;
+          const discoverUrl = `discover/tv?with_genres=${genreQuery}&sort_by=popularity.desc&page=1`;
 
           if (baseLang && baseCountries.length > 0) {
             const langCountryUrl = `${discoverUrl}&with_original_language=${baseLang}&with_origin_country=${baseCountries[0]}`;
@@ -1019,12 +981,9 @@ export class TvService implements OnModuleInit {
         }
       }
 
-      // Popular fallback (tv)
       if (allCandidates.length < minRequired * 2) {
         try {
-          const popularData = await this.tmdb(
-            `${this.baseUrl}/tv/popular?language=en-US&page=1`,
-          );
+          const popularData = await this.tmdb(`tv/popular?language=en-US&page=1`);
           if (popularData?.results) {
             for (const item of popularData.results.slice(0, 20)) {
               if (!seenIds.has(item.id)) {
@@ -1038,7 +997,6 @@ export class TvService implements OnModuleInit {
         }
       }
 
-      // Scoring (shared)
       const scored = this.scoreCandidates(
         allCandidates,
         baseLang,
@@ -1046,7 +1004,6 @@ export class TvService implements OnModuleInit {
         baseCountries,
       );
 
-      // Trailer fetching
       const topCandidates = scored.slice(
         0,
         Math.max(limit * 3, minRequired * 5),
@@ -1093,17 +1050,8 @@ export class TvService implements OnModuleInit {
     }
   }
 
-  // OPTIMIZED: Korea trending with background processing + filtering
   async getKoreaTrending(limit = 30): Promise<TmdbTv[]> {
-    const ttlSec = this.CACHE_TTL.BASIC_DATA;
-    // const cacheKey = `koreaTrending-${limit}`;
-    // const cached = await this.redisService.get(cacheKey);
-    // if (cached) {
-    //     try {
-    //         const parsed = JSON.parse(cached) as TmdbTv[];
-    //         return parsed.slice(0, limit);
-    //     } catch { }
-    // }
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty koreaTrending');
@@ -1111,20 +1059,25 @@ export class TvService implements OnModuleInit {
     }
 
     try {
-      // Fetch Korean TV + Korean Movies in parallel with TMDB-side filters
-      const [tvData] = await Promise.all([
-        this.tmdb(
-          `${this.baseUrl}/discover/tv?with_original_language=ko&sort_by=popularity.desc&page=1&include_adult=false&without_keywords=13090,190720&certification_country=KR&certification.lte=15`,
-        ),
-      ]);
+      let allResults: any[] = [];
+      let page = 1;
+      const maxPages = 5;
 
-      let results = [...(tvData?.results ?? [])];
+      while (allResults.length < minRequired && page <= maxPages) {
+        const tvData = await this.tmdb(
+          `discover/tv?with_original_language=ko&sort_by=popularity.desc&page=${page}&include_adult=false&without_keywords=13090,190720`,
+        );
 
-      // Post-fetch aggressive filter
-      results = this.filterAdultishContent(results);
+        const results = tvData?.results ?? [];
+        const filtered = this.filterAdultishContent(results);
 
-      // Process basic info first and defer recommendations
-      const items: TmdbTv[] = results.slice(0, limit).map((m) => {
+        allResults.push(...filtered);
+        page++;
+
+        if (filtered.length === 0) break;
+      }
+
+      const items: TmdbTv[] = allResults.slice(0, minRequired).map((m) => {
         const type = m.media_type ?? (m.first_air_date ? 'tv' : 'movie');
         return {
           id: m.id,
@@ -1141,17 +1094,14 @@ export class TvService implements OnModuleInit {
             m.genre_ids?.map((id: number) => this.genreMap[id] || 'Unknown') ??
             [],
           type,
-          recommendations: [], // Populate later in background
+          recommendations: [],
         };
       });
 
       const shuffled = shuffleArray(items);
-
-      // Cache and start background recommendation population
-      // await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
       this.populateRecommendationsBackground(shuffled);
 
-      return shuffled.slice(0, Math.max(0, limit));
+      return shuffled;
     } catch (err) {
       this.logger.error('Failed to fetch koreaTrending', err as any);
       return [];
@@ -1167,16 +1117,6 @@ export class TvService implements OnModuleInit {
       rating?: number | null;
     }[]
   > {
-    const ttlSec = 60 * 10;
-    // const cacheKey = `trendingReviews`;
-
-    // const cached = await this.redisService.get(cacheKey);
-    // if (cached) {
-    //     try {
-    //         return JSON.parse(cached);
-    //     } catch { }
-    // }
-
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty reviews');
       return [];
@@ -1196,7 +1136,7 @@ export class TvService implements OnModuleInit {
 
       for (let p = 1; p <= trendingPages; p++) {
         const trendingData = await this.tmdb(
-          `${this.baseUrl}/trending/tv/week?language=en-US&page=${p}`,
+          `trending/tv/week?language=en-US&page=${p}`,
         );
         const results = trendingData?.results ?? [];
 
@@ -1205,7 +1145,7 @@ export class TvService implements OnModuleInit {
 
           const reviewPromises: Promise<any>[] = [];
           for (let rp = 1; rp <= reviewPages; rp++) {
-            const reviewUrl = `${this.baseUrl}/tv/${item.id}/reviews?language=en-US&page=${rp}`;
+            const reviewUrl = `tv/${item.id}/reviews?language=en-US&page=${rp}`;
             reviewPromises.push(this.tmdb(reviewUrl));
           }
 
@@ -1240,7 +1180,6 @@ export class TvService implements OnModuleInit {
       }
 
       const shuffled = reviews.sort(() => Math.random() - 0.5);
-      // await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
       return shuffled;
     } catch (err) {
       this.logger.error('Failed to fetch trending reviews', err as any);
@@ -1249,15 +1188,7 @@ export class TvService implements OnModuleInit {
   }
 
   async getUpcomingTrailers(limit = 30): Promise<TmdbTv[]> {
-    const ttlSec = this.CACHE_TTL.TRAILERS;
-    const cacheKey = `trailers-upcoming-${limit}`;
-
-    // const cached = await this.redisService.get(cacheKey);
-    // if (cached) {
-    //     try {
-    //         return JSON.parse(cached) as TmdbTv[];
-    //     } catch { }
-    // }
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty trailers');
@@ -1270,81 +1201,62 @@ export class TvService implements OnModuleInit {
       const todayStr = today.toISOString().split('T')[0];
       const maxPages = 20;
 
-      const fetchTrailers = async (mediaType: 'tv') => {
-        for (let page = 1; page <= maxPages; page++) {
-          const url = `${this.baseUrl}/discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&page=${page}`;
+      for (let page = 1; page <= maxPages && items.length < minRequired; page++) {
+        const url = `discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&page=${page}`;
+        const data = await this.tmdb(url);
+        const results = data?.results ?? [];
 
-          const data = await this.tmdb(url);
-          const results = data?.results ?? [];
+        const trailerTasks = results.map((m: any) => async () => {
+          const rd = m.release_date ?? m.first_air_date;
+          if (!rd || new Date(rd) < today) return null;
 
-          // Process with concurrency control
-          const trailerTasks = results.map((m: any) => async () => {
-            const rd = m.release_date ?? m.first_air_date;
-            if (!rd || new Date(rd) < today) return null;
+          try {
+            const [videosData, details] = await Promise.all([
+              this.tmdb(`tv/${m.id}/videos?language=en-US`),
+              this.tmdb(`tv/${m.id}?language=en-US`),
+            ]);
 
-            try {
-              // Fetch videos and details in parallel
-              const [videosData, details] = await Promise.all([
-                this.tmdb(
-                  `${this.baseUrl}/tv/${m.id}/videos?language=en-US`,
-                ),
-                this.tmdb(
-                  `${this.baseUrl}/tv/${m.id}?language=en-US`,
-                ),
-              ]);
+            const trailer = (videosData?.results ?? []).find(
+              (v: any) => v.type === 'Trailer' && v.site === 'YouTube',
+            );
+            if (!trailer) return null;
 
-              const trailer = (videosData?.results ?? []).find(
-                (v: any) => v.type === 'Trailer' && v.site === 'YouTube',
-              );
-              if (!trailer) return null;
+            return {
+              id: m.id,
+              title: m.title ?? m.name ?? 'Untitled',
+              overview: m.overview ?? '',
+              poster_path: m.poster_path ?? null,
+              backdrop_path: m.backdrop_path ?? null,
+              release_date: rd,
+              vote_average: m.vote_average,
+              trailer_key: trailer.key,
+              type: 'tv' as ContentType,
+              recommendations: [],
+              number_of_episodes: details.number_of_episodes ?? null,
+              genres: details.genres
+                ? details.genres.map((g: any) => g.name)
+                : [],
+            } as TmdbTv;
+          } catch {
+            return null;
+          }
+        });
 
-              return {
-                id: m.id,
-                title: m.title ?? m.name ?? 'Untitled',
-                overview: m.overview ?? '',
-                poster_path: m.poster_path ?? null,
-                backdrop_path: m.backdrop_path ?? null,
-                release_date: rd,
-                vote_average: m.vote_average,
-                trailer_key: trailer.key,
-                type: mediaType,
-                recommendations: [],
-                number_of_episodes:
-                  mediaType === 'tv'
-                    ? (details.number_of_episodes ?? null)
-                    : null,
-                genres: details.genres
-                  ? details.genres.map((g: any) => g.name)
-                  : [],
-              } as TmdbTv;
-            } catch {
-              return null;
-            }
-          });
+        const pageResults = (
+          await this.withConcurrencyLimit(trailerTasks)
+        ).filter((item): item is TmdbTv => item !== null);
 
-          const pageResults = (
-            await this.withConcurrencyLimit(trailerTasks)
-          ).filter((item): item is TmdbTv => item !== null);
+        items.push(...pageResults);
+      }
 
-          items.push(...pageResults);
-
-          if (items.length >= limit) break;
-        }
-      };
-
-      // Fetch both movie and TV concurrently
-      await Promise.all([fetchTrailers('tv')]);
-
-      // Sort by release date and limit
       const sorted = items
         .sort(
           (a, b) =>
             (a.release_date ? new Date(a.release_date).getTime() : Infinity) -
             (b.release_date ? new Date(b.release_date).getTime() : Infinity),
         )
-        .slice(0, limit);
+        .slice(0, minRequired);
 
-      // Populate recommendations in background (don't await)
       setTimeout(async () => {
         const tasks = sorted.map((item) => async () => {
           try {
@@ -1362,11 +1274,9 @@ export class TvService implements OnModuleInit {
           }
         });
 
-        const updatedItems = await this.withConcurrencyLimit(tasks, 3);
-        // await this.redisService.set(cacheKey, JSON.stringify(updatedItems), ttlSec);
+        await this.withConcurrencyLimit(tasks, 3);
       }, 100);
 
-      // await this.redisService.set(cacheKey, JSON.stringify(sorted), ttlSec);
       return sorted;
     } catch (err) {
       this.logger.error('Failed to fetch upcoming trailers', err as any);
@@ -1374,7 +1284,6 @@ export class TvService implements OnModuleInit {
     }
   }
 
-  // Get TV show images
   async images(id: number, type: string) {
     const data = await this.tmdb(`${type}/${id}/images`);
     if (!data) return { posters: [], backdrops: [] };
@@ -1390,18 +1299,8 @@ export class TvService implements OnModuleInit {
     return { posters, backdrops };
   }
 
-  // Get trailer for TV show
   async getTrailers(limit = 30): Promise<TmdbTv[]> {
-    const ttlSec = this.CACHE_TTL.TRAILERS;
-    // const cacheKey = `trailers-enhanced-${limit}`;
-
-    // // const cached = await this.redisService.get(cacheKey);
-    // if (cached) {
-    //     try {
-    //         const parsed = JSON.parse(cached) as TmdbTv[];
-    //         return parsed;
-    //     } catch { }
-    // }
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty trailers');
@@ -1409,19 +1308,13 @@ export class TvService implements OnModuleInit {
     }
 
     try {
-      // Multi-source approach to get diverse content with trailers
       const sources = [
-        // Korean content (original focus)
-        `${this.baseUrl}/discover/tv?with_original_language=ko&sort_by=popularity.desc&page=1`,
-        // Popular TV with high ratings (likely to have trailers)
-        `${this.baseUrl}/tv/popular?language=en-US&page=1`,
-        // Top rated TV (quality content)
-        `${this.baseUrl}/tv/top_rated?language=en-US&page=1`,
-        // Recent releases (likely to have trailers)
-        `${this.baseUrl}/discover/tv?sort_by=release_date.desc&first_air_date.gte=${new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}&page=1`,
+        `discover/tv?with_original_language=ko&sort_by=popularity.desc&page=1`,
+        `tv/popular?language=en-US&page=1`,
+        `tv/top_rated?language=en-US&page=1`,
+        `discover/tv?sort_by=release_date.desc&first_air_date.gte=${new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}&page=1`,
       ];
 
-      // Fetch from multiple sources
       const allResults: any[] = [];
       for (const url of sources) {
         try {
@@ -1434,7 +1327,6 @@ export class TvService implements OnModuleInit {
         }
       }
 
-      // Deduplicate by ID while preserving order (Korean content first)
       const uniqueItems: any[] = [];
       const seenIds = new Set<number>();
       for (const item of allResults) {
@@ -1444,24 +1336,15 @@ export class TvService implements OnModuleInit {
         }
       }
 
-      // Process with enhanced trailer fetching
       const trailerTasks = uniqueItems
-        .slice(0, limit * 2)
+        .slice(0, minRequired * 2)
         .map((m: any) => async (): Promise<TmdbTv | null> => {
           try {
-            const type = 'tv'; // Focus on TV series
-
-            // Fetch videos, details, and additional info in parallel
             const [videosData, details] = await Promise.all([
-              this.tmdb(
-                `${this.baseUrl}/${type}/${m.id}/videos?language=en-US`,
-              ),
-              this.tmdb(`${this.baseUrl}/${type}/${m.id}?language=en-US`).catch(
-                () => null,
-              ),
+              this.tmdb(`tv/${m.id}/videos?language=en-US`),
+              this.tmdb(`tv/${m.id}?language=en-US`).catch(() => null),
             ]);
 
-            // Enhanced trailer finding - look for multiple types
             const trailerTypes = ['Trailer', 'Teaser', 'Clip'];
             let trailer: any = null;
 
@@ -1472,7 +1355,6 @@ export class TvService implements OnModuleInit {
               if (trailer) break;
             }
 
-            // Only return items that have trailers
             if (!trailer) return null;
 
             return {
@@ -1486,13 +1368,13 @@ export class TvService implements OnModuleInit {
               vote_count: m.vote_count,
               popularity: m.popularity,
               trailer_key: trailer.key,
-              recommendations: [], // Will be populated in background
-              runtime: undefined, // Use undefined instead of null for TV
+              recommendations: [],
+              runtime: undefined,
               genres: details?.genres
                 ? details.genres.map((g: any) => g.name)
                 : [],
               origin_country: details?.origin_country ?? m.origin_country ?? [],
-              type: type,
+              type: 'tv',
               genre_ids: details?.genres
                 ? details.genres.map((g: any) => g.id)
                 : (m.genre_ids ?? []),
@@ -1505,13 +1387,10 @@ export class TvService implements OnModuleInit {
 
       const withTrailers = (await this.withConcurrencyLimit(trailerTasks, 5))
         .filter((item): item is TmdbTv => item !== null)
-        .slice(0, limit);
+        .slice(0, minRequired);
 
-      // Background population of recommendations
       this.populateRecommendationsBackground(withTrailers);
 
-      // Cache the results
-      // await this.redisService.set(cacheKey, JSON.stringify(withTrailers), ttlSec);
       const shuffled = shuffleArray(withTrailers);
       return shuffled;
     } catch (err) {
@@ -1523,20 +1402,9 @@ export class TvService implements OnModuleInit {
   async getTrailersForItems(
     items: { id: number }[],
   ): Promise<Record<string, string | null>> {
-    // const cacheKey = `batch-trailers-${items.map(i => `${i.type}-${i.id}`).join(',')}`;
-    // const cached = await this.redisService.get(cacheKey);
-
-    // if (cached) {
-    //     try {
-    //         return JSON.parse(cached);
-    //     } catch { }
-    // }
-
     const tasks = items.map((item) => async () => {
       try {
-        const videosData = await this.tmdb(
-          `${this.baseUrl}/tv/${item.id}/videos?language=en-US`,
-        );
+        const videosData = await this.tmdb(`tv/${item.id}/videos?language=en-US`);
         const trailer = (videosData?.results ?? []).find(
           (v: any) => v.type === 'Trailer' && v.site === 'YouTube',
         );
@@ -1549,7 +1417,6 @@ export class TvService implements OnModuleInit {
     const results = await this.withConcurrencyLimit(tasks);
     const trailerMap = Object.fromEntries(results);
 
-    // await this.redisService.set(cacheKey, JSON.stringify(trailerMap), this.CACHE_TTL.TRAILERS);
     return trailerMap;
   }
 }
