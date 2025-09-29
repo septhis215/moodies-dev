@@ -146,7 +146,7 @@ function StarRating({ rating }: { rating: number }) {
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           className={`w-4 h-4 ${
-            i < fullStars ? "text-yellow-400" : "text-white/30"
+            i < fullStars ? "text-yellow-400" : "text-white/85"
           }`}
           fill={i < fullStars ? "currentColor" : "none"}
           stroke="currentColor"
@@ -157,7 +157,7 @@ function StarRating({ rating }: { rating: number }) {
           />
         </svg>
       ))}
-      <span className="ml-2 text-xs text-white/70">{rating.toFixed(1)}</span>
+      <span className="ml-2 text-xs text-white/85">{rating.toFixed(1)}</span>
     </div>
   );
 }
@@ -210,7 +210,7 @@ function ReadMore({ text, limit = 300 }: { text: string; limit?: number }) {
     expanded || !shouldTruncate ? text : text.slice(0, limit).trim() + "…";
 
   return (
-    <p className="max-w-3xl text-white/90 leading-relaxed text-sm sm:text-base lg:text-lg">
+    <p className="max-w-3xl text-white/90 leading-relaxed text-xs sm:text-sm lg:text-sm xl:text-base">
       {displayText}
       {shouldTruncate && (
         <button
@@ -268,35 +268,38 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
   const tvInfo = isTV ? (data as TvDetailsData).info : null;
 
   return (
-    <div className="w-full min-h-screen relative text-white font-inter overflow-hidden">
-      <Image
-        src={mappedContent.backdrop}
-        alt="" // empty alt if it's decorative
-        fill
-        priority
-        aria-hidden
-        className="object-cover object-center"
-        style={{
-          filter: "brightness(1.1)",
-          objectPosition: "center 50%",
-        }}
-      />
+    <div className="w-full relative text-white font-inter overflow-hidden">
+      {/* Background image - full screen */}
+      <div className="fixed inset-0 -z-10">
+        <Image
+          src={mappedContent.backdrop}
+          alt=""
+          fill
+          priority
+          aria-hidden
+          className="object-cover object-center"
+          style={{
+            filter: "brightness(1.1) grayscale(100%)", // add grayscale to wash out colors
+            objectPosition: "center 50%",
+          }}
+        />
 
-      {/* Dark gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/30 to-black/20" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent" />
+        {/* Grey to black gradient overlays */}
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800/20 to-black" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-gray-900/60 to-transparent" />
+      </div>
 
-      {/* Content Container - Positioned very close to bottom */}
-      <div className="relative min-h-screen flex items-end justify-center px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 lg:pb-16">
+      {/* Content Container - Add top padding for navbar and adjust height */}
+      <div className="relative min-h-screen pt-20 sm:pt-24 md:pt-16 lg:pt-20 xl:pt-24 flex items-end justify-center px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 lg:pb-16">
         <div className="w-full max-w-7xl mx-auto">
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start lg:items-center">
             {/* Poster */}
-            <div className="flex-shrink-0 w-48 sm:w-56 lg:w-64 xl:w-72 mx-auto lg:mx-0">
+            <div className="flex-shrink-0 w-34 sm:w-42 lg:w-50 xl:w-58 mx-auto lg:mx-0">
               <div className="rounded-lg shadow-2xl overflow-hidden transform transition-transform hover:scale-105">
                 <Image
                   src={mappedContent.poster}
-                  width={100}
-                  height={100}
+                  width={300}
+                  height={450}
                   alt={`${mappedContent.title} poster`}
                   className="w-full h-auto block"
                 />
@@ -304,30 +307,30 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
             </div>
 
             {/* Info */}
-            <div className="flex-1 text-center lg:text-left space-y-4 lg:space-y-6">
+            <div className="flex-1 text-center lg:text-left space-y-3 lg:space-y-4">
               {/* Title and Year */}
               <div>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold tracking-tight leading-tight">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tracking-tight leading-tight">
                   {mappedContent.title}
                 </h1>
                 <div className="mt-3 flex items-center justify-center lg:justify-start gap-3 flex-wrap">
-                  <span className="text-sm bg-white/10 border border-white/20 px-3 py-1 rounded-md">
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm bg-white/10 border border-white/20 px-3 py-1 rounded-md">
                     {mappedContent.year}
                   </span>
                   {mappedContent.ageRating && (
-                    <span className="text-xs bg-green-600 text-black px-3 py-1 rounded-md font-medium">
+                    <span className="text-xs sm:text-xs lg:text-xs xl:text-sm bg-green-600 text-black px-3 py-1 rounded-md font-medium">
                       {mappedContent.ageRating}
                     </span>
                   )}
-                  <span className="text-sm text-white/70 flex items-center gap-2">
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/85 flex items-center gap-2">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="w-4 h-4"
+                      className="w-3 h-3"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
                     >
-                      <path strokeWidth={1.5} d="M12 3v18m9-9H3" />
+                      <path strokeWidth={2.5} d="M12 3v18m9-9H3" />
                     </svg>
                     {mappedContent.runtime}
                   </span>
@@ -371,10 +374,10 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
               {/* Director/Creator and Rating */}
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-white/70">
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">
                     {isTV ? "Created by" : "Directed by"}
                   </span>
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm font-medium text-white">
                     {mappedContent.director ?? "Unknown"}
                   </span>
                 </div>
@@ -384,8 +387,8 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
               {/* Network info for TV shows */}
               {isTV && tvInfo?.networks && tvInfo.networks.length > 0 && (
                 <div className="flex items-center justify-center lg:justify-start gap-2">
-                  <span className="text-sm text-white/70">Network:</span>
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">Network:</span>
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm font-medium text-white">
                     {tvInfo.networks.map((n) => n.name).join(", ")}
                   </span>
                 </div>
@@ -399,7 +402,7 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
               </div>
 
               {/* Overview */}
-              <ReadMore text={mappedContent.overview} limit={300} />
+              <ReadMore text={mappedContent.overview} limit={200} />
 
               {/* Actions */}
               <div className="flex items-center justify-center lg:justify-start gap-3 flex-wrap pt-2">

@@ -5,7 +5,6 @@ import HeroCarousel from '@/components/hero/heroCarousel';
 import TrendingSection from "@/components/sections/TrendingSection";
 import PremiereHighlights from "@/components/sections/PremiereHighlights";
 import FavoritesSection from "@/components/sections/FavoriteSection";
-import CelebSection from '@/components/sections/CelebsSection';
 import CommunityPicks from '@/components/sections/CommunityPicks';
 import { UpcomingTrailers } from '@/components/sections/UpcomingTrailers';
 
