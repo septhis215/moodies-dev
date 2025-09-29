@@ -191,7 +191,7 @@ export default function ReviewsSection({
         </div>
       </div>
 
-      {/* Top 3 grid */}
+      {/* Top 3 grid - Fixed with proper constraints */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <AnimatePresence mode="popLayout">
           {topThree.length === 0 ? (
@@ -211,14 +211,18 @@ export default function ReviewsSection({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
                 whileHover={{ scale: 1.02 }}
-                className={`relative rounded-2xl p-5 border border-white/8 bg-gradient-to-br from-slate-900/70 to-slate-800/70 shadow-lg`}
+                className="relative rounded-2xl p-5 border border-white/8 bg-gradient-to-br from-slate-900/70 to-slate-800/70 shadow-lg overflow-hidden"
               >
-                <div className="flex items-start gap-4">
-                  <AvatarBlock review={r} />
-                  <div className="flex-1">
-                    <div className="flex items-start gap-3">
-                      <div>
-                        <h3 className="text-slate-100 font-semibold">
+                <div className="flex items-start gap-4 min-w-0">
+                  <div className="flex-shrink-0">
+                    <AvatarBlock review={r} />
+                  </div>
+
+                  <div className="flex-1 min-w-0 space-y-3">
+                    {/* Header section with author and rating */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-xs text-slate-100 font-semibold truncate">
                           {r.author}
                         </h3>
                         <div className="text-xs text-slate-400">
@@ -226,7 +230,7 @@ export default function ReviewsSection({
                         </div>
                       </div>
 
-                      <div className="ml-auto flex items-center gap-3">
+                      <div className="flex-shrink-0 flex items-center gap-3">
                         <RatingDisplay rating={r.author_details?.rating} />
                         <div className="text-xs text-slate-400">
                           {(r.content?.length ?? 0) > 0
@@ -239,64 +243,67 @@ export default function ReviewsSection({
                       </div>
                     </div>
 
-                    <div className="mt-3 text-slate-300 text-sm leading-relaxed whitespace-pre-wrap max-h-36 overflow-hidden">
+                    {/* Review content with proper text wrapping */}
+                    <div className="text-slate-300 text-sm leading-relaxed max-h-36 overflow-hidden">
                       <div className="relative">
-                        <p className="line-clamp-6">{r.content}</p>
-                        <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t pointer-events-none" />
+                        <p className="line-clamp-6 break-words">{r.content}</p>
                       </div>
                     </div>
 
-                    <div className="mt-4 flex items-center gap-3">
-                      <button
-                        onClick={() => toggleHelpful(r.id)}
-                        className={`inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full transition ${
-                          markedHelpful[r.id]
-                            ? "bg-indigo-600/80 text-white shadow-sm"
-                            : "bg-white/5 text-slate-200 hover:bg-white/6"
-                        }`}
-                        aria-pressed={!!markedHelpful[r.id]}
-                      >
-                        <motion.span
-                          whileTap={{ scale: 0.92 }}
-                          className="flex items-center gap-2"
+                    {/* Action buttons - wrapped properly */}
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <button
+                          onClick={() => toggleHelpful(r.id)}
+                          className={`inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full transition flex-shrink-0 ${
+                            markedHelpful[r.id]
+                              ? "bg-indigo-600/80 text-white shadow-sm"
+                              : "bg-white/5 text-slate-200 hover:bg-white/6"
+                          }`}
+                          aria-pressed={!!markedHelpful[r.id]}
                         >
-                          <svg
-                            width={14}
-                            height={14}
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                            aria-hidden
+                          <motion.span
+                            whileTap={{ scale: 0.92 }}
+                            className="flex items-center gap-2"
                           >
-                            <path d="M2 21h4V9H2v12zM22 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13.17 2 7.59 7.59C7.22 7.95 7 8.45 7 9v9c0 1.1.9 2 2 2h7c.88 0 1.63-.58 1.86-1.41L22 12.5V10z" />
-                          </svg>
-                          <span className="text-xs">
-                            {helpfulMap[r.id] ?? 0}
-                          </span>
-                        </motion.span>
-                      </button>
+                            <svg
+                              width={14}
+                              height={14}
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              aria-hidden
+                            >
+                              <path d="M2 21h4V9H2v12zM22 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13.17 2 7.59 7.59C7.22 7.95 7 8.45 7 9v9c0 1.1.9 2 2 2h7c.88 0 1.63-.58 1.86-1.41L22 12.5V10z" />
+                            </svg>
+                            <span className="text-xs">
+                              {helpfulMap[r.id] ?? 0}
+                            </span>
+                          </motion.span>
+                        </button>
 
-                      {/* Link to the dedicated all-reviews page; include highlight param */}
-                      {movieId ? (
-                        <Link
-                          href={`/${basePath}/${movieId}/reviews?highlight=${encodeURIComponent(
-                            r.id
-                          )}`}
-                          className="text-xs text-indigo-400 hover:underline"
-                        >
-                          Read full review
-                        </Link>
-                      ) : (
-                        <a
-                          href={r.url || "#"}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-indigo-400 hover:underline"
-                        >
-                          Read full review
-                        </a>
-                      )}
+                        {/* Link to the dedicated all-reviews page */}
+                        {movieId ? (
+                          <Link
+                            href={`/${basePath}/${movieId}/reviews?highlight=${encodeURIComponent(
+                              r.id
+                            )}`}
+                            className="text-xs text-indigo-400 hover:underline truncate"
+                          >
+                            Read full review
+                          </Link>
+                        ) : (
+                          <a
+                            href={r.url || "#"}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-indigo-400 hover:underline truncate"
+                          >
+                            Read full review
+                          </a>
+                        )}
+                      </div>
 
-                      <div className="ml-auto text-xs text-slate-400">
+                      <div className="text-xs text-slate-400 flex-shrink-0">
                         #{idx + 1} of {sorted.length}
                       </div>
                     </div>
