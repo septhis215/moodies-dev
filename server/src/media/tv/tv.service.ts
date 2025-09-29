@@ -1385,7 +1385,7 @@ export class TvService implements OnModuleInit {
           }
         });
 
-      const withTrailers = (await this.withConcurrencyLimit(trailerTasks, 5))
+      const withTrailers = (await this.withConcurrencyLimit(trailerTasks, 3))
         .filter((item): item is TmdbTv => item !== null)
         .slice(0, minRequired);
 

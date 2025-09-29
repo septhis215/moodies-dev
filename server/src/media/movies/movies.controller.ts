@@ -76,7 +76,7 @@ export class MoviesController {
       throw new Error('Type must be either "movie"');
     }
 
-    const parsedLimit = limit ? parseInt(limit, 10) : 5;
+    const parsedLimit = limit ? parseInt(limit, 10) : 3;
     return this.movieService.getSmartRecommendationsMovie(id, parsedLimit);
   }
 

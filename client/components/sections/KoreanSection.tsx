@@ -22,7 +22,7 @@ interface KoreaTrendingSectionProps {
 
 export default function KoreaTrendingSection({
     data,
-    title = "K-Drama & Beyond",
+    title = "K-Moods",
     subtitle = "From heart-fluttering romances to gripping thrillers, explore what's trending in Korea, tailored for your mood.",
     endpoint
 }: KoreaTrendingSectionProps) {

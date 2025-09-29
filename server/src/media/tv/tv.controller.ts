@@ -98,7 +98,7 @@ export class TvController {
       throw new Error('Type must be either "tv"');
     }
 
-    const parsedLimit = limit ? parseInt(limit, 10) : 5;
+    const parsedLimit = limit ? parseInt(limit, 10) : 3;
     return this.tvService.getSmartRecommendationsTv(id, parsedLimit);
   }
 

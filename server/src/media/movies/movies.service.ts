@@ -926,7 +926,7 @@ export class MoviesService implements OnModuleInit {
           }
         });
 
-      const withTrailers = (await this.withConcurrencyLimit(trailerTasks, 5))
+      const withTrailers = (await this.withConcurrencyLimit(trailerTasks, 3))
         .filter((item): item is TmdbMovie => item !== null)
         .slice(0, minRequired);
 
@@ -1210,7 +1210,7 @@ export class MoviesService implements OnModuleInit {
 
       const fetchTrailers = async (mediaType: 'movie') => {
         for (let page = 1; page <= maxPages && items.length < minRequired; page++) {
-          const url = `${this.baseUrl}/discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${todayStr}&page=${page}`;
+          const url = `discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${todayStr}&page=${page}`;
 
           const data = await this.tmdb(url);
           const results = data?.results ?? [];
