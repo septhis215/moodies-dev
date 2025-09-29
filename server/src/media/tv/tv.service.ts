@@ -50,9 +50,9 @@ export class TvService implements OnModuleInit {
   private readonly MIN_REQUIRED_ITEMS = 25;
 
   private readonly CACHE_TTL = {
-    BASIC_DATA: 60 * 60 * 24,
-    RECOMMENDATIONS: 60 * 60 * 24,
-    TRAILERS: 60 * 60 * 24,
+    BASIC_DATA: 60 * 5,
+    RECOMMENDATIONS: 60 * 30,
+    TRAILERS: 60 * 60,
     GENRES: 60 * 60 * 24,
   };
 
