@@ -66,7 +66,7 @@ export class TvService implements OnModuleInit {
   ) {
     this.baseUrl =
       this.configService.get<string>('TMDB_BASE') ??
-      'https://api.themoviedb.org/3';
+      'https://api.themoviedb.org/3/';
     this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
   }
 
@@ -903,7 +903,7 @@ export class TvService implements OnModuleInit {
     const tasks = candidates.map((cand) => async (): Promise<any> => {
       try {
         const videosData = await this.tmdb(
-          `${this.baseUrl}/${type}/${cand.id}/videos?language=en-US`,
+          `${type}/${cand.id}/videos?language=en-US`,
         );
         const trailerTypes = ['Trailer', 'Teaser', 'Clip'];
         let trailer: any = null;
@@ -937,7 +937,7 @@ export class TvService implements OnModuleInit {
 
     try {
       const baseItem = await this.tmdb(
-        `${this.baseUrl}/tv/${id}?language=en-US`,
+        `tv/${id}?language=en-US`,
       );
       if (!baseItem) return [];
 
@@ -953,9 +953,9 @@ export class TvService implements OnModuleInit {
       // recommendations & similar in parallel
       const [recData, simData] = await Promise.allSettled([
         this.tmdb(
-          `${this.baseUrl}/tv/${id}/recommendations?language=en-US&page=1`,
+          `tv/${id}/recommendations?language=en-US&page=1`,
         ),
-        this.tmdb(`${this.baseUrl}/tv/${id}/similar?language=en-US&page=1`),
+        this.tmdb(`tv/${id}/similar?language=en-US&page=1`),
       ]);
 
       if (recData.status === 'fulfilled' && recData.value?.results) {
@@ -984,7 +984,7 @@ export class TvService implements OnModuleInit {
       if (allCandidates.length < limit * 2 && baseGenreIds.length > 0) {
         try {
           const genreQuery = baseGenreIds.slice(0, 2).join(',');
-          const discoverUrl = `${this.baseUrl}/discover/tv?with_genres=${genreQuery}&sort_by=popularity.desc&page=1`;
+          const discoverUrl = `discover/tv?with_genres=${genreQuery}&sort_by=popularity.desc&page=1`;
 
           if (baseLang && baseCountries.length > 0) {
             const langCountryUrl = `${discoverUrl}&with_original_language=${baseLang}&with_origin_country=${baseCountries[0]}`;
@@ -1023,7 +1023,7 @@ export class TvService implements OnModuleInit {
       if (allCandidates.length < minRequired * 2) {
         try {
           const popularData = await this.tmdb(
-            `${this.baseUrl}/tv/popular?language=en-US&page=1`,
+            `tv/popular?language=en-US&page=1`,
           );
           if (popularData?.results) {
             for (const item of popularData.results.slice(0, 20)) {
@@ -1114,7 +1114,7 @@ export class TvService implements OnModuleInit {
       // Fetch Korean TV + Korean Movies in parallel with TMDB-side filters
       const [tvData] = await Promise.all([
         this.tmdb(
-          `${this.baseUrl}/discover/tv?with_original_language=ko&sort_by=popularity.desc&page=1&include_adult=false&without_keywords=13090,190720&certification_country=KR&certification.lte=15`,
+          `discover/tv?with_original_language=ko&sort_by=popularity.desc&page=1&include_adult=false&without_keywords=13090,190720&certification_country=KR&certification.lte=15`,
         ),
       ]);
 
@@ -1125,7 +1125,7 @@ export class TvService implements OnModuleInit {
 
       // Process basic info first and defer recommendations
       const items: TmdbTv[] = results.slice(0, limit).map((m) => {
-        const type = m.media_type ?? (m.first_air_date ? 'tv' : 'movie');
+        const type = 'tv';
         return {
           id: m.id,
           title: m.title ?? m.name ?? 'Untitled',
@@ -1196,7 +1196,7 @@ export class TvService implements OnModuleInit {
 
       for (let p = 1; p <= trendingPages; p++) {
         const trendingData = await this.tmdb(
-          `${this.baseUrl}/trending/tv/week?language=en-US&page=${p}`,
+          `trending/tv/week?language=en-US&page=${p}`,
         );
         const results = trendingData?.results ?? [];
 
@@ -1205,7 +1205,7 @@ export class TvService implements OnModuleInit {
 
           const reviewPromises: Promise<any>[] = [];
           for (let rp = 1; rp <= reviewPages; rp++) {
-            const reviewUrl = `${this.baseUrl}/tv/${item.id}/reviews?language=en-US&page=${rp}`;
+            const reviewUrl = `tv/${item.id}/reviews?language=en-US&page=${rp}`;
             reviewPromises.push(this.tmdb(reviewUrl));
           }
 
@@ -1272,7 +1272,7 @@ export class TvService implements OnModuleInit {
 
       const fetchTrailers = async (mediaType: 'tv') => {
         for (let page = 1; page <= maxPages; page++) {
-          const url = `${this.baseUrl}/discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&page=${page}`;
+          const url = `discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&page=${page}`;
 
           const data = await this.tmdb(url);
           const results = data?.results ?? [];
@@ -1286,10 +1286,10 @@ export class TvService implements OnModuleInit {
               // Fetch videos and details in parallel
               const [videosData, details] = await Promise.all([
                 this.tmdb(
-                  `${this.baseUrl}/tv/${m.id}/videos?language=en-US`,
+                  `tv/${m.id}/videos?language=en-US`,
                 ),
                 this.tmdb(
-                  `${this.baseUrl}/tv/${m.id}?language=en-US`,
+                  `tv/${m.id}?language=en-US`,
                 ),
               ]);
 
@@ -1412,13 +1412,13 @@ export class TvService implements OnModuleInit {
       // Multi-source approach to get diverse content with trailers
       const sources = [
         // Korean content (original focus)
-        `${this.baseUrl}/discover/tv?with_original_language=ko&sort_by=popularity.desc&page=1`,
+        `discover/tv?with_original_language=ko&sort_by=popularity.desc&page=1`,
         // Popular TV with high ratings (likely to have trailers)
-        `${this.baseUrl}/tv/popular?language=en-US&page=1`,
+        `tv/popular?language=en-US&page=1`,
         // Top rated TV (quality content)
-        `${this.baseUrl}/tv/top_rated?language=en-US&page=1`,
+        `tv/top_rated?language=en-US&page=1`,
         // Recent releases (likely to have trailers)
-        `${this.baseUrl}/discover/tv?sort_by=release_date.desc&first_air_date.gte=${new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}&page=1`,
+        `discover/tv?sort_by=release_date.desc&first_air_date.gte=${new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}&page=1`,
       ];
 
       // Fetch from multiple sources
@@ -1454,9 +1454,9 @@ export class TvService implements OnModuleInit {
             // Fetch videos, details, and additional info in parallel
             const [videosData, details] = await Promise.all([
               this.tmdb(
-                `${this.baseUrl}/${type}/${m.id}/videos?language=en-US`,
+                `${type}/${m.id}/videos?language=en-US`,
               ),
-              this.tmdb(`${this.baseUrl}/${type}/${m.id}?language=en-US`).catch(
+              this.tmdb(`${type}/${m.id}?language=en-US`).catch(
                 () => null,
               ),
             ]);
@@ -1535,7 +1535,7 @@ export class TvService implements OnModuleInit {
     const tasks = items.map((item) => async () => {
       try {
         const videosData = await this.tmdb(
-          `${this.baseUrl}/tv/${item.id}/videos?language=en-US`,
+          `tv/${item.id}/videos?language=en-US`,
         );
         const trailer = (videosData?.results ?? []).find(
           (v: any) => v.type === 'Trailer' && v.site === 'YouTube',
