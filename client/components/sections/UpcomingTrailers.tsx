@@ -6,6 +6,13 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight, Film, Tv } from "lucide-react";
 import { motion } from "framer-motion";
 import { IconClock } from "@tabler/icons-react";
+import {
+  IconCalendar,
+  IconClock,
+  IconDeviceTv,
+  IconTags,
+  IconX,
+} from "@tabler/icons-react";
 import dynamic from "next/dynamic";
 
 // Lazy-load modal (disable SSR)
