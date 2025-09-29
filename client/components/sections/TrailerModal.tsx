@@ -2,8 +2,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { All } from "@/types/all";
-import { IconCalendar, IconClock, IconDeviceTv, IconX } from "@tabler/icons-react";
+import {
+  IconCalendar,
+  IconClock,
+  IconDeviceTv,
+  IconX,
+} from "@tabler/icons-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 type Props = {
   trailer: All;
@@ -11,9 +17,35 @@ type Props = {
   onSelectTrailer: (trailer: All) => void | Promise<void>;
 };
 
-export default function TrailerModal({ trailer, onClose, onSelectTrailer }: Props) {
+export default function TrailerModal({
+  trailer,
+  onClose,
+  onSelectTrailer,
+}: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const router = useRouter();
+
+  const getContentType = (item: Partial<All>): "movie" | "tv" => {
+    if ((item as any).media_type) return (item as any).media_type;
+    if ((item as any).type === "movies" || (item as any).type === "movie")
+      return "movie";
+    if ((item as any).type === "tv") return "tv";
+    if (
+      (item as any).number_of_seasons ||
+      (item as any).first_air_date ||
+      (item as any).name
+    )
+      return "tv";
+    return "movie";
+  };
+
+  const handleClick = async (movie: All) => {
+    const contentType = getContentType(movie);
+    const routePath = contentType === "tv" ? "tv" : "movies";
+    const href = `/${routePath}/${movie.id}`;
+    router.push(href);
+  };
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -61,7 +93,10 @@ export default function TrailerModal({ trailer, onClose, onSelectTrailer }: Prop
             <div className="flex-shrink-0 p-4 xl:p-6 border-b border-gray-700/50 relative">
               <div className="flex gap-4 xl:gap-6 items-start">
                 {trailer.poster_path && (
-                  <div className="w-20 xl:w-32 flex-shrink-0">
+                  <div
+                    className="w-20 xl:w-32 flex-shrink-0 cursor-pointer"
+                    onClick={() => handleClick(trailer)}
+                  >
                     <img
                       src={`https://image.tmdb.org/t/p/w300${trailer.poster_path}`}
                       alt={trailer.title}
@@ -71,7 +106,10 @@ export default function TrailerModal({ trailer, onClose, onSelectTrailer }: Prop
                 )}
 
                 <div className="flex flex-col flex-1 min-w-0 relative z-10">
-                  <h2 className="text-xl xl:text-2xl 2xl:text-3xl font-extrabold text-white drop-shadow-2xl leading-tight">
+                  <h2
+                    className="text-xl xl:text-2xl 2xl:text-3xl font-extrabold text-white drop-shadow-2xl leading-tight cursor-pointer"
+                    onClick={() => handleClick(trailer)}
+                  >
                     {trailer.title}
                   </h2>
 
@@ -79,18 +117,22 @@ export default function TrailerModal({ trailer, onClose, onSelectTrailer }: Prop
                     {trailer.release_date && (
                       <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-blue-600/90 shadow-lg text-xs font-medium text-white">
                         <IconCalendar size={14} />
-                        {new Date(trailer.release_date).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
+                        {new Date(trailer.release_date).toLocaleDateString(
+                          undefined,
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          }
+                        )}
                       </span>
                     )}
 
                     {trailer.runtime && (
                       <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-600/90 shadow-lg text-xs font-medium text-white">
                         <IconClock size={14} />
-                        {Math.floor(trailer.runtime / 60)}h {trailer.runtime % 60}m
+                        {Math.floor(trailer.runtime / 60)}h{" "}
+                        {trailer.runtime % 60}m
                       </span>
                     )}
 
@@ -122,7 +164,10 @@ export default function TrailerModal({ trailer, onClose, onSelectTrailer }: Prop
                   Synopsis
                 </h3>
                 <p className="text-gray-300 text-sm leading-relaxed break-words">
-                  {isExpanded ? trailer.overview : trailer.overview.slice(0, 200) + (trailer.overview.length > 200 ? "..." : "")}
+                  {isExpanded
+                    ? trailer.overview
+                    : trailer.overview.slice(0, 200) +
+                      (trailer.overview.length > 200 ? "..." : "")}
                   {trailer.overview.length > 200 && (
                     <button
                       onClick={() => setIsExpanded(!isExpanded)}
@@ -155,7 +200,7 @@ export default function TrailerModal({ trailer, onClose, onSelectTrailer }: Prop
                       onClick={() => onSelectTrailer(rec)}
                       title={rec.title}
                     >
-                      <div className="aspect-[2/3] relative overflow-hidden">
+                      <div className="aspect-[2/3] relative overflow-hidden cursor-pointer">
                         <Image
                           src={`https://image.tmdb.org/t/p/w300${rec.poster_path}`}
                           alt={rec.title}
@@ -180,7 +225,6 @@ export default function TrailerModal({ trailer, onClose, onSelectTrailer }: Prop
             )}
           </div>
         </div>
-
       </div>
     </div>
   );

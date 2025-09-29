@@ -6,9 +6,15 @@ import type { All } from "@/types/all";
 import { tmdbImage } from "@/lib/tmdb";
 import useCarousel from "@/hooks/useCarousel";
 import HeroThumbnail from "./heroThumbnail";
-import { IconClock, IconInfoCircle, IconPlus, IconTags } from "@tabler/icons-react";
+import {
+  IconClock,
+  IconInfoCircle,
+  IconPlus,
+  IconTags,
+} from "@tabler/icons-react";
 import "./hero.css";
 import { Film, Tv } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type Props = { all: All[]; cycleMs?: number };
 
@@ -23,6 +29,29 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
     length: all.length,
     intervalMs: cycleMs,
   });
+
+  const router = useRouter();
+
+  const getContentType = (item: Partial<All>): "movie" | "tv" => {
+    if ((item as any).media_type) return (item as any).media_type;
+    if ((item as any).type === "movies" || (item as any).type === "movie")
+      return "movie";
+    if ((item as any).type === "tv") return "tv";
+    if (
+      (item as any).number_of_seasons ||
+      (item as any).first_air_date ||
+      (item as any).name
+    )
+      return "tv";
+    return "movie";
+  };
+
+  const handleClick = async (movie: All) => {
+    const contentType = getContentType(movie);
+    const routePath = contentType === "tv" ? "tv" : "movies";
+    const href = `/${routePath}/${movie.id}`;
+    router.push(href);
+  };
 
   // preload current + next (use browser Image object; not next/image)
   useEffect(() => {
@@ -56,7 +85,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
   // Get dynamic thumbnail window size based on screen size
   const getThumbnailWindowSize = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       if (window.innerWidth < 640) return 3; // mobile: 3 thumbnails
       if (window.innerWidth < 1024) return 4; // tablet: 4 thumbnails
       return 5; // desktop: 5 thumbnails
@@ -64,7 +93,11 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
     return 5;
   };
 
-  const thumbnailWindow = getThumbnailWindow(all, index, getThumbnailWindowSize());
+  const thumbnailWindow = getThumbnailWindow(
+    all,
+    index,
+    getThumbnailWindowSize()
+  );
 
   return (
     <section
@@ -81,25 +114,24 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           const active = i === index;
           // Responsive image sizing
           const getImageSize = () => {
-            if (typeof window !== 'undefined') {
-              if (window.innerWidth < 640) return 'w780'; // mobile
-              if (window.innerWidth < 1024) return 'w1280'; // tablet
-              return active ? 'w1280' : 'w780'; // desktop
+            if (typeof window !== "undefined") {
+              if (window.innerWidth < 640) return "w780"; // mobile
+              if (window.innerWidth < 1024) return "w1280"; // tablet
+              return active ? "w1280" : "w780"; // desktop
             }
-            return 'w1280';
+            return "w1280";
           };
 
           const src =
-            tmdbImage(
-              m.backdrop_path || m.poster_path,
-              getImageSize()
-            ) ?? "/images/placeholder-backdrop.jpg";
+            tmdbImage(m.backdrop_path || m.poster_path, getImageSize()) ??
+            "/images/placeholder-backdrop.jpg";
 
           return (
             <div
               key={m.id}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${active ? "opacity-100" : "opacity-0 pointer-events-none"
-                }`}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                active ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
               aria-hidden={!active}
             >
               <Image
@@ -108,7 +140,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                 className="w-full h-full object-cover object-center"
                 style={{
                   filter: "brightness(0.90) contrast(1.05)",
-                  objectPosition: "center 50%" // Better mobile cropping
+                  objectPosition: "center 50%", // Better mobile cropping
                 }}
                 fill
                 priority={active}
@@ -143,15 +175,16 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
         {/* Main Content Area */}
         <div className="flex-1 flex items-end">
           <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pb-4 sm:pb-6 lg:pb-8">
-
             {/* Mobile/Tablet Layout - Stack content vertically */}
             <div className="lg:hidden">
               {/* Content */}
               <div className="text-white mb-6">
                 {/* Title */}
-                <h1 className="font-bold leading-tight drop-shadow-2xl 
+                <h1
+                  className="font-bold leading-tight drop-shadow-2xl 
                   text-2xl sm:text-3xl md:text-4xl 
-                  tracking-tight mb-3">
+                  tracking-tight mb-3"
+                >
                   {all[index].title}
                 </h1>
 
@@ -172,15 +205,20 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
                   {/* Release Date */}
                   {all[index].release_date && (
-                    <div className="flex items-center gap-1 text-gray-200 font-medium 
+                    <div
+                      className="flex items-center gap-1 text-gray-200 font-medium 
                       px-2 py-1 rounded-full bg-gray-800/60 shadow-sm 
-                      text-xs sm:text-sm">
+                      text-xs sm:text-sm"
+                    >
                       <IconClock size={12} />
                       <span>
-                        {new Date(all[index].release_date).toLocaleDateString(undefined, {
-                          month: "short",
-                          year: "numeric",
-                        })}
+                        {new Date(all[index].release_date).toLocaleDateString(
+                          undefined,
+                          {
+                            month: "short",
+                            year: "numeric",
+                          }
+                        )}
                       </span>
                     </div>
                   )}
@@ -192,38 +230,49 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                         : "bg-purple-500/90 text-white border-purple-400/50",
                     ].join(" ")}
                   >
-                    {all[index].type === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                    {all[index].type === "tv" ? (
+                      <Tv size={12} />
+                    ) : (
+                      <Film size={12} />
+                    )}
                     {all[index].type === "tv" ? "Series" : "Movie"}
                   </div>
                 </div>
 
                 {/* Overview - shorter on mobile */}
-                <p className="text-sm sm:text-base text-gray-200/90 drop-shadow-lg 
-                  line-clamp-2 sm:line-clamp-2 mb-4">
-                  {all[index].overview.slice(0, 120) + (all[index].overview.length > 120 ? "..." : "")}
+                <p
+                  className="text-sm sm:text-base text-gray-200/90 drop-shadow-lg 
+                  line-clamp-2 sm:line-clamp-2 mb-4"
+                >
+                  {all[index].overview.slice(0, 120) +
+                    (all[index].overview.length > 120 ? "..." : "")}
                 </p>
 
                 {/* Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
-                  <button className="px-6 py-3 text-sm font-semibold
+                  <button
+                    className="px-6 py-3 text-sm font-semibold
                     bg-gradient-to-r from-[#e94f37] to-pink-600 text-white 
                     rounded-lg shadow-lg shadow-red-900/40
                     hover:from-red-700 hover:to-pink-700 transition-all duration-200
-                    flex items-center justify-center gap-2 cursor-pointer">
+                    flex items-center justify-center gap-2 cursor-pointer"
+                    onClick={() => handleClick(all[index])}
+                  >
                     <IconInfoCircle className="w-5 h-5" /> More Info
                   </button>
 
-                  <button className="px-6 py-3 text-sm font-medium
+                  <button
+                    className="px-6 py-3 text-sm font-medium
                     bg-white/10 border border-white/20 text-white 
                     rounded-lg backdrop-blur-md hover:bg-white/20 
                     transition-all duration-200
-                    flex items-center justify-center gap-2 cursor-pointer">
+                    flex items-center justify-center gap-2 cursor-pointer"
+                  >
                     <IconPlus className="w-5 h-5" />
                     My List
                   </button>
                 </div>
               </div>
-
             </div>
 
             {/* Desktop Layout - Side by side */}
@@ -231,9 +280,11 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
               {/* Left: Content */}
               <div className="flex-1 text-white max-w-2xl xl:max-w-3xl">
                 {/* Title */}
-                <h1 className="font-bold leading-tight drop-shadow-2xl 
+                <h1
+                  className="font-bold leading-tight drop-shadow-2xl 
                   text-4xl xl:text-5xl 2xl:text-6xl 
-                  tracking-tight mb-4">
+                  tracking-tight mb-4"
+                >
                   {all[index].title}
                 </h1>
 
@@ -256,11 +307,14 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                  px-2 py-1.5 rounded-full bg-gray-800/60 shadow-sm text-sm"
                     >
                       <IconClock size={14} />
-                      {new Date(all[index].release_date).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
+                      {new Date(all[index].release_date).toLocaleDateString(
+                        undefined,
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        }
+                      )}
                     </span>
                   )}
                   <div
@@ -271,35 +325,47 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                         : "bg-purple-500/90 text-white border-purple-400/50",
                     ].join(" ")}
                   >
-                    {all[index].type === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                    {all[index].type === "tv" ? (
+                      <Tv size={12} />
+                    ) : (
+                      <Film size={12} />
+                    )}
                     {all[index].type === "tv" ? "Series" : "Movie"}
                   </div>
                 </div>
 
-
                 {/* Overview */}
-                <p className="text-base xl:text-lg text-gray-200/90 drop-shadow-lg 
-                  max-w-2xl line-clamp-2 mb-6">
-                  {all[index].overview.slice(0, 180) + (all[index].overview.length > 180 ? "..." : "")}
+                <p
+                  className="text-base xl:text-lg text-gray-200/90 drop-shadow-lg 
+                  max-w-2xl line-clamp-2 mb-6"
+                >
+                  {all[index].overview.slice(0, 180) +
+                    (all[index].overview.length > 180 ? "..." : "")}
                 </p>
 
                 {/* Buttons */}
                 <div className="flex flex-wrap gap-4">
-                  <button className="px-6 xl:px-8 py-3 xl:py-4 
+                  <button
+                    className="px-6 xl:px-8 py-3 xl:py-4 
                     text-base xl:text-lg font-semibold
                     bg-gradient-to-r from-[#e94f37] to-pink-600 text-white 
                     rounded-lg shadow-lg shadow-red-900/40
                     hover:from-red-700 hover:to-pink-700 transition-all duration-200
-                    flex items-center gap-2 cursor-pointer">
-                    <IconInfoCircle className="w-5 h-5 xl:w-6 xl:h-6" /> More Info
+                    flex items-center gap-2 cursor-pointer"
+                    onClick={() => handleClick(all[index])}
+                  >
+                    <IconInfoCircle className="w-5 h-5 xl:w-6 xl:h-6" /> More
+                    Info
                   </button>
 
-                  <button className="px-6 xl:px-8 py-3 xl:py-4
+                  <button
+                    className="px-6 xl:px-8 py-3 xl:py-4
                     text-base xl:text-lg font-medium
                     bg-white/10 border border-white/20 text-white 
                     rounded-lg backdrop-blur-md hover:bg-white/20 
                     transition-all duration-200
-                    flex items-center gap-2 cursor-pointer">
+                    flex items-center gap-2 cursor-pointer"
+                  >
                     <IconPlus className="w-5 h-5 xl:w-6 xl:h-6" />
                     My List
                   </button>
@@ -317,7 +383,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                         all={m}
                         active={i === index}
                         onClick={() => setIndex(i)}
-                        width={110}  // Standard desktop size
+                        width={110} // Standard desktop size
                         height={160}
                       />
                     );
@@ -328,6 +394,6 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           </div>
         </div>
       </div>
-    </section >
+    </section>
   );
 }
