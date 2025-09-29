@@ -210,7 +210,7 @@ export default function MovieCarousel<T extends MovieLike>({
     return count?.toString() || "0";
   };
 
-  const handleCardClick = (movie: T) => {
+  const handleCardClick = (movie: MovieLike) => {
     const contentType = getContentType(movie);
     const routePath = contentType === "tv" ? "tv" : "movies";
     const href = `/${routePath}/${movie.id}`;
@@ -466,13 +466,13 @@ export default function MovieCarousel<T extends MovieLike>({
                                       KR
                                     </span>
                                   )}
-                                    <div className={`
+                                  <div className={`
                           flex items-center gap-1 px-2 py-0.5 rounded-full font-medium text-xs shadow-lg backdrop-blur-md  
                          
                         `}>
-                                      {contentType === "tv" ? <Tv size={12} /> : <Film size={12} />}
-                                      {contentType === "tv" ? "Series" : "Movie"}
-                                    </div>
+                                    {contentType === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                                    {contentType === "tv" ? "Series" : "Movie"}
+                                  </div>
                                 </div>
 
                                 {/* Compact genres - only show top 2 */}
@@ -537,6 +537,7 @@ export default function MovieCarousel<T extends MovieLike>({
                                                 <motion.div
                                                   whileHover={{ scale: 1.1 }}
                                                   className="relative aspect-[2/3] rounded-md overflow-hidden cursor-pointer shadow-md hover:shadow-lg transition-all"
+                                                  onClick={(e) => { e.stopPropagation(); handleCardClick(rec) }}
                                                 >
                                                   <Image
                                                     src={posterGetter(rec)}

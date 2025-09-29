@@ -2,8 +2,6 @@
 "use client";
 
 import { motion, Variants } from "framer-motion";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import {
     Film,
     Tv,
@@ -11,14 +9,10 @@ import {
     Play,
     Sparkles,
     Loader2,
-    Search,
-    Calendar,
-    Users
 } from "lucide-react";
 
 export default function AppLoading() {
 
-    const isClient = typeof window !== "undefined";
 
     const pulseVariants: Variants = {
         initial: { scale: 1, opacity: 0.7 },
@@ -99,7 +93,7 @@ export default function AppLoading() {
                 <div className="flex justify-center gap-6">
                     {[
                         { Icon: Film, delay: 0, color: "text-purple-400" },
-                        { Icon: Tv, delay: 0.5, color: "text-blue-400" },
+                        { Icon: Tv, delay: 0.5, color: "text-blue-400"},
                         { Icon: Star, delay: 1, color: "text-yellow-400" },
                         { Icon: Sparkles, delay: 1.5, color: "text-pink-400" }
                     ].map(({ Icon, delay, color }, index) => (
