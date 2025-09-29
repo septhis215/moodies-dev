@@ -148,7 +148,7 @@ export class TvController {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      service: 'movieService',
+      service: 'tvService',
       endpoints: [
         'featured',
         'trending',

@@ -85,9 +85,21 @@ export class MoviesService implements OnModuleInit {
 
   // Generic helper: returns response.data (not only results)
   private async tmdb(endpoint: string) {
-    const normalizedEndpoint = endpoint.startsWith('http')
-      ? endpoint
-      : `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+    let normalizedEndpoint: string;
+
+    // If it's a full URL, use it as-is
+    if (endpoint.startsWith('http')) {
+      normalizedEndpoint = endpoint;
+    } else {
+      // Remove leading slash from endpoint if present
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+
+      // Remove trailing slash from baseUrl if present
+      const cleanBase = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
+
+      // Combine with single slash
+      normalizedEndpoint = `${cleanBase}/${cleanEndpoint}`;
+    }
 
     const response = await firstValueFrom(
       this.httpService.get(normalizedEndpoint, {
@@ -527,7 +539,7 @@ export class MoviesService implements OnModuleInit {
   }
 
   private async fetchTrailersForCandidates(
-    type: 'movie' | 'tv',
+    type: 'movie',
     candidates: any[],
   ) {
     const tasks = candidates.map((cand) => async (): Promise<any> => {

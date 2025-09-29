@@ -8,10 +8,11 @@ import FavoritesSection from "@/components/sections/FavoriteSection";
 import KoreaTrendingSection from '@/components/sections/KoreanSection';
 import CelebSection from '@/components/sections/CelebsSection';
 import CommunityPicks from '@/components/sections/CommunityPicks';
+import { UpcomingTrailers } from '@/components/sections/UpcomingTrailers';
 
 async function fetchTrendingTV() {
     const base = process.env.NEST_API_URL || 'http://localhost:4000';
-    const res = await fetch(`${base}/all/featured`, { next: { revalidate: 60 } });
+    const res = await fetch(`${base}/tv/featured`, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const json = await res.json();
     return json as All[];
@@ -19,7 +20,7 @@ async function fetchTrendingTV() {
 
 async function fetchPopularTV() {
     const base = process.env.NEST_API_URL || 'http://localhost:4000';
-    const res = await fetch(`${base}/tv/popular`, { next: { revalidate: 60 } });
+    const res = await fetch(`${base}/tv/trending`, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const json = await res.json();
     return json as All[];
@@ -27,15 +28,23 @@ async function fetchPopularTV() {
 
 async function fetchTopRatedTV() {
     const base = process.env.NEST_API_URL || 'http://localhost:4000';
-    const res = await fetch(`${base}/all/favorite`, { next: { revalidate: 60 } });
+    const res = await fetch(`${base}/tv/favorites`, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const json = await res.json();
     return json as All[];
 }
 
-async function fetchNewTVReleases() {
+async function fetchTVTrailers() {
     const base = process.env.NEST_API_URL || 'http://localhost:4000';
-    const res = await fetch(`${base}/all/trailers`, { next: { revalidate: 60 } });
+    const res = await fetch(`${base}/tv/trailers`, { next: { revalidate: 60 } });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json as All[];
+}
+
+async function fetchNewTVTrailers() {
+    const base = process.env.NEST_API_URL || 'http://localhost:4000';
+    const res = await fetch(`${base}/tv/upcoming-trailers`, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const json = await res.json();
     return json as All[];
@@ -45,11 +54,12 @@ export const metadata = {
     description: 'Discover trending TV shows and series',
 };
 export default async function TVHomePage() {
-    const [trendingTV, popularTV, topRatedTV, newReleases] = await Promise.all([
+    const [trendingTV, popularTV, topRatedTV, TVTrailer, NewTVTrailer] = await Promise.all([
         fetchTrendingTV(),
         fetchPopularTV(),
         fetchTopRatedTV(),
-        fetchNewTVReleases()
+        fetchTVTrailers(),
+        fetchNewTVTrailers()
     ]);
 
     return (
@@ -60,7 +70,7 @@ export default async function TVHomePage() {
             {/* TV-specific sections */}
             <TrendingSection data={popularTV} title="Trending TV Shows" />
 
-            <PremiereHighlights data={newReleases} title="New Episodes This Week" />
+            <PremiereHighlights data={TVTrailer} title="New Episodes This Week" />
 
             <FavoritesSection data={topRatedTV} title="Top Rated Series" />
 
@@ -71,9 +81,10 @@ export default async function TVHomePage() {
                 {/* Add your carousel component here */}
             </section>
 
-            <CelebSection />
 
             <CommunityPicks/>
+
+            <UpcomingTrailers data={NewTVTrailer} />
         </main>
     );
 }

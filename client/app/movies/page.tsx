@@ -11,7 +11,7 @@ import { UpcomingTrailers } from '@/components/sections/UpcomingTrailers';
 
 async function fetchTrendingMovies() {
   const base = process.env.NEST_API_URL || 'http://localhost:4000';
-  const res = await fetch(`${base}/movies/trending/week`, { next: { revalidate: 60 } });
+  const res = await fetch(`${base}/movies/trending`, { next: { revalidate: 60 } });
   if (!res.ok) return [];
   const json = await res.json();
   return json as All[];
@@ -19,7 +19,7 @@ async function fetchTrendingMovies() {
 
 async function fetchPopularMovies() {
   const base = process.env.NEST_API_URL || 'http://localhost:4000';
-  const res = await fetch(`${base}/movies/popular`, { next: { revalidate: 60 } });
+  const res = await fetch(`${base}/movies/featured`, { next: { revalidate: 60 } });
   if (!res.ok) return [];
   const json = await res.json();
   return json as All[];
@@ -27,7 +27,7 @@ async function fetchPopularMovies() {
 
 async function fetchTopRatedMovies() {
   const base = process.env.NEST_API_URL || 'http://localhost:4000';
-  const res = await fetch(`${base}/movies/top-rated`, { next: { revalidate: 60 } });
+  const res = await fetch(`${base}/movies/favorites`, { next: { revalidate: 60 } });
   if (!res.ok) return [];
   const json = await res.json();
   return json as All[];
@@ -35,7 +35,7 @@ async function fetchTopRatedMovies() {
 
 async function fetchUpcomingMovies() {
   const base = process.env.NEST_API_URL || 'http://localhost:4000';
-  const res = await fetch(`${base}/movies/upcoming`, { next: { revalidate: 60 } });
+  const res = await fetch(`${base}/movies/upcoming-trailers`, { next: { revalidate: 60 } });
   if (!res.ok) return [];
   const json = await res.json();
   return json as All[];
@@ -43,7 +43,7 @@ async function fetchUpcomingMovies() {
 
 async function fetchNowPlayingMovies() {
   const base = process.env.NEST_API_URL || 'http://localhost:4000';
-  const res = await fetch(`${base}/movies/now-playing`, { next: { revalidate: 60 } });
+  const res = await fetch(`${base}/movies/trailers`, { next: { revalidate: 60 } });
   if (!res.ok) return [];
   const json = await res.json();
   return json as All[];
@@ -64,7 +64,7 @@ export default async function MoviesHomePage() {
       <HeroCarousel all={trendingMovies} />
       
       {/* Movie-specific sections */}
-      <TrendingSection data={trendingMovies} title="Trending Movies" />
+      <TrendingSection data={popularMovies} title="Trending Movies" />
       
       <PremiereHighlights data={nowPlayingMovies} title="Now Playing in Theaters" />
       
@@ -80,11 +80,9 @@ export default async function MoviesHomePage() {
         {/* Add your carousel component here for upcoming movies */}
       </section>
       
-      <CelebSection />
-      
       <CommunityPicks />
       
-      <UpcomingTrailers />
+      <UpcomingTrailers data={upcomingMovies}/>
     </main>
   );
 }
