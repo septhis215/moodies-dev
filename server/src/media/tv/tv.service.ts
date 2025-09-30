@@ -1078,7 +1078,7 @@ export class TvService implements OnModuleInit {
       }
 
       const items: TmdbTv[] = allResults.slice(0, minRequired).map((m) => {
-        const type = m.media_type ?? (m.first_air_date ? 'tv' : 'movie');
+        const type = 'tv'
         return {
           id: m.id,
           title: m.title ?? m.name ?? 'Untitled',

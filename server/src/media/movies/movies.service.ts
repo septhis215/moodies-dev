@@ -59,7 +59,7 @@ export class MoviesService implements OnModuleInit {
   ) {
     this.baseUrl =
       this.configService.get<string>('TMDB_BASE') ??
-      'https://api.themoviedb.org/3/';
+      'https://api.themoviedb.org/3';
     this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
   }
 
@@ -772,7 +772,7 @@ export class MoviesService implements OnModuleInit {
       }
 
       const items: TmdbMovie[] = allResults.slice(0, minRequired).map((m) => {
-        const type = m.media_type ?? (m.first_air_date ? 'tv' : 'movie');
+        const type = 'movie'
         return {
           id: m.id,
           title: m.title ?? m.name ?? 'Untitled',
@@ -958,7 +958,7 @@ export class MoviesService implements OnModuleInit {
       const maxPages = 5;
 
       while (allResults.length < minRequired && page <= maxPages) {
-        const data = await this.tmdb(`/trending/movies/day?page=${page}`);
+        const data = await this.tmdb(`/trending/movie/day?page=${page}`);
         const results = data?.results ?? [];
         const filtered = results.filter((item: any) => item.media_type === 'tv');
         const clean = this.filterAdultishContent(filtered);
