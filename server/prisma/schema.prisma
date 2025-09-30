@@ -13,6 +13,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Sentiment {
+  positive
+  neutral
+  negative
+}
+
+enum TargetType {
+  post
+  comment
+  review
+}
+
+enum MoodTag {
+  happy
+  angry
+  sad
+  excited
+  curious
+}
+
 model User {
   id                 String      @id @default(uuid())
   username           String      @unique
@@ -200,6 +225,78 @@ model ContentCache {
   @@index([popularity])
   @@index([lastFetched])
   @@map("content_cache")
+}
+
+model Post {
+  id             String    @id @map("_id") @default(auto()) @db.ObjectId
+  userId         String    @map("user_id") @db.ObjectId
+  user           User?     @relation(fields: [userId], references: [id])
+  movieId        String?   @map("movie_id")  @db.ObjectId
+  seriesId       String?   @map("series_id") @db.ObjectId
+  title          String
+  content        String
+  tags           String[]  @default([])
+  mediaUrls      String[]  @map("media_urls") @default([])
+  likeCount      Int       @map("like_count") @default(0)
+  commentCount   Int       @map("comment_count") @default(0)
+  sentimentScore Float?    @map("sentiment_score")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  comments       PostComment[]
+
+  @@index([userId])
+  @@index([movieId])
+  @@index([seriesId])
+}
+
+model PostComment {
+  id             String    @id @map("_id") @default(auto()) @db.ObjectId
+  postId         String    @map("post_id") @db.ObjectId
+  post           Post?     @relation(fields: [postId], references: [id])
+  userId         String    @map("user_id") @db.ObjectId
+  user           User?     @relation(fields: [userId], references: [id])
+  content        String
+  likeCount      Int       @map("like_count") @default(0)
+  sentimentScore Float?    @map("sentiment_score")
+  parentId       String?   @map("parent_id") @db.ObjectId
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([postId])
+  @@index([parentId])
+  @@index([userId])
+}
+
+model Review {
+  id             String    @id @map("_id") @default(auto()) @db.ObjectId
+  movieId        String?   @map("movie_id")  @db.ObjectId
+  seriesId       String?   @map("series_id") @db.ObjectId
+  userId         String    @map("user_id") @db.ObjectId
+  user           User?     @relation(fields: [userId], references: [id])
+  content        String
+  rating         Float?
+  moodTag        MoodTag?
+  likeCount      Int       @map("like_count") @default(0)
+  sentimentScore Float?    @map("sentiment_score")
+  createdAt      DateTime  @default(now())
+
+  @@index([userId])
+  @@index([movieId])
+  @@index([seriesId])
+}
+
+model SentimentLog {
+  id         String      @id @map("_id") @default(auto()) @db.ObjectId
+  targetType TargetType  @map("target_type")
+  targetId   String      @map("target_id") @db.ObjectId
+  userId     String      @map("user_id") @db.ObjectId
+  sentiment  Sentiment
+  score      Float
+  timestamp  DateTime    @default(now())
+
+  @@index([targetType, targetId])
+  @@index([userId])
 }
 
 enum MediaType {
