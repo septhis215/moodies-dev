@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 
 // Original Content type for internal use
 export type Content = {
@@ -35,13 +36,16 @@ export type MovieDetailsData = {
       name: string;
       logo_path?: string;
     }>;
-    production_countries: Array<{ iso_3166_1: string; name: string }>;
+    production_countries: Array<{ iso_3166_1: string; name?: string }>;
     spoken_languages: Array<{ iso_639_1: string; name: string }>;
     status: string;
     tagline?: string;
     homepage?: string;
     poster_path?: string;
     backdrop_path?: string;
+    content_type: "movie";
+    director?: string;
+    content_rating?: string;
   };
   credits: {
     cast: Array<{
@@ -59,7 +63,78 @@ export type MovieDetailsData = {
       profile_path?: string;
     }>;
   };
+  trailer?: any;
+  providers?: any;
+  reviews?: any[];
+  similar?: any[];
+  raw?: any;
 };
+
+// TV API data structure (matching your updated TvService)
+export type TvDetailsData = {
+  info: {
+    id: number;
+    title: string;
+    original_title?: string;
+    overview: string;
+    release_date: string; // maps to first_air_date
+    runtime: number; // normalized from episode_run_time
+    budget: number;
+    revenue: number;
+    vote_average: number;
+    vote_count: number;
+    genres: Array<{ id: number; name: string }>;
+    production_companies: Array<{
+      id: number;
+      name: string;
+      logo_path?: string;
+    }>;
+    production_countries: Array<{ iso_3166_1: string; name?: string }>;
+    spoken_languages: Array<{ iso_639_1: string; name: string }>;
+    status: string;
+    tagline?: string;
+    homepage?: string;
+    poster_path?: string;
+    backdrop_path?: string;
+    adult: boolean;
+    created_by?: Array<{ id: number; name: string }>;
+    content_type: "tv";
+    director?: string; // creator name
+    content_rating?: string;
+    // TV-specific fields
+    number_of_seasons?: number;
+    number_of_episodes?: number;
+    episode_run_time?: number[];
+    first_air_date?: string;
+    last_air_date?: string;
+    networks?: Array<{ id: number; name: string; logo_path?: string }>;
+    seasons?: Array<any>;
+  };
+  credits: {
+    cast: Array<{
+      id: number;
+      name: string;
+      character: string;
+      profile_path?: string;
+      order: number;
+    }>;
+    crew: Array<{
+      id: number;
+      name: string;
+      job: string;
+      department: string;
+      profile_path?: string;
+    }>;
+  };
+  trailer?: any;
+  providers?: any;
+  reviews?: any[];
+  similar?: any[];
+  raw?: any;
+};
+
+const truncate = (s: string = "", n = 200) =>
+  s.length > n ? s.slice(0, n).trim() + "…" : s;
 
 function StarRating({ rating }: { rating: number }) {
   const fullStars = Math.round(rating / 2); // convert 0-10 -> 0-5
@@ -71,7 +146,7 @@ function StarRating({ rating }: { rating: number }) {
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           className={`w-4 h-4 ${
-            i < fullStars ? "text-yellow-400" : "text-white/30"
+            i < fullStars ? "text-yellow-400" : "text-white/85"
           }`}
           fill={i < fullStars ? "currentColor" : "none"}
           stroke="currentColor"
@@ -82,7 +157,7 @@ function StarRating({ rating }: { rating: number }) {
           />
         </svg>
       ))}
-      <span className="ml-2 text-xs text-white/70">{rating.toFixed(1)}</span>
+      <span className="ml-2 text-xs text-white/85">{rating.toFixed(1)}</span>
     </div>
   );
 }
@@ -109,16 +184,50 @@ function extractYear(dateString: string): string {
   return new Date(dateString).getFullYear().toString();
 }
 
-// Helper function to find director from crew
-function findDirector(crew: MovieDetailsData["credits"]["crew"]): string {
+// Helper function to find director/creator from crew or created_by
+function findDirectorOrCreator(
+  crew: MovieDetailsData["credits"]["crew"] | TvDetailsData["credits"]["crew"],
+  createdBy?: Array<{ id: number; name: string }>
+): string {
   const director = crew.find((person) => person.job === "Director");
-  return director?.name || "Unknown";
+  if (director) return director.name;
+
+  // For TV shows, fall back to creator
+  if (createdBy && createdBy.length > 0) {
+    return createdBy[0].name;
+  }
+
+  return "Unknown";
 }
 
-// Component that accepts either Content or MovieDetailsData
+function ReadMore({ text, limit = 300 }: { text: string; limit?: number }) {
+  const [expanded, setExpanded] = React.useState(false);
+
+  if (!text) return null;
+
+  const shouldTruncate = text.length > limit;
+  const displayText =
+    expanded || !shouldTruncate ? text : text.slice(0, limit).trim() + "…";
+
+  return (
+    <p className="max-w-3xl text-white/90 leading-relaxed text-xs sm:text-sm lg:text-sm xl:text-base">
+      {displayText}
+      {shouldTruncate && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="ml-2 text-blue-400 hover:underline text-sm font-medium"
+        >
+          {expanded ? "Read less" : "Read more"}
+        </button>
+      )}
+    </p>
+  );
+}
+
+// Component that accepts either Content, MovieDetailsData, or TvDetailsData
 interface HeroContentCardProps {
   content?: Content;
-  data?: MovieDetailsData;
+  data?: MovieDetailsData | TvDetailsData;
 }
 
 export function HeroContentCard({ content, data }: HeroContentCardProps) {
@@ -129,6 +238,9 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
     if (!data) {
       throw new Error("Either content or data prop must be provided");
     }
+
+    const isTV = data.info.content_type === "tv";
+    const tvData = isTV ? (data as TvDetailsData) : null;
 
     return {
       id: data.info.id,
@@ -144,36 +256,50 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
       runtime: formatRuntime(data.info.runtime),
       rating: data.info.vote_average,
       overview: data.info.overview,
-      director: findDirector(data.credits.crew),
-      ageRating: undefined, // This would need to come from certification data if available
+      director:
+        data.info.director ||
+        findDirectorOrCreator(data.credits.crew, tvData?.info.created_by),
+      ageRating: data.info.content_rating, // Basic age rating logic
     };
   }, [content, data]);
 
+  // Determine if this is a TV show for display purposes
+  const isTV = data?.info.content_type === "tv";
+  const tvInfo = isTV ? (data as TvDetailsData).info : null;
+
   return (
-    <div className="w-full min-h-screen relative text-white font-inter overflow-hidden">
-      <div
-        className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `url(${mappedContent.backdrop})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center center",
-        }}
-        aria-hidden
-      />
+    <div className="w-full relative text-white font-inter overflow-hidden">
+      {/* Background image - full screen */}
+      <div className="fixed inset-0 -z-10">
+        <Image
+          src={mappedContent.backdrop}
+          alt=""
+          fill
+          priority
+          aria-hidden
+          className="object-cover object-center"
+          style={{
+            filter: "brightness(1.1) grayscale(100%)", // add grayscale to wash out colors
+            objectPosition: "center 50%",
+          }}
+        />
 
-      {/* Dark gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/40" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+        {/* Grey to black gradient overlays */}
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800/20 to-black" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-gray-900/60 to-transparent" />
+      </div>
 
-      {/* Content Container - Positioned very close to bottom */}
-      <div className="relative min-h-screen flex items-end justify-center px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 lg:pb-16">
+      {/* Content Container - Add top padding for navbar and adjust height */}
+      <div className="relative min-h-screen pt-20 sm:pt-24 md:pt-16 lg:pt-20 xl:pt-24 flex items-end justify-center px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 lg:pb-16">
         <div className="w-full max-w-7xl mx-auto">
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start lg:items-center">
             {/* Poster */}
-            <div className="flex-shrink-0 w-48 sm:w-56 lg:w-64 xl:w-72 mx-auto lg:mx-0">
+            <div className="flex-shrink-0 w-34 sm:w-42 lg:w-50 xl:w-58 mx-auto lg:mx-0">
               <div className="rounded-lg shadow-2xl overflow-hidden transform transition-transform hover:scale-105">
-                <img
+                <Image
                   src={mappedContent.poster}
+                  width={300}
+                  height={450}
                   alt={`${mappedContent.title} poster`}
                   className="w-full h-auto block"
                 />
@@ -181,46 +307,92 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
             </div>
 
             {/* Info */}
-            <div className="flex-1 text-center lg:text-left space-y-4 lg:space-y-6">
+            <div className="flex-1 text-center lg:text-left space-y-3 lg:space-y-4">
               {/* Title and Year */}
               <div>
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold tracking-tight leading-tight">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tracking-tight leading-tight">
                   {mappedContent.title}
                 </h1>
                 <div className="mt-3 flex items-center justify-center lg:justify-start gap-3 flex-wrap">
-                  <span className="text-sm bg-white/10 border border-white/20 px-3 py-1 rounded-md">
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm bg-white/10 border border-white/20 px-3 py-1 rounded-md">
                     {mappedContent.year}
                   </span>
                   {mappedContent.ageRating && (
-                    <span className="text-xs bg-green-600 text-black px-3 py-1 rounded-md font-medium">
+                    <span className="text-xs sm:text-xs lg:text-xs xl:text-sm bg-green-600 text-black px-3 py-1 rounded-md font-medium">
                       {mappedContent.ageRating}
                     </span>
                   )}
-                  <span className="text-sm text-white/70 flex items-center gap-2">
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/85 flex items-center gap-2">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="w-4 h-4"
+                      className="w-3 h-3"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
                     >
-                      <path strokeWidth={1.5} d="M12 3v18m9-9H3" />
+                      <path strokeWidth={2.5} d="M12 3v18m9-9H3" />
                     </svg>
                     {mappedContent.runtime}
                   </span>
+                  {/* TV-specific info: seasons and episodes */}
+                  {isTV && tvInfo && (
+                    <>
+                      {tvInfo.number_of_seasons && (
+                        <span className="text-sm text-white/70 flex items-center gap-2">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="w-4 h-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <rect
+                              width="18"
+                              height="18"
+                              x="3"
+                              y="3"
+                              rx="2"
+                              ry="2"
+                            />
+                            <line x1="9" x2="9" y1="9" y2="15" />
+                            <line x1="15" x2="15" y1="9" y2="15" />
+                          </svg>
+                          {tvInfo.number_of_seasons} Season
+                          {tvInfo.number_of_seasons !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {tvInfo.number_of_episodes && (
+                        <span className="text-sm text-white/70">
+                          {tvInfo.number_of_episodes} Episodes
+                        </span>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* Director and Rating */}
+              {/* Director/Creator and Rating */}
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-white/70">Directed by</span>
-                  <span className="text-sm font-medium text-white">
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">
+                    {isTV ? "Created by" : "Directed by"}
+                  </span>
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm font-medium text-white">
                     {mappedContent.director ?? "Unknown"}
                   </span>
                 </div>
                 <StarRating rating={mappedContent.rating} />
               </div>
+
+              {/* Network info for TV shows */}
+              {isTV && tvInfo?.networks && tvInfo.networks.length > 0 && (
+                <div className="flex items-center justify-center lg:justify-start gap-2">
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">Network:</span>
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm font-medium text-white">
+                    {tvInfo.networks.map((n) => n.name).join(", ")}
+                  </span>
+                </div>
+              )}
 
               {/* Genres */}
               <div className="flex items-center justify-center lg:justify-start gap-2 flex-wrap">
@@ -230,9 +402,7 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
               </div>
 
               {/* Overview */}
-              <p className="max-w-3xl text-white/90 leading-relaxed text-sm sm:text-base lg:text-lg">
-                {mappedContent.overview}
-              </p>
+              <ReadMore text={mappedContent.overview} limit={200} />
 
               {/* Actions */}
               <div className="flex items-center justify-center lg:justify-start gap-3 flex-wrap pt-2">

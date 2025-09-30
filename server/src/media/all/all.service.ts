@@ -2,8 +2,9 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-
 import { RedisService } from 'src/redis/redis.service';
+
+// import { RedisService } from 'src/redis/redis.service';
 
 export type TmdbAll = {
     id: number;
@@ -61,10 +62,10 @@ export class AllService implements OnModuleInit {
 
     // Cache TTL constants
     private readonly CACHE_TTL = {
-        BASIC_DATA: 60 * 5,      // 5 minutes for trending
-        RECOMMENDATIONS: 60 * 30, // 30 minutes for recommendations
-        TRAILERS: 60 * 60,       // 1 hour for trailers
-        GENRES: 60 * 60 * 24     // 24 hours for genres
+        BASIC_DATA: 60 * 60 * 24,      // 5 minutes for trending
+        RECOMMENDATIONS: 60 * 60 * 24, // 30 minutes for recommendations
+        TRAILERS: 60 * 60 * 24,       // 1 hour for trailers
+        GENRES: 60 * 60 * 48     // 24 hours for genres
     };
 
     constructor(
@@ -146,13 +147,13 @@ export class AllService implements OnModuleInit {
     // Featured (recent + trending, small cache)
     async getFeatured(limit = 30): Promise<TmdbAll[]> {
         const ttlSec = this.CACHE_TTL.BASIC_DATA;
-        const cacheKey = `featured`;
-        const cached = await this.redisService.get(cacheKey);
-        if (cached) {
-            try {
-                return (JSON.parse(cached) as TmdbAll[]).slice(0, limit);
-            } catch { }
-        }
+        // const cacheKey = `featured`;
+        // const cached = await this.redisService.get(cacheKey);
+        // if (cached) {
+        //     try {
+        //         return (JSON.parse(cached) as TmdbAll[]).slice(0, limit);
+        //     } catch { }
+        // }
 
         if (!this.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty featured');
@@ -194,7 +195,7 @@ export class AllService implements OnModuleInit {
             const shuffled = shuffleArray(all);
             const sliced = shuffled.slice(0, Math.max(0, limit));
 
-            await this.redisService.set(cacheKey, JSON.stringify(sliced), ttlSec);
+            // await this.redisService.set(cacheKey, JSON.stringify(sliced), ttlSec);
             return sliced;
         } catch (err) {
             this.logger.error('Failed to fetch featured', err as any);
@@ -202,6 +203,7 @@ export class AllService implements OnModuleInit {
         }
     }
 
+    // Trending (optimized + recent + background recommendations)
     // Trending (optimized + recent + background recommendations)
     async getTrending(limit = 30): Promise<TmdbAll[]> {
         const ttlSec = this.CACHE_TTL.BASIC_DATA;
@@ -221,12 +223,12 @@ export class AllService implements OnModuleInit {
         try {
             // Get trending but only recent ones
             const data = await this.tmdb(
-                `/trending/all/week?include_adult=false`
+                `/trending/all/day?include_adult=false`
             );
 
             const results = (data?.results ?? []).filter((m: any) => {
                 const date = new Date(m.release_date ?? m.first_air_date ?? '');
-                return date >= new Date(this.getRecentDate(730)); // last 12 months
+                return date >= new Date(this.getRecentDate(365)); // last 12 months
             });
 
             const basicItems: TmdbAll[] = results.slice(0, limit).map((m: any) => ({
@@ -246,7 +248,7 @@ export class AllService implements OnModuleInit {
             }));
 
             const shuffled = shuffleArray(basicItems);
-            // await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
+            await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
 
             // populate recommendations in background
             this.populateRecommendationsBackground(basicItems, cacheKey);
@@ -604,6 +606,7 @@ export class AllService implements OnModuleInit {
         }
     }
 
+
     // OPTIMIZED: Korea trending with background processing + filtering
     async getKoreaTrending(limit = 30): Promise<TmdbAll[]> {
         const ttlSec = this.CACHE_TTL.BASIC_DATA;
@@ -659,7 +662,7 @@ export class AllService implements OnModuleInit {
             const shuffled = shuffleArray(items);
 
             // Cache and start background recommendation population
-            await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
+            // await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
             this.populateRecommendationsBackground(shuffled, cacheKey);
 
             return shuffled.slice(0, Math.max(0, limit));
@@ -688,13 +691,13 @@ export class AllService implements OnModuleInit {
         const ttlSec = this.CACHE_TTL.TRAILERS;
         const cacheKey = `trailers-enhanced-${limit}`;
 
-        // // const cached = await this.redisService.get(cacheKey);
-        // if (cached) {
-        //     try {
-        //         const parsed = JSON.parse(cached) as TmdbAll[];
-        //         return parsed;
-        //     } catch { }
-        // }
+        const cached = await this.redisService.get(cacheKey);
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached) as TmdbAll[];
+                return parsed;
+            } catch { }
+        }
 
         if (!this.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty trailers');
@@ -743,10 +746,9 @@ export class AllService implements OnModuleInit {
                     const type = 'tv'; // Focus on TV series
 
                     // Fetch videos, details, and additional info in parallel
-                    const [videosData, details, credits] = await Promise.all([
+                    const [videosData, details] = await Promise.all([
                         this.tmdb(`${this.baseUrl}/${type}/${m.id}/videos?language=en-US`),
-                        this.tmdb(`${this.baseUrl}/${type}/${m.id}?language=en-US`),
-                        this.tmdb(`${this.baseUrl}/${type}/${m.id}/credits?language=en-US`).catch(() => null)
+                        this.tmdb(`${this.baseUrl}/${type}/${m.id}?language=en-US`).catch(() => null)
                     ]);
 
                     // Enhanced trailer finding - look for multiple types
@@ -807,14 +809,14 @@ export class AllService implements OnModuleInit {
     // Keep existing methods with optimizations
     async getFavorites(limit = 30): Promise<TmdbAll[]> {
         const ttlSec = this.CACHE_TTL.BASIC_DATA;
-        const cacheKey = `favorites`;
-        const cached = await this.redisService.get(cacheKey);
-        if (cached) {
-            try {
-                const parsed = JSON.parse(cached) as TmdbAll[];
-                return parsed.slice(0, limit);
-            } catch { }
-        }
+        // const cacheKey = `favorites`;
+        // const cached = await this.redisService.get(cacheKey);
+        // if (cached) {
+        //     try {
+        //         const parsed = JSON.parse(cached) as TmdbAll[];
+        //         return parsed.slice(0, limit);
+        //     } catch { }
+        // }
 
         if (!this.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty favorites');
@@ -843,7 +845,7 @@ export class AllService implements OnModuleInit {
 
             const shuffled = shuffleArray(all);
             const sliced = shuffled.slice(0, Math.max(0, limit));
-            await this.redisService.set(cacheKey, JSON.stringify(sliced), ttlSec);
+            // await this.redisService.set(cacheKey, JSON.stringify(sliced), ttlSec);
             return sliced;
         } catch (err) {
             this.logger.error('Failed to fetch favorites', err as any);
@@ -859,7 +861,7 @@ export class AllService implements OnModuleInit {
     // People — filter out persons who appear to be adult/erotic stars
     async getPeople(limit = 30): Promise<TmdbPerson[]> {
         const ttlSec = this.CACHE_TTL.BASIC_DATA;
-        const cacheKey = `people-${limit}`;
+        // const cacheKey = `people-${limit}`;
 
         if (!this.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty people');
@@ -918,7 +920,7 @@ export class AllService implements OnModuleInit {
 
             const sliced = people.slice(0, Math.max(0, limit));
             // Cache and return a shuffled result
-            await this.redisService.set(cacheKey, JSON.stringify(sliced), ttlSec);
+            // await this.redisService.set(cacheKey, JSON.stringify(sliced), ttlSec);
             return shuffleArray(sliced);
         } catch (err) {
             this.logger.error('Failed to fetch people', err as any);
@@ -927,16 +929,16 @@ export class AllService implements OnModuleInit {
     }
 
     async trending(type: string) {
-        const cacheKey = `trending/all/${type}`;
-        const cached = await this.redisService.get(cacheKey);
-        if (cached) {
-            return JSON.parse(cached);
-        }
+        // const cacheKey = `trending/all/${type}`;
+        // const cached = await this.redisService.get(cacheKey);
+        // if (cached) {
+        //     return JSON.parse(cached);
+        // }
 
         const data = await this.tmdb(`trending/all/${type}`);
         const results = data?.results ?? [];
 
-        await this.redisService.set(cacheKey, JSON.stringify(results), 60);
+        // await this.redisService.set(cacheKey, JSON.stringify(results), 60);
         return results;
     }
 
@@ -1026,14 +1028,14 @@ export class AllService implements OnModuleInit {
         rating?: number | null;
     }[]> {
         const ttlSec = 60 * 10;
-        const cacheKey = `trendingReviews`;
+        // const cacheKey = `trendingReviews`;
 
-        const cached = await this.redisService.get(cacheKey);
-        if (cached) {
-            try {
-                return JSON.parse(cached);
-            } catch { }
-        }
+        // const cached = await this.redisService.get(cacheKey);
+        // if (cached) {
+        //     try {
+        //         return JSON.parse(cached);
+        //     } catch { }
+        // }
 
         if (!this.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty reviews');
@@ -1095,7 +1097,7 @@ export class AllService implements OnModuleInit {
             }
 
             const shuffled = reviews.sort(() => Math.random() - 0.5);
-            await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
+            // await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
             return shuffled;
         } catch (err) {
             this.logger.error('Failed to fetch trending reviews', err as any);
@@ -1107,12 +1109,12 @@ export class AllService implements OnModuleInit {
         const ttlSec = this.CACHE_TTL.TRAILERS;
         const cacheKey = `trailers-upcoming-${limit}`;
 
-        const cached = await this.redisService.get(cacheKey);
-        if (cached) {
-            try {
-                return JSON.parse(cached) as TmdbAll[];
-            } catch { }
-        }
+        // const cached = await this.redisService.get(cacheKey);
+        // if (cached) {
+        //     try {
+        //         return JSON.parse(cached) as TmdbAll[];
+        //     } catch { }
+        // }
 
         if (!this.token) {
             this.logger.warn("TMDB_API_KEY not set; returning empty trailers");
@@ -1206,10 +1208,10 @@ export class AllService implements OnModuleInit {
                 });
 
                 const updatedItems = await this.withConcurrencyLimit(tasks, 3);
-                await this.redisService.set(cacheKey, JSON.stringify(updatedItems), ttlSec);
+                // await this.redisService.set(cacheKey, JSON.stringify(updatedItems), ttlSec);
             }, 100);
 
-            await this.redisService.set(cacheKey, JSON.stringify(sorted), ttlSec);
+            // await this.redisService.set(cacheKey, JSON.stringify(sorted), ttlSec);
             return sorted;
         } catch (err) {
             this.logger.error("Failed to fetch upcoming trailers", err as any);
@@ -1224,14 +1226,14 @@ export class AllService implements OnModuleInit {
 
     // NEW: Batch trailer fetching for multiple items
     async getTrailersForItems(items: { type: 'movie' | 'tv', id: number }[]): Promise<Record<string, string | null>> {
-        const cacheKey = `batch-trailers-${items.map(i => `${i.type}-${i.id}`).join(',')}`;
-        const cached = await this.redisService.get(cacheKey);
+        // const cacheKey = `batch-trailers-${items.map(i => `${i.type}-${i.id}`).join(',')}`;
+        // const cached = await this.redisService.get(cacheKey);
 
-        if (cached) {
-            try {
-                return JSON.parse(cached);
-            } catch { }
-        }
+        // if (cached) {
+        //     try {
+        //         return JSON.parse(cached);
+        //     } catch { }
+        // }
 
         const tasks = items.map(item => async () => {
             try {
@@ -1248,8 +1250,23 @@ export class AllService implements OnModuleInit {
         const results = await this.withConcurrencyLimit(tasks);
         const trailerMap = Object.fromEntries(results);
 
-        await this.redisService.set(cacheKey, JSON.stringify(trailerMap), this.CACHE_TTL.TRAILERS);
+        // await this.redisService.set(cacheKey, JSON.stringify(trailerMap), this.CACHE_TTL.TRAILERS);
         return trailerMap;
+    }
+
+    async images(id: number, type: string) {
+        const data = await this.tmdb(`${type}/${id}/images`);
+        if (!data) return { posters: [], backdrops: [] };
+
+        const posters: string[] = (data.posters ?? [])
+            .map((p: any) => p?.file_path ?? null)
+            .filter((fp: string | null): fp is string => Boolean(fp));
+
+        const backdrops: string[] = (data.backdrops ?? [])
+            .map((b: any) => b?.file_path ?? null)
+            .filter((fp: string | null): fp is string => Boolean(fp));
+
+        return { posters, backdrops };
     }
 }
 

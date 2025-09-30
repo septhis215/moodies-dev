@@ -1,3 +1,4 @@
+// app/auth/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
@@ -31,14 +32,10 @@ export default function AuthLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en">
-            <body
-                className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-white`}
-            >
-                <main>
-                    {children}
-                </main>
-            </body>
-        </html>
+        <main
+            className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-white min-h-screen flex items-center justify-center`}
+        >
+            {children}
+        </main>
     );
 }

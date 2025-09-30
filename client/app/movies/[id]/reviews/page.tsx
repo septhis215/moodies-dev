@@ -13,7 +13,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  return { title: `Reviews for ${id}` }; // You could fetch movie title here too
+  return { title: `Reviews for ${id}` };
 }
 
 export default async function ReviewsPage({ params, searchParams }: Props) {

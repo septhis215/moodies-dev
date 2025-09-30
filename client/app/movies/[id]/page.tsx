@@ -17,20 +17,18 @@ async function fetchDetails(id: string) {
 export async function generateMetadata({
   params,
 }: {
-  // params may be a Promise in App Router, so await it below
   params: { id: string } | Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const { id } = await params; // <--- await here
+  const { id } = await params;
   return { title: `Movie ${id}` };
 }
 
 export default async function MoviePage({
   params,
 }: {
-  // params may be a Promise in App Router, so await it below
   params: { id: string } | Promise<{ id: string }>;
 }) {
-  const { id } = await params; // <--- await here
+  const { id } = await params; 
   const data = await fetchDetails(id);
 
   if (!data) {

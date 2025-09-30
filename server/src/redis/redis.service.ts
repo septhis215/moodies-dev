@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService) { }
 
   private client;
 
