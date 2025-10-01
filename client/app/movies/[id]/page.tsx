@@ -4,6 +4,7 @@ import HeroContentCard from "@/components/selected-content/sections/heroTop";
 import MovieDetails from "@/components/selected-content/sections/extras";
 import ReviewsSection from "@/components/selected-content/sections/reviews";
 import MovieCarousel from "@/components/sections/MovieCarousel";
+import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
 
 async function fetchDetails(id: string) {
   const base = process.env.NEST_API_URL ?? "http://localhost:4000";
@@ -12,6 +13,32 @@ async function fetchDetails(id: string) {
   });
   if (!res.ok) return null;
   return res.json();
+}
+
+async function fetchImages(id: string) {
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(`${base}/movies/images/movie/${id}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
+async function fetchVideos(id: string) {
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(`${base}/movies/videos/movie/${id}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch (err) {
+    return null;
+  }
 }
 
 export async function generateMetadata({
@@ -28,8 +55,10 @@ export default async function MoviePage({
 }: {
   params: { id: string } | Promise<{ id: string }>;
 }) {
-  const { id } = await params; 
+  const { id } = await params;
   const data = await fetchDetails(id);
+  const images = await fetchImages(id);
+  const videos = await fetchVideos(id);
 
   if (!data) {
     return (
@@ -49,6 +78,14 @@ export default async function MoviePage({
 
       <div className="min-h-screen bg-black text-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-16 space-y-14">
+          <ImageVideoCarousel
+            posters={images.posters}
+            backdrops={images.backdrops}
+            videos={videos.videos}
+          />
+
+          <hr className="border-white/8 my-14" />
+
           <MovieDetails data={data} />
 
           <hr className="border-white/8 my-14" />
