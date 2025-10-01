@@ -124,7 +124,7 @@ export default function FavoritesSection({
 
   if (loading) {
     return (
-      <section className="relative px-6 py-6 bg-gradient-to-b from-gray-900 via-black to-gray-900">
+      <section className="relative px-6 py-6  bg-gradient-to-b from-gray-900 via-black to-gray-900">
         <div className="mb-6">
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
             {title}
@@ -146,7 +146,7 @@ export default function FavoritesSection({
   if (favorites.length === 0) return null;
 
   return (
-    <section className="relative px-6 py-6 bg-gradient-to-b from-gray-900 via-black to-gray-900">
+    <section className="relative px-6 py-6 bg-gradient-to-b from-gray-900 via-black to-gray-900 max-w-7xl mx-auto">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
@@ -215,13 +215,12 @@ export default function FavoritesSection({
             {typeof item.vote_average === "number" && (
               <div
                 className={`absolute top-2 right-2 z-20 text-xs px-2 py-1 rounded-lg font-bold shadow
-      ${
-        item.vote_average && item.vote_average >= 7
-          ? "bg-green-500 text-white"
-          : item.vote_average && item.vote_average >= 5
-          ? "bg-yellow-400 text-black"
-          : "bg-red-500 text-white"
-      }`}
+      ${item.vote_average && item.vote_average >= 7
+                    ? "bg-green-500 text-white"
+                    : item.vote_average && item.vote_average >= 5
+                      ? "bg-yellow-400 text-black"
+                      : "bg-red-500 text-white"
+                  }`}
               >
                 {item.vote_average.toFixed(1)}
               </div>

@@ -9,10 +9,11 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { TvService } from './tv.service';
-
+import { parse } from 'path';
+import { MoodsService } from 'src/routes/moods/moods.service';
 @Controller('tv')
 export class TvController {
-  constructor(private readonly tvService: TvService) {}
+  constructor(private readonly tvService: TvService, private readonly moodsService: MoodsService) { }
 
   // Main TV details endpoint - matches movies approach
   @Get('details/:id')
@@ -84,6 +85,12 @@ export class TvController {
   async upcomingTrailers(@Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : 30;
     return this.tvService.getUpcomingTrailers(parsedLimit);
+  }
+
+  @Get('new-releases')
+  async newReleases(@Query('limit') limit?: string) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 20;
+    return this.tvService.getNewReleases(parsedLimit);
   }
 
   // Enhanced recommendations endpoint with better error handling
@@ -176,27 +183,30 @@ export class TvController {
 
   // NEW: Bulk endpoint for getting multiple categories at once
   // Useful for loading dashboard data in a single request
+  // tv.controller.ts
   @Get('bulk/dashboard')
   async getDashboardData(@Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 10) : 10;
 
-    // Execute all requests in parallel for faster response
-    const [featured, trending, trailers, koreaTrending, reviews] =
+    const [featured, trending, trailers, koreaTrending, reviews, newReleases, moods] =
       await Promise.allSettled([
         this.tvService.getFeatured(parsedLimit),
         this.tvService.getTrending(parsedLimit),
         this.tvService.getTrailers(parsedLimit),
         this.tvService.getKoreaTrending(parsedLimit),
-        this.tvService.getTrendingReviews(Math.min(parsedLimit, 10)), // Limit reviews to 10 max
+        this.tvService.getTrendingReviews(Math.min(parsedLimit, 10)),
+        this.tvService.getNewReleases(parsedLimit),
+        this.moodsService.getAllMoods(), 
       ]);
 
     return {
       featured: featured.status === 'fulfilled' ? featured.value : [],
       trending: trending.status === 'fulfilled' ? trending.value : [],
       trailers: trailers.status === 'fulfilled' ? trailers.value : [],
-      koreaTrending:
-        koreaTrending.status === 'fulfilled' ? koreaTrending.value : [],
+      koreaTrending: koreaTrending.status === 'fulfilled' ? koreaTrending.value : [],
       reviews: reviews.status === 'fulfilled' ? reviews.value : [],
+      newReleases: newReleases.status === 'fulfilled' ? newReleases.value : [],
+      moods: moods.status === 'fulfilled' ? moods.value : [], 
       timestamp: new Date().toISOString(),
     };
   }

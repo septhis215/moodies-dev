@@ -168,7 +168,7 @@ export const UpcomingTrailers = ({
     // =====================
 
     return (
-        <section className="px-6 py-12 mx-auto relative">
+        <section className="px-6 py-12 max-w-7xl mx-auto relative">
             <div className="flex items-center justify-between mb-2">
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{title}</h2>
                 <div className="text-sm text-gray-500">{trailers.length} trailers</div>

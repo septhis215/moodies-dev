@@ -122,7 +122,7 @@ export default function CelebSection() {
   if (!celebs.length) return null;
 
   return (
-    <section className="relative w-full px-6 py-16 mx-auto">
+    <section className="relative w-full px-6 py-16 max-w-7xl mx-auto">
       <div className="mx-auto">
 
         {/* Section Header */}

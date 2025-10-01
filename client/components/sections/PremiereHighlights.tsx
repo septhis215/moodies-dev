@@ -190,7 +190,7 @@ export default function PremiereHighlights({
   if (trailers.length === 0) return null;
 
   return (
-    <section className="px-6 py-12 mx-auto relative">
+    <section className="px-6 py-12 max-w-7xl mx-auto relative">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{title}</h2>
         <div className="text-sm text-gray-500">
@@ -278,7 +278,7 @@ export default function PremiereHighlights({
                   )}
 
                 </div>
-                
+
                 <div className="absolute bottom-3 right-3 z-20 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
                   <div
                     className={[

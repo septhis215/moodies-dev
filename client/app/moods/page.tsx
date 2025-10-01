@@ -196,7 +196,7 @@ export default function MoodDiscoveryWheel() {
         setRecError(null);
 
         try {
-            const endpoint = forceRefresh ? '/moods/recommendations/regenerate' : '/moods/recommendations/generate';
+            const endpoint = forceRefresh ? '/moods/recommendations/regenerate' : '/moods/recommendations';
 
             if (forceRefresh) {
                 const response = await fetch(`${API_BASE}${endpoint}`, {

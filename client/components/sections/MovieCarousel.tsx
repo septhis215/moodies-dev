@@ -243,7 +243,7 @@ export default function MovieCarousel<T extends MovieLike>({
   return (
     <>
       <style jsx>{scrollbarStyles}</style>
-      <section className="relative w-full px-4 sm:px-6 py-8 sm:py-12 mx-auto">
+      <section className="relative w-full px-4 sm:px-6 py-8 sm:py-12 max-w-7xl mx-auto">
         {/* Section header */}
         <div className="mb-6 flex items-center justify-between">
           <div>

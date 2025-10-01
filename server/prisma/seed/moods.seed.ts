@@ -10,12 +10,107 @@ export async function seedMoods(prisma: PrismaClient) {
 
   const moods = [
     {
+      name: 'Radiance',
+      color: '#FFD700',
+      icon: 'sun',
+      description: 'Bright, joyful, and uplifting stories',
+      keywords: ['joy', 'uplifting', 'cheerful', 'positive'],
+      movieGenres: [35, 16, 10751, 12],    // Comedy, Animation, Family, Adventure :contentReference[oaicite:0]{index=0}
+      tvGenres: [35, 16, 10751, 10762],     // Comedy, Animation, Family, Kids :contentReference[oaicite:1]{index=1}
+      valence: 0.9,
+      arousal: 0.6,
+      isActive: true,
+    }, {
+      name: 'Eclipse',
+      color: '#2F4F4F',
+      icon: 'moon',
+      description: 'Dark, mysterious stories with intrigue',
+      keywords: ['mystery', 'noir', 'psychological', 'suspense'],
+      movieGenres: [9648, 53, 80, 878],      // Mystery, Thriller, Crime, Sci-Fi :contentReference[oaicite:4]{index=4}
+      tvGenres: [9648, 80, 10765],            // Mystery, Crime, Sci-Fi & Fantasy :contentReference[oaicite:5]{index=5}
+      valence: -0.1,
+      arousal: 0.5,
+      isActive: true,
+    },
+    {
+      name: 'Serenity',
+      color: '#20B2AA',
+      icon: 'wind',
+      description: 'Gentle, calm, and soothing narratives',
+      keywords: ['calm', 'peaceful', 'relaxing', 'soothing'],
+      movieGenres: [18, 36, 99],             // Drama, History, Documentary :contentReference[oaicite:6]{index=6}
+      tvGenres: [18, 99],                     // Drama, Documentary :contentReference[oaicite:7]{index=7}
+      valence: 0.3,
+      arousal: -0.3,
+      isActive: true,
+    },
+    {
+      name: 'Memoria',
+      color: '#FFB347',
+      icon: 'clock',
+      description: 'Nostalgic, reflective, reminds you of the past',
+      keywords: ['nostalgic', 'retro', 'memory', 'yearning'],
+      movieGenres: [35, 16, 10751, 10402],     // Comedy, Animation, Family, Music :contentReference[oaicite:10]{index=10}
+      tvGenres: [16, 35, 10751],                // Animation, Comedy, Family :contentReference[oaicite:11]{index=11}
+      valence: 0.5,
+      arousal: 0.3,
+      isActive: true,
+    },
+    {
+      name: 'Bittersweet',
+      color: '#708090',
+      icon: 'cloud',
+      description: 'A blend of joy and sorrow, emotionally rich',
+      keywords: ['poignant', 'emotional', 'sad', 'reflective'],
+      movieGenres: [18, 10749],                // Drama, Romance :contentReference[oaicite:12]{index=12}
+      tvGenres: [18, 10766],                   // Drama, Soap :contentReference[oaicite:13]{index=13}
+      valence: -0.2,
+      arousal: 0.2,
+      isActive: true,
+    },
+    {
+      name: 'Seraph',
+      color: '#32CD32',
+      icon: 'star',
+      description: 'Uplifting, motivational, stories of overcoming',
+      keywords: ['inspiring', 'hopeful', 'resilient', 'empowering'],
+      movieGenres: [18, 36, 99],               // Drama, History, Documentary :contentReference[oaicite:14]{index=14}
+      tvGenres: [18, 99],                      // Drama, Documentary :contentReference[oaicite:15]{index=15}
+      valence: 0.8,
+      arousal: 0.6,
+      isActive: true,
+    },
+    {
+      name: 'Whimsy',
+      color: '#BA55D3',
+      icon: 'magic',
+      description: 'Playful, imaginative, and joyous flights of fancy',
+      keywords: ['whimsical', 'fantasy', 'imaginative', 'dreamy'],
+      movieGenres: [14, 16, 10751],             // Fantasy, Animation, Family :contentReference[oaicite:16]{index=16}
+      tvGenres: [10765, 16, 10751],             // Sci-Fi & Fantasy, Animation, Family :contentReference[oaicite:17]{index=17}
+      valence: 0.7,
+      arousal: 0.5,
+      isActive: true,
+    },
+    {
+      name: 'Chaos',
+      color: '#FF4500',
+      icon: 'fire',
+      description: 'Wild, unpredictable, fast-paced stories',
+      keywords: ['chaotic', 'madness', 'unpredictable', 'intense'],
+      movieGenres: [28, 53, 80],                // Action, Thriller, Crime :contentReference[oaicite:18]{index=18}
+      tvGenres: [10759, 53, 80],                // Action & Adventure, Thriller, Crime (if TV supports) :contentReference[oaicite:19]{index=19}
+      valence: 0.2,
+      arousal: 0.9,
+      isActive: true,
+    }, {
       name: 'Happy',
       color: '#FFD700',
       icon: 'smile',
-      description: 'Feel-good content to brighten your day',
-      keywords: ['comedy', 'feel-good', 'uplifting', 'cheerful', 'positive'],
-      tmdbGenres: [35, 16, 10751, 12],
+      description: 'Lighthearted and uplifting stories that boost your mood',
+      keywords: ['comedy', 'cheerful', 'uplifting', 'positive vibes'],
+      movieGenres: [35, 16, 10751, 12], // Comedy, Animation, Family, Adventure
+      tvGenres: [35, 16, 10751, 10762], // Comedy, Animation, Family, Kids
       valence: 0.8,
       arousal: 0.5,
       isActive: true,
@@ -24,9 +119,10 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Thrilling',
       color: '#FF6B35',
       icon: 'zap',
-      description: 'Heart-pounding adventures and excitement',
-      keywords: ['action', 'adventure', 'exciting', 'intense', 'adrenaline'],
-      tmdbGenres: [28, 53, 12, 80],
+      description: 'High-stakes action and suspense-filled adventures',
+      keywords: ['action', 'adventure', 'suspense', 'intense', 'adrenaline'],
+      movieGenres: [28, 53, 12, 80], // Action, Thriller, Adventure, Crime
+      tvGenres: [10759, 80, 9648], // Action & Adventure, Crime, Mystery
       valence: 0.6,
       arousal: 0.9,
       isActive: true,
@@ -35,9 +131,10 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Horror',
       color: '#8B0000',
       icon: 'skull',
-      description: 'Spine-chilling scares and supernatural thrills',
-      keywords: ['scary', 'frightening', 'supernatural', 'suspense', 'terror'],
-      tmdbGenres: [27, 9648],
+      description: 'Creepy tales and spine-chilling frights',
+      keywords: ['scary', 'terror', 'supernatural', 'suspense'],
+      movieGenres: [27, 9648], // Horror, Mystery
+      tvGenres: [9648], // Mystery (TV has no direct "Horror" genre)
       valence: -0.3,
       arousal: 0.8,
       isActive: true,
@@ -46,9 +143,10 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Romantic',
       color: '#FF69B4',
       icon: 'heart',
-      description: 'Love stories and heartwarming connections',
-      keywords: ['love', 'romance', 'relationship', 'heartwarming', 'emotional'],
-      tmdbGenres: [10749, 18],
+      description: 'Stories of love, connection, and heartfelt emotions',
+      keywords: ['romance', 'love story', 'relationships', 'emotional'],
+      movieGenres: [10749, 18], // Romance, Drama
+      tvGenres: [18, 10766], // Drama, Soap
       valence: 0.7,
       arousal: 0.3,
       isActive: true,
@@ -57,9 +155,10 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Chill',
       color: '#20B2AA',
       icon: 'wind',
-      description: 'Relaxing content for unwinding',
-      keywords: ['relaxing', 'calm', 'peaceful', 'soothing', 'meditative'],
-      tmdbGenres: [18, 36, 99],
+      description: 'Relaxed, slow-paced stories perfect for unwinding',
+      keywords: ['relaxing', 'peaceful', 'soothing', 'calm'],
+      movieGenres: [18, 36, 99], // Drama, History, Documentary
+      tvGenres: [18, 99], // Drama, Documentary
       valence: 0.3,
       arousal: -0.5,
       isActive: true,
@@ -68,21 +167,22 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Dark',
       color: '#2F4F4F',
       icon: 'moon',
-      description: 'Mysterious and thought-provoking narratives',
-      keywords: ['mysterious', 'psychological', 'complex', 'introspective', 'noir'],
-      tmdbGenres: [9648, 53, 80, 878],
+      description: 'Mysterious and unsettling narratives that linger',
+      keywords: ['noir', 'psychological', 'mystery', 'gritty'],
+      movieGenres: [9648, 53, 80, 878], // Mystery, Thriller, Crime, Sci-Fi
+      tvGenres: [9648, 80, 10765], // Mystery, Crime, Sci-Fi & Fantasy
       valence: -0.2,
       arousal: 0.4,
       isActive: true,
     },
-    // 🌟 New moods
     {
       name: 'Epic',
       color: '#8A2BE2',
       icon: 'crown',
-      description: 'Grand adventures and fantasy worlds',
-      keywords: ['fantasy', 'epic', 'heroic', 'legendary', 'mythical'],
-      tmdbGenres: [14, 12, 28, 878],
+      description: 'Legendary adventures set in vast, fantastical worlds',
+      keywords: ['fantasy', 'heroic', 'legendary', 'mythical'],
+      movieGenres: [14, 12, 28, 878], // Fantasy, Adventure, Action, Sci-Fi
+      tvGenres: [10765, 10759], // Sci-Fi & Fantasy, Action & Adventure
       valence: 0.5,
       arousal: 0.8,
       isActive: true,
@@ -91,9 +191,10 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Inspirational',
       color: '#32CD32',
       icon: 'star',
-      description: 'Stories that uplift and motivate',
-      keywords: ['inspiring', 'emotional', 'true story', 'motivating', 'heartfelt'],
-      tmdbGenres: [18, 36, 99],
+      description: 'True stories and dramas that lift your spirit',
+      keywords: ['motivating', 'emotional', 'uplifting', 'true story'],
+      movieGenres: [18, 36, 99], // Drama, History, Documentary
+      tvGenres: [18, 99], // Drama, Documentary
       valence: 0.9,
       arousal: 0.6,
       isActive: true,
@@ -102,9 +203,10 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Nostalgic',
       color: '#FFB347',
       icon: 'clock',
-      description: 'Classic tales and retro vibes',
-      keywords: ['classic', 'retro', 'nostalgic', 'childhood', 'old school'],
-      tmdbGenres: [35, 16, 10751, 10402],
+      description: 'Classic tales and retro vibes that take you back',
+      keywords: ['retro', 'classic', 'childhood', 'old school'],
+      movieGenres: [35, 16, 10751, 10402], // Comedy, Animation, Family, Music
+      tvGenres: [16, 35, 10751], // Animation, Comedy, Family
       valence: 0.6,
       arousal: 0.4,
       isActive: true,
@@ -113,9 +215,10 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Sad',
       color: '#4682B4',
       icon: 'cloud-rain',
-      description: 'Emotional and tear-jerking stories',
-      keywords: ['sad', 'emotional', 'tragic', 'heartbreaking', 'drama'],
-      tmdbGenres: [18, 10749],
+      description: 'Emotional and moving stories that tug at your heart',
+      keywords: ['tragic', 'emotional', 'tearjerker', 'loss'],
+      movieGenres: [18, 10749], // Drama, Romance
+      tvGenres: [18, 10766], // Drama, Soap
       valence: -0.5,
       arousal: 0.3,
       isActive: true,
@@ -124,9 +227,10 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Funny',
       color: '#FFB6C1',
       icon: 'laugh',
-      description: 'Lighthearted comedies to make you laugh',
-      keywords: ['funny', 'hilarious', 'comedy', 'parody', 'satire'],
-      tmdbGenres: [35, 10751, 16],
+      description: 'Comedies full of laughs, parodies, and satire',
+      keywords: ['hilarious', 'parody', 'satire', 'funny'],
+      movieGenres: [35, 10751, 16], // Comedy, Family, Animation
+      tvGenres: [35, 16, 10751], // Comedy, Animation, Family
       valence: 0.9,
       arousal: 0.6,
       isActive: true,
@@ -135,74 +239,22 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Documentary',
       color: '#708090',
       icon: 'book',
-      description: 'Real-world stories and factual content',
-      keywords: ['documentary', 'true', 'educational', 'informative', 'real'],
-      tmdbGenres: [99, 36],
+      description: 'Fascinating insights into real-world stories and events',
+      keywords: ['true', 'factual', 'informative', 'educational'],
+      movieGenres: [99, 36], // Documentary, History
+      tvGenres: [99], // Documentary
       valence: 0.4,
       arousal: 0.2,
-      isActive: true,
-    },
-    {
-      name: 'Melancholy',
-      color: '#708090',
-      icon: 'cloud',
-      description: 'Bittersweet, deep, and reflective stories',
-      keywords: ['sad', 'tragic', 'thoughtful', 'poignant'],
-      tmdbGenres: [18, 10749],
-      valence: -0.4,
-      arousal: -0.2,
-      isActive: true,
-    },
-    {
-      name: 'Patriotic',
-      color: '#B22222',
-      icon: 'flag',
-      description: 'War, history, and tales of sacrifice',
-      keywords: ['war', 'history', 'sacrifice', 'bravery'],
-      tmdbGenres: [36, 10752, 99],
-      valence: 0.2,
-      arousal: 0.7,
-      isActive: true,
-    },
-    {
-      name: 'Musical',
-      color: '#FF1493',
-      icon: 'music',
-      description: 'Song, dance, and musical journeys',
-      keywords: ['music', 'song', 'dance', 'performance'],
-      tmdbGenres: [10402, 35, 10751],
-      valence: 0.8,
-      arousal: 0.6,
-      isActive: true,
-    }, {
-      name: 'Adventurous',
-      color: '#1E90FF',
-      icon: 'compass',
-      description: 'Journey into the unknown with epic quests and discoveries',
-      keywords: ['adventure', 'explore', 'journey', 'quest'],
-      tmdbGenres: [12, 14, 878],
-      valence: 0.6,
-      arousal: 0.8,
-      isActive: true,
-    },
-    {
-      name: 'Wholesome',
-      color: '#FFE4B5',
-      icon: 'sun',
-      description: 'Heartwarming stories for the whole family',
-      keywords: ['family', 'wholesome', 'warm', 'kind', 'pure'],
-      tmdbGenres: [10751, 16, 35],
-      valence: 0.9,
-      arousal: 0.3,
       isActive: true,
     },
     {
       name: 'Mind-Bending',
       color: '#4B0082',
       icon: 'brain',
-      description: 'Twists, puzzles, and stories that bend reality',
-      keywords: ['mystery', 'sci-fi', 'psychological', 'twist'],
-      tmdbGenres: [9648, 878, 53],
+      description: 'Twists and narratives that challenge your perception',
+      keywords: ['mystery', 'psychological', 'sci-fi', 'surreal'],
+      movieGenres: [9648, 878, 53], // Mystery, Sci-Fi, Thriller
+      tvGenres: [9648, 10765], // Mystery, Sci-Fi & Fantasy
       valence: 0.2,
       arousal: 0.7,
       isActive: true,
@@ -211,9 +263,10 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Gritty',
       color: '#696969',
       icon: 'shield',
-      description: 'Dark, raw, and street-level narratives',
-      keywords: ['crime', 'gritty', 'urban', 'raw'],
-      tmdbGenres: [80, 18, 53],
+      description: 'Raw, unpolished stories of crime and survival',
+      keywords: ['crime', 'urban', 'raw', 'dark'],
+      movieGenres: [80, 18, 53], // Crime, Drama, Thriller
+      tvGenres: [80, 18], // Crime, Drama
       valence: -0.3,
       arousal: 0.6,
       isActive: true,
@@ -222,9 +275,10 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Sci-Fi',
       color: '#00CED1',
       icon: 'rocket',
-      description: 'Exploration of technology, space, and the future',
+      description: 'Exploring the future, space, and new worlds',
       keywords: ['sci-fi', 'space', 'technology', 'future'],
-      tmdbGenres: [878, 12, 14],
+      movieGenres: [878, 12, 14], // Sci-Fi, Adventure, Fantasy
+      tvGenres: [10765, 10759], // Sci-Fi & Fantasy, Action & Adventure
       valence: 0.5,
       arousal: 0.7,
       isActive: true,
@@ -233,71 +287,67 @@ export async function seedMoods(prisma: PrismaClient) {
       name: 'Western',
       color: '#CD853F',
       icon: 'cowboy',
-      description: 'Cowboys, duels, and frontier justice',
-      keywords: ['western', 'cowboy', 'frontier', 'gunslinger'],
-      tmdbGenres: [37, 28, 12],
+      description: 'Cowboys, outlaws, and life on the frontier',
+      keywords: ['western', 'frontier', 'gunslinger', 'duel'],
+      movieGenres: [37, 28, 12], // Western, Action, Adventure
+      tvGenres: [37], // Western
       valence: 0.4,
       arousal: 0.6,
-      isActive: true,
-    },
-    {
-      name: 'War & Sacrifice',
-      color: '#800000',
-      icon: 'crosshair',
-      description: 'Stories of bravery, sacrifice, and the cost of war',
-      keywords: ['war', 'sacrifice', 'soldier', 'battle'],
-      tmdbGenres: [10752, 36, 99],
-      valence: -0.1,
-      arousal: 0.9,
       isActive: true,
     },
     {
       name: 'Cozy',
       color: '#FFDEAD',
       icon: 'mug-hot',
-      description: 'Comforting stories to curl up with',
-      keywords: ['cozy', 'comfort', 'gentle', 'warm'],
-      tmdbGenres: [35, 10751, 16],
+      description: 'Comforting, wholesome stories that warm the heart',
+      keywords: ['gentle', 'comfort', 'family', 'heartwarming'],
+      movieGenres: [35, 10751, 16], // Comedy, Family, Animation
+      tvGenres: [35, 10751, 16], // Comedy, Family, Animation
       valence: 0.7,
       arousal: 0.2,
       isActive: true,
+    }, {
+      name: 'Joyful',
+      color: '#FFD700',
+      icon: 'smile',
+      description: 'Feel-good, uplifting stories that bring pure happiness',
+      keywords: ['happy', 'comedy', 'cheerful', 'positive'],
+      movieGenres: [35, 16, 10751, 12], // Comedy, Animation, Family, Adventure
+      tvGenres: [35, 16, 10751, 10762], // Comedy, Animation, Family, Kids
+      valence: 0.9,
+      arousal: 0.6,
+      isActive: true,
     },
     {
-      name: 'Experimental',
+      name: 'Adrenaline',
       color: '#FF4500',
-      icon: 'beaker',
-      description: 'Artsy, indie, and unconventional storytelling',
-      keywords: ['artsy', 'indie', 'experimental', 'avant-garde'],
-      tmdbGenres: [10770, 18, 99],
-      valence: 0.3,
-      arousal: 0.4,
+      icon: 'zap',
+      description: 'Explosive action and non-stop excitement',
+      keywords: ['action', 'thriller', 'intense', 'fast-paced'],
+      movieGenres: [28, 53, 12, 80], // Action, Thriller, Adventure, Crime
+      tvGenres: [10759, 80, 9648], // Action & Adventure, Crime, Mystery
+      valence: 0.5,
+      arousal: 1.0,
       isActive: true,
     },
     {
-      name: 'Empowering',
-      color: '#ADFF2F',
-      icon: 'fist',
-      description: 'Stories of resilience, empowerment, and overcoming odds',
-      keywords: ['empowering', 'uplifting', 'motivating', 'strong'],
-      tmdbGenres: [18, 36, 10752],
-      valence: 0.8,
-      arousal: 0.7,
+      name: 'Fear',
+      color: '#8B0000',
+      icon: 'skull',
+      description: 'Terrifying and eerie stories that send chills',
+      keywords: ['scary', 'horror', 'supernatural', 'suspense'],
+      movieGenres: [27, 9648], // Horror, Mystery
+      tvGenres: [9648], // Mystery (TV lacks direct Horror)
+      valence: -0.4,
+      arousal: 0.9,
       isActive: true,
-    },
-    {
-      name: 'Philosophical',
-      color: '#708090',
-      icon: 'book-open',
-      description: 'Deep stories that provoke thought and reflection',
-      keywords: ['philosophy', 'existential', 'deep', 'reflective'],
-      tmdbGenres: [18, 99, 9648],
-      valence: 0.1,
-      arousal: 0.3,
-      isActive: true,
-    },
+    }
   ];
 
+
   for (const moodData of moods) {
+    const tmdbGenres = Array.from(new Set([...(moodData.movieGenres || []), ...(moodData.tvGenres || [])]));
+
     await prisma.mood.upsert({
       where: { name: moodData.name },
       update: {}, // keep unchanged if it already exists
@@ -307,7 +357,7 @@ export async function seedMoods(prisma: PrismaClient) {
         icon: moodData.icon,
         description: moodData.description,
         keywords: moodData.keywords,
-        tmdbGenres: moodData.tmdbGenres,
+        tmdbGenres,
         valence: new Prisma.Decimal(moodData.valence),
         arousal: new Prisma.Decimal(moodData.arousal),
         isActive: moodData.isActive,

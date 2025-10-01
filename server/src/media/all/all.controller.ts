@@ -75,7 +75,7 @@ export class AllController {
       throw new Error('Type must be either "movie" or "tv"');
     }
 
-    const parsedLimit = limit ? parseInt(limit, 20) : 5;
+    const parsedLimit = limit ? parseInt(limit, 20) : 3;
     return this.allService.getSmartRecommendations(type, id, parsedLimit);
   }
 

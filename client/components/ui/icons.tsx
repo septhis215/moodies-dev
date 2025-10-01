@@ -14,7 +14,17 @@ import {
   Ticket,
   Plus,
   Info,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft,
+  Bookmark,
+  Share2,
+  Zap,
+  Globe,
+  Flame,
+  Popcorn,
+  Eye,
+  Heart,
+  Tv
 } from 'lucide-react';
 
 export {
@@ -30,5 +40,15 @@ export {
   Ticket,
   Plus,
   Info,
-  ChevronRight
+  ChevronRight,
+  ChevronLeft,
+  Bookmark,
+  Share2,
+  Zap,
+  Globe,
+  Flame,
+  Popcorn,
+  Eye,
+  Heart,
+  Tv
 };
