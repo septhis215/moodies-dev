@@ -234,4 +234,14 @@ export class MoviesController {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
     return this.movieService.getIndieMovies(parsedLimit);
   }
+
+  @Get('videos/:type/:id')
+  async getVideos(@Param('type') type: 'movie', @Param('id') id: string) {
+    try {
+      const videos = this.movieService.videos(Number(id), type);
+      return videos;
+    } catch (err) {
+      console.log(err);
+    }
+  }
 }

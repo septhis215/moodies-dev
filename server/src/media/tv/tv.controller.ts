@@ -229,10 +229,20 @@ export class TvController {
   }
 
   @Get('images/:type/:id')
-  async getMovieImages(@Param('type') type: 'tv', @Param('id') id: string) {
+  async getImages(@Param('type') type: 'tv', @Param('id') id: string) {
     try {
       const images = this.tvService.images(Number(id), type);
       return images;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  @Get('videos/:type/:id')
+  async getVideos(@Param('type') type: 'tv', @Param('id') id: string) {
+    try {
+      const videos = this.tvService.videos(Number(id), type);
+      return videos;
     } catch (err) {
       console.log(err);
     }
