@@ -206,7 +206,7 @@ export default function TVHomePageClient({
                 {/* Top gradient for navbar readability */}
                 <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black/80 to-transparent pointer-events-none z-10" />
 
-                <div className="max-w-7xl mx-auto px-6 py-12 relative z-20 mt-14">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 relative z-20 mt-14">
                     {/* Content grid */}
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
                         {/* LEFT mosaic */}
@@ -242,7 +242,7 @@ export default function TVHomePageClient({
                                                         src={getPosterUrl(s.poster_path)}
                                                         alt={s.title || s.name || ""}
                                                         width={150}
-                                                        height={220}
+                                                        height={180}
                                                         className="object-cover w-full h-full"
                                                     />
                                                 ) : (
@@ -300,47 +300,42 @@ export default function TVHomePageClient({
                                     </div>
 
                                     {/* card body */}
-                                    <div className="relative p-6 flex flex-col flex-1 min-h-[280px]">
-                                        {/* heading + meta inline */}
-                                        <div className="flex items-center gap-3 mb-3 flex-wrap">
-                                            <span className="text-sm text-[#e94f37] font-bold uppercase">
-                                                Featured Series
+                                    {/* Content */}
+                                    <div className="relative p-6 flex flex-col flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap mb-4">
+                                            <span className="px-3 py-1.5 bg-[#e94f37] text-white rounded-full text-xs font-bold uppercase tracking-wider">
+                                                Featured
                                             </span>
-
-                                            {/* Year */}
                                             {featured?.release_date && (
-                                                <span className="text-sm text-gray-400">
+                                                <span className="px-3 py-1.5 bg-white/10 rounded-full text-xs font-semibold">
                                                     {featured.release_date.split("-")[0]}
                                                 </span>
                                             )}
-
-                                            {/* Rating (only if > 0) */}
-                                            {featured?.vote_average > 0 && (
-                                                <span className="inline-flex items-center gap-1 text-sm font-semibold text-yellow-400 bg-black/40 px-2 py-0.5 rounded-md">
-                                                    ★ {featured.vote_average.toFixed(1)}
-                                                </span>
+                                            {featured?.vote_average && (
+                                                <div className="flex items-center gap-1 px-3 py-1.5 bg-amber-500/20 rounded-full">
+                                                    <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                                    <span className="text-xs font-bold">{featured.vote_average.toFixed(1)}</span>
+                                                </div>
                                             )}
                                         </div>
 
-                                        {/* Title */}
-                                        <h2 className="text-xl sm:text-2xl font-semibold leading-snug line-clamp-2 mb-3">
-                                            {featured?.title || featured?.name || "—"}
+                                        <h2 className="text-2xl sm:text-3xl font-black mb-3 leading-tight line-clamp-2">
+                                            {featured?.title || "—"}
                                         </h2>
 
-                                        {/* Overview */}
-                                        <p className="text-sm text-gray-300 line-clamp-3">
-                                            {featured?.overview}
+                                        <p className="text-sm sm:text-base text-gray-300 line-clamp-3  leading-relaxed">
+                                            {featured?.overview || "No description available"}
                                         </p>
 
-                                        {/* Buttons */}
-                                        <div className="flex items-center gap-3 mt-5">
-                                            <Link href={`/tv/${featured?.id}`}>
-                                                <button className="px-4 py-2 rounded-lg bg-[#e94f37] text-black font-bold">
-                                                    View
+                                        <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
+                                            <Link href={`/tv/${featured?.id}`} className="flex-1">
+                                                <button className="w-full px-6 py-3 bg-[#e94f37] hover:bg-[#d4452f] text-white rounded-xl font-bold transition-all transform hover:scale-105 flex items-center justify-center gap-2">
+                                                    <Info className="w-4 h-4" />
+                                                    View Details
                                                 </button>
                                             </Link>
-                                            <button className="px-4 py-2 rounded-lg border border-white/20 hover:bg-white/5">
-                                                Save
+                                            <button className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl font-semibold transition-all flex items-center justify-center gap-2">
+                                                <Plus className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>
@@ -673,7 +668,7 @@ export default function TVHomePageClient({
                 )}
                 {moods && moods.length > 0 && (
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
-                        <MoodRecommendationsSection moods={moods} mediaType="tv"/>
+                        <MoodRecommendationsSection moods={moods} mediaType="tv" />
                     </div>
                 )}
             </div >

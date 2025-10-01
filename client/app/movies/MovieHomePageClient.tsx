@@ -164,83 +164,99 @@ export default function MoviesHomePageClient({
     return (
         <main className="bg-[#070707] text-white min-h-screen">
             {/* Enhanced Movie Hub Hero */}
-            <section className="relative bg-gradient-to-b from-zinc-900 to-black overflow-hidden">
-                <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black/90 to-transparent pointer-events-none z-10" />
+            <section
+                className="relative w-full bg-gradient-to-b from-zinc-900 to-black text-white overflow-hidden"
+            >
+                {/* Top gradient for navbar readability */}
+                <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black/80 to-transparent pointer-events-none z-10" />
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 relative z-20 mt-14">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                        {/* LEFT: Poster Mosaic */}
-                        <div className="lg:col-span-7 rounded-2xl overflow-hidden bg-zinc-950 p-5 border border-white/10">
+                    {/* Content grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+                        {/* LEFT mosaic */}
+                        <div className="md:col-span-7 col-span-1 rounded-2xl overflow-hidden bg-[#070707] p-4 flex flex-col">
+
+                            {/* Heading inside the panel */}
                             <div className="mb-4">
-                                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black bg-gradient-to-r from-[#e94f37] via-orange-400 to-amber-300 bg-clip-text text-transparent leading-tight">
-                                    Cinema Showcase
+                                <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight bg-gradient-to-r from-[#e94f37] via-orange-400 to-yellow-300 bg-clip-text text-transparent">
+                                    Movies Hub
                                 </h1>
-                                <p className="text-gray-400 text-sm mt-2">Select any poster to preview</p>
+                                <p className="text-gray-400 text-xs sm:text-sm mt-1">
+                                    Click a poster to feature it →
+                                </p>
                             </div>
 
-                            <div className="relative h-[400px] sm:h-[500px] lg:h-[550px] rounded-xl overflow-hidden bg-black/50">
-                                <div className="absolute inset-0 grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 gap-2 p-3">
-                                    {heroMovies.map((m, i) => {
-                                        const isActive = featured?.id === m.id;
+                            <div className="relative flex-1 w-full h-full rounded-lg overflow-hidden">
+                                {/* mosaic grid of posters */}
+                                <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 p-2 animate-mosaic">
+                                    {Array.from({ length: 18 }).map((_, i) => {
+                                        const s = heroMovies[(index + i) % heroMovies.length] || {};
+                                        const isActive = featured?.id === s.id;
+
                                         return (
                                             <button
-                                                key={m.id || i}
-                                                onClick={() => setFeatured(m)}
-                                                className={`rounded-lg overflow-hidden border-2 transition-all hover:scale-105 hover:z-10 ${isActive ? "border-[#e94f37] ring-4 ring-[#e94f37]/50 scale-105" : "border-white/10 hover:border-white/30"
-                                                    }`}
+                                                key={i}
+                                                onClick={() => setFeatured(s)}
+                                                className={`rounded-md overflow-hidden border transform transition 
+              hover:scale-105 focus:outline-none 
+              ${isActive ? "border-[#e94f37] ring-2 ring-[#e94f37]" : "border-white/6"}`}
                                             >
-                                                {m.poster_path && (
+                                                {s.poster_path ? (
                                                     <Image
-                                                        src={getPosterUrl(m.poster_path)}
-                                                        alt={m.title || ""}
-                                                        width={120}
+                                                        src={getPosterUrl(s.poster_path)}
+                                                        alt={s.title || s.name || ""}
+                                                        width={150}
                                                         height={180}
                                                         className="object-cover w-full h-full"
                                                     />
+                                                ) : (
+                                                    <div className="bg-zinc-800 w-full h-full aspect-[2/3]" />
                                                 )}
                                             </button>
                                         );
                                     })}
                                 </div>
-                                {/* Vignette effect */}
-                                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.8)_100%)]" />
+
+                                {/* gradient overlay for cinematic depth */}
+                                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_55%,black_95%)]" />
                             </div>
                         </div>
 
-                        {/* RIGHT: Featured Details */}
-                        <div className="lg:col-span-5">
+
+
+                        {/* RIGHT featured card */}
+                        <div className="md:col-span-5 col-span-1 flex items-stretch scale-[0.98]">
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={featured?.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
-                                    transition={{ duration: 0.4 }}
-                                    className="relative flex flex-col h-full rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-900/95 to-zinc-950 border border-white/10 overflow-hidden"
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                                    className="relative flex flex-col w-full rounded-2xl bg-gradient-to-br from-black/70 via-black/40 to-transparent border border-white/10 shadow-2xl overflow-hidden"
                                 >
-                                    {/* Background */}
                                     {featured?.backdrop_path && (
-                                        <div className="absolute inset-0 -z-10 opacity-20">
+                                        <div className="absolute inset-0 -z-10">
                                             <Image
                                                 src={getImageUrl(featured.backdrop_path)}
-                                                alt=""
+                                                alt={featured.title || featured.name || ""}
                                                 fill
-                                                className="object-cover blur-xl scale-110"
+                                                className="object-cover opacity-30 blur-sm"
                                             />
                                         </div>
                                     )}
 
-                                    {/* Backdrop Image */}
-                                    <div className="relative w-full h-56 sm:h-64 lg:h-72 rounded-t-2xl overflow-hidden">
+                                    {/* fixed-height hero image */}
+                                    <div className="relative w-full h-56 sm:h-72 rounded-t-2xl overflow-hidden">
                                         {featured?.backdrop_path ? (
                                             <>
                                                 <Image
                                                     src={getImageUrl(featured.backdrop_path)}
-                                                    alt={featured.title || ""}
+                                                    alt={featured.title || featured.name || ""}
                                                     fill
                                                     className="object-cover"
                                                 />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                                             </>
                                         ) : (
                                             <div className="w-full h-full bg-zinc-800" />
@@ -270,7 +286,7 @@ export default function MoviesHomePageClient({
                                             {featured?.title || "—"}
                                         </h2>
 
-                                        <p className="text-sm sm:text-base text-gray-300 line-clamp-4 mb-auto leading-relaxed">
+                                        <p className="text-sm sm:text-base text-gray-300 line-clamp-3  leading-relaxed">
                                             {featured?.overview || "No description available"}
                                         </p>
 
@@ -292,6 +308,7 @@ export default function MoviesHomePageClient({
                     </div>
                 </div>
             </section>
+
 
             {/* Content */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-20">

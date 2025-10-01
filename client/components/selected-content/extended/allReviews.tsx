@@ -186,7 +186,7 @@ export default function AllReviews({
         <div className="relative z-10 max-w-7xl mx-auto px-6 pt-14 pb-16">
           {/* Back Navigation */}
           <Link
-            href={`/movies/${id}`}
+            href={`/${info.type}/${id}`}
             className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors mb-8"
           >
             <ArrowLeft size={20} />

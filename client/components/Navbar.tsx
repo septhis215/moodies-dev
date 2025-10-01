@@ -25,9 +25,9 @@ import SearchBar from "./ui/searchbar";
 const routes = [
   { name: "Home", href: "/" },
   { name: "Movies", href: "/movies" },
-  { name: "Series", href: "/series" },
+  { name: "Series", href: "/tv" },
   { name: "Community", href: "/community" },
-  { name: "Your Moods", href: "/your-moods" },
+  { name: "Your Moods", href: "/moods" },
 ];
 
 export function NavbarComponent() {
@@ -60,7 +60,7 @@ export function NavbarComponent() {
       "Collections",
       "Browse by Year",
     ],
-    "/series": [
+    "/tv": [
       "Trending",
       "Top Rated",
       "New Seasons",
@@ -78,7 +78,7 @@ export function NavbarComponent() {
       "Contests",
       "Meetups",
     ],
-    "/your-moods": [
+    "/moods": [
       "Saved Moods",
       "Create Mood",
       "History",
