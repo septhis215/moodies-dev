@@ -11,7 +11,7 @@ import { MoviesService } from './movies.service';
 
 @Controller('movies')
 export class MoviesController {
-  constructor(private readonly movieService: MoviesService) {}
+  constructor(private readonly movieService: MoviesService) { }
 
   @Get('details/:id')
   async details(@Param('id') id: string, @Query('type') type: 'movie') {
@@ -201,6 +201,16 @@ export class MoviesController {
     try {
       const images = this.movieService.images(Number(id), type);
       return images;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  @Get('videos/:type/:id')
+  async getVideos(@Param('type') type: 'movie', @Param('id') id: string) {
+    try {
+      const videos = this.movieService.videos(Number(id), type);
+      return videos;
     } catch (err) {
       console.log(err);
     }

@@ -133,9 +133,6 @@ export type TvDetailsData = {
   raw?: any;
 };
 
-const truncate = (s: string = "", n = 200) =>
-  s.length > n ? s.slice(0, n).trim() + "…" : s;
-
 function StarRating({ rating }: { rating: number }) {
   const fullStars = Math.round(rating / 2); // convert 0-10 -> 0-5
   return (
@@ -387,7 +384,9 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
               {/* Network info for TV shows */}
               {isTV && tvInfo?.networks && tvInfo.networks.length > 0 && (
                 <div className="flex items-center justify-center lg:justify-start gap-2">
-                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">Network:</span>
+                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">
+                    Network:
+                  </span>
                   <span className="text-xs sm:text-xs lg:text-xs xl:text-sm font-medium text-white">
                     {tvInfo.networks.map((n) => n.name).join(", ")}
                   </span>
@@ -450,11 +449,16 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="w-5 h-5"
-                    viewBox="0 0 24 24"
                     fill="none"
+                    viewBox="0 0 24 24"
                     stroke="currentColor"
+                    strokeWidth={1.5}
                   >
-                    <path strokeWidth={1.5} d="M12 5v7l3 3" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M7.5 8.25h9m-9 3h6.75M21 12c0 4.418-4.03 8-9 8-1.043 0-2.047-.158-2.975-.45L4.5 20.25l1.196-2.392C4.65 16.76 4 14.463 4 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
                   </svg>
                   <span>Review</span>
                 </button>

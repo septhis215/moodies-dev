@@ -6,7 +6,7 @@ import TvDetails from "@/components/selected-content/sections/extras";
 import ReviewsSection from "@/components/selected-content/sections/reviews";
 import MovieCarousel from "@/components/sections/MovieCarousel";
 import TvSeasonsEpisodes from "@/components/selected-content/sections/TvSeasonsEpisodes";
-import ImageCarousel from "@/components/selected-content/sections/ImageCarousel";
+import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
 
 async function fetchDetails(id: string) {
   const base = process.env.NEST_API_URL ?? "http://localhost:4000";
@@ -34,7 +34,20 @@ async function fetchSeasonsWithEpisodes(id: string) {
 async function fetchImages(id: string) {
   try {
     const base = process.env.NEST_API_URL ?? "http://localhost:4000";
-    const res = await fetch(`${base}/all/images/tv/${id}`, {
+    const res = await fetch(`${base}/tv/images/tv/${id}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
+async function fetchVideos(id: string) {
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(`${base}/tv/videos/tv/${id}`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return null;
@@ -61,6 +74,7 @@ export default async function TvPage({
   const { id } = await params;
   const data = await fetchDetails(id);
   const images = await fetchImages(id);
+  const videos = await fetchVideos(id);
 
   if (!data) {
     return (
@@ -101,11 +115,12 @@ export default async function TvPage({
 
           <TvSeasonsEpisodes seasons={seasonsProp} />
 
-          <ImageCarousel
+          <hr className="border-white/8 my-14" />
+          <ImageVideoCarousel
             posters={images.posters}
             backdrops={images.backdrops}
+            videos={videos.videos}
           />
-
           <hr className="border-white/8 my-14" />
           <TvDetails data={data} />
 

@@ -1395,4 +1395,37 @@ export class MoviesService implements OnModuleInit {
 
     return { posters, backdrops };
   }
+
+  async videos(id: number, type: string) {
+    const data = await this.tmdb(`${type}/${id}/videos`);
+    if (!data) return { videos: [] };
+
+    const videos: Array<{
+      id: string;
+      key: string;
+      name: string;
+      site?: string | null;
+      type?: string | null;
+      size?: number | null;
+      official: boolean;
+      iso_639_1?: string | null;
+      iso_3166_1?: string | null;
+      published_at?: string | null;
+    }> = (data.results ?? [])
+      .map((v: any) => ({
+        id: v?.id ?? "",
+        key: v?.key ?? "",
+        name: v?.name ?? "",
+        site: v?.site ?? null,
+        type: v?.type ?? null,
+        size: typeof v?.size === "number" ? v.size : null,
+        official: Boolean(v?.official),
+        iso_639_1: v?.iso_639_1 ?? null,
+        iso_3166_1: v?.iso_3166_1 ?? null,
+        published_at: v?.published_at ?? null,
+      }))
+      .filter((v) => Boolean(v.key)); // key videos with usable key
+
+    return { videos };
+  }
 }
