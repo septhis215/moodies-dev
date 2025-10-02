@@ -85,10 +85,15 @@ async function fetchIndieMovies() {
 }
 
 async function fetchAwardWinners() {
-  return fetchWithFallback<All[]>('/movies/award-winners?limit=15', []);
+  return fetchWithFallback<All[]>('/movies/award-winners?limit=25', []);
 }
+
+async function fetchNewReleases() {
+    return fetchWithFallback<All[]>('/movies/new-releases?limit=30', []);
+}
+
 export const metadata = {
-  title: 'Movies - Discover Trending Films | Moodies',
+  title: 'Movies - Discover Trending Films',
   description: 'Explore trending movies, box office hits, top-rated classics, and upcoming releases. Stay updated with new trailers and community reviews.',
   keywords: 'movies, films, box office, trending movies, top rated, upcoming releases, movie reviews',
   openGraph: {
@@ -111,7 +116,8 @@ export default async function MoviesHomePage() {
     indieMovies,
     awardWinners,
     actionMovies,
-    moods
+    moods,
+    newReleaseMovies
   ] = await Promise.all([
     fetchTrendingMovies(),
     fetchPopularMovies(),
@@ -124,7 +130,8 @@ export default async function MoviesHomePage() {
     fetchIndieMovies(),
     fetchAwardWinners(),
     fetchActionMovies(),
-    fetchMoods()
+    fetchMoods(),
+    fetchNewReleases()
   ]);
 
   return (
@@ -141,6 +148,7 @@ export default async function MoviesHomePage() {
       awardWinners={awardWinners}
       actionMovies={actionMovies}
       moods={moods}
+      newReleaseMovies={newReleaseMovies}
     />
   );
 }

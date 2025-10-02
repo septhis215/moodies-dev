@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Plus, Info, Share2, Sparkles, RefreshCw } from 'lucide-react';
+import { Star, Plus, Info, Share2, Sparkles, RefreshCw, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getMoodRecommendations } from '@/app/tv/action';
 
@@ -91,6 +91,7 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
             setLoading(false);
         }
     };
+
     const handleMoodClick = (mood: Mood) => {
         setSelectedMood(mood);
         fetchRecommendations(mood);
@@ -103,190 +104,274 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
     };
 
     return (
-        <section className="relative">
-            <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-3">
-                    <Sparkles className="w-8 h-8 text-purple-400" />
-                    <h2 className="text-3xl sm:text-4xl font-black">Discover by Mood</h2>
-                </div>
-                {selectedMood && (
-                    <button
-                        onClick={handleRefresh}
-                        disabled={loading}
-                        className="flex items-center gap-2 px-4 py-2 bg-purple-500/20 border border-purple-500/40 rounded-lg hover:bg-purple-500/30 transition-colors disabled:opacity-50"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                        <span className="text-sm font-semibold">Refresh</span>
-                    </button>
-                )}
+        <section className="relative overflow-hidden">
+            {/* Animated Background */}
+            <div className="absolute inset-0 -z-10">
+                <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl animate-pulse" />
+                <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-fuchsia-600/10 rounded-full blur-3xl animate-pulse delay-700" />
             </div>
 
-            {/* Mood Selection */}
-            <div className="mb-8">
-                <p className="text-gray-400 mb-4">How are you feeling today?</p>
-                <div className="flex flex-wrap gap-3">
-                    {moods.map((mood) => (
-                        <button
-                            key={mood.id}
-                            onClick={() => handleMoodClick(mood)}
-                            className={`group relative px-5 py-3 rounded-xl font-semibold transition-all ${selectedMood?.id === mood.id
-                                ? 'ring-2 scale-105 shadow-lg'
-                                : 'hover:scale-105'
-                                }`}
-                            style={{
-                                backgroundColor: selectedMood?.id === mood.id ? mood.color + '40' : mood.color + '20',
-                                borderColor: mood.color + '60',
-                                borderWidth: '1px',
-                                color: selectedMood?.id === mood.id ? '#fff' : mood.color,
-                            }}
-                        >
-                            <span className="mr-2">{getIconEmoji(mood.icon)}</span>
-                            {mood.name}
-
-                            {/* Tooltip */}
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-black/90 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                                {mood.description}
+            {/* Header */}
+            <div className="relative mb-12">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="relative">
+                                <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-xl blur-lg opacity-50" />
+                                <div className="relative bg-gradient-to-br from-violet-600 to-fuchsia-600 p-2.5 rounded-xl">
+                                    <Sparkles className="w-6 h-6 text-white" />
+                                </div>
                             </div>
-                        </button>
-                    ))}
+                            <div>
+                                <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight">
+                                    Mood Matcher
+                                </h2>
+                            </div>
+                        </div>
+                        <p className="text-gray-400 text-base ml-14">
+                            Discover content that matches your current vibe
+                        </p>
+                    </div>
+
+                    {selectedMood && (
+                        <motion.button
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            onClick={handleRefresh}
+                            disabled={loading}
+                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full hover:shadow-lg hover:shadow-violet-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
+                        >
+                            <RefreshCw className={`w-4 h-4 text-white ${loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+                            <span className="text-sm font-bold text-white">New Picks</span>
+                        </motion.button>
+                    )}
                 </div>
             </div>
 
-            {/* Recommendations Display */}
+            {/* Mood Selection - Redesigned as Cards */}
             <AnimatePresence mode="wait">
-                {selectedMood && (
+                {!selectedMood ? (
                     <motion.div
-                        key={selectedMood.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.3 }}
+                        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-12"
                     >
-                        {loading ? (
-                            <div className="flex items-center justify-center py-20">
-                                <div className="flex flex-col items-center gap-4">
-                                    <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
-                                    <p className="text-gray-400">Finding perfect matches for your {selectedMood.name.toLowerCase()} mood...</p>
+                        {moods.map((mood, index) => (
+                            <motion.button
+                                key={mood.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                onClick={() => handleMoodClick(mood)}
+                                className="group relative p-6 rounded-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-1"
+                                style={{
+                                    background: `linear-gradient(135deg, ${mood.color}20 0%, ${mood.color}05 100%)`,
+                                    border: `2px solid ${mood.color}30`,
+                                }}
+                            >
+                                <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                    style={{
+                                        background: `linear-gradient(135deg, ${mood.color}30 0%, ${mood.color}10 100%)`,
+                                        boxShadow: `0 8px 32px ${mood.color}30`,
+                                    }}
+                                />
+
+                                <div className="relative flex flex-col items-center text-center gap-3">
+                                    <div className="text-4xl mb-1 transform group-hover:scale-110 transition-transform duration-300">
+                                        {getIconEmoji(mood.icon)}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-white text-sm mb-1">
+                                            {mood.name}
+                                        </h3>
+                                        <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
+                                            {mood.description}
+                                        </p>
+                                    </div>
+                                    <ChevronRight
+                                        className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                        style={{ color: mood.color }}
+                                    />
+                                </div>
+                            </motion.button>
+                        ))}
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="mb-8"
+                    >
+                        {/* Selected Mood Bar */}
+                        <div className="flex items-center justify-between p-4 rounded-2xl mb-8"
+                            style={{
+                                background: `linear-gradient(90deg, ${selectedMood.color}25 0%, ${selectedMood.color}10 100%)`,
+                                border: `2px solid ${selectedMood.color}40`,
+                            }}
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="text-3xl">
+                                    {getIconEmoji(selectedMood.icon)}
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-white text-lg">
+                                        {selectedMood.name} Mode
+                                    </h3>
+                                    <p className="text-sm text-gray-300">
+                                        {selectedMood.description}
+                                    </p>
                                 </div>
                             </div>
+                            <button
+                                onClick={() => setSelectedMood(null)}
+                                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white text-sm font-semibold transition-colors"
+                            >
+                                Change Mood
+                            </button>
+                        </div>
+
+                        {/* Recommendations Grid */}
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-32">
+                                <div className="relative mb-6">
+                                    <div className="w-16 h-16 border-4 rounded-full animate-spin"
+                                        style={{
+                                            borderColor: `${selectedMood.color}30`,
+                                            borderTopColor: selectedMood.color,
+                                        }}
+                                    />
+                                    <div className="absolute inset-0 blur-xl opacity-50"
+                                        style={{ backgroundColor: selectedMood.color }}
+                                    />
+                                </div>
+                                <p className="text-xl font-semibold text-white mb-2">
+                                    Curating your perfect matches
+                                </p>
+                                <p className="text-gray-400">
+                                    Finding content that fits your {selectedMood.name.toLowerCase()} mood...
+                                </p>
+                            </div>
                         ) : error ? (
-                            <div className="flex items-center justify-center py-20">
-                                <div className="text-center">
-                                    <p className="text-red-400 mb-4">{error}</p>
+                            <div className="flex items-center justify-center py-32">
+                                <div className="text-center max-w-md">
+                                    <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <span className="text-3xl">😕</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-2">Oops!</h3>
+                                    <p className="text-gray-400 mb-6">{error}</p>
                                     <button
                                         onClick={handleRefresh}
-                                        className="px-6 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg font-semibold transition"
+                                        className="px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full font-bold text-white hover:shadow-lg hover:shadow-violet-500/50 transition-all"
                                     >
                                         Try Again
                                     </button>
                                 </div>
                             </div>
                         ) : recommendations.length > 0 ? (
-                            <>
-                                <div className="mb-6 p-4 bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-500/20 rounded-xl">
-                                    <p className="text-sm text-gray-300">
-                                        <span className="font-bold" style={{ color: selectedMood.color }}>
-                                            {selectedMood.name}
-                                        </span>
-                                        {' '}- {selectedMood.description}
-                                    </p>
-                                </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
+                                {recommendations.map((rec, index) => (
+                                    <motion.div
+                                        key={rec.id}
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: index * 0.05 }}
+                                    >
+                                        <Link href={`/${rec.mediaType.toLowerCase()}/${rec.tmdbId}`}>
+                                            <div className="group relative block">
+                                                {/* Poster Container */}
+                                                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-zinc-900 mb-3 shadow-xl">
+                                                    {rec.posterPath && (
+                                                        <Image
+                                                            src={getPosterUrl(rec.posterPath)}
+                                                            alt={rec.title}
+                                                            fill
+                                                            className="object-cover transition-transform duration-700 group-hover:scale-110"
+                                                        />
+                                                    )}
 
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                                    {recommendations.map((rec) => (
-                                        <div key={rec.id} className="group relative">
-                                            <Link href={`/${rec.mediaType.toLowerCase()}/${rec.tmdbId}`}>
-                                                <div className="block">
-                                                    <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-900 shadow-md mb-2">
-                                                        {rec.posterPath && (
-                                                            <Image
-                                                                src={getPosterUrl(rec.posterPath)}
-                                                                alt={rec.title}
-                                                                fill
-                                                                className="object-cover group-hover:scale-105 transition-transform duration-500"
-                                                            />
-                                                        )}
+                                                    {/* Gradient Overlay */}
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
 
-                                                        {/* Rating Badge */}
-                                                        <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-sm px-2 py-0.5 rounded-md font-bold text-[11px] flex items-center gap-1">
-                                                            <Star className="w-3 h-3 text-yellow-400" />
-                                                            {rec.voteAverage.toFixed(1)}
-                                                        </div>
-
-                                                        {/* Match Score */}
-                                                        <div
-                                                            className="absolute top-2 left-2 px-2 py-1 rounded-md font-bold text-[10px] backdrop-blur-sm"
-                                                            style={{
-                                                                backgroundColor: selectedMood.color + '80',
-                                                                color: '#fff',
-                                                            }}
-                                                        >
-                                                            {Math.round(rec.score * 100)}% Match
-                                                        </div>
-
-                                                        {/* Hover Overlay */}
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                                            <div className="absolute bottom-0 left-0 right-0 p-3">
-                                                                <div className="flex justify-center gap-2 mb-2">
-                                                                    <button
-                                                                        onClick={(e) => { e.preventDefault(); }}
-                                                                        className="w-8 h-8 bg-white/95 rounded-full flex items-center justify-center hover:scale-110 transition-transform"
-                                                                    >
-                                                                        <Plus className="w-4 h-4 text-black" />
-                                                                    </button>
-                                                                    <button
-                                                                        className="w-8 h-8 bg-white/95 rounded-full flex items-center justify-center hover:scale-110 transition-transform"
-                                                                    >
-                                                                        <Info className="w-4 h-4 text-black" />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={(e) => { e.preventDefault(); }}
-                                                                        className="w-8 h-8 bg-white/95 rounded-full flex items-center justify-center hover:scale-110 transition-transform"
-                                                                    >
-                                                                        <Share2 className="w-4 h-4 text-black" />
-                                                                    </button>
-                                                                </div>
-                                                                <p className="text-[10px] text-center text-gray-300 line-clamp-2">
-                                                                    {rec.reason}
-                                                                </p>
-                                                            </div>
-                                                        </div>
+                                                    {/* Match Score Badge */}
+                                                    <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full backdrop-blur-md font-black text-xs shadow-lg"
+                                                        style={{
+                                                            background: `linear-gradient(135deg, ${selectedMood.color}F0 0%, ${selectedMood.color}CC 100%)`,
+                                                            color: '#ffffff',
+                                                        }}
+                                                    >
+                                                        {Math.round(rec.score * 100)}%
                                                     </div>
 
-                                                    <h4 className="font-semibold text-xs sm:text-sm line-clamp-2 leading-tight mb-1">
+                                                    {/* Rating Badge */}
+                                                    <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md font-bold text-xs flex items-center gap-1 shadow-lg">
+                                                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                                                        <span className="text-white">{rec.voteAverage && rec.voteAverage > 0 ? rec.voteAverage.toFixed(1) : "New"}</span>
+                                                    </div>
+
+                                                    {/* Hover Actions */}
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                                        <div className="absolute inset-0 flex flex-col justify-end p-4">
+                                                            {/* Action Buttons */}
+                                                            <div className="flex justify-center gap-2 mb-3">
+                                                                <button
+                                                                    onClick={(e) => { e.preventDefault(); }}
+                                                                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
+                                                                >
+                                                                    <Plus className="w-5 h-5 text-black" />
+                                                                </button>
+                                                                <button
+                                                                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
+                                                                >
+                                                                    <Info className="w-5 h-5 text-black" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => { e.preventDefault(); }}
+                                                                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg"
+                                                                >
+                                                                    <Share2 className="w-5 h-5 text-black" />
+                                                                </button>
+                                                            </div>
+                                                            {/* Reason */}
+                                                            <p className="text-xs text-center text-white font-medium line-clamp-2 leading-relaxed">
+                                                                {rec.reason}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Title and Genres */}
+                                                <div className="px-1">
+                                                    <h4 className="font-bold text-sm text-white line-clamp-2 leading-tight mb-1.5 group-hover:text-violet-400 transition-colors">
                                                         {rec.title}
                                                     </h4>
-
                                                     {rec.genreNames && rec.genreNames.length > 0 && (
-                                                        <p className="text-[10px] text-gray-400 line-clamp-1">
-                                                            {rec.genreNames.slice(0, 2).join(', ')}
+                                                        <p className="text-xs text-gray-500 font-medium">
+                                                            {rec.genreNames.slice(0, 2).join(' • ')}
                                                         </p>
                                                     )}
                                                 </div>
-                                            </Link>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
+                                            </div>
+                                        </Link>
+                                    </motion.div>
+                                ))}
+                            </div>
                         ) : (
-                            <div className="flex items-center justify-center py-20">
-                                <p className="text-gray-400">No recommendations found for this mood. Try another!</p>
+                            <div className="flex items-center justify-center py-32">
+                                <div className="text-center">
+                                    <div className="text-6xl mb-4">🎭</div>
+                                    <h3 className="text-xl font-bold text-white mb-2">No matches found</h3>
+                                    <p className="text-gray-400 mb-6">Try selecting a different mood</p>
+                                    <button
+                                        onClick={() => setSelectedMood(null)}
+                                        className="px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full font-bold text-white hover:shadow-lg hover:shadow-violet-500/50 transition-all"
+                                    >
+                                        Choose Another Mood
+                                    </button>
+                                </div>
                             </div>
                         )}
-                    </motion.div>
-                )}
-
-                {!selectedMood && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="flex flex-col items-center justify-center py-20 text-center"
-                    >
-                        <Sparkles className="w-16 h-16 text-purple-400 mb-4" />
-                        <h3 className="text-2xl font-bold mb-2">Select a mood to get started</h3>
-                        <p className="text-gray-400 max-w-md">
-                            Choose how you're feeling and we'll recommend the perfect movies and TV shows to match your vibe
-                        </p>
                     </motion.div>
                 )}
             </AnimatePresence>

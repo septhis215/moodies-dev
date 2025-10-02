@@ -234,6 +234,11 @@ export class MoviesController {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
     return this.movieService.getIndieMovies(parsedLimit);
   }
+  @Get('new-releases')
+  async newReleases(@Query('limit') limit?: string) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 20;
+    return this.movieService.getNewReleases(parsedLimit);
+  }
 
   @Get('videos/:type/:id')
   async getVideos(@Param('type') type: 'movie', @Param('id') id: string) {

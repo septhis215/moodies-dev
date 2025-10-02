@@ -71,8 +71,8 @@ async function fetchKoreanTV() {
 
 async function fetchNewReleases() {
     return fetchWithFallback<All[]>('/tv/new-releases?limit=30', []);
-
 }
+
 async function fetchTVReviews() {
     return fetchWithFallback<ReviewItem[]>('/tv/trending-reviews?limit=20', []);
 }
@@ -118,7 +118,7 @@ async function fetchDashboardData() {
 }
 
 export const metadata = {
-    title: 'TV Shows - Discover Trending Series | Moodies',
+    title: 'TV Shows - Discover Trending Series',
     description: 'Explore trending TV shows, top-rated series, K-dramas, and community favorites. Stay updated with airing schedules and new releases.',
     keywords: 'tv shows, series, k-drama, trending shows, top rated series, airing today',
     openGraph: {

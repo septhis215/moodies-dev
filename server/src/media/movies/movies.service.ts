@@ -14,7 +14,7 @@ export type TmdbMovie = {
   genres?: string[];
   poster_path: string | null;
   backdrop_path: string | null;
-  release_date?: string | null;
+  release_date: string;
   vote_average?: number;
   vote_count?: number;
   popularity?: number;
@@ -1381,6 +1381,158 @@ export class MoviesService implements OnModuleInit {
     return { posters, backdrops };
   }
 
+  async getNewReleases(limit = 30): Promise<TmdbMovie[]> {
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
+
+    if (!this.token) {
+      this.logger.warn("TMDB_API_KEY not set; returning empty new releases");
+      return [];
+    }
+
+    try {
+      const items: TmdbMovie[] = [];
+      const today = new Date();
+      const lastMonth = new Date();
+      lastMonth.setDate(today.getDate() - 30);
+
+      const todayStr = today.toISOString().split("T")[0];
+      const lastMonthStr = lastMonth.toISOString().split("T")[0];
+
+      const lastWeek = new Date();
+      lastWeek.setDate(today.getDate() - 7);
+      const lastWeekStr = lastWeek.toISOString().split("T")[0];
+
+      const maxPages = 5;
+
+      // --- Helper for strict filtering by date ---
+      const isWithinRange = (dateStr: string, from: string, to: string) => {
+        if (!dateStr) return false;
+        const d = new Date(dateStr).getTime();
+        return d >= new Date(from).getTime() && d <= new Date(to).getTime();
+      };
+
+      // --- Fetch popular releases (last 30 days) ---
+      for (let page = 1; page <= maxPages && items.length < minRequired; page++) {
+        const url = `discover/movie?language=en-US&sort_by=popularity.desc&release_date.gte=${lastMonthStr}&release_date.lte=${todayStr}&with_release_type=3|2&page=${page}`;
+
+        const data = await this.tmdb(url);
+        const results = data?.results ?? [];
+        const filtered = this.filterAdultishContent(results);
+
+        const trailerTasks = filtered
+          .filter((m: any) => isWithinRange(m.release_date, lastMonthStr, todayStr)) // filter strictly here
+          .map((m: any) => async () => {
+            try {
+              const [videosData, details] = await Promise.all([
+                this.tmdb(`movie/${m.id}/videos?language=en-US`),
+                this.tmdb(`movie/${m.id}?language=en-US`),
+              ]);
+
+              const trailer = (videosData?.results ?? []).find(
+                (v: any) => v.type === "Trailer" && v.site === "YouTube"
+              );
+              if (!trailer) return null;
+
+              return {
+                id: m.id,
+                title: m.title ?? "Untitled",
+                overview: m.overview ?? "",
+                poster_path: m.poster_path ?? null,
+                backdrop_path: m.backdrop_path ?? null,
+                release_date: m.release_date,
+                vote_average: m.vote_average,
+                trailer_key: trailer.key,
+                type: "movie" as ContentType,
+                recommendations: [],
+                genres: details.genres ? details.genres.map((g: any) => g.name) : [],
+              } as TmdbMovie;
+            } catch {
+              return null;
+            }
+          });
+
+        const pageResults = (
+          await this.withConcurrencyLimit(trailerTasks)
+        ).filter((item): item is TmdbMovie => item !== null);
+
+        items.push(...pageResults);
+      }
+
+      // --- Fallback: fetch by release date (last 7 days) ---
+      if (items.length < minRequired) {
+        for (let page = 1; page <= maxPages && items.length < minRequired; page++) {
+          const url = `discover/movie?language=en-US&sort_by=release_date.desc&release_date.gte=${lastWeekStr}&release_date.lte=${todayStr}&with_release_type=3|2&page=${page}`;
+          const data = await this.tmdb(url);
+          const results = data?.results ?? [];
+          const filtered = this.filterAdultishContent(results);
+
+          const trailerTasks = filtered
+            .filter((m: any) => isWithinRange(m.release_date, lastWeekStr, todayStr)) // strict filter again
+            .map((m: any) => async () => {
+              try {
+                const [videosData, details] = await Promise.all([
+                  this.tmdb(`movie/${m.id}/videos?language=en-US`),
+                  this.tmdb(`movie/${m.id}?language=en-US`),
+                ]);
+
+                const trailer = (videosData?.results ?? []).find(
+                  (v: any) => v.type === "Trailer" && v.site === "YouTube"
+                );
+                if (!trailer) return null;
+
+                return {
+                  id: m.id,
+                  title: m.title ?? "Untitled",
+                  overview: m.overview ?? "",
+                  poster_path: m.poster_path ?? null,
+                  backdrop_path: m.backdrop_path ?? null,
+                  release_date: m.release_date,
+                  vote_average: m.vote_average,
+                  trailer_key: trailer.key,
+                  type: "movie" as ContentType,
+                  recommendations: [],
+                  genres: details.genres ? details.genres.map((g: any) => g.name) : [],
+                } as TmdbMovie;
+              } catch {
+                return null;
+              }
+            });
+
+          const pageResults = (
+            await this.withConcurrencyLimit(trailerTasks)
+          ).filter((item): item is TmdbMovie => item !== null);
+
+          items.push(...pageResults);
+        }
+      }
+
+      // --- Deduplicate & filter by poster/backdrop ---
+      const withImages = items.filter(
+        (item) => item.backdrop_path && item.poster_path
+      );
+      const uniqueItems = Array.from(
+        new Map(withImages.map((i) => [i.id, i])).values()
+      );
+
+      // --- Final strict filter by release window ---
+      const strictlyFiltered = uniqueItems.filter((m) =>
+        isWithinRange(m.release_date, lastMonthStr, todayStr)
+      );
+
+      // --- Sort by release_date (most recent first) ---
+      const sorted = strictlyFiltered.sort(
+        (a, b) =>
+          new Date(b.release_date).getTime() - new Date(a.release_date).getTime()
+      );
+
+      return sorted.slice(0, limit);
+    } catch (err) {
+      this.logger.error("Failed to fetch new movie releases", err as any);
+      return [];
+    }
+  }
+
+
   // Get Action Movies
   async getActionMovies(limit = 25): Promise<TmdbMovie[]> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
@@ -1562,11 +1714,11 @@ export class MoviesService implements OnModuleInit {
     try {
       let allResults: any[] = [];
       let page = 1;
-      const maxPages = 3;
+      const maxPages = 5;
 
       while (allResults.length < minRequired && page <= maxPages) {
         const movieData = await this.tmdb(
-          `discover/movie?sort_by=vote_average.desc&page=${page}&include_adult=false&vote_count.gte=1000&vote_average.gte=7.5`,
+          `discover/movie?sort_by=vote_average.desc&page=${page}&include_adult=false&vote_count.gte=700&vote_average.gte=7.0`,
         );
 
         const results = movieData?.results ?? [];

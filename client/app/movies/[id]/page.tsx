@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import HeroContentCard from "@/components/selected-content/sections/heroTop";
 import MovieDetails from "@/components/selected-content/sections/extras";
 import ReviewsSection from "@/components/selected-content/sections/reviews";
-import MovieCarousel from "@/components/sections/MovieCarousel";
+import CardCarousel from "@/components/sections/CardCarousel";
 import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
 
 async function fetchDetails(id: string) {
@@ -92,7 +92,7 @@ export default async function MoviePage({
           <ReviewsSection reviews={data.reviews} movieId={id} />
 
           <hr className="border-white/8 my-14" />
-          <MovieCarousel
+          <CardCarousel
             title="Something Similar"
             subtitle="Films you may also enjoy"
             items={data.similar}

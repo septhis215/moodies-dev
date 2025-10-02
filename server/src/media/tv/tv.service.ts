@@ -1323,6 +1323,7 @@ export class TvService implements OnModuleInit {
       return [];
     }
   }
+  
   async getUpcomingTrailers(limit = 60): Promise<TmdbTv[]> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 

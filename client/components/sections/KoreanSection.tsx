@@ -1,6 +1,6 @@
 "use client";
 
-import MovieCarousel from "./MovieCarousel";
+import CardCarousel from "./CardCarousel";
 import { useEffect, useState } from "react";
 import type { All } from "@/types/all";
 
@@ -81,7 +81,7 @@ export default function KoreaTrendingSection({
     }
 
     return (
-        <MovieCarousel
+        <CardCarousel
             title={title}
             subtitle={subtitle}
             items={koreaTrending}

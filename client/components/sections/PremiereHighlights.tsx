@@ -1,16 +1,16 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play, Star, Tv, Film } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { All } from "@/types/all";
 
-// Lazy load modal (SSR disabled)
+// Lazy load modal
 const TrailerModal = dynamic(() => import("./TrailerModal"), { ssr: false });
 
-// Default fetch function for backwards compatibility
-async function fetchTrailer(): Promise<All[]> {
+// Fetch trailers
+async function fetchPremiereTrailers(): Promise<All[]> {
   const base = process.env.NEST_API_URL || "http://localhost:4000";
   try {
     const res = await fetch(`${base}/all/trailers`);
@@ -22,6 +22,7 @@ async function fetchTrailer(): Promise<All[]> {
   }
 }
 
+// Fetch recommendations
 async function fetchRecommendations(type: "movie" | "tv", id: number): Promise<All[]> {
   const base = process.env.NEST_API_URL || "http://localhost:4000";
   try {
@@ -38,7 +39,7 @@ interface PremiereHighlightsProps {
   data?: All[];
   title?: string;
   subtitle?: string;
-  endpoint?: string; // Custom endpoint for fetching
+  endpoint?: string;
 }
 
 export default function PremiereHighlights({
@@ -52,22 +53,37 @@ export default function PremiereHighlights({
   const [recommendationsCache, setRecommendationsCache] = useState<Record<number, All[]>>({});
   const [loading, setLoading] = useState(!data);
   const [error, setError] = useState<string | null>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Carousel state
+  const [startIndex, setStartIndex] = useState(0);
+  const [itemsPerView, setItemsPerView] = useState(4);
+
+  // Unique trailers
+  const uniqueTrailers = Array.from(new Map(trailers.map(item => [item.id, item])).values());
 
   useEffect(() => {
-    // If data is passed as props, use it directly
+    // Responsive layout
+    const updateLayout = () => {
+      const w = window.innerWidth;
+      if (w < 640) setItemsPerView(1);
+      else if (w < 768) setItemsPerView(2);
+      else if (w < 1024) setItemsPerView(3);
+      else setItemsPerView(4);
+    };
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, []);
+
+  useEffect(() => {
     if (data) {
-      setTrailers(data);
       setLoading(false);
       return;
     }
-
-    // Otherwise fetch data
-    const loadTrailers = async () => {
+    const load = async () => {
       try {
         setLoading(true);
         setError(null);
-
         let result: All[];
         if (endpoint) {
           const base = process.env.NEST_API_URL || "http://localhost:4000";
@@ -75,95 +91,57 @@ export default function PremiereHighlights({
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           result = await res.json();
         } else {
-          result = await fetchTrailer();
+          result = await fetchPremiereTrailers();
         }
-
         if (result.length === 0) {
           setError("No content available at the moment");
         } else {
           setTrailers(result);
         }
       } catch (err) {
-        setError("Failed to load content. Please try again later.");
         console.error("Error loading trailers:", err);
+        setError("Failed to load content. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
-
-    loadTrailers();
+    load();
   }, [data, endpoint]);
-
-  const scroll = (direction: "left" | "right") => {
-    if (!carouselRef.current) return;
-    const { scrollLeft, clientWidth } = carouselRef.current;
-    const scrollAmount = direction === "left" ? -clientWidth * 0.8 : clientWidth * 0.8;
-    carouselRef.current.scrollTo({
-      left: scrollLeft + scrollAmount,
-      behavior: "smooth"
-    });
-  };
 
   const handleSelectTrailer = async (trailer: All) => {
     const type = trailer.type || "tv";
     const id = trailer.id;
-
-    if (!id) {
-      console.warn("No ID found for trailer:", trailer.title);
-      return;
-    }
-
+    if (!id) return;
     try {
       let recs = recommendationsCache[id];
-
       if (!recs && type !== "person") {
-        // Show loading state
-        setSelectedTrailer({ ...trailer, recommendations: [] });
-
-        // Fetch recommendations
         recs = await fetchRecommendations(type, id);
-
-        // Update cache
         setRecommendationsCache(prev => ({ ...prev, [id]: recs }));
       }
-
-      setSelectedTrailer({ ...trailer, recommendations: recs });
-    } catch (error) {
-      console.error("Error fetching recommendations:", error);
-      // Still show modal even if recommendations fail
+      setSelectedTrailer({ ...trailer, recommendations: recs || [] });
+    } catch {
       setSelectedTrailer({ ...trailer, recommendations: [] });
     }
   };
 
-  const formatRating = (rating: number) => {
-    return rating ? rating.toFixed(1) : "N/A";
-  };
+  // Carousel navigation
+  const canScrollLeft = startIndex > 0;
+  const canScrollRight = startIndex < uniqueTrailers.length - itemsPerView;
 
-  const formatCountryFlags = (countries: string[]) => {
-    const flagMap: Record<string, string> = {
-      'KR': '🇰🇷',
-      'US': '🇺🇸',
-      'GB': '🇬🇧',
-      'JP': '🇯🇵',
-      'CN': '🇨🇳',
-      'FR': '🇫🇷',
-      'DE': '🇩🇪',
-      'IT': '🇮🇹',
-      'ES': '🇪🇸'
-    };
+  const scrollLeft = () => setStartIndex(prev => Math.max(0, prev - itemsPerView));
+  const scrollRight = () =>
+    setStartIndex(prev => Math.min(uniqueTrailers.length - itemsPerView, prev + itemsPerView));
 
-    return countries.slice(0, 2).map(country => flagMap[country] || country).join(' ');
-  };
+  const visibleItems = uniqueTrailers.slice(startIndex, startIndex + itemsPerView);
 
   if (loading) {
     return (
       <section className="px-6 py-12 mx-auto relative">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{title}</h2>
         <p className="text-gray-400 text-sm mt-1">Loading...</p>
-
         <div className="flex gap-4 mt-6 overflow-hidden">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-80 h-52 bg-gray-800 animate-pulse rounded-lg" />
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="w-80 h-52 bg-gray-800 animate-pulse rounded-lg" />
           ))}
         </div>
       </section>
@@ -190,40 +168,43 @@ export default function PremiereHighlights({
   if (trailers.length === 0) return null;
 
   return (
-    <section className="px-6 py-12 max-w-7xl mx-auto relative">
+    <section className="px-6 py-12 max-w-7xl mx-auto relative mb-16">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{title}</h2>
-        <div className="text-sm text-gray-500">
-          {trailers.length} shows available
-        </div>
+        <div className="text-sm text-gray-500">{trailers.length} shows available</div>
       </div>
       <p className="text-gray-400 text-sm mt-1">{subtitle}</p>
 
       {/* Carousel */}
-      <div className="relative mt-6">
-        {/* Navigation Buttons */}
-        <button
-          onClick={() => scroll("left")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-black/70 text-white hover:bg-black/90 transition-all duration-200 shadow-lg"
-          aria-label="Scroll left"
-        >
-          <ChevronLeft size={24} />
-        </button>
+      <div className="relative mt-6 group/carousel">
+        {canScrollLeft && (
+          <button
+            onClick={scrollLeft}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-50 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-lg"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+        )}
 
-        <div
-          ref={carouselRef}
-          className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {trailers.map((item) => (
+        {canScrollRight && (
+          <button
+            onClick={scrollRight}
+            className="absolute right-0 top-1/2 translate-x-4 -translate-y-1/2 z-50 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-lg"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          {visibleItems.map((item) => (
             <motion.div
               key={item.id}
               whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              className="relative flex-shrink-0 w-80 h-52 cursor-pointer rounded-lg overflow-hidden shadow-lg group"
+              className="relative group flex-shrink-0 w-full h-54 cursor-pointer rounded-lg overflow-hidden bg-gray-800 shadow-lg"
               onClick={() => handleSelectTrailer(item)}
             >
-              {/* Background Image */}
               <Image
                 src={
                   item.backdrop_path
@@ -231,16 +212,13 @@ export default function PremiereHighlights({
                     : "/placeholder.jpg"
                 }
                 alt={item.title}
-                width={500}
-                height={280}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                priority={trailers.indexOf(item) < 3}
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                className="object-cover object-center"
               />
-
-              {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-
-              {/* Play Button Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-3">
+                <h3 className="text-white font-semibold text-sm line-clamp-2">{item.title}</h3>
+              </div>
               {item.trailer_key && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
@@ -248,72 +226,24 @@ export default function PremiereHighlights({
                   </div>
                 </div>
               )}
-
-              {/* Content */}
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-white font-semibold text-lg line-clamp-2 flex-1 pr-2">
-                    {item.title}
-                  </h3>
-                  {item.vote_average && item.vote_average > 0 && (
-                    <div className="flex items-center gap-1 bg-black/50 rounded px-2 py-1">
-                      <Star size={14} className="text-yellow-400" fill="currentColor" />
-                      <span className="text-white text-sm font-medium">
-                        {formatRating(item.vote_average)}
-                      </span>
-                    </div>
-                  )}
+              <div className="absolute bottom-3 right-3">
+                <div
+                  className={[
+                    "flex items-center gap-1 px-2 py-0.5 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border",
+                    item.type === "tv"
+                      ? "bg-blue-500/90 text-white border-blue-400/50"
+                      : "bg-purple-500/90 text-white border-purple-400/50",
+                  ].join(" ")}
+                >
+                  {item.type === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                  {item.type === "tv" ? "Series" : "Movie"}
                 </div>
-
-                {/* Metadata */}
-                <div className="flex items-center gap-3 text-xs text-gray-300">
-                  {item.origin_country && item.origin_country.length > 0 && (
-                    <span>{formatCountryFlags(item.origin_country)}</span>
-                  )}
-                  {item.type === "tv" && item.number_of_seasons && (
-                    <span>{item.number_of_seasons} Season{item.number_of_seasons > 1 ? 's' : ''}</span>
-                  )}
-                  {item.genres && item.genres.length > 0 && (
-                    <span className="truncate">{item.genres.slice(0, 2).join(', ')}</span>
-                  )}
-
-                </div>
-
-                <div className="absolute bottom-3 right-3 z-20 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
-                  <div
-                    className={[
-                      "flex items-center gap-1 px-2 py-0.5 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border",
-                      item.type === "tv"
-                        ? "bg-blue-500/90 text-white border-blue-400/50"
-                        : "bg-purple-500/90 text-white border-purple-400/50",
-                    ].join(" ")}
-                  >
-                    {item.type === "tv" ? <Tv size={12} /> : <Film size={12} />}
-                    {item.type === "tv" ? "Series" : "Movie"}
-                  </div>
-                </div>
-
-                {/* No Trailer Warning */}
-                {!item.trailer_key && (
-                  <div className="mt-1 text-xs text-amber-400">
-                    Preview not available
-                  </div>
-                )}
               </div>
             </motion.div>
           ))}
         </div>
-
-        <button
-          onClick={() => scroll("right")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-black/70 text-white hover:bg-black/90 transition-all duration-200 shadow-lg"
-          aria-label="Scroll right"
-        >
-          <ChevronRight size={24} />
-        </button>
       </div>
 
-      {/* Lazy modal */}
       {selectedTrailer && (
         <TrailerModal
           trailer={selectedTrailer}
@@ -321,17 +251,6 @@ export default function PremiereHighlights({
           onSelectTrailer={handleSelectTrailer}
         />
       )}
-
-      {/* Custom scrollbar styles */}
-      <style jsx>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </section>
   );
 }

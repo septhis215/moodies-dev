@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import HeroContentCard from "@/components/selected-content/sections/heroTop";
 import TvDetails from "@/components/selected-content/sections/extras";
 import ReviewsSection from "@/components/selected-content/sections/reviews";
-import MovieCarousel from "@/components/sections/MovieCarousel";
+import CardCarousel from "@/components/sections/CardCarousel";
 import TvSeasonsEpisodes from "@/components/selected-content/sections/TvSeasonsEpisodes";
 import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
 
@@ -132,7 +132,7 @@ export default async function TvPage({
           />
 
           <hr className="border-white/8 my-14" />
-          <MovieCarousel
+          <CardCarousel
             title="Something Similar"
             subtitle="TV shows you may also enjoy"
             items={data.similar}
