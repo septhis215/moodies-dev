@@ -197,7 +197,7 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
                                         <div key={rec.id} className="group relative">
                                             <Link href={`/${rec.mediaType.toLowerCase()}/${rec.tmdbId}`}>
                                                 <div className="block">
-                                                    <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-900 shadow-md mb-2">
+                                                    <div className="relative aspect-[2/3] w-auto h-auto rounded-lg overflow-hidden bg-zinc-900 shadow-md mb-2">
                                                         {rec.posterPath && (
                                                             <Image
                                                                 src={getPosterUrl(rec.posterPath)}

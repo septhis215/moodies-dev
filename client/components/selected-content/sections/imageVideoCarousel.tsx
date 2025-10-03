@@ -158,7 +158,7 @@ export default function ImageVideoCarousel({
             onClick={() => setActiveTab("posters")}
             className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 cursor-pointer ${
               activeTab === "posters"
-                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30"
+                ? " bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white shadow-lg"
                 : "text-slate-400 hover:text-white"
             }`}
           >
@@ -170,7 +170,7 @@ export default function ImageVideoCarousel({
             onClick={() => setActiveTab("backdrops")}
             className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 cursor-pointer ${
               activeTab === "backdrops"
-                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30"
+                ? " bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white shadow-lg"
                 : "text-slate-400 hover:text-white"
             }`}
           >
@@ -182,7 +182,7 @@ export default function ImageVideoCarousel({
             onClick={() => setActiveTab("videos")}
             className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 cursor-pointer ${
               activeTab === "videos"
-                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30"
+                ? " bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white shadow-lg"
                 : "text-slate-400 hover:text-white"
             }`}
           >
@@ -278,7 +278,13 @@ export default function ImageVideoCarousel({
           <>
             <button
               onClick={() => navigate("prev")}
-              className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 text-white shadow-lg hover:scale-110 transition-all duration-300 cursor-pointer"
+              className="absolute left-6 top-1/2 -translate-y-1/2
+                w-12 h-12 flex items-center justify-center rounded-full
+                bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
+                backdrop-blur-md border border-white/10
+                text-white shadow-lg shadow-black/40
+                hover:scale-110 hover:bg-gradient-to-br hover:from-zinc-800/80 hover:via-neutral-700/60 hover:to-zinc-600/50
+                transition-all duration-300 cursor-pointer"
               aria-label="Previous"
             >
               <ChevronIcon direction="left" className="w-6 h-6" />
@@ -286,7 +292,13 @@ export default function ImageVideoCarousel({
 
             <button
               onClick={() => navigate("next")}
-              className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 text-white shadow-lg hover:scale-110 transition-all duration-300 cursor-pointer"
+              className="absolute right-6 top-1/2 -translate-y-1/2
+                w-12 h-12 flex items-center justify-center rounded-full
+                bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
+                backdrop-blur-md border border-white/10
+                text-white shadow-lg shadow-black/40
+                hover:scale-110 hover:bg-gradient-to-br hover:from-zinc-800/80 hover:via-neutral-700/60 hover:to-zinc-600/50
+                transition-all duration-300 cursor-pointer"
               aria-label="Next"
             >
               <ChevronIcon direction="right" className="w-6 h-6" />
@@ -308,7 +320,7 @@ export default function ImageVideoCarousel({
       <div className="overflow-x-auto py-2">
         <div className="flex gap-3 items-start px-1">
           {visibleThumbs.map((item: any, idx: number) => {
-            const globalIdx = idx; // index relative to allThumbs slice start (0)
+            const globalIdx = idx;
             const isSelected = selectedIndex === globalIdx;
 
             return (
@@ -319,7 +331,6 @@ export default function ImageVideoCarousel({
                   idx
                 }
                 onClick={() => {
-                  // adjust selected index to the right absolute index in the full array
                   const absoluteIdx = (
                     activeTab === "videos" ? normalizedVideos : images
                   ).indexOf(item);
@@ -327,13 +338,6 @@ export default function ImageVideoCarousel({
                 }}
                 onMouseEnter={() => setHoveredThumb(idx)}
                 onMouseLeave={() => setHoveredThumb(null)}
-                className={`relative rounded-lg overflow-hidden transition-all duration-200 flex-shrink-0
-            ${
-              isSelected
-                ? "ring-2 ring-purple-500 shadow-lg shadow-purple-500/40 scale-105"
-                : "ring-1 ring-white/10 hover:ring-purple-400/40 hover:scale-105"
-            }
-          `}
                 aria-label={
                   activeTab === "videos"
                     ? `Play video ${idx + 1}`
@@ -342,8 +346,21 @@ export default function ImageVideoCarousel({
                 style={{
                   width: 120,
                   height: activeTab === "videos" ? 68 : 120,
-                }} // small thumbnails
+                }}
+                className={`relative rounded-lg overflow-hidden transition-all duration-200 flex-shrink-0
+        // base glassy gradient theme (subtle)
+        bg-gradient-to-r from-[#e94f37]/30 to-[#ff6b58]/30
+        backdrop-blur-sm border border-white/8 shadow-md
+
+        // interactive states
+        ${
+          isSelected
+            ? "ring-2 ring-[#ff6b58]/60 shadow-lg shadow-[#ff6b58]/20 scale-105"
+            : "ring-1 ring-white/10 hover:ring-[#ff6b58]/30 hover:scale-105"
+        }
+      `}
               >
+                {/* image (fills the container) */}
                 {activeTab === "videos" ? (
                   <Image
                     src={youtubeThumb(item.key)}
@@ -351,7 +368,7 @@ export default function ImageVideoCarousel({
                     fill
                     className="object-cover"
                     sizes="120px"
-                    unoptimized // optional: remove if you have host configured in next.config.js
+                    unoptimized
                   />
                 ) : (
                   <Image
@@ -363,21 +380,22 @@ export default function ImageVideoCarousel({
                   />
                 )}
 
+                {/* subtle top-to-bottom darken so UI elements are legible */}
                 <div
                   className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent transition-opacity duration-200
-              ${
-                hoveredThumb === idx || isSelected ? "opacity-100" : "opacity-0"
-              }
-            `}
+          ${hoveredThumb === idx || isSelected ? "opacity-100" : "opacity-0"}
+        `}
                 />
 
+                {/* small label (keeps same style but slightly translucent) */}
                 <div className="absolute left-2 bottom-2 px-2 py-0.5 rounded-md bg-black/50 text-xs text-white">
                   {activeTab === "videos" ? item.type ?? "Video" : ""}
                 </div>
 
+                {/* selected indicator (dot) — use the warm gradient glass for the indicator */}
                 {isSelected && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-8 h-8 rounded-full bg-purple-500/90 backdrop-blur-sm flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#e94f37]/90 to-[#ff6b58]/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
                       <div className="w-2 h-2 bg-white rounded-full" />
                     </div>
                   </div>
@@ -385,12 +403,10 @@ export default function ImageVideoCarousel({
               </button>
             );
           })}
-
+          
           {hiddenCount > 0 && (
-            // Show the "+N" tile as the last element
             <button
               onClick={() => {
-                // open lightbox starting at the first hidden item
                 const absoluteIdx = VISIBLE_THUMBS;
                 setSelectedIndex(
                   absoluteIdx < allThumbs.length
@@ -399,11 +415,11 @@ export default function ImageVideoCarousel({
                 );
                 setLightboxOpen(true);
               }}
-              className="relative rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-white/10 hover:ring-purple-400/40 hover:scale-105 transition-all duration-200"
+              className="relative rounded-lg overflow-hidden flex-shrink-0 transition-all duration-200
+      bg-gradient-to-r from-[#e94f37]/20 to-[#ff6b58]/20 backdrop-blur-sm border border-white/8 hover:from-[#e94f37]/30 hover:to-[#ff6b58]/30 hover:scale-105 ring-1 ring-white/10"
               style={{ width: 120, height: 120 }}
               aria-label={`Show ${hiddenCount} more`}
             >
-              {/* use the next item's image as background if available, otherwise a neutral gradient */}
               {allThumbs[VISIBLE_THUMBS] ? (
                 activeTab === "videos" ? (
                   <Image
@@ -427,7 +443,7 @@ export default function ImageVideoCarousel({
                 <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900" />
               )}
 
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-sm font-semibold">
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-sm font-semibold">
                 +{hiddenCount}
               </div>
             </button>

@@ -1366,21 +1366,6 @@ export class MoviesService implements OnModuleInit {
     return trailerMap;
   }
 
-  async images(id: number, type: string) {
-    const data = await this.tmdb(`${type}/${id}/images`);
-    if (!data) return { posters: [], backdrops: [] };
-
-    const posters: string[] = (data.posters ?? [])
-      .map((p: any) => p?.file_path ?? null)
-      .filter((fp: string | null): fp is string => Boolean(fp));
-
-    const backdrops: string[] = (data.backdrops ?? [])
-      .map((b: any) => b?.file_path ?? null)
-      .filter((fp: string | null): fp is string => Boolean(fp));
-
-    return { posters, backdrops };
-  }
-
   // Get Action Movies
   async getActionMovies(limit = 25): Promise<TmdbMovie[]> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
@@ -1663,9 +1648,31 @@ export class MoviesService implements OnModuleInit {
     }
   }
 
+  async images(id: number, type: string) {
+    const data = await this.tmdb(`${type}/${id}/images`);
+    if (!data) return { posters: [], backdrops: [] };
+
+    const THRESHOLD = 2.5;
+
+    const filterThreshold = (images: any[] = []) => {
+      const above = images.filter(img => img?.vote_average && img.vote_average >= THRESHOLD);
+      return (above.length > 0 ? above : images)
+        .map(img => img?.file_path ?? null)
+        .filter((f: string | null): f is string => Boolean(f));
+    }
+
+    const posters: string[] = filterThreshold(data?.posters);
+    const backdrops: string[] = filterThreshold(data?.backdrops);
+
+    return { posters, backdrops };
+  }
+
   async videos(id: number, type: string) {
     const data = await this.tmdb(`${type}/${id}/videos`);
     if (!data) return { videos: [] };
+
+    const PRIORITY_TYPES = ['Trailer', 'Teaser', 'Clip', 'Featurette'];
+    const MIN_SIZE = 720; // Minimum video quality (720p or higher)
 
     const videos: Array<{
       id: string;
@@ -1679,6 +1686,32 @@ export class MoviesService implements OnModuleInit {
       iso_3166_1?: string | null;
       published_at?: string | null;
     }> = (data.results ?? [])
+      .filter((v: any) => {
+        return (
+          Boolean(v?.key) &&
+          (v?.site?.toLowerCase() === 'youtube') &&
+          Boolean(v?.official) && // Official content only
+          (typeof v?.size === 'number' ? v.size >= MIN_SIZE : true) && // HD quality or unknown
+          PRIORITY_TYPES.includes(v?.type) // Relevant video types
+        );
+      })
+      .sort((a: any, b: any) => {
+        const typeOrder = (type: string) => PRIORITY_TYPES.indexOf(type);
+
+        const aPriority = typeOrder(a.type);
+        const bPriority = typeOrder(b.type);
+
+        if (aPriority !== bPriority) return aPriority - bPriority;
+
+        const aSize = a.size ?? 0;
+        const bSize = b.size ?? 0;
+        if (aSize !== bSize) return bSize - aSize; // Higher quality first
+
+        const aDate = new Date(a.published_at ?? 0).getTime();
+        const bDate = new Date(b.published_at ?? 0).getTime();
+        return bDate - aDate;
+      })
+      .slice(0, 30)
       .map((v: any) => ({
         id: v?.id ?? "",
         key: v?.key ?? "",
@@ -1690,9 +1723,9 @@ export class MoviesService implements OnModuleInit {
         iso_639_1: v?.iso_639_1 ?? null,
         iso_3166_1: v?.iso_3166_1 ?? null,
         published_at: v?.published_at ?? null,
-      }))
-      .filter((v) => Boolean(v.key)); // key videos with usable key
+      }));
 
     return { videos };
   }
+
 }

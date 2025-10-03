@@ -298,7 +298,7 @@ export default function MovieCarousel<T extends MovieLike>({
                   >
                     {/* Main Card Container */}
                     <div
-                      className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 bg-gray-900 cursor-pointer"
+                      className="relative w-full h-auto aspect-[2/3] rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 bg-gray-900 cursor-pointer"
                       onClick={() => handleCardClick(movie)}
                       role="button"
                       tabIndex={0}
@@ -331,13 +331,15 @@ export default function MovieCarousel<T extends MovieLike>({
                                 disabled={isLoading}
                                 className={`
                                   p-2 rounded-full shadow-lg backdrop-blur-md border transition-all duration-200
-                                  ${inWatchlist
-                                    ? "bg-green-500/90 border-green-400/50 text-white hover:bg-green-600/90"
-                                    : "bg-black/50 border-white/30 text-white hover:bg-black/70 hover:border-white/50"
+                                  ${
+                                    inWatchlist
+                                      ? "bg-green-500/90 border-green-400/50 text-white hover:bg-green-600/90"
+                                      : "bg-black/50 border-white/30 text-white hover:bg-black/70 hover:border-white/50"
                                   }
-                                  ${isLoading
-                                    ? "opacity-70 cursor-not-allowed"
-                                    : "hover:scale-110"
+                                  ${
+                                    isLoading
+                                      ? "opacity-70 cursor-not-allowed"
+                                      : "hover:scale-110"
                                   }
                                 `}
                                 whileTap={{ scale: 0.9 }}
@@ -368,8 +370,8 @@ export default function MovieCarousel<T extends MovieLike>({
                                 {isLoading
                                   ? "Updating..."
                                   : inWatchlist
-                                    ? "Remove from Watchlist"
-                                    : "Add to Watchlist"}
+                                  ? "Remove from Watchlist"
+                                  : "Add to Watchlist"}
                               </div>
                             </TooltipContent>
                           </Tooltip>
@@ -380,9 +382,10 @@ export default function MovieCarousel<T extends MovieLike>({
                           <div
                             className={`
                               flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-xs shadow-lg backdrop-blur-md border
-                              ${movie.vote_average >= 7.5
-                                ? "bg-green-500/90 text-white border-green-400/50"
-                                : movie.vote_average >= 6
+                              ${
+                                movie.vote_average >= 7.5
+                                  ? "bg-green-500/90 text-white border-green-400/50"
+                                  : movie.vote_average >= 6
                                   ? "bg-yellow-500/90 text-black border-yellow-400/50"
                                   : "bg-red-500/90 text-white border-red-400/50"
                               }
@@ -396,14 +399,21 @@ export default function MovieCarousel<T extends MovieLike>({
 
                       {/* Content Type Badge - Bottom Left */}
                       <div className="absolute bottom-3 left-3 z-40">
-                        <div className={`
+                        <div
+                          className={`
                           flex items-center gap-1 px-2 py-1 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border group-hover:opacity-0 transition-opacity duration-300
-                          ${contentType === "tv"
-                            ? "bg-blue-500/90 text-white border-blue-400/50"
-                            : "bg-purple-500/90 text-white border-purple-400/50"
+                          ${
+                            contentType === "tv"
+                              ? "bg-blue-500/90 text-white border-blue-400/50"
+                              : "bg-purple-500/90 text-white border-purple-400/50"
                           }
-                        `}>
-                          {contentType === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                        `}
+                        >
+                          {contentType === "tv" ? (
+                            <Tv size={12} />
+                          ) : (
+                            <Film size={12} />
+                          )}
                           {contentType === "tv" ? "Series" : "Movie"}
                         </div>
                       </div>
@@ -448,12 +458,18 @@ export default function MovieCarousel<T extends MovieLike>({
                                   {movie.vote_count && (
                                     <div className="flex items-center gap-1">
                                       <Users size={11} />
-                                      <span>{formatVoteCount(movie.vote_count)}</span>
+                                      <span>
+                                        {formatVoteCount(movie.vote_count)}
+                                      </span>
                                     </div>
                                   )}
                                   {runtime && (
                                     <div className="flex items-center gap-1">
-                                      {contentType === "tv" ? <Tv size={11} /> : <Film size={11} />}
+                                      {contentType === "tv" ? (
+                                        <Tv size={11} />
+                                      ) : (
+                                        <Film size={11} />
+                                      )}
                                       <span>{runtime}</span>
                                     </div>
                                   )}
@@ -466,11 +482,17 @@ export default function MovieCarousel<T extends MovieLike>({
                                       KR
                                     </span>
                                   )}
-                                  <div className={`
+                                  <div
+                                    className={`
                           flex items-center gap-1 px-2 py-0.5 rounded-full font-medium text-xs shadow-lg backdrop-blur-md  
                          
-                        `}>
-                                    {contentType === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                        `}
+                                  >
+                                    {contentType === "tv" ? (
+                                      <Tv size={12} />
+                                    ) : (
+                                      <Film size={12} />
+                                    )}
                                     {contentType === "tv" ? "Series" : "Movie"}
                                   </div>
                                 </div>
@@ -537,14 +559,22 @@ export default function MovieCarousel<T extends MovieLike>({
                                                 <motion.div
                                                   whileHover={{ scale: 1.1 }}
                                                   className="relative aspect-[2/3] rounded-md overflow-hidden cursor-pointer shadow-md hover:shadow-lg transition-all"
-                                                  onClick={(e) => { e.stopPropagation(); handleCardClick(rec) }}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleCardClick(rec);
+                                                  }}
                                                 >
                                                   <Image
                                                     src={posterGetter(rec)}
                                                     alt={getTitle(rec)}
-                                                    fill
+                                                    width={60}
+                                                    height={90}
                                                     sizes="60px"
                                                     className="object-cover"
+                                                    style={{
+                                                      width: "100%",
+                                                      height: "auto",
+                                                    }}
                                                   />
                                                   <div className="absolute inset-0 bg-black/20 hover:bg-black/0 transition-colors" />
                                                 </motion.div>
@@ -562,7 +592,9 @@ export default function MovieCarousel<T extends MovieLike>({
                                                         size={10}
                                                         fill="currentColor"
                                                       />
-                                                      {rec.vote_average.toFixed(1)}
+                                                      {rec.vote_average.toFixed(
+                                                        1
+                                                      )}
                                                     </div>
                                                   )}
                                                 </div>

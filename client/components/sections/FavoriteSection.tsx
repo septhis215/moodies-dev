@@ -182,7 +182,7 @@ export default function FavoritesSection({
         {favorites.map((item) => (
           <div
             key={item.id}
-            className="relative group flex-shrink-0 w-64 snap-start rounded-2xl overflow-hidden shadow-lg cursor-pointer"
+            className="relative group flex-shrink-0 w-64 h-auto snap-start rounded-2xl overflow-hidden shadow-lg cursor-pointer"
             onClick={() => handleClick(item)}
           >
             {/* Poster */}
