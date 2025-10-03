@@ -96,6 +96,14 @@ export class MoviesController {
     return this.movieService.getItemRecommendations(type, id, parsedLimit);
   }
 
+  @Get('recommendations/:id')
+  async getMovieRecommendations(
+    @Param('id', ParseIntPipe) id: number
+  ) {
+    const parsedLimit = 15;
+    return this.movieService.getSmartRecommendationsMovie(id, parsedLimit);
+  }
+
   // NEW: Batch trailer endpoint for multiple items
   // Frontend can request trailers for multiple items at once
   @Post('batch/trailers')

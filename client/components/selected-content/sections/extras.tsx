@@ -263,13 +263,21 @@ export default function ExtraDetails({ data }: DetailsProp) {
           <div className="flex items-center gap-2">
             <button
               onClick={scrollPrev}
-              className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 border border-white/10 flex items-center justify-center shadow-md transition"
+              className="w-10 h-10 rounded-full  bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
+                backdrop-blur-md border border-white/10
+                text-white shadow-lg shadow-black/40
+                hover:scale-110 hover:bg-gradient-to-br hover:from-zinc-800/80 hover:via-neutral-700/60 hover:to-zinc-600/50
+                transition-all duration-300 cursor-pointer flex items-center justify-center shadow-md transition"
             >
               <ChevronLeft size={16} />
             </button>
             <button
               onClick={scrollNext}
-              className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 border border-white/10 flex items-center justify-center shadow-md transition"
+              className="w-10 h-10 rounded-full  bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
+                backdrop-blur-md border border-white/10
+                text-white shadow-lg shadow-black/40
+                hover:scale-110 hover:bg-gradient-to-br hover:from-zinc-800/80 hover:via-neutral-700/60 hover:to-zinc-600/50
+                transition-all duration-300 cursor-pointer flex items-center justify-center shadow-md transition"
             >
               <ChevronRight size={16} />
             </button>
@@ -290,7 +298,7 @@ export default function ExtraDetails({ data }: DetailsProp) {
                         group-hover:scale-105 group-hover:rotate-1 transition-all duration-500"
               >
                 {/* Glow behind */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent w-auto h-auto" />
                 {actor.profile_path ? (
                   <Image
                     src={`https://image.tmdb.org/t/p/w500${actor.profile_path}`}
@@ -435,7 +443,7 @@ export default function ExtraDetails({ data }: DetailsProp) {
                     key={company.id}
                     className="flex flex-col items-center group"
                   >
-                    <div className="relative flex items-center justify-center">
+                    <div className="relative flex items-center justify-center w-auto h-auto">
                       {company.logo_path ? (
                         <Image
                           src={`https://image.tmdb.org/t/p/w300${company.logo_path}`}
@@ -821,7 +829,7 @@ export default function ExtraDetails({ data }: DetailsProp) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           {/* Countries */}
           <div className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/70 border border-white/10 shadow-lg p-6 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-[0.03] bg-[url('/textures/world-map.svg')] bg-cover bg-center"></div>
+            <div className="absolute inset-0 opacity-[0.03] bg-cover bg-center"></div>
 
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-200 mb-6">
               Release Countries
@@ -883,6 +891,7 @@ export default function ExtraDetails({ data }: DetailsProp) {
                             src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`}
                             alt={provider.provider_name}
                             fill
+                            sizes=""
                             style={{ objectFit: "contain" }}
                           />
                         </div>

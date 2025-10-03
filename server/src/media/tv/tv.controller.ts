@@ -125,6 +125,14 @@ export class TvController {
     return this.tvService.getSmartRecommendationsTv(id, parsedLimit);
   }
 
+  @Get('recommendations/:id')
+  async getMovieRecommendations(
+    @Param('id', ParseIntPipe) id: number
+  ) {
+    const parsedLimit = 15;
+    return this.tvService.getSmartRecommendationsTv(id, parsedLimit);
+  }
+
   // NEW: Batch trailer endpoint for multiple items
   // Frontend can request trailers for multiple items at once
   @Post('batch/trailers')
@@ -196,7 +204,7 @@ export class TvController {
         this.tvService.getKoreaTrending(parsedLimit),
         this.tvService.getTrendingReviews(Math.min(parsedLimit, 10)),
         this.tvService.getNewReleases(parsedLimit),
-        this.moodsService.getAllMoods(), 
+        this.moodsService.getAllMoods(),
       ]);
 
     return {
@@ -206,7 +214,7 @@ export class TvController {
       koreaTrending: koreaTrending.status === 'fulfilled' ? koreaTrending.value : [],
       reviews: reviews.status === 'fulfilled' ? reviews.value : [],
       newReleases: newReleases.status === 'fulfilled' ? newReleases.value : [],
-      moods: moods.status === 'fulfilled' ? moods.value : [], 
+      moods: moods.status === 'fulfilled' ? moods.value : [],
       timestamp: new Date().toISOString(),
     };
   }

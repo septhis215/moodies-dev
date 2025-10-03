@@ -25,13 +25,13 @@ type Review = {
 interface ReviewsSectionProps {
   // accept either an array or TMDB-style object { results: Review[] }
   reviews: Review[] | { results?: Review[] } | undefined;
-  movieId?: string; // optional id used to build the "view all" link
+  contentId?: string; // optional id used to build the "view all" link
   contentType?: "movie" | "tv"; // default is movie; pass "tv" from your tv page
 }
 
 export default function ReviewsSection({
   reviews,
-  movieId,
+  contentId,
   contentType = "movie",
 }: ReviewsSectionProps) {
   // Normalize incoming reviews to an array
@@ -46,19 +46,12 @@ export default function ReviewsSection({
     "latest"
   );
 
-  const [helpfulMap, setHelpfulMap] = useState<Record<string, number>>({});
-  const [markedHelpful, setMarkedHelpful] = useState<Record<string, boolean>>(
-    {}
-  );
-
   useEffect(() => {
     const map: Record<string, number> = {};
     localReviews.forEach((r) => {
       map[r.id] = Math.max(0, Math.round(popularityProxy(r) / 2));
     });
-    setHelpfulMap(map);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once
+  }, []);
 
   function popularityProxy(r: Review) {
     const rating = r.author_details?.rating ?? 0;
@@ -97,22 +90,6 @@ export default function ReviewsSection({
 
   const topThree = sorted.slice(0, 3);
 
-  function toggleHelpful(id: string) {
-    setMarkedHelpful((prev) => {
-      const currently = !!prev[id];
-      const copy = { ...prev, [id]: !currently };
-      setHelpfulMap((hm) => {
-        const currentCount = hm[id] ?? 0;
-        const next = {
-          ...hm,
-          [id]: currently ? Math.max(0, currentCount - 1) : currentCount + 1,
-        };
-        return next;
-      });
-      return copy;
-    });
-  }
-
   function addLocalReview(payload: {
     author: string;
     content: string;
@@ -134,13 +111,11 @@ export default function ReviewsSection({
       url: "",
     };
     setLocalReviews((prev) => [newReview, ...prev]);
-    setHelpfulMap((h) => ({ ...h, [newReview.id]: 0 }));
-    setMarkedHelpful((m) => ({ ...m, [newReview.id]: false }));
   }
 
   // build base path depending on contentType (movie or tv)
   const basePath = contentType === "tv" ? "tv" : "movies";
-  const viewAllHref = movieId ? `/${basePath}/${movieId}/reviews` : "#";
+  const viewAllHref = contentId ? `/${basePath}/${contentId}/reviews` : "#";
 
   return (
     <section className="space-y-6">
@@ -181,7 +156,7 @@ export default function ReviewsSection({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-slate-800/60 text-slate-200 rounded-lg px-3 py-2 text-sm border border-white/6"
+              className="bg-slate-800/60 text-slate-200 rounded-lg px-3 py-2 text-sm border border-white/6 cursor-pointer"
             >
               <option value="latest">Latest</option>
               <option value="highest">Highest</option>
@@ -192,7 +167,7 @@ export default function ReviewsSection({
       </div>
 
       {/* Top 3 grid - Fixed with proper constraints */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence mode="popLayout">
           {topThree.length === 0 ? (
             <motion.div
@@ -253,38 +228,10 @@ export default function ReviewsSection({
                     {/* Action buttons - wrapped properly */}
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div className="flex items-center gap-3 min-w-0">
-                        <button
-                          onClick={() => toggleHelpful(r.id)}
-                          className={`inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full transition flex-shrink-0 ${
-                            markedHelpful[r.id]
-                              ? "bg-indigo-600/80 text-white shadow-sm"
-                              : "bg-white/5 text-slate-200 hover:bg-white/6"
-                          }`}
-                          aria-pressed={!!markedHelpful[r.id]}
-                        >
-                          <motion.span
-                            whileTap={{ scale: 0.92 }}
-                            className="flex items-center gap-2"
-                          >
-                            <svg
-                              width={14}
-                              height={14}
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                              aria-hidden
-                            >
-                              <path d="M2 21h4V9H2v12zM22 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L13.17 2 7.59 7.59C7.22 7.95 7 8.45 7 9v9c0 1.1.9 2 2 2h7c.88 0 1.63-.58 1.86-1.41L22 12.5V10z" />
-                            </svg>
-                            <span className="text-xs">
-                              {helpfulMap[r.id] ?? 0}
-                            </span>
-                          </motion.span>
-                        </button>
-
                         {/* Link to the dedicated all-reviews page */}
-                        {movieId ? (
+                        {contentId ? (
                           <Link
-                            href={`/${basePath}/${movieId}/reviews?highlight=${encodeURIComponent(
+                            href={`/${basePath}/${contentId}/reviews?highlight=${encodeURIComponent(
                               r.id
                             )}`}
                             className="text-xs text-indigo-400 hover:underline truncate"
@@ -329,15 +276,15 @@ export default function ReviewsSection({
 
       {/* 'View all' button that navigates to the dedicated page */}
       <div className="pt-4">
-        {movieId ? (
+        {contentId ? (
           <Link href={viewAllHref} className="inline-block">
-            <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium shadow">
+            <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white text-sm font-medium shadow cursor-pointer">
               View all reviews
             </button>
           </Link>
         ) : (
           <a href={viewAllHref} className="inline-block">
-            <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium shadow">
+            <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white text-sm font-medium shadow cursor-pointer">
               View all reviews
             </button>
           </a>
@@ -366,9 +313,9 @@ function SortButton({
   return (
     <button
       onClick={onClick}
-      className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+      className={`px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
         active
-          ? "bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow"
+          ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white shadow"
           : "bg-white/5 text-slate-200 hover:bg-white/6"
       }`}
     >
@@ -534,7 +481,7 @@ function ReviewForm({
         <button
           type="submit"
           disabled={submitting}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium shadow"
+          className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white text-sm font-medium shadow cursor-pointer"
         >
           {submitting ? "Posting…" : "Post Review"}
         </button>

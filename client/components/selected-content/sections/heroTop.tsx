@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 // Original Content type for internal use
 export type Content = {
@@ -63,7 +64,18 @@ export type MovieDetailsData = {
       profile_path?: string;
     }>;
   };
-  trailer?: any;
+  trailer?: {
+    iso_639_1: string;
+    iso_3166_1: string;
+    name: string;
+    key: string;
+    site: string;
+    size: number;
+    type: string;
+    official: boolean;
+    published_at: string;
+    id: string;
+  };
   providers?: any;
   reviews?: any[];
   similar?: any[];
@@ -126,12 +138,82 @@ export type TvDetailsData = {
       profile_path?: string;
     }>;
   };
-  trailer?: any;
+  trailer?: {
+    iso_639_1: string;
+    iso_3166_1: string;
+    name: string;
+    key: string;
+    site: string;
+    size: number;
+    type: string;
+    official: boolean;
+    published_at: string;
+    id: string;
+  };
   providers?: any;
   reviews?: any[];
   similar?: any[];
   raw?: any;
 };
+
+function TrailerModal({
+  isOpen,
+  onClose,
+  trailerKey,
+  title,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  trailerKey: string;
+  title: string;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-5xl bg-gray-900 rounded-lg overflow-hidden shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+          aria-label="Close trailer"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-6 h-6"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+
+        {/* Video container */}
+        <div className="relative" style={{ paddingBottom: "56.25%" }}>
+          <iframe
+            className="absolute top-0 left-0 w-full h-full"
+            src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
+            title={`${title} Trailer`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StarRating({ rating }: { rating: number }) {
   const fullStars = Math.round(rating / 2); // convert 0-10 -> 0-5
@@ -228,6 +310,16 @@ interface HeroContentCardProps {
 }
 
 export function HeroContentCard({ content, data }: HeroContentCardProps) {
+  const [isTrailerOpen, setIsTrailerOpen] = useState(false);
+
+  const contentType = data?.info?.content_type === "tv" ? "tv" : "movies";
+  const tvInfo = contentType ? (data as TvDetailsData).info : null;
+
+  const trailerKey = data?.trailer?.key;
+
+  const contentId = data?.info?.id ?? content?.id ?? null;
+  const viewAllRef = contentId ? `/${contentType}/${contentId}/reviews` : "#";
+
   // If data prop is provided, map it to the Content format
   const mappedContent: Content = React.useMemo(() => {
     if (content) return content;
@@ -238,6 +330,8 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
 
     const isTV = data.info.content_type === "tv";
     const tvData = isTV ? (data as TvDetailsData) : null;
+
+    console.log("API Results: ", data);
 
     return {
       id: data.info.id,
@@ -256,218 +350,234 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
       director:
         data.info.director ||
         findDirectorOrCreator(data.credits.crew, tvData?.info.created_by),
-      ageRating: data.info.content_rating, // Basic age rating logic
+      ageRating: data.info.content_rating,
     };
   }, [content, data]);
 
-  // Determine if this is a TV show for display purposes
-  const isTV = data?.info.content_type === "tv";
-  const tvInfo = isTV ? (data as TvDetailsData).info : null;
-
   return (
-    <div className="w-full relative text-white font-inter overflow-hidden">
-      {/* Background image - full screen */}
-      <div className="fixed inset-0 -z-10">
-        <Image
-          src={mappedContent.backdrop}
-          alt=""
-          fill
-          priority
-          aria-hidden
-          className="object-cover object-center"
-          style={{
-            filter: "brightness(1.1) grayscale(100%)", // add grayscale to wash out colors
-            objectPosition: "center 50%",
-          }}
-        />
+    <>
+      <div className="w-full relative text-white font-inter overflow-hidden">
+        {/* Background image - full screen */}
+        <div className="fixed inset-0 -z-10">
+          <Image
+            src={mappedContent.backdrop}
+            alt=""
+            fill
+            priority
+            aria-hidden
+            className="object-cover object-center"
+            style={{
+              filter: "brightness(1.1) grayscale(100%)",
+              objectPosition: "center 50%",
+            }}
+          />
 
-        {/* Grey to black gradient overlays */}
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800/20 to-black" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-gray-900/60 to-transparent" />
-      </div>
+          {/* Grey to black gradient overlays */}
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800/20 to-black" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-gray-900/60 to-transparent" />
+        </div>
 
-      {/* Content Container - Add top padding for navbar and adjust height */}
-      <div className="relative min-h-screen pt-20 sm:pt-24 md:pt-16 lg:pt-20 xl:pt-24 flex items-end justify-center px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 lg:pb-16">
-        <div className="w-full max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start lg:items-center">
-            {/* Poster */}
-            <div className="flex-shrink-0 w-34 sm:w-42 lg:w-50 xl:w-58 mx-auto lg:mx-0">
-              <div className="rounded-lg shadow-2xl overflow-hidden transform transition-transform hover:scale-105">
-                <Image
-                  src={mappedContent.poster}
-                  width={300}
-                  height={450}
-                  alt={`${mappedContent.title} poster`}
-                  className="w-full h-auto block"
-                />
+        {/* Content Container - Add top padding for navbar and adjust height */}
+        <div className="relative min-h-screen pt-20 sm:pt-24 md:pt-16 lg:pt-20 xl:pt-24 flex items-end justify-center px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 lg:pb-16">
+          <div className="w-full max-w-7xl mx-auto">
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start lg:items-center">
+              {/* Poster */}
+              <div className="flex-shrink-0 w-34 sm:w-42 lg:w-50 xl:w-58 mx-auto lg:mx-0">
+                <div className="rounded-lg shadow-2xl overflow-hidden transform transition-transform hover:scale-105">
+                  <Image
+                    src={mappedContent.poster}
+                    width={300}
+                    height={450}
+                    alt={`${mappedContent.title} poster`}
+                    className="w-full h-auto block"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Info */}
-            <div className="flex-1 text-center lg:text-left space-y-3 lg:space-y-4">
-              {/* Title and Year */}
-              <div>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tracking-tight leading-tight">
-                  {mappedContent.title}
-                </h1>
-                <div className="mt-3 flex items-center justify-center lg:justify-start gap-3 flex-wrap">
-                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm bg-white/10 border border-white/20 px-3 py-1 rounded-md">
-                    {mappedContent.year}
-                  </span>
-                  {mappedContent.ageRating && (
-                    <span className="text-xs sm:text-xs lg:text-xs xl:text-sm bg-green-600 text-black px-3 py-1 rounded-md font-medium">
-                      {mappedContent.ageRating}
+              {/* Info */}
+              <div className="flex-1 text-center lg:text-left space-y-3 lg:space-y-4">
+                {/* Title and Year */}
+                <div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tracking-tight leading-tight">
+                    {mappedContent.title}
+                  </h1>
+                  <div className="mt-3 flex items-center justify-center lg:justify-start gap-3 flex-wrap">
+                    <span className="text-xs sm:text-xs lg:text-xs xl:text-sm bg-white/10 border border-white/20 px-3 py-1 rounded-md">
+                      {mappedContent.year}
                     </span>
+                    {mappedContent.ageRating && (
+                      <span className="text-xs sm:text-xs lg:text-xs xl:text-sm bg-green-600 text-black px-3 py-1 rounded-md font-medium">
+                        {mappedContent.ageRating}
+                      </span>
+                    )}
+                    <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/85 flex items-center gap-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-3 h-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path strokeWidth={2.5} d="M12 3v18m9-9H3" />
+                      </svg>
+                      {mappedContent.runtime}
+                    </span>
+                    {/* TV-specific info: seasons and episodes */}
+                    {contentType && tvInfo && (
+                      <>
+                        {tvInfo.number_of_seasons && (
+                          <span className="text-sm text-white/70 flex items-center gap-2">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="w-4 h-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
+                              <rect
+                                width="18"
+                                height="18"
+                                x="3"
+                                y="3"
+                                rx="2"
+                                ry="2"
+                              />
+                              <line x1="9" x2="9" y1="9" y2="15" />
+                              <line x1="15" x2="15" y1="9" y2="15" />
+                            </svg>
+                            {tvInfo.number_of_seasons} Season
+                            {tvInfo.number_of_seasons !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {tvInfo.number_of_episodes && (
+                          <span className="text-sm text-white/70">
+                            {tvInfo.number_of_episodes} Episodes
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Director/Creator and Rating */}
+                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">
+                      {contentType ? "Created by" : "Directed by"}
+                    </span>
+                    <span className="text-xs sm:text-xs lg:text-xs xl:text-sm font-medium text-white">
+                      {mappedContent.director ?? "Unknown"}
+                    </span>
+                  </div>
+                  <StarRating rating={mappedContent.rating} />
+                </div>
+
+                {/* Network info for TV shows */}
+                {contentType &&
+                  tvInfo?.networks &&
+                  tvInfo.networks.length > 0 && (
+                    <div className="flex items-center justify-center lg:justify-start gap-2">
+                      <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">
+                        Network:
+                      </span>
+                      <span className="text-xs sm:text-xs lg:text-xs xl:text-sm font-medium text-white">
+                        {tvInfo.networks.map((n) => n.name).join(", ")}
+                      </span>
+                    </div>
                   )}
-                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/85 flex items-center gap-2">
+
+                {/* Genres */}
+                <div className="flex items-center justify-center lg:justify-start gap-2 flex-wrap">
+                  {mappedContent.genres.map((g) => (
+                    <GenreBadge key={g}>{g}</GenreBadge>
+                  ))}
+                </div>
+
+                {/* Overview */}
+                <ReadMore text={mappedContent.overview} limit={200} />
+
+                {/* Actions */}
+                <div className="flex items-center justify-center lg:justify-start gap-3 flex-wrap pt-2">
+                  <button
+                    onClick={() => trailerKey && setIsTrailerOpen(true)}
+                    disabled={!trailerKey}
+                    className="inline-flex items-center gap-2 bg-white text-black px-6 py-3 rounded-lg hover:bg-white/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="w-3 h-3"
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M5 3v18l15-9L5 3z" />
+                    </svg>
+                    <span>Trailer</span>
+                  </button>
+
+                  <button className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-6 py-3 rounded-lg hover:bg-white/20 transition-colors">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-5 h-5"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
                     >
-                      <path strokeWidth={2.5} d="M12 3v18m9-9H3" />
+                      <path
+                        strokeWidth={1.5}
+                        d="M12 21l-8-4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12l-8 4z"
+                      />
                     </svg>
-                    {mappedContent.runtime}
-                  </span>
-                  {/* TV-specific info: seasons and episodes */}
-                  {isTV && tvInfo && (
-                    <>
-                      {tvInfo.number_of_seasons && (
-                        <span className="text-sm text-white/70 flex items-center gap-2">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="w-4 h-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                          >
-                            <rect
-                              width="18"
-                              height="18"
-                              x="3"
-                              y="3"
-                              rx="2"
-                              ry="2"
-                            />
-                            <line x1="9" x2="9" y1="9" y2="15" />
-                            <line x1="15" x2="15" y1="9" y2="15" />
-                          </svg>
-                          {tvInfo.number_of_seasons} Season
-                          {tvInfo.number_of_seasons !== 1 ? "s" : ""}
-                        </span>
-                      )}
-                      {tvInfo.number_of_episodes && (
-                        <span className="text-sm text-white/70">
-                          {tvInfo.number_of_episodes} Episodes
-                        </span>
-                      )}
-                    </>
-                  )}
+                    <span>Watchlist</span>
+                  </button>
+
+                  <button className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-6 py-3 rounded-lg hover:bg-white/20 transition-colors">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                    </svg>
+                    <span>Like</span>
+                  </button>
+
+                  <Link href={viewAllRef} className="inline-block">
+                    <button className="inline-flex items-center gap-2 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] px-6 py-3 rounded-lg transition-colors cursor-pointer">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M7.5 8.25h9m-9 3h6.75M21 12c0 4.418-4.03 8-9 8-1.043 0-2.047-.158-2.975-.45L4.5 20.25l1.196-2.392C4.65 16.76 4 14.463 4 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                        />
+                      </svg>
+                      <span>Review</span>
+                    </button>
+                  </Link>
                 </div>
-              </div>
-
-              {/* Director/Creator and Rating */}
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">
-                    {isTV ? "Created by" : "Directed by"}
-                  </span>
-                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm font-medium text-white">
-                    {mappedContent.director ?? "Unknown"}
-                  </span>
-                </div>
-                <StarRating rating={mappedContent.rating} />
-              </div>
-
-              {/* Network info for TV shows */}
-              {isTV && tvInfo?.networks && tvInfo.networks.length > 0 && (
-                <div className="flex items-center justify-center lg:justify-start gap-2">
-                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">
-                    Network:
-                  </span>
-                  <span className="text-xs sm:text-xs lg:text-xs xl:text-sm font-medium text-white">
-                    {tvInfo.networks.map((n) => n.name).join(", ")}
-                  </span>
-                </div>
-              )}
-
-              {/* Genres */}
-              <div className="flex items-center justify-center lg:justify-start gap-2 flex-wrap">
-                {mappedContent.genres.map((g) => (
-                  <GenreBadge key={g}>{g}</GenreBadge>
-                ))}
-              </div>
-
-              {/* Overview */}
-              <ReadMore text={mappedContent.overview} limit={200} />
-
-              {/* Actions */}
-              <div className="flex items-center justify-center lg:justify-start gap-3 flex-wrap pt-2">
-                <button className="inline-flex items-center gap-2 bg-white text-black px-6 py-3 rounded-lg hover:bg-white/90 transition-colors font-medium">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-5 h-5"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M5 3v18l15-9L5 3z" />
-                  </svg>
-                  <span>Trailer</span>
-                </button>
-
-                <button className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-6 py-3 rounded-lg hover:bg-white/20 transition-colors">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-5 h-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeWidth={1.5}
-                      d="M12 21l-8-4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12l-8 4z"
-                    />
-                  </svg>
-                  <span>Watchlist</span>
-                </button>
-
-                <button className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-6 py-3 rounded-lg hover:bg-white/20 transition-colors">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-5 h-5"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                  </svg>
-                  <span>Like</span>
-                </button>
-
-                <button className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg transition-colors">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-5 h-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M7.5 8.25h9m-9 3h6.75M21 12c0 4.418-4.03 8-9 8-1.043 0-2.047-.158-2.975-.45L4.5 20.25l1.196-2.392C4.65 16.76 4 14.463 4 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                    />
-                  </svg>
-                  <span>Review</span>
-                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Trailer Modal */}
+      {trailerKey && (
+        <TrailerModal
+          isOpen={isTrailerOpen}
+          onClose={() => setIsTrailerOpen(false)}
+          trailerKey={trailerKey}
+          title={mappedContent.title}
+        />
+      )}
+    </>
   );
 }
 

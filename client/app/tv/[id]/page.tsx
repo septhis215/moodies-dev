@@ -57,13 +57,46 @@ async function fetchVideos(id: string) {
   }
 }
 
+async function fetchRecommendations(id: string) {
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(`${base}/tv/recommendations/${id}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: { id: string } | Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  return { title: `TV ${id}` };
+  const data = await fetchDetails(id);
+
+  if (!data || !data.info) {
+    return {
+      title: "TV Show not found",
+    };
+  }
+
+  const info = data.info;
+
+  const title =
+    info.title?.trim() ||
+    info.name?.trim() ||
+    info.original_title?.trim() ||
+    `TV Show ${info.id ?? ""}`;
+
+  const metadata: Metadata = {
+    title
+  };
+
+  return metadata;
 }
 
 export default async function TvPage({
@@ -75,6 +108,7 @@ export default async function TvPage({
   const data = await fetchDetails(id);
   const images = await fetchImages(id);
   const videos = await fetchVideos(id);
+  const recommendations = await fetchRecommendations(id);
 
   if (!data) {
     return (
@@ -127,7 +161,7 @@ export default async function TvPage({
           <hr className="border-white/8 my-14" />
           <ReviewsSection
             reviews={data.reviews}
-            movieId={id}
+            contentId={id}
             contentType="tv"
           />
 
@@ -135,7 +169,7 @@ export default async function TvPage({
           <CardCarousel
             title="Something Similar"
             subtitle="TV shows you may also enjoy"
-            items={data.similar}
+            items={recommendations}
           />
         </div>
       </div>

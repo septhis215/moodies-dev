@@ -94,7 +94,7 @@ export default function TrailerModal({
               <div className="flex gap-4 xl:gap-6 items-start">
                 {trailer.poster_path && (
                   <div
-                    className="w-20 xl:w-32 flex-shrink-0 cursor-pointer"
+                    className="w-20 h-auto xl:w-32 flex-shrink-0 cursor-pointer"
                     onClick={() => handleClick(trailer)}
                   >
                     <img
@@ -200,7 +200,7 @@ export default function TrailerModal({
                       onClick={() => onSelectTrailer(rec)}
                       title={rec.title}
                     >
-                      <div className="aspect-[2/3] relative overflow-hidden cursor-pointer">
+                      <div className="aspect-[2/3] w-auto h-auto relative overflow-hidden cursor-pointer">
                         <Image
                           src={`https://image.tmdb.org/t/p/w300${rec.poster_path}`}
                           alt={rec.title}
