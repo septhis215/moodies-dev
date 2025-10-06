@@ -19,9 +19,6 @@ import {
 import { Type } from 'class-transformer';
 
 export class RegisterDto {
-  @IsString()
-  @IsNotEmpty()
-  id: string;
 
   @IsString()
   @IsNotEmpty()
@@ -54,34 +51,32 @@ export class RegisterDto {
   @IsInt({ message: 'Age must be an number' })
   age?: number;
 
-  @IsArray()
-  @IsNotEmpty()
-  @IsString({ each: true })
-  @ArrayNotEmpty({
-    message: 'Preferred genres cannot be empty',
-  })
-  @ArrayMinSize(1, {
-    message: 'Select at least 1 genre',
-  })
-  @ArrayMaxSize(3, {
-    message: 'Select at most 3 genres',
-  })
-  preferredGenres: string[];
+  // @IsArray()
+  // @IsString({ each: true })
+  // @ArrayNotEmpty({
+  //   message: 'Preferred genres cannot be empty',
+  // })
+  // @ArrayMinSize(1, {
+  //   message: 'Select at least 1 genre',
+  // })
+  // @ArrayMaxSize(3, {
+  //   message: 'Select at most 3 genres',
+  // })
+  // preferredGenres: string[];
 
-  @IsArray()
-  @IsNotEmpty()
-  @IsString({ each: true })
-  @ArrayNotEmpty({
-    message:
-      'Preferred languages cannot be empty',
-  })
-  @ArrayMinSize(1, {
-    message: 'Select at least 1 language',
-  })
-  @ArrayMaxSize(3, {
-    message: 'Select at most 3 languages',
-  })
-  preferredLanguages: string[];
+  // @IsArray()
+  // @IsString({ each: true })
+  // @ArrayNotEmpty({
+  //   message:
+  //     'Preferred languages cannot be empty',
+  // })
+  // @ArrayMinSize(1, {
+  //   message: 'Select at least 1 language',
+  // })
+  // @ArrayMaxSize(3, {
+  //   message: 'Select at most 3 languages',
+  // })
+  // preferredLanguages: string[];
 
   @Type(() => Date)
   @IsDate()
