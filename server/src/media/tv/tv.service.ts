@@ -12,7 +12,7 @@ export type TmdbTv = {
   genres?: string[];
   poster_path: string | null;
   backdrop_path: string | null;
-  release_date?: string | null;
+  release_date: string;
   vote_average?: number;
   vote_count?: number;
   popularity?: number;
@@ -506,8 +506,10 @@ export class TvService implements OnModuleInit {
 
         if (results.length === 0) break;
       }
-
-      const tvContent: TmdbTv[] = allResults.map((m: any) => ({
+      const uniqueItems = Array.from(
+        new Map(allResults.map((item) => [item.id, item])).values()
+      );
+      const tvContent: TmdbTv[] = uniqueItems.map((m: any) => ({
         id: m.id,
         title: m.title ?? m.name ?? 'Untitled',
         overview: m.overview ?? '',
@@ -563,8 +565,10 @@ export class TvService implements OnModuleInit {
 
         if (results.length === 0) break;
       }
-
-      const basicItems: TmdbTv[] = allResults
+      const uniqueItems = Array.from(
+        new Map(allResults.map((item) => [item.id, item])).values()
+      );
+      const basicItems: TmdbTv[] = uniqueItems
         .slice(0, minRequired)
         .map((m: any) => ({
           id: m.id,
@@ -617,8 +621,10 @@ export class TvService implements OnModuleInit {
 
         if (filtered.length === 0) break;
       }
-
-      const items: TmdbTv[] = allResults
+      const uniqueItems = Array.from(
+        new Map(allResults.map((item) => [item.id, item])).values()
+      );
+      const items: TmdbTv[] = uniqueItems
         .slice(0, minRequired)
         .map((m) => this.mapToTmdbTv(m, true));
 
@@ -655,8 +661,10 @@ export class TvService implements OnModuleInit {
 
         if (filtered.length === 0) break;
       }
-
-      const items: TmdbTv[] = allResults
+      const uniqueItems = Array.from(
+        new Map(allResults.map((item) => [item.id, item])).values()
+      );
+      const items: TmdbTv[] = uniqueItems
         .slice(0, minRequired)
         .map((m) => this.mapToTmdbTv(m, true));
 
@@ -694,8 +702,10 @@ export class TvService implements OnModuleInit {
 
         if (clean.length === 0) break;
       }
-
-      const all: TmdbTv[] = allResults.map((m: any) => ({
+      const uniqueItems = Array.from(
+        new Map(allResults.map((item) => [item.id, item])).values()
+      );
+      const all: TmdbTv[] = uniqueItems.map((m: any) => ({
         id: m.id,
         title: m.title ?? m.name ?? 'Untitled',
         overview: m.overview ?? '',
@@ -742,8 +752,10 @@ export class TvService implements OnModuleInit {
 
         if (filtered.length === 0) break;
       }
-
-      const items: TmdbTv[] = allResults
+      const uniqueItems = Array.from(
+        new Map(allResults.map((item) => [item.id, item])).values()
+      );
+      const items: TmdbTv[] = uniqueItems
         .slice(0, minRequired)
         .map((m) => this.mapToTmdbTv(m, true));
 
@@ -798,8 +810,10 @@ export class TvService implements OnModuleInit {
 
         if (filtered.length === 0) break;
       }
-
-      const items: TmdbTv[] = allResults
+      const uniqueItems = Array.from(
+        new Map(allResults.map((item) => [item.id, item])).values()
+      );
+      const items: TmdbTv[] = uniqueItems
         .slice(0, minRequired)
         .map((m) => this.mapToTmdbTv(m, true));
 
@@ -1077,7 +1091,11 @@ export class TvService implements OnModuleInit {
         if (filtered.length === 0) break;
       }
 
-      const items: TmdbTv[] = allResults.slice(0, minRequired).map((m) => {
+      const uniqueItems = Array.from(
+        new Map(allResults.map((item) => [item.id, item])).values()
+      );
+
+      const items: TmdbTv[] = uniqueItems.slice(0, minRequired).map((m) => {
         const type = 'tv'
         return {
           id: m.id,
@@ -1187,28 +1205,36 @@ export class TvService implements OnModuleInit {
     }
   }
 
-  async getUpcomingTrailers(limit = 30): Promise<TmdbTv[]> {
+  async getNewReleases(limit = 30): Promise<TmdbTv[]> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
-      this.logger.warn('TMDB_API_KEY not set; returning empty trailers');
+      this.logger.warn('TMDB_API_KEY not set; returning empty new releases');
       return [];
     }
 
     try {
       const items: TmdbTv[] = [];
       const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
       const maxPages = 20;
+      // last 7 days
+      const lastWeek = new Date();
+      lastWeek.setDate(today.getDate() - 7);
+      const lastWeekStr = lastWeek.toISOString().split("T")[0];
+
+      // next 7 days
+      const nextWeek = new Date();
+      nextWeek.setDate(today.getDate() + 7);
+      const nextWeekStr = nextWeek.toISOString().split("T")[0];
 
       for (let page = 1; page <= maxPages && items.length < minRequired; page++) {
-        const url = `discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&page=${page}`;
+        const url = `discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${lastWeekStr}&first_air_date.lte=${nextWeekStr}&page=${page}`;
+
         const data = await this.tmdb(url);
         const results = data?.results ?? [];
 
         const trailerTasks = results.map((m: any) => async () => {
-          const rd = m.release_date ?? m.first_air_date;
-          if (!rd || new Date(rd) < today) return null;
+          const rd = m.first_air_date;
 
           try {
             const [videosData, details] = await Promise.all([
@@ -1220,7 +1246,6 @@ export class TvService implements OnModuleInit {
               (v: any) => v.type === 'Trailer' && v.site === 'YouTube',
             );
             if (!trailer) return null;
-
             return {
               id: m.id,
               title: m.title ?? m.name ?? 'Untitled',
@@ -1249,33 +1274,133 @@ export class TvService implements OnModuleInit {
         items.push(...pageResults);
       }
 
-      const sorted = items
+      const withImages = items.filter((item) => item.backdrop_path !== null && item.poster_path !== null);
+
+      // Deduplicate by `id`
+      const uniqueItems = Array.from(
+        new Map(withImages.map((item) => [item.id, item])).values()
+      );
+      // ---- Priority sorting ----
+      const todayStr = today.toISOString().split("T")[0];
+      const yesterdayStr = new Date(today); yesterdayStr.setDate(today.getDate() - 1);
+      const tomorrowStr = new Date(today); tomorrowStr.setDate(today.getDate() + 1);
+      const next2Str = new Date(today); next2Str.setDate(today.getDate() + 2);
+
+      const priorityDates = new Set([
+        yesterdayStr.toISOString().split("T")[0],
+        todayStr,
+        tomorrowStr.toISOString().split("T")[0],
+        next2Str.toISOString().split("T")[0],
+      ]);
+
+      const [priority, others] = uniqueItems.reduce<[TmdbTv[], TmdbTv[]]>(
+        (acc, item) => {
+          if (priorityDates.has(item.release_date)) acc[0].push(item);
+          else acc[1].push(item);
+          return acc;
+        },
+        [[], []],
+      );
+
+      // Sort priority by exact date (today first, then ±1, then +2)
+      const orderedPriority = priority.sort(
+        (a, b) =>
+          new Date(a.release_date).getTime() - new Date(b.release_date).getTime(),
+      );
+
+      // Sort others normally by date
+      const orderedOthers = others.sort(
+        (a, b) =>
+          new Date(a.release_date).getTime() - new Date(b.release_date).getTime(),
+      );
+
+      // Combine: priority first, then others
+      const sorted = [...orderedPriority, ...orderedOthers].slice(0, limit);
+
+      return sorted;
+    } catch (err) {
+      this.logger.error('Failed to fetch upcoming trailers', err as any);
+      return [];
+    }
+  }
+  
+  async getUpcomingTrailers(limit = 60): Promise<TmdbTv[]> {
+    const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
+
+    if (!this.token) {
+      this.logger.warn('TMDB_API_KEY not set; returning empty trailers');
+      return [];
+    }
+
+    try {
+      const items: TmdbTv[] = [];
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      const maxPages = 20;
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 3);
+      const nextMonthStr = nextMonth.toISOString().split('T')[0];
+
+      for (let page = 1; page <= maxPages && items.length < minRequired; page++) {
+        const url = `discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&first_air_date.lte=${nextMonthStr}&page=${page}`;
+
+        const data = await this.tmdb(url);
+        const results = data?.results ?? [];
+
+        const trailerTasks = results.map((m: any) => async () => {
+          const rd = m.release_date ?? m.first_air_date;
+
+          try {
+            const [videosData, details] = await Promise.all([
+              this.tmdb(`tv/${m.id}/videos?language=en-US`),
+              this.tmdb(`tv/${m.id}?language=en-US`),
+            ]);
+
+            const trailer = (videosData?.results ?? []).find(
+              (v: any) => v.type === 'Trailer' && v.site === 'YouTube',
+            );
+            if (!trailer) return null;
+            return {
+              id: m.id,
+              title: m.title ?? m.name ?? 'Untitled',
+              overview: m.overview ?? '',
+              poster_path: m.poster_path ?? null,
+              backdrop_path: m.backdrop_path ?? null,
+              release_date: rd,
+              vote_average: m.vote_average,
+              trailer_key: trailer.key,
+              type: 'tv' as ContentType,
+              recommendations: [],
+              number_of_episodes: details.number_of_episodes ?? null,
+              genres: details.genres
+                ? details.genres.map((g: any) => g.name)
+                : [],
+            } as TmdbTv;
+          } catch {
+            return null;
+          }
+        });
+
+        const pageResults = (
+          await this.withConcurrencyLimit(trailerTasks)
+        ).filter((item): item is TmdbTv => item !== null);
+
+        items.push(...pageResults);
+      }
+
+      const withImages = items.filter((item) => item.backdrop_path !== null && item.poster_path !== null);
+
+      // Deduplicate by `id`
+      const uniqueItems = Array.from(
+        new Map(withImages.map((item) => [item.id, item])).values()
+      );
+      const sorted = uniqueItems
         .sort(
           (a, b) =>
             (a.release_date ? new Date(a.release_date).getTime() : Infinity) -
             (b.release_date ? new Date(b.release_date).getTime() : Infinity),
         )
-        .slice(0, minRequired);
-
-      setTimeout(async () => {
-        const tasks = sorted.map((item) => async () => {
-          try {
-            item.recommendations = await this.getSmartRecommendationsTv(
-              item.id,
-              3,
-            );
-            return item;
-          } catch (err) {
-            this.logger.error(
-              `Failed to populate recommendations for ${item.id}`,
-              err,
-            );
-            return item;
-          }
-        });
-
-        await this.withConcurrencyLimit(tasks, 3);
-      }, 100);
+        .slice(0, limit);
 
       return sorted;
     } catch (err) {
@@ -1288,17 +1413,84 @@ export class TvService implements OnModuleInit {
     const data = await this.tmdb(`${type}/${id}/images`);
     if (!data) return { posters: [], backdrops: [] };
 
-    const posters: string[] = (data.posters ?? [])
-      .map((p: any) => p?.file_path ?? null)
-      .filter((fp: string | null): fp is string => Boolean(fp));
+    const THRESHOLD = 2.5;
 
-    const backdrops: string[] = (data.backdrops ?? [])
-      .map((b: any) => b?.file_path ?? null)
-      .filter((fp: string | null): fp is string => Boolean(fp));
+    const filterThreshold = (images: any[] = []) => {
+      const above = images.filter(img => img?.vote_average && img.vote_average >= THRESHOLD);
+      return (above.length > 0 ? above : images)
+        .map(img => img?.file_path ?? null)
+        .filter((f: string | null): f is string => Boolean(f));
+    }
+
+    const posters: string[] = filterThreshold(data?.posters);
+    const backdrops: string[] = filterThreshold(data?.backdrops);
 
     return { posters, backdrops };
   }
 
+  async videos(id: number, type: string) {
+    const data = await this.tmdb(`${type}/${id}/videos`);
+    if (!data) return { videos: [] };
+
+    const PRIORITY_TYPES = ['Trailer', 'Teaser', 'Clip', 'Featurette'];
+    const MIN_SIZE = 720; // Minimum video quality (720p or higher)
+
+    const videos: Array<{
+      id: string;
+      key: string;
+      name: string;
+      site?: string | null;
+      type?: string | null;
+      size?: number | null;
+      official: boolean;
+      iso_639_1?: string | null;
+      iso_3166_1?: string | null;
+      published_at?: string | null;
+    }> = (data.results ?? [])
+      .filter((v: any) => {
+        return (
+          Boolean(v?.key) && 
+          (v?.site?.toLowerCase() === 'youtube') && 
+          Boolean(v?.official) && // Official content only
+          (typeof v?.size === 'number' ? v.size >= MIN_SIZE : true) && // HD quality or unknown
+          PRIORITY_TYPES.includes(v?.type) // Relevant video types
+        );
+      })
+      .sort((a: any, b: any) => {
+        const typeOrder = (type: string) => PRIORITY_TYPES.indexOf(type);
+
+        const aPriority = typeOrder(a.type);
+        const bPriority = typeOrder(b.type);
+
+        if (aPriority !== bPriority) return aPriority - bPriority;
+
+        const aSize = a.size ?? 0;
+        const bSize = b.size ?? 0;
+        if (aSize !== bSize) return bSize - aSize; // Higher quality first
+
+        const aDate = new Date(a.published_at ?? 0).getTime();
+        const bDate = new Date(b.published_at ?? 0).getTime();
+        return bDate - aDate;
+      })
+      .slice(0, 30) 
+      .map((v: any) => ({
+        id: v?.id ?? "",
+        key: v?.key ?? "",
+        name: v?.name ?? "",
+        site: v?.site ?? null,
+        type: v?.type ?? null,
+        size: typeof v?.size === "number" ? v.size : null,
+        official: Boolean(v?.official),
+        iso_639_1: v?.iso_639_1 ?? null,
+        iso_3166_1: v?.iso_3166_1 ?? null,
+        published_at: v?.published_at ?? null,
+      }));
+
+    return { videos };
+  }
+
+
+  // Get trailer for TV show
   async getTrailers(limit = 30): Promise<TmdbTv[]> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 

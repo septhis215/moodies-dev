@@ -176,8 +176,10 @@ export class AllService implements OnModuleInit {
             ]);
 
             const results = [...(movies?.results ?? []), ...(tv?.results ?? [])];
-
-            const all: TmdbAll[] = results.map((m: any) => ({
+            const uniqueItems = Array.from(
+                new Map(results.map((item) => [item.id, item])).values()
+            );
+            const all: TmdbAll[] = uniqueItems.map((m: any) => ({
                 id: m.id,
                 title: m.title ?? m.name ?? 'Untitled',
                 overview: m.overview ?? '',
@@ -230,8 +232,10 @@ export class AllService implements OnModuleInit {
                 const date = new Date(m.release_date ?? m.first_air_date ?? '');
                 return date >= new Date(this.getRecentDate(365)); // last 12 months
             });
-
-            const basicItems: TmdbAll[] = results.slice(0, limit).map((m: any) => ({
+            const uniqueItems = Array.from(
+                new Map(results.map((item) => [item.id, item])).values()
+            );
+            const basicItems: TmdbAll[] = uniqueItems.slice(0, limit).map((m: any) => ({
                 id: m.id,
                 title: m.title ?? m.name ?? 'Untitled',
                 overview: m.overview ?? '',
@@ -638,9 +642,11 @@ export class AllService implements OnModuleInit {
 
             // Post-fetch aggressive filter
             results = this.filterAdultishContent(results);
-
+            const uniqueItems = Array.from(
+                new Map(results.map((item) => [item.id, item])).values()
+            );
             // Process basic info first and defer recommendations
-            const items: TmdbAll[] = results.slice(0, limit).map(m => {
+            const items: TmdbAll[] = uniqueItems.slice(0, limit).map(m => {
                 const type = m.media_type ?? (m.first_air_date ? 'tv' : 'movie');
                 return {
                     id: m.id,
@@ -705,35 +711,13 @@ export class AllService implements OnModuleInit {
         }
 
         try {
-            // Multi-source approach to get diverse content with trailers
-            const sources = [
-                // Korean content (original focus)
-                `${this.baseUrl}/discover/tv?with_original_language=ko&sort_by=popularity.desc&page=1`,
-                // Popular TV with high ratings (likely to have trailers)
-                `${this.baseUrl}/tv/popular?language=en-US&page=1`,
-                // Top rated TV (quality content)
-                `${this.baseUrl}/tv/top_rated?language=en-US&page=1`,
-                // Recent releases (likely to have trailers)
-                `${this.baseUrl}/discover/tv?sort_by=release_date.desc&first_air_date.gte=${new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}&page=1`
-            ];
-
-            // Fetch from multiple sources
-            const allResults: any[] = [];
-            for (const url of sources) {
-                try {
-                    const data = await this.tmdb(url);
-                    if (data?.results?.length) {
-                        allResults.push(...data.results);
-                    }
-                } catch (err) {
-                    this.logger.warn(`Failed to fetch from source: ${url}`, err);
-                }
-            }
-
+            const data = await this.tmdb(`${this.baseUrl}/trending/all/week?language=en-US&page=1`);
+            const results = Array.isArray(data?.results) ? data.results : [];
+            if (!results.length) return [];
             // Deduplicate by ID while preserving order (Korean content first)
             const uniqueItems: any[] = [];
             const seenIds = new Set<number>();
-            for (const item of allResults) {
+            for (const item of results) {
                 if (!seenIds.has(item.id)) {
                     seenIds.add(item.id);
                     uniqueItems.push(item);
@@ -743,7 +727,7 @@ export class AllService implements OnModuleInit {
             // Process with enhanced trailer fetching
             const trailerTasks = uniqueItems.slice(0, limit * 2).map((m: any) => async (): Promise<TmdbAll | null> => {
                 try {
-                    const type = 'tv'; // Focus on TV series
+                    const type = m.media_type; // Focus on TV series
 
                     // Fetch videos, details, and additional info in parallel
                     const [videosData, details] = await Promise.all([
@@ -809,14 +793,6 @@ export class AllService implements OnModuleInit {
     // Keep existing methods with optimizations
     async getFavorites(limit = 30): Promise<TmdbAll[]> {
         const ttlSec = this.CACHE_TTL.BASIC_DATA;
-        // const cacheKey = `favorites`;
-        // const cached = await this.redisService.get(cacheKey);
-        // if (cached) {
-        //     try {
-        //         const parsed = JSON.parse(cached) as TmdbAll[];
-        //         return parsed.slice(0, limit);
-        //     } catch { }
-        // }
 
         if (!this.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty favorites');
@@ -824,34 +800,57 @@ export class AllService implements OnModuleInit {
         }
 
         try {
-            const data = await this.tmdb('/trending/all/day');
-            const results = data?.results ?? [];
-            const filtered = results.filter((item: any) => item.media_type === 'movie' || item.media_type === 'tv');
+            const MIN_RESULTS = 25;
+            const MAX_PAGES = 5; // safety cap
+            let collected: TmdbAll[] = [];
 
-            // apply adult-ish filter
-            const clean = this.filterAdultishContent(filtered);
+            for (let page = 1; page <= MAX_PAGES && collected.length < limit; page++) {
+                const data = await this.tmdb(`/trending/all/day?page=${page}`);
+                const results = data?.results ?? [];
 
-            const all: TmdbAll[] = clean.map((m: any) => ({
-                id: m.id,
-                title: m.title ?? m.name ?? 'Untitled',
-                overview: m.overview ?? '',
-                genres: m.genre_ids ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown') : [],
-                poster_path: m.poster_path ?? null,
-                backdrop_path: m.backdrop_path ?? null,
-                release_date: m.release_date ?? m.first_air_date ?? null,
-                vote_average: m.vote_average,
-                type: m.media_type,
-            }));
+                const filtered = results.filter(
+                    (item: any) => item.media_type === 'movie' || item.media_type === 'tv'
+                );
 
-            const shuffled = shuffleArray(all);
-            const sliced = shuffled.slice(0, Math.max(0, limit));
-            // await this.redisService.set(cacheKey, JSON.stringify(sliced), ttlSec);
+                const clean = this.filterAdultishContent(filtered);
+                const uniqueItems = Array.from(
+                    new Map(clean.map((item) => [item.id, item])).values()
+                );
+                const mapped: TmdbAll[] = uniqueItems.map((m: any) => ({
+                    id: m.id,
+                    title: m.title ?? m.name ?? 'Untitled',
+                    overview: m.overview ?? '',
+                    genres: m.genre_ids
+                        ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
+                        : [],
+                    poster_path: m.poster_path ?? null,
+                    backdrop_path: m.backdrop_path ?? null,
+                    release_date: m.release_date ?? m.first_air_date ?? null,
+                    vote_average: m.vote_average,
+                    type: m.media_type,
+                }));
+
+                collected.push(...mapped);
+            }
+
+            // Ensure at least MIN_RESULTS (fallback if TMDB had fewer results)
+            if (collected.length < MIN_RESULTS) {
+                this.logger.warn(
+                    `Only ${collected.length} favorites collected, less than the minimum ${MIN_RESULTS}`
+                );
+            }
+
+            // Shuffle *after* collecting enough
+            const shuffled = shuffleArray(collected);
+            const sliced = shuffled.slice(0, Math.max(MIN_RESULTS, limit));
+
             return sliced;
         } catch (err) {
             this.logger.error('Failed to fetch favorites', err as any);
             return [];
         }
     }
+
 
     // Legacy methods kept for compatibility
     async getRecommendations(type: 'movie' | 'tv', id: number, limit = 10): Promise<TmdbAll[]> {

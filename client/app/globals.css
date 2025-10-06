@@ -100,6 +100,7 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --nav-height: 40px;
 }
 
 .dark {
@@ -193,4 +194,46 @@
 
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+@keyframes ken-burns {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.1);
+  }
+}
+
+/* utility class you can reuse in JSX */
+.animate-ken-burns {
+  animation: ken-burns 8s ease-out both;
+}
+.kinetic {
+  animation: kinetic 900ms ease both;
+}
+@keyframes kinetic {
+  0% {
+    transform: translateY(-8px) scale(0.98);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes mosaic {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.animate-mosaic {
+  animation: mosaic 8s linear infinite;
 }

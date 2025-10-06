@@ -144,32 +144,30 @@ export class MoodsService {
         });
     }
 
-    private async generateRecommendations(mood: Mood, dto: GetRecommendationsDto): Promise<any[]> {
+    private async generateRecommendations(
+        mood: Mood,
+        dto: GetRecommendationsDto,
+    ): Promise<any[]> {
         const recommendations: any[] = [];
         const targetLimit = dto.limit || 12;
 
-        // Get user's mood history for personalization
+        // User mood history & preferences
         let userMoodHistory: (MoodLog & { mood: Mood })[] = [];
         if (dto.userId) {
             userMoodHistory = await this.getUserMoodHistory(dto.userId, 20);
         }
 
-        // Get user preferences if available
         const userPreferences = dto.userId
             ? await this.prisma.userPreference.findUnique({ where: { userId: dto.userId } })
             : null;
 
-        // Fetch from multiple pages to ensure variety and avoid duplicates
-        const pagesToFetch = Math.max(10, Math.ceil(targetLimit / 10)); // Ensure we fetch enough pages
-        const shuffledPages = this.shuffleArray([...Array(20)].map((_, i) => i + 1)).slice(0, pagesToFetch);
-
-        this.logger.debug(`Fetching from pages: ${shuffledPages.join(', ')} for mood: ${mood.name}`);
-
-        // Collect all content from multiple pages
+        // Collect all content until we reach targetLimit (or max pages)
         const allMovies: any[] = [];
         const allTVShows: any[] = [];
+        let page = 1;
+        const maxPages = 50; // safeguard
 
-        for (const page of shuffledPages) {
+        while ((allMovies.length + allTVShows.length) < targetLimit * 2 && page <= maxPages) {
             try {
                 if (dto.mediaType === 'both' || dto.mediaType === 'movie') {
                     const movies = await this.tmdbService.getMoviesByGenres(
@@ -190,19 +188,23 @@ export class MoodsService {
                 }
             } catch (error) {
                 this.logger.warn(`Failed to fetch page ${page} for mood ${mood.name}:`, error.message);
-                // Continue with other pages
             }
+            page++;
         }
 
-        // Remove duplicates based on TMDB ID
+        // Deduplicate
         const uniqueMovies = this.removeDuplicates(allMovies, 'id');
         const uniqueTVShows = this.removeDuplicates(allTVShows, 'id');
 
-        this.logger.debug(`Fetched ${uniqueMovies.length} unique movies and ${uniqueTVShows.length} unique TV shows`);
+        this.logger.debug(
+            `Fetched ${uniqueMovies.length} unique movies and ${uniqueTVShows.length} unique TV shows`,
+        );
 
-        // Shuffle the arrays for randomization
-        this.shuffleArray(uniqueMovies);
-        this.shuffleArray(uniqueTVShows);
+        // Multiple shuffles to introduce unpredictability
+        for (let i = 0; i < 3; i++) {
+            this.shuffleArray(uniqueMovies);
+            this.shuffleArray(uniqueTVShows);
+        }
 
         // Process recommendations
         if (uniqueMovies.length > 0) {
@@ -226,14 +228,22 @@ export class MoodsService {
             );
             recommendations.push(...tvRecommendations);
         }
-        this.shuffleArray(recommendations);
-        // Diversify and limit results
+
+        // Final shuffle before selection
+        for (let i = 0; i < 2; i++) {
+            this.shuffleArray(recommendations);
+        }
+
+        // Diversify and limit
         const finalRecommendations = this.diversifyRecommendations(recommendations, targetLimit);
 
-        this.logger.debug(`Generated ${finalRecommendations.length} final recommendations for mood: ${mood.name}`);
+        this.logger.debug(
+            `Generated ${finalRecommendations.length} final recommendations for mood: ${mood.name}`,
+        );
 
         return finalRecommendations;
     }
+
 
     private removeDuplicates<T>(array: T[], key: keyof T): T[] {
         const seen = new Set();
@@ -257,133 +267,6 @@ export class MoodsService {
             } as any;
         }));
     }
-
-    private async processMovieRecommendations(
-        movies: any[],
-        mood: Mood,
-        userId: string,
-        userHistory: (MoodLog & { mood: Mood })[],
-        userPreferences: any,
-    ): Promise<any[]> {
-        return Promise.all(movies.map(async movie => {
-            const score = this.calculateRecommendationScore(movie, mood, userHistory, userPreferences);
-            const genreNames = await this.getGenreNames(movie.genre_ids);
-
-            return {
-                userId,
-                moodId: mood.id,
-                tmdbId: movie.id,
-                mediaType: MediaType.MOVIE,
-                title: movie.title,
-                overview: movie.overview,
-                genreIds: movie.genre_ids,
-                genreNames, // Add genre names
-                voteAverage: movie.vote_average,
-                voteCount: movie.vote_count,
-                releaseDate: movie.release_date,
-                posterPath: movie.poster_path,
-                backdropPath: movie.backdrop_path,
-                score: new Prisma.Decimal(score.toFixed(3)),
-                reason: this.generateRecommendationReason(movie, mood, score),
-                algorithm: 'mood-based-tmdb-v2',
-                metadata: {
-                    moodMatch: this.calculateMoodMatch(movie.genre_ids, mood.tmdbGenres),
-                    popularity: movie.popularity,
-                    userMoodPreference: this.calculateUserMoodPreference(mood.id, userHistory),
-                    userPreferenceMatch: userPreferences ? this.calculateUserPreferenceMatch(movie.genre_ids, userPreferences) : 0.5,
-                    fetchedAt: new Date(),
-                },
-                viewed: false,
-                liked: false,
-                saved: false,
-            };
-        }));
-    }
-
-    private async processTVRecommendations(
-        tvShows: any[],
-        mood: Mood,
-        userId: string,
-        userHistory: (MoodLog & { mood: Mood })[],
-        userPreferences: any,
-    ): Promise<any[]> {
-        return Promise.all(tvShows.map(async show => {
-            const score = this.calculateRecommendationScore(show, mood, userHistory, userPreferences);
-            const genreNames = await this.getGenreNames(show.genre_ids);
-
-            return {
-                userId,
-                moodId: mood.id,
-                tmdbId: show.id,
-                mediaType: MediaType.TV,
-                title: show.name,
-                overview: show.overview,
-                genreIds: show.genre_ids,
-                genreNames, // Add genre names
-                voteAverage: show.vote_average,
-                voteCount: show.vote_count,
-                releaseDate: show.first_air_date,
-                posterPath: show.poster_path,
-                backdropPath: show.backdrop_path,
-                score: new Prisma.Decimal(score.toFixed(3)),
-                reason: this.generateRecommendationReason(show, mood, score),
-                algorithm: 'mood-based-tmdb-v2',
-                metadata: {
-                    moodMatch: this.calculateMoodMatch(show.genre_ids, mood.tmdbGenres),
-                    popularity: show.popularity,
-                    userMoodPreference: this.calculateUserMoodPreference(mood.id, userHistory),
-                    userPreferenceMatch: userPreferences ? this.calculateUserPreferenceMatch(show.genre_ids, userPreferences) : 0.5,
-                    fetchedAt: new Date(),
-                },
-                viewed: false,
-                liked: false,
-                saved: false,
-            };
-        }));
-    }
-
-    private calculateRecommendationScore(
-        content: any,
-        mood: Mood,
-        userHistory: (MoodLog & { mood: Mood })[],
-        userPreferences: any,
-    ): number {
-        let score = 0;
-
-        // Base mood-genre match (35% weight)
-        const genreMatch = this.calculateMoodMatch(content.genre_ids, mood.tmdbGenres);
-        score += genreMatch * 0.35;
-
-        // Content quality based on ratings (20% weight)
-        const qualityScore = Math.min(content.vote_average / 10, 1);
-        score += qualityScore * 0.20;
-
-        // User mood preference (20% weight)
-        const userMoodPreference = this.calculateUserMoodPreference(mood.id, userHistory);
-        score += userMoodPreference * 0.2;
-
-        // User genre preferences (15% weight)
-        const userGenrePreference = userPreferences
-            ? this.calculateUserPreferenceMatch(content.genre_ids, userPreferences)
-            : 0.5;
-        score += userGenrePreference * 0.15;
-
-        // Popularity boost (10% weight)
-        const popularityScore = Math.min(content.popularity / 1000, 1);
-        score += popularityScore * 0.10;
-
-        // Recency factor (example: 15% weight)
-        const releaseDate = new Date(content.release_date || content.first_air_date || Date.now());
-        const now = new Date();
-        const yearsDiff = (now.getTime() - releaseDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
-
-        // Normalize: recent (0 years) => 1, old (10+ years) => 0
-        const recencyScore = Math.max(0, Math.min(1, 1 - yearsDiff / 10));
-        score += recencyScore * 0.15;
-
-        return Math.min(score, 1.0);
-    }
-
 
     private calculateMoodMatch(contentGenres: number[], moodGenres: number[]): number {
         if (moodGenres.length === 0) return 0.5;
@@ -422,23 +305,732 @@ export class MoodsService {
 
         return Math.max(preferenceScore - penaltyScore, 0);
     }
+    // Add these private fields near top of class
+    private keywordCache = new Map<number, string[]>(); // tmdbId -> keywords[]
+    private sentimentCache = new Map<number, { valence: number; arousal: number }>();
 
-    private generateRecommendationReason(content: any, mood: Mood, score: number): string {
+    /**
+ * Optimized scoring algorithm that rewards good matches more generously
+ * Score range: 0.50-0.98 (filtering happens before this, so we only score viable matches)
+ */
+    private calculateRecommendationScore(
+        content: any,
+        mood: Mood,
+        userHistory: (MoodLog & { mood: Mood })[],
+        userPreferences: any,
+    ): number {
+        // New weights (sum to 1.0)
+        const weights = {
+            keyword: 0.32,
+            sentiment: 0.22,
+            genre: 0.28,
+            quality: 0.12,
+            popularity: 0.10,
+            recency: 0.10,
+            userMood: 0.03,
+            userGenre: 0.03,
+        };
+
+        const componentScores: Record<string, number> = {};
+
+        // Compute core component matches (each should be 0..1)
+        const genreMatch = this.calculateEnhancedMoodMatch(content.genre_ids || [], mood.tmdbGenres || []);
+        const keywordMatch = this.calculateEnhancedKeywordMatch(content.contentKeywords || [], mood.keywords || []);
+        const sentimentMatch = this.calculateEnhancedSentimentMatch(content.sentiment, mood);
+        const qualityScore = this.calculateQualityScore(content.vote_average ?? 0, content.vote_count ?? 0);
+        const popularityScore = this.calculatePopularityScore(content.popularity ?? 0); 
+        const recencyScore = this.calculateRecencyScore(content.release_date || content.first_air_date); 
+
+        const userMoodPreference = this.calculateUserMoodPreference(mood.id, userHistory);
+        const userGenrePreference = userPreferences ? this.calculateUserPreferenceMatch(content.genre_ids || [], userPreferences) : 0.5;
+
+        // Weighted components
+        componentScores.genre = genreMatch * weights.genre;
+        componentScores.keyword = keywordMatch * weights.keyword;
+        componentScores.sentiment = sentimentMatch * weights.sentiment;
+        componentScores.quality = qualityScore * weights.quality;
+        componentScores.popularity = popularityScore * weights.popularity;
+        componentScores.recency = recencyScore * weights.recency;
+        componentScores.userMood = userMoodPreference * weights.userMood;
+        componentScores.userGenre = userGenrePreference * weights.userGenre;
+
+        // Base sum
+        let score =
+            componentScores.genre +
+            componentScores.keyword +
+            componentScores.sentiment +
+            componentScores.quality +
+            componentScores.popularity +
+            componentScores.recency +
+            componentScores.userMood +
+            componentScores.userGenre;
+
+        // Optional baseline boost — small floor to avoid extremely low baseline
+        const baseBoost = 0.05; // adjust up/down or remove if you don't want a floor
+        score += baseBoost;
+
+        // Synergy multiplier: boost when multiple strong signals align
+        score = this.applySynergyMultipliers(score, {
+            genreMatch,
+            keywordMatch,
+            sentimentMatch,
+            quality: content.vote_average ?? 0,
+            voteCount: content.vote_count ?? 0,
+        });
+
+        // Small extra bump if keyword+sentiment are excellent
+        if (keywordMatch > 0.9 && sentimentMatch > 0.85) {
+            score += 0.03;
+        }
+
+        // Keep in [0,1]
+        return Math.max(0, Math.min(1, score));
+    }
+
+    /**
+     * Enhanced genre matching - more generous scoring
+     */
+    private calculateEnhancedMoodMatch(contentGenres: number[], moodGenres: number[]): number {
+        if (!moodGenres || moodGenres.length === 0) return 0.65;
+        if (!contentGenres || contentGenres.length === 0) return 0.15;
+
+        const intersection = contentGenres.filter(g => moodGenres.includes(g));
+
+        if (intersection.length === 0) return 0.15;
+
+        // More generous scaling
+        const matchRatio = intersection.length / moodGenres.length;
+
+        // Progressive bonus structure
+        let bonus = 0;
+        if (intersection.length >= 3) bonus = 0.25;
+        else if (intersection.length >= 2) bonus = 0.18;
+        else if (intersection.length === 1) bonus = 0.10;
+
+        // Scale up with 1.5x multiplier
+        return Math.min(1.0, (matchRatio * 1.5) + bonus);
+    }
+
+    /**
+     * Enhanced keyword matching - rewards partial matches better
+     */
+    private calculateEnhancedKeywordMatch(
+        contentKeywords: string[] = [],
+        moodKeywords: string[] = []
+    ): number {
+        if (!moodKeywords || moodKeywords.length === 0) return 0.65;
+        if (!contentKeywords || contentKeywords.length === 0) return 0.20;
+
+        const norm = (s: string) => s.toLowerCase().trim();
+        const contentSet = new Set(contentKeywords.map(norm));
+
+        let exactMatches = 0;
+        let partialMatches = 0;
+        let semanticMatches = 0;
+
+        // Semantic similarity pairs (expand this based on your domain)
+        const semanticPairs: Record<string, string[]> = {
+            'love': ['romance', 'romantic', 'heart', 'passion'],
+            'fear': ['scary', 'terror', 'horror', 'frightening'],
+            'joy': ['happy', 'cheerful', 'uplifting', 'positive'],
+            'sad': ['tragic', 'emotional', 'tearjerker', 'melancholy'],
+            'action': ['intense', 'explosive', 'adrenaline', 'fight'],
+            'mystery': ['suspense', 'thriller', 'detective', 'puzzle'],
+            'funny': ['comedy', 'hilarious', 'humor', 'laughs'],
+            'dark': ['noir', 'gritty', 'psychological', 'brooding'],
+        };
+
+        for (const mk of moodKeywords.map(norm)) {
+            let matched = false;
+
+            for (const ck of contentSet) {
+                // Exact match (best)
+                if (ck === mk) {
+                    exactMatches++;
+                    matched = true;
+                    break;
+                }
+                // Substring match (good)
+                if (ck.includes(mk) || mk.includes(ck)) {
+                    partialMatches++;
+                    matched = true;
+                    break;
+                }
+            }
+
+            // Semantic match (okay)
+            if (!matched && semanticPairs[mk]) {
+                for (const synonym of semanticPairs[mk]) {
+                    if (contentSet.has(synonym)) {
+                        semanticMatches++;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Weighted scoring: exact > partial > semantic
+        const exactScore = (exactMatches / moodKeywords.length) * 1.0;
+        const partialScore = (partialMatches / moodKeywords.length) * 0.65;
+        const semanticScore = (semanticMatches / moodKeywords.length) * 0.40;
+        const totalScore = exactScore + partialScore + semanticScore;
+
+        // Progressive bonus structure
+        const totalMatches = exactMatches + partialMatches + semanticMatches;
+        let bonus = 0;
+        if (totalMatches >= 4) bonus = 0.25;
+        else if (totalMatches >= 3) bonus = 0.18;
+        else if (totalMatches >= 2) bonus = 0.12;
+        else if (totalMatches >= 1) bonus = 0.06;
+
+        // Scale with 1.4x multiplier
+        return Math.min(1.0, (totalScore * 1.4) + bonus);
+    }
+
+    /**
+     * Enhanced sentiment matching - more forgiving bands
+     */
+    private calculateEnhancedSentimentMatch(
+        contentSentiment: { valence: number; arousal: number } | undefined,
+        targetMood: Mood
+    ): number {
+        if (!contentSentiment ||
+            typeof targetMood.valence !== 'number' ||
+            typeof targetMood.arousal !== 'number') {
+            return 0.60; // Neutral default
+        }
+
+        const targetValence = Number(targetMood.valence);
+        const targetArousal = Number(targetMood.arousal);
+
+        const dv = Math.abs(contentSentiment.valence - targetValence);
+        const da = Math.abs(contentSentiment.arousal - targetArousal);
+
+        // Distance-based similarity with wider tolerance
+        const distance = Math.sqrt(dv * dv + da * da);
+        const maxDistance = 2.828;
+
+        // Base similarity (more generous curve)
+        let similarity = Math.pow(1 - (distance / maxDistance), 0.7); // Power < 1 = more generous
+
+        // Wide tolerance bands
+        if (dv <= 0.5 && da <= 0.5) {
+            similarity = Math.min(1.0, similarity + 0.25); // Very close
+        } else if (dv <= 0.8 && da <= 0.8) {
+            similarity = Math.min(1.0, similarity + 0.15); // Close enough
+        }
+
+        // Valence matters more than arousal for most moods
+        if (dv <= 0.3) {
+            similarity = Math.min(1.0, similarity + 0.10);
+        }
+
+        return Math.max(0.30, similarity);
+    }
+
+    /**
+     * Quality score - more generous for decent ratings
+     */
+    private calculateQualityScore(voteAverage: number, voteCount: number): number {
+        if (voteAverage === 0) return 0.45;
+
+        // More generous base scoring
+        let score = Math.pow(voteAverage / 10, 0.8); // Power < 1 = more generous
+
+        // Confidence boost (less penalty for moderate vote counts)
+        if (voteCount >= 1000) {
+            score = Math.min(1.0, score * 1.15);
+        } else if (voteCount >= 500) {
+            score = Math.min(1.0, score * 1.08);
+        } else if (voteCount >= 100) {
+            score = Math.min(1.0, score * 1.03);
+        } else if (voteCount < 50) {
+            score *= Math.min(1.0, voteCount / 50 + 0.5); // Less harsh penalty
+        }
+
+        // Bonus for highly rated content
+        if (voteAverage >= 8.5) score = Math.min(1.0, score + 0.10);
+        else if (voteAverage >= 8.0) score = Math.min(1.0, score + 0.06);
+        else if (voteAverage >= 7.5) score = Math.min(1.0, score + 0.03);
+
+        return Math.max(0.45, score);
+    }
+
+    /**
+     * Synergy multipliers - reward combinations of strong signals
+     */
+    private applySynergyMultipliers(
+        baseScore: number,
+        factors: {
+            genreMatch: number;
+            keywordMatch: number;
+            sentimentMatch: number;
+            quality: number;
+            voteCount: number;
+        }
+    ): number {
+        let multiplier = 1.0;
+
+        // Excellent match across the board
+        if (factors.genreMatch >= 0.85 &&
+            factors.keywordMatch >= 0.80 &&
+            factors.sentimentMatch >= 0.75) {
+            multiplier += 0.22; // Major boost
+        }
+        // Very good dual match
+        else if ((factors.genreMatch >= 0.80 && factors.keywordMatch >= 0.75) ||
+            (factors.keywordMatch >= 0.80 && factors.sentimentMatch >= 0.75)) {
+            multiplier += 0.15;
+        }
+        // Good dual match
+        else if ((factors.genreMatch >= 0.70 && factors.keywordMatch >= 0.65) ||
+            (factors.keywordMatch >= 0.70 && factors.sentimentMatch >= 0.65)) {
+            multiplier += 0.10;
+        }
+
+        // Premium content bonus
+        if (factors.quality >= 8.5 && factors.voteCount >= 500) {
+            multiplier += 0.12;
+        } else if (factors.quality >= 8.0 && factors.voteCount >= 300) {
+            multiplier += 0.08;
+        } else if (factors.quality >= 7.5) {
+            multiplier += 0.04;
+        }
+
+        // Strong single signal bonus
+        if (factors.keywordMatch >= 0.90) multiplier += 0.06;
+        if (factors.genreMatch >= 0.95) multiplier += 0.05;
+
+        return baseScore * multiplier;
+    }
+
+    /**
+     * Generate compelling reasons that reflect the higher scores
+     */
+    private generateEnhancedRecommendationReason(
+        content: any,
+        mood: Mood,
+        score: number,
+        matches: { genreMatch: number; keywordMatch: number; sentimentMatch: number }
+    ): string {
         const moodName = mood.name.toLowerCase();
-        const rating = content.vote_average;
+        const rating = content.vote_average ?? 0;
+        // Tier 1: Outstanding matches (90%+)
+        if (score >= 0.90) {
+            return `Exceptional fit for your ${moodName} mood`;
+        }
 
-        const reasons = [
-            `Perfect match for your ${moodName} mood`,
-            `Highly rated (${rating.toFixed(1)}/10) content that fits your current vibe`,
-            `Popular choice for ${moodName} moments`,
-            `Based on your preferences, you'll love this`,
-            `Great ${rating.toFixed(1)}/10 rating matches your mood`,
-            `Trending content that aligns with your ${moodName} feeling`,
-            `Discovered just for your ${moodName} mood`,
-            `Fresh pick that matches your vibe perfectly`,
-        ];
+        // Tier 2: Excellent matches (80-89%)
+        if (score >= 0.80) {
+            if (rating >= 8.0) {
+                return `Highly rated (${rating.toFixed(1)}/10) and perfect for ${moodName}`;
+            }
+            return `Excellent choice for ${moodName} moments`;
+        }
 
-        return reasons[Math.floor(Math.random() * reasons.length)];
+        // Tier 3: Great matches (70-79%)
+        if (score >= 0.70) {
+            if (matches.keywordMatch >= 0.80) {
+                return `Captures the essence of ${moodName}`;
+            }
+            return `Great fit for your ${moodName} vibe`;
+        }
+
+        // Tier 4: Good matches (60-69%)
+        if (score >= 0.60) {
+            return `Recommended for ${moodName} feelings`;
+        }
+
+        // Default
+        return `Good choice for ${moodName}`;
+    }
+
+    /**
+     * Popularity score with logarithmic scaling
+     */
+    private calculatePopularityScore(popularity: number): number {
+        if (popularity <= 0) return 0;
+
+        // Log scale to prevent extreme popularity from dominating
+        const logPop = Math.log10(popularity + 1);
+        const maxLogPop = Math.log10(1001); // ~3
+
+        return Math.min(1.0, logPop / maxLogPop);
+    }
+
+    /**
+     * Recency score with preference for recent content
+     */
+    private calculateRecencyScore(releaseDate?: string): number {
+        if (!releaseDate) return 0.10;
+
+        const release = new Date(releaseDate);
+        const now = new Date();
+        const yearsDiff = (now.getTime() - release.getTime()) / (1000 * 60 * 60 * 24 * 365);
+
+        if (yearsDiff < 0) return 0.3; // Future release
+        if (yearsDiff < 1) return 1.0;  // Last year
+        if (yearsDiff < 3) return 0.8;  // Last 3 years
+        if (yearsDiff < 5) return 0.6;  // Last 5 years
+        if (yearsDiff < 10) return 0.4; // Last decade
+
+        return Math.max(0.2, 1 - yearsDiff / 50);
+    }
+
+    /**
+     * Apply bonus multipliers for exceptional content
+     */
+    private applyBonusMultipliers(
+        baseScore: number,
+        factors: {
+            genreMatch: number;
+            keywordMatch: number;
+            sentimentMatch: number;
+            quality: number;
+        }
+    ): number {
+        let multiplier = 1.0;
+
+        // Perfect genre + keyword match bonus
+        if (factors.genreMatch >= 0.9 && factors.keywordMatch >= 0.8) {
+            multiplier += 0.15;
+        }
+
+        // High quality content bonus
+        if (factors.quality >= 8.0) {
+            multiplier += 0.1;
+        } else if (factors.quality >= 7.5) {
+            multiplier += 0.05;
+        }
+
+        // Triple match bonus (genre + keyword + sentiment)
+        if (factors.genreMatch >= 0.7 &&
+            factors.keywordMatch >= 0.7 &&
+            factors.sentimentMatch >= 0.7) {
+            multiplier += 0.1;
+        }
+
+        return baseScore * multiplier;
+    }
+
+    // ============================================================
+    // PART 2: Enhanced metadata tracking in process methods
+    // ============================================================
+
+    /**
+     * Enhanced processMovieRecommendations with detailed metadata
+     */
+    private async processMovieRecommendations(
+        movies: any[],
+        mood: Mood,
+        userId: string,
+        userHistory: (MoodLog & { mood: Mood })[],
+        userPreferences: any,
+    ): Promise<any[]> {
+        return Promise.all(movies.map(async movie => {
+            const contentKeywords = await this.getContentKeywords(movie.id, 'movie', movie);
+            const sentiment = await this.analyzeOverviewSentiment(movie.id, movie.overview);
+
+            // Calculate individual match scores for metadata
+            const genreMatch = this.calculateEnhancedMoodMatch(
+                movie.genre_ids || [],
+                mood.tmdbGenres || []
+            );
+            const keywordMatch = this.calculateEnhancedKeywordMatch(
+                contentKeywords,
+                mood.keywords || []
+            );
+            const sentimentMatch = this.calculateEnhancedSentimentMatch(sentiment, mood);
+            const qualityScore = this.calculateQualityScore(
+                movie.vote_average ?? 0,
+                movie.vote_count ?? 0
+            );
+
+            const score = this.calculateRecommendationScore(
+                { ...movie, contentKeywords, sentiment },
+                mood,
+                userHistory,
+                userPreferences,
+            );
+
+            const genreNames = await this.getGenreNames(
+                movie.genre_ids || movie.genres?.map((g: any) => g.id) || []
+            );
+
+            return {
+                userId,
+                moodId: mood.id,
+                tmdbId: movie.id,
+                mediaType: MediaType.MOVIE,
+                title: movie.title,
+                overview: movie.overview,
+                genreIds: movie.genre_ids,
+                genreNames,
+                voteAverage: movie.vote_average,
+                voteCount: movie.vote_count,
+                releaseDate: movie.release_date,
+                posterPath: movie.poster_path,
+                backdropPath: movie.backdrop_path,
+                score: new Prisma.Decimal(score.toFixed(3)),
+                reason: this.generateEnhancedRecommendationReason(
+                    movie,
+                    mood,
+                    score,
+                    { genreMatch, keywordMatch, sentimentMatch }
+                ),
+                algorithm: 'mood-based-enhanced-v4',
+                metadata: {
+                    // Match scores (0-1 scale)
+                    moodMatch: Number(genreMatch.toFixed(3)),
+                    keywordMatch: Number(keywordMatch.toFixed(3)),
+                    sentimentMatch: Number(sentimentMatch.toFixed(3)),
+                    qualityScore: Number(qualityScore.toFixed(3)),
+
+                    // Raw data
+                    sentiment: sentiment,
+                    popularity: movie.popularity,
+                    keywords: contentKeywords.slice(0, 10), // Top 10 for debugging
+
+                    // User personalization
+                    userMoodPreference: this.calculateUserMoodPreference(mood.id, userHistory),
+                    userPreferenceMatch: userPreferences
+                        ? this.calculateUserPreferenceMatch(movie.genre_ids, userPreferences)
+                        : 0.5,
+
+                    // Metadata
+                    fetchedAt: new Date(),
+                    scoreBreakdown: {
+                        genre: genreMatch * 0.25,
+                        keyword: keywordMatch * 0.30,
+                        sentiment: sentimentMatch * 0.20,
+                        quality: qualityScore * 0.10,
+                    },
+                },
+                viewed: false,
+                liked: false,
+                saved: false,
+            };
+        }));
+    }
+
+    /**
+     * Enhanced processTVRecommendations (same pattern as movies)
+     */
+    private async processTVRecommendations(
+        tvShows: any[],
+        mood: Mood,
+        userId: string,
+        userHistory: (MoodLog & { mood: Mood })[],
+        userPreferences: any,
+    ): Promise<any[]> {
+        return Promise.all(tvShows.map(async show => {
+            const contentKeywords = await this.getContentKeywords(show.id, 'tv', show);
+            const sentiment = await this.analyzeOverviewSentiment(show.id, show.overview);
+
+            const genreMatch = this.calculateEnhancedMoodMatch(
+                show.genre_ids || [],
+                mood.tmdbGenres || []
+            );
+            const keywordMatch = this.calculateEnhancedKeywordMatch(
+                contentKeywords,
+                mood.keywords || []
+            );
+            const sentimentMatch = this.calculateEnhancedSentimentMatch(sentiment, mood);
+            const qualityScore = this.calculateQualityScore(
+                show.vote_average ?? 0,
+                show.vote_count ?? 0
+            );
+
+            const score = this.calculateRecommendationScore(
+                { ...show, contentKeywords, sentiment },
+                mood,
+                userHistory,
+                userPreferences,
+            );
+
+            const genreNames = await this.getGenreNames(
+                show.genre_ids || show.genres?.map((g: any) => g.id) || []
+            );
+
+            return {
+                userId,
+                moodId: mood.id,
+                tmdbId: show.id,
+                mediaType: MediaType.TV,
+                title: show.name,
+                overview: show.overview,
+                genreIds: show.genre_ids,
+                genreNames,
+                voteAverage: show.vote_average,
+                voteCount: show.vote_count,
+                releaseDate: show.first_air_date,
+                posterPath: show.poster_path,
+                backdropPath: show.backdrop_path,
+                score: new Prisma.Decimal(score.toFixed(3)),
+                reason: this.generateEnhancedRecommendationReason(
+                    show,
+                    mood,
+                    score,
+                    { genreMatch, keywordMatch, sentimentMatch }
+                ),
+                algorithm: 'mood-based-enhanced-v4',
+                metadata: {
+                    moodMatch: Number(genreMatch.toFixed(3)),
+                    keywordMatch: Number(keywordMatch.toFixed(3)),
+                    sentimentMatch: Number(sentimentMatch.toFixed(3)),
+                    qualityScore: Number(qualityScore.toFixed(3)),
+                    sentiment,
+                    popularity: show.popularity,
+                    keywords: contentKeywords.slice(0, 10),
+                    userMoodPreference: this.calculateUserMoodPreference(mood.id, userHistory),
+                    userPreferenceMatch: userPreferences
+                        ? this.calculateUserPreferenceMatch(show.genre_ids, userPreferences)
+                        : 0.5,
+                    fetchedAt: new Date(),
+                    scoreBreakdown: {
+                        genre: genreMatch * 0.25,
+                        keyword: keywordMatch * 0.30,
+                        sentiment: sentimentMatch * 0.20,
+                        quality: qualityScore * 0.10,
+                    },
+                },
+                viewed: false,
+                liked: false,
+                saved: false,
+            };
+        }));
+    }
+
+
+    // Helper: fetch / build keywords for a content item (caches per-run)
+    private async getContentKeywords(tmdbId: number, type: 'movie' | 'tv', rawItem?: any): Promise<string[]> {
+        if (this.keywordCache.has(tmdbId)) return this.keywordCache.get(tmdbId)!;
+
+        let keywords: string[] = [];
+
+        // 1) Prefer keywords included in the raw TMDB item if present
+        if (rawItem?.keywords?.keywords && Array.isArray(rawItem.keywords.keywords)) {
+            keywords = rawItem.keywords.keywords.map((k: any) => String(k.name || k).toLowerCase());
+        } else if (rawItem?.keywords && Array.isArray(rawItem.keywords)) {
+            keywords = rawItem.keywords.map((k: any) => String(k.name || k).toLowerCase());
+        } else {
+            // 2) Otherwise, fetch from tmdbService and defensively normalize response
+            try {
+                const resp: any = type === 'movie' && this.tmdbService.getMovieKeywords
+                    ? await this.tmdbService.getMovieKeywords(tmdbId)
+                    : type === 'tv' && this.tmdbService.getTVKeywords
+                        ? await this.tmdbService.getTVKeywords(tmdbId)
+                        : null;
+
+                if (resp) {
+                    let rawKeywords: any[] = [];
+
+                    if (Array.isArray(resp.keywords)) {
+                        rawKeywords = resp.keywords;
+                    } else if (Array.isArray(resp.results)) {
+                        rawKeywords = resp.results;
+                    } else if (resp.keywords && Array.isArray(resp.keywords.keywords)) {
+                        rawKeywords = resp.keywords.keywords;
+                    } else {
+                        // fallback: find first array-like property with objects that have name
+                        for (const v of Object.values(resp)) {
+                            if (Array.isArray(v) && v.length > 0 && (typeof v[0] === 'object' ? 'name' in v[0] : typeof v[0] === 'string')) {
+                                rawKeywords = v;
+                                break;
+                            }
+                        }
+                    }
+
+                    keywords = rawKeywords
+                        .map((k: any) => (typeof k === 'string' ? k : k?.name || k?.keyword || ''))
+                        .filter(Boolean)
+                        .map((s: string) => s.toLowerCase());
+                }
+            } catch (err) {
+                this.logger.debug(`Failed to fetch keywords for ${type} ${tmdbId}: ${err?.message ?? err}`);
+            }
+        }
+
+        // 3) Supplement with tokens from title/overview
+        const text = `${rawItem?.title ?? rawItem?.name ?? ''} ${rawItem?.overview ?? ''}`.toLowerCase();
+        const textKeywords = this.extractImportantTokens(text);
+        keywords = Array.from(new Set([...(keywords || []), ...textKeywords]));
+
+        this.keywordCache.set(tmdbId, keywords);
+        return keywords;
+    }
+
+
+    // Small token extractor for title/overview to supplement keywords
+    private extractImportantTokens(text: string): string[] {
+        if (!text) return [];
+        // Basic tokenization & filter: words longer than 3, remove stopwords
+        const stopwords = new Set(['the', 'and', 'with', 'that', 'this', 'from', 'into', 'your', 'about', 'which', 'have', 'will', 'their', 'they', 'his', 'her', 'for', 'are', 'but', 'not', 'you', 'has']);
+        const tokens = text
+            .replace(/[^a-z0-9\s]/gi, ' ')
+            .split(/\s+/)
+            .map(t => t.trim())
+            .filter(t => t.length > 3 && !stopwords.has(t));
+        // return top unique tokens up to 12
+        return Array.from(new Set(tokens)).slice(0, 12);
+    }
+
+    // Sentiment analyzer (caches per-run). If you have external sentimentService: use it.
+    // Fallback: tiny lexicon-based estimator returns valence & arousal in [-1, 1]
+    private async analyzeOverviewSentiment(tmdbId: number, overview?: string) {
+        if (this.sentimentCache.has(tmdbId)) return this.sentimentCache.get(tmdbId)!;
+
+        let result = { valence: 0, arousal: 0 };
+
+        try {
+            // If you have a sentimentService (e.g., HuggingFace/OpenAI wrapper) you can call it:
+            if ((this as any).sentimentService?.analyze) {
+                const remote = await (this as any).sentimentService.analyze(overview || '');
+                // remote expected to return { valence: number, arousal: number } in -1..1
+                if (remote && typeof remote.valence === 'number' && typeof remote.arousal === 'number') {
+                    result = { valence: remote.valence, arousal: remote.arousal };
+                    this.sentimentCache.set(tmdbId, result);
+                    return result;
+                }
+            }
+
+            // Fallback: light lexicon
+            const posWords = ['love', 'heart', 'joy', 'happy', 'uplift', 'hope', 'inspire', 'hero', 'romantic', 'sweet', 'funny', 'laugh', 'comedy', 'warm'];
+            const negWords = ['kill', 'murder', 'loss', 'death', 'sad', 'tragic', 'dark', 'fear', 'terror', 'haunt', 'grief', 'angry', 'anger', 'revenge', 'horror', 'sorrow'];
+            const highArousalWords = ['explosion', 'intense', 'battle', 'war', 'chase', 'thrill', 'violent', 'escape', 'adrenaline', 'fight', 'scream', 'panic', 'action', 'explosive', 'fast'];
+            const lowArousalWords = ['calm', 'gentle', 'quiet', 'soft', 'relax', 'meditative', 'peaceful', 'slow', 'nostalgic', 'bittersweet', 'reflective', 'intimate'];
+
+            const text = (overview || '').toLowerCase();
+            const counts = { pos: 0, neg: 0, highA: 0, lowA: 0 };
+
+            for (const w of posWords) if (text.includes(w)) counts.pos++;
+            for (const w of negWords) if (text.includes(w)) counts.neg++;
+            for (const w of highArousalWords) if (text.includes(w)) counts.highA++;
+            for (const w of lowArousalWords) if (text.includes(w)) counts.lowA++;
+
+            // Valence: positive -> +, negative -> -
+            const valenceRaw = counts.pos - counts.neg; // could be negative
+            const maxVal = Math.max(1, Math.abs(valenceRaw));
+            let valence = Math.max(-1, Math.min(1, valenceRaw / (maxVal + 1))); // normalize roughly
+
+            // Arousal: highArousal increases, lowArousal decreases
+            const arousalRaw = counts.highA - counts.lowA;
+            const maxA = Math.max(1, Math.abs(arousalRaw));
+            let arousal = Math.max(-1, Math.min(1, arousalRaw / (maxA + 1)));
+
+            // Slight smoothing to avoid extremes for very short overviews
+            if ((overview || '').split(/\s+/).length < 8) {
+                valence *= 0.6;
+                arousal *= 0.6;
+            }
+
+            result = { valence, arousal };
+        } catch (err) {
+            this.logger.debug('Sentiment fallback failed:', err?.message ?? err);
+        }
+
+        this.sentimentCache.set(tmdbId, result);
+        return result;
     }
 
     private diversifyRecommendations(recommendations: any[], limit: number): any[] {

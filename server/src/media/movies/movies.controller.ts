@@ -11,7 +11,7 @@ import { MoviesService } from './movies.service';
 
 @Controller('movies')
 export class MoviesController {
-  constructor(private readonly movieService: MoviesService) {}
+  constructor(private readonly movieService: MoviesService) { }
 
   @Get('details/:id')
   async details(@Param('id') id: string, @Query('type') type: 'movie') {
@@ -94,6 +94,14 @@ export class MoviesController {
 
     const parsedLimit = limit ? parseInt(limit, 10) : 3;
     return this.movieService.getItemRecommendations(type, id, parsedLimit);
+  }
+
+  @Get('recommendations/:id')
+  async getMovieRecommendations(
+    @Param('id', ParseIntPipe) id: number
+  ) {
+    const parsedLimit = 15;
+    return this.movieService.getSmartRecommendationsMovie(id, parsedLimit);
   }
 
   // NEW: Batch trailer endpoint for multiple items
@@ -201,6 +209,50 @@ export class MoviesController {
     try {
       const images = this.movieService.images(Number(id), type);
       return images;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+  @Get('action-movies')
+  async actionMovies(@Query('limit') limit?: string) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 25;
+    return this.movieService.getActionMovies(parsedLimit);
+  }
+
+  @Get('animated-movies')
+  async animatedMovies(@Query('limit') limit?: string) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 25;
+    return this.movieService.getAnimatedMovies(parsedLimit);
+  }
+
+  @Get('documentary-movies')
+  async documentaryMovies(@Query('limit') limit?: string) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 25;
+    return this.movieService.getDocumentaryMovies(parsedLimit);
+  }
+
+  @Get('award-winners')
+  async awardWinners(@Query('limit') limit?: string) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 25;
+    return this.movieService.getAwardWinners(parsedLimit);
+  }
+
+  @Get('indie-movies')
+  async indieMovies(@Query('limit') limit?: string) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 25;
+    return this.movieService.getIndieMovies(parsedLimit);
+  }
+  @Get('new-releases')
+  async newReleases(@Query('limit') limit?: string) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 20;
+    return this.movieService.getNewReleases(parsedLimit);
+  }
+
+  @Get('videos/:type/:id')
+  async getVideos(@Param('type') type: 'movie', @Param('id') id: string) {
+    try {
+      const videos = this.movieService.videos(Number(id), type);
+      return videos;
     } catch (err) {
       console.log(err);
     }

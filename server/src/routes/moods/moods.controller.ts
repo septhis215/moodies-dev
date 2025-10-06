@@ -17,6 +17,13 @@ export class MoodsController {
     async getAllMoods() {
         return this.moodsService.getAllMoods();
     }
+    
+    @Get('recommendations')
+    @ApiOperation({ summary: 'Get mood-based recommendations' })
+    @ApiResponse({ status: 200, description: 'List of recommendations' })
+    async getRecommendations(@Query() dto: GetRecommendationsDto) {
+        return this.moodsService.getRecommendations(dto);
+    }
 
     @Get(':id')
     @ApiOperation({ summary: 'Get mood by ID' })
@@ -42,13 +49,6 @@ export class MoodsController {
         @Query('limit') limit?: number,
     ) {
         return this.moodsService.getUserMoodHistory(userId, limit);
-    }
-
-    @Get('recommendations/generate')
-    @ApiOperation({ summary: 'Get mood-based recommendations' })
-    @ApiResponse({ status: 200, description: 'List of recommendations' })
-    async getRecommendations(@Query() dto: GetRecommendationsDto) {
-        return this.moodsService.getRecommendations(dto);
     }
 
     @Post('recommendations/regenerate')

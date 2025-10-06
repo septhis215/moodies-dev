@@ -39,6 +39,9 @@ type Info = {
   vote_count: number;
   runtime: number;
   genres: Array<{ id: number; name: string }>;
+  content_type: string;
+  number_of_seasons: number;
+  number_of_episodes: number;
 };
 
 interface AllReviewsProps {
@@ -47,11 +50,7 @@ interface AllReviewsProps {
   id?: string;
 }
 
-export default function AllReviews({
-  reviews,
-  info,
-  id,
-}: AllReviewsProps) {
+export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
   const [localReviews, setLocalReviews] = useState<Review[]>(
     reviews ? [...reviews] : []
   );
@@ -62,21 +61,6 @@ export default function AllReviews({
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(
     new Set()
   );
-
-  const [helpfulMap, setHelpfulMap] = useState<Record<string, number>>({});
-  const [markedHelpful, setMarkedHelpful] = useState<Record<string, boolean>>(
-    {}
-  );
-
-  // Initialize helpful counts
-  useEffect(() => {
-    const map: Record<string, number> = {};
-    localReviews.forEach((r) => {
-      map[r.id] = Math.max(0, Math.round(popularityProxy(r) / 2));
-    });
-    setHelpfulMap(map);
-  }, [localReviews]);
-
   function popularityProxy(r: Review) {
     const rating = r.author_details?.rating ?? 0;
     const lenScore = Math.min(5, (r.content?.length ?? 0) / 200);
@@ -124,22 +108,6 @@ export default function AllReviews({
     return arr;
   }, [localReviews, sortBy, searchQuery]);
 
-  const toggleHelpful = (id: string) => {
-    setMarkedHelpful((prev) => {
-      const currently = !!prev[id];
-      const copy = { ...prev, [id]: !currently };
-      setHelpfulMap((hm) => {
-        const currentCount = hm[id] ?? 0;
-        const next = {
-          ...hm,
-          [id]: currently ? Math.max(0, currentCount - 1) : currentCount + 1,
-        };
-        return next;
-      });
-      return copy;
-    });
-  };
-
   const toggleExpanded = (id: string) => {
     setExpandedReviews((prev) => {
       const newSet = new Set(prev);
@@ -166,6 +134,68 @@ export default function AllReviews({
     return `${hours}h ${mins}m`;
   };
 
+  const contentType = (type: string) => {
+    if (type === "movie") return "movies";
+    else return "tv";
+  };
+
+  useEffect(() => {
+    const map: Record<string, number> = {};
+    localReviews.forEach((r) => {
+      map[r.id] = Math.max(0, Math.round(popularityProxy(r) / 2));
+    });
+  }, [localReviews]);
+
+  // Add this useEffect after your other useEffects in AllReviews component
+  useEffect(() => {
+    // Get highlight parameter from URL
+    const params = new URLSearchParams(window.location.search);
+    const highlightId = params.get("highlight");
+
+    if (highlightId) {
+      // Wait for the DOM to be ready
+      setTimeout(() => {
+        const element = document.getElementById(`review-${highlightId}`);
+        if (element) {
+          element.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+
+          // Optional: Add a temporary highlight effect
+          element.style.transition = "all 0.3s ease";
+          element.style.boxShadow = "0 0 0 3px rgba(99, 102, 241, 0.5)";
+          setTimeout(() => {
+            element.style.boxShadow = "";
+          }, 3000);
+        }
+      }, 300); // Small delay to ensure content is rendered
+    }
+  }, [filteredAndSorted]); // Re-run if reviews change
+
+  function addLocalReview(payload: {
+    author: string;
+    content: string;
+    rating?: number;
+  }) {
+    const now = new Date().toISOString();
+    const newReview: Review = {
+      id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      author: payload.author || "Anonymous",
+      author_details: {
+        username: payload.author?.toLowerCase() || "anonymous",
+        name: payload.author || undefined,
+        avatar_path: undefined,
+        rating: payload.rating ?? undefined,
+      },
+      content: payload.content,
+      created_at: now,
+      updated_at: now,
+      url: "",
+    };
+    setLocalReviews((prev) => [newReview, ...prev]);
+  }
+
   return (
     <div className="min-h-screen bg-black">
       {/* Hero Section with Info */}
@@ -186,7 +216,7 @@ export default function AllReviews({
         <div className="relative z-10 max-w-7xl mx-auto px-6 pt-14 pb-16">
           {/* Back Navigation */}
           <Link
-            href={`/movies/${id}`}
+            href={`/${contentType(info.content_type)}/${id}`}
             className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors mb-8"
           >
             <ArrowLeft size={20} />
@@ -222,9 +252,24 @@ export default function AllReviews({
                 </h1>
                 <div className="flex items-center gap-4 text-slate-300 text-sm">
                   <span>{new Date(info.release_date).getFullYear()}</span>
-                  <span>•</span>
-                  <span>{formatRuntime(info.runtime)}</span>
-                  <span>•</span>
+                  <span className="text-sm text-white/70 flex items-center gap-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                      <line x1="9" x2="9" y1="9" y2="15" />
+                      <line x1="15" x2="15" y1="9" y2="15" />
+                    </svg>
+                    {info.number_of_seasons} Season
+                    {info.number_of_seasons !== 1 ? "s" : ""}
+                  </span>
+                  <span className="text-sm text-white/70">
+                    {info.number_of_episodes} Episodes
+                  </span>
                   <div className="flex items-center gap-1">
                     <Star
                       size={16}
@@ -272,6 +317,10 @@ export default function AllReviews({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <ReviewForm onSubmit={addLocalReview} />
       </div>
 
       {/* Reviews Section */}
@@ -344,6 +393,7 @@ export default function AllReviews({
                 return (
                   <motion.div
                     key={review.id}
+                    id={`review-${review.id}`} // Add this line
                     layout
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -409,19 +459,7 @@ export default function AllReviews({
 
                     {/* Review Actions */}
                     <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                      <button
-                        onClick={() => toggleHelpful(review.id)}
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm transition-all ${
-                          markedHelpful[review.id]
-                            ? "bg-indigo-600/80 text-white shadow-sm"
-                            : "bg-white/5 text-slate-300 hover:bg-white/10"
-                        }`}
-                      >
-                        <motion.span whileTap={{ scale: 0.9 }}>
-                          👍 Helpful ({helpfulMap[review.id] ?? 0})
-                        </motion.span>
-                      </button>
-
+                    
                       {review.url && (
                         <a
                           href={review.url}
@@ -503,5 +541,105 @@ function RatingDisplay({ rating }: { rating?: number }) {
         {rating.toFixed(1)}/10
       </div>
     </div>
+  );
+}
+
+function ReviewForm({
+  onSubmit,
+}: {
+  onSubmit: (v: { author: string; content: string; rating?: number }) => void;
+}) {
+  const [author, setAuthor] = useState("");
+  const [content, setContent] = useState("");
+  const [rating, setRating] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  function toggleStar(index: number) {
+    const newRating = index * 2;
+    setRating((prev) => (prev === newRating ? null : newRating));
+  }
+
+  function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault();
+    setError(null);
+    if (!content.trim()) {
+      setError("Write something before submitting.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      onSubmit({
+        author: author.trim() || "Anonymous",
+        content: content.trim(),
+        rating: rating ?? undefined,
+      });
+      setAuthor("");
+      setContent("");
+      setRating(null);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex flex-col md:flex-row gap-3">
+        <input
+          value={author}
+          onChange={(e) => setAuthor(e.target.value)}
+          placeholder="Your name (optional)"
+          className="flex-1 bg-slate-800/60 text-slate-100 placeholder-slate-400 rounded-lg px-3 py-2 border border-white/8"
+        />
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-slate-400">Your rating</div>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: 5 }).map((_, i) => {
+              const starValue = (i + 1) * 2;
+              const active = rating !== null && rating >= starValue;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => toggleStar(i + 1)}
+                  className={`p-1 rounded ${
+                    active ? "bg-yellow-500/10" : "hover:bg-white/6"
+                  }`}
+                >
+                  <Star
+                    size={18}
+                    className={active ? "text-yellow-300" : "text-slate-500"}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder="Write your review — be respectful and constructive."
+        rows={5}
+        className="w-full bg-slate-800/60 text-slate-100 placeholder-slate-400 rounded-lg px-3 py-3 border border-white/8"
+      />
+
+      {error && <div className="text-xs text-red-400">{error}</div>}
+
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium shadow"
+        >
+          {submitting ? "Posting…" : "Post Review"}
+        </button>
+        <div className="text-xs text-slate-400">
+          Your review will appear locally (demo). To save server-side, wire the
+          submit to your API.
+        </div>
+      </div>
+    </form>
   );
 }
