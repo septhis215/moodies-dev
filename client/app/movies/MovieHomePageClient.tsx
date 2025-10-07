@@ -235,7 +235,6 @@ export default function MoviesHomePageClient({
                                     {Array.from({ length: 18 }).map((_, i) => {
                                         const s = heroMovies[(index + i) % heroMovies.length] || {};
                                         const isActive = featured?.id === s.id;
-
                                         return (
                                             <button
                                                 key={i}
@@ -262,7 +261,6 @@ export default function MoviesHomePageClient({
                                         );
                                     })}
                                 </div>
-
                                 <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.8)_95%)]" />
                             </div>
                         </div>
@@ -353,7 +351,6 @@ export default function MoviesHomePageClient({
 
             {/* Content */}
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-24">
-
                 {/* Box Office */}
                 {popularMovies.length > 0 && (
                     <section id="popular-movies" className="relative">
@@ -364,7 +361,6 @@ export default function MoviesHomePageClient({
                             </div>
                             <h2 className="text-3xl sm:text-4xl font-black text-white">Box Office Hits</h2>
                         </div>
-
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {popularMovies.slice(0, 4).map((movie, idx) => (
                                 <Link key={movie.id} href={`/movies/${movie.id}`}>
@@ -411,7 +407,6 @@ export default function MoviesHomePageClient({
                             </div>
                             <h2 className="text-3xl sm:text-4xl font-black text-white">New Releases</h2>
                         </div>
-
                         <div className="grid grid-cols-12 gap-5">
                             {newReleaseMovies[0] && (
                                 <Link href={`/movies/${newReleaseMovies[0].id}`} className="col-span-12 lg:col-span-8 group">
@@ -448,7 +443,6 @@ export default function MoviesHomePageClient({
                                     </div>
                                 </Link>
                             )}
-
                             <div className="col-span-12 lg:col-span-4 grid grid-cols-2 lg:grid-cols-1 gap-5">
                                 {newReleaseMovies.slice(1, 3).map((movie) => (
                                     <Link key={movie.id} href={`/movies/${movie.id}`} className="group">
@@ -482,7 +476,6 @@ export default function MoviesHomePageClient({
                                 ))}
                             </div>
                         </div>
-
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5 mt-6">
                             {newReleaseMovies.slice(3, 9).map((movie) => (
                                 <MovieCard key={movie.id} movie={movie} />
@@ -530,7 +523,6 @@ export default function MoviesHomePageClient({
                         </div>
                         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">Community Pulse</h2>
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
                         {[
                             {
@@ -625,7 +617,6 @@ export default function MoviesHomePageClient({
                             </div>
                             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">Critics Corner</h2>
                         </div>
-
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
                             {movieReviews.slice(0, 6).map((review, idx) => (
                                 <div key={idx} className="bg-gradient-to-br from-zinc-900/80 to-zinc-950/80 backdrop-blur-sm border border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 hover:border-rose-500/50 transition-all ring-1 ring-white/5 shadow-xl">
@@ -656,7 +647,6 @@ export default function MoviesHomePageClient({
                         {/* Background gradients */}
                         <div className="absolute top-0 right-0 w-64 sm:w-80 lg:w-[400px] h-64 sm:h-80 lg:h-[400px] bg-gradient-to-bl from-red-600/20 to-transparent rounded-full blur-3xl animate-pulse" />
                         <div className="absolute bottom-0 left-0 w-48 sm:w-64 lg:w-[350px] h-48 sm:h-64 lg:h-[350px] bg-gradient-to-tr from-orange-600/20 to-transparent rounded-full blur-3xl animate-pulse delay-700" />
-
                         <div className="relative p-4 sm:p-5 lg:p-6">
                             {/* Section Title */}
                             <div className="flex items-center gap-3 sm:gap-4 mb-5 sm:mb-6">
@@ -756,12 +746,11 @@ export default function MoviesHomePageClient({
                     <section id="award-winners" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-950/40 via-yellow-950/30 to-black backdrop-blur-sm border border-amber-500/30 ring-1 ring-white/5 shadow-2xl">
                         {/* Radial golden glow */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 sm:w-96 lg:w-[600px] h-80 sm:h-96 lg:h-[600px] bg-gradient-to-r from-amber-600/20 to-yellow-600/20 rounded-full blur-3xl" />
-
+                        
                         {/* Subtle grid pattern */}
                         <div className="absolute inset-0 opacity-5">
                             <div className="absolute inset-0 bg-[linear-gradient(to_right,#fbbf24_1px,transparent_1px),linear-gradient(to_bottom,#fbbf24_1px,transparent_1px)] bg-[size:2rem_2rem]" />
                         </div>
-
                         <div className="relative p-5 sm:p-6 lg:p-8">
                             <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
                                 <div className="relative">
@@ -777,7 +766,6 @@ export default function MoviesHomePageClient({
                                     <p className="text-xs sm:text-sm text-gray-300 mt-1 sm:mt-2 font-semibold hidden sm:block">Critically acclaimed masterpieces</p>
                                 </div>
                             </div>
-
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
                                 {awardWinners.slice(0, 10).map((movie, idx) => (
                                     <Link key={movie.id} href={`/movies/${movie.id}`} className="group">
@@ -891,7 +879,6 @@ export default function MoviesHomePageClient({
                                     </Link>
                                 ))}
                             </div>
-
                             {/* Rest in carousel */}
                             {animatedMovies.length > 5 && <Carousel items={animatedMovies.slice(5)} />}
                         </div>

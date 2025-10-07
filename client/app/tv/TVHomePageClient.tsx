@@ -197,8 +197,9 @@ export default function TVHomePageClient({
             </div>
         );
     };
-    const [featured, setFeatured] = useState(heroShows[0]); // default first show
+    const [featured, setFeatured] = useState(heroShows[0]); 
     const [index, setIndex] = useState(0);
+
     /* ---------------- Page Layout ---------------- */
     return (
         <main className="bg-[#070707] text-white min-h-screen">
@@ -275,8 +276,6 @@ export default function TVHomePageClient({
                                 <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_55%,black_95%)]" />
                             </div>
                         </div>
-
-
 
                         {/* RIGHT featured card */}
                         <div className="md:col-span-5 col-span-1 flex items-stretch scale-[0.98]">

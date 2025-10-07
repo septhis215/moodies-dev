@@ -60,7 +60,7 @@ export default function CelebSection() {
   }, []);
 
   const handleOpenPerson = (celeb: Person) => {
-    router.push(`/person/${celeb.id}`);
+    router.push(`/celeb/${celeb.id}`);
   };
 
   const handleOpenWork = (work: any) => {
@@ -236,7 +236,7 @@ export default function CelebSection() {
 
               return (
                 <motion.div
-                  key={`person-${celeb.id}`}
+                  key={`celeb-${celeb.id}`}
                   className="relative flex-shrink-0 group"
                   style={{
                     flex: `0 0 ${cardBasisCss}`,

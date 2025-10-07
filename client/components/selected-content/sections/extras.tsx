@@ -2,6 +2,7 @@
 
 import React, { useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
@@ -289,7 +290,8 @@ export default function ExtraDetails({ data }: DetailsProp) {
           className="flex gap-8 overflow-x-auto snap-x snap-mandatory pb-8 scrollbar-none"
         >
           {credits.cast.map((actor) => (
-            <div
+            <Link
+              href={`/celeb/${actor.id}`}
               key={actor.id}
               className="snap-start flex-shrink-0 min-w-[180px] text-center group"
             >
@@ -324,7 +326,7 @@ export default function ExtraDetails({ data }: DetailsProp) {
                   </p>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -336,89 +338,89 @@ export default function ExtraDetails({ data }: DetailsProp) {
         {(getKeyCrewMembers() || [])
           .filter((item) => item.job)
           .some((item) => item.people?.length) && (
-          <div>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-              Key Personnel
-            </h2>
-            <p className="text-slate-400 text-sm mb-8">
-              The creative visionaries behind the film
-            </p>
+            <div>
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+                Key Personnel
+              </h2>
+              <p className="text-slate-400 text-sm mb-8">
+                The creative visionaries behind the film
+              </p>
 
-            <div className="flex flex-wrap gap-4">
-              {getKeyCrewMembers()
-                .filter((item) => item.job)
-                .map((item) =>
-                  item.people.map((person) => (
-                    <div
-                      key={person.id}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-                    >
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
-                        {person.profile_path ? (
-                          <Image
-                            src={`https://image.tmdb.org/t/p/w92${person.profile_path}`}
-                            alt={person.name}
-                            width={40}
-                            height={40}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Users2 size={18} className="text-slate-500" />
-                          </div>
-                        )}
-                      </div>
+              <div className="flex flex-wrap gap-4">
+                {getKeyCrewMembers()
+                  .filter((item) => item.job)
+                  .map((item) =>
+                    item.people.map((person) => (
+                      <div
+                        key={person.id}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
+                          {person.profile_path ? (
+                            <Image
+                              src={`https://image.tmdb.org/t/p/w92${person.profile_path}`}
+                              alt={person.name}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Users2 size={18} className="text-slate-500" />
+                            </div>
+                          )}
+                        </div>
 
-                      <div className="flex flex-col">
-                        <span className="text-slate-100 text-sm font-medium leading-tight">
-                          {person.name}
-                        </span>
-                        <span className="text-[10px] uppercase text-slate-400 tracking-wide">
-                          {item.job}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="text-slate-100 text-sm font-medium leading-tight">
+                            {person.name}
+                          </span>
+                          <span className="text-[10px] uppercase text-slate-400 tracking-wide">
+                            {item.job}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Timeline Style Crew List */}
         {(getKeyCrewMembers() || [])
           .filter((item) => item.job)
           .some((item) => item.people?.length) && (
-          <div>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-              Creative Team
-            </h2>
-            <div className="divide-y divide-white/10">
-              {getKeyCrewMembers()
-                .filter((item) => item.job)
-                .map((item) => (
-                  <div
-                    key={item.job}
-                    className="flex justify-between py-3 text-sm"
-                  >
-                    <span className="text-slate-400 uppercase tracking-wide font-medium">
-                      {item.job}
-                    </span>
-                    <div className="text-slate-100 font-medium">
-                      {item.people
-                        .map((person) => person.name)
-                        .slice(0, 3)
-                        .join(", ")}
-                      {item.people.length > 3 && (
-                        <button className="ml-2 text-xs text-blue-400 hover:text-blue-300">
-                          View All
-                        </button>
-                      )}
+            <div>
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+                Creative Team
+              </h2>
+              <div className="divide-y divide-white/10">
+                {getKeyCrewMembers()
+                  .filter((item) => item.job)
+                  .map((item) => (
+                    <div
+                      key={item.job}
+                      className="flex justify-between py-3 text-sm"
+                    >
+                      <span className="text-slate-400 uppercase tracking-wide font-medium">
+                        {item.job}
+                      </span>
+                      <div className="text-slate-100 font-medium">
+                        {item.people
+                          .map((person) => person.name)
+                          .slice(0, 3)
+                          .join(", ")}
+                        {item.people.length > 3 && (
+                          <button className="ml-2 text-xs text-blue-400 hover:text-blue-300">
+                            View All
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Studio Partners */}
         {info.production_companies?.length > 0 && (
@@ -540,11 +542,10 @@ export default function ExtraDetails({ data }: DetailsProp) {
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{
-                      width: `${
-                        info.budget > 0
+                      width: `${info.budget > 0
                           ? Math.min(100, (info.revenue / info.budget) * 100)
                           : 0
-                      }%`,
+                        }%`,
                     }}
                     transition={{ duration: 1, ease: "easeOut" }}
                     className="absolute top-0 left-0 h-full bg-green-500"
@@ -554,8 +555,8 @@ export default function ExtraDetails({ data }: DetailsProp) {
                   {roi >= 1.2
                     ? "Strong performance"
                     : roi >= 0.8
-                    ? "Average"
-                    : "Underperforming"}
+                      ? "Average"
+                      : "Underperforming"}
                 </div>
               </div>
 
@@ -569,21 +570,20 @@ export default function ExtraDetails({ data }: DetailsProp) {
                     initial={{ width: 0 }}
                     animate={{ width: `${(info.vote_average / 10) * 100}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
-                    className={`h-full ${
-                      info.vote_average < 5
+                    className={`h-full ${info.vote_average < 5
                         ? "bg-red-500"
                         : info.vote_average < 7
-                        ? "bg-yellow-400"
-                        : "bg-green-500"
-                    }`}
+                          ? "bg-yellow-400"
+                          : "bg-green-500"
+                      }`}
                   />
                 </div>
                 <div className="text-xs text-slate-400 mt-1">
                   {info.vote_average >= 7.5
                     ? "Well received"
                     : info.vote_average >= 5
-                    ? "Mixed reception"
-                    : "Poor reception"}
+                      ? "Mixed reception"
+                      : "Poor reception"}
                 </div>
               </div>
             </div>
@@ -602,19 +602,18 @@ export default function ExtraDetails({ data }: DetailsProp) {
                   <li>
                     Audience sentiment:{" "}
                     <span
-                      className={`${
-                        info.vote_average >= 7.5
+                      className={`${info.vote_average >= 7.5
                           ? "text-green-400"
                           : info.vote_average >= 5
-                          ? "text-yellow-300"
-                          : "text-red-400"
-                      }`}
+                            ? "text-yellow-300"
+                            : "text-red-400"
+                        }`}
                     >
                       {info.vote_average >= 7.5
                         ? "Positive"
                         : info.vote_average >= 5
-                        ? "Neutral"
-                        : "Negative"}
+                          ? "Neutral"
+                          : "Negative"}
                     </span>
                   </li>
                   <li>
@@ -704,9 +703,9 @@ export default function ExtraDetails({ data }: DetailsProp) {
                   {((info as TvDetailsData["info"]).number_of_seasons || 0) >= 5
                     ? "Long-running series"
                     : ((info as TvDetailsData["info"]).number_of_seasons ||
-                        0) >= 2
-                    ? "Multi-season"
-                    : "Limited series"}
+                      0) >= 2
+                      ? "Multi-season"
+                      : "Limited series"}
                 </div>
               </div>
 
@@ -720,21 +719,20 @@ export default function ExtraDetails({ data }: DetailsProp) {
                     initial={{ width: 0 }}
                     animate={{ width: `${(info.vote_average / 10) * 100}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
-                    className={`h-full ${
-                      info.vote_average < 5
+                    className={`h-full ${info.vote_average < 5
                         ? "bg-red-500"
                         : info.vote_average < 7
-                        ? "bg-yellow-400"
-                        : "bg-green-500"
-                    }`}
+                          ? "bg-yellow-400"
+                          : "bg-green-500"
+                      }`}
                   />
                 </div>
                 <div className="text-xs text-slate-400 mt-1">
                   {info.vote_average >= 7.5
                     ? "Critically acclaimed"
                     : info.vote_average >= 5
-                    ? "Mixed reviews"
-                    : "Poor reception"}
+                      ? "Mixed reviews"
+                      : "Poor reception"}
                 </div>
               </div>
             </div>
@@ -755,20 +753,19 @@ export default function ExtraDetails({ data }: DetailsProp) {
                         0) *
                         (info.runtime || 0)) /
                         60) *
-                        10
+                      10
                     ) / 10}
                     h total)
                   </li>
                   <li>
                     Status:{" "}
                     <span
-                      className={`${
-                        info.status === "Ended"
+                      className={`${info.status === "Ended"
                           ? "text-red-400"
                           : info.status === "Returning Series"
-                          ? "text-green-400"
-                          : "text-yellow-300"
-                      }`}
+                            ? "text-green-400"
+                            : "text-yellow-300"
+                        }`}
                     >
                       {info.status}
                     </span>
@@ -779,19 +776,18 @@ export default function ExtraDetails({ data }: DetailsProp) {
                       "-"
                     )[0] || info.release_date.split("-")[0]}
                     {(info as TvDetailsData["info"]).last_air_date &&
-                      ` - ${
-                        (info as TvDetailsData["info"]).last_air_date?.split(
-                          "-"
-                        )[0]
+                      ` - ${(info as TvDetailsData["info"]).last_air_date?.split(
+                        "-"
+                      )[0]
                       }`}
                   </li>
                   <li>
                     Networks:{" "}
                     {((info as TvDetailsData["info"]).networks?.length || 0) > 0
                       ? (info as TvDetailsData["info"]).networks
-                          ?.slice(0, 2)
-                          .map((n) => n.name)
-                          .join(", ")
+                        ?.slice(0, 2)
+                        .map((n) => n.name)
+                        .join(", ")
                       : "Unknown"}
                   </li>
                   <li>

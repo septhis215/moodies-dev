@@ -239,14 +239,14 @@ export default function ReviewsSection({
                             Read full review
                           </Link>
                         ) : (
-                          <a
+                          <Link
                             href={r.url || "#"}
                             target="_blank"
                             rel="noreferrer"
                             className="text-xs text-indigo-400 hover:underline truncate"
                           >
                             Read full review
-                          </a>
+                          </Link>
                         )}
                       </div>
 
