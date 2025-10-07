@@ -206,7 +206,6 @@ export class AllService implements OnModuleInit {
     }
 
     // Trending (optimized + recent + background recommendations)
-    // Trending (optimized + recent + background recommendations)
     async getTrending(limit = 30): Promise<TmdbAll[]> {
         const ttlSec = this.CACHE_TTL.BASIC_DATA;
         const cacheKey = `trending-${limit}`;
@@ -223,19 +222,18 @@ export class AllService implements OnModuleInit {
         }
 
         try {
-            // Get trending but only recent ones
-            const data = await this.tmdb(
-                `/trending/all/day?include_adult=false`
-            );
-
+            const data = await this.tmdb(`/trending/all/day?include_adult=false`);
             const results = (data?.results ?? []).filter((m: any) => {
                 const date = new Date(m.release_date ?? m.first_air_date ?? '');
-                return date >= new Date(this.getRecentDate(365)); // last 12 months
+                return date >= new Date(this.getRecentDate(365));
             });
+
             const uniqueItems = Array.from(
                 new Map(results.map((item) => [item.id, item])).values()
             );
-            const basicItems: TmdbAll[] = uniqueItems.slice(0, limit).map((m: any) => ({
+
+            // Pre-format basic data
+            let basicItems: TmdbAll[] = uniqueItems.slice(0, limit).map((m: any) => ({
                 id: m.id,
                 title: m.title ?? m.name ?? 'Untitled',
                 overview: m.overview ?? '',
@@ -246,15 +244,39 @@ export class AllService implements OnModuleInit {
                 vote_count: m.vote_count,
                 popularity: m.popularity,
                 origin_country: m.origin_country ?? [],
-                genres: m.genre_ids ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown') : [],
+                genres: m.genre_ids
+                    ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
+                    : [],
                 type: m.media_type,
                 recommendations: [],
             }));
 
+            // Fetch missing origin countries for movies
+            const movieWithoutCountry = basicItems.filter(
+                (m) => m.type === 'movie' && (!m.origin_country || m.origin_country.length === 0)
+            );
+
+            if (movieWithoutCountry.length > 0) {
+                const movieDetails = await Promise.allSettled(
+                    movieWithoutCountry.map((movie) =>
+                        this.tmdb(`/movie/${movie.id}?language=en-US`).catch(() => null)
+                    )
+                );
+
+                movieDetails.forEach((res, i) => {
+                    if (res.status === 'fulfilled' && res.value) {
+                        const detail = res.value;
+                        const countryCodes =
+                            detail.production_countries?.map((c: any) => c.iso_3166_1) ?? [];
+                        movieWithoutCountry[i].origin_country = countryCodes;
+                    }
+                });
+            }
+
             const shuffled = shuffleArray(basicItems);
             await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
 
-            // populate recommendations in background
+            // Populate recommendations in background
             this.populateRecommendationsBackground(basicItems, cacheKey);
 
             return shuffled.slice(0, limit);
@@ -263,6 +285,7 @@ export class AllService implements OnModuleInit {
             return [];
         }
     }
+
 
     // Utility to get date X days ago
     private getRecentDate(days: number): string {

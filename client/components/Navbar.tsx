@@ -21,6 +21,7 @@ import {
   MobileNavToggle,
 } from "./ui/resizable-navbar";
 import SearchBar from "./ui/searchbar";
+import Link from "next/link";
 
 const routes = [
   { name: "Home", href: "/" },
@@ -41,51 +42,43 @@ export function NavbarComponent() {
     null
   );
 
-  const routeOptions: Record<string, string[]> = {
+  const routeOptions: Record<string, { label: string; hash: string }[]> = {
     "/": [
-      "Overview",
-      "Highlights",
-      "Recommendations",
-      "What's New",
-      "Trending Now",
-      "Staff Picks",
+      { label: "Trending", hash: "/#trending" },
+      { label: "Premieres", hash: "/#premiere" },
+      { label: "Moodies Mix", hash: "/#favorites" },
+      { label: "Korean Picks", hash: "/#korea-trending" },
+      { label: "Celebrities", hash: "/#celebs" },
+      { label: "Upcoming", hash: "/#upcoming" },
     ],
+
     "/movies": [
-      "Now Playing",
-      "Top Rated",
-      "Upcoming",
-      "Genres",
-      "Box Office",
-      "Trailers",
-      "Collections",
-      "Browse by Year",
+      { label: "Trending", hash: "/movies#trending-movies" },
+      { label: "Top Rated", hash: "/movies#top-rated-movies" },
+      { label: "New Releases", hash: "/movies#new-release-movies" },
+      { label: "Korean", hash: "/movies#korean-movies" },
+      { label: "Upcoming", hash: "/movies#upcoming" },
+      { label: "Moods Matcher", hash: "/movies#moods" },
     ],
+
     "/tv": [
-      "Trending",
-      "Top Rated",
-      "New Seasons",
-      "By Network",
-      "Watchlist",
-      "New Episodes",
-      "Top Comedies",
+      { label: "Trending", hash: "/tv#trending-tv" },
+      { label: "Top Rated", hash: "/tv#top-rated-tv" },
+      { label: "New Releases", hash: "/tv#new-release-tv" },
+      { label: "Korean", hash: "/tv#korean-tv" },
+      { label: "Upcoming", hash: "/tv#upcoming" },
+      { label: "Moods Matcher", hash: "/tv#moods" },
     ],
+
     "/community": [
-      "Forums",
-      "Events",
-      "Guides",
-      "User Reviews",
-      "Clubs",
-      "Contests",
-      "Meetups",
+      { label: "Forums", hash: "#forums" },
+      { label: "Clubs", hash: "#clubs" },
+      { label: "Reviews", hash: "#user-reviews" },
     ],
+
     "/moods": [
-      "Saved Moods",
-      "Create Mood",
-      "History",
-      "Recommendations",
-      "Shared Moods",
-      "Export",
-      "Reset Moods",
+      { label: "Mood Wheels", hash: "/moods#mood-wheels" },
+      { label: "Categories", hash: "/moods#categories" },
     ],
   };
 
@@ -198,17 +191,16 @@ export function NavbarComponent() {
               {/* nav — on hover/focus set activeRoute */}
               <nav className="flex-1 flex flex-col justify-center gap-2 md:gap-4">
                 {routes.map((r) => (
-                  <a
+                  <Link
                     key={r.href}
                     href={r.href}
                     onMouseEnter={() => setActiveRoute(r.href)}
                     onFocus={() => setActiveRoute(r.href)}
                     onClick={() => setIsOpen(false)}
-                    className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${
-                      activeRoute === r.href
-                        ? "text-[#e94f37]"
-                        : "text-gray-100 hover:text-[#e94f37]"
-                    } pl-4`} // ⬅️ padding-left so line sits outside
+                    className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${activeRoute === r.href
+                      ? "text-[#e94f37]"
+                      : "text-gray-100 hover:text-[#e94f37]"
+                      } pl-4`} // ⬅️ padding-left so line sits outside
                     style={{
                       fontSize: "clamp(1.125rem, 4.2vh, 1.75rem)",
                       paddingTop: "0.35rem",
@@ -217,14 +209,13 @@ export function NavbarComponent() {
                   >
                     {/* active/hover indicator line */}
                     <span
-                      className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full bg-[#e94f37] transition-all duration-200 ${
-                        activeRoute === r.href
-                          ? "h-6 opacity-100"
-                          : "h-0 opacity-0 group-hover:h-4 group-hover:opacity-100"
-                      }`}
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full bg-[#e94f37] transition-all duration-200 ${activeRoute === r.href
+                        ? "h-6 opacity-100"
+                        : "h-0 opacity-0 group-hover:h-4 group-hover:opacity-100"
+                        }`}
                     />
                     {r.name}
-                  </a>
+                  </Link>
                 ))}
               </nav>
 
@@ -254,17 +245,18 @@ export function NavbarComponent() {
 
                 <div className="flex flex-col gap-3">
                   {(routeOptions[activeRoute] || []).map((opt) => (
-                    <a
-                      key={opt}
-                      href="#"
+                    <Link
+                      key={opt.hash}
+                      href={opt.hash}
+                      onClick={() => setIsOpen(false)}
                       className="relative px-4 py-2 rounded-lg text-gray-200
-           hover:text-white transition-all duration-300
-           before:absolute before:inset-0 before:rounded-lg before:border
-           before:border-[#e94f37]/30 hover:before:border-[#e94f37]
-           before:transition-all before:duration-300"
+        hover:text-white transition-all duration-300
+        before:absolute before:inset-0 before:rounded-lg before:border
+        before:border-[#e94f37]/30 hover:before:border-[#e94f37]
+        before:transition-all before:duration-300"
                     >
-                      {opt}
-                    </a>
+                      {opt.label}
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -309,13 +301,13 @@ export function NavbarComponent() {
                 </p>
 
                 <div className="mt-4">
-                  <a
+                  <Link
                     href="/auth/login"
                     onClick={() => setIsOpen(false)}
                     className="inline-flex items-center justify-center rounded-full border border-white/20 px-5 py-2 text-sm text-white hover:bg-white/5 transition"
                   >
                     Login
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -331,8 +323,9 @@ export function NavbarComponent() {
             </button>
           </motion.div>
         </motion.div>
-      )}
-    </AnimatePresence>
+      )
+      }
+    </AnimatePresence >
   );
 
   return (
@@ -344,21 +337,21 @@ export function NavbarComponent() {
         <div />
 
         <div className="flex items-center gap-3">
-          <a
+          <Link
             href="/community"
             className="hidden md:inline-flex items-center gap-2 text-gray-200 hover:text-white"
           >
             <IconUsers size={24} className="!w-6 !h-6" />
             <span className="sr-only">Community</span>
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/your-moods"
             className="hidden md:inline-flex items-center gap-2 text-gray-200 hover:text-white"
           >
             <IconMoodSmile size={24} className="!w-6 !h-6" />
             <span className="sr-only">Your Moods</span>
-          </a>
+          </Link>
 
           <div className="hidden sm:inline-flex items-center">
             <SearchBar
@@ -423,11 +416,10 @@ export function NavbarComponent() {
                         prev === r.href ? null : r.href
                       )
                     }
-                    className={`flex justify-between items-center py-3 px-2 rounded-md text-lg transition ${
-                      activeMobileRoute === r.href
-                        ? "text-[#e94f37] bg-[#e94f37]/10"
-                        : "text-gray-100 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
-                    }`}
+                    className={`flex justify-between items-center py-3 px-2 rounded-md text-lg transition ${activeMobileRoute === r.href
+                      ? "text-[#e94f37] bg-[#e94f37]/10"
+                      : "text-gray-100 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
+                      }`}
                   >
                     <span>{r.name}</span>
                     <span className="text-[#e94f37]">
@@ -439,18 +431,21 @@ export function NavbarComponent() {
                   {activeMobileRoute === r.href && (
                     <ul className="pl-4 mt-1 flex flex-col gap-2">
                       {(routeOptions[r.href] || []).map((opt) => (
-                        <li key={opt}>
-                          <a
-                            href="#"
+                        <li key={opt.hash}>
+                          <Link
+                            href={opt.hash}
                             onClick={(e) => {
                               e.preventDefault();
                               setIsMobileOpen(false);
+                              // Optionally scroll to section:
+                              const el = document.querySelector(opt.hash);
+                              if (el) el.scrollIntoView({ behavior: "smooth" });
                             }}
                             className="block text-sm px-2 py-1 rounded-md transition
-    text-gray-300 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
+        text-gray-300 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
                           >
-                            {opt}
-                          </a>
+                            {opt.label}
+                          </Link>
                         </li>
                       ))}
                     </ul>
@@ -469,13 +464,13 @@ export function NavbarComponent() {
               </div>
 
               <div className="mt-4">
-                <a
+                <Link
                   href="/auth/login"
                   onClick={() => setIsMobileOpen(false)}
                   className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
                 >
                   Login
-                </a>
+                </Link>
               </div>
             </div>
 

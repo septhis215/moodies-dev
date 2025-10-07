@@ -104,7 +104,7 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
     };
 
     return (
-        <section className="relative overflow-hidden">
+        <section id="moods" className="relative py-22 px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto overflow-hidden">
             {/* Animated Background */}
             <div className="absolute inset-0 -z-10">
                 <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl animate-pulse" />

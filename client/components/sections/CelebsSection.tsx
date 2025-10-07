@@ -208,7 +208,7 @@ export default function CelebSection() {
   if (!celebs.length) return null;
 
   return (
-    <section className="relative w-full px-6 py-16 max-w-7xl mx-auto">
+    <section id="celebs" className="relative w-full py-22 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-8">
           <div className="flex items-center gap-3 mb-2">

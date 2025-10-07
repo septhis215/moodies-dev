@@ -61,7 +61,7 @@ export function ComingSoonSection({
     const grouped = groupByMonthAndWeek(items, type);
 
     return (
-        <section className="mt-16">
+        <section id="upcoming" className="relative max-w-7xl w-full mx-auto py-22 px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3 mb-6">
                 <Calendar className="w-7 h-7 text-[#e94f37]" />
                 <h2 className="text-2xl sm:text-3xl font-black text-white">{title}</h2>

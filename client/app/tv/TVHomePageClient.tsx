@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from "framer-motion";
 import { ComingSoonSection } from '@/components/sections/ComingSoon';
 import MoodRecommendationsSection from '@/components/sections/MoodRecommendationSection';
-
+import { useScrollToHash } from "@/hooks/useScrollToHash";
 export default function TVHomePageClient({
     trendingTV,
     popularTV,
@@ -43,7 +43,7 @@ export default function TVHomePageClient({
         path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder.jpg";
     const getPosterUrl = (path?: string) =>
         path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder.jpg";
-
+    useScrollToHash(100);
     const nextHero = () =>
         setHeroIndex((prev) => (heroShows.length ? (prev + 1) % heroShows.length : 0));
     const prevHero = () =>
@@ -219,7 +219,7 @@ export default function TVHomePageClient({
                 {/* Top gradient for navbar readability */}
                 <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10" />
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 relative z-20 mt-14">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-30 pb-20 relative z-20">
                     {/* Content grid */}
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
                         {/* LEFT mosaic */}
@@ -369,7 +369,7 @@ export default function TVHomePageClient({
 
                 {/* Airing Today */}
                 {airingToday && airingToday.length > 0 && (
-                    <section className="relative bg-gradient-to-br from-red-950/30 via-orange-950/20 to-transparent backdrop-blur-sm p-6 sm:p-8 lg:p-10 rounded-3xl border border-red-500/20 ring-1 ring-white/5 shadow-2xl overflow-hidden">
+                    <section id="airing-today" className="relative bg-gradient-to-br from-red-950/30 via-orange-950/20 to-transparent backdrop-blur-sm p-6 sm:p-8 lg:p-10 rounded-3xl border border-red-500/20 ring-1 ring-white/5 shadow-2xl overflow-hidden">
                         {/* Decorative elements */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/10 rounded-full blur-3xl" />
 
@@ -395,7 +395,7 @@ export default function TVHomePageClient({
 
                 {/* Trending Now */}
                 {popularTV && popularTV.length > 0 && (
-                    <section className="relative">
+                    <section id="trending-tv" className="relative">
                         <div className="flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
                                 <div className="relative">
@@ -416,7 +416,7 @@ export default function TVHomePageClient({
 
                 {/* New This Week - Responsive Grid */}
                 {newReleaseTV && newReleaseTV.length > 0 && (
-                    <section className="relative">
+                    <section id="new-release-tv" className="relative">
                         <div className="flex items-center gap-4 mb-10">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-cyan-400 blur-xl opacity-50" />
@@ -509,7 +509,7 @@ export default function TVHomePageClient({
                 {/* Top Rated */}
                 {
                     topRatedTV && topRatedTV.length > 0 && (
-                        <section>
+                        <section id="top-rated-tv" className="relative">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <Star className="w-7 h-7 text-yellow-500" />
@@ -559,7 +559,7 @@ export default function TVHomePageClient({
                 {/* Airing This Week */}
                 {
                     airingThisWeek && airingThisWeek.length > 0 && (
-                        <section>
+                        <section id="airing-this-week" className="relative">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <Calendar className="w-7 h-7 text-indigo-500" />
@@ -574,7 +574,7 @@ export default function TVHomePageClient({
                 {/* K-Drama Collection */}
                 {
                     KoreanTV && KoreanTV.length > 0 && (
-                        <section className="bg-gradient-to-br from-purple-900/10 to-pink-900/10 p-4 sm:p-6 lg:p-8 rounded-2xl border border-purple-500/10">
+                        <section id="korean-tv" className="bg-gradient-to-br from-purple-900/10 to-pink-900/10 p-4 sm:p-6 lg:p-8 rounded-2xl border border-purple-500/10">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
                                     <span className="text-3xl">🇰🇷</span>
@@ -589,7 +589,7 @@ export default function TVHomePageClient({
                 {/* Community Activity */}
                 {
                     popularTV && topRatedTV && TVTrailer && (
-                        <section>
+                        <section className="relative">
                             <div className="flex items-center gap-3 mb-6">
                                 <TrendingUp className="w-7 h-7 text-green-500" />
                                 <h2 className="text-2xl sm:text-3xl font-black">Community Activity</h2>

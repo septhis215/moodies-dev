@@ -1,15 +1,13 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play, Star, Tv, Film } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { All } from "@/types/all";
 
-// Lazy load modal
 const TrailerModal = dynamic(() => import("./TrailerModal"), { ssr: false });
 
-// Fetch trailers
 async function fetchPremiereTrailers(): Promise<All[]> {
   const base = process.env.NEST_API_URL || "http://localhost:4000";
   try {
@@ -22,7 +20,6 @@ async function fetchPremiereTrailers(): Promise<All[]> {
   }
 }
 
-// Fetch recommendations
 async function fetchRecommendations(type: "movie" | "tv", id: number): Promise<All[]> {
   const base = process.env.NEST_API_URL || "http://localhost:4000";
   try {
@@ -53,22 +50,19 @@ export default function PremiereHighlights({
   const [recommendationsCache, setRecommendationsCache] = useState<Record<number, All[]>>({});
   const [loading, setLoading] = useState(!data);
   const [error, setError] = useState<string | null>(null);
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
 
-  // Carousel state
   const [startIndex, setStartIndex] = useState(0);
-  const [itemsPerView, setItemsPerView] = useState(4);
+  const [itemsPerView, setItemsPerView] = useState(3);
 
-  // Unique trailers
   const uniqueTrailers = Array.from(new Map(trailers.map(item => [item.id, item])).values());
 
   useEffect(() => {
-    // Responsive layout
     const updateLayout = () => {
       const w = window.innerWidth;
       if (w < 640) setItemsPerView(1);
-      else if (w < 768) setItemsPerView(2);
-      else if (w < 1024) setItemsPerView(3);
-      else setItemsPerView(4);
+      else if (w < 1024) setItemsPerView(2);
+      else setItemsPerView(3);
     };
     updateLayout();
     window.addEventListener("resize", updateLayout);
@@ -124,24 +118,27 @@ export default function PremiereHighlights({
     }
   };
 
-  // Carousel navigation
   const canScrollLeft = startIndex > 0;
   const canScrollRight = startIndex < uniqueTrailers.length - itemsPerView;
 
-  const scrollLeft = () => setStartIndex(prev => Math.max(0, prev - itemsPerView));
+  const scrollLeft = () => setStartIndex(prev => Math.max(0, prev - 3));
   const scrollRight = () =>
-    setStartIndex(prev => Math.min(uniqueTrailers.length - itemsPerView, prev + itemsPerView));
+    setStartIndex(prev => Math.min(uniqueTrailers.length - itemsPerView, prev + 3));
 
   const visibleItems = uniqueTrailers.slice(startIndex, startIndex + itemsPerView);
 
   if (loading) {
     return (
-      <section className="px-6 py-12 mx-auto relative">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{title}</h2>
-        <p className="text-gray-400 text-sm mt-1">Loading...</p>
-        <div className="flex gap-4 mt-6 overflow-hidden">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="w-80 h-52 bg-gray-800 animate-pulse rounded-lg" />
+      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">{title}</h2>
+            <p className="text-gray-400 text-base mt-2">Loading incredible content...</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="aspect-[16/9] bg-gray-800 animate-pulse rounded-2xl" />
           ))}
         </div>
       </section>
@@ -150,13 +147,13 @@ export default function PremiereHighlights({
 
   if (error) {
     return (
-      <section className="px-6 py-12 mx-auto relative">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{title}</h2>
-        <div className="mt-6 p-8 bg-gray-800 rounded-lg text-center">
-          <p className="text-gray-400 text-lg">{error}</p>
+      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-8">{title}</h2>
+        <div className="p-12 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl text-center border border-gray-700">
+          <p className="text-gray-400 text-lg mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors font-semibold"
           >
             Retry
           </button>
@@ -168,20 +165,20 @@ export default function PremiereHighlights({
   if (trailers.length === 0) return null;
 
   return (
-    <section className="px-6 py-12 max-w-7xl mx-auto relative mb-16">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{title}</h2>
-        <div className="text-sm text-gray-500">{trailers.length} shows available</div>
+    <section id="premiere" className="py-22 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto  relative">
+      <div className="flex items-end justify-between mb-8">
+        <div>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">{title}</h2>
+          <p className="text-gray-400 text-base mt-2">{subtitle}</p>
+        </div>
       </div>
-      <p className="text-gray-400 text-sm mt-1">{subtitle}</p>
 
-      {/* Carousel */}
-      <div className="relative mt-6 group/carousel">
+      <div className="relative group/carousel">
         {canScrollLeft && (
           <button
             onClick={scrollLeft}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-50 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-lg"
-            aria-label="Scroll left"
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 z-50 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-md hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all opacity-0 group-hover/carousel:opacity-100 shadow-xl border border-white/20"
+            aria-label="Previous"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
@@ -190,57 +187,122 @@ export default function PremiereHighlights({
         {canScrollRight && (
           <button
             onClick={scrollRight}
-            className="absolute right-0 top-1/2 translate-x-4 -translate-y-1/2 z-50 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-lg"
-            aria-label="Scroll right"
+            className="absolute  right-0 top-1/2 translate-x-6 -translate-y-1/2 z-50 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
+            aria-label="Next"
           >
             <ChevronRight className="w-6 h-6" />
           </button>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {visibleItems.map((item) => (
-            <motion.div
-              key={item.id}
-              whileHover={{ scale: 1.05 }}
-              className="relative group flex-shrink-0 w-full h-54 cursor-pointer rounded-lg overflow-hidden bg-gray-800 shadow-lg"
-              onClick={() => handleSelectTrailer(item)}
-            >
-              <Image
-                src={
-                  item.backdrop_path
-                    ? `https://image.tmdb.org/t/p/w500${item.backdrop_path}`
-                    : "/placeholder.jpg"
-                }
-                alt={item.title}
-                fill
-                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                className="object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-3">
-                <h3 className="text-white font-semibold text-sm line-clamp-2">{item.title}</h3>
-              </div>
-              {item.trailer_key && (
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
-                    <Play size={32} className="text-white ml-1" fill="white" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <AnimatePresence mode="popLayout">
+            {visibleItems.map((item, index) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className="relative group cursor-pointer"
+                onMouseEnter={() => setHoveredId(item.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                onClick={() => handleSelectTrailer(item)}
+              >
+                <div className="relative aspect-[16/11] rounded-2xl overflow-hidden bg-gray-900 shadow-2xl">
+                  {/* Image */}
+                  <Image
+                    src={
+                      item.backdrop_path
+                        ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
+                        : "/placeholder.jpg"
+                    }
+                    alt={item.title}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 33vw"
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    priority={index === 0}
+                  />
+
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+
+                  {/* Top Badges */}
+                  <div className="absolute top-4 left-4 right-4 flex items-start justify-between z-20">
+                    <div
+                      className={`
+                                             flex items-center gap-1 px-2 py-1 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border group-hover:opacity-0 transition-opacity duration-300
+                                             ${item.type === "tv"
+                          ? "bg-blue-500/90 text-white border-blue-400/50"
+                          : "bg-purple-500/90 text-white border-purple-400/50"
+                        }
+                                           `}
+                    >
+                      {item.type === "tv" ? (
+                        <Tv size={12} />
+                      ) : (
+                        <Film size={12} />
+                      )}
+                      {item.type === "tv" ? "Series" : "Movie"}
+                    </div>
+
+                    {item.vote_average && item.vote_average > 0 && (
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-lg font-medium text-xs text-white rounded-md bg-black/60 backdrop-blur-md border border-white/10">
+                        <Star size={12} fill="white" />
+                        <span>{item.vote_average.toFixed(1) ?? "New"}</span>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Play Button - Center */}
+                  {item.trailer_key && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{
+                        scale: hoveredId === item.id ? 1 : 0,
+                        opacity: hoveredId === item.id ? 1 : 0
+                      }}
+                      transition={{ duration: 0.2, type: "spring", stiffness: 200 }}
+                      className="absolute inset-0 flex items-center justify-center z-10"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-2xl backdrop-blur-sm">
+                        <Play size={24} className="text-black ml-1" fill="black" />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Bottom Content */}
+                  <div className="absolute bottom-0 left-0 right-0 p-5 z-10">
+                    <h3 className="text-white font-bold text-lg sm:text-xl mb-2 line-clamp-2">
+                      {item.title}
+                    </h3>
+
+                    <div className="flex items-center gap-3 text-sm text-gray-300 mb-2">
+                      {item.release_date && (
+                        <span className="font-medium">
+                          {new Date(item.release_date).getFullYear()}
+                        </span>
+                      )}
+                      {item.genres && item.genres.length > 0 && (
+                        <>
+                          <span className="text-gray-500">•</span>
+                          <span>{item.genres.slice(0, 2).join(", ")}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Hover Border */}
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      opacity: hoveredId === item.id ? 1 : 0
+                    }}
+                    className="absolute inset-0 rounded-2xl ring-2 ring-white/30 pointer-events-none"
+                  />
                 </div>
-              )}
-              <div className="absolute bottom-3 right-3">
-                <div
-                  className={[
-                    "flex items-center gap-1 px-2 py-0.5 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border",
-                    item.type === "tv"
-                      ? "bg-blue-500/90 text-white border-blue-400/50"
-                      : "bg-purple-500/90 text-white border-purple-400/50",
-                  ].join(" ")}
-                >
-                  {item.type === "tv" ? <Tv size={12} /> : <Film size={12} />}
-                  {item.type === "tv" ? "Series" : "Movie"}
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </div>
 

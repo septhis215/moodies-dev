@@ -119,7 +119,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
       )}
     >
       {items.map((item, idx) => (
-        <a
+        <Link
           key={idx}
           href={item.link}
           onClick={onItemClick}
@@ -127,7 +127,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
         >
           {item.name}
           <span className="absolute left-0 -bottom-1 h-0.5 w-0 bg-blue-400 transition-all group-hover:w-full" />
-        </a>
+        </Link>
       ))}
     </div>
   );
@@ -303,9 +303,9 @@ export const NavbarButton = ({
 
   if (href)
     return (
-      <a href={href} className={`${base} ${variantClass} ${className ?? ""}`}>
+      <Link href={href} className={`${base} ${variantClass} ${className ?? ""}`}>
         {children}
-      </a>
+      </Link>
     );
 
   return (

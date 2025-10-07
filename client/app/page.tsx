@@ -1,5 +1,5 @@
 // src/app/page.tsx
-import React from 'react';
+import React, { use } from 'react';
 import type { All } from '@/types/all';
 import HeroCarousel from '@/components/hero/heroCarousel';
 import TrendingSection from "@/components/sections/TrendingSection";
@@ -9,7 +9,7 @@ import KoreaTrendingSection from '@/components/sections/KoreanSection';
 import CelebSection from '@/components/sections/CelebsSection';
 import CommunityPicks from '@/components/sections/CommunityPicks';
 import { UpcomingTrailers } from '@/components/sections/UpcomingTrailers';
-
+import MoodDiscoverySection from '@/components/sections/MoodDiscoverySection';
 async function fetchFeatured() {
   const base = process.env.NEST_API_URL || 'http://localhost:4000';
   // cache policy: change revalidate per your needs
@@ -22,7 +22,6 @@ async function fetchFeatured() {
 export default async function LandingPage() {
   const all = await fetchFeatured();
   await new Promise((resolve) => setTimeout(resolve, 4000)); // ⏳ fake delay
-
   return (
     <main className="bg-black min-h-screen overflow-x-hidden">
       <HeroCarousel all={all} />
@@ -30,6 +29,7 @@ export default async function LandingPage() {
       <PremiereHighlights />
       <FavoritesSection />
       <KoreaTrendingSection />
+      <MoodDiscoverySection />
       <CelebSection />
       <CommunityPicks />
       <UpcomingTrailers />

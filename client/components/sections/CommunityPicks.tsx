@@ -83,7 +83,7 @@ export default function CommunityPicks({
     if (reviews.length === 0) return null;
 
     return (
-        <section className="relative w-full px-6 py-12 mx-auto max-w-7xl">
+        <section id="community" className="relative w-full py-16 px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl">
             <div className="mb-6">
                 <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">{title}</h2>
                 <p className="text-gray-400 text-sm mt-1">{subtitle}</p>

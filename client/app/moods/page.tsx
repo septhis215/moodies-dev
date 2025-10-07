@@ -325,7 +325,7 @@ export default function MoodDiscoveryWheel() {
     const selectedMood = shuffledMoods.find((m) => m.id === selectedMoodId) ?? shuffledMoods[0];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900">
+        <section id="mood-wheels" className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900">
             {/* Subtle background elements */}
             <div className="absolute inset-0 overflow-hidden">
                 <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/3 rounded-full blur-3xl" />
@@ -729,6 +729,6 @@ export default function MoodDiscoveryWheel() {
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     );
 }

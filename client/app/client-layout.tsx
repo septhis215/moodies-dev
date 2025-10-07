@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { NavbarComponent } from "@/components/Navbar";
 import { Suspense, useEffect, useState } from "react";
 import { useLoading } from "./context/LoadingContext";
-
+import { useScrollToHash } from "@/hooks/useScrollToHash";
 export default function ClientLayout({
   children,
 }: {
@@ -14,6 +14,7 @@ export default function ClientLayout({
   const { isLoading } = useLoading();
   const [isMounted, setIsMounted] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  useScrollToHash(100);
 
   // Handle initial mount - hide navbar briefly on page load/refresh
   useEffect(() => {

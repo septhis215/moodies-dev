@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 // a visible, robust aurora background + centered 404 card
 export default function NotFoundAuroraVisible() {
   return (
@@ -152,12 +154,12 @@ export default function NotFoundAuroraVisible() {
             Looks like this route drifted into the aurora. Try heading back
             home.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block px-8 py-3 rounded-md bg-gradient-to-r from-slate-700 to-slate-600 hover:from-slate-600 hover:to-slate-500 transition text-white"
           >
             Back to safety
-          </a>
+          </Link>
         </div>
       </div>
 

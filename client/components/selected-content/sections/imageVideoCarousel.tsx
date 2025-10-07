@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 type Props = {
   posters?: string[];
@@ -229,7 +230,7 @@ export default function ImageVideoCarousel({
                       sizes="100vw"
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <a
+                      <Link
                         href={
                           normalizedVideos[
                             selectedIndex
@@ -242,7 +243,7 @@ export default function ImageVideoCarousel({
                         className="px-4 py-2 rounded-md bg-black/60 text-white"
                       >
                         Open video
-                      </a>
+                      </Link>
                     </div>
                   </>
                 )}
@@ -486,7 +487,7 @@ export default function ImageVideoCarousel({
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <a
+                    <Link
                       href={
                         normalizedVideos[selectedIndex].site?.toLowerCase() ===
                         "vimeo"
@@ -498,7 +499,7 @@ export default function ImageVideoCarousel({
                       className="px-4 py-2 rounded-md bg-white text-black"
                     >
                       Open video in new tab
-                    </a>
+                    </Link>
                   </div>
                 )
               ) : (

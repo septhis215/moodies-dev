@@ -26,6 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { style } from "framer-motion/client";
 
 type MovieLike = {
   id: string | number;
@@ -56,6 +57,7 @@ interface CardCarouselProps<T extends MovieLike> {
   title: string;
   subtitle?: string;
   items: T[];
+  sectionId?: string;
   getPoster?: (item: T) => string;
   onAddToWatchlist?: (item: T) => void;
   onRemoveFromWatchlist?: (item: T) => void;
@@ -78,6 +80,7 @@ export default function CardCarousel<T extends MovieLike>({
   title,
   subtitle,
   items,
+  sectionId = "",
   onAddToWatchlist,
   onRemoveFromWatchlist,
   isInWatchlist,
@@ -298,7 +301,7 @@ export default function CardCarousel<T extends MovieLike>({
   return (
     <>
       <style jsx>{scrollbarStyles}</style>
-      <section className="relative w-full px-4 sm:px-6 py-8 sm:py-12 max-w-7xl mx-auto">
+      <section id={sectionId} className="relative w-full py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Section header */}
         <div className="mb-6">
           <div>
@@ -384,7 +387,7 @@ export default function CardCarousel<T extends MovieLike>({
                     />
 
                     {/* Top Action Bar - Always Visible */}
-                    <div className="absolute top-3 left-3 right-3 z-40 flex justify-between items-start">
+                    <div className="absolute top-2 sm:top-3 left-2 sm:left-3 right-2 sm:right-3 z-40 flex justify-between items-start">
                       {/* Watchlist Button */}
                       <TooltipProvider>
                         <Tooltip>
@@ -393,32 +396,25 @@ export default function CardCarousel<T extends MovieLike>({
                               onClick={(e) => handleWatchlistToggle(movie, e)}
                               disabled={isLoading}
                               className={`
-                                  p-2 rounded-full shadow-lg backdrop-blur-md border transition-all duration-200
-                                  ${inWatchlist
+              p-1.5 sm:p-2 rounded-full shadow-lg backdrop-blur-md border transition-all duration-200
+              ${inWatchlist
                                   ? "bg-green-500/90 border-green-400/50 text-white hover:bg-green-600/90"
                                   : "bg-black/50 border-white/30 text-white hover:bg-black/70 hover:border-white/50"
                                 }
-                                  ${isLoading
-                                  ? "opacity-70 cursor-not-allowed"
-                                  : "hover:scale-110"
-                                }
-                                `}
+              ${isLoading ? "opacity-70 cursor-not-allowed" : "hover:scale-110"}
+            `}
                               whileTap={{ scale: 0.9 }}
                             >
                               {isLoading ? (
                                 <motion.div
                                   animate={{ rotate: 360 }}
-                                  transition={{
-                                    duration: 1,
-                                    repeat: Infinity,
-                                    ease: "linear",
-                                  }}
-                                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                  className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full"
                                 />
                               ) : inWatchlist ? (
-                                <BookmarkCheck size={16} />
+                                <BookmarkCheck size={14} className="sm:w-4 sm:h-4" />
                               ) : (
-                                <Bookmark size={16} />
+                                <Bookmark size={14} className="sm:w-4 sm:h-4" />
                               )}
                             </motion.button>
                           </TooltipTrigger>
@@ -427,12 +423,8 @@ export default function CardCarousel<T extends MovieLike>({
                             sideOffset={8}
                             className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
                           >
-                            <div className="text-sm font-medium text-white">
-                              {isLoading
-                                ? "Updating..."
-                                : inWatchlist
-                                  ? "Remove from Watchlist"
-                                  : "Add to Watchlist"}
+                            <div className="text-xs sm:text-sm font-medium text-white">
+                              {isLoading ? "Updating..." : inWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
                             </div>
                           </TooltipContent>
                         </Tooltip>
@@ -442,224 +434,185 @@ export default function CardCarousel<T extends MovieLike>({
                       {movie.vote_average && (
                         <div
                           className={`
-                              flex items-center gap-1 px-2 py-1 rounded-lg font-bold text-xs shadow-lg backdrop-blur-md border
-                              ${movie.vote_average >= 7.5
+          flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-bold text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
+          ${movie.vote_average >= 7.5
                               ? "bg-green-500/90 text-white border-green-400/50"
                               : movie.vote_average >= 6
                                 ? "bg-yellow-500/90 text-black border-yellow-400/50"
                                 : "bg-red-500/90 text-white border-red-400/50"
                             }
-                            `}
+        `}
                         >
-                          <Star size={12} fill="currentColor" />
+                          <Star size={10} className="sm:w-3 sm:h-3" fill="currentColor" />
                           {movie.vote_average.toFixed(1)}
                         </div>
                       )}
                     </div>
 
-                    {/* Content Type Badge - Bottom Left */}
-                    <div className="absolute bottom-3 left-3 z-40">
+                    {/* Content Type Badge - Bottom Left (hidden on hover) */}
+                    <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 z-40 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
                       <div
                         className={`
-                          flex items-center gap-1 px-2 py-1 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border group-hover:opacity-0 transition-opacity duration-300
-                          ${contentType === "tv"
+        flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-medium text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
+        ${contentType === "tv"
                             ? "bg-blue-500/90 text-white border-blue-400/50"
                             : "bg-purple-500/90 text-white border-purple-400/50"
                           }
-                        `}
+      `}
                       >
-                        {contentType === "tv" ? (
-                          <Tv size={12} />
-                        ) : (
-                          <Film size={12} />
-                        )}
+                        {contentType === "tv" ? <Tv size={10} className="sm:w-3 sm:h-3" /> : <Film size={10} className="sm:w-3 sm:h-3" />}
                         {contentType === "tv" ? "Series" : "Movie"}
                       </div>
                     </div>
 
-                    {/* Hover Overlay - Better positioned and scrollable */}
+                    {/* Hover Overlay - Fixed positioning with no overflow */}
                     <motion.div
                       initial={{ opacity: 0 }}
                       whileHover={{ opacity: 1 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute inset-0 z-30 opacity-0 group-hover:opacity-100"
+                      className="absolute inset-0 z-30 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
                     >
-                      {/* Top safe zone to avoid collision with action bar */}
-                      <div className="h-16 bg-gradient-to-b from-black/60 to-transparent" />
+                      {/* Gradient Background */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-black/40 backdrop-blur-sm" />
 
-                      {/* Scrollable content area */}
-                      <div className="absolute inset-x-0 bottom-0 top-16 bg-gradient-to-t from-black/95 via-black/80 to-black/40 backdrop-blur-md">
-                        <div className="h-full overflow-y-auto scrollbar-hide p-2 sm:p-3">
-                          <div className="flex flex-col h-full justify-end min-h-full">
-                            {/* Title & Info Section */}
-                            <div className="space-y-2 bg-gradient-to-t from-black/80 via-black/60 to-transparent rounded-md p-2 backdrop-blur-sm">
-                              <div className="flex items-start justify-between gap-2">
-                                <h3 className="text-sm sm:text-base font-bold text-white line-clamp-2 leading-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] flex-1">
-                                  {movieTitle}
-                                </h3>
+                      {/* Safe Content Area - Avoids top action bar */}
+                      <div className="absolute inset-0 flex flex-col">
+                        {/* Top spacer to avoid collision with action bar */}
+                        <div className="h-12 sm:h-14 shrink-0" />
 
-                                {/* Info button */}
-                                <button
-                                  className="shrink-0 rounded-full bg-white/20 hover:bg-white/30 text-white transition cursor-pointer p-1"
-                                  aria-label="More info"
-                                >
-                                  <Info size={14} />
-                                </button>
-                              </div>
+                        {/* Scrollable Content Container */}
+                        <div className="flex-1 overflow-y-auto scrollbar-hide px-2 sm:px-3 pb-2 sm:pb-3 mt-5">
+                          <div className="space-y-1.5 sm:space-y-2">
+                            {/* Title & Info Button */}
+                            <div className="flex items-start justify-between gap-1.5 sm:gap-2">
+                              <h3 className="text-sm sm:text-md font-bold text-white line-clamp-2 leading-tight flex-1">
+                                {movieTitle}
+                              </h3>
+                              <button
+                                className="shrink-0 rounded-full bg-white/20 hover:bg-white/30 text-white transition p-1"
+                                aria-label="More info"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Info size={12} className="sm:w-3.5 sm:h-3.5" />
+                              </button>
+                            </div>
 
-                              <div className="flex items-center gap-2 text-xs text-gray-200 flex-wrap drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                                {year && (
-                                  <div className="flex items-center gap-1">
-                                    <Calendar size={11} />
-                                    <span>{year}</span>
-                                  </div>
-                                )}
-                                {movie.vote_count && (
-                                  <div className="flex items-center gap-1">
-                                    <Users size={11} />
-                                    <span>
-                                      {formatVoteCount(movie.vote_count)}
-                                    </span>
-                                  </div>
-                                )}
-                                {runtime && (
-                                  <div className="flex items-center gap-1">
-                                    {contentType === "tv" ? (
-                                      <Tv size={11} />
-                                    ) : (
-                                      <Film size={11} />
-                                    )}
-                                    <span>{runtime}</span>
-                                  </div>
-                                )}
-                                {movie.origin_country?.length ? (
-                                  <span className="text-orange-400 font-semibold">
-                                    {movie.origin_country[0]}
-                                  </span>
-                                ) : (
-                                  <span className="text-orange-400 font-semibold">
-                                    KR
-                                  </span>
-                                )}
-                                <div
-                                  className={`
-                          flex items-center gap-1 px-2 py-0.5 rounded-full font-medium text-xs shadow-lg backdrop-blur-md  
-                         
-                        `}
-                                >
-                                  {contentType === "tv" ? (
-                                    <Tv size={12} />
-                                  ) : (
-                                    <Film size={12} />
-                                  )}
-                                  {contentType === "tv" ? "Series" : "Movie"}
-                                </div>
-                              </div>
-
-                              {/* Compact genres - only show top 2 */}
-                              {movie.genres?.length ? (
-                                <div className="flex flex-wrap gap-1">
-                                  {movie.genres
-                                    .slice(0, 2)
-                                    .map((genre, i) => (
-                                      <span
-                                        key={i}
-                                        className="text-xs px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500/70 to-pink-500/70 text-white font-medium border border-white/20"
-                                      >
-                                        {genre}
-                                      </span>
-                                    ))}
-                                  {movie.genres.length > 2 && (
-                                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-600/50 text-gray-300 font-medium">
-                                      +{movie.genres.length - 2}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : null}
-
-                              {/* Watchlist status - compact */}
-                              {inWatchlist && (
-                                <div className="flex items-center gap-1 text-green-400 text-xs">
-                                  <Check size={10} />
-                                  <span className="font-medium">
-                                    In Watchlist
-                                  </span>
+                            {/* Metadata Row */}
+                            <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-gray-200 flex-wrap">
+                              {year && (
+                                <div className="flex items-center gap-0.5 sm:gap-1">
+                                  <Calendar size={10} className="sm:w-3 sm:h-3" />
+                                  <span>{year}</span>
                                 </div>
                               )}
+                              {movie.vote_count && (
+                                <div className="flex items-center gap-0.5 sm:gap-1">
+                                  <Users size={10} className="sm:w-3 sm:h-3" />
+                                  <span>{formatVoteCount(movie.vote_count)}</span>
+                                </div>
+                              )}
+                              {runtime && (
+                                <div className="flex items-center gap-0.5 sm:gap-1">
+                                  {contentType === "tv" ? <Tv size={10} className="sm:w-3 sm:h-3" /> : <Film size={10} className="sm:w-3 sm:h-3" />}
+                                  <span>{runtime}</span>
+                                </div>
+                              )}
+                              {(movie.origin_country?.length || true) && (
+                                <span className="text-orange-400 font-semibold">
+                                  {movie.origin_country?.[0]}
+                                </span>
+                              )}
+                            </div>
 
-                              {/* Overview - Optional, only if space allows */}
-                              {movie.overview && (
-                                <div className="pt-1">
-                                  <p className="text-xs text-gray-300 line-clamp-2 leading-relaxed opacity-90">
-                                    {movie.overview}
+                            {/* Genres - Compact */}
+                            {movie.genres?.length ? (
+                              <div className="flex flex-wrap gap-1">
+                                {movie.genres.slice(0, 2).map((genre, i) => (
+                                  <span
+                                    key={i}
+                                    className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-white/10 text-white font-medium border border-white/20"
+                                  >
+                                    {genre}
+                                  </span>
+                                ))}
+                                {movie.genres.length > 2 && (
+                                  <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-gray-600/50 text-gray-300 font-medium">
+                                    +{movie.genres.length - 2}
+                                  </span>
+                                )}
+                              </div>
+                            ) : null}
+
+                            {/* Watchlist Status */}
+                            {inWatchlist && (
+                              <div className="flex items-center gap-1 text-green-400 text-[10px] sm:text-xs">
+                                <Check size={10} className="sm:w-3 sm:h-3" />
+                                <span className="font-medium">In Watchlist</span>
+                              </div>
+                            )}
+
+                            {/* Overview - Hidden on small screens */}
+                            {movie.overview && (
+                              <div className="hidden sm:block pt-0.5">
+                                <p className="text-[10px] sm:text-xs text-gray-300 line-clamp-2 leading-relaxed opacity-90">
+                                  {movie.overview}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Recommendations Section */}
+                            {movie.recommendations?.length ? (
+                              <div className="pt-1.5 sm:pt-2 border-t border-white/10">
+                                <div className="flex items-center gap-1 mb-1.5">
+                                  <Heart size={10} className="sm:w-3 sm:h-3 text-pink-400" />
+                                  <p className="text-gray-400 text-[10px] sm:text-xs font-medium">
+                                    You might also like
                                   </p>
                                 </div>
-                              )}
-
-                              {/* Enhanced Recommendations Section */}
-                              {movie.recommendations?.length ? (
-                                <div className="pt-3 border-t border-white/20">
-                                  <div className="flex items-center gap-1 mb-2">
-                                    <Heart
-                                      size={12}
-                                      className="text-pink-400"
-                                    />
-                                    <p className="text-gray-400 text-xs font-medium">
-                                      You might also like
-                                    </p>
-                                  </div>
-                                  <div className="grid grid-cols-3 gap-2">
-                                    {movie.recommendations
-                                      .slice(0, 3)
-                                      .map((rec) => (
-                                        <TooltipProvider key={rec.id}>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <motion.div
-                                                whileHover={{ scale: 1.1 }}
-                                                className="relative aspect-[2/3] rounded-md overflow-hidden cursor-pointer shadow-md hover:shadow-lg transition-all"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleCardClick(rec);
-                                                }}
-                                              >
-                                                <Image
-                                                  src={posterGetter(rec)}
-                                                  alt={getTitle(rec)}
-                                                  fill
-                                                  sizes="60px"
-                                                  className="object-cover"
-                                                />
-                                                <div className="absolute inset-0 bg-black/20 hover:bg-black/0 transition-colors" />
-                                              </motion.div>
-                                            </TooltipTrigger>
-                                            <TooltipContent
-                                              side="bottom"
-                                              sideOffset={8}
-                                              className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20 max-w-[180px]"
-                                            >
-                                              <div className="text-xs font-medium text-white">
-                                                {getTitle(rec)}
-                                                {rec.vote_average && (
-                                                  <div className="flex items-center gap-1 mt-1 text-gray-300">
-                                                    <Star
-                                                      size={10}
-                                                      fill="currentColor"
-                                                    />
-                                                    {rec.vote_average.toFixed(
-                                                      1
-                                                    )}
-                                                  </div>
-                                                )}
+                                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                                  {movie.recommendations.slice(0, 3).map((rec) => (
+                                    <TooltipProvider key={rec.id}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <motion.div
+                                            whileHover={{ scale: 1.05 }}
+                                            className="relative aspect-[2/3] rounded-md overflow-hidden cursor-pointer shadow-md hover:shadow-lg transition-all"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleCardClick(rec);
+                                            }}
+                                          >
+                                            <Image
+                                              src={posterGetter(rec)}
+                                              alt={getTitle(rec)}
+                                              fill
+                                              sizes="48px"
+                                              className="object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-black/20 hover:bg-black/0 transition-colors" />
+                                          </motion.div>
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                          side="bottom"
+                                          sideOffset={8}
+                                          className="rounded-lg bg-black/90 backdrop-blur-md px-2 sm:px-3 py-1.5 sm:py-2 shadow-xl border border-white/20 max-w-[140px] sm:max-w-[180px]"
+                                        >
+                                          <div className="text-[10px] sm:text-xs font-medium text-white">
+                                            {getTitle(rec)}
+                                            {rec.vote_average && (
+                                              <div className="flex items-center gap-1 mt-0.5 text-gray-300">
+                                                <Star size={8} className="sm:w-2.5 sm:h-2.5" fill="currentColor" />
+                                                {rec.vote_average.toFixed(1)}
                                               </div>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      ))}
-                                  </div>
+                                            )}
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ))}
                                 </div>
-                              ) : null}
-                            </div>
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       </div>

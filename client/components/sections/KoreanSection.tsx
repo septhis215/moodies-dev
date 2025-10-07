@@ -85,6 +85,7 @@ export default function KoreaTrendingSection({
             title={title}
             subtitle={subtitle}
             items={koreaTrending}
+            sectionId="korea-trending"
         />
     );
 }

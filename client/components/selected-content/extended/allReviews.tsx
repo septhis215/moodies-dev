@@ -461,14 +461,14 @@ export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
                     <div className="flex items-center justify-between pt-4 border-t border-white/10">
                     
                       {review.url && (
-                        <a
+                        <Link
                           href={review.url}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
                         >
                           View Original →
-                        </a>
+                        </Link>
                       )}
                     </div>
                   </motion.div>

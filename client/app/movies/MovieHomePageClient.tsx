@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from "framer-motion";
 import { ComingSoonSection } from '@/components/sections/ComingSoon';
 import MoodRecommendationsSection from '@/components/sections/MoodRecommendationSection';
-
+import { useScrollToHash } from "@/hooks/useScrollToHash";
 export default function MoviesHomePageClient({
     trendingMovies,
     popularMovies,
@@ -44,7 +44,7 @@ export default function MoviesHomePageClient({
     const [featured, setFeatured] = useState(trendingMovies[0]);
     const [index, setIndex] = useState(0);
     const heroMovies = trendingMovies.slice(0, 18);
-
+    useScrollToHash(100);
     const getImageUrl = (path?: string) =>
         path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder.jpg";
     const getPosterUrl = (path?: string) =>
@@ -211,7 +211,7 @@ export default function MoviesHomePageClient({
             <section className="relative w-full text-white overflow-hidden">
                 <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10" />
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 relative z-20 mt-14">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-30 pb-20 relative z-20">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
                         {/* LEFT mosaic */}
                         <div className="md:col-span-7 col-span-1 rounded-3xl overflow-hidden bg-gradient-to-br from-zinc-900/80 via-zinc-900/50 to-zinc-950/80 backdrop-blur-xl p-6 flex flex-col ring-1 ring-white/10 shadow-2xl">
@@ -356,7 +356,7 @@ export default function MoviesHomePageClient({
 
                 {/* Box Office */}
                 {popularMovies.length > 0 && (
-                    <section className="relative">
+                    <section id="popular-movies" className="relative">
                         <div className="flex items-center gap-4 mb-10">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-amber-500 blur-xl opacity-50" />
@@ -403,7 +403,7 @@ export default function MoviesHomePageClient({
 
                 {/* New Releases */}
                 {newReleaseMovies.length > 0 && (
-                    <section className="relative">
+                    <section id="new-release-movies" className="relative">
                         <div className="flex items-center gap-4 mb-10">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-cyan-400 blur-xl opacity-50" />
@@ -493,7 +493,7 @@ export default function MoviesHomePageClient({
 
                 {/* Trending */}
                 {trendingMovies.length > 0 && (
-                    <section className="relative">
+                    <section id="trending-movies" className="relative">
                         <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-[#e94f37] blur-xl opacity-50" />
@@ -507,7 +507,7 @@ export default function MoviesHomePageClient({
 
                 {/* Korean Cinema */}
                 {koreanMovies.length > 0 && (
-                    <section className="relative bg-gradient-to-br from-rose-950/30 via-pink-950/20 to-transparent backdrop-blur-sm p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl border border-rose-500/20 ring-1 ring-white/5 shadow-2xl overflow-hidden">
+                    <section id="korean-movies" className="relative bg-gradient-to-br from-rose-950/30 via-pink-950/20 to-transparent backdrop-blur-sm p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl border border-rose-500/20 ring-1 ring-white/5 shadow-2xl overflow-hidden">
                         <div className="absolute top-0 left-0 w-64 sm:w-80 lg:w-96 h-64 sm:h-80 lg:h-96 bg-rose-500/10 rounded-full blur-3xl" />
 
                         <div className="relative flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
@@ -617,7 +617,7 @@ export default function MoviesHomePageClient({
 
                 {/* Critics Corner */}
                 {movieReviews.length > 0 && (
-                    <section className="relative">
+                    <section id="reviews" className="relative">
                         <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-rose-500 blur-xl opacity-50" />
@@ -652,7 +652,7 @@ export default function MoviesHomePageClient({
 
                 {/* ACTION-PACKED - Fixed Layout */}
                 {actionMovies.length > 0 && (
-                    <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-red-950/40 via-orange-950/30 to-black backdrop-blur-sm border border-red-500/30 ring-1 ring-white/5 shadow-2xl">
+                    <section id="action-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-red-950/40 via-orange-950/30 to-black backdrop-blur-sm border border-red-500/30 ring-1 ring-white/5 shadow-2xl">
                         {/* Background gradients */}
                         <div className="absolute top-0 right-0 w-64 sm:w-80 lg:w-[400px] h-64 sm:h-80 lg:h-[400px] bg-gradient-to-bl from-red-600/20 to-transparent rounded-full blur-3xl animate-pulse" />
                         <div className="absolute bottom-0 left-0 w-48 sm:w-64 lg:w-[350px] h-48 sm:h-64 lg:h-[350px] bg-gradient-to-tr from-orange-600/20 to-transparent rounded-full blur-3xl animate-pulse delay-700" />
@@ -753,7 +753,7 @@ export default function MoviesHomePageClient({
 
                 {/* AWARD WINNERS - Prestigious Design */}
                 {awardWinners.length > 0 && (
-                    <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-950/40 via-yellow-950/30 to-black backdrop-blur-sm border border-amber-500/30 ring-1 ring-white/5 shadow-2xl">
+                    <section id="award-winners" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-950/40 via-yellow-950/30 to-black backdrop-blur-sm border border-amber-500/30 ring-1 ring-white/5 shadow-2xl">
                         {/* Radial golden glow */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 sm:w-96 lg:w-[600px] h-80 sm:h-96 lg:h-[600px] bg-gradient-to-r from-amber-600/20 to-yellow-600/20 rounded-full blur-3xl" />
 
@@ -825,7 +825,7 @@ export default function MoviesHomePageClient({
 
                 {/* ANIMATED FEATURES - Playful Design */}
                 {animatedMovies.length > 0 && (
-                    <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-purple-950/40 via-pink-950/30 to-blue-950/30 backdrop-blur-sm border border-purple-500/30 ring-1 ring-white/5 shadow-2xl">
+                    <section id="animated-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-purple-950/40 via-pink-950/30 to-blue-950/30 backdrop-blur-sm border border-purple-500/30 ring-1 ring-white/5 shadow-2xl">
                         {/* Colorful gradient orbs */}
                         <div className="absolute top-0 left-0 w-64 sm:w-80 lg:w-96 h-64 sm:h-80 lg:h-96 bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-full blur-3xl animate-pulse" />
                         <div className="absolute bottom-0 right-0 w-64 sm:w-80 lg:w-96 h-64 sm:h-80 lg:h-96 bg-gradient-to-tl from-blue-600/20 to-cyan-600/20 rounded-full blur-3xl animate-pulse delay-1000" />
@@ -900,7 +900,7 @@ export default function MoviesHomePageClient({
 
                 {/* INDIE SPOTLIGHT - Artistic Design */}
                 {indieMovies.length > 0 && (
-                    <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-950/40 via-slate-950/30 to-black backdrop-blur-sm border border-indigo-500/30 ring-1 ring-white/5 shadow-2xl">
+                    <section id="indie-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-950/40 via-slate-950/30 to-black backdrop-blur-sm border border-indigo-500/30 ring-1 ring-white/5 shadow-2xl">
                         {/* Artistic gradient */}
                         <div className="absolute top-0 right-0 w-80 sm:w-96 lg:w-[500px] h-80 sm:h-96 lg:h-[500px] bg-gradient-to-bl from-indigo-600/20 to-transparent rounded-full blur-3xl" />
 

@@ -84,6 +84,7 @@ export default function TrendingSection({
             title={title}
             subtitle={subtitle}
             items={trending}
+            sectionId="trending"
         />
     );
 }
