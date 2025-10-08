@@ -47,4 +47,14 @@ export class PeopleController {
   async getTaggedImages(@Param('id', ParseIntPipe) id: number) {
     return this.peopleService.getTaggedImages(id);
   }
+
+  @Get(':id/similar')
+  async getSimilar(@Param('id', ParseIntPipe) id: number) {
+    return this.peopleService.getSimilarPeople(id);
+  }
+  @Get(':id/upcoming')
+  async getUpcoming(@Param('id', ParseIntPipe) id: number) {
+    return this.peopleService.getUpcomingProjects(id);
+  }
+  
 }
