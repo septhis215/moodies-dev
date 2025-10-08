@@ -52,9 +52,20 @@ export class PeopleController {
   async getSimilar(@Param('id', ParseIntPipe) id: number) {
     return this.peopleService.getSimilarPeople(id);
   }
+
   @Get(':id/upcoming')
   async getUpcoming(@Param('id', ParseIntPipe) id: number) {
     return this.peopleService.getUpcomingProjects(id);
   }
-  
+
+  // NEW ENDPOINTS
+  // @Get(':id/timeline')
+  // async getTimeline(@Param('id', ParseIntPipe) id: number) {
+  //   return this.peopleService.getCareerTimeline(id);
+  // }
+
+  @Get(':id/collaborations')
+  async getCollaborations(@Param('id', ParseIntPipe) id: number) {
+    return this.peopleService.getCollaborations(id);
+  }
 }

@@ -40,9 +40,9 @@ export default function TVHomePageClient({
     const heroShows = popularTV.slice(0, 18);
     const heroShow = heroShows[heroIndex];
     const getImageUrl = (path?: string) =>
-        path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder.jpg";
+        path ? `https://image.tmdb.org/t/p/original${path}` : "/coming-soon.png";
     const getPosterUrl = (path?: string) =>
-        path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder.jpg";
+        path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
     useScrollToHash(100);
     const nextHero = () =>
         setHeroIndex((prev) => (heroShows.length ? (prev + 1) % heroShows.length : 0));

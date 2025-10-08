@@ -46,9 +46,9 @@ export default function MoviesHomePageClient({
     const heroMovies = trendingMovies.slice(0, 18);
     useScrollToHash(100);
     const getImageUrl = (path?: string) =>
-        path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder.jpg";
+        path ? `https://image.tmdb.org/t/p/original${path}` : "/coming-soon.png";
     const getPosterUrl = (path?: string) =>
-        path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder.jpg";
+        path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
 
     useEffect(() => {
         if (!heroMovies.length) return;

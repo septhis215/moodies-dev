@@ -214,7 +214,7 @@ export default function PremiereHighlights({
                     src={
                       item.backdrop_path
                         ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
-                        : "/placeholder.jpg"
+                        : "/coming-soon.png"
                     }
                     alt={item.title}
                     fill

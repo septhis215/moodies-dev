@@ -412,7 +412,7 @@ export default function SearchResultsPage() {
     const getPosterUrl = (item: SearchResult) => {
         return item.poster_path
             ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-            : '/placeholder.jpg';
+            : '/coming-soon.png';
     };
 
     const getBackdropUrl = (item: SearchResult) => {

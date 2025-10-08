@@ -3,27 +3,22 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 
-// import { RedisService } from 'src/redis/redis.service';
-
 @Injectable()
 export class PeopleService {
   private readonly baseUrl: string;
   private readonly token: string;
+  private creditCache = new Map<string, any>();
 
   constructor(
     private readonly httpService: HttpService,
-    // private readonly redisService: RedisService,
     private readonly configService: ConfigService,
   ) {
-    this.baseUrl =
-      this.configService.get<string>('TMDB_BASE') ?? 'null tmdb base';
-    this.token =
-      this.configService.get<string>('TMDB_API_KEY') ?? 'null tmdb api key';
+    this.baseUrl = this.configService.get<string>('TMDB_BASE') ?? 'null tmdb base';
+    this.token = this.configService.get<string>('TMDB_API_KEY') ?? 'null tmdb api key';
   }
 
   private async tmdb(endpoint: string) {
     const url = `${this.baseUrl}${endpoint}`;
-
     const response = await firstValueFrom(
       this.httpService.get(url, {
         headers: {
@@ -32,139 +27,65 @@ export class PeopleService {
         },
       }),
     );
-
     return response.data;
   }
 
   async trending(type: string) {
-    // const cacheKey = `trending/person/${type}`;
-    // const cached = await this.redisService.get(cacheKey);
-
-    // if (cached) {
-    //   return JSON.parse(cached);
-    // }
-
     const data = await this.tmdb(`trending/person/${type}`);
-    const person = data.results;
-
-    // await this.redisService.set(cacheKey, JSON.stringify(person), 60);
-    return person;
+    return data.results;
   }
 
-  // Get celebrity details by ID
   async getPersonDetails(id: number) {
-    // const cacheKey = `person/${id}/details`;
-    // const cached = await this.redisService.get(cacheKey);
-
-    // if (cached) {
-    //   return JSON.parse(cached);
-    // }
-
-    const details = await this.tmdb(
-      `person/${id}?append_to_response=images,combined_credits,external_ids,movie_credits,tv_credits,changes,tagged_images`
+    return await this.tmdb(
+      `person/${id}?append_to_response=images,combined_credits,external_ids,movie_credits,tv_credits,tagged_images`
     );
-
-    // await this.redisService.set(cacheKey, JSON.stringify(details), 300);
-    return details;
   }
 
-  // Get celebrity movie credits
   async getMovieCredits(id: number) {
-    // const cacheKey = `person/${id}/movie_credits`;
-    // const cached = await this.redisService.get(cacheKey);
-
-    // if (cached) {
-    //   return JSON.parse(cached);
-    // }
-
-    const credits = await this.tmdb(`person/${id}/movie_credits`);
-
-    // await this.redisService.set(cacheKey, JSON.stringify(credits), 300);
-    return credits;
+    return await this.tmdb(`person/${id}/movie_credits`);
   }
 
-  // Get celebrity TV credits
   async getTvCredits(id: number) {
-    // const cacheKey = `person/${id}/tv_credits`;
-    // const cached = await this.redisService.get(cacheKey);
-
-    // if (cached) {
-    //   return JSON.parse(cached);
-    // }
-
-    const credits = await this.tmdb(`person/${id}/tv_credits`);
-
-    // await this.redisService.set(cacheKey, JSON.stringify(credits), 300);
-    return credits;
+    return await this.tmdb(`person/${id}/tv_credits`);
   }
 
-  // Get celebrity images
   async getImages(id: number) {
-    // const cacheKey = `person/${id}/images`;
-    // const cached = await this.redisService.get(cacheKey);
-
-    // if (cached) {
-    //   return JSON.parse(cached);
-    // }
-
-    const images = await this.tmdb(`person/${id}/images`);
-
-    // await this.redisService.set(cacheKey, JSON.stringify(images), 300);
-    return images;
+    return await this.tmdb(`person/${id}/images`);
   }
 
   async getTaggedImages(id: number) {
-    const images = await this.tmdb(`person/${id}/tagged_images`);
-    return images;
+    return await this.tmdb(`person/${id}/tagged_images`);
   }
 
-  // Search for people
   async searchPeople(query: string, page: number = 1) {
-    const data = await this.tmdb(`search/person?query=${encodeURIComponent(query)}&page=${page}`);
-    return data;
+    return await this.tmdb(`search/person?query=${encodeURIComponent(query)}&page=${page}`);
   }
 
-  // Get popular people
   async getPopular(page: number = 1) {
-    // const cacheKey = `person/popular/${page}`;
-    // const cached = await this.redisService.get(cacheKey);
-
-    // if (cached) {
-    //   return JSON.parse(cached);
-    // }
-
-    const data = await this.tmdb(`person/popular?page=${page}`);
-
-    // await this.redisService.set(cacheKey, JSON.stringify(data), 180);
-    return data;
+    return await this.tmdb(`person/popular?page=${page}`);
   }
+
   async getTitleCredits(mediaType: 'movie' | 'tv', id: number) {
-    // mediaType determines which endpoint to hit
     const endpoint = `${mediaType}/${id}/credits`;
-    const credits = await this.tmdb(endpoint);
-    return credits;
+    return await this.tmdb(endpoint);
   }
-  // Helper: search movies
+
   async searchMovie(query: string, page = 1) {
     return this.tmdb(`search/movie?query=${encodeURIComponent(query)}&page=${page}`);
   }
 
-  // Helper: search tv
   async searchTv(query: string, page = 1) {
     return this.tmdb(`search/tv?query=${encodeURIComponent(query)}&page=${page}`);
   }
 
-  // Helper: trending fallback
   private async getTrendingPeople() {
     return this.tmdb(`trending/person/week`);
   }
 
-  // Helper: simple name similarity (token overlap)
   private isNameSimilar(a?: string, b?: string) {
     if (!a || !b) return false;
     const norm = (s: string) =>
-      s
-        .toLowerCase()
+      s.toLowerCase()
         .replace(/[^a-z0-9\s]/g, ' ')
         .split(/\s+/)
         .filter(Boolean);
@@ -174,10 +95,9 @@ export class PeopleService {
     const setA = new Set(ta);
     const intersect = tb.filter(t => setA.has(t)).length;
     const ratio = intersect / Math.max(ta.length, tb.length);
-    return ratio >= 0.6; // tweak threshold if needed
+    return ratio >= 0.6;
   }
 
-  // Helper: chunking
   private chunkArray<T>(arr: T[], size: number): T[][] {
     const out: T[][] = [];
     for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -189,9 +109,9 @@ export class PeopleService {
     const credits = person.combined_credits?.cast || [];
     const nationality = this.extractNationality(person.place_of_birth);
 
-    // --- Step A: collect genre ids
     const genreFrequency = new Map<number, number>();
     const titleIds = new Set<number>();
+
     for (const c of credits) {
       (c.genre_ids || []).forEach((g: number) =>
         genreFrequency.set(g, (genreFrequency.get(g) || 0) + 1)
@@ -202,7 +122,6 @@ export class PeopleService {
     const coStars = new Map<number, number>();
     const candidateMap = new Map<number, { id: number; name?: string; source?: string }>();
 
-    // --- Step B: NATIONALITY FIRST — regional expansion
     if (nationality) {
       const regionPeople = await this.searchPeopleByNationality(nationality);
       for (const p of regionPeople || []) {
@@ -212,7 +131,6 @@ export class PeopleService {
       }
     }
 
-    // --- Step C: gather co-stars (only if fewer than 25 found)
     if (candidateMap.size < 25) {
       const titleArray = Array.from(titleIds);
       const titleBatchSize = 10;
@@ -236,12 +154,10 @@ export class PeopleService {
             }
           }
         }
-
         if (candidateMap.size >= 30) break;
       }
     }
 
-    // --- Step D: enrich with known_for titles
     if (candidateMap.size < 30) {
       const knownTitles = (person.known_for || [])
         .map((k: any) => k.title || k.name)
@@ -277,12 +193,10 @@ export class PeopleService {
             }
           }
         }
-
         if (candidateMap.size >= 35) break;
       }
     }
 
-    // --- Step E: fallback to trending if still small
     if (candidateMap.size < 20) {
       const trending = await this.getTrendingPeople();
       for (const t of trending.results || []) {
@@ -292,7 +206,6 @@ export class PeopleService {
       }
     }
 
-    // --- Step F: fetch details (batch)
     const candidateIds = Array.from(candidateMap.keys()).filter(cid => cid !== id);
     const detailsById = new Map<number, any>();
     const detailBatchSize = 15;
@@ -306,7 +219,6 @@ export class PeopleService {
       }
     }
 
-    // --- Step G: scoring (favor popularity + same nationality)
     const originalGenres = new Set<number>([...genreFrequency.keys()]);
     const scored: any[] = [];
 
@@ -341,7 +253,6 @@ export class PeopleService {
       scored.push({ ...d, score });
     }
 
-    // --- Step H: return at least 25 sorted by score
     return scored.sort((a, b) => b.score - a.score).slice(0, 25);
   }
 
@@ -365,22 +276,12 @@ export class PeopleService {
     return results;
   }
 
-
-
-  /**
-   * Extract nationality/country from TMDB "place_of_birth"
-   */
   private extractNationality(place?: string): string | null {
     if (!place) return null;
     const parts = place.split(',').map(p => p.trim());
     const country = parts[parts.length - 1];
     return country || null;
   }
-
-  /**
-   * Cached version of getTitleCredits to reduce redundant API calls
-   */
-  private creditCache = new Map<string, any>();
 
   private async getTitleCreditsCached(id: number, mediaType: 'movie' | 'tv' = 'movie') {
     const key = `${mediaType}_${id}`;
@@ -397,11 +298,8 @@ export class PeopleService {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Get upcoming movies (include unknown release_date)
     const upcomingMovies = (movieCredits.cast
-      ?.filter(movie =>
-        !movie.release_date || movie.release_date > today
-      )
+      ?.filter(movie => !movie.release_date || movie.release_date > today)
       .sort((a, b) => {
         if (!a.release_date && !b.release_date) return 0;
         if (!a.release_date) return 1;
@@ -411,11 +309,8 @@ export class PeopleService {
       .slice(0, 10) || [])
       .map(movie => ({ ...movie, media_type: "movie" }));
 
-    // Get upcoming TV shows (include unknown first_air_date)
     const upcomingTV = (tvCredits.cast
-      ?.filter(show =>
-        !show.first_air_date || show.first_air_date > today
-      )
+      ?.filter(show => !show.first_air_date || show.first_air_date > today)
       .sort((a, b) => {
         if (!a.first_air_date && !b.first_air_date) return 0;
         if (!a.first_air_date) return 1;
@@ -430,5 +325,115 @@ export class PeopleService {
       tv: upcomingTV,
       total: upcomingMovies.length + upcomingTV.length
     };
+  }
+
+  // NEW: Get career timeline with proper chronological data
+  // async getCareerTimeline(id: number) {
+  //   const person = await this.getPersonDetails(id);
+  //   const allCredits = [...(person.combined_credits?.cast || [])];
+
+  //   // Sort credits by actual date
+  //   const sortedCredits = allCredits
+  //     .filter(c => c.release_date || c.first_air_date)
+  //     .sort((a, b) => {
+  //       const dateA = new Date(a.release_date || a.first_air_date).getTime();
+  //       const dateB = new Date(b.release_date || b.first_air_date).getTime();
+  //       return dateA - dateB;
+  //     });
+
+  //   if (sortedCredits.length === 0) return null;
+
+  //   // 🧠 Find the actual debut work:
+  //   // For TV shows, skip very old shows where the actor probably wasn't in the first year
+  //   const firstValidWork = sortedCredits.find(credit => {
+  //     const year = new Date(credit.release_date || credit.first_air_date).getFullYear();
+  //     const currentYear = new Date().getFullYear();
+  //     return year >= 1900 && year <= currentYear;
+  //   }) || sortedCredits[0];
+
+  //   const topRated = [...sortedCredits].sort((a, b) => b.vote_average - a.vote_average)[0];
+  //   const recentWork = sortedCredits[sortedCredits.length - 1];
+
+  //   // 🗂 Group by decade
+  //   const decades = new Map<string, any[]>();
+  //   sortedCredits.forEach(credit => {
+  //     const year = new Date(credit.release_date || credit.first_air_date).getFullYear();
+  //     const decade = Math.floor(year / 10) * 10;
+  //     const key = `${decade}s`;
+
+  //     const decadeArray = decades.get(key) ?? [];
+  //     decadeArray.push(credit);
+  //     decades.set(key, decadeArray);
+  //   });
+
+  //   const debutYear = new Date(firstValidWork.release_date || firstValidWork.first_air_date).getFullYear();
+  //   const lastYear = new Date(recentWork.release_date || recentWork.first_air_date).getFullYear();
+  //   const totalYears = Math.max(1, lastYear - debutYear + 1); // ensure at least 1 year
+
+  //   return {
+  //     debut: {
+  //       title: firstValidWork.title || firstValidWork.name,
+  //       year: debutYear,
+  //       character: firstValidWork.character,
+  //       rating: firstValidWork.vote_average
+  //     },
+  //     breakout: {
+  //       title: topRated.title || topRated.name,
+  //       year: new Date(topRated.release_date || topRated.first_air_date).getFullYear(),
+  //       character: topRated.character,
+  //       rating: topRated.vote_average
+  //     },
+  //     recent: {
+  //       title: recentWork.title || recentWork.name,
+  //       year: lastYear,
+  //       character: recentWork.character,
+  //       rating: recentWork.vote_average
+  //     },
+  //     decades: Array.from(decades.entries()).map(([decade, works]) => ({
+  //       period: decade,
+  //       count: works.length,
+  //       avgRating: (works.reduce((sum, w) => sum + w.vote_average, 0) / works.length).toFixed(1),
+  //       topWork: works.sort((a, b) => b.vote_average - a.vote_average)[0]
+  //     })),
+  //     totalYears
+  //   };
+  // }
+
+
+
+  // NEW: Get collaboration network
+  async getCollaborations(id: number) {
+    const person = await this.getPersonDetails(id);
+    const credits = person.combined_credits?.cast || [];
+
+    const collaborators = new Map<number, { name: string; count: number; projects: string[] }>();
+
+    for (const credit of credits.slice(0, 50)) {
+      try {
+        const mediaType = credit.media_type === 'tv' ? 'tv' : 'movie';
+        const titleCredits = await this.getTitleCreditsCached(credit.id, mediaType);
+
+        if (titleCredits?.cast) {
+          for (const cast of titleCredits.cast.slice(0, 10)) {
+            if (cast.id !== id) {
+              if (!collaborators.has(cast.id)) {
+                collaborators.set(cast.id, { name: cast.name, count: 0, projects: [] });
+              }
+              const collab = collaborators.get(cast.id);
+              if (!collab) continue;
+              collab.count++;
+              collab.projects.push(credit.title || credit.name);
+            }
+          }
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+
+    return Array.from(collaborators.entries())
+      .map(([id, data]) => ({ id, ...data }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
   }
 }

@@ -43,7 +43,7 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
     const [error, setError] = useState<string | null>(null);
 
     const getPosterUrl = (path?: string) =>
-        path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder.jpg";
+        path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
 
     const getIconEmoji = (iconName: string) => {
         const iconMap: Record<string, string> = {

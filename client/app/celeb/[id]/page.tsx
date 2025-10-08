@@ -24,7 +24,10 @@ import {
     Heart,
     Sparkles,
     ChevronRight,
-    ChevronLeft
+    ChevronLeft,
+    Clock,
+    Zap,
+    TrendingUp
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -97,35 +100,58 @@ interface UpcomingProject {
     character?: string;
     media_type?: string;
 }
+interface Timeline {
+    debut: { title: string; year: number; character: string; rating: number };
+    breakout: { title: string; year: number; character: string; rating: number };
+    recent: { title: string; year: number; character: string; rating: number };
+    decades: Array<{ period: string; count: number; avgRating: string; topWork: any }>;
+    totalYears: number;
+}
 
+interface Collaboration {
+    id: number;
+    name: string;
+    count: number;
+    projects: string[];
+}
 export default function CelebrityDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = use(params);
     const [person, setPerson] = useState<Person | null>(null);
+    const [timeline, setTimeline] = useState<Timeline | null>(null);
+    const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedTab, setSelectedTab] = useState<'all' | 'movies' | 'tv'>('all');
     const [bioExpanded, setBioExpanded] = useState(false);
     const [showAllCredits, setShowAllCredits] = useState(false);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [similarPeople, setSimilarPeople] = useState<SimilarPerson[]>([]);
-    const [upcomingProjects, setUpcomingProjects] = useState<UpcomingProject[]>([]);
+    const [upcomingProjects, setUpcomingProjects] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchPerson = async () => {
             try {
                 const base = process.env.NEXT_PUBLIC_NEST_API_URL || 'http://localhost:4000';
-                const res = await fetch(`${base}/people/${resolvedParams.id}`);
-                const data = await res.json();
-                setPerson(data);
 
-                // Fetch similar people
-                const similarRes = await fetch(`${base}/people/${resolvedParams.id}/similar`);
-                const similarData = await similarRes.json();
-                setSimilarPeople(similarData);
+                const [personRes, similarRes, upcomingRes, timelineRes, collabRes] = await Promise.all([
+                    fetch(`${base}/people/${resolvedParams.id}`),
+                    fetch(`${base}/people/${resolvedParams.id}/similar`),
+                    fetch(`${base}/people/${resolvedParams.id}/upcoming`),
+                    fetch(`${base}/people/${resolvedParams.id}/timeline`),
+                    fetch(`${base}/people/${resolvedParams.id}/collaborations`)
+                ]);
 
-                // Fetch upcoming projects
-                const upcomingRes = await fetch(`${base}/people/${resolvedParams.id}/upcoming`);
-                const upcomingData = await upcomingRes.json();
-                setUpcomingProjects([...upcomingData.movies, ...upcomingData.tv]);
+                const personData = await personRes.json();
+                setPerson(personData);
+                setSimilarPeople(await similarRes.json());
+
+                const upData = await upcomingRes.json();
+                setUpcomingProjects([...upData.movies, ...upData.tv]);
+
+                const timelineData = await timelineRes.json();
+                setTimeline(timelineData);
+
+                const collabData = await collabRes.json();
+                setCollaborations(collabData);
             } catch (error) {
                 console.error('Error fetching celebrity:', error);
             } finally {
@@ -138,10 +164,10 @@ export default function CelebrityDetailPage({ params }: { params: Promise<{ id: 
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#0a0a0a] flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 border-4 border-[#e94f37] border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-white text-lg font-medium">Loading...</p>
+                    <div className="w-20 h-20 border-4 border-[#e94f37] border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-white text-lg font-medium">Loading celebrity profile...</p>
                 </div>
             </div>
         );
@@ -149,7 +175,7 @@ export default function CelebrityDetailPage({ params }: { params: Promise<{ id: 
 
     if (!person) {
         return (
-            <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#0a0a0a] flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-20 h-20 rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] flex items-center justify-center mx-auto mb-4">
                         <Users className="w-10 h-10 text-white" />
@@ -160,7 +186,8 @@ export default function CelebrityDetailPage({ params }: { params: Promise<{ id: 
             </div>
         );
     }
-    const Carousel = ({ items }: { items: All[] }) => {
+
+    const Carousel = ({ items }: { items: any[] }) => {
         const [startIndex, setStartIndex] = useState(0);
         const [itemsPerView, setItemsPerView] = useState(6);
 
@@ -229,7 +256,7 @@ export default function CelebrityDetailPage({ params }: { params: Promise<{ id: 
                                         src={
                                             person.profile_path
                                                 ? `https://image.tmdb.org/t/p/w342${person.profile_path}`
-                                                : "/placeholder.jpg"
+                                                : "/coming-soon.png"
                                         }
                                         alt={person.name}
                                         fill
@@ -247,18 +274,33 @@ export default function CelebrityDetailPage({ params }: { params: Promise<{ id: 
             </div>
         );
     };
+
     const movieCredits = person.combined_credits?.cast.filter(c => c.media_type === 'movie').sort((a, b) => b.vote_average - a.vote_average) || [];
     const tvCredits = person.combined_credits?.cast.filter(c => c.media_type === 'tv').sort((a, b) => b.vote_average - a.vote_average) || [];
     const allCredits = [...movieCredits, ...tvCredits].sort((a, b) => b.vote_average - a.vote_average);
 
     const displayCredits = selectedTab === 'all' ? allCredits : selectedTab === 'movies' ? movieCredits : tvCredits;
-    const visibleCredits = showAllCredits ? displayCredits : displayCredits.slice(0, 12);
+    const getCreditDate = (credit: any) =>
+        credit.release_date || credit.first_air_date || "";
+
+    // Sort displayCredits by date descending (latest first)
+    const sortedCredits = [...displayCredits].sort((a, b) => {
+        const dateA = getCreditDate(a);
+        const dateB = getCreditDate(b);
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
+    const visibleCredits = showAllCredits ? sortedCredits : sortedCredits.slice(0, 12);
 
     const age = person.birthday ? new Date().getFullYear() - new Date(person.birthday).getFullYear() : null;
     const shouldTruncateBio = person.biography && person.biography.length > 400;
     const displayBio = shouldTruncateBio && !bioExpanded ? person.biography.slice(0, 400) + '...' : person.biography;
 
-    const backdropImage = person.images?.profiles?.sort((a, b) => b.vote_average - a.vote_average)[0]?.file_path;
+    const backdropImage = visibleCredits.find(
+        credit => credit.poster_path
+    )?.poster_path || null;
 
     // Genre mapping
     const genreMap: Record<number, string> = {
@@ -320,23 +362,6 @@ export default function CelebrityDetailPage({ params }: { params: Promise<{ id: 
                         className="absolute -bottom-40 -right-40 w-96 h-96 bg-black/20 rounded-full blur-3xl"
                     ></motion.div>
 
-                    {/* Backdrop overlay */}
-                    {backdropImage && (
-                        <div className="absolute inset-0 opacity-40">
-                            <Image
-                                src={`https://image.tmdb.org/t/p/original${backdropImage}`}
-                                alt={person.name}
-                                fill
-                                priority
-                                className="object-cover object-center"
-                                style={{
-                                    filter: "brightness(1.1) grayscale(100%)",
-                                    objectPosition: "center 50%",
-                                }}
-                            />
-                        </div>
-                    )}
-
                     {/* Pattern overlay */}
                     <div className="absolute inset-0 opacity-10" style={{
                         backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
@@ -359,7 +384,7 @@ export default function CelebrityDetailPage({ params }: { params: Promise<{ id: 
                                     src={
                                         person.profile_path
                                             ? `https://image.tmdb.org/t/p/w500${person.profile_path}`
-                                            : '/placeholder.jpg'
+                                            : '/coming-soon.png'
                                     }
                                     alt={person.name}
                                     fill
@@ -473,329 +498,256 @@ export default function CelebrityDetailPage({ params }: { params: Promise<{ id: 
                     </div>
                 </div>
 
-                {/* Wave separator */}
                 <div className="absolute bottom-0 left-0 right-0">
-                    <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-16">
-                        <path d="M0 0L60 10C120 20 240 40 360 46.7C480 53 600 47 720 43.3C840 40 960 40 1080 46.7C1200 53 1320 67 1380 73.3L1440 80V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0V0Z" fill="#0a0a0a" />
+                    <svg viewBox="0 0 1440 120" fill="none" className="w-full h-16">
+                        <path d="M0 0L60 10C120 20 240 40 360 46.7C480 53 600 47 720 43.3C840 40 960 40 1080 46.7C1200 53 1320 67 1380 73.3L1440 80V120H0V0Z" fill="url(#wave-gradient)" />
+                        <defs>
+                            <linearGradient id="wave-gradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#1a1a2e" />
+                                <stop offset="100%" stopColor="#0a0a0a" />
+                            </linearGradient>
+                        </defs>
                     </svg>
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-20">
                 {/* Biography */}
                 {person.biography && (
-                    <section>
-                        <h2 className="text-3xl font-black text-white mb-6 flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#e94f37] to-[#ff6b58] flex items-center justify-center">
-                                <Sparkles className="w-5 h-5 text-white" />
+                    <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                        <h2 className="text-4xl font-black text-white mb-8 flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#e94f37] to-[#ff6b58] flex items-center justify-center shadow-xl">
+                                <Sparkles className="w-7 h-7 text-white" />
                             </div>
-                            About
+                            About {person.name.split(' ')[0]}
                         </h2>
-                        <div className="bg-[#111] rounded-2xl p-6 border border-gray-800">
-                            <p className="text-gray-300 leading-relaxed text-base">
-                                {displayBio}
-                            </p>
+                        <div className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-3xl p-8 border border-white/10 shadow-2xl">
+                            <p className="text-gray-300 leading-relaxed text-lg">{displayBio}</p>
                             {shouldTruncateBio && (
-                                <button
-                                    onClick={() => setBioExpanded(!bioExpanded)}
-                                    className="mt-4 text-[#e94f37] hover:text-[#ff6b58] font-semibold text-sm flex items-center gap-1"
-                                >
-                                    {bioExpanded ? (
-                                        <>Show less <ChevronUp className="w-4 h-4" /></>
-                                    ) : (
-                                        <>Read more <ChevronDown className="w-4 h-4" /></>
-                                    )}
+                                <button onClick={() => setBioExpanded(!bioExpanded)}
+                                    className="mt-6 text-[#e94f37] hover:text-[#ff6b58] font-semibold text-sm flex items-center gap-2 transition-colors">
+                                    {bioExpanded ? <><ChevronUp className="w-4 h-4" /> Show less</> : <><ChevronDown className="w-4 h-4" /> Read more</>}
                                 </button>
                             )}
                         </div>
-                    </section>
+                    </motion.section>
                 )}
 
-                {/* Photo Gallery */}
-                {person.images?.profiles && person.images.profiles.length > 0 && (
-                    <section>
-                        <h2 className="text-3xl font-black text-white mb-6 flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#e94f37] to-[#ff6b58] flex items-center justify-center">
-                                <Camera className="w-5 h-5 text-white" />
+                {/* {timeline && (
+                    <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                        <h2 className="text-4xl font-black text-white mb-8 flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-xl">
+                                <Clock className="w-7 h-7 text-white" />
                             </div>
-                            Photos
-                            <span className="text-sm text-gray-500 font-normal">({person.images.profiles.length})</span>
+                            Career Journey
+                        </h2>
+
+                        <div className="relative">
+                            <div className="absolute left-8 top-0 bottom-0 w-1 bg-gradient-to-b from-[#e94f37] via-purple-500 to-blue-500 rounded-full" />
+
+                            <div className="space-y-10">
+                                <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} className="relative pl-24">
+                                    <div className="absolute left-0 w-16 h-16 rounded-2xl bg-gradient-to-br from-[#e94f37] to-[#ff6b58] flex items-center justify-center ring-4 ring-[#0a0a0a] shadow-xl">
+                                        <Sparkles className="w-8 h-8 text-white" />
+                                    </div>
+                                    <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 shadow-xl hover:shadow-2xl transition-shadow">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div>
+                                                <h3 className="text-white font-black text-2xl mb-2">Career Debut</h3>
+                                                <p className="text-[#e94f37] font-bold text-xl">{timeline.debut.year}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 bg-yellow-500/20 px-4 py-2 rounded-full border border-yellow-500/30">
+                                                <Star className="w-5 h-5 text-yellow-400" fill="currentColor" />
+                                                <span className="text-yellow-400 text-lg font-bold">{timeline.debut.rating.toFixed(1)}</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-white text-xl font-semibold mb-2">{timeline.debut.title}</p>
+                                        <p className="text-gray-400 text-sm">as {timeline.debut.character}</p>
+                                    </div>
+                                </motion.div>
+
+                                <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="relative pl-24">
+                                    <div className="absolute left-0 w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center ring-4 ring-[#0a0a0a] shadow-xl">
+                                        <Trophy className="w-8 h-8 text-white" />
+                                    </div>
+                                    <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 shadow-xl hover:shadow-2xl transition-shadow">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div>
+                                                <h3 className="text-white font-black text-2xl mb-2">Breakout Performance</h3>
+                                                <p className="text-purple-400 font-bold text-xl">{timeline.breakout.year}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 bg-yellow-500/20 px-4 py-2 rounded-full border border-yellow-500/30">
+                                                <Star className="w-5 h-5 text-yellow-400" fill="currentColor" />
+                                                <span className="text-yellow-400 text-lg font-bold">{timeline.breakout.rating.toFixed(1)}</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-white text-xl font-semibold mb-2">{timeline.breakout.title}</p>
+                                        <p className="text-gray-400 text-sm">as {timeline.breakout.character}</p>
+                                    </div>
+                                </motion.div>
+
+                                <motion.div initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="relative pl-24">
+                                    <div className="absolute left-0 w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center ring-4 ring-[#0a0a0a] shadow-xl">
+                                        <Film className="w-8 h-8 text-white" />
+                                    </div>
+                                    <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 shadow-xl hover:shadow-2xl transition-shadow">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div>
+                                                <h3 className="text-white font-black text-2xl mb-2">Recent Work</h3>
+                                                <p className="text-blue-400 font-bold text-xl">{timeline.recent.year}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 bg-yellow-500/20 px-4 py-2 rounded-full border border-yellow-500/30">
+                                                <Star className="w-5 h-5 text-yellow-400" fill="currentColor" />
+                                                <span className="text-yellow-400 text-lg font-bold">{timeline.recent.rating.toFixed(1)}</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-white text-xl font-semibold mb-2">{timeline.recent.title}</p>
+                                        <p className="text-gray-400 text-sm">as {timeline.recent.character}</p>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        </div>
+
+                        {timeline.decades.length > 0 && (
+                            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {timeline.decades.map((decade, idx) => (
+                                    <motion.div key={decade.period} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }}
+                                        className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all group">
+                                        <h4 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#e94f37] to-[#ff6b58] mb-4">{decade.period}</h4>
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-gray-400 text-sm">Productions</span>
+                                                <span className="text-white font-bold text-lg">{decade.count}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-gray-400 text-sm">Avg Rating</span>
+                                                <div className="flex items-center gap-1">
+                                                    <Star className="w-4 h-4 text-yellow-400" fill="currentColor" />
+                                                    <span className="text-white font-bold text-lg">{decade.avgRating}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
+                    </motion.section>
+                )} */}
+
+                {/* Collaborations Network */}
+                {collaborations.length > 0 && (
+                    <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                        <h2 className="text-4xl font-black text-white mb-8 flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-xl">
+                                <Users className="w-7 h-7 text-white" />
+                            </div>
+                            Frequent Collaborators
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {collaborations.slice(0, 6).map((collab, idx) => (
+                                <Link
+                                    key={collab.id}
+                                    href={`/celeb/${collab.id}`} 
+                                    className="block"
+                                >
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: idx * 0.1 }}
+                                        whileHover={{ scale: 1.03 }}
+                                        className="bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all group cursor-pointer"
+                                    >
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex-1">
+                                                <h3 className="text-white font-bold text-xl mb-1 group-hover:text-[#e94f37] transition-colors">
+                                                    {collab.name}
+                                                </h3>
+                                                <p className="text-gray-500 text-sm">
+                                                    Co-starred in {collab.count} project{collab.count > 1 ? "s" : ""}
+                                                </p>
+                                            </div>
+                                            <div className="px-4 py-2 bg-[#e94f37]/20 rounded-full border border-[#e94f37]/30">
+                                                <span className="text-[#e94f37] text-lg font-black">{collab.count}</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            {collab.projects.slice(0, 3).map((project, i) => (
+                                                <p key={i} className="text-gray-400 text-sm truncate">
+                                                    • {project}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                </Link>
+                            ))}
+                        </div>
+                    </motion.section>
+                )}
+
+                {/* Photos */}
+                {person.images?.profiles && person.images.profiles.length > 0 && (
+                    <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                        <h2 className="text-4xl font-black text-white mb-8 flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-xl">
+                                <Camera className="w-7 h-7 text-white" />
+                            </div>
+                            Gallery
+                            <span className="text-sm text-gray-500 font-normal">({person.images.profiles.length} photos)</span>
                         </h2>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            {person.images.profiles.slice(0, 12).map((image, index) => (
-                                <motion.div
-                                    key={index}
-                                    whileHover={{ scale: 1.05 }}
-                                    className="relative aspect-[2/3] rounded-xl overflow-hidden cursor-pointer group bg-[#111]"
-                                    onClick={() => setSelectedImage(`https://image.tmdb.org/t/p/original${image.file_path}`)}
-                                >
-                                    <Image
-                                        src={`https://image.tmdb.org/t/p/w342${image.file_path}`}
-                                        alt={`${person.name} photo`}
-                                        fill
-                                        className="object-cover transition-transform duration-300 group-hover:scale-110"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                            {person.images.profiles.slice(0, 12).map((img, idx) => (
+                                <motion.div key={idx} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: idx * 0.05 }}
+                                    whileHover={{ scale: 1.05 }} className="relative aspect-[2/3] rounded-xl overflow-hidden cursor-pointer group bg-[#111] border border-white/10 hover:border-white/20"
+                                    onClick={() => setSelectedImage(`https://image.tmdb.org/t/p/original${img.file_path}`)}>
+                                    <Image src={`https://image.tmdb.org/t/p/w342${img.file_path}`} alt={`${person.name} photo`} fill className="object-cover transition-transform duration-300 group-hover:scale-110" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                                        <Camera className="w-5 h-5 text-white" />
+                                    </div>
                                 </motion.div>
                             ))}
                         </div>
-                    </section>
+                    </motion.section>
                 )}
 
-                {/* Career Timeline */}
-                <section>
-                    <h2 className="text-3xl font-black text-white mb-6 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#e94f37] to-[#ff6b58] flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-white" />
+                {/* Career Highlights */}
+                <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                    <h2 className="text-4xl font-black text-white mb-8 flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-xl">
+                            <Trophy className="w-7 h-7 text-white" />
                         </div>
-                        Career Timeline
+                        Career Statistics
                     </h2>
-                    <div className="relative">
-                        {/* Timeline Line */}
-                        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[#e94f37] to-[#ff6b58]"></div>
-
-                        <div className="space-y-8">
-                            {/* Debut */}
-                            {displayCredits.length > 0 && (
-                                <motion.div
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="relative pl-12"
-                                >
-                                    <div className="absolute left-0 w-8 h-8 rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] flex items-center justify-center ring-4 ring-[#0a0a0a]">
-                                        <Star className="w-4 h-4 text-white" />
-                                    </div>
-                                    <div className="bg-[#111] rounded-xl p-6 border border-gray-800">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div>
-                                                <h3 className="text-white font-bold text-lg">Career Debut</h3>
-                                                <p className="text-gray-400 text-sm">
-                                                    {new Date(
-                                                        displayCredits[displayCredits.length - 1].release_date ||
-                                                        displayCredits[displayCredits.length - 1].first_air_date || ''
-                                                    ).getFullYear()}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <p className="text-gray-300 text-sm">
-                                            Started with "{displayCredits[displayCredits.length - 1].title || displayCredits[displayCredits.length - 1].name}"
-                                        </p>
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {/* Breakout Role */}
-                            {displayCredits.length > 0 && (
-                                <motion.div
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.1 }}
-                                    className="relative pl-12"
-                                >
-                                    <div className="absolute left-0 w-8 h-8 rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] flex items-center justify-center ring-4 ring-[#0a0a0a]">
-                                        <Trophy className="w-4 h-4 text-white" />
-                                    </div>
-                                    <div className="bg-[#111] rounded-xl p-6 border border-gray-800">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <div>
-                                                <h3 className="text-white font-bold text-lg">Breakout Role</h3>
-                                                <p className="text-gray-400 text-sm">
-                                                    {new Date(
-                                                        displayCredits[0].release_date ||
-                                                        displayCredits[0].first_air_date || ''
-                                                    ).getFullYear()}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-1 bg-yellow-500/10 px-3 py-1 rounded-full">
-                                                <Star className="w-4 h-4 text-yellow-400" fill="currentColor" />
-                                                <span className="text-yellow-400 text-sm font-bold">{displayCredits[0].vote_average.toFixed(1)}</span>
-                                            </div>
-                                        </div>
-                                        <p className="text-gray-300 text-sm mb-2">
-                                            {displayCredits[0].title || displayCredits[0].name}
-                                        </p>
-                                        <p className="text-gray-500 text-xs">
-                                            as {displayCredits[0].character}
-                                        </p>
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {/* Current Status */}
-                            <motion.div
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.2 }}
-                                className="relative pl-12"
-                            >
-                                <div className="absolute left-0 w-8 h-8 rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] flex items-center justify-center ring-4 ring-[#0a0a0a]">
-                                    <Sparkles className="w-4 h-4 text-white" />
-                                </div>
-                                <div className="bg-[#111] rounded-xl p-6 border border-gray-800">
-                                    <div className="flex items-start justify-between mb-2">
-                                        <div>
-                                            <h3 className="text-white font-bold text-lg">Active Career</h3>
-                                            <p className="text-gray-400 text-sm">Present</p>
-                                        </div>
-                                    </div>
-                                    <p className="text-gray-300 text-sm">
-                                        {allCredits.length} total credits • {displayCredits.filter(c => c.vote_average >= 7).length} highly rated works
-                                    </p>
-                                </div>
-                            </motion.div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Box Office Stats */}
-                <section>
-                    <h2 className="text-3xl font-black text-white mb-6 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#e94f37] to-[#ff6b58] flex items-center justify-center">
-                            <Trophy className="w-5 h-5 text-white" />
-                        </div>
-                        Career Highlights
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Total Movies */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="bg-[#111] rounded-xl p-6 border border-gray-800 relative overflow-hidden"
-                        >
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#e94f37]/10 to-transparent rounded-full blur-2xl"></div>
-                            <Film className="w-8 h-8 text-[#e94f37] mb-3 relative z-10" />
-                            <div className="text-3xl font-black text-white mb-1 relative z-10">{movieCredits.length}</div>
-                            <div className="text-sm text-gray-400 font-medium relative z-10">Movies</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                            className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm rounded-2xl p-8 border border-blue-500/20 hover:border-blue-500/40 transition-all group">
+                            <Film className="w-12 h-12 text-blue-400 mb-4 group-hover:scale-110 transition-transform" />
+                            <div className="text-5xl font-black text-white mb-2">{movieCredits.length}</div>
+                            <div className="text-sm text-gray-400 font-medium">Feature Films</div>
                         </motion.div>
 
-                        {/* Total TV Shows */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
-                            className="bg-[#111] rounded-xl p-6 border border-gray-800 relative overflow-hidden"
-                        >
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#ff6b58]/10 to-transparent rounded-full blur-2xl"></div>
-                            <Tv className="w-8 h-8 text-[#ff6b58] mb-3 relative z-10" />
-                            <div className="text-3xl font-black text-white mb-1 relative z-10">{tvCredits.length}</div>
-                            <div className="text-sm text-gray-400 font-medium relative z-10">TV Shows</div>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                            className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20 hover:border-purple-500/40 transition-all group">
+                            <Tv className="w-12 h-12 text-purple-400 mb-4 group-hover:scale-110 transition-transform" />
+                            <div className="text-5xl font-black text-white mb-2">{tvCredits.length}</div>
+                            <div className="text-sm text-gray-400 font-medium">TV Productions</div>
                         </motion.div>
 
-                        {/* Highest Rated */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="bg-[#111] rounded-xl p-6 border border-gray-800 relative overflow-hidden"
-                        >
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-yellow-500/10 to-transparent rounded-full blur-2xl"></div>
-                            <Star className="w-8 h-8 text-yellow-400 mb-3 relative z-10" fill="currentColor" />
-                            <div className="text-3xl font-black text-white mb-1 relative z-10">
-                                {displayCredits.length > 0 ? displayCredits[0].vote_average.toFixed(1) : '0.0'}
-                            </div>
-                            <div className="text-sm text-gray-400 font-medium relative z-10">Highest Rated</div>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                            className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 backdrop-blur-sm rounded-2xl p-8 border border-yellow-500/20 hover:border-yellow-500/40 transition-all group">
+                            <Star className="w-12 h-12 text-yellow-400 mb-4 group-hover:scale-110 transition-transform" fill="currentColor" />
+                            <div className="text-5xl font-black text-white mb-2">{allCredits.filter(c => c.vote_average >= 7).length}</div>
+                            <div className="text-sm text-gray-400 font-medium">Highly Rated</div>
                         </motion.div>
 
-                        {/* Years Active */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3 }}
-                            className="bg-[#111] rounded-xl p-6 border border-gray-800 relative overflow-hidden"
-                        >
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#e94f37]/10 to-transparent rounded-full blur-2xl"></div>
-                            <Calendar className="w-8 h-8 text-[#e94f37] mb-3 relative z-10" />
-                            <div className="text-3xl font-black text-white mb-1 relative z-10">
-                                {displayCredits.length > 0 ? (
-                                    new Date().getFullYear() - new Date(
-                                        displayCredits[displayCredits.length - 1].release_date ||
-                                        displayCredits[displayCredits.length - 1].first_air_date || ''
-                                    ).getFullYear()
-                                ) : 0}+
-                            </div>
-                            <div className="text-sm text-gray-400 font-medium relative z-10">Years Active</div>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                            className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm rounded-2xl p-8 border border-green-500/20 hover:border-green-500/40 transition-all group">
+                            <Clock className="w-12 h-12 text-green-400 mb-4 group-hover:scale-110 transition-transform" />
+                            <div className="text-5xl font-black text-white mb-2">{timeline?.totalYears || 0}+</div>
+                            <div className="text-sm text-gray-400 font-medium">Years Active</div>
                         </motion.div>
                     </div>
-                </section>
-
-                {/* Awards Section */}
-                <section>
-                    <h2 className="text-3xl font-black text-white mb-6 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#e94f37] to-[#ff6b58] flex items-center justify-center">
-                            <Award className="w-5 h-5 text-white" />
-                        </div>
-                        Recognition & Awards
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Highly Rated Works */}
-                        <div className="bg-[#111] rounded-xl p-6 border border-gray-800">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center">
-                                    <Trophy className="w-6 h-6 text-yellow-400" />
-                                </div>
-                                <div>
-                                    <h3 className="text-white font-bold text-lg">Highly Rated Works</h3>
-                                    <p className="text-gray-400 text-sm">{displayCredits.filter(c => c.vote_average >= 7).length} productions with 7+ rating</p>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                {displayCredits
-                                    .filter(c => c.vote_average >= 7)
-                                    .sort((a, b) => b.vote_average - a.vote_average)
-                                    .slice(0, 3)
-                                    .map((credit, idx) => (
-                                        <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
-                                            <span className="text-gray-300 text-sm truncate flex-1">{credit.title || credit.name}</span>
-                                            <div className="flex items-center gap-1 ml-2">
-                                                <Star className="w-3 h-3 text-yellow-400" fill="currentColor" />
-                                                <span className="text-white text-sm font-bold">{credit.vote_average.toFixed(1)}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                {displayCredits.filter(c => c.vote_average >= 7).length === 0 && (
-                                    <p className="text-gray-500 text-sm text-center py-4">No highly rated works yet</p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Career Achievements */}
-                        <div className="bg-[#111] rounded-xl p-6 border border-gray-800">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 rounded-xl bg-[#e94f37]/10 flex items-center justify-center">
-                                    <Sparkles className="w-6 h-6 text-[#e94f37]" />
-                                </div>
-                                <div>
-                                    <h3 className="text-white font-bold text-lg">Career Achievements</h3>
-                                    <p className="text-gray-400 text-sm">Notable milestones</p>
-                                </div>
-                            </div>
-                            <div className="space-y-3">
-                                <div className="flex items-start gap-3">
-                                    <div className="w-2 h-2 rounded-full bg-[#e94f37] mt-2"></div>
-                                    <div>
-                                        <p className="text-white text-sm font-semibold">Top {Math.ceil(person.popularity / 10)}% Popularity</p>
-                                        <p className="text-gray-500 text-xs">Among all celebrities</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                    <div className="w-2 h-2 rounded-full bg-[#ff6b58] mt-2"></div>
-                                    <div>
-                                        <p className="text-white text-sm font-semibold">{allCredits.length} Total Credits</p>
-                                        <p className="text-gray-500 text-xs">Movies and TV combined</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-start gap-3">
-                                    <div className="w-2 h-2 rounded-full bg-[#e94f37] mt-2"></div>
-                                    <div>
-                                        <p className="text-white text-sm font-semibold">Versatile Performer</p>
-                                        <p className="text-gray-500 text-xs">Both film and television</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                </motion.section>
 
                 {/* Genre Stats */}
                 {topGenres.length > 0 && (
@@ -871,67 +823,32 @@ export default function CelebrityDetailPage({ params }: { params: Promise<{ id: 
                 )}
 
                 {/* Upcoming Projects */}
-                <section>
-                    <h2 className="text-3xl font-black text-white mb-6 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#e94f37] to-[#ff6b58] flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-white" />
-                        </div>
-                        Coming Soon
-                    </h2>
-                    {upcomingProjects.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {upcomingProjects.length > 0 && (
+                    <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+                        <h2 className="text-4xl font-black text-white mb-8 flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-xl">
+                                <Calendar className="w-7 h-7 text-white" />
+                            </div>
+                            Coming Soon
+                        </h2>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
                             {upcomingProjects.slice(0, 6).map((project, idx) => (
-                                <motion.div
-                                    key={project.id}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.1 }}
-                                    className="group"
-                                >
+                                <motion.div key={project.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.1 }} className="group">
                                     <Link href={`/${project.media_type === "tv" ? "tv" : "movies"}/${project.id}`}>
-                                        <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-[#111] mb-3 group-hover:ring-2 group-hover:ring-[#e94f37] transition-all">
-                                            <Image
-                                                src={
-                                                    project.poster_path
-                                                        ? `https://image.tmdb.org/t/p/w342${project.poster_path}`
-                                                        : "/placeholder.jpg"
-                                                }
-                                                alt={project.title || project.name || ""}
-                                                fill
-                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                            />
-                                            <div className="absolute top-2 left-2 px-2 py-1 bg-[#e94f37] rounded-lg">
-                                                <span className="text-white text-xs font-bold">Coming</span>
+                                        <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-[#111] mb-3 border border-white/10 group-hover:border-cyan-500/50 transition-all shadow-lg">
+                                            <Image src={project.poster_path ? `https://image.tmdb.org/t/p/w342${project.poster_path}` : "/coming-soon.png"} alt={project.title || project.name || ""} fill className="object-cover transition-transform duration-300 group-hover:scale-105" />
+                                            <div className="absolute top-2 left-2 px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg shadow-lg">
+                                                <span className="text-white text-xs font-bold">Upcoming</span>
                                             </div>
                                         </div>
-                                        <h3 className="text-white font-semibold text-sm line-clamp-2 mb-1">
-                                            {project.title || project.name}
-                                        </h3>
-                                        <p className="text-gray-500 text-xs">
-                                            {(project.release_date || project.first_air_date)
-                                                ? new Date(project.release_date || project.first_air_date).toLocaleDateString('en-US', {
-                                                    day: 'numeric',
-                                                    month: 'short',
-                                                    year: 'numeric'
-                                                })
-                                                : "TBA"}
-                                        </p>
+                                        <h3 className="text-white font-semibold text-sm line-clamp-2 mb-1">{project.title || project.name}</h3>
+                                        <p className="text-gray-500 text-xs">{(project.release_date || project.first_air_date) ? new Date(project.release_date || project.first_air_date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : "TBA"}</p>
                                     </Link>
                                 </motion.div>
                             ))}
                         </div>
-                    ) : (
-                        <div className="bg-[#111] rounded-xl p-8 border border-gray-800 text-center">
-                            <div className="inline-flex w-16 h-16 rounded-full bg-gradient-to-r from-[#e94f37]/20 to-[#ff6b58]/20 items-center justify-center mb-4">
-                                <Calendar className="w-8 h-8 text-[#e94f37]" />
-                            </div>
-                            <h3 className="text-white font-bold text-xl mb-2">No Upcoming Projects</h3>
-                            <p className="text-gray-400 text-sm max-w-md mx-auto">
-                                No announced projects at this time. Check back soon for updates on {person.name.split(' ')[0]}'s future work.
-                            </p>
-                        </div>
-                    )}
-                </section>
+                    </motion.section>
+                )}
 
                 {/* Similar Celebrities */}
                 <section>
@@ -1028,7 +945,7 @@ export default function CelebrityDetailPage({ params }: { params: Promise<{ id: 
                                             src={
                                                 credit.poster_path
                                                     ? `https://image.tmdb.org/t/p/w342${credit.poster_path}`
-                                                    : "/placeholder.jpg"
+                                                    : "/coming-soon.png"
                                             }
                                             alt={credit.title || credit.name || ""}
                                             fill

@@ -215,7 +215,7 @@ export default function CardCarousel<T extends MovieLike>({
   function posterGetter(item: MovieLike): string {
     return item.poster_path
       ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-      : item.poster ?? "/placeholder.jpg";
+      : item.poster ?? "/coming-soon.png";
   }
 
   useEffect(() => {

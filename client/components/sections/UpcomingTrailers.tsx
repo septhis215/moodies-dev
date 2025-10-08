@@ -240,7 +240,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                                     <div className="relative aspect-[16/11] rounded-2xl overflow-hidden bg-gray-900 shadow-2xl">
                                         {/* Image */}
                                         <Image
-                                            src={item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : "/placeholder.jpg"}
+                                            src={item.backdrop_path ? `https://image.tmdb.org/t/p/original${item.backdrop_path}` : "/coming-soon.png"}
                                             alt={item.title}
                                             fill
                                             sizes="(max-width: 1024px) 100vw, 33vw"
