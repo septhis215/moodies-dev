@@ -1290,6 +1290,106 @@ export class AllService implements OnModuleInit {
 
         return { posters, backdrops };
     }
+
+    async getVideoFeed(page: number = 1, mediaType?: 'movie' | 'tv') {
+        try {
+            const requests:any = [];
+
+            // Fetch trending movies and TV shows
+            if (!mediaType || mediaType === 'movie') {
+                requests.push(
+                    this.tmdb('trending/movie/week?page=' + page),
+                    this.tmdb('movie/popular?page=' + page),
+                    this.tmdb('movie/now_playing?page=' + page)
+                );
+            }
+
+            if (!mediaType || mediaType === 'tv') {
+                requests.push(
+                    this.tmdb('trending/tv/week?page=' + page),
+                    this.tmdb('tv/popular?page=' + page),
+                    this.tmdb('tv/on_the_air?page=' + page)
+                );
+            }
+
+            const results = await Promise.allSettled(requests);
+            const allItems:any[] = [];
+
+            // Combine all results
+            for (const result of results) {
+                if (result.status === 'fulfilled' && result.value?.results) {
+                    allItems.push(...result.value.results);
+                }
+            }
+
+            // Remove duplicates based on ID
+            const uniqueItems = Array.from(
+                new Map(allItems.map(item => [item.id, item])).values()
+            );
+
+            // Shuffle for variety
+            const shuffled = uniqueItems.sort(() => Math.random() - 0.5);
+
+            // Fetch videos for each item (in batches to avoid rate limits)
+            const itemsWithVideos = await this.enrichWithVideos(shuffled.slice(0, 20));
+
+            return {
+                results: itemsWithVideos,
+                page,
+                total_pages: 50, // Arbitrary large number for infinite scroll
+                hasMore: page < 50
+            };
+        } catch (error) {
+            console.error('Error fetching video feed:', error);
+            return { results: [], page, total_pages: 0, hasMore: false };
+        }
+    }
+
+    private async enrichWithVideos(items: any[]) {
+        const enriched:any[] = [];
+
+        for (const item of items) {
+            try {
+                const mediaType = item.title ? 'movie' : 'tv';
+                const videosResponse = await this.tmdb(
+                    `${mediaType}/${item.id}/videos`
+                );
+
+                const videos = videosResponse.results || [];
+
+                // Prioritize trailers and teasers
+                const priorityVideos = videos.filter(
+                    v => v.type === 'Trailer' || v.type === 'Teaser'
+                );
+
+                const selectedVideos = priorityVideos.length > 0
+                    ? priorityVideos
+                    : videos;
+
+                if (selectedVideos.length > 0) {
+                    enriched.push({
+                        ...item,
+                        media_type: mediaType,
+                        videos: selectedVideos.slice(0, 3), // Get top 3 videos
+                        primary_video: selectedVideos[0] // Main video to display
+                    });
+                }
+            } catch (error) {
+                // Skip items without videos
+                continue;
+            }
+        }
+
+        return enriched;
+    }
+
+    async getMovieVideos(id: number) {
+        return await this.tmdb(`movie/${id}/videos`);
+    }
+
+    async getTvVideos(id: number) {
+        return await this.tmdb(`tv/${id}/videos`);
+    }
 }
 
 // 9. IMPLEMENTATION GUIDE

@@ -91,7 +91,7 @@ export default function TrailerModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
       <div className="absolute inset-0 cursor-pointer" onClick={onClose} />
 
-      <div className="relative w-full h-full bg-black/80 backdrop-blur-md flex flex-col xl:flex-row gap-6 items-stretch max-w-7xl overflow-hidden">
+      <div className="relative w-full h-full bg-black/80 backdrop-blur-md flex flex-col xl:flex-row gap-6 items-stretch overflow-hidden">
 
         <button
           onClick={onClose}
@@ -125,54 +125,54 @@ export default function TrailerModal({
 
             {/* Header */}
             <div className="flex-shrink-0 p-6 pt-14 border-b border-gray-700/50 relative">
-              <div className="flex gap-6 items-start">
+              <div className="flex gap-4 sm:gap-6 lg:gap-8 items-start">
                 {trailer.poster_path && (
                   <div
-                    className="w-32 flex-shrink-0 cursor-pointer"
+                    className="w-28 sm:w-40 md:w-56 lg:w-64 xl:w-72 2xl:w-80 flex-shrink-0 cursor-pointer transition-all"
                     onClick={() => handleClick(trailer)}
                   >
                     <img
-                      src={`https://image.tmdb.org/t/p/w300${trailer.poster_path}`}
+                      src={`https://image.tmdb.org/t/p/w500${trailer.poster_path}`}
                       alt={trailer.title}
-                      className="rounded-lg shadow-xl object-cover w-full h-auto"
+                      className="rounded-lg shadow-xl object-cover w-full aspect-[2/3]"
                     />
                   </div>
                 )}
 
+                {/* Title + Pills */}
                 <div className="flex flex-col flex-1 min-w-0 relative z-10">
                   <h2
-                    className="text-3xl font-extrabold text-white drop-shadow-2xl leading-tight cursor-pointer mb-4"
+                    className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 
+        font-extrabold text-white drop-shadow-2xl leading-tight 
+        cursor-pointer mb-4 lg:mb-6"
                     onClick={() => handleClick(trailer)}
                   >
                     {trailer.title}
                   </h2>
 
-                  <div className="flex flex-wrap gap-2">
+                  {/* Pills */}
+                  <div className="flex flex-wrap gap-2 lg:gap-3 xl:gap-4">
                     {trailer.release_date && (
-                      <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-blue-600/90 shadow-lg text-xs font-medium text-white">
-                        <IconCalendar size={14} />
-                        {new Date(trailer.release_date).toLocaleDateString(
-                          undefined,
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          }
-                        )}
+                      <span className="flex items-center gap-1 px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full bg-blue-600/90 shadow-lg text-xs sm:text-sm md:text-base lg:text-lg font-medium text-white">
+                        <IconCalendar size={18} />
+                        {new Date(trailer.release_date).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
                       </span>
                     )}
 
                     {trailer.runtime && (
-                      <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-600/90 shadow-lg text-xs font-medium text-white">
-                        <IconClock size={14} />
-                        {Math.floor(trailer.runtime / 60)}h{" "}
-                        {trailer.runtime % 60}m
+                      <span className="flex items-center gap-1 px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full bg-purple-600/90 shadow-lg text-xs sm:text-sm md:text-base lg:text-lg font-medium text-white">
+                        <IconClock size={18} />
+                        {Math.floor(trailer.runtime / 60)}h {trailer.runtime % 60}m
                       </span>
                     )}
 
                     {trailer.number_of_episodes && (
-                      <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-500/90 shadow-lg text-xs font-medium text-white">
-                        <IconDeviceTv size={14} />
+                      <span className="flex items-center gap-1 px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full bg-purple-500/90 shadow-lg text-xs sm:text-sm md:text-base lg:text-lg font-medium text-white">
+                        <IconDeviceTv size={18} />
                         {trailer.number_of_episodes} Episodes
                       </span>
                     )}
@@ -180,7 +180,9 @@ export default function TrailerModal({
                     {trailer.genres?.slice(0, 3).map((genre, i) => (
                       <span
                         key={i}
-                        className="relative px-3 py-1 rounded-full text-white font-semibold text-xs shadow-lg overflow-hidden"
+                        className="relative px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full 
+            text-white font-semibold text-xs sm:text-sm md:text-base lg:text-lg 
+            shadow-lg overflow-hidden"
                       >
                         <span className="absolute inset-0 bg-gradient-to-r from-[#e94f37] via-pink-500 to-orange-500 opacity-40 animate-gradient-x rounded-full"></span>
                         <span className="relative z-10">{genre}</span>
@@ -194,18 +196,21 @@ export default function TrailerModal({
             {/* Synopsis */}
             {trailer.overview && (
               <div className="flex-shrink-0 px-6 py-4 border-b border-gray-700/30">
-                <h3 className="text-gray-400 font-semibold text-sm mb-2 uppercase tracking-wide">
+                <h3 className="text-gray-400 font-semibold text-sm sm:text-base lg:text-lg uppercase tracking-wide mb-2">
                   Synopsis
                 </h3>
-                <p className="text-gray-300 text-sm leading-relaxed break-words">
+                <p
+                  className="text-gray-300 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl 
+      leading-relaxed break-words max-w-5xl"
+                >
                   {isExpanded
                     ? trailer.overview
-                    : trailer.overview.slice(0, 200) +
-                    (trailer.overview.length > 200 ? "..." : "")}
-                  {trailer.overview.length > 200 && (
+                    : trailer.overview.slice(0, 300) +
+                    (trailer.overview.length > 300 ? "..." : "")}
+                  {trailer.overview.length > 300 && (
                     <button
                       onClick={() => setIsExpanded(!isExpanded)}
-                      className="ml-2 text-blue-400 hover:text-blue-500 text-xs font-semibold"
+                      className="ml-2 text-blue-400 hover:text-blue-500 text-xs sm:text-sm lg:text-base font-semibold"
                     >
                       {isExpanded ? "Show less" : "Read more"}
                     </button>
@@ -214,11 +219,12 @@ export default function TrailerModal({
               </div>
             )}
 
+
             {/* Recommendations */}
             {trailer.recommendations && trailer.recommendations?.length > 0 && (
               <div className="p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-gray-400 font-semibold text-sm uppercase tracking-wide">
+                  <h3 className="text-gray-400 font-semibold text-sm sm:text-base lg:text-lg uppercase tracking-wide">
                     You Might Also Like
                   </h3>
                   <span className="text-sm text-gray-500 bg-gray-800/50 px-2 py-1 rounded-full">

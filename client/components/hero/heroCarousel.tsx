@@ -135,17 +135,25 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
             >
               <Image
                 src={src}
-                alt={m.title ?? "Featured general backdrop"}
+                alt=""
+                fill
+                priority
+                aria-hidden
                 className="w-full h-full object-cover object-center"
                 style={{
-                  filter: "brightness(0.90) contrast(1.05)",
-                  objectPosition: "center 50%", // Better mobile cropping
+                  filter: "brightness(1.2) contrast(1.15) saturate(1.15)",
+                  objectPosition: "center 50%",
                 }}
-                fill
-                priority={active}
-                sizes="100vw"
               />
+
+              {/* Softer edge shading for text readability */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-black/50" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-transparent" />
+
+              {/* Center spotlight effect */}
+              <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.08)_35%,transparent_80%)] mix-blend-lighten" />
             </div>
+
           );
         })}
 
@@ -170,7 +178,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
       </div>
 
       {/* Content Container */}
-      <div className="absolute inset-0 z-20 flex flex-col">
+      <div className="absolute inset-0 z-20 flex flex-col max-w-7xl mx-auto">
         {/* Main Content Area */}
         <div className="flex-1 flex items-end">
           <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pb-4 sm:pb-6 lg:pb-8">

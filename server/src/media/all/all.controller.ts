@@ -197,6 +197,26 @@ export class AllController {
       console.log(err);
     }
   }
+
+
+  @Get('video-feed')
+  async getVideoFeed(
+    @Query('page') page: string = '1',
+    @Query('mediaType') mediaType?: 'movie' | 'tv'
+  ) {
+    const pageNum = parseInt(page, 10);
+    return this.allService.getVideoFeed(pageNum, mediaType);
+  }
+
+  @Get('movie/:id/videos')
+  async getMovieVideos(@Param('id') id: string) {
+    return this.allService.getMovieVideos(parseInt(id, 10));
+  }
+
+  @Get('tv/:id/videos')
+  async getTvVideos(@Param('id') id: string) {
+    return this.allService.getTvVideos(parseInt(id, 10));
+  }
 }
 
 /*
