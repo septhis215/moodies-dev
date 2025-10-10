@@ -36,17 +36,89 @@ export class PeopleService {
   }
 
   async getPersonDetails(id: number) {
-    return await this.tmdb(
+    const details = await this.tmdb(
       `person/${id}?append_to_response=images,combined_credits,external_ids,movie_credits,tv_credits,tagged_images`
     );
+
+    // Remove duplicates from combined credits
+    if (details.combined_credits) {
+      details.combined_credits.cast = this.removeDuplicateCredits(details.combined_credits.cast || []);
+      details.combined_credits.crew = this.removeDuplicateCredits(details.combined_credits.crew || []);
+    }
+
+    // Remove duplicates from movie credits
+    if (details.movie_credits) {
+      details.movie_credits.cast = this.removeDuplicateCredits(details.movie_credits.cast || []);
+      details.movie_credits.crew = this.removeDuplicateCredits(details.movie_credits.crew || []);
+    }
+
+    // Remove duplicates from TV credits
+    if (details.tv_credits) {
+      details.tv_credits.cast = this.removeDuplicateCredits(details.tv_credits.cast || []);
+      details.tv_credits.crew = this.removeDuplicateCredits(details.tv_credits.crew || []);
+    }
+
+    return details;
+  }
+
+  /**
+   * Remove duplicate credits based on ID and title/name
+   * Keeps the entry with more complete information
+   */
+  private removeDuplicateCredits(credits: any[]): any[] {
+    const seen = new Map<string, any>();
+
+    for (const credit of credits) {
+      const key = `${credit.id}_${credit.title || credit.name || ''}`.toLowerCase();
+
+      if (!seen.has(key)) {
+        seen.set(key, credit);
+      } else {
+        // Keep the one with more information
+        const existing = seen.get(key);
+        const existingScore = this.getCreditCompletenesScore(existing);
+        const currentScore = this.getCreditCompletenesScore(credit);
+
+        if (currentScore > existingScore) {
+          seen.set(key, credit);
+        }
+      }
+    }
+
+    return Array.from(seen.values());
+  }
+
+  /**
+   * Calculate a score for how complete a credit entry is
+   */
+  private getCreditCompletenesScore(credit: any): number {
+    let score = 0;
+
+    if (credit.character) score += 2;
+    if (credit.poster_path) score += 1;
+    if (credit.vote_average > 0) score += 1;
+    if (credit.release_date || credit.first_air_date) score += 1;
+    if (credit.overview) score += 1;
+
+    return score;
   }
 
   async getMovieCredits(id: number) {
-    return await this.tmdb(`person/${id}/movie_credits`);
+    const credits = await this.tmdb(`person/${id}/movie_credits`);
+    return {
+      ...credits,
+      cast: this.removeDuplicateCredits(credits.cast || []),
+      crew: this.removeDuplicateCredits(credits.crew || [])
+    };
   }
 
   async getTvCredits(id: number) {
-    return await this.tmdb(`person/${id}/tv_credits`);
+    const credits = await this.tmdb(`person/${id}/tv_credits`);
+    return {
+      ...credits,
+      cast: this.removeDuplicateCredits(credits.cast || []),
+      crew: this.removeDuplicateCredits(credits.crew || [])
+    };
   }
 
   async getImages(id: number) {
@@ -327,81 +399,6 @@ export class PeopleService {
     };
   }
 
-  // NEW: Get career timeline with proper chronological data
-  // async getCareerTimeline(id: number) {
-  //   const person = await this.getPersonDetails(id);
-  //   const allCredits = [...(person.combined_credits?.cast || [])];
-
-  //   // Sort credits by actual date
-  //   const sortedCredits = allCredits
-  //     .filter(c => c.release_date || c.first_air_date)
-  //     .sort((a, b) => {
-  //       const dateA = new Date(a.release_date || a.first_air_date).getTime();
-  //       const dateB = new Date(b.release_date || b.first_air_date).getTime();
-  //       return dateA - dateB;
-  //     });
-
-  //   if (sortedCredits.length === 0) return null;
-
-  //   // 🧠 Find the actual debut work:
-  //   // For TV shows, skip very old shows where the actor probably wasn't in the first year
-  //   const firstValidWork = sortedCredits.find(credit => {
-  //     const year = new Date(credit.release_date || credit.first_air_date).getFullYear();
-  //     const currentYear = new Date().getFullYear();
-  //     return year >= 1900 && year <= currentYear;
-  //   }) || sortedCredits[0];
-
-  //   const topRated = [...sortedCredits].sort((a, b) => b.vote_average - a.vote_average)[0];
-  //   const recentWork = sortedCredits[sortedCredits.length - 1];
-
-  //   // 🗂 Group by decade
-  //   const decades = new Map<string, any[]>();
-  //   sortedCredits.forEach(credit => {
-  //     const year = new Date(credit.release_date || credit.first_air_date).getFullYear();
-  //     const decade = Math.floor(year / 10) * 10;
-  //     const key = `${decade}s`;
-
-  //     const decadeArray = decades.get(key) ?? [];
-  //     decadeArray.push(credit);
-  //     decades.set(key, decadeArray);
-  //   });
-
-  //   const debutYear = new Date(firstValidWork.release_date || firstValidWork.first_air_date).getFullYear();
-  //   const lastYear = new Date(recentWork.release_date || recentWork.first_air_date).getFullYear();
-  //   const totalYears = Math.max(1, lastYear - debutYear + 1); // ensure at least 1 year
-
-  //   return {
-  //     debut: {
-  //       title: firstValidWork.title || firstValidWork.name,
-  //       year: debutYear,
-  //       character: firstValidWork.character,
-  //       rating: firstValidWork.vote_average
-  //     },
-  //     breakout: {
-  //       title: topRated.title || topRated.name,
-  //       year: new Date(topRated.release_date || topRated.first_air_date).getFullYear(),
-  //       character: topRated.character,
-  //       rating: topRated.vote_average
-  //     },
-  //     recent: {
-  //       title: recentWork.title || recentWork.name,
-  //       year: lastYear,
-  //       character: recentWork.character,
-  //       rating: recentWork.vote_average
-  //     },
-  //     decades: Array.from(decades.entries()).map(([decade, works]) => ({
-  //       period: decade,
-  //       count: works.length,
-  //       avgRating: (works.reduce((sum, w) => sum + w.vote_average, 0) / works.length).toFixed(1),
-  //       topWork: works.sort((a, b) => b.vote_average - a.vote_average)[0]
-  //     })),
-  //     totalYears
-  //   };
-  // }
-
-
-
-  // NEW: Get collaboration network
   async getCollaborations(id: number) {
     const person = await this.getPersonDetails(id);
     const credits = person.combined_credits?.cast || [];

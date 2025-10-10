@@ -1,21 +1,54 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import type { All } from "@/types/all";
-import {
-  IconCalendar,
-  IconClock,
-  IconDeviceTv,
-  IconX,
-} from "@tabler/icons-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
+
+type All = {
+  id: number;
+  title: string;
+  poster_path?: string;
+  trailer_key?: string;
+  release_date?: string;
+  runtime?: number;
+  number_of_episodes?: number;
+  genres?: string[];
+  overview?: string;
+  vote_average?: number;
+  recommendations?: All[];
+  media_type?: string;
+  type?: string;
+};
 
 type Props = {
   trailer: All;
   onClose: () => void;
   onSelectTrailer: (trailer: All) => void | Promise<void>;
 };
+
+// Icon Components
+const IconX = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
+const IconCalendar = ({ size }: { size?: number }) => (
+  <svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+
+const IconClock = ({ size }: { size?: number }) => (
+  <svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const IconDeviceTv = ({ size }: { size?: number }) => (
+  <svg width={size} height={size} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  </svg>
+);
 
 export default function TrailerModal({
   trailer,
@@ -24,7 +57,6 @@ export default function TrailerModal({
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isExpanded, setIsExpanded] = useState(false);
-  const router = useRouter();
 
   const getContentType = (item: Partial<All>): "movie" | "tv" => {
     if ((item as any).media_type) return (item as any).media_type;
@@ -39,13 +71,14 @@ export default function TrailerModal({
       return "tv";
     return "movie";
   };
-
+  const router = useRouter();
   const handleClick = async (movie: All) => {
     const contentType = getContentType(movie);
     const routePath = contentType === "tv" ? "tv" : "movies";
     const href = `/${routePath}/${movie.id}`;
     router.push(href);
   };
+
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -55,23 +88,23 @@ export default function TrailerModal({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      {/* Close on background click */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
       <div className="absolute inset-0 cursor-pointer" onClick={onClose} />
 
-      <div className="relative w-full max-w-[90vw] mx-auto h-[85vh] max-h-[90vh] bg-black/80 backdrop-blur-md flex flex-col xl:flex-row gap-6 items-stretch">
+      <div className="relative w-full h-full bg-black/80 backdrop-blur-md flex flex-col xl:flex-row gap-6 items-stretch max-w-7xl overflow-hidden">
+
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute -top-3 -right-3 z-50 rounded-full bg-[#e94f37]/70 hover:bg-[#e94f37]/100 p-2 drop-shadow-lg focus:outline-none focus:ring-2 focus:ring-[#e94f37]/40 cursor-pointer"
+          className="absolute top-4 right-4 z-50 rounded-full bg-[#e94f37]/70 hover:bg-[#e94f37]/100 p-2 drop-shadow-lg focus:outline-none focus:ring-2 focus:ring-[#e94f37]/40 cursor-pointer"
           style={{ backdropFilter: "blur(6px)" }}
         >
           <IconX className="w-5 h-5 text-white" />
         </button>
 
         {/* Trailer player */}
-        <div className="flex-none w-full xl:flex-[2] flex justify-center items-center min-h-0">
-          <div className="w-full h-full max-h-[60vh] xl:max-h-full flex justify-center items-center">
+        <div className="flex-none w-full xl:flex-[2] flex justify-center items-center min-h-0 p-8">
+          <div className="w-full h-full flex justify-center items-center">
             <iframe
               className="w-full h-full rounded-xl shadow-2xl border border-gray-700 bg-black"
               src={`https://www.youtube.com/embed/${trailer.trailer_key}?autoplay=0&controls=1`}
@@ -86,15 +119,16 @@ export default function TrailerModal({
         {/* Details panel */}
         <div
           ref={panelRef}
-          className="flex-none w-full xl:flex-[1] bg-gradient-to-b from-black/95 to-black/85 backdrop-blur-xl rounded-l-2xl border border-gray-600/50 shadow-2xl flex flex-col min-h-0 h-[35vh] xl:h-full max-h-[35vh] xl:max-h-full"
+          className="flex-none w-full xl:flex-[1] bg-gradient-to-b from-black/95 to-black/85 backdrop-blur-xl border-l border-gray-600/50 shadow-2xl flex flex-col min-h-0 h-full"
         >
-          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-400 px-1">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-400">
+
             {/* Header */}
-            <div className="flex-shrink-0 p-4 xl:p-6 border-b border-gray-700/50 relative">
-              <div className="flex gap-4 xl:gap-6 items-start">
+            <div className="flex-shrink-0 p-6 pt-14 border-b border-gray-700/50 relative">
+              <div className="flex gap-6 items-start">
                 {trailer.poster_path && (
                   <div
-                    className="w-20 h-auto xl:w-32 flex-shrink-0 cursor-pointer"
+                    className="w-32 flex-shrink-0 cursor-pointer"
                     onClick={() => handleClick(trailer)}
                   >
                     <img
@@ -107,13 +141,13 @@ export default function TrailerModal({
 
                 <div className="flex flex-col flex-1 min-w-0 relative z-10">
                   <h2
-                    className="text-xl xl:text-2xl 2xl:text-3xl font-extrabold text-white drop-shadow-2xl leading-tight cursor-pointer"
+                    className="text-3xl font-extrabold text-white drop-shadow-2xl leading-tight cursor-pointer mb-4"
                     onClick={() => handleClick(trailer)}
                   >
                     {trailer.title}
                   </h2>
 
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <div className="flex flex-wrap gap-2">
                     {trailer.release_date && (
                       <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-blue-600/90 shadow-lg text-xs font-medium text-white">
                         <IconCalendar size={14} />
@@ -159,7 +193,7 @@ export default function TrailerModal({
 
             {/* Synopsis */}
             {trailer.overview && (
-              <div className="flex-shrink-0 px-4 xl:px-6 py-3 xl:py-4 border-b border-gray-700/30">
+              <div className="flex-shrink-0 px-6 py-4 border-b border-gray-700/30">
                 <h3 className="text-gray-400 font-semibold text-sm mb-2 uppercase tracking-wide">
                   Synopsis
                 </h3>
@@ -167,7 +201,7 @@ export default function TrailerModal({
                   {isExpanded
                     ? trailer.overview
                     : trailer.overview.slice(0, 200) +
-                      (trailer.overview.length > 200 ? "..." : "")}
+                    (trailer.overview.length > 200 ? "..." : "")}
                   {trailer.overview.length > 200 && (
                     <button
                       onClick={() => setIsExpanded(!isExpanded)}
@@ -181,8 +215,8 @@ export default function TrailerModal({
             )}
 
             {/* Recommendations */}
-            {trailer.recommendations?.length > 0 && (
-              <div className="p-4 xl:p-6">
+            {trailer.recommendations && trailer.recommendations?.length > 0 && (
+              <div className="p-6">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-gray-400 font-semibold text-sm uppercase tracking-wide">
                     You Might Also Like
@@ -201,11 +235,9 @@ export default function TrailerModal({
                       title={rec.title}
                     >
                       <div className="aspect-[2/3] w-auto h-auto relative overflow-hidden cursor-pointer">
-                        <Image
+                        <img
                           src={`https://image.tmdb.org/t/p/w300${rec.poster_path}`}
                           alt={rec.title}
-                          width={300}
-                          height={450}
                           className="object-cover w-full h-full transform transition-transform duration-500 group-hover:scale-110"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-70 group-hover:opacity-80 transition-opacity duration-500" />

@@ -116,10 +116,10 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           const getImageSize = () => {
             if (typeof window !== "undefined") {
               if (window.innerWidth < 640) return "w780"; // mobile
-              if (window.innerWidth < 1024) return "w1280"; // tablet
-              return active ? "w1280" : "w780"; // desktop
+              if (window.innerWidth < 1024) return "w1280";
+              return active ? "original" : "w780"; // desktop
             }
-            return "w1280";
+            return "original";
           };
 
           const src =
@@ -129,9 +129,8 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           return (
             <div
               key={m.id}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                active ? "opacity-100" : "opacity-0 pointer-events-none"
-              }`}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${active ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
               aria-hidden={!active}
             >
               <Image
@@ -181,8 +180,8 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
               <div className="text-white mb-6">
                 {/* Title */}
                 <h1
-                  className="font-bold leading-tight drop-shadow-2xl 
-                  text-2xl sm:text-3xl md:text-4xl 
+                  className="font-bold leading-tight drop-shadow-2xl  line-clamp-2
+                  text-2xl sm:text-3xl md:text-4xl
                   tracking-tight mb-3"
                 >
                   {all[index].title}
@@ -282,7 +281,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                 {/* Title */}
                 <h1
                   className="font-bold leading-tight drop-shadow-2xl 
-                  text-4xl xl:text-5xl 2xl:text-6xl 
+                  text-3xl xl:text-4xl 2xl:text-5xl  line-clamp-3
                   tracking-tight mb-4"
                 >
                   {all[index].title}
@@ -294,7 +293,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                     <span
                       key={genre}
                       className="flex-shrink-0 flex items-center gap-1 text-white font-medium 
-                 px-2 py-1.5 rounded-full bg-[#e94f37]/90 shadow-sm text-sm"
+                 px-2 py-1 rounded-full bg-[#e94f37]/90 shadow-sm text-sm"
                     >
                       <IconTags size={14} />
                       {genre}
@@ -304,7 +303,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                   {all[index].release_date && (
                     <span
                       className="flex-shrink-0 flex items-center gap-1 text-gray-200 font-medium 
-                 px-2 py-1.5 rounded-full bg-gray-800/60 shadow-sm text-sm"
+                 px-1.5 py-1 rounded-full bg-gray-800/60 shadow-sm text-sm"
                     >
                       <IconClock size={14} />
                       {new Date(all[index].release_date).toLocaleDateString(
