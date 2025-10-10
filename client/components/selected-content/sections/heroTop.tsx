@@ -171,17 +171,17 @@ function TrailerModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-8"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-5xl bg-gray-900 rounded-lg overflow-hidden shadow-2xl"
+        className="relative w-full max-w-5xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
+        {/* Close button - positioned outside/above the video container */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+          className="absolute -top-10 sm:-top-12 right-0 sm:right-0 rounded-full bg-[#e94f37]/70 hover:bg-[#e94f37]/100 p-2 drop-shadow-lg focus:outline-none focus:ring-2 focus:ring-[#e94f37]/40 cursor-pointer"
           aria-label="Close trailer"
         >
           <svg
@@ -201,14 +201,16 @@ function TrailerModal({
         </button>
 
         {/* Video container */}
-        <div className="relative" style={{ paddingBottom: "56.25%" }}>
-          <iframe
-            className="absolute top-0 left-0 w-full h-full"
-            src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
-            title={`${title} Trailer`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+        <div className="relative bg-gray-900 rounded-lg overflow-hidden shadow-2xl">
+          <div className="relative" style={{ paddingBottom: "56.25%" }}>
+            <iframe
+              className="absolute top-0 left-0 w-full h-full"
+              src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
+              title={`${title} Trailer`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
         </div>
       </div>
     </div>
