@@ -10,6 +10,7 @@
     "db:dev:rm": "docker compose --env-file ./.env -f ../docker-compose.yml rm postgres-dev -s -f -v",
     "db:dev:up": "docker compose --env-file ./.env -f ../docker-compose.yml up postgres-dev -d",
     "db:dev:restart": "npm run db:dev:rm && npm run db:dev:up && sleep 1 && npm run prisma:dev:deploy",
+    "seed": "npx prisma db seed",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
