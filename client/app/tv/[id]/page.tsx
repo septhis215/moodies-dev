@@ -2,11 +2,12 @@ import React from "react";
 import type { Metadata } from "next";
 
 import HeroContentCard from "@/components/selected-content/sections/heroTop";
-import TvDetails from "@/components/selected-content/sections/extras";
+import ExtraDetails from "@/components/selected-content/sections/extras";
 import ReviewsSection from "@/components/selected-content/sections/reviews";
 import CardCarousel from "@/components/sections/CardCarousel";
 import TvSeasonsEpisodes from "@/components/selected-content/sections/TvSeasonsEpisodes";
 import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
+import Analytics from "@/components/selected-content/sections/analytics";
 
 async function fetchDetails(id: string) {
   const base = process.env.NEST_API_URL ?? "http://localhost:4000";
@@ -155,8 +156,9 @@ export default async function TvPage({
             backdrops={images.backdrops}
             videos={videos.videos}
           />
+
           <hr className="border-white/8 my-14" />
-          <TvDetails data={data} />
+          <ExtraDetails data={data} />
 
           <hr className="border-white/8 my-14" />
           <ReviewsSection
