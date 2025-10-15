@@ -200,7 +200,7 @@ export default function TvSeasonsEpisodes({ seasons, className = "" }: Props) {
                         </svg>
                         <span>
                           {season.episode_count ?? season.episodes.length}{" "}
-                          episodes
+                          eps
                         </span>
                       </div>
 
