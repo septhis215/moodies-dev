@@ -1,11 +1,16 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Volume2, VolumeX, Heart, Share2, Bookmark,
-  MessageCircle, Star, ExternalLink, ChevronDown, ChevronUp, Sparkles
+  MessageCircle, Star, ExternalLink, Sparkles, Home, Compass, Search, Plus, Info, X,
+  Pause,
+  Play
 } from 'lucide-react';
+import { All } from '@/types/all';
+import { useRouter } from "next/navigation";
+import Link from 'next/link';
 
 interface VideoItem {
   id: number;
@@ -14,6 +19,9 @@ interface VideoItem {
   overview: string;
   poster_path: string;
   backdrop_path: string;
+  release_date?: string;
+  first_air_date?: string;
+  genres?: string[];
   vote_average: number;
   media_type: 'movie' | 'tv';
   primary_video: {
@@ -31,21 +39,105 @@ export default function VideoFeedPage() {
   const [loading, setLoading] = useState(false);
   const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set());
   const [hasMore, setHasMore] = useState(true);
-  const [muted, setMuted] = useState(true);
-  const [showInfo, setShowInfo] = useState(false);
+  // Persisted mute state
+  const [muted, setMuted] = useState<boolean>(() => {
+    try {
+      const s = typeof window !== 'undefined' ? localStorage.getItem('videoMuted') : null;
+      return s === null ? true : s === 'true';
+    } catch {
+      return true;
+    }
+  });
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [titleBarVisible, setTitleBarVisible] = useState(true);
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
-
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<number, HTMLIFrameElement>>(new Map());
+  const titleBarTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentVideo = videos[currentIndex];
+  const initialMutedRef = useRef<boolean>(muted);
 
-  // Generate random page number
+
+  const getContentType = (item: Partial<All>): "movie" | "tv" => {
+    if ((item as any).media_type) return (item as any).media_type;
+    if ((item as any).type === "movies" || (item as any).type === "movie")
+      return "movie";
+    if ((item as any).type === "tv") return "tv";
+    if (
+      (item as any).number_of_seasons ||
+      (item as any).first_air_date ||
+      (item as any).name
+    )
+      return "tv";
+    return "movie";
+  };
+  const href = currentVideo
+    ? `/${getContentType(currentVideo) === 'tv' ? 'tv' : 'movies'}/${currentVideo.id}`
+    : undefined;
+
+  // Auto-hide title bar after 3 seconds
+  useEffect(() => {
+    setTitleBarVisible(true);
+
+    if (titleBarTimeoutRef.current) {
+      clearTimeout(titleBarTimeoutRef.current);
+    }
+
+    titleBarTimeoutRef.current = setTimeout(() => {
+      setTitleBarVisible(false);
+    }, 3000);
+
+    return () => {
+      if (titleBarTimeoutRef.current) {
+        clearTimeout(titleBarTimeoutRef.current);
+      }
+    };
+  }, [currentIndex]);
+  // persist muted preference
+  useEffect(() => {
+    try {
+      localStorage.setItem('videoMuted', String(muted));
+    } catch { /* ignore */ }
+  }, [muted]);
+
+  // helper: send postMessage command to YouTube iframe (enablejsapi=1 required)
+  const sendYouTubeCommand = (iframe: HTMLIFrameElement | undefined | null, func: string, args: any[] = []) => {
+    if (!iframe) return;
+    try {
+      iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+    } catch {
+      // ignore
+    }
+  };
+
+  // toggle mute (only via postMessage; iframe src does NOT include mute param)
+  const toggleMute = useCallback(() => {
+    setMuted(prev => {
+      const next = !prev;
+      const iframe = currentVideo ? videoRefs.current.get(currentVideo.id) : undefined;
+      if (iframe) {
+        sendYouTubeCommand(iframe, next ? 'mute' : 'unMute');
+      }
+      return next;
+    });
+  }, [currentVideo]);
+
+  // When active iframe loads or when currentVideo changes, apply mute/unMute via postMessage
+  useEffect(() => {
+    if (!currentVideo) return;
+    const iframe = videoRefs.current.get(currentVideo.id);
+    if (iframe) {
+      const t = window.setTimeout(() => sendYouTubeCommand(iframe, muted ? 'mute' : 'unMute'), 250);
+      return () => clearTimeout(t);
+    }
+  }, [currentVideo, muted]);
   const getRandomPage = () => {
     return Math.floor(Math.random() * 20) + 1;
   };
 
-  // Fetch videos with randomization
   const fetchVideos = useCallback(async () => {
     if (loading || !hasMore) return;
 
@@ -77,56 +169,31 @@ export default function VideoFeedPage() {
     }
   }, [loading, hasMore, fetchedPages]);
 
-  // Initial fetch
   useEffect(() => {
     fetchVideos();
   }, []);
 
-  // Toggle mute function - Fixed!
-  const toggleMute = useCallback(() => {
-    setMuted(prev => {
-      const newMutedState = !prev;
 
-      // Update the current video's iframe
-      if (currentVideo) {
-        const iframe = videoRefs.current.get(currentVideo.id);
-        if (iframe && iframe.contentWindow) {
-          const command = newMutedState ? 'mute' : 'unMute';
-          iframe.contentWindow.postMessage(
-            JSON.stringify({ event: 'command', func: command }),
-            '*'
-          );
-        }
-      }
 
-      return newMutedState;
-    });
-  }, [currentVideo]);
-
-  // Scroll handler
+  // ---------- scroll / swipe handling ----------
   const handleScroll = useCallback((e: WheelEvent) => {
-    e.preventDefault();
+    // If wheel originates from panel, ignore (panel has its own scroll)
+    if (panelRef.current && panelRef.current.contains(e.target as Node)) return;
 
+    e.preventDefault();
     if (Math.abs(e.deltaY) < 50) return;
 
     if (e.deltaY > 0 && currentIndex < videos.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      setShowInfo(false);
-      setLiked(false);
-      setSaved(false);
+      setCurrentIndex(i => i + 1);
+      setPanelOpen(false); setLiked(false); setSaved(false);
     } else if (e.deltaY < 0 && currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
-      setShowInfo(false);
-      setLiked(false);
-      setSaved(false);
+      setCurrentIndex(i => i - 1);
+      setPanelOpen(false); setLiked(false); setSaved(false);
     }
 
-    if (currentIndex >= videos.length - 3) {
-      fetchVideos();
-    }
+    if (currentIndex >= videos.length - 3) fetchVideos();
   }, [currentIndex, videos.length, fetchVideos]);
 
-  // Touch handlers for mobile
   const touchStartY = useRef(0);
   const handleTouchStart = (e: TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
@@ -140,12 +207,12 @@ export default function VideoFeedPage() {
 
     if (diff > 0 && currentIndex < videos.length - 1) {
       setCurrentIndex(prev => prev + 1);
-      setShowInfo(false);
+      setPanelOpen(false);
       setLiked(false);
       setSaved(false);
     } else if (diff < 0 && currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
-      setShowInfo(false);
+      setPanelOpen(false);
       setLiked(false);
       setSaved(false);
     }
@@ -155,7 +222,6 @@ export default function VideoFeedPage() {
     }
   };
 
-  // Attach scroll listeners
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -171,322 +237,336 @@ export default function VideoFeedPage() {
     };
   }, [handleScroll]);
 
+  // Apply mute state when video changes
+  useEffect(() => {
+    if (currentVideo) {
+      const iframe = videoRefs.current.get(currentVideo.id);
+      if (iframe && iframe.contentWindow) {
+        // Wait a bit for iframe to be ready
+        setTimeout(() => {
+          const command = muted ? 'mute' : 'unMute';
+          iframe.contentWindow?.postMessage(
+            JSON.stringify({ event: 'command', func: command, args: [] }),
+            '*'
+          );
+        }, 500);
+      }
+    }
+  }, [currentVideo, muted]);
 
+  const iframeSrc = useMemo(() => {
+    if (!currentVideo) return '';
+    const key = currentVideo.primary_video.key;
+    const base = `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&fs=1&playsinline=1`;
+    return initialMutedRef.current ? `${base}&mute=1` : base;
+  }, [currentVideo?.primary_video.key]);
+
+  const togglePlayPause = () => {
+    const iframe = videoRefs.current.get(currentVideo.id);
+    if (!iframe) return;
+    sendYouTubeCommand(iframe, isPlaying ? 'pauseVideo' : 'playVideo');
+    setIsPlaying(!isPlaying);
+  };
   return (
-    <div
-      ref={containerRef}
-      className="fixed inset-0 bg-black overflow-hidden"
-    >
-      {/* Video Container */}
-      <div className="relative w-full h-full">
+    <div ref={containerRef} className="fixed inset-0 bg-black overflow-hidden">
+      {/* Top Navigation Bar */}
+      <motion.nav
+        initial={{ y: -60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="fixed top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/60 via-black/40 to-transparent backdrop-blur-xl border-b border-white/5 z-50 flex items-center px-4 md:px-8"
+      >
+        <div className="w-full flex items-center justify-between">
+          <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-3 cursor-pointer group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 via-orange-500 to-pink-500 flex items-center justify-center shadow-lg shadow-red-500/30">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <span className="hidden sm:block font-black text-white tracking-tight text-lg">CinemaFeed</span>
+          </motion.div>
+
+          <div className="hidden md:flex items-center gap-1">
+            {[{ icon: Home }, { icon: Compass }, { icon: Search }].map((it, i) => (
+              <motion.button key={i} whileHover={{ scale: 1.1 }} className="p-2 rounded-lg transition-all">
+                <it.icon className="w-5 h-5 text-white/70 hover:text-white" />
+              </motion.button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <motion.button whileHover={{ scale: 1.05 }} className="p-2 rounded-lg bg-gradient-to-r from-red-500 to-orange-500 text-white">
+              <Plus className="w-5 h-5" />
+            </motion.button>
+            <motion.div whileHover={{ scale: 1.1 }} className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <span className="text-white font-bold">U</span>
+            </motion.div>
+          </div>
+        </div>
+      </motion.nav>
+
+      {/* Main Content Area */}
+      <div className="relative w-full h-full pt-16">
         <AnimatePresence mode="wait">
           {currentVideo && (
             <motion.div
               key={currentVideo.id}
-              initial={{ opacity: 0, scale: 1.05 }}
+              initial={{ opacity: 0, scale: 1.02 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className="absolute inset-0"
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.28, ease: 'easeOut' }}
+              className="absolute inset-0 pt-16 flex"
             >
-              {/* YouTube Video */}
-              <div className="relative w-full h-full">
+              {/* Video Display */}
+              <div className="flex-1 relative w-full bg-black overflow-hidden">
                 <iframe
-                  ref={el => {
-                    if (el) videoRefs.current.set(currentVideo.id, el);
-                  }}
-                  src={`https://www.youtube.com/embed/${currentVideo.primary_video.key}?autoplay=1&controls=0&modestbranding=1&rel=0&mute=${muted ? 1 : 0}&loop=1&playlist=${currentVideo.primary_video.key}&enablejsapi=1`}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  allow="autoplay; encrypted-media"
+                  ref={el => { if (el) videoRefs.current.set(currentVideo.id, el); }}
+                  title={currentVideo.title || currentVideo.name || `video-${currentVideo.id}`}
+                  src={iframeSrc}
+                  className="w-full h-full"
+                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
                   allowFullScreen
                   style={{ border: 'none', pointerEvents: 'none' }}
+                  onLoad={(e) => {
+                    const iframe = e.currentTarget as HTMLIFrameElement;
+                    // ensure ref and then apply the current (possibly changed) muted state via postMessage
+                    videoRefs.current.set(currentVideo.id, iframe);
+                    // slight delay to give YouTube player time to init
+                    setTimeout(() => sendYouTubeCommand(iframe, muted ? 'mute' : 'unMute'), 250);
+                  }}
                 />
 
-                {/* Enhanced Gradient Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/20 to-black/90 pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-black/30 pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
-              </div>
 
-              {/* Top Floating Bar with Glass Effect */}
-              <motion.div
-                initial={{ y: -100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-                className="absolute top-4 left-4 right-4 flex items-center justify-between z-10"
-              >
-                <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-black/30 backdrop-blur-2xl border border-white/10">
-                  <Sparkles className="w-5 h-5 text-yellow-400" />
-                  <div>
-                    <h1 className="text-white font-bold text-sm">Discover</h1>
-                    <p className="text-white/50 text-xs">Trending Now</p>
-                  </div>
-                </div>
 
-                {/* Progress Dots */}
-                <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-black/30 backdrop-blur-2xl border border-white/10">
-                  {videos.slice(Math.max(0, currentIndex - 2), currentIndex + 3).map((_, idx) => (
+                {/* Animated Title Bar */}
+                <AnimatePresence>
+                  {titleBarVisible && (
                     <motion.div
-                      key={idx}
-                      animate={{
-                        width: idx === 2 ? 24 : 6,
-                        opacity: idx === 2 ? 1 : 0.4
+                      initial={{ y: 100, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: 100, opacity: 0 }}
+                      transition={{ duration: 0.36, ease: 'easeOut' }}
+                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 via-black/30 to-transparent backdrop-blur-sm px-4 md:px-8 py-5 pointer-events-auto z-20"
+                      onMouseEnter={() => {
+                        if (titleBarTimeoutRef.current) window.clearTimeout(titleBarTimeoutRef.current);
+                        setTitleBarVisible(true);
                       }}
-                      className="h-1.5 rounded-full bg-white"
-                    />
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* Right Side Actions - Enhanced */}
-              <motion.div
-                initial={{ x: 100, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.5 }}
-                className="absolute right-3 md:right-5 bottom-32 md:bottom-40 flex flex-col gap-4 z-10"
-              >
-                {/* Like Button */}
-                <motion.button
-                  whileHover={{ scale: 1.15 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setLiked(!liked)}
-                  className="flex flex-col items-center gap-1.5 group"
-                >
-                  <div className="relative">
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-2xl border border-white/20 flex items-center justify-center group-hover:border-red-400/50 transition-all shadow-lg">
-                      <Heart
-                        className={`w-6 h-6 md:w-7 md:h-7 transition-all ${liked ? 'fill-red-500 text-red-500 scale-110' : 'text-white group-hover:text-red-400'
-                          }`}
-                      />
-                    </div>
-                    {liked && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: [0, 1.2, 1] }}
-                        className="absolute inset-0 rounded-2xl bg-red-500/20 blur-xl"
-                      />
-                    )}
-                  </div>
-                  <span className="text-white text-xs font-bold">
-                    {Math.floor(currentVideo.vote_average * 10)}K
-                  </span>
-                </motion.button>
-
-                {/* Comments Button */}
-                <motion.button
-                  whileHover={{ scale: 1.15 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="flex flex-col items-center gap-1.5 group"
-                >
-                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-2xl border border-white/20 flex items-center justify-center group-hover:border-blue-400/50 transition-all shadow-lg">
-                    <MessageCircle className="w-6 h-6 md:w-7 md:h-7 text-white group-hover:text-blue-400 transition-colors" />
-                  </div>
-                  <span className="text-white text-xs font-bold">234</span>
-                </motion.button>
-
-                {/* Save Button */}
-                <motion.button
-                  whileHover={{ scale: 1.15 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setSaved(!saved)}
-                  className="flex flex-col items-center gap-1.5 group"
-                >
-                  <div className="relative">
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-2xl border border-white/20 flex items-center justify-center group-hover:border-yellow-400/50 transition-all shadow-lg">
-                      <Bookmark
-                        className={`w-6 h-6 md:w-7 md:h-7 transition-all ${saved ? 'fill-yellow-400 text-yellow-400 scale-110' : 'text-white group-hover:text-yellow-400'
-                          }`}
-                      />
-                    </div>
-                    {saved && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: [0, 1.2, 1] }}
-                        className="absolute inset-0 rounded-2xl bg-yellow-500/20 blur-xl"
-                      />
-                    )}
-                  </div>
-                </motion.button>
-
-                {/* Share Button */}
-                <motion.button
-                  whileHover={{ scale: 1.15 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="flex flex-col items-center gap-1.5 group"
-                >
-                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-2xl border border-white/20 flex items-center justify-center group-hover:border-green-400/50 transition-all shadow-lg">
-                    <Share2 className="w-6 h-6 md:w-7 md:h-7 text-white group-hover:text-green-400 transition-colors" />
-                  </div>
-                </motion.button>
-
-                {/* Sound Button - Fixed */}
-                <motion.button
-                  whileHover={{ scale: 1.15 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={toggleMute}
-                  className="flex flex-col items-center gap-1.5 group"
-                >
-                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-2xl border border-white/20 flex items-center justify-center group-hover:border-purple-400/50 transition-all shadow-lg">
-                    {muted ? (
-                      <VolumeX className="w-6 h-6 md:w-7 md:h-7 text-white group-hover:text-purple-400 transition-colors" />
-                    ) : (
-                      <Volume2 className="w-6 h-6 md:w-7 md:h-7 text-purple-400" />
-                    )}
-                  </div>
-                </motion.button>
-              </motion.div>
-
-              {/* Enhanced Bottom Info Panel */}
-              <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4, duration: 0.5 }}
-                className="absolute bottom-0 left-0 right-0 z-10"
-              >
-                <div className="px-4 md:px-6 pb-6 md:pb-8">
-                  <div className="max-w-2xl">
-                    {/* Info Panel */}
-                    <motion.div
-                      animate={{ height: showInfo ? 'auto' : 'auto' }}
-                      className="rounded-3xl bg-gradient-to-br from-black/40 via-black/30 to-black/20 backdrop-blur-2xl border border-white/10 p-5 md:p-6 shadow-2xl overflow-hidden"
+                      onMouseLeave={() => {
+                        titleBarTimeoutRef.current = window.setTimeout(() => setTitleBarVisible(false), 2000);
+                      }}
                     >
-                      {/* Title */}
-                      <motion.h2
-                        className="text-white font-black text-2xl md:text-3xl mb-3 leading-tight"
-                      >
-                        {currentVideo.title || currentVideo.name}
-                      </motion.h2>
-
-                      {/* Tags */}
-                      <div className="flex items-center gap-2 mb-4 flex-wrap">
-                        <div className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-500/30 to-orange-500/30 backdrop-blur-xl px-3 py-1.5 rounded-xl border border-yellow-400/30">
-                          <Star className="w-4 h-4 text-yellow-400" fill="currentColor" />
-                          <span className="text-yellow-400 font-bold text-sm">
-                            {currentVideo.vote_average.toFixed(1)}
-                          </span>
-                        </div>
-                        <span className="px-3 py-1.5 bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 text-white text-xs font-bold uppercase tracking-wider">
-                          {currentVideo.media_type}
-                        </span>
-                        <span className="px-3 py-1.5 bg-gradient-to-r from-red-500/30 to-pink-500/30 backdrop-blur-xl rounded-xl border border-red-400/30 text-red-300 text-xs font-bold uppercase tracking-wider">
-                          {currentVideo.primary_video.type}
-                        </span>
-                      </div>
-
-                      {/* Overview with smooth expand/collapse */}
-                      <AnimatePresence>
-                        {showInfo && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="overflow-hidden"
-                          >
-                            <p className="text-white/90 text-sm md:text-base leading-relaxed mb-4">
-                              {currentVideo.overview}
-                            </p>
+                      <div className="flex items-end justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <motion.h2 initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.06 }} className="text-white font-bold text-lg md:text-2xl line-clamp-2 mb-2">
+                            {currentVideo.title || currentVideo.name}
+                          </motion.h2>
+                          <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.12 }} className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-1 bg-yellow-500/40 px-2.5 py-1 rounded-lg border border-yellow-400/50">
+                              <Star className="w-3.5 h-3.5 text-yellow-300" fill="currentColor" />
+                              <span className="text-yellow-100 font-bold text-sm">{currentVideo.vote_average.toFixed(1)}</span>
+                            </div>
+                            <span className="px-2.5 py-1 bg-white/20 rounded-lg border border-white/30 text-white text-xs font-bold uppercase">{currentVideo.media_type}</span>
+                            <span className="px-2.5 py-1 bg-red-500/30 rounded-lg border border-red-400/40 text-red-200 text-xs font-bold uppercase">{currentVideo.primary_video.type}</span>
                           </motion.div>
-                        )}
-                      </AnimatePresence>
+                        </div>
 
-                      {/* Action Buttons */}
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setShowInfo(!showInfo)}
-                          className="flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-xl border border-white/20 text-white text-sm font-bold transition-all"
-                        >
-                          {showInfo ? (
-                            <>
-                              <ChevronUp className="w-4 h-4" />
-                              Show Less
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown className="w-4 h-4" />
-                              Show More
-                            </>
-                          )}
-                        </motion.button>
-
-                        <motion.button
-                          whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(239, 68, 68, 0.5)' }}
-                          whileTap={{ scale: 0.95 }}
-                          className="flex-1 flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-red-500 via-red-600 to-orange-500 rounded-xl text-white text-sm md:text-base font-bold shadow-lg shadow-red-500/30 hover:shadow-red-500/50 transition-all"
-                        >
-                          <ExternalLink className="w-5 h-5" />
-                          View Details
+                        <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.18, type: 'spring' }} whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }} onClick={() => setPanelOpen(p => !p)} className={`p-3 rounded-xl transition-all backdrop-blur-md ${panelOpen ? 'bg-white text-black shadow-lg' : 'bg-white/20 border border-white/30 text-white hover:bg-white/30'}`}>
+                          <Info className="w-5 h-5" />
                         </motion.button>
                       </div>
                     </motion.div>
-                  </div>
-                </div>
-              </motion.div>
+                  )}
+                </AnimatePresence>
 
-              {/* Animated Scroll Indicators */}
-              {currentIndex > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute top-20 md:top-24 left-1/2 -translate-x-1/2 pointer-events-none"
-                >
-                  <div className="w-8 h-12 border-2 border-white/40 rounded-full flex items-start justify-center p-2 backdrop-blur-sm bg-white/5">
-                    <motion.div
-                      animate={{ y: [0, 10, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                      className="w-2 h-2 bg-white rounded-full shadow-lg shadow-white/50"
-                    />
-                  </div>
-                </motion.div>
-              )}
+                {/* Show Info Button when hidden */}
+                <AnimatePresence>
+                  {!titleBarVisible && (
+                    <motion.button initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.28 }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setTitleBarVisible(true)} className="absolute bottom-6 left-4 md:left-8 px-4 py-2 bg-black/40 backdrop-blur-md border border-white/30 rounded-xl text-white text-sm font-medium hover:bg-black/60 transition-all shadow-lg z-20 flex items-center gap-2">
+                      <Info className="w-4 h-4" />
+                      <span className="hidden sm:inline">Show Info</span>
+                    </motion.button>
+                  )}
+                </AnimatePresence>
 
-              {currentIndex < videos.length - 1 && (
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="absolute bottom-28 md:bottom-32 left-1/2 -translate-x-1/2 pointer-events-none"
+                  initial={{ x: 50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.2, duration: 0.36 }}
+                  className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 flex flex-col gap-5 z-30"
                 >
-                  <div className="w-8 h-12 border-2 border-white/40 rounded-full flex items-end justify-center p-2 backdrop-blur-sm bg-white/5">
-                    <motion.div
-                      animate={{ y: [0, -10, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                      className="w-2 h-2 bg-white rounded-full shadow-lg shadow-white/50"
-                    />
-                  </div>
+                  {[
+                    {
+                      onClick: togglePlayPause,
+                      icon: isPlaying ? <Pause className="w-6 h-6 md:w-7 md:h-7 text-white" /> : <Play className="w-6 h-6 md:w-7 md:h-7 text-white" />,
+                      label: isPlaying ? "Playing..." : "Paused",
+                      active: isPlaying,
+                    },
+                    {
+                      onClick: () => setLiked(l => !l),
+                      icon: <Heart className={`w-6 h-6 md:w-7 md:h-7 ${liked ? "fill-white text-white" : "text-white"}`} />,
+                      label: liked ? "Liked" : "Like",
+                      active: liked,
+                    },
+                    {
+                      onClick: () => setSaved(s => !s),
+                      icon: <Bookmark className={`w-6 h-6 md:w-7 md:h-7 ${saved ? "fill-white text-white" : "text-white"}`} />,
+                      label: saved ? "Saved" : "Save",
+                      active: saved,
+                    },
+                    {
+                      onClick: toggleMute,
+                      icon: muted ? (
+                        <VolumeX className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                      ) : (
+                        <Volume2 className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                      ),
+                      label: muted ? "Muted" : "Unmuted",
+                      active: !muted,
+                    },
+                  ].map((btn, idx) => (
+                    <motion.button
+                      key={idx}
+                      whileHover={{ scale: 1.15 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={btn.onClick}
+                      className="group flex flex-col items-center gap-1"
+                    >
+                      <div
+                        className={`w-12 h-12 md:w-14 md:h-14 rounded-full border flex items-center justify-center transition-all duration-300
+          ${btn.active
+                            ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] border-transparent shadow-[0_0_12px_rgba(233,79,55,0.7)] backdrop-blur-sm"
+                            : "bg-black/40 border-white/30 group-hover:border-white/50 group-hover:bg-white/10 backdrop-blur-sm"}`}
+                      >
+                        {btn.icon}
+                      </div>
+                      <span
+                        className={`text-xs md:text-sm font-medium transition-colors duration-200 ${btn.active ? "text-white" : "text-white/80 group-hover:text-white"
+                          }`}
+                      >
+                        {btn.label}
+                      </span>
+                    </motion.button>
+                  ))}
                 </motion.div>
-              )}
+              </div>
+
+              {/* Side Info Panel - right of the video (separate scroll container) */}
+              <AnimatePresence>
+                {panelOpen && (
+                  <motion.div
+                    initial={{ x: 400, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: 400, opacity: 0 }}
+                    transition={{ duration: 0.28, ease: 'easeOut' }}
+                    className="w-80 md:w-96 bg-gradient-to-br from-black/90 via-black/80 to-black/90 backdrop-blur-xl border-l border-white/10 flex flex-col overflow-hidden shadow-2xl"
+                  >
+                    <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
+                      <h3 className="text-white font-bold text-base">Details</h3>
+                      <motion.button whileHover={{ scale: 1.06 }} whileTap={{ scale: 0.95 }} onClick={() => setPanelOpen(false)} className="p-2 hover:bg-white/10 rounded-lg transition-all">
+                        <X className="w-5 h-5 text-white/60" />
+                      </motion.button>
+                    </div>
+
+                    {/* Panel Content — panelRef stops propagation so it scrolls independently */}
+                    <div ref={panelRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+                      <div>
+                        <h2 className="text-white font-bold text-xl md:text-2xl leading-tight mb-3">{currentVideo.title || currentVideo.name}</h2>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 bg-yellow-500/30 px-3 py-1.5 rounded-lg border border-yellow-400/40">
+                            <Star className="w-4 h-4 text-yellow-400" fill="currentColor" />
+                            <span className="text-yellow-300 font-bold text-sm">{currentVideo.vote_average.toFixed(1)}</span>
+                          </div>
+                          <span className="px-3 py-1.5 bg-white/10 rounded-lg border border-white/20 text-white text-xs font-bold uppercase">{currentVideo.media_type}</span>
+                          <span className="px-3 py-1.5 bg-red-500/20 rounded-lg border border-red-400/30 text-red-300 text-xs font-bold uppercase">{currentVideo.primary_video.type}</span>
+                        </div>
+                      </div>
+
+                      <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                      <div>
+                        <h4 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+                          <div className="w-1 h-4 bg-gradient-to-b from-red-500 to-orange-500 rounded-full" /> Overview
+                        </h4>
+                        <p className="text-white/80 text-sm leading-relaxed">
+                          {currentVideo.overview}
+                        </p>
+                      </div>
+
+                      <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                      <div>
+                        <h4 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+                          <div className="w-1 h-4 bg-gradient-to-b from-red-500 to-orange-500 rounded-full" /> Details
+                        </h4>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="col-span-2 p-4 bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/10">
+                            <div className="text-white/50 text-xs font-medium mb-1">Media Type</div>
+                            <div className="text-white font-bold text-base uppercase">{currentVideo.media_type}</div>
+                          </div>
+
+                          <div className="p-4 bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/10">
+                            <div className="text-white/50 text-xs font-medium mb-1">Rating</div>
+                            <div className="flex items-center gap-1">
+                              <Star className="w-3.5 h-3.5 text-yellow-400" fill="currentColor" />
+                              <span className="text-white font-bold text-base">{currentVideo.vote_average.toFixed(1)}</span>
+                            </div>
+                          </div>
+
+                          <div className="p-4 bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/10">
+                            <div className="text-white/50 text-xs font-medium mb-1">Video Type</div>
+                            <div className="text-white font-bold text-sm uppercase">{currentVideo.primary_video.type}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 border-t border-white/10">
+                      {href ? (
+                        <Link href={href} prefetch={true} shallow={false}>
+                          <motion.span
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl text-white font-bold text-sm shadow-lg shadow-red-500/30"
+                            aria-label={`View full details for ${currentVideo?.title ?? currentVideo?.name ?? currentVideo?.id}`}
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            View Full Details
+                          </motion.span>
+                        </Link>
+                      ) : (
+                        <motion.span className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white/60 bg-gray-700/20">
+                          <ExternalLink className="w-4 h-4" />
+                          View Full Details
+                        </motion.span>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Loading Indicator */}
+        {/* Loading */}
         {loading && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20"
-          >
-            <div className="px-6 py-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-lg">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20">
+            <div className="px-5 py-3 bg-black/60 backdrop-blur-xl rounded-full border border-white/20 shadow-xl">
               <div className="flex items-center gap-3">
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 <span className="text-white text-sm font-bold">Loading more...</span>
               </div>
             </div>
           </motion.div>
         )}
 
-        {/* Empty State */}
+        {/* Empty */}
         {!loading && videos.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0 flex items-center justify-center"
-          >
-            <div className="text-center p-8 rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/10">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }} className="w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="w-10 h-10 text-white" />
+              </motion.div>
               <div className="text-white text-2xl font-bold mb-2">No videos available</div>
-              <div className="text-white/60 text-base">Check back later for new content</div>
+              <div className="text-white/60 text-sm">Check back later for new content</div>
             </div>
           </motion.div>
         )}

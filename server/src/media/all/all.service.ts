@@ -52,6 +52,7 @@ function shuffleArray<T>(arr: T[]): T[] {
     return a;
 }
 
+
 @Injectable()
 export class AllService implements OnModuleInit {
     private readonly logger = new Logger(AllService.name);
@@ -1293,7 +1294,7 @@ export class AllService implements OnModuleInit {
 
     async getVideoFeed(page: number = 1, mediaType?: 'movie' | 'tv') {
         try {
-            const requests:any = [];
+            const requests: any = [];
 
             // Fetch trending movies and TV shows
             if (!mediaType || mediaType === 'movie') {
@@ -1313,7 +1314,7 @@ export class AllService implements OnModuleInit {
             }
 
             const results = await Promise.allSettled(requests);
-            const allItems:any[] = [];
+            const allItems: any[] = [];
 
             // Combine all results
             for (const result of results) {
@@ -1345,43 +1346,73 @@ export class AllService implements OnModuleInit {
         }
     }
 
+
+    private async isVideoAvailable(videoKey: string): Promise<boolean> {
+        try {
+            const response = await fetch(`https://www.youtube.com/embed/${videoKey}`, {
+                method: 'HEAD'
+            });
+            return response.ok;
+        } catch (e) {
+            return false;
+        }
+    }
+
     private async enrichWithVideos(items: any[]) {
-        const enriched:any[] = [];
+        const enriched: any[] = [];
+        const allowedRegions = ["US", "GB", "CA", "AU", "MY", null];
 
         for (const item of items) {
             try {
-                const mediaType = item.title ? 'movie' : 'tv';
-                const videosResponse = await this.tmdb(
-                    `${mediaType}/${item.id}/videos`
-                );
-
+                const mediaType = item.title ? "movie" : "tv";
+                const videosResponse = await this.tmdb(`${mediaType}/${item.id}/videos`);
                 const videos = videosResponse.results || [];
 
-                // Prioritize trailers and teasers
-                const priorityVideos = videos.filter(
-                    v => v.type === 'Trailer' || v.type === 'Teaser'
+                const filteredVideos = videos.filter(v =>
+                    v.site === "YouTube" &&
+                    (v.type === "Trailer" || v.type === "Teaser") &&
+                    v.key &&
+                    allowedRegions.includes(v.iso_3166_1 ?? null)
                 );
 
-                const selectedVideos = priorityVideos.length > 0
-                    ? priorityVideos
-                    : videos;
+                // ✅ Check availability in parallel
+                const availabilityChecks = await Promise.all(
+                    filteredVideos.map(async v => ({
+                        ...v,
+                        available: await this.isVideoAvailable(v.key)
+                    }))
+                );
 
-                if (selectedVideos.length > 0) {
+                const availableVideos = availabilityChecks.filter(v => v.available);
+
+                const sortedVideos = availableVideos.sort((a, b) => {
+                    const scoreA =
+                        (a.official ? 3 : 0) +
+                        (a.type === "Trailer" ? 2 : 0) +
+                        (a.size >= 720 ? 1 : 0);
+                    const scoreB =
+                        (b.official ? 3 : 0) +
+                        (b.type === "Trailer" ? 2 : 0) +
+                        (b.size >= 720 ? 1 : 0);
+                    return scoreB - scoreA;
+                });
+
+                if (sortedVideos.length > 0) {
                     enriched.push({
                         ...item,
                         media_type: mediaType,
-                        videos: selectedVideos.slice(0, 3), // Get top 3 videos
-                        primary_video: selectedVideos[0] // Main video to display
+                        videos: sortedVideos.slice(0, 3),
+                        primary_video: sortedVideos[0],
                     });
                 }
-            } catch (error) {
-                // Skip items without videos
+            } catch (err) {
                 continue;
             }
         }
 
         return enriched;
     }
+
 
     async getMovieVideos(id: number) {
         return await this.tmdb(`movie/${id}/videos`);

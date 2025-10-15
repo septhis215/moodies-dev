@@ -5,45 +5,37 @@ import { NavbarComponent } from "@/components/Navbar";
 import { Suspense, useEffect, useState } from "react";
 import { useLoading } from "./context/LoadingContext";
 import { useScrollToHash } from "@/hooks/useScrollToHash";
-export default function ClientLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isLoading } = useLoading();
   const [isMounted, setIsMounted] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+
   useScrollToHash(100);
 
-  // Handle initial mount - hide navbar briefly on page load/refresh
   useEffect(() => {
     setIsMounted(false);
     const timer = setTimeout(() => setIsMounted(true), 2000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Handle route changes - hide navbar during navigation
   useEffect(() => {
     setIsNavigating(true);
     const timer = setTimeout(() => setIsNavigating(false), 500);
     return () => clearTimeout(timer);
   }, [pathname]);
 
-  // Define routes where navbar should be hidden
+  // Add this: Hide navbar on feed pages
+  const isFeedRoute = pathname.includes('/feed') || pathname === '/discover';
   const isAuthRoute = pathname.startsWith("/auth");
   const isReviewsRoute = pathname.includes("/reviews");
 
-  // Hide navbar during:
-  // 1. Initial mount/page refresh
-  // 2. Route navigation
-  // 3. Context loading state
-  // 4. Auth or review pages
   const shouldShowNavbar =
     isMounted &&
     !isNavigating &&
     !isAuthRoute &&
     !isReviewsRoute &&
+    !isFeedRoute &&  // Add this line
     !isLoading;
 
   return (
