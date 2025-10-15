@@ -487,9 +487,9 @@ export default function ExtraDetails({ data }: DetailsProp) {
             </div>
 
             {/* Banner Strip */}
-            <div className="relative bg-gradient-to-r from-black via-slate-900 to-black py-8 px-4 rounded-2xl border border-white/10 shadow-[0_0_60px_rgba(0,0,0,0.7)] overflow-hidden">
-              {/* subtle spotlight effect */}
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.08),transparent_70%)] pointer-events-none"></div>
+            <div className="relative bg-gradient-to-r from-indigo-950 via-slate-800 to-indigo-900 py-8 px-4 rounded-2xl overflow-hidden">
+              {/* soft luminous center glow */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.15),transparent_70%)] pointer-events-none"></div>
 
               <div className="flex flex-wrap items-center justify-center gap-12 relative z-10">
                 {info.production_companies.map((company) => (
@@ -504,15 +504,16 @@ export default function ExtraDetails({ data }: DetailsProp) {
                           alt={company.name}
                           width={180}
                           height={90}
-                          className="object-contain opacity-80 group-hover:opacity-100 transition-all duration-300"
+                          className="object-contain opacity-90 group-hover:opacity-100 transition-all duration-300 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
                         />
                       ) : (
-                        <Building2 size={40} className="text-slate-500" />
+                        <Building2 size={40} className="text-slate-300" />
                       )}
-                      {/* Underline accent */}
-                      <div className="absolute -bottom-2 w-0 group-hover:w-full h-[2px] bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 transition-all duration-500"></div>
+
+                      {/* gradient accent line */}
+                      <div className="absolute -bottom-2 w-0 group-hover:w-full h-[2px] bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 transition-all duration-500"></div>
                     </div>
-                    <p className="mt-4 text-xs text-slate-400 group-hover:text-slate-100 transition-colors text-center max-w-[140px]">
+                    <p className="mt-4 text-xs text-slate-200 group-hover:text-white transition-colors text-center max-w-[140px]">
                       {company.name}
                     </p>
                   </div>
