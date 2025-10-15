@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -11,8 +11,6 @@ type Props = {
 };
 
 const DEFAULT_IMAGE_BASE = "https://image.tmdb.org/t/p/";
-
-// small helper to build youtube thumbnail if site is YouTube
 const youtubeThumb = (key: string) =>
   `https://img.youtube.com/vi/${key}/hqdefault.jpg`;
 const youtubeEmbed = (key: string) =>
@@ -30,7 +28,6 @@ function XIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
 function ChevronIcon({
   direction,
   className,
@@ -69,7 +66,6 @@ export default function ImageVideoCarousel({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [hoveredThumb, setHoveredThumb] = useState<number | null>(null);
 
-  // ensure videos is always an array
   const safeVideos = Array.isArray(videos) ? videos : [];
   const normalizedVideos = safeVideos.map((v) =>
     typeof v === "string"
@@ -80,24 +76,26 @@ export default function ImageVideoCarousel({
   const images = activeTab === "posters" ? posters : backdrops;
   const imageSize = activeTab === "posters" ? "w500" : "w1280";
 
-  {
-    /* Compact thumbnail strip (shows up to VISIBLE_THUMBS, +N overlay when more) */
-  }
   const VISIBLE_THUMBS = 8;
   const allThumbs = activeTab === "videos" ? normalizedVideos : images;
-  const visibleThumbs = allThumbs.slice(0, VISIBLE_THUMBS);
-  const hiddenCount = Math.max(0, allThumbs.length - visibleThumbs.length);
+
+  // refs for scrolling thumbnails into view
+  const thumbRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const thumbsContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const repeatIntervalRef = useRef<number | null>(null); // holds interval id (window.setInterval)
+  const startTimeoutRef = useRef<number | null>(null); // initial delay before repeating
+  const rafRef = useRef<number | null>(null); // for RAF approach
+  const repeatingRef = useRef(false); // whether we're currently repeating
+  const currentDirectionRef = useRef<"prev" | "next" | null>(null);
 
   useEffect(() => {
     const maxIndex =
       activeTab === "videos" ? normalizedVideos.length - 1 : images.length - 1;
-
-    if (selectedIndex > maxIndex) {
-      setSelectedIndex(Math.max(0, maxIndex));
-    } else {
-      setSelectedIndex(0);
-    }
-  }, [activeTab]);
+    setSelectedIndex((prev) =>
+      Math.max(0, Math.min(prev, Math.max(0, maxIndex)))
+    );
+  }, [activeTab, images.length, normalizedVideos.length]);
 
   useEffect(() => {
     if (!lightboxOpen) return;
@@ -109,6 +107,18 @@ export default function ImageVideoCarousel({
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [lightboxOpen, selectedIndex, images.length, normalizedVideos.length]);
+
+  // scroll selected thumb into center whenever it changes
+  useEffect(() => {
+    const ref = thumbRefs.current[selectedIndex];
+    if (ref && thumbsContainerRef.current) {
+      ref.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [selectedIndex, activeTab]);
 
   const buildImageUrl = (path: string | undefined) => {
     if (!path) return "";
@@ -145,14 +155,39 @@ export default function ImageVideoCarousel({
   if (!posters.length && !backdrops.length && !normalizedVideos.length)
     return null;
 
-  // counts for header
   const postersCount = posters.length;
   const backdropsCount = backdrops.length;
   const videosCount = normalizedVideos.length;
 
+  function handlePressStart(direction: "prev" | "next") {
+    navigate(direction);
+
+    currentDirectionRef.current = direction;
+    repeatingRef.current = true;
+
+    startTimeoutRef.current = window.setTimeout(() => {
+      repeatIntervalRef.current = window.setInterval(() => {
+        navigate(direction);
+      }, 150);
+    }, 450);
+  }
+
+  function handlePressEnd() {
+    repeatingRef.current = false;
+    currentDirectionRef.current = null;
+    if (startTimeoutRef.current) {
+      clearTimeout(startTimeoutRef.current);
+      startTimeoutRef.current = null;
+    }
+    if (repeatIntervalRef.current) {
+      clearInterval(repeatIntervalRef.current);
+      repeatIntervalRef.current = null;
+    }
+  }
+
   return (
     <div className="w-full space-y-8">
-      {/* Header with tabs (added Videos tab) */}
+      {/* Header with tabs */}
       <div className="flex items-center justify-between">
         <div className="relative inline-flex gap-1 p-1 bg-slate-800/50 rounded-xl backdrop-blur-sm">
           <button
@@ -163,7 +198,7 @@ export default function ImageVideoCarousel({
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            Posters
+            Posters{" "}
             <span className="ml-2 text-xs opacity-70">({postersCount})</span>
           </button>
 
@@ -175,7 +210,7 @@ export default function ImageVideoCarousel({
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            Backdrops
+            Backdrops{" "}
             <span className="ml-2 text-xs opacity-70">({backdropsCount})</span>
           </button>
 
@@ -187,7 +222,7 @@ export default function ImageVideoCarousel({
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            Videos
+            Videos{" "}
             <span className="ml-2 text-xs opacity-70">({videosCount})</span>
           </button>
         </div>
@@ -210,7 +245,6 @@ export default function ImageVideoCarousel({
           {activeTab === "videos" ? (
             normalizedVideos.length > 0 && normalizedVideos[selectedIndex] ? (
               <div className="absolute inset-0">
-                {/* show an iframe for YouTube, or fallback to thumbnail + link if unknown site */}
                 {normalizedVideos[selectedIndex]?.site?.toLowerCase() ===
                 "youtube" ? (
                   <iframe
@@ -273,33 +307,29 @@ export default function ImageVideoCarousel({
           )}
         </div>
 
-        {/* Navigation arrows */}
+        {/* Nav arrows */}
         {((activeTab === "videos" && normalizedVideos.length > 1) ||
           (activeTab !== "videos" && images.length > 1)) && (
           <>
             <button
-              onClick={() => navigate("prev")}
-              className="absolute left-6 top-1/2 -translate-y-1/2
-                w-12 h-12 flex items-center justify-center rounded-full
-                bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
-                backdrop-blur-md border border-white/10
-                text-white shadow-lg shadow-black/40
-                hover:scale-110 hover:bg-gradient-to-br hover:from-zinc-800/80 hover:via-neutral-700/60 hover:to-zinc-600/50
-                transition-all duration-300 cursor-pointer"
+              onMouseDown={() => handlePressStart("prev")}
+              onMouseUp={handlePressEnd}
+              onMouseLeave={handlePressEnd}
+              onTouchStart={() => handlePressStart("prev")}
+              onTouchEnd={handlePressEnd}
+              className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40 backdrop-blur-md border border-white/10 text-white shadow-lg shadow-black/40 hover:scale-110 transition-all duration-300 cursor-pointer"
               aria-label="Previous"
             >
               <ChevronIcon direction="left" className="w-6 h-6" />
             </button>
 
             <button
-              onClick={() => navigate("next")}
-              className="absolute right-6 top-1/2 -translate-y-1/2
-                w-12 h-12 flex items-center justify-center rounded-full
-                bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
-                backdrop-blur-md border border-white/10
-                text-white shadow-lg shadow-black/40
-                hover:scale-110 hover:bg-gradient-to-br hover:from-zinc-800/80 hover:via-neutral-700/60 hover:to-zinc-600/50
-                transition-all duration-300 cursor-pointer"
+              onMouseDown={() => handlePressStart("next")}
+              onMouseUp={handlePressEnd}
+              onMouseLeave={handlePressEnd}
+              onTouchStart={() => handlePressStart("next")}
+              onTouchEnd={handlePressEnd}
+              className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40 backdrop-blur-md border border-white/10 text-white shadow-lg shadow-black/40 hover:scale-110 transition-all duration-300 cursor-pointer"
               aria-label="Next"
             >
               <ChevronIcon direction="right" className="w-6 h-6" />
@@ -307,7 +337,6 @@ export default function ImageVideoCarousel({
           </>
         )}
 
-        {/* Badge */}
         <div className="absolute bottom-4 right-4 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs font-medium text-white">
           {activeTab === "posters"
             ? "Poster"
@@ -317,12 +346,29 @@ export default function ImageVideoCarousel({
         </div>
       </div>
 
-      {/* Thumbnail grid */}
-      <div className="overflow-x-auto py-2">
+      {/* Thumbnails: render all so we can scroll and apply distance-based styles */}
+      <div className="overflow-x-hidden py-2" ref={thumbsContainerRef}>
         <div className="flex gap-3 items-start px-1">
-          {visibleThumbs.map((item: any, idx: number) => {
-            const globalIdx = idx;
-            const isSelected = selectedIndex === globalIdx;
+          {allThumbs.map((item: any, idx: number) => {
+            const absoluteIdx = idx;
+            const isSelected = selectedIndex === absoluteIdx;
+
+            // distance from selected index -> drives scale and darkness
+            const distance = Math.abs(absoluteIdx - selectedIndex);
+
+            // scale: selected is slightly larger, hover slightly larger, others slightly smaller depending on distance
+            const baseScale = isSelected
+              ? 1.06
+              : hoveredThumb === absoluteIdx
+              ? 1.03
+              : Math.max(0.92, 1 - distance * 0.03);
+
+            // overlay opacity increases with distance (farther => darker)
+            // tweak coefficients to taste
+            const overlayOpacity = Math.min(0.8, distance * 0.12);
+
+            // subtle shadow intensity (farther => stronger)
+            const shadowIntensity = Math.min(0.35, distance * 0.06);
 
             return (
               <button
@@ -331,13 +377,11 @@ export default function ImageVideoCarousel({
                   "-" +
                   idx
                 }
-                onClick={() => {
-                  const absoluteIdx = (
-                    activeTab === "videos" ? normalizedVideos : images
-                  ).indexOf(item);
-                  setSelectedIndex(absoluteIdx >= 0 ? absoluteIdx : idx);
+                ref={(el) => {
+                  thumbRefs.current[absoluteIdx] = el;
                 }}
-                onMouseEnter={() => setHoveredThumb(idx)}
+                onClick={() => setSelectedIndex(absoluteIdx)}
+                onMouseEnter={() => setHoveredThumb(absoluteIdx)}
                 onMouseLeave={() => setHoveredThumb(null)}
                 aria-label={
                   activeTab === "videos"
@@ -347,21 +391,17 @@ export default function ImageVideoCarousel({
                 style={{
                   width: 120,
                   height: activeTab === "videos" ? 68 : 120,
+                  transform: `scale(${baseScale})`,
+                  transition:
+                    "transform 220ms cubic-bezier(.2,.9,.2,1), box-shadow 220ms",
+                  boxShadow: isSelected
+                    ? "0 10px 25px rgba(0,0,0,0.25)"
+                    : `0 6px 18px rgba(0,0,0,${shadowIntensity})`,
                 }}
                 className={`relative rounded-lg overflow-hidden transition-all duration-200 flex-shrink-0
-        // base glassy gradient theme (subtle)
-        bg-gradient-to-r from-[#e94f37]/30 to-[#ff6b58]/30
-        backdrop-blur-sm border border-white/8 shadow-md
-
-        // interactive states
-        ${
-          isSelected
-            ? "ring-2 ring-[#ff6b58]/60 shadow-lg shadow-[#ff6b58]/20 scale-105"
-            : "ring-1 ring-white/10 hover:ring-[#ff6b58]/30 hover:scale-105"
-        }
-      `}
+                  bg-gradient-to-r from-[#e94f37]/30 to-[#ff6b58]/30
+                  backdrop-blur-sm border border-white/8`}
               >
-                {/* image (fills the container) */}
                 {activeTab === "videos" ? (
                   <Image
                     src={youtubeThumb(item.key)}
@@ -381,19 +421,25 @@ export default function ImageVideoCarousel({
                   />
                 )}
 
-                {/* subtle top-to-bottom darken so UI elements are legible */}
+                {/* distance-based dark overlay */}
                 <div
-                  className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent transition-opacity duration-200
-          ${hoveredThumb === idx || isSelected ? "opacity-100" : "opacity-0"}
-        `}
+                  style={{
+                    opacity: overlayOpacity,
+                    transition: "opacity 220ms cubic-bezier(.2,.9,.2,1)",
+                  }}
+                  className="absolute inset-0 bg-black pointer-events-none"
                 />
 
-                {/* small label (keeps same style but slightly translucent) */}
+                {/* subtle top-to-bottom gradient for legibility (keeps same behavior as before) */}
+                <div
+                  className={`absolute inset-0 bg-gradient-to-t from-black/20 via-transparent pointer-events-none`}
+                />
+
                 <div className="absolute left-2 bottom-2 px-2 py-0.5 rounded-md bg-black/50 text-xs text-white">
                   {activeTab === "videos" ? item.type ?? "Video" : ""}
                 </div>
 
-                {/* selected indicator (dot) — use the warm gradient glass for the indicator */}
+                {/* selected indicator */}
                 {isSelected && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#e94f37]/90 to-[#ff6b58]/90 backdrop-blur-sm flex items-center justify-center shadow-lg">
@@ -404,51 +450,6 @@ export default function ImageVideoCarousel({
               </button>
             );
           })}
-          
-          {hiddenCount > 0 && (
-            <button
-              onClick={() => {
-                const absoluteIdx = VISIBLE_THUMBS;
-                setSelectedIndex(
-                  absoluteIdx < allThumbs.length
-                    ? absoluteIdx
-                    : allThumbs.length - 1
-                );
-                setLightboxOpen(true);
-              }}
-              className="relative rounded-lg overflow-hidden flex-shrink-0 transition-all duration-200
-      bg-gradient-to-r from-[#e94f37]/20 to-[#ff6b58]/20 backdrop-blur-sm border border-white/8 hover:from-[#e94f37]/30 hover:to-[#ff6b58]/30 hover:scale-105 ring-1 ring-white/10"
-              style={{ width: 120, height: 120 }}
-              aria-label={`Show ${hiddenCount} more`}
-            >
-              {allThumbs[VISIBLE_THUMBS] ? (
-                activeTab === "videos" ? (
-                  <Image
-                    src={youtubeThumb(allThumbs[VISIBLE_THUMBS].key)}
-                    alt={`+${hiddenCount} more`}
-                    fill
-                    className="object-cover"
-                    sizes="120px"
-                    unoptimized
-                  />
-                ) : (
-                  <Image
-                    src={buildImageUrl(allThumbs[VISIBLE_THUMBS])}
-                    alt={`+${hiddenCount} more`}
-                    fill
-                    className="object-cover"
-                    sizes="120px"
-                  />
-                )
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-slate-700 to-slate-900" />
-              )}
-
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-sm font-semibold">
-                +{hiddenCount}
-              </div>
-            </button>
-          )}
         </div>
       </div>
 
@@ -514,7 +515,7 @@ export default function ImageVideoCarousel({
               )}
             </div>
 
-            {/* Lightbox navigation */}
+            {/* lightbox nav */}
             {((activeTab === "videos" && normalizedVideos.length > 1) ||
               (activeTab !== "videos" && images.length > 1)) && (
               <>
