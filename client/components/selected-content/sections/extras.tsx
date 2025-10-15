@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -213,16 +213,89 @@ export default function ExtraDetails({ data }: DetailsProp) {
   };
 
   // Carousel helpers
+  const [itemsPerView, setItemsPerView] = useState(4.5);
+  const [itemWidthPx, setItemWidthPx] = useState<number>(220);
+  const [maxScrollLeft, setMaxScrollLeft] = useState<number>(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const GAP_PX = 32; // gap-8 = 32px
+  const stepCount = Math.max(1, Math.floor(itemsPerView - 1));
+  const stepPx = Math.round(stepCount * (itemWidthPx + GAP_PX));
+
   const scrollNext = () => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollBy({ left: el.clientWidth * 0.75, behavior: "smooth" });
+    const desired = el.scrollLeft + stepPx;
+    const next = Math.min(maxScrollLeft, desired);
+    el.scrollTo({ left: next, behavior: "smooth" });
   };
+
   const scrollPrev = () => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollBy({ left: -el.clientWidth * 0.75, behavior: "smooth" });
+    const next = Math.max(0, el.scrollLeft - stepPx);
+    el.scrollTo({ left: next, behavior: "smooth" });
   };
+
+  // Responsive itemsPerView
+  useEffect(() => {
+    const updateLayout = () => {
+      const w = window.innerWidth;
+      if (w < 640) setItemsPerView(1.5);
+      else if (w < 768) setItemsPerView(2.5);
+      else if (w < 1024) setItemsPerView(3.5);
+      else setItemsPerView(4.5);
+    };
+
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, []);
+
+  // Compute sizes & scroll limits using DOM measurements
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const compute = () => {
+      const containerWidth = el.clientWidth || 0;
+      const computed = Math.max(
+        140,
+        (containerWidth - Math.max(0, itemsPerView - 1) * GAP_PX) / itemsPerView
+      );
+      setItemWidthPx(Math.round(computed));
+
+      const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
+      setMaxScrollLeft(maxScroll);
+
+      const sLeft = el.scrollLeft || 0;
+      setCanScrollLeft(sLeft > 5);
+      setCanScrollRight(sLeft < Math.max(0, maxScroll - 5));
+    };
+
+    compute();
+
+    const ro = new ResizeObserver(() => compute());
+    ro.observe(el);
+
+    const t = setTimeout(() => compute(), 120);
+
+    const onScroll = () => {
+      const sLeft = el.scrollLeft || 0;
+      setCanScrollLeft(sLeft > 5);
+      setCanScrollRight(
+        sLeft < Math.max(0, el.scrollWidth - el.clientWidth - 5)
+      );
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      ro.disconnect();
+      clearTimeout(t);
+      el.removeEventListener("scroll", onScroll);
+    };
+  }, [credits.cast.length, itemsPerView]);
 
   return (
     <>
@@ -237,26 +310,30 @@ export default function ExtraDetails({ data }: DetailsProp) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={scrollPrev}
-              className="w-10 h-10 rounded-full  bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
+            {canScrollLeft && (
+              <button
+                onClick={scrollPrev}
+                className="w-10 h-10 rounded-full  bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
                 backdrop-blur-md border border-white/10
                 text-white shadow-lg shadow-black/40
                 hover:scale-110 hover:bg-gradient-to-br hover:from-zinc-800/80 hover:via-neutral-700/60 hover:to-zinc-600/50
                 transition-all duration-300 cursor-pointer flex items-center justify-center shadow-md transition"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              onClick={scrollNext}
-              className="w-10 h-10 rounded-full  bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
+              >
+                <ChevronLeft size={16} />
+              </button>
+            )}
+            {canScrollRight && (
+              <button
+                onClick={scrollNext}
+                className="w-10 h-10 rounded-full  bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
                 backdrop-blur-md border border-white/10
                 text-white shadow-lg shadow-black/40
                 hover:scale-110 hover:bg-gradient-to-br hover:from-zinc-800/80 hover:via-neutral-700/60 hover:to-zinc-600/50
                 transition-all duration-300 cursor-pointer flex items-center justify-center shadow-md transition"
-            >
-              <ChevronRight size={16} />
-            </button>
+              >
+                <ChevronRight size={16} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -313,89 +390,89 @@ export default function ExtraDetails({ data }: DetailsProp) {
         {(getKeyCrewMembers() || [])
           .filter((item) => item.job)
           .some((item) => item.people?.length) && (
-            <div>
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-                Key Personnel
-              </h2>
-              <p className="text-slate-400 text-sm mb-8">
-                The creative visionaries behind the film
-              </p>
+          <div>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+              Key Personnel
+            </h2>
+            <p className="text-slate-400 text-sm mb-8">
+              The creative visionaries behind the film
+            </p>
 
-              <div className="flex flex-wrap gap-4">
-                {getKeyCrewMembers()
-                  .filter((item) => item.job)
-                  .map((item) =>
-                    item.people.map((person) => (
-                      <div
-                        key={person.id}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-                      >
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
-                          {person.profile_path ? (
-                            <Image
-                              src={`https://image.tmdb.org/t/p/w92${person.profile_path}`}
-                              alt={person.name}
-                              width={40}
-                              height={40}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Users2 size={18} className="text-slate-500" />
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col">
-                          <span className="text-slate-100 text-sm font-medium leading-tight">
-                            {person.name}
-                          </span>
-                          <span className="text-[10px] uppercase text-slate-400 tracking-wide">
-                            {item.job}
-                          </span>
-                        </div>
+            <div className="flex flex-wrap gap-4">
+              {getKeyCrewMembers()
+                .filter((item) => item.job)
+                .map((item) =>
+                  item.people.map((person) => (
+                    <div
+                      key={person.id}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
+                        {person.profile_path ? (
+                          <Image
+                            src={`https://image.tmdb.org/t/p/w92${person.profile_path}`}
+                            alt={person.name}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Users2 size={18} className="text-slate-500" />
+                          </div>
+                        )}
                       </div>
-                    ))
-                  )}
-              </div>
+
+                      <div className="flex flex-col">
+                        <span className="text-slate-100 text-sm font-medium leading-tight">
+                          {person.name}
+                        </span>
+                        <span className="text-[10px] uppercase text-slate-400 tracking-wide">
+                          {item.job}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
             </div>
-          )}
+          </div>
+        )}
 
         {/* Timeline Style Crew List */}
         {(getKeyCrewMembers() || [])
           .filter((item) => item.job)
           .some((item) => item.people?.length) && (
-            <div>
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-                Creative Team
-              </h2>
-              <div className="divide-y divide-white/10">
-                {getKeyCrewMembers()
-                  .filter((item) => item.job)
-                  .map((item) => (
-                    <div
-                      key={item.job}
-                      className="flex justify-between py-3 text-sm"
-                    >
-                      <span className="text-slate-400 uppercase tracking-wide font-medium">
-                        {item.job}
-                      </span>
-                      <div className="text-slate-100 font-medium">
-                        {item.people
-                          .map((person) => person.name)
-                          .slice(0, 3)
-                          .join(", ")}
-                        {item.people.length > 3 && (
-                          <button className="ml-2 text-xs text-blue-400 hover:text-blue-300">
-                            View All
-                          </button>
-                        )}
-                      </div>
+          <div>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+              Creative Team
+            </h2>
+            <div className="divide-y divide-white/10">
+              {getKeyCrewMembers()
+                .filter((item) => item.job)
+                .map((item) => (
+                  <div
+                    key={item.job}
+                    className="flex justify-between py-3 text-sm"
+                  >
+                    <span className="text-slate-400 uppercase tracking-wide font-medium">
+                      {item.job}
+                    </span>
+                    <div className="text-slate-100 font-medium">
+                      {item.people
+                        .map((person) => person.name)
+                        .slice(0, 3)
+                        .join(", ")}
+                      {item.people.length > 3 && (
+                        <button className="ml-2 text-xs text-blue-400 hover:text-blue-300">
+                          View All
+                        </button>
+                      )}
                     </div>
-                  ))}
-              </div>
+                  </div>
+                ))}
             </div>
-          )}
+          </div>
+        )}
 
         {/* Studio Partners */}
         {info.production_companies?.length > 0 && (
