@@ -1296,20 +1296,24 @@ export class AllService implements OnModuleInit {
         try {
             const requests: any = [];
 
+            const today = new Date();
+            const todayStr = today.toISOString().split("T")[0];
             // Fetch trending movies and TV shows
             if (!mediaType || mediaType === 'movie') {
                 requests.push(
-                    this.tmdb('trending/movie/week?page=' + page),
-                    this.tmdb('movie/popular?page=' + page),
-                    this.tmdb('movie/now_playing?page=' + page)
+                    this.tmdb(`trending/movie/week?page=${page}`),
+                    this.tmdb(`movie/popular?page=${page}`),
+                    this.tmdb(`movie/now_playing?page=${page}`),
+                    this.tmdb(`discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${todayStr}&page=${page}`)
                 );
             }
 
             if (!mediaType || mediaType === 'tv') {
                 requests.push(
-                    this.tmdb('trending/tv/week?page=' + page),
-                    this.tmdb('tv/popular?page=' + page),
-                    this.tmdb('tv/on_the_air?page=' + page)
+                    this.tmdb(`trending/tv/week?page=${page}`),
+                    this.tmdb(`tv/popular?page=${page}`),
+                    this.tmdb(`tv/on_the_air?page=${page}`),
+                    this.tmdb(`discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&page=${page}`)
                 );
             }
 

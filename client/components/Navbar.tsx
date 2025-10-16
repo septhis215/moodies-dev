@@ -77,6 +77,7 @@ export function NavbarComponent() {
     ],
 
     "/moods": [
+      { label: "Moodies Feed", hash: "/feed" },
       { label: "Mood Wheels", hash: "/moods#mood-wheels" },
       { label: "Categories", hash: "/moods#categories" },
     ],

@@ -257,54 +257,86 @@ export default function VideoFeedPage() {
   const iframeSrc = useMemo(() => {
     if (!currentVideo) return '';
     const key = currentVideo.primary_video.key;
-    const base = `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&fs=1&playsinline=1`;
-    return initialMutedRef.current ? `${base}&mute=1` : base;
+    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&fs=1&playsinline=1`;
   }, [currentVideo?.primary_video.key]);
+
 
   const togglePlayPause = () => {
     const iframe = videoRefs.current.get(currentVideo.id);
     if (!iframe) return;
-    sendYouTubeCommand(iframe, isPlaying ? 'pauseVideo' : 'playVideo');
+
+    if (isPlaying) {
+      sendYouTubeCommand(iframe, 'pauseVideo');
+    } else {
+      sendYouTubeCommand(iframe, 'playVideo');
+      sendYouTubeCommand(iframe, 'unMute');
+    }
+
     setIsPlaying(!isPlaying);
   };
+
   return (
     <div ref={containerRef} className="fixed inset-0 bg-black overflow-hidden">
-      {/* Top Navigation Bar */}
+      {/* Top Navigation Bar - Redesigned */}
       <motion.nav
         initial={{ y: -60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="fixed top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/60 via-black/40 to-transparent backdrop-blur-xl border-b border-white/5 z-50 flex items-center px-4 md:px-8"
+        className="fixed top-0 left-0 right-0 h-14 
+bg-gradient-to-b from-black/60 via-black/40 to-transparent 
+backdrop-blur-xs z-50 flex items-center px-4 md:px-6"
       >
         <div className="w-full flex items-center justify-between">
-          <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-3 cursor-pointer group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 via-orange-500 to-pink-500 flex items-center justify-center shadow-lg shadow-red-500/30">
-              <Sparkles className="w-6 h-6 text-white" />
+          {/* Logo */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="hidden sm:block font-black text-white tracking-tight text-lg">CinemaFeed</span>
           </motion.div>
 
-          <div className="hidden md:flex items-center gap-1">
-            {[{ icon: Home }, { icon: Compass }, { icon: Search }].map((it, i) => (
-              <motion.button key={i} whileHover={{ scale: 1.1 }} className="p-2 rounded-lg transition-all">
-                <it.icon className="w-5 h-5 text-white/70 hover:text-white" />
-              </motion.button>
+          {/* Center Navigation */}
+          <div className="hidden md:flex items-center gap-6">
+            {[
+              { icon: Home, label: 'Home', route: '/' },
+              { icon: Compass, label: 'Explore', route: '/explore' },
+              { icon: Search, label: 'Search', route: '/search' },
+            ].map((item, i) => (
+              <Link
+                key={i}
+                href={item.route}
+                prefetch={item.route ? true : false}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/10 transition-all group"
+              >
+                <item.icon className="w-4 h-4 text-white/60 group-hover:text-white transition-colors" />
+                <span className="text-sm text-white/60 group-hover:text-white transition-colors">{item.label}</span>
+              </Link>
             ))}
           </div>
 
-          <div className="flex items-center gap-3">
-            <motion.button whileHover={{ scale: 1.05 }} className="p-2 rounded-lg bg-gradient-to-r from-red-500 to-orange-500 text-white">
-              <Plus className="w-5 h-5" />
+          {/* Right Actions */}
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="p-2 rounded-lg hover:bg-white/10 transition-all md:hidden"
+            >
+              <Search className="w-5 h-5 text-white/80" />
             </motion.button>
-            <motion.div whileHover={{ scale: 1.1 }} className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <span className="text-white font-bold">U</span>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center cursor-pointer"
+            >
+              <span className="text-white text-xs font-bold">U</span>
             </motion.div>
           </div>
         </div>
       </motion.nav>
 
       {/* Main Content Area */}
-      <div className="relative w-full h-full pt-16">
+      <div className="relative w-full h-screen bg-black flex items-center justify-center overflow-hidden">
         <AnimatePresence mode="wait">
           {currentVideo && (
             <motion.div
@@ -313,29 +345,26 @@ export default function VideoFeedPage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.28, ease: 'easeOut' }}
-              className="absolute inset-0 pt-16 flex"
+              className="absolute inset-0 flex"
             >
-              {/* Video Display */}
-              <div className="flex-1 relative w-full bg-black overflow-hidden">
-                <iframe
-                  ref={el => { if (el) videoRefs.current.set(currentVideo.id, el); }}
-                  title={currentVideo.title || currentVideo.name || `video-${currentVideo.id}`}
-                  src={iframeSrc}
-                  className="w-full h-full"
-                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                  allowFullScreen
-                  style={{ border: 'none', pointerEvents: 'none' }}
-                  onLoad={(e) => {
-                    const iframe = e.currentTarget as HTMLIFrameElement;
-                    // ensure ref and then apply the current (possibly changed) muted state via postMessage
-                    videoRefs.current.set(currentVideo.id, iframe);
-                    // slight delay to give YouTube player time to init
-                    setTimeout(() => sendYouTubeCommand(iframe, muted ? 'mute' : 'unMute'), 250);
-                  }}
-                />
-
-
-
+              <div className="relative w-full  h-full flex items-center justify-center">
+                {/* Iframe Container */}
+                <div className="w-full h-[50vh] md:h-full flex items-center justify-center">
+                  <iframe
+                    ref={el => { if (el) videoRefs.current.set(currentVideo.id, el); }}
+                    title={currentVideo.title || currentVideo.name || `video-${currentVideo.id}`}
+                    src={iframeSrc}
+                    className="w-full h-full object-contain bg-black"
+                    allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                    allowFullScreen
+                    style={{ border: 'none', pointerEvents: 'none' }}
+                    onLoad={(e) => {
+                      const iframe = e.currentTarget as HTMLIFrameElement;
+                      videoRefs.current.set(currentVideo.id, iframe);
+                      setTimeout(() => sendYouTubeCommand(iframe, muted ? 'mute' : 'unMute'), 250);
+                    }}
+                  />
+                </div>
                 {/* Animated Title Bar */}
                 <AnimatePresence>
                   {titleBarVisible && (
@@ -379,9 +408,9 @@ export default function VideoFeedPage() {
                 {/* Show Info Button when hidden */}
                 <AnimatePresence>
                   {!titleBarVisible && (
-                    <motion.button initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.28 }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setTitleBarVisible(true)} className="absolute bottom-6 left-4 md:left-8 px-4 py-2 bg-black/40 backdrop-blur-md border border-white/30 rounded-xl text-white text-sm font-medium hover:bg-black/60 transition-all shadow-lg z-20 flex items-center gap-2">
+                    <motion.button initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} transition={{ duration: 0.28 }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setTitleBarVisible(true)} className="absolute bottom-6 left-4 md:left-8 px-4 py-1.5 bg-black/40 backdrop-blur-md border border-white/30 rounded-xl text-white text-md font-medium hover:bg-black/60 transition-all shadow-lg z-50 flex items-center gap-2">
                       <Info className="w-4 h-4" />
-                      <span className="hidden sm:inline">Show Info</span>
+                      <span className=" sm:inline">{currentVideo.title}</span>
                     </motion.button>
                   )}
                 </AnimatePresence>
@@ -390,33 +419,33 @@ export default function VideoFeedPage() {
                   initial={{ x: 50, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: 0.2, duration: 0.36 }}
-                  className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 flex flex-col gap-5 z-30"
+                  className="absolute right-3 md:right-6 bottom-20 md:bottom-24 flex flex-col gap-4 md:gap-5 z-30"
                 >
                   {[
                     {
                       onClick: togglePlayPause,
-                      icon: isPlaying ? <Pause className="w-6 h-6 md:w-7 md:h-7 text-white" /> : <Play className="w-6 h-6 md:w-7 md:h-7 text-white" />,
+                      icon: isPlaying ? <Pause className="w-5 h-5 md:w-6 md:h-6 text-white" /> : <Play className="w-5 h-5 md:w-6 md:h-6 text-white" />,
                       label: isPlaying ? "Playing..." : "Paused",
                       active: isPlaying,
                     },
                     {
                       onClick: () => setLiked(l => !l),
-                      icon: <Heart className={`w-6 h-6 md:w-7 md:h-7 ${liked ? "fill-white text-white" : "text-white"}`} />,
+                      icon: <Heart className={`w-5 h-5 md:w-6 md:h-6 ${liked ? "fill-white text-white" : "text-white"}`} />,
                       label: liked ? "Liked" : "Like",
                       active: liked,
                     },
                     {
                       onClick: () => setSaved(s => !s),
-                      icon: <Bookmark className={`w-6 h-6 md:w-7 md:h-7 ${saved ? "fill-white text-white" : "text-white"}`} />,
+                      icon: <Bookmark className={`w-5 h-5 md:w-6 md:h-6 ${saved ? "fill-white text-white" : "text-white"}`} />,
                       label: saved ? "Saved" : "Save",
                       active: saved,
                     },
                     {
                       onClick: toggleMute,
                       icon: muted ? (
-                        <VolumeX className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                        <VolumeX className="w-5 h-5 md:w-6 md:h-6 text-white" />
                       ) : (
-                        <Volume2 className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                        <Volume2 className="w-5 h-5 md:w-6 md:h-6 text-white" />
                       ),
                       label: muted ? "Muted" : "Unmuted",
                       active: !muted,
@@ -430,7 +459,7 @@ export default function VideoFeedPage() {
                       className="group flex flex-col items-center gap-1"
                     >
                       <div
-                        className={`w-12 h-12 md:w-14 md:h-14 rounded-full border flex items-center justify-center transition-all duration-300
+                        className={`w-10 h-10 md:w-12 md:h-12 rounded-full border flex items-center justify-center transition-all duration-300
           ${btn.active
                             ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] border-transparent shadow-[0_0_12px_rgba(233,79,55,0.7)] backdrop-blur-sm"
                             : "bg-black/40 border-white/30 group-hover:border-white/50 group-hover:bg-white/10 backdrop-blur-sm"}`}
@@ -456,7 +485,7 @@ export default function VideoFeedPage() {
                     animate={{ x: 0, opacity: 1 }}
                     exit={{ x: 400, opacity: 0 }}
                     transition={{ duration: 0.28, ease: 'easeOut' }}
-                    className="w-80 md:w-96 bg-gradient-to-br from-black/90 via-black/80 to-black/90 backdrop-blur-xl border-l border-white/10 flex flex-col overflow-hidden shadow-2xl"
+                    className="fixed inset-0 md:relative md:w-96 z-100 bg-gradient-to-br from-black/90 via-black/80 to-black/90 backdrop-blur-xl border-l pt-12 border-white/10 flex flex-col overflow-hidden shadow-2xl"
                   >
                     <div className="flex items-center justify-between px-6 py-5 border-b border-white/10">
                       <h3 className="text-white font-bold text-base">Details</h3>
@@ -571,6 +600,6 @@ export default function VideoFeedPage() {
           </motion.div>
         )}
       </div>
-    </div>
+    </div >
   );
 }
