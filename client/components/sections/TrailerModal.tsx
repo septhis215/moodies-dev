@@ -124,11 +124,11 @@ export default function TrailerModal({
           <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-400">
 
             {/* Header */}
-            <div className="flex-shrink-0 p-6 pt-14 border-b border-gray-700/50 relative">
-              <div className="flex gap-4 sm:gap-6 lg:gap-8 items-start">
+            <div className="flex-shrink-0 p-3 sm:p-4 md:p-5 lg:p-6 pt-12 sm:pt-14 border-b border-gray-700/50 relative">
+              <div className="flex gap-2 sm:gap-3 md:gap-4 lg:gap-6 items-start">
                 {trailer.poster_path && (
                   <div
-                    className="w-28 sm:w-40 md:w-56 lg:w-64 xl:w-72 2xl:w-80 flex-shrink-0 cursor-pointer transition-all"
+                    className="w-16 sm:w-20 md:w-28 lg:w-36 xl:w-44 flex-shrink-0 cursor-pointer transition-all"
                     onClick={() => handleClick(trailer)}
                   >
                     <img
@@ -142,50 +142,50 @@ export default function TrailerModal({
                 {/* Title + Pills */}
                 <div className="flex flex-col flex-1 min-w-0 relative z-10">
                   <h2
-                    className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 
-        font-extrabold text-white drop-shadow-2xl leading-tight 
-        cursor-pointer mb-4 lg:mb-6"
+                    // clamp ensures title never gets too big on narrow screens or too small on huge screens
+                    style={{ fontSize: 'clamp(1.125rem, 3.2vw, 2.25rem)' }}
+                    className="font-extrabold text-white drop-shadow-2xl leading-tight cursor-pointer mb-2 sm:mb-3 md:mb-4"
                     onClick={() => handleClick(trailer)}
                   >
                     {trailer.title}
                   </h2>
 
                   {/* Pills */}
-                  <div className="flex flex-wrap gap-2 lg:gap-3 xl:gap-4">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2 md:gap-2.5 items-center">
                     {trailer.release_date && (
-                      <span className="flex items-center gap-1 px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full bg-blue-600/90 shadow-lg text-xs sm:text-sm md:text-base lg:text-lg font-medium text-white">
-                        <IconCalendar size={18} />
-                        {new Date(trailer.release_date).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
+                      <span className="flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-blue-600/90 shadow text-[10px] sm:text-xs md:text-sm font-medium text-white">
+                        <IconCalendar className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="whitespace-nowrap">
+                          {new Date(trailer.release_date).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
                       </span>
                     )}
 
                     {trailer.runtime && (
-                      <span className="flex items-center gap-1 px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full bg-purple-600/90 shadow-lg text-xs sm:text-sm md:text-base lg:text-lg font-medium text-white">
-                        <IconClock size={18} />
-                        {Math.floor(trailer.runtime / 60)}h {trailer.runtime % 60}m
+                      <span className="flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-purple-600/90 shadow text-[10px] sm:text-xs md:text-sm font-medium text-white">
+                        <IconClock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="whitespace-nowrap">{Math.floor(trailer.runtime / 60)}h {trailer.runtime % 60}m</span>
                       </span>
                     )}
 
                     {trailer.number_of_episodes && (
-                      <span className="flex items-center gap-1 px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full bg-purple-500/90 shadow-lg text-xs sm:text-sm md:text-base lg:text-lg font-medium text-white">
-                        <IconDeviceTv size={18} />
-                        {trailer.number_of_episodes} Episodes
+                      <span className="flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-purple-500/90 shadow text-[10px] sm:text-xs md:text-sm font-medium text-white">
+                        <IconDeviceTv className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="whitespace-nowrap">{trailer.number_of_episodes} Episodes</span>
                       </span>
                     )}
 
                     {trailer.genres?.slice(0, 3).map((genre, i) => (
                       <span
                         key={i}
-                        className="relative px-3 sm:px-4 lg:px-5 py-1.5 lg:py-2 rounded-full 
-            text-white font-semibold text-xs sm:text-sm md:text-base lg:text-lg 
-            shadow-lg overflow-hidden"
+                        className="relative px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-white font-semibold text-[10px] sm:text-xs md:text-sm shadow overflow-hidden"
                       >
-                        <span className="absolute inset-0 bg-gradient-to-r from-[#e94f37] via-pink-500 to-orange-500 opacity-40 animate-gradient-x rounded-full"></span>
-                        <span className="relative z-10">{genre}</span>
+                        <span className="absolute inset-0 bg-gradient-to-r from-[#e94f37] via-pink-500 to-orange-500 opacity-30 rounded-full"></span>
+                        <span className="relative z-10 whitespace-nowrap">{genre}</span>
                       </span>
                     ))}
                   </div>
@@ -195,22 +195,27 @@ export default function TrailerModal({
 
             {/* Synopsis */}
             {trailer.overview && (
-              <div className="flex-shrink-0 px-6 py-4 border-b border-gray-700/30">
-                <h3 className="text-gray-400 font-semibold text-sm sm:text-base lg:text-lg uppercase tracking-wide mb-2">
+              <div className="flex-shrink-0 px-4 sm:px-6 md:px-8 py-3 sm:py-4 border-b border-gray-700/30">
+                <h3 className="text-gray-400 font-semibold text-xs sm:text-sm md:text-base uppercase tracking-wide mb-2">
                   Synopsis
                 </h3>
+
                 <p
-                  className="text-gray-300 text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl 
-      leading-relaxed break-words max-w-5xl"
+                  className={
+                    // responsive text sizing + constrained width for better readability
+                    "text-gray-300 text-sm sm:text-base md:text-lg leading-snug sm:leading-normal md:leading-relaxed max-w-full md:max-w-3xl break-words"
+                  }
                 >
                   {isExpanded
                     ? trailer.overview
-                    : trailer.overview.slice(0, 300) +
-                    (trailer.overview.length > 300 ? "..." : "")}
+                    : trailer.overview.length > 300
+                      ? trailer.overview.slice(0, 300) + "..."
+                      : trailer.overview}
                   {trailer.overview.length > 300 && (
                     <button
                       onClick={() => setIsExpanded(!isExpanded)}
-                      className="ml-2 text-blue-400 hover:text-blue-500 text-xs sm:text-sm lg:text-base font-semibold"
+                      className="ml-2 inline-block text-blue-400 hover:text-blue-500 text-xs sm:text-sm font-semibold"
+                      aria-expanded={isExpanded}
                     >
                       {isExpanded ? "Show less" : "Read more"}
                     </button>
