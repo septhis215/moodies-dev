@@ -21,6 +21,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     setIsNavigating(true);
+    window.scrollTo({ top: 0, behavior: "instant" });
     const timer = setTimeout(() => setIsNavigating(false), 500);
     return () => clearTimeout(timer);
   }, [pathname]);
