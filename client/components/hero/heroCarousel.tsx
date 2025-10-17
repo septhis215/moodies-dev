@@ -1,6 +1,6 @@
 // src/components/Hero/HeroCarousel.tsx
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import type { All } from "@/types/all";
 import { tmdbImage } from "@/lib/tmdb";
@@ -82,12 +82,12 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
       </section>
     );
   }
-
+ 
   // Get dynamic thumbnail window size based on screen size
   const getThumbnailWindowSize = () => {
     if (typeof window !== "undefined") {
-      if (window.innerWidth < 640) return 3; // mobile: 3 thumbnails
-      if (window.innerWidth < 1024) return 4; // tablet: 4 thumbnails
+      if (window.innerWidth <= 640) return 3; // mobile: 3 thumbnails
+      if (window.innerWidth <= 1024) return 4; // tablet: 4 thumbnails
       return 5; // desktop: 5 thumbnails
     }
     return 5;

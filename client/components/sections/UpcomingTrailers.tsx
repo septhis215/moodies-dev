@@ -222,7 +222,19 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                     </button>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <motion.div
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.2}
+                    onDragEnd={(e, info) => {
+                        const swipe = info.offset.x;
+                        if (Math.abs(swipe) > 80) {
+                            if (swipe > 0 && canScrollLeft) scrollLeft();
+                            else if (swipe < 0 && canScrollRight) scrollRight();
+                        }
+                    }}
+                    className="grid grid-cols-1 lg:grid-cols-3 gap-6 touch-pan-y"
+                >
                     <AnimatePresence mode="popLayout">
                         {visibleItems.map((item, index) => (
                             item.trailer_key && (
@@ -275,7 +287,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                                         {item.release_date && (
                                             <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
                                                 <div className="flex items-center gap-1 px-2 py-1 text-white text-xs font-medium rounded-lg bg-black/60 backdrop-blur-md border border-white/10">
-                                                    <Clock size={12}/>
+                                                    <Clock size={12} />
                                                     <span>
                                                         {getDaysUntilRelease(item.release_date)}
                                                     </span>
@@ -336,13 +348,15 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                             )
                         ))}
                     </AnimatePresence>
-                </div>
+                </motion.div>
             </div>
 
             {/* Modal */}
-            {selectedTrailer && (
-                <TrailerModal trailer={selectedTrailer} onClose={() => setSelectedTrailer(null)} onSelectTrailer={handleSelectTrailer} />
-            )}
-        </section>
+            {
+                selectedTrailer && (
+                    <TrailerModal trailer={selectedTrailer} onClose={() => setSelectedTrailer(null)} onSelectTrailer={handleSelectTrailer} />
+                )
+            }
+        </section >
     );
 };

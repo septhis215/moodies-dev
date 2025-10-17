@@ -194,8 +194,19 @@ export default function PremiereHighlights({
           </button>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <AnimatePresence mode="popLayout">
+        <motion.div
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={(e, info) => {
+            const swipe = info.offset.x;
+            if (Math.abs(swipe) > 80) {
+              if (swipe > 0 && canScrollLeft) scrollLeft();
+              else if (swipe < 0 && canScrollRight) scrollRight();
+            }
+          }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6 touch-pan-y"
+        >          <AnimatePresence mode="popLayout">
             {visibleItems.map((item, index) => (
               <motion.div
                 key={item.id}
@@ -303,16 +314,18 @@ export default function PremiereHighlights({
               </motion.div>
             ))}
           </AnimatePresence>
-        </div>
+        </motion.div>
       </div>
 
-      {selectedTrailer && (
-        <TrailerModal
-          trailer={selectedTrailer}
-          onClose={() => setSelectedTrailer(null)}
-          onSelectTrailer={handleSelectTrailer}
-        />
-      )}
-    </section>
+      {
+        selectedTrailer && (
+          <TrailerModal
+            trailer={selectedTrailer}
+            onClose={() => setSelectedTrailer(null)}
+            onSelectTrailer={handleSelectTrailer}
+          />
+        )
+      }
+    </section >
   );
 }

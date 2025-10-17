@@ -10,6 +10,7 @@ import CelebSection from '@/components/sections/CelebsSection';
 import CommunityPicks from '@/components/sections/CommunityPicks';
 import { UpcomingTrailers } from '@/components/sections/UpcomingTrailers';
 import MoodDiscoverySection from '@/components/sections/MoodDiscoverySection';
+import ImmersiveFeedSection from '@/components/sections/ImmersiveFeedSection';
 async function fetchFeatured() {
   const base = process.env.NEST_API_URL || 'http://localhost:4000';
   // cache policy: change revalidate per your needs
@@ -28,6 +29,7 @@ export default async function LandingPage() {
       <TrendingSection />
       <PremiereHighlights />
       <FavoritesSection />
+      <ImmersiveFeedSection />
       <KoreaTrendingSection />
       <MoodDiscoverySection />
       <CelebSection />
