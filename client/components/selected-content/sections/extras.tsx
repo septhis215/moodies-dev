@@ -500,11 +500,6 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
                         .map((person) => person.name)
                         .slice(0, 3)
                         .join(", ")}
-                      {item.people.length > 3 && (
-                        <button className="ml-2 text-xs text-blue-400 hover:text-blue-300">
-                          View All
-                        </button>
-                      )}
                     </div>
                   </div>
                 ))}

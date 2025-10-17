@@ -41,6 +41,12 @@ export default function AllCredits({
       cast.map((p, i) => ({
         ...p,
         order: typeof p.order === "number" ? p.order : i + 1,
+        // 🔧 Fix: Normalize TV "roles" array into character string
+        character:
+          p.character ??
+          (Array.isArray((p as any).roles) && (p as any).roles.length > 0
+            ? (p as any).roles.map((r: any) => r.character).join(", ")
+            : undefined),
       })),
     [cast]
   );
@@ -123,9 +129,6 @@ export default function AllCredits({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold">Full Cast & Crew</h1>
-          {info?.title && (
-            <div className="text-slate-400 text-sm mt-1">{info.title}</div>
-          )}
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">

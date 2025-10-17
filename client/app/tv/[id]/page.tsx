@@ -158,7 +158,7 @@ export default async function TvPage({
           />
 
           <hr className="border-white/8 my-14" />
-          <ExtraDetails data={data} />
+          <ExtraDetails data={data} contentId={id}/>
 
           <hr className="border-white/8 my-14" />
           <ReviewsSection
