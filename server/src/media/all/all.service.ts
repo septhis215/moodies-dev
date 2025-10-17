@@ -1295,54 +1295,71 @@ export class AllService implements OnModuleInit {
     async getVideoFeed(page: number = 1, mediaType?: 'movie' | 'tv') {
         try {
             const requests: any = [];
-
             const today = new Date();
             const todayStr = today.toISOString().split("T")[0];
-            // Fetch trending movies and TV shows
+            const pastDate = new Date();
+            pastDate.setFullYear(pastDate.getFullYear() - 2); // Last 2 years
+            const pastDateStr = pastDate.toISOString().split("T")[0];
+
+            // Vary the content sources based on page for more diversity
+            const pageOffset = Math.floor((page - 1) / 3);
+
             if (!mediaType || mediaType === 'movie') {
                 requests.push(
                     this.tmdb(`trending/movie/week?page=${page}`),
-                    this.tmdb(`movie/popular?page=${page}`),
+                    this.tmdb(`movie/popular?page=${page + pageOffset}`),
                     this.tmdb(`movie/now_playing?page=${page}`),
-                    this.tmdb(`discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${todayStr}&page=${page}`)
+                    this.tmdb(`movie/upcoming?page=${page}`),
+                    this.tmdb(`discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${pastDateStr}&page=${page}`),
                 );
             }
 
             if (!mediaType || mediaType === 'tv') {
                 requests.push(
                     this.tmdb(`trending/tv/week?page=${page}`),
-                    this.tmdb(`tv/popular?page=${page}`),
+                    this.tmdb(`tv/popular?page=${page + pageOffset}`),
                     this.tmdb(`tv/on_the_air?page=${page}`),
-                    this.tmdb(`discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&page=${page}`)
+                    this.tmdb(`tv/airing_today?page=${page}`),
+                    this.tmdb(`discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${pastDateStr}&page=${page}`),
                 );
             }
 
             const results = await Promise.allSettled(requests);
             const allItems: any[] = [];
 
-            // Combine all results
             for (const result of results) {
                 if (result.status === 'fulfilled' && result.value?.results) {
                     allItems.push(...result.value.results);
                 }
             }
 
+            // Pre-filter items before processing
+            const filteredItems = this.preFilterItems(allItems);
+
             // Remove duplicates based on ID
             const uniqueItems = Array.from(
-                new Map(allItems.map(item => [item.id, item])).values()
+                new Map(filteredItems.map(item => [item.id, item])).values()
             );
 
-            // Shuffle for variety
-            const shuffled = uniqueItems.sort(() => Math.random() - 0.5);
+            // --- SCORE WITH LIGHT RANDOMNESS ---
+            // jitter controls how much randomness is injected (small value => light randomness)
+            const jitter = 1.25; // tweak this: 0 = deterministic score-only, 2 = more random
+            const scoredMixed = this.seededShuffle(uniqueItems, page, jitter);
 
-            // Fetch videos for each item (in batches to avoid rate limits)
-            const itemsWithVideos = await this.enrichWithVideos(shuffled.slice(0, 20));
+            // Pick the batch to enrich (keep this conservative for performance)
+            const batchSize = 30;
+            const itemsToEnrich = scoredMixed.slice(0, batchSize);
+
+            const itemsWithVideos = await this.enrichWithVideos(itemsToEnrich, page);
+
+            // Filter to ensure we have at least some items (and have primary_video)
+            const validItems = itemsWithVideos.filter(item => item.primary_video);
 
             return {
-                results: itemsWithVideos,
+                results: validItems,
                 page,
-                total_pages: 50, // Arbitrary large number for infinite scroll
-                hasMore: page < 50
+                total_pages: 100,
+                hasMore: page < 100 && validItems.length > 0
             };
         } catch (error) {
             console.error('Error fetching video feed:', error);
@@ -1350,73 +1367,380 @@ export class AllService implements OnModuleInit {
         }
     }
 
+    /**
+     * Seeded shuffle that scores items, mixes new releases through the feed,
+     * and applies a small deterministic jitter to add light randomness.
+     *
+     * - `array`: items to score
+     * - `seed`: page seed (use page number or other per-request seed)
+     * - `jitter`: magnitude of random jitter (0 = none)
+     */
+    private seededShuffle(array: any[], seed: number, jitter = 1.25): any[] {
+        // deterministic pseudo-random generator per item using sin (fast & reproducible)
+        const seededRandomForId = (id: number | string) => {
+            // convert id to number-ish value
+            const n = typeof id === 'number' ? id : parseInt(String(id).replace(/\D/g, '') || '0', 10);
+            const x = Math.sin(seed * 9301 + n * 49297) * 43758.5453123;
+            return Math.abs(x - Math.floor(x)); // 0..1
+        };
+
+        // Score all items
+        const scoredItems = array.map(item => ({
+            item,
+            qualityScore: this.calculateItemQualityScore(item),
+            isNewRelease: this.isRecentOrUpcoming(item)
+        }));
+
+        // Sort comparator that prioritizes qualityScore but adds a tiny jitter
+        const compareWithJitter = (a: any, b: any) => {
+            const scoreDiff = b.qualityScore - a.qualityScore; // higher score first
+            if (jitter === 0) return scoreDiff;
+
+            // deterministic random contribution in range [-0.5, +0.5]
+            const randA = seededRandomForId(a.item.id ?? a.item.key ?? (Math.random() * 1000000));
+            const randB = seededRandomForId(b.item.id ?? b.item.key ?? (Math.random() * 1000000));
+
+            // center around 0
+            const randDiff = (randB - randA); // range approx [-1..1]
+
+            // scale jitter so it is clearly smaller than typical score differences
+            const randomFactor = randDiff * (jitter);
+
+            // combine primary score and small random factor
+            return scoreDiff + randomFactor;
+        };
+
+        // Separate new releases and regular content to mix them
+        const newReleases = scoredItems.filter(s => s.isNewRelease);
+        const regularContent = scoredItems.filter(s => !s.isNewRelease);
+
+        newReleases.sort(compareWithJitter);
+        regularContent.sort(compareWithJitter);
+
+        // Mix new releases throughout the feed (every ~3 items)
+        const mixed: any[] = [];
+        let newIndex = 0;
+        let regularIndex = 0;
+
+        while (newIndex < newReleases.length || regularIndex < regularContent.length) {
+            // Add N regular items (3 is a good default)
+            for (let i = 0; i < 3 && regularIndex < regularContent.length; i++) {
+                mixed.push(regularContent[regularIndex++].item);
+            }
+            // Add one new release if available
+            if (newIndex < newReleases.length) {
+                mixed.push(newReleases[newIndex++].item);
+            }
+        }
+
+        return mixed;
+    }
+
+    /**
+     * Pre-filter items with focus on post-2000, popular languages, and new releases
+     */
+    private preFilterItems(items: any[]): any[] {
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth();
+
+        return items.filter(item => {
+            // Filter out adult content
+            if (item.adult === true) return false;
+
+            // Filter out items without poster (visual requirement)
+            if (!item.poster_path) return false;
+
+            // Check if this is a new/upcoming release
+            const releaseYear = this.getItemYear(item);
+            const isNewRelease = releaseYear && releaseYear >= currentYear &&
+                this.isRecentOrUpcoming(item);
+
+            // For new releases, skip vote/rating checks
+            if (!isNewRelease) {
+                // Only apply vote/rating filters to older content
+                const minVoteCount = 10; // Lenient for established content
+                if ((item.vote_count || 0) < minVoteCount) return false;
+
+                // Lenient rating filter for established content
+                const minRating = 5.0;
+                if ((item.vote_average || 0) < minRating) return false;
+            }
+
+            // Strict year filtering - post-2000 content only
+            if (releaseYear && releaseYear < 2000) return false;
+
+            // Filter out content with no overview (likely incomplete data)
+            if (!item.overview || item.overview.length < 10) return false;
+
+            // Strict language filtering - focus on major languages only
+            const allowedLanguages = [
+                'en', // English
+                'es', // Spanish
+                'fr', // French
+                'de', // German
+                'ja', // Japanese
+                'ko', // Korean
+                'zh', // Chinese
+                'pt', // Portuguese
+                'it', // Italian
+                'hi'  // Hindi
+            ];
+
+            if (item.original_language && !allowedLanguages.includes(item.original_language)) {
+                // Even for popular non-allowed languages, be strict
+                // Only allow if extremely popular (500+ votes)
+                if ((item.vote_count || 0) < 500) return false;
+            }
+
+            return true;
+        });
+    }
+
+    /**
+     * Check if item is a recent or upcoming release (within last 3 months or future)
+     */
+    private isRecentOrUpcoming(item: any): boolean {
+        const dateStr = item.release_date || item.first_air_date;
+        if (!dateStr) return false;
+
+        const releaseDate = new Date(dateStr);
+        const today = new Date();
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+        // Consider as new if released in last 3 months or in the future
+        return releaseDate >= threeMonthsAgo;
+    }
+
+    /**
+     * Extract release year from item
+     */
+    private getItemYear(item: any): number | null {
+        const dateStr = item.release_date || item.first_air_date;
+        if (!dateStr) return null;
+
+        const year = parseInt(dateStr.split('-')[0]);
+        return isNaN(year) ? null : year;
+    }
+
+    /**
+     * Quality scoring with boost for new releases
+     */
+    private calculateItemQualityScore(item: any): number {
+        let score = 0;
+
+        // Check if new release
+        const isNewRelease = this.isRecentOrUpcoming(item);
+
+        // Big boost for new releases
+        if (isNewRelease) {
+            score += 20; // Prioritize new content
+        }
+
+        // Popularity weight
+        score += Math.log10((item.popularity || 1) + 1) * 12;
+
+        // Vote average weight (only if has votes)
+        if (item.vote_count > 0) {
+            score += (item.vote_average || 0) * 3;
+        }
+
+        // Vote count weight
+        score += Math.log10((item.vote_count || 1) + 1) * 2;
+
+        // Recency bonus for non-new releases
+        if (!isNewRelease) {
+            const year = this.getItemYear(item);
+            if (year) {
+                const currentYear = new Date().getFullYear();
+                const yearDiff = currentYear - year;
+                if (yearDiff <= 2) score += 10;
+                else if (yearDiff <= 5) score += 7;
+                else if (yearDiff <= 10) score += 5;
+                else if (yearDiff <= 15) score += 3;
+            }
+        }
+
+        // Has backdrop bonus
+        if (item.backdrop_path) score += 2;
+
+        // Language bonus for English
+        if (item.original_language === 'en') score += 4;
+        // Smaller bonus for other major languages
+        else if (item.original_language === 'ko') score += 3;
+
+        return score;
+    }
+
+    private seededShuffleArray(array: any[], seed: number): any[] {
+        const shuffled = [...array];
+        let currentIndex = shuffled.length;
+
+        const random = () => {
+            const x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        };
+
+        while (currentIndex !== 0) {
+            const randomIndex = Math.floor(random() * currentIndex);
+            currentIndex -= 1;
+            const temp = shuffled[currentIndex];
+            shuffled[currentIndex] = shuffled[randomIndex];
+            shuffled[randomIndex] = temp;
+        }
+
+        return shuffled;
+    }
 
     private async isVideoAvailable(videoKey: string): Promise<boolean> {
         try {
-            const response = await fetch(`https://www.youtube.com/embed/${videoKey}`, {
-                method: 'HEAD'
-            });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+            const response = await fetch(
+                `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoKey}&format=json`,
+                {
+                    signal: controller.signal,
+                    method: 'GET'
+                }
+            );
+
+            clearTimeout(timeoutId);
             return response.ok;
         } catch (e) {
             return false;
         }
     }
 
-    private async enrichWithVideos(items: any[]) {
+    private async enrichWithVideos(items: any[], page: number) {
         const enriched: any[] = [];
-        const allowedRegions = ["US", "GB", "CA", "AU", "MY", null];
+        const allowedRegions = [
+            "MY", // Malaysia
+            "SG", // Singapore
+            "ID", // Indonesia
+            "TH", // Thailand
+            "PH", // Philippines
+            "VN", // Vietnam
+            "BN", // Brunei
+            "KH", // Cambodia
+            "LA", // Laos
+            "HK", // Hong Kong
+            "TW", // Taiwan
+            "IN", // India
+            "AU", // Australia
+            "NZ", // New Zealand
+            "US", // United States
+            "GB"  // United Kingdom
+        ]; const targetCount = 15;
 
-        for (const item of items) {
-            try {
-                const mediaType = item.title ? "movie" : "tv";
-                const videosResponse = await this.tmdb(`${mediaType}/${item.id}/videos`);
-                const videos = videosResponse.results || [];
+        const batchSize = 5;
 
-                const filteredVideos = videos.filter(v =>
-                    v.site === "YouTube" &&
-                    (v.type === "Trailer" || v.type === "Teaser") &&
-                    v.key &&
-                    allowedRegions.includes(v.iso_3166_1 ?? null)
-                );
+        for (let i = 0; i < items.length && enriched.length < targetCount; i += batchSize) {
+            const batch = items.slice(i, i + batchSize);
 
-                // ✅ Check availability in parallel
-                const availabilityChecks = await Promise.all(
-                    filteredVideos.map(async v => ({
-                        ...v,
-                        available: await this.isVideoAvailable(v.key)
-                    }))
-                );
+            const batchResults = await Promise.allSettled(
+                batch.map(item => this.processItemWithVideos(item, allowedRegions, page))
+            );
 
-                const availableVideos = availabilityChecks.filter(v => v.available);
-
-                const sortedVideos = availableVideos.sort((a, b) => {
-                    const scoreA =
-                        (a.official ? 3 : 0) +
-                        (a.type === "Trailer" ? 2 : 0) +
-                        (a.size >= 720 ? 1 : 0);
-                    const scoreB =
-                        (b.official ? 3 : 0) +
-                        (b.type === "Trailer" ? 2 : 0) +
-                        (b.size >= 720 ? 1 : 0);
-                    return scoreB - scoreA;
-                });
-
-                if (sortedVideos.length > 0) {
-                    enriched.push({
-                        ...item,
-                        media_type: mediaType,
-                        videos: sortedVideos.slice(0, 3),
-                        primary_video: sortedVideos[0],
-                    });
+            for (const result of batchResults) {
+                if (result.status === 'fulfilled' && result.value) {
+                    enriched.push(result.value);
+                    if (enriched.length >= targetCount) break;
                 }
-            } catch (err) {
-                continue;
+            }
+
+            if (i + batchSize < items.length && enriched.length < targetCount) {
+                await new Promise(resolve => setTimeout(resolve, 100));
             }
         }
 
         return enriched;
     }
 
+    private async processItemWithVideos(item: any, allowedRegions: string[], page: number) {
+        try {
+            const mediaType = item.title ? "movie" : "tv";
+            const videosResponse = await this.tmdb(`${mediaType}/${item.id}/videos`);
+            const videos = videosResponse.results || [];
+
+            // Filter videos by region, type, and quality
+            const filteredVideos = videos.filter(v =>
+                v.site === "YouTube" &&
+                (v.type === "Trailer" || v.type === "Teaser" || v.type === "Clip") &&
+                v.key &&
+                v.key.length > 5 && // Valid YouTube key
+                allowedRegions.includes(v.iso_3166_1 ?? null) &&
+                v.name && // Must have a name
+                !v.name.toLowerCase().includes('reaction') && // Filter out reaction videos
+                !v.name.toLowerCase().includes('review') // Filter out review videos
+            );
+
+            if (filteredVideos.length === 0) return null;
+
+            // Check availability in parallel with limit
+            const checkLimit = Math.min(filteredVideos.length, 5);
+            const videosToCheck = filteredVideos.slice(0, checkLimit);
+
+            const availabilityChecks = await Promise.allSettled(
+                videosToCheck.map(async v => ({
+                    ...v,
+                    available: await this.isVideoAvailable(v.key)
+                }))
+            );
+
+            const availableVideos = availabilityChecks
+                .filter((result): result is PromiseFulfilledResult<any> =>
+                    result.status === 'fulfilled' && result.value.available
+                )
+                .map(result => result.value);
+
+            if (availableVideos.length === 0) return null;
+
+            // Score and sort videos
+            const scoredVideos = availableVideos.map(v => ({
+                ...v,
+                score: this.calculateVideoScore(v)
+            })).sort((a, b) => b.score - a.score);
+
+            const topVideos = scoredVideos.slice(0, 8);
+
+            // Randomly select primary video from top 3 for variety
+            const primaryCandidates = topVideos.slice(0, Math.min(5, topVideos.length));
+            const primaryIndex = this.getSeededRandom(item.id + page, primaryCandidates.length);
+            const primaryVideo = primaryCandidates[primaryIndex];
+
+            return {
+                ...item,
+                media_type: mediaType,
+                videos: topVideos,
+                primary_video: primaryVideo,
+            };
+        } catch (err) {
+            console.error(`Error processing item ${item.id}:`, err);
+            return null;
+        }
+    }
+
+    private calculateVideoScore(video: any): number {
+        let score = 0;
+
+        if (video.official) score += 5;
+
+        if (video.type === "Trailer") score += 8;
+        else if (video.type === "Teaser") score += 4;
+        else if (video.type === "Clip") score += 2;
+
+        if (video.size >= 1080) score += 5;
+        else if (video.size >= 720) score += 3;
+        else if (video.size >= 480) score += 1;
+
+        return score;
+    }
+
+    private getSeededRandom(seed: number, max: number): number {
+        const x = Math.sin(seed) * 10000;
+        return Math.floor((x - Math.floor(x)) * max);
+    }
 
     async getMovieVideos(id: number) {
         return await this.tmdb(`movie/${id}/videos`);

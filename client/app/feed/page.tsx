@@ -6,7 +6,9 @@ import {
   Volume2, VolumeX, Heart, Share2, Bookmark,
   MessageCircle, Star, ExternalLink, Sparkles, Home, Compass, Search, Plus, Info, X,
   Pause,
-  Play
+  Play,
+  Calendar,
+  Globe
 } from 'lucide-react';
 import { All } from '@/types/all';
 import { useRouter } from "next/navigation";
@@ -21,6 +23,7 @@ interface VideoItem {
   backdrop_path: string;
   release_date?: string;
   first_air_date?: string;
+  original_language?: string;
   genres?: string[];
   vote_average: number;
   media_type: 'movie' | 'tv';
@@ -34,12 +37,13 @@ interface VideoItem {
 }
 
 export default function VideoFeedPage() {
+  const [expanded, setExpanded] = useState(false);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set());
   const [hasMore, setHasMore] = useState(true);
-  // Persisted mute state
+  // Persisted mute state (default true to allow autoplay)
   const [muted, setMuted] = useState<boolean>(() => {
     try {
       const s = typeof window !== 'undefined' ? localStorage.getItem('videoMuted') : null;
@@ -58,8 +62,7 @@ export default function VideoFeedPage() {
   const videoRefs = useRef<Map<number, HTMLIFrameElement>>(new Map());
   const titleBarTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const currentVideo = videos[currentIndex];
-  const initialMutedRef = useRef<boolean>(muted);
-
+  const firstUserGestureRef = useRef(false); // for user-gesture fallback
 
   const getContentType = (item: Partial<All>): "movie" | "tv" => {
     if ((item as any).media_type) return (item as any).media_type;
@@ -96,6 +99,7 @@ export default function VideoFeedPage() {
       }
     };
   }, [currentIndex]);
+
   // persist muted preference
   useEffect(() => {
     try {
@@ -107,25 +111,27 @@ export default function VideoFeedPage() {
   const sendYouTubeCommand = (iframe: HTMLIFrameElement | undefined | null, func: string, args: any[] = []) => {
     if (!iframe) return;
     try {
+      // YouTube expects a stringified object
       iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
     } catch {
       // ignore
     }
   };
 
-  // toggle mute (only via postMessage; iframe src does NOT include mute param)
+  // toggle mute (only via postMessage; we'll also update state)
   const toggleMute = useCallback(() => {
     setMuted(prev => {
       const next = !prev;
       const iframe = currentVideo ? videoRefs.current.get(currentVideo.id) : undefined;
       if (iframe) {
+        // attempt to set via postMessage
         sendYouTubeCommand(iframe, next ? 'mute' : 'unMute');
       }
       return next;
     });
   }, [currentVideo]);
 
-  // When active iframe loads or when currentVideo changes, apply mute/unMute via postMessage
+  // When active iframe loads or when currentVideo changes, try to apply mute/unMute via postMessage
   useEffect(() => {
     if (!currentVideo) return;
     const iframe = videoRefs.current.get(currentVideo.id);
@@ -134,6 +140,7 @@ export default function VideoFeedPage() {
       return () => clearTimeout(t);
     }
   }, [currentVideo, muted]);
+
   const getRandomPage = () => {
     return Math.floor(Math.random() * 20) + 1;
   };
@@ -157,8 +164,13 @@ export default function VideoFeedPage() {
       if (data.results.length > 0) {
         const shuffled = [...data.results].sort(() => Math.random() - 0.5);
         setVideos(prev => [...prev, ...shuffled]);
-        setFetchedPages(prev => new Set([...prev, randomPage]));
-        setHasMore(fetchedPages.size < 50);
+        setFetchedPages(prev => {
+          const next = new Set(prev);
+          next.add(randomPage);
+          // update hasMore based on next size
+          setHasMore(next.size < 50);
+          return next;
+        });
       } else {
         setHasMore(false);
       }
@@ -171,13 +183,11 @@ export default function VideoFeedPage() {
 
   useEffect(() => {
     fetchVideos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-
 
   // ---------- scroll / swipe handling ----------
   const handleScroll = useCallback((e: WheelEvent) => {
-    // If wheel originates from panel, ignore (panel has its own scroll)
     if (panelRef.current && panelRef.current.contains(e.target as Node)) return;
 
     e.preventDefault();
@@ -237,42 +247,71 @@ export default function VideoFeedPage() {
     };
   }, [handleScroll]);
 
-  // Apply mute state when video changes
+  // Ensure player is playing when currentVideo changes (best-effort)
   useEffect(() => {
-    if (currentVideo) {
+    if (!currentVideo) return;
+    setIsPlaying(true);
+
+    // small delay to let iframe initialize
+    const t = window.setTimeout(() => {
       const iframe = videoRefs.current.get(currentVideo.id);
-      if (iframe && iframe.contentWindow) {
-        // Wait a bit for iframe to be ready
-        setTimeout(() => {
-          const command = muted ? 'mute' : 'unMute';
-          iframe.contentWindow?.postMessage(
-            JSON.stringify({ event: 'command', func: command, args: [] }),
-            '*'
-          );
-        }, 500);
+      if (iframe) {
+        // always try to play; if browser blocks autoplay (unmuted), video will remain muted or paused,
+        // but since we include mute=1 in src autoplay should work
+        sendYouTubeCommand(iframe, 'playVideo', []);
+        // If user preference is unmuted, attempt an unmute. This may be blocked by the browser,
+        // hence we also register a user gesture fallback below.
+        if (!muted) {
+          sendYouTubeCommand(iframe, 'unMute', []);
+        }
       }
-    }
+    }, 350);
+
+    return () => clearTimeout(t);
   }, [currentVideo, muted]);
 
+  // One-time user-gesture fallback: on the first click/tap after load, attempt to unmute.
+  useEffect(() => {
+    if (!currentVideo) return;
+    const onFirstGesture = () => {
+      if (firstUserGestureRef.current) return;
+      firstUserGestureRef.current = true;
+      const iframe = videoRefs.current.get(currentVideo.id);
+      if (iframe) {
+        sendYouTubeCommand(iframe, 'unMute', []);
+        sendYouTubeCommand(iframe, 'playVideo', []);
+      }
+      // we don't need to remove listener explicitly because we used { once: true } below
+    };
+    window.addEventListener('click', onFirstGesture, { once: true, passive: true });
+    return () => {
+      try { window.removeEventListener('click', onFirstGesture as any); } catch { }
+    };
+  }, [currentVideo]);
+
+  // iframeSrc with enablejsapi and origin and mute=1 to allow autoplay reliably
   const iframeSrc = useMemo(() => {
     if (!currentVideo) return '';
     const key = currentVideo.primary_video.key;
-    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&fs=1&playsinline=1`;
+    const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
+    // always include mute=1 in URL so autoplay is allowed; we'll programmatically unMute if user preference is unmuted
+    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=1&origin=${origin}`;
   }, [currentVideo?.primary_video.key]);
 
-
   const togglePlayPause = () => {
+    if (!currentVideo) return;
     const iframe = videoRefs.current.get(currentVideo.id);
     if (!iframe) return;
 
     if (isPlaying) {
-      sendYouTubeCommand(iframe, 'pauseVideo');
+      sendYouTubeCommand(iframe, 'pauseVideo', []);
+      setIsPlaying(false);
     } else {
-      sendYouTubeCommand(iframe, 'playVideo');
-      sendYouTubeCommand(iframe, 'unMute');
+      sendYouTubeCommand(iframe, 'playVideo', []);
+      // if we resume playback and the UI wants sound, try unmuting
+      if (!muted) sendYouTubeCommand(iframe, 'unMute', []);
+      setIsPlaying(true);
     }
-
-    setIsPlaying(!isPlaying);
   };
 
   return (
@@ -351,17 +390,25 @@ backdrop-blur-xs z-50 flex items-center px-4 md:px-6"
                 {/* Iframe Container */}
                 <div className="w-full h-[50vh] md:h-full flex items-center justify-center">
                   <iframe
-                    ref={el => { if (el) videoRefs.current.set(currentVideo.id, el); }}
+                    ref={el => { if (el && currentVideo) videoRefs.current.set(currentVideo.id, el); }}
                     title={currentVideo.title || currentVideo.name || `video-${currentVideo.id}`}
                     src={iframeSrc}
                     className="w-full h-full object-contain bg-black"
                     allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
                     allowFullScreen
-                    style={{ border: 'none', pointerEvents: 'none' }}
+                    style={{ border: 'none', pointerEvents: 'none' }} // allow user interaction (so clicks can unmute)
                     onLoad={(e) => {
                       const iframe = e.currentTarget as HTMLIFrameElement;
-                      videoRefs.current.set(currentVideo.id, iframe);
-                      setTimeout(() => sendYouTubeCommand(iframe, muted ? 'mute' : 'unMute'), 250);
+                      if (currentVideo) videoRefs.current.set(currentVideo.id, iframe);
+
+                      // Try to play and set mute/unMute according to preference
+                      setTimeout(() => {
+                        // We always start with mute=1 in src to allow autoplay.
+                        // Then attempt to set unMute if muted === false (may be blocked by browser until gesture).
+                        sendYouTubeCommand(iframe, 'playVideo', []);
+                        if (!muted) sendYouTubeCommand(iframe, 'unMute', []);
+                        else sendYouTubeCommand(iframe, 'mute', []);
+                      }, 300);
                     }}
                   />
                 </div>
@@ -495,43 +542,73 @@ backdrop-blur-xs z-50 flex items-center px-4 md:px-6"
                     </div>
 
                     {/* Panel Content — panelRef stops propagation so it scrolls independently */}
-                    <div ref={panelRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+                    <div ref={panelRef} className="relative flex-1 overflow-y-auto px-6 py-6 space-y-6">
+
+                      {/* Title & Tags */}
                       <div>
-                        <h2 className="text-white font-bold text-xl md:text-2xl leading-tight mb-3">{currentVideo.title || currentVideo.name}</h2>
+                        <h2 className="text-white font-bold text-xl md:text-2xl leading-tight mb-3">
+                          {currentVideo.title || currentVideo.name}
+                        </h2>
                         <div className="flex items-center gap-2 flex-wrap">
                           <div className="flex items-center gap-1.5 bg-yellow-500/30 px-3 py-1.5 rounded-lg border border-yellow-400/40">
                             <Star className="w-4 h-4 text-yellow-400" fill="currentColor" />
-                            <span className="text-yellow-300 font-bold text-sm">{currentVideo.vote_average.toFixed(1)}</span>
+                            <span className="text-yellow-300 font-bold text-xs">
+                              {currentVideo.vote_average.toFixed(1)}
+                            </span>
                           </div>
-                          <span className="px-3 py-1.5 bg-white/10 rounded-lg border border-white/20 text-white text-xs font-bold uppercase">{currentVideo.media_type}</span>
-                          <span className="px-3 py-1.5 bg-red-500/20 rounded-lg border border-red-400/30 text-red-300 text-xs font-bold uppercase">{currentVideo.primary_video.type}</span>
+                          <span className="px-3 py-1.5 bg-white/10 rounded-lg border border-white/20 text-white text-xs font-bold uppercase">
+                            {currentVideo.media_type}
+                          </span>
+                          {currentVideo.primary_video?.type && (
+                            <span className="px-3 py-1.5 bg-red-500/20 rounded-lg border border-red-400/30 text-red-300 text-xs font-bold uppercase">
+                              {currentVideo.primary_video.type}
+                            </span>
+                          )}
                         </div>
                       </div>
 
                       <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
+                      {/* Overview */}
                       <div>
                         <h4 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
-                          <div className="w-1 h-4 bg-gradient-to-b from-red-500 to-orange-500 rounded-full" /> Overview
+                          <div className="w-1 h-4 bg-gradient-to-b from-red-500 to-orange-500 rounded-full" />
+                          Overview
                         </h4>
-                        <p className="text-white/80 text-sm leading-relaxed">
+
+                        <p
+                          className={`text-white/80 text-sm leading-relaxed transition-all duration-300 ${expanded ? "" : "line-clamp-4"
+                            }`}
+                        >
                           {currentVideo.overview}
                         </p>
+
+                        {currentVideo.overview?.length > 150 && ( // only show button if text is long
+                          <button
+                            onClick={() => setExpanded(!expanded)}
+                            className="mt-2 text-red-400 text-sm font-medium hover:underline"
+                          >
+                            {expanded ? "Read less" : "Read more"}
+                          </button>
+                        )}
                       </div>
 
                       <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
+                      {/* Details */}
                       <div>
                         <h4 className="text-white/60 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
                           <div className="w-1 h-4 bg-gradient-to-b from-red-500 to-orange-500 rounded-full" /> Details
                         </h4>
 
                         <div className="grid grid-cols-2 gap-3">
+                          {/* Media Type */}
                           <div className="col-span-2 p-4 bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/10">
                             <div className="text-white/50 text-xs font-medium mb-1">Media Type</div>
                             <div className="text-white font-bold text-base uppercase">{currentVideo.media_type}</div>
                           </div>
 
+                          {/* Rating */}
                           <div className="p-4 bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/10">
                             <div className="text-white/50 text-xs font-medium mb-1">Rating</div>
                             <div className="flex items-center gap-1">
@@ -540,10 +617,40 @@ backdrop-blur-xs z-50 flex items-center px-4 md:px-6"
                             </div>
                           </div>
 
+                          {/* Video Type */}
                           <div className="p-4 bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/10">
                             <div className="text-white/50 text-xs font-medium mb-1">Video Type</div>
-                            <div className="text-white font-bold text-sm uppercase">{currentVideo.primary_video.type}</div>
+                            <div className="text-white font-bold text-sm uppercase">
+                              {currentVideo.primary_video?.type || "-"}
+                            </div>
                           </div>
+
+                          {/* Release Date */}
+                          {(currentVideo.release_date || currentVideo.first_air_date) && (
+                            <div className="p-4 bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/10 flex flex-col">
+                              <div className="text-white/50 text-xs font-medium mb-1 flex items-center gap-1">
+                                Release Date
+                              </div>
+                              <div className="text-white font-bold text-sm">
+                                {new Date(
+                                  currentVideo.release_date ?? currentVideo.first_air_date!
+                                ).toLocaleDateString()}
+                              </div>
+                            </div>
+                          )}
+
+
+                          {/* Original Language */}
+                          {currentVideo.original_language && (
+                            <div className="p-4 bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/10 flex flex-col">
+                              <div className="text-white/50 text-xs font-medium mb-1 flex items-center gap-1">
+                                Language
+                              </div>
+                              <div className="text-white font-bold text-sm uppercase">
+                                {currentVideo.original_language}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

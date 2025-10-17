@@ -4,15 +4,16 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-export function useScrollToHash(offset = 80) {
+export function useScrollToHash(offset = 80, ignoreIds: string[] = []) {
     const pathname = usePathname();
 
     useEffect(() => {
-        const hash = window.location.hash?.replace("#", "");
-        if (!hash) return;
+        const scrollToElement = (hash?: string) => {
+            const id = (hash ?? window.location.hash).replace("#", "");
+            if (!id) return false;
+            if (ignoreIds.includes(id)) return false;
 
-        const scrollToElement = () => {
-            const el = document.getElementById(hash);
+            const el = document.getElementById(id);
             if (!el) return false;
 
             const top = el.getBoundingClientRect().top + window.scrollY - offset;
@@ -20,18 +21,28 @@ export function useScrollToHash(offset = 80) {
             return true;
         };
 
-        // Try immediately
+        // Try immediately (when route changes)
         if (scrollToElement()) return;
 
-        // Retry until element exists (handles route load delays)
+        // Retry until element exists (handles async renders)
         let retries = 0;
-        const interval = setInterval(() => {
+        const interval = window.setInterval(() => {
             retries++;
             if (scrollToElement() || retries > 15) {
                 clearInterval(interval);
             }
         }, 200);
 
-        return () => clearInterval(interval);
-    }, [pathname, offset]);
+        // Also listen for hashchange events (clicks that only change the fragment)
+        const onHashChange = () => {
+            // attempt to scroll, honoring ignoreIds
+            scrollToElement(window.location.hash);
+        };
+        window.addEventListener("hashchange", onHashChange);
+
+        return () => {
+            clearInterval(interval);
+            window.removeEventListener("hashchange", onHashChange);
+        };
+    }, [pathname, offset, ignoreIds]);
 }

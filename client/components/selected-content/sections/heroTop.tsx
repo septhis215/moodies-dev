@@ -333,8 +333,6 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
     const isTV = data.info.content_type === "tv";
     const tvData = isTV ? (data as TvDetailsData) : null;
 
-    console.log("API Results: ", data);
-
     return {
       id: data.info.id,
       title: data.info.title,
