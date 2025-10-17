@@ -8,7 +8,10 @@ import {
   Pause,
   Play,
   Calendar,
-  Globe
+  Globe,
+  ChevronDown,
+  Scroll,
+  ScrollIcon
 } from 'lucide-react';
 import { All } from '@/types/all';
 import { useRouter } from "next/navigation";
@@ -80,7 +83,21 @@ export default function VideoFeedPage() {
   const href = currentVideo
     ? `/${getContentType(currentVideo) === 'tv' ? 'tv' : 'movies'}/${currentVideo.id}`
     : undefined;
+  const [showScrollHint, setShowScrollHint] = useState(true);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      if (containerRef.current) {
+        const scrollTop = containerRef.current.scrollTop;
+        if (scrollTop > 50) setShowScrollHint(false);
+        else setShowScrollHint(true);
+      }
+    };
+
+    const container = containerRef.current;
+    if (container) container.addEventListener('scroll', handleScroll);
+    return () => container?.removeEventListener('scroll', handleScroll);
+  }, []);
   // Auto-hide title bar after 3 seconds
   useEffect(() => {
     setTitleBarVisible(true);
@@ -706,6 +723,35 @@ backdrop-blur-xs z-50 flex items-center px-4 md:px-6"
             </div>
           </motion.div>
         )}
+        <AnimatePresence>
+          {showScrollHint && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.4 }}
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-40"
+            >
+
+              <div
+               
+                className="flex flex-col items-center"
+              >
+                <svg
+                  className="w-6 h-8 text-white"
+                  viewBox="0 0 24 40"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect x="2" y="2" width="20" height="36" rx="10" />
+                  <circle className="scroll-wheel" cx="12" cy="10" r="2" fill="currentColor" />
+                </svg>
+                <span className="text-xs text-white/70 mt-1 tracking-wide">Scroll</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div >
   );

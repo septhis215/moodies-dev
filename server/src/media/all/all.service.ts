@@ -1291,15 +1291,18 @@ export class AllService implements OnModuleInit {
 
         return { posters, backdrops };
     }
-
     async getVideoFeed(page: number = 1, mediaType?: 'movie' | 'tv') {
         try {
             const requests: any = [];
             const today = new Date();
             const todayStr = today.toISOString().split("T")[0];
             const pastDate = new Date();
-            pastDate.setFullYear(pastDate.getFullYear() - 2); // Last 2 years
+            pastDate.setFullYear(pastDate.getFullYear() - 2);
             const pastDateStr = pastDate.toISOString().split("T")[0];
+
+            // Generate a session seed that changes periodically but stays consistent within a session
+            const sessionSeed = Math.floor(Date.now() / (1000 * 60 * 15)); // Changes every 15 minutes
+            const pageSeed = sessionSeed + page;
 
             // Vary the content sources based on page for more diversity
             const pageOffset = Math.floor((page - 1) / 3);
@@ -1309,8 +1312,10 @@ export class AllService implements OnModuleInit {
                     this.tmdb(`trending/movie/week?page=${page}`),
                     this.tmdb(`movie/popular?page=${page + pageOffset}`),
                     this.tmdb(`movie/now_playing?page=${page}`),
-                    this.tmdb(`movie/upcoming?page=${page}`),
                     this.tmdb(`discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${pastDateStr}&page=${page}`),
+                    this.tmdb(`discover/movie?with_original_language=ko&sort_by=popularity.desc&page=${page}&include_adult=false&without_keywords=13090,190720`),
+                    // Add variety with different sort orders
+                    this.tmdb(`discover/movie?sort_by=vote_average.desc&vote_count.gte=200&page=${page}`),
                 );
             }
 
@@ -1321,6 +1326,9 @@ export class AllService implements OnModuleInit {
                     this.tmdb(`tv/on_the_air?page=${page}`),
                     this.tmdb(`tv/airing_today?page=${page}`),
                     this.tmdb(`discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${pastDateStr}&page=${page}`),
+                    this.tmdb(`discover/tv?with_original_language=ko&sort_by=popularity.desc&page=${page}&include_adult=false&without_keywords=13090,190720`),
+                    // Add variety with different genres periodically
+                    this.tmdb(`discover/tv?sort_by=vote_average.desc&vote_count.gte=200&page=${page}`),
                 );
             }
 
@@ -1341,25 +1349,27 @@ export class AllService implements OnModuleInit {
                 new Map(filteredItems.map(item => [item.id, item])).values()
             );
 
-            // --- SCORE WITH LIGHT RANDOMNESS ---
-            // jitter controls how much randomness is injected (small value => light randomness)
-            const jitter = 1.25; // tweak this: 0 = deterministic score-only, 2 = more random
-            const scoredMixed = this.seededShuffle(uniqueItems, page, jitter);
+            // Enhanced randomization with session seed
+            const jitter = 2.0; // Increased for more variety
+            const scoredMixed = this.seededShuffle(uniqueItems, pageSeed, jitter);
 
-            // Pick the batch to enrich (keep this conservative for performance)
-            const batchSize = 30;
+            // Dynamically adjust batch size for more variety
+            const batchSize = 35; // Increased to check more items
             const itemsToEnrich = scoredMixed.slice(0, batchSize);
 
-            const itemsWithVideos = await this.enrichWithVideos(itemsToEnrich, page);
+            const itemsWithVideos = await this.enrichWithVideos(itemsToEnrich, pageSeed);
 
             // Filter to ensure we have at least some items (and have primary_video)
             const validItems = itemsWithVideos.filter(item => item.primary_video);
 
+            // Apply final shuffle to results for variety
+            const finalResults = this.applyFinalShuffle(validItems, pageSeed);
+
             return {
-                results: validItems,
+                results: finalResults,
                 page,
                 total_pages: 100,
-                hasMore: page < 100 && validItems.length > 0
+                hasMore: page < 100 && finalResults.length > 0
             };
         } catch (error) {
             console.error('Error fetching video feed:', error);
@@ -1368,68 +1378,121 @@ export class AllService implements OnModuleInit {
     }
 
     /**
-     * Seeded shuffle that scores items, mixes new releases through the feed,
-     * and applies a small deterministic jitter to add light randomness.
-     *
-     * - `array`: items to score
-     * - `seed`: page seed (use page number or other per-request seed)
-     * - `jitter`: magnitude of random jitter (0 = none)
+     * Apply final shuffle to results while maintaining quality tiers
      */
-    private seededShuffle(array: any[], seed: number, jitter = 1.25): any[] {
-        // deterministic pseudo-random generator per item using sin (fast & reproducible)
-        const seededRandomForId = (id: number | string) => {
-            // convert id to number-ish value
-            const n = typeof id === 'number' ? id : parseInt(String(id).replace(/\D/g, '') || '0', 10);
-            const x = Math.sin(seed * 9301 + n * 49297) * 43758.5453123;
-            return Math.abs(x - Math.floor(x)); // 0..1
+    private applyFinalShuffle(items: any[], seed: number): any[] {
+        if (items.length === 0) return items;
+
+        // Group items into quality tiers
+        const tiers = {
+            premium: [] as any[],
+            high: [] as any[],
+            medium: [] as any[]
         };
 
-        // Score all items
+        items.forEach(item => {
+            const score = this.calculateItemQualityScore(item);
+            if (score >= 45) tiers.premium.push(item);
+            else if (score >= 35) tiers.high.push(item);
+            else tiers.medium.push(item);
+        });
+
+        // Shuffle within each tier
+        const shuffledPremium = this.seededShuffleArray(tiers.premium, seed);
+        const shuffledHigh = this.seededShuffleArray(tiers.high, seed + 100);
+        const shuffledMedium = this.seededShuffleArray(tiers.medium, seed + 200);
+
+        // Mix tiers with weighted distribution
+        const result: any[] = [];
+        let pIdx = 0, hIdx = 0, mIdx = 0;
+
+        while (pIdx < shuffledPremium.length || hIdx < shuffledHigh.length || mIdx < shuffledMedium.length) {
+            // 2 premium items
+            for (let i = 0; i < 2 && pIdx < shuffledPremium.length; i++) {
+                result.push(shuffledPremium[pIdx++]);
+            }
+            // 1 high quality item
+            if (hIdx < shuffledHigh.length) {
+                result.push(shuffledHigh[hIdx++]);
+            }
+            // 1 premium item
+            if (pIdx < shuffledPremium.length) {
+                result.push(shuffledPremium[pIdx++]);
+            }
+            // 1 medium quality item for variety
+            if (mIdx < shuffledMedium.length) {
+                result.push(shuffledMedium[mIdx++]);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Seeded shuffle with enhanced randomization and Korean content mixing
+     */
+    private seededShuffle(array: any[], seed: number, jitter = 2.0): any[] {
+        const seededRandomForId = (id: number | string, offset = 0) => {
+            const n = typeof id === 'number' ? id : parseInt(String(id).replace(/\D/g, '') || '0', 10);
+            const x = Math.sin((seed + offset) * 9301 + n * 49297) * 43758.5453123;
+            return Math.abs(x - Math.floor(x));
+        };
+
+        // Score all items and categorize
         const scoredItems = array.map(item => ({
             item,
             qualityScore: this.calculateItemQualityScore(item),
-            isNewRelease: this.isRecentOrUpcoming(item)
+            isNewRelease: this.isRecentOrUpcoming(item),
+            isKorean: item.original_language === 'ko'
         }));
 
-        // Sort comparator that prioritizes qualityScore but adds a tiny jitter
+        // Enhanced sort with more randomness
         const compareWithJitter = (a: any, b: any) => {
-            const scoreDiff = b.qualityScore - a.qualityScore; // higher score first
+            const scoreDiff = b.qualityScore - a.qualityScore;
             if (jitter === 0) return scoreDiff;
 
-            // deterministic random contribution in range [-0.5, +0.5]
-            const randA = seededRandomForId(a.item.id ?? a.item.key ?? (Math.random() * 1000000));
-            const randB = seededRandomForId(b.item.id ?? b.item.key ?? (Math.random() * 1000000));
+            const randA = seededRandomForId(a.item.id ?? (Math.random() * 1000000));
+            const randB = seededRandomForId(b.item.id ?? (Math.random() * 1000000));
+            const randDiff = (randB - randA);
+            const randomFactor = randDiff * jitter;
 
-            // center around 0
-            const randDiff = (randB - randA); // range approx [-1..1]
-
-            // scale jitter so it is clearly smaller than typical score differences
-            const randomFactor = randDiff * (jitter);
-
-            // combine primary score and small random factor
             return scoreDiff + randomFactor;
         };
 
-        // Separate new releases and regular content to mix them
+        // Separate into categories for better mixing
         const newReleases = scoredItems.filter(s => s.isNewRelease);
-        const regularContent = scoredItems.filter(s => !s.isNewRelease);
+        const koreanContent = scoredItems.filter(s => !s.isNewRelease && s.isKorean);
+        const regularContent = scoredItems.filter(s => !s.isNewRelease && !s.isKorean);
 
+        // Sort each category
         newReleases.sort(compareWithJitter);
+        koreanContent.sort(compareWithJitter);
         regularContent.sort(compareWithJitter);
 
-        // Mix new releases throughout the feed (every ~3 items)
+        // Mix all categories with weighted distribution
         const mixed: any[] = [];
-        let newIndex = 0;
-        let regularIndex = 0;
+        let newIdx = 0, koreanIdx = 0, regularIdx = 0;
 
-        while (newIndex < newReleases.length || regularIndex < regularContent.length) {
-            // Add N regular items (3 is a good default)
-            for (let i = 0; i < 3 && regularIndex < regularContent.length; i++) {
-                mixed.push(regularContent[regularIndex++].item);
+        while (newIdx < newReleases.length || koreanIdx < koreanContent.length || regularIdx < regularContent.length) {
+            // Add 2-3 regular items
+            const regularCount = Math.floor(seededRandomForId(regularIdx + seed, 100) * 2) + 2;
+            for (let i = 0; i < regularCount && regularIdx < regularContent.length; i++) {
+                mixed.push(regularContent[regularIdx++].item);
             }
-            // Add one new release if available
-            if (newIndex < newReleases.length) {
-                mixed.push(newReleases[newIndex++].item);
+
+            // Add 1 new release
+            if (newIdx < newReleases.length) {
+                mixed.push(newReleases[newIdx++].item);
+            }
+
+            // Add 1 Korean content (increased frequency)
+            if (koreanIdx < koreanContent.length) {
+                mixed.push(koreanContent[koreanIdx++].item);
+            }
+
+            // Occasionally add another Korean item for more visibility
+            if (koreanIdx < koreanContent.length && seededRandomForId(koreanIdx + seed, 200) > 0.6) {
+                mixed.push(koreanContent[koreanIdx++].item);
             }
         }
 
@@ -1437,58 +1500,40 @@ export class AllService implements OnModuleInit {
     }
 
     /**
-     * Pre-filter items with focus on post-2000, popular languages, and new releases
+     * Pre-filter items with enhanced Korean content support
      */
     private preFilterItems(items: any[]): any[] {
         const currentYear = new Date().getFullYear();
-        const currentMonth = new Date().getMonth();
 
         return items.filter(item => {
-            // Filter out adult content
             if (item.adult === true) return false;
-
-            // Filter out items without poster (visual requirement)
             if (!item.poster_path) return false;
 
-            // Check if this is a new/upcoming release
             const releaseYear = this.getItemYear(item);
-            const isNewRelease = releaseYear && releaseYear >= currentYear &&
-                this.isRecentOrUpcoming(item);
+            const isNewRelease = releaseYear && releaseYear >= currentYear && this.isRecentOrUpcoming(item);
+            const isKorean = item.original_language === 'ko';
 
-            // For new releases, skip vote/rating checks
-            if (!isNewRelease) {
-                // Only apply vote/rating filters to older content
-                const minVoteCount = 10; // Lenient for established content
+            // Relaxed filters for Korean content and new releases
+            if (!isNewRelease && !isKorean) {
+                const minVoteCount = 10;
                 if ((item.vote_count || 0) < minVoteCount) return false;
 
-                // Lenient rating filter for established content
                 const minRating = 5.0;
                 if ((item.vote_average || 0) < minRating) return false;
+            } else if (isKorean && !isNewRelease) {
+                // More lenient for Korean content
+                if ((item.vote_count || 0) < 5) return false;
+                if ((item.vote_average || 0) < 4.5) return false;
             }
 
-            // Strict year filtering - post-2000 content only
-            if (releaseYear && releaseYear < 2000) return false;
+            // Relaxed year filtering for Korean content
+            if (releaseYear && releaseYear < (isKorean ? 1995 : 2000)) return false;
 
-            // Filter out content with no overview (likely incomplete data)
             if (!item.overview || item.overview.length < 10) return false;
 
-            // Strict language filtering - focus on major languages only
-            const allowedLanguages = [
-                'en', // English
-                'es', // Spanish
-                'fr', // French
-                'de', // German
-                'ja', // Japanese
-                'ko', // Korean
-                'zh', // Chinese
-                'pt', // Portuguese
-                'it', // Italian
-                'hi'  // Hindi
-            ];
+            const allowedLanguages = ['en', 'es', 'fr', 'de', 'ja', 'ko', 'zh', 'pt', 'it', 'hi'];
 
             if (item.original_language && !allowedLanguages.includes(item.original_language)) {
-                // Even for popular non-allowed languages, be strict
-                // Only allow if extremely popular (500+ votes)
                 if ((item.vote_count || 0) < 500) return false;
             }
 
@@ -1497,58 +1542,27 @@ export class AllService implements OnModuleInit {
     }
 
     /**
-     * Check if item is a recent or upcoming release (within last 3 months or future)
-     */
-    private isRecentOrUpcoming(item: any): boolean {
-        const dateStr = item.release_date || item.first_air_date;
-        if (!dateStr) return false;
-
-        const releaseDate = new Date(dateStr);
-        const today = new Date();
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-        // Consider as new if released in last 3 months or in the future
-        return releaseDate >= threeMonthsAgo;
-    }
-
-    /**
-     * Extract release year from item
-     */
-    private getItemYear(item: any): number | null {
-        const dateStr = item.release_date || item.first_air_date;
-        if (!dateStr) return null;
-
-        const year = parseInt(dateStr.split('-')[0]);
-        return isNaN(year) ? null : year;
-    }
-
-    /**
-     * Quality scoring with boost for new releases
+     * Enhanced quality scoring with Korean content boost
      */
     private calculateItemQualityScore(item: any): number {
         let score = 0;
 
-        // Check if new release
         const isNewRelease = this.isRecentOrUpcoming(item);
+        const isKorean = item.original_language === 'ko';
 
-        // Big boost for new releases
-        if (isNewRelease) {
-            score += 20; // Prioritize new content
-        }
+        if (isNewRelease) score += 20;
 
-        // Popularity weight
-        score += Math.log10((item.popularity || 1) + 1) * 12;
+        // Boost Korean content for visibility
+        if (isKorean) score += 5;
 
-        // Vote average weight (only if has votes)
+        score += Math.log10((item.popularity || 1) + 1) * 8;
+
         if (item.vote_count > 0) {
             score += (item.vote_average || 0) * 3;
         }
 
-        // Vote count weight
         score += Math.log10((item.vote_count || 1) + 1) * 2;
 
-        // Recency bonus for non-new releases
         if (!isNewRelease) {
             const year = this.getItemYear(item);
             if (year) {
@@ -1561,15 +1575,32 @@ export class AllService implements OnModuleInit {
             }
         }
 
-        // Has backdrop bonus
         if (item.backdrop_path) score += 2;
 
-        // Language bonus for English
         if (item.original_language === 'en') score += 4;
-        // Smaller bonus for other major languages
-        else if (item.original_language === 'ko') score += 3;
+        else if (item.original_language === 'ko') score += 5;
 
         return score;
+    }
+
+    private isRecentOrUpcoming(item: any): boolean {
+        const dateStr = item.release_date || item.first_air_date;
+        if (!dateStr) return false;
+
+        const releaseDate = new Date(dateStr);
+        const today = new Date();
+        const threeMonthsAgo = new Date();
+        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+        return releaseDate >= threeMonthsAgo;
+    }
+
+    private getItemYear(item: any): number | null {
+        const dateStr = item.release_date || item.first_air_date;
+        if (!dateStr) return null;
+
+        const year = parseInt(dateStr.split('-')[0]);
+        return isNaN(year) ? null : year;
     }
 
     private seededShuffleArray(array: any[], seed: number): any[] {
@@ -1612,34 +1643,21 @@ export class AllService implements OnModuleInit {
         }
     }
 
-    private async enrichWithVideos(items: any[], page: number) {
+    private async enrichWithVideos(items: any[], seed: number) {
         const enriched: any[] = [];
         const allowedRegions = [
-            "MY", // Malaysia
-            "SG", // Singapore
-            "ID", // Indonesia
-            "TH", // Thailand
-            "PH", // Philippines
-            "VN", // Vietnam
-            "BN", // Brunei
-            "KH", // Cambodia
-            "LA", // Laos
-            "HK", // Hong Kong
-            "TW", // Taiwan
-            "IN", // India
-            "AU", // Australia
-            "NZ", // New Zealand
-            "US", // United States
-            "GB"  // United Kingdom
-        ]; const targetCount = 15;
+            "MY", "SG", "ID", "TH", "PH", "VN", "BN", "KH", "LA",
+            "HK", "TW", "IN", "AU", "NZ", "US", "GB", "KR" // Added KR for Korean content
+        ];
 
+        const targetCount = 20; // Increased target
         const batchSize = 5;
 
         for (let i = 0; i < items.length && enriched.length < targetCount; i += batchSize) {
             const batch = items.slice(i, i + batchSize);
 
             const batchResults = await Promise.allSettled(
-                batch.map(item => this.processItemWithVideos(item, allowedRegions, page))
+                batch.map(item => this.processItemWithVideos(item, allowedRegions, seed))
             );
 
             for (const result of batchResults) {
@@ -1657,27 +1675,25 @@ export class AllService implements OnModuleInit {
         return enriched;
     }
 
-    private async processItemWithVideos(item: any, allowedRegions: string[], page: number) {
+    private async processItemWithVideos(item: any, allowedRegions: string[], seed: number) {
         try {
             const mediaType = item.title ? "movie" : "tv";
             const videosResponse = await this.tmdb(`${mediaType}/${item.id}/videos`);
             const videos = videosResponse.results || [];
 
-            // Filter videos by region, type, and quality
             const filteredVideos = videos.filter(v =>
                 v.site === "YouTube" &&
                 (v.type === "Trailer" || v.type === "Teaser" || v.type === "Clip") &&
                 v.key &&
-                v.key.length > 5 && // Valid YouTube key
+                v.key.length > 5 &&
                 allowedRegions.includes(v.iso_3166_1 ?? null) &&
-                v.name && // Must have a name
-                !v.name.toLowerCase().includes('reaction') && // Filter out reaction videos
-                !v.name.toLowerCase().includes('review') // Filter out review videos
+                v.name &&
+                !v.name.toLowerCase().includes('reaction') &&
+                !v.name.toLowerCase().includes('review')
             );
 
             if (filteredVideos.length === 0) return null;
 
-            // Check availability in parallel with limit
             const checkLimit = Math.min(filteredVideos.length, 5);
             const videosToCheck = filteredVideos.slice(0, checkLimit);
 
@@ -1696,7 +1712,6 @@ export class AllService implements OnModuleInit {
 
             if (availableVideos.length === 0) return null;
 
-            // Score and sort videos
             const scoredVideos = availableVideos.map(v => ({
                 ...v,
                 score: this.calculateVideoScore(v)
@@ -1704,9 +1719,9 @@ export class AllService implements OnModuleInit {
 
             const topVideos = scoredVideos.slice(0, 8);
 
-            // Randomly select primary video from top 3 for variety
-            const primaryCandidates = topVideos.slice(0, Math.min(5, topVideos.length));
-            const primaryIndex = this.getSeededRandom(item.id + page, primaryCandidates.length);
+            // Enhanced primary video selection with more variety
+            const primaryCandidates = topVideos.slice(0, Math.min(6, topVideos.length));
+            const primaryIndex = this.getSeededRandom(item.id + seed, primaryCandidates.length);
             const primaryVideo = primaryCandidates[primaryIndex];
 
             return {
