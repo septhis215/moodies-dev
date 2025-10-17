@@ -119,7 +119,7 @@ export default async function MoviePage({
 
           <hr className="border-white/8 my-14" />
 
-          <MovieDetails data={data} />
+          <MovieDetails data={data} contentId={id}/>
 
           <hr className="border-white/8 my-14" />
           <ReviewsSection reviews={data.reviews} contentId={id} />

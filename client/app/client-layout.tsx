@@ -30,12 +30,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isFeedRoute = pathname.includes('/feed') || pathname === '/discover';
   const isAuthRoute = pathname.startsWith("/auth");
   const isReviewsRoute = pathname.includes("/reviews");
+  const isCreditsRoute = pathname.includes("/credits");
 
   const shouldShowNavbar =
     isMounted &&
     !isNavigating &&
     !isAuthRoute &&
     !isReviewsRoute &&
+    !isCreditsRoute &&
     !isFeedRoute &&  // Add this line
     !isLoading;
 
