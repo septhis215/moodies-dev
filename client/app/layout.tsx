@@ -35,7 +35,9 @@ export default function RootLayout({
       >
         {/* ✅ Wrap everything inside LoadingProvider & ClientLayout */}
         <LoadingProvider>
-          <ClientLayout>{children}</ClientLayout>
+          <ClientLayout>
+            {children}
+          </ClientLayout>
         </LoadingProvider>
       </body>
     </html>

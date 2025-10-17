@@ -108,16 +108,24 @@ export default function ImageVideoCarousel({
     return () => window.removeEventListener("keydown", handleKey);
   }, [lightboxOpen, selectedIndex, images.length, normalizedVideos.length]);
 
-  // scroll selected thumb into center whenever it changes
   useEffect(() => {
     const ref = thumbRefs.current[selectedIndex];
-    if (ref && thumbsContainerRef.current) {
-      ref.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest",
-      });
-    }
+    const container = thumbsContainerRef.current;
+    if (!ref || !container) return;
+
+    // calculate a centered scrollLeft for the container
+    const refLeft = ref.offsetLeft;
+    const refCenter = refLeft + ref.offsetWidth / 2;
+    const targetScrollLeft = Math.max(
+      0,
+      Math.round(refCenter - container.clientWidth / 2)
+    );
+
+    // smooth scroll the container horizontally only
+    container.scrollTo({
+      left: targetScrollLeft,
+      behavior: "smooth",
+    });
   }, [selectedIndex, activeTab]);
 
   const buildImageUrl = (path: string | undefined) => {
@@ -347,7 +355,11 @@ export default function ImageVideoCarousel({
       </div>
 
       {/* Thumbnails: render all so we can scroll and apply distance-based styles */}
-      <div className="overflow-x-hidden py-2" ref={thumbsContainerRef}>
+      <div
+        ref={thumbsContainerRef}
+        className="overflow-x-auto py-2 touch-pan-x scrollbar-none"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         <div className="flex gap-3 items-start px-1">
           {allThumbs.map((item: any, idx: number) => {
             const absoluteIdx = idx;
