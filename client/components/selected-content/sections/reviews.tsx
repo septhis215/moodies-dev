@@ -32,7 +32,7 @@ interface ReviewsSectionProps {
 export default function ReviewsSection({
   reviews,
   contentId,
-  contentType = "movie",
+  contentType,
 }: ReviewsSectionProps) {
   // Normalize incoming reviews to an array
   const reviewsArray: Review[] = Array.isArray(reviews)

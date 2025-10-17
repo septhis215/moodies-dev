@@ -131,9 +131,10 @@ export type TvDetailsData = {
 
 interface DetailsProp {
   data: MovieDetailsData | TvDetailsData;
+  contentId?: string;
 }
 
-export default function ExtraDetails({ data }: DetailsProp) {
+export default function ExtraDetails({ data, contentId }: DetailsProp) {
   // carousel uses a ref-driven single-row scroll
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [providerSearch, setProviderSearch] = useState("");
@@ -297,6 +298,12 @@ export default function ExtraDetails({ data }: DetailsProp) {
     };
   }, [credits.cast.length, itemsPerView]);
 
+  const resolvedContentType: "movie" | "tv" =
+    (info as any)?.content_type === "tv" ? "tv" : "movie";
+
+  const basePath = resolvedContentType === "tv" ? "tv" : "movies";
+  const viewAllHref = contentId ? `/${basePath}/${contentId}/credits` : "#";
+
   return (
     <>
       {/* Cast carousel: single-row horizontal scroll */}
@@ -310,6 +317,12 @@ export default function ExtraDetails({ data }: DetailsProp) {
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              href={viewAllHref}
+              className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
+            >
+              View all casts →
+            </Link>
             {canScrollLeft && (
               <button
                 onClick={scrollPrev}
@@ -391,12 +404,23 @@ export default function ExtraDetails({ data }: DetailsProp) {
           .filter((item) => item.job)
           .some((item) => item.people?.length) && (
           <div>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-              Key Personnel
-            </h2>
-            <p className="text-slate-400 text-sm mb-8">
-              The creative visionaries behind the film
-            </p>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+                  Key Personnel
+                </h2>
+                <p className="text-slate-400 text-sm">
+                  The creative visionaries behind the film
+                </p>
+              </div>
+
+              <Link
+                href={viewAllHref}
+                className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
+              >
+                View all personnel →
+              </Link>
+            </div>
 
             <div className="flex flex-wrap gap-4">
               {getKeyCrewMembers()
@@ -443,9 +467,23 @@ export default function ExtraDetails({ data }: DetailsProp) {
           .filter((item) => item.job)
           .some((item) => item.people?.length) && (
           <div>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-              Creative Team
-            </h2>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+                  Creative Team
+                </h2>
+                <p className="text-slate-400 text-sm">
+                  "Also" creative visionaries behind the film
+                </p>
+              </div>
+
+              <Link
+                href={viewAllHref}
+                className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
+              >
+                View the team →
+              </Link>
+            </div>
             <div className="divide-y divide-white/10">
               {getKeyCrewMembers()
                 .filter((item) => item.job)
