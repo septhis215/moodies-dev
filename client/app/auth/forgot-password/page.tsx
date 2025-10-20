@@ -1,89 +1,74 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
-import Background from "../background";
 import { useRouter } from "next/navigation";
+
+const API =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [msg, setMsg] = useState<string>("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setMsg("");
     setLoading(true);
-    setError("");
-    setSuccess("");
-
     try {
-      const res = await fetch("http://localhost:3333/auth/forget-password", {
+      const res = await fetch(`${API}/auth/check-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-
       const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Email not found");
 
-      if (!res.ok) throw new Error(data.message || "Email not found");
-
-      setSuccess("Password reset link sent successfully!");
-      // Or redirect immediately if your backend doesn't send emails
-      router.push(`/change-password?email=${encodeURIComponent(email)}`);
-    } catch (err: any) {
-      setError(err.message);
+      // If no email service, forward to change-password directly
+      router.push(`/auth/change-password?email=${encodeURIComponent(email)}`);
+    } catch (e: any) {
+      setMsg(e.message || "Unable to process request");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Background />
+    <>
+      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+        Forgot your password?
+      </h2>
+      <p className="mt-2 text-sm text-white/70">
+        Enter the email you used to register and we’ll help you reset it.
+      </p>
 
-      <div className="bg-black/70 backdrop-blur-md p-8 rounded-2xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row items-center gap-6">
-        <div className="w-full md:w-1/2">
-          <Image
-            src="/images/ironmanposter.jpeg"
-            alt="Poster"
-            width={500}
-            height={700}
-            className="rounded-xl shadow-lg"
-          />
-        </div>
+      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="w-full px-4 py-3 rounded-xl bg-white/5 text-white placeholder:text-white/40
+                     border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
+                     focus:border-transparent transition"
+        />
 
-        <div className="w-full md:w-1/2 text-white">
-          <h2 className="text-2xl font-bold mb-4">Forgot Your Password?</h2>
-          <p className="mb-6 text-sm text-gray-300">
-            Enter the email address you used to register with{" "}
-            <span className="text-blue-400">moodies</span>.
-          </p>
+        {msg && <p className="text-amber-300 text-sm">{msg}</p>}
 
-          <form onSubmit={handleSubmit}>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              required
-              className="w-full p-3 mb-4 rounded-lg bg-transparent border border-gray-600 focus:border-blue-400 outline-none"
-            />
-
-            {error && <p className="text-red-400 mb-3 text-sm">{error}</p>}
-            {success && <p className="text-green-400 mb-3 text-sm">{success}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-black hover:bg-gray-700 py-3 rounded-lg font-semibold disabled:opacity-50"
-            >
-              {loading ? "Processing..." : "Submit"}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-3 rounded-xl font-bold
+                     bg-gradient-to-r from-amber-500 to-pink-500
+                     hover:from-amber-400 hover:to-pink-400
+                     shadow-[0_8px_30px_rgba(250,204,21,0.35)]
+                     transition disabled:opacity-60"
+        >
+          {loading ? "Checking..." : "Continue"}
+        </button>
+      </form>
+    </>
   );
 }

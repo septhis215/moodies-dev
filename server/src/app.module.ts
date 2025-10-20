@@ -12,6 +12,7 @@ import { SearchController } from './routes/search/search.controller';
 import { SearchModule } from './routes/search/search.module';
 import { MoodsController } from './routes/moods/moods.controller';
 import { MoodsModule } from './routes/moods/moods.module';
+import { PasswordModule } from './routes/auth/password.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { MoodsModule } from './routes/moods/moods.module';
     PeopleModule,
     SearchModule,
     MoodsModule,
+    PasswordModule,
   ],
   providers: [],
   controllers: [SearchController, MoodsController],

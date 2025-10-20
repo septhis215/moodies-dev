@@ -4,12 +4,15 @@ import { usePathname } from "next/navigation";
 import { NavbarComponent } from "@/components/Navbar";
 import { Suspense, useEffect, useState } from "react";
 import { useLoading } from "./context/LoadingContext";
+import useAutoLogout from "./auth/AutoLogout";
 
 export default function ClientLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  useAutoLogout();
+
   const pathname = usePathname();
   const { isLoading } = useLoading();
   const [isMounted, setIsMounted] = useState(false);
