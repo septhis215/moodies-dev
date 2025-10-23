@@ -292,7 +292,7 @@ export default function ReviewsSection({
       </div>
 
       {/* Write a review form */}
-      <div className="mt-6 rounded-2xl p-6 bg-gradient-to-br from-slate-800/70 to-slate-900/70 border border-white/12 shadow-md">
+      <div className="mt-8 rounded-3xl p-8 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border-2 border-white/10 shadow-2xl">
         <ReviewForm onSubmit={addLocalReview} />
       </div>
     </section>
@@ -397,13 +397,59 @@ function RatingDisplay({ rating }: { rating?: number }) {
 function ReviewForm({
   onSubmit,
 }: {
-  onSubmit: (v: { author: string; content: string; rating?: number }) => void;
+  onSubmit: (v: {
+    author: string;
+    content: string;
+    rating?: number;
+    mood?: string;
+  }) => void;
 }) {
   const [author, setAuthor] = useState("");
   const [content, setContent] = useState("");
   const [rating, setRating] = useState<number | null>(null);
+  const [mood, setMood] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [hoveredStar, setHoveredStar] = useState<number | null>(null);
+
+  const moods = [
+    {
+      emoji: "🎬",
+      label: "Epic",
+      value: "epic",
+      color: "from-purple-500 to-pink-500",
+    },
+    {
+      emoji: "❤️",
+      label: "Loved",
+      value: "loved",
+      color: "from-red-500 to-rose-500",
+    },
+    {
+      emoji: "😄",
+      label: "Fun",
+      value: "fun",
+      color: "from-yellow-500 to-orange-500",
+    },
+    {
+      emoji: "😮",
+      label: "Shocking",
+      value: "shocking",
+      color: "from-blue-500 to-cyan-500",
+    },
+    {
+      emoji: "😴",
+      label: "Boring",
+      value: "boring",
+      color: "from-slate-500 to-gray-500",
+    },
+    {
+      emoji: "💔",
+      label: "Bad",
+      value: "bad",
+      color: "from-gray-600 to-slate-600",
+    },
+  ];
 
   function toggleStar(index: number) {
     const newRating = index * 2;
@@ -413,83 +459,261 @@ function ReviewForm({
   function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
-    if (!content.trim()) {
-      setError("Write something before submitting.");
+
+    if (!author.trim()) {
+      setError("👤 Please enter your name");
       return;
     }
+
+    if (!mood) {
+      setError("🎭 Pick a mood that matches your vibe");
+      return;
+    }
+
+    if (rating === null) {
+      setError("⭐ Don't forget to rate it");
+      return;
+    }
+
+    if (!content.trim() || content.trim().length < 10) {
+      setError("✍️ Tell us more! At least 10 characters");
+      return;
+    }
+
     setSubmitting(true);
     try {
       onSubmit({
-        author: author.trim() || "Anonymous",
+        author: author.trim(),
         content: content.trim(),
-        rating: rating ?? undefined,
+        rating: rating,
+        mood: mood,
       });
       setAuthor("");
       setContent("");
       setRating(null);
+      setMood(null);
     } finally {
       setSubmitting(false);
     }
   }
 
+  const displayRating = hoveredStar !== null ? hoveredStar : rating;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-3">
-        <input
-          value={author}
-          onChange={(e) => setAuthor(e.target.value)}
-          placeholder="Your name (optional)"
-          className="flex-1 bg-slate-800/60 text-slate-100 placeholder-slate-400 rounded-lg px-3 py-2 border border-white/8"
-        />
-        <div className="flex items-center gap-2">
-          <div className="text-xs text-slate-400">Your rating</div>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: 5 }).map((_, i) => {
-              const starValue = (i + 1) * 2;
-              const active = rating !== null && rating >= starValue;
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => toggleStar(i + 1)}
-                  className={`p-1 rounded ${
-                    active ? "bg-yellow-500/10" : "hover:bg-white/6"
-                  }`}
-                >
-                  <Star
-                    size={18}
-                    className={active ? "text-yellow-300" : "text-slate-500"}
-                  />
-                </button>
-              );
-            })}
+    <div className="relative overflow-hidden">
+      {/* Animated background gradient */}
+      <div className="absolute inset-0 animate-pulse" />
+
+      <div className="relative backdrop-blur-sm">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Hero Header */}
+          <div className="text-center pb-4 border-b border-white/10">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 mb-3 shadow-lg">
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-3xl font-black text-white mb-2">
+              Drop Your Review
+            </h3>
+            <p className="text-slate-400">We'd love to hear what you think!</p>
           </div>
-        </div>
+
+          {/* Two Column Layout */}
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Left Column - Quick Info */}
+            <div className="space-y-5">
+              {/* Name Input Card */}
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl p-5 border border-white/10 backdrop-blur">
+                <label className="block text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+                  <span className="text-xl">👤</span>
+                  Who are you?
+                </label>
+                <input
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                  placeholder="Enter your name..."
+                  className="w-full bg-black/30 text-white placeholder-slate-500 rounded-xl px-4 py-3.5 border border-white/5 focus:border-violet-400/50 focus:ring-4 focus:ring-violet-400/10 transition-all outline-none text-lg"
+                />
+              </div>
+
+              {/* Mood Selection Card */}
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl p-5 border border-white/10 backdrop-blur">
+                <label className="block text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+                  <span className="text-xl">🎭</span>
+                  How did it make you feel?
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {moods.map((m) => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setMood(m.value)}
+                      className={`relative flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300 cursor-pointer ${
+                        mood === m.value
+                          ? `bg-gradient-to-br ${m.color} shadow-lg scale-105`
+                          : "bg-black/30 hover:bg-black/50 border border-white/10"
+                      }`}
+                    >
+                      <span className="text-3xl">{m.emoji}</span>
+                      <span
+                        className={`text-xs font-semibold ${
+                          mood === m.value ? "text-white" : "text-slate-400"
+                        }`}
+                      >
+                        {m.label}
+                      </span>
+                      {mood === m.value && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center">
+                          <svg
+                            className="w-3 h-3 text-green-500"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Star Rating Card */}
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl p-5 border border-white/10 backdrop-blur">
+                <label className="block text-sm font-bold text-slate-200 mb-3 flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <span className="text-xl">⭐</span>
+                    Your Score
+                  </span>
+                </label>
+                <div className="flex items-center justify-center gap-1 py-2">
+                  {Array.from({ length: 5 }).map((_, i) => {
+                    const starValue = (i + 1) * 2;
+                    const active =
+                      displayRating !== null && displayRating >= starValue;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => toggleStar(i + 1)}
+                        onMouseEnter={() => setHoveredStar(starValue)}
+                        onMouseLeave={() => setHoveredStar(null)}
+                        className="p-1 transition-transform hover:scale-125 cursor-pointer"
+                      >
+                        <Star
+                          size={36}
+                          className={`transition-all duration-200 ${
+                            active
+                              ? "text-yellow-400 fill-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]"
+                              : "text-slate-700"
+                          }`}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Review Text */}
+            <div className="space-y-5">
+              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl p-5 border border-white/10 backdrop-blur h-full flex flex-col">
+                <label className="block text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
+                  <span className="text-xl">💭</span>
+                  Share your thoughts
+                </label>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="What stood out to you? Any favorite moments? Would you recommend it to others? Share the details..."
+                  rows={11}
+                  className="flex-1 w-full bg-black/30 text-white placeholder-slate-500 rounded-xl px-4 py-3 border border-white/5 focus:border-violet-400/50 focus:ring-4 focus:ring-violet-400/10 transition-all outline-none resize-none"
+                />
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="group relative w-full sm:w-auto px-4 py-2 mt-3 rounded-lg bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white text-sm font-medium shadow cursor-pointer"
+                >
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    {submitting ? (
+                      <>
+                        <svg
+                          className="animate-spin h-5 w-5"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            fill="none"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                        Publishing...
+                      </>
+                    ) : (
+                      <>Post</>
+                    )}
+                  </span>
+                </button>
+                <div className="flex items-center justify-between mt-3 text-xs">
+                  <span
+                    className={`font-medium ${
+                      content.length < 10 ? "text-slate-500" : "text-green-400"
+                    }`}
+                  >
+                    {content.length} characters
+                  </span>
+                  <span className="text-slate-500">
+                    {content.length < 10
+                      ? `${10 - content.length} more needed`
+                      : "✓ Good to go!"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Error Alert */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-3 p-4 bg-red-500/10 border-2 border-red-500/30 rounded-xl backdrop-blur"
+            >
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                <span className="text-lg">⚠️</span>
+              </div>
+              <span className="text-red-300 font-medium">{error}</span>
+            </motion.div>
+          )}
+
+          {/* Submit Section */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 pt-2"></div>
+        </form>
       </div>
-
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder="Write your review — be respectful and constructive."
-        rows={5}
-        className="w-full bg-slate-800/60 text-slate-100 placeholder-slate-400 rounded-lg px-3 py-3 border border-white/8"
-      />
-
-      {error && <div className="text-xs text-red-400">{error}</div>}
-
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white text-sm font-medium shadow cursor-pointer"
-        >
-          {submitting ? "Posting…" : "Post Review"}
-        </button>
-        <div className="text-xs text-slate-400">
-          Your review will appear locally (demo). To save server-side, wire the
-          submit to your API.
-        </div>
-      </div>
-    </form>
+    </div>
   );
 }
