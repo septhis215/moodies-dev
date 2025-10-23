@@ -676,7 +676,6 @@ export default function SearchBarWithSuggestions({
                     <div className="bg-transparent rounded-lg px-2 py-2">
                       <div className="flex items-center justify-between mb-2">
                         <div className="text-xs font-medium text-gray-300">Trending</div>
-
                       </div>
 
                       <div className="space-y-2">
@@ -764,7 +763,6 @@ export default function SearchBarWithSuggestions({
 
         {portalRender}
       </div>
-
       <MobileModal />
     </>
   );

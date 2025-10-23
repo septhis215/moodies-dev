@@ -341,10 +341,10 @@ export default function SearchResultsPage() {
                 const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
                 const params = new URLSearchParams();
 
-                // ✅ Always include query if it exists
+                // Always include query if it exists
                 if (query.trim()) params.append("q", query.trim());
 
-                // ✅ Always include filters even if query exists
+                // Always include filters even if query exists
                 params.append("page", currentPage.toString());
                 params.append("type", filterType);
                 params.append("sort", sortBy);
@@ -594,9 +594,13 @@ export default function SearchResultsPage() {
         );
     };
     const searchInputRef = useRef<HTMLInputElement>(null);
-    const [trendingTerms, setTrendingTerms] = useState<string[]>([
-        'Avengers', 'Stranger Things', 'Batman', 'Marvel', 'Game of Thrones', 'Breaking Bad'
-    ]);
+    const [trendingTerms, setTrendingTerms] = useState<any[]>(
+        [
+            { id: 0, title: 'Avengers', media_type: 'movie' },
+            { id: 0, title: 'Stranger Things', media_type: 'tv' },
+            { id: 0, title: 'Batman', media_type: 'movie' },
+        ]
+    );
     const [loadingTrending, setLoadingTrending] = useState(false);
 
     useEffect(() => {
@@ -611,6 +615,7 @@ export default function SearchResultsPage() {
                     if (data && data.length > 0) {
                         setTrendingTerms(data);
                     }
+                    console.log("Terms: ", trendingTerms);
                 }
             } catch (error) {
                 console.error('Failed to fetch trending terms:', error);
@@ -687,13 +692,17 @@ export default function SearchResultsPage() {
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                     {trendingTerms.map((term, index) => (
                                         <button
-                                            key={term}
-                                            onClick={() => router.push(`/search?q=${encodeURIComponent(term)}`)}
+                                            key={term.id || term.title}
+                                            onClick={() =>
+                                                router.push(`/${term.media_type}/${term.id}`)
+                                            }
                                             className="bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-[#e94f37]/50 rounded-lg px-4 py-3 text-sm font-medium text-gray-300 hover:text-white transition-all text-left"
                                         >
                                             <div className="flex items-center gap-2">
-                                                <span className="text-xs text-[#e94f37] font-semibold mr-1">#{index + 1}</span>
-                                                <span>{term}</span>
+                                                <span className="text-xs text-[#e94f37] font-semibold mr-1">
+                                                    #{index + 1}
+                                                </span>
+                                                <span>{term.title}</span>
                                             </div>
                                         </button>
                                     ))}

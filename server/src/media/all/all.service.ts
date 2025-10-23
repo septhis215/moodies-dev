@@ -1141,7 +1141,7 @@ export class AllService implements OnModuleInit {
                 .map((item: any) => {
                     const id = Number(item?.id) || 0;
                     const title = item?.title ?? item?.name ?? null;
-                    const media_type = item?.media_type ?? (item?.title ? 'movie' : item?.name ? 'tv' : 'unknown');
+                    const media_type = item?.media_type ?? (item?.title ? 'movies' : item?.name ? 'tv' : 'unknown');
                     if (!id || !title) return null;
                     return { id, title: String(title), media_type };
                 })

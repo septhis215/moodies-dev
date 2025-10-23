@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Volume2, VolumeX, Heart, Bookmark, Star, ExternalLink, 
+  Volume2, VolumeX, Heart, Bookmark, Star, ExternalLink,
   Sparkles, Search, Info, X, Pause, Play
 } from 'lucide-react';
 import { All } from '@/types/all';
@@ -39,9 +39,11 @@ export default function VideoFeedPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set());
+  const fetchedPagesRef = useRef<Set<number>>(new Set());
   const [hasMore, setHasMore] = useState(true);
   const [activeCategory, setActiveCategory] = useState<Category>('all');
-  
+  const fetchVideosRef = useRef<() => Promise<void>>(async () => { });
+
   // Persisted mute state
   const [muted, setMuted] = useState<boolean>(() => {
     try {
@@ -51,19 +53,19 @@ export default function VideoFeedPage() {
       return true;
     }
   });
-  
+
   const [panelOpen, setPanelOpen] = useState(false);
   const [titleBarVisible, setTitleBarVisible] = useState(true);
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
-  
+
   const panelRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<number, HTMLIFrameElement>>(new Map());
   const titleBarTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const firstUserGestureRef = useRef(false);
-  
+
   const currentVideo = videos[currentIndex];
   const [showScrollHint, setShowScrollHint] = useState(true);
 
@@ -74,7 +76,7 @@ export default function VideoFeedPage() {
     if ((item as any).number_of_seasons || (item as any).first_air_date || (item as any).name) return "tv";
     return "movie";
   };
-  
+
   const href = currentVideo
     ? `/${getContentType(currentVideo) === 'tv' ? 'tv' : 'movies'}/${currentVideo.id}`
     : undefined;
@@ -97,9 +99,9 @@ export default function VideoFeedPage() {
   useEffect(() => {
     setTitleBarVisible(true);
     if (titleBarTimeoutRef.current) clearTimeout(titleBarTimeoutRef.current);
-    
+
     titleBarTimeoutRef.current = setTimeout(() => setTitleBarVisible(false), 3000);
-    
+
     return () => {
       if (titleBarTimeoutRef.current) clearTimeout(titleBarTimeoutRef.current);
     };
@@ -141,47 +143,60 @@ export default function VideoFeedPage() {
 
   const getRandomPage = () => Math.floor(Math.random() * 20) + 1;
 
-  // Fetch videos based on category
-  const fetchVideos = useCallback(async () => {
-    if (loading || !hasMore) return;
+  async function fetchVideos() {
+    // avoid multiple concurrent fetches
+    if (loading) return;
 
     setLoading(true);
     try {
       const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-      
+
       let endpoint: string;
       let randomPage: number | undefined;
-      
+
       if (activeCategory === 'upcoming') {
         endpoint = `${base}/all/upcoming-trailers-feed?limit=30`;
       } else {
-        randomPage = getRandomPage();
-        if (fetchedPages.has(randomPage)) {
-          setLoading(false);
+        // find an unfetched page up to N attempts
+        let attempts = 0;
+        do {
+          randomPage = getRandomPage();
+          attempts++;
+        } while (fetchedPagesRef.current.has(randomPage) && attempts < 50);
+
+        if (attempts >= 50) {
+          // everything probably fetched
+          setHasMore(false);
           return;
         }
+
         endpoint = `${base}/all/video-feed?page=${randomPage}`;
       }
 
       const res = await fetch(endpoint);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch: ${res.status}`);
+      }
       const data = await res.json();
 
-      // Handle different response formats
       const results = Array.isArray(data) ? data : (data.results || []);
 
       if (results.length > 0) {
         const shuffled = [...results].sort(() => Math.random() - 0.5);
         setVideos(prev => [...prev, ...shuffled]);
-        
+
         if (activeCategory === 'all' && randomPage) {
+          // update ref + state with functional update
           setFetchedPages(prev => {
             const next = new Set(prev);
-            next.add(randomPage);
+            next.add(randomPage!);
+            fetchedPagesRef.current = new Set(next);
+            // if you have 50 pages max:
             setHasMore(next.size < 50);
             return next;
           });
         } else {
-          setHasMore(false); // Upcoming trailers are limited
+          setHasMore(false); // upcoming category limited
         }
       } else {
         setHasMore(false);
@@ -192,7 +207,7 @@ export default function VideoFeedPage() {
     } finally {
       setLoading(false);
     }
-  }, [loading, hasMore, fetchedPages, activeCategory]);
+  }
 
   // Reset and fetch when category changes
   useEffect(() => {
@@ -206,6 +221,10 @@ export default function VideoFeedPage() {
     fetchVideos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
+  // keep ref updated each render
+  useEffect(() => {
+    fetchVideosRef.current = fetchVideos;
+  }, [fetchVideos]); // fetchVideos is function reference but okay; or just [] if not memoized
 
   // Scroll/swipe handling
   const handleScroll = useCallback((e: WheelEvent) => {
@@ -350,11 +369,10 @@ export default function VideoFeedPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setActiveCategory('all')}
-              className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
-                activeCategory === 'all'
-                  ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg shadow-red-500/30'
-                  : 'text-white/70 hover:text-white'
-              }`}
+              className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${activeCategory === 'all'
+                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg shadow-red-500/30'
+                : 'text-white/70 hover:text-white'
+                }`}
             >
               All Videos
             </motion.button>
@@ -362,11 +380,10 @@ export default function VideoFeedPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setActiveCategory('upcoming')}
-              className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${
-                activeCategory === 'upcoming'
-                  ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg shadow-red-500/30'
-                  : 'text-white/70 hover:text-white'
-              }`}
+              className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all ${activeCategory === 'upcoming'
+                ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg shadow-red-500/30'
+                : 'text-white/70 hover:text-white'
+                }`}
             >
               Upcoming
             </motion.button>
@@ -448,18 +465,18 @@ export default function VideoFeedPage() {
                     >
                       <div className="flex items-end justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <motion.h2 
-                            initial={{ y: 10, opacity: 0 }} 
-                            animate={{ y: 0, opacity: 1 }} 
-                            transition={{ delay: 0.06 }} 
+                          <motion.h2
+                            initial={{ y: 10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.06 }}
                             className="text-white font-bold text-lg md:text-2xl line-clamp-2 mb-2"
                           >
                             {currentVideo.title || currentVideo.name}
                           </motion.h2>
-                          <motion.div 
-                            initial={{ y: 10, opacity: 0 }} 
-                            animate={{ y: 0, opacity: 1 }} 
-                            transition={{ delay: 0.12 }} 
+                          <motion.div
+                            initial={{ y: 10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.12 }}
                             className="flex items-center gap-2 flex-wrap"
                           >
                             <div className="flex items-center gap-1 bg-yellow-500/40 px-2.5 py-1 rounded-lg border border-yellow-400/50">
@@ -471,13 +488,13 @@ export default function VideoFeedPage() {
                           </motion.div>
                         </div>
 
-                        <motion.button 
-                          initial={{ scale: 0 }} 
-                          animate={{ scale: 1 }} 
-                          transition={{ delay: 0.18, type: 'spring' }} 
-                          whileHover={{ scale: 1.06 }} 
-                          whileTap={{ scale: 0.95 }} 
-                          onClick={() => setPanelOpen(p => !p)} 
+                        <motion.button
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.28 }}
+                          whileHover={{ scale: 1.06 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setPanelOpen(p => !p)}
                           className={`p-3 rounded-xl transition-all backdrop-blur-md ${panelOpen ? 'bg-white text-black shadow-lg' : 'bg-white/20 border border-white/30 text-white hover:bg-white/30'}`}
                         >
                           <Info className="w-5 h-5" />
@@ -490,18 +507,18 @@ export default function VideoFeedPage() {
                 {/* Collapsed Title Button */}
                 <AnimatePresence>
                   {!titleBarVisible && (
-                    <motion.button 
-                      initial={{ y: 20, opacity: 0 }} 
-                      animate={{ y: 0, opacity: 1 }} 
-                      exit={{ y: 20, opacity: 0 }} 
-                      transition={{ duration: 0.28 }} 
-                      whileHover={{ scale: 1.05 }} 
-                      whileTap={{ scale: 0.95 }} 
-                      onClick={() => setTitleBarVisible(true)} 
+                    <motion.button
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: 20, opacity: 0 }}
+                      transition={{ duration: 0.28 }}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setTitleBarVisible(true)}
                       className="absolute bottom-6 left-4 md:left-8 px-4 py-1.5 bg-black/40 backdrop-blur-md border border-white/30 rounded-xl text-white text-md font-medium hover:bg-black/60 transition-all shadow-lg z-50 flex items-center gap-2"
                     >
                       <Info className="w-4 h-4" />
-                      <span className="sm:inline">{currentVideo.title || currentVideo.name}</span>
+                      <span className="sm:inline">{currentVideo.title}</span>
                     </motion.button>
                   )}
                 </AnimatePresence>
@@ -623,8 +640,16 @@ export default function VideoFeedPage() {
                           <div className="p-4 bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/10">
                             <div className="text-white/50 text-xs font-medium mb-1">Rating</div>
                             <div className="flex items-center gap-1">
-                              <Star className="w-3.5 h-3.5 text-yellow-400" fill="currentColor" />
-                              <span className="text-white font-bold text-base">{currentVideo.vote_average.toFixed(1)}</span>
+                              <span className="flex items-center gap-2 text-white font-bold text-base" aria-label={`Rating ${currentVideo?.vote_average ?? 'No rating'}`}>
+                                {Number.isFinite(+currentVideo?.vote_average) && +currentVideo!.vote_average > 0 ? (
+                                  <>
+                                    <Star className="w-4 h-4 text-yellow-300" />
+                                    <span>{(+currentVideo!.vote_average).toFixed(1)}</span>
+                                  </>
+                                ) : (
+                                  <>New</>
+                                )}
+                              </span>
                             </div>
                           </div>
 
