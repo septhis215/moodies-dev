@@ -302,17 +302,25 @@ export default function CardCarousel<T extends MovieLike>({
     <>
       <style jsx>{scrollbarStyles}</style>
       <section id={sectionId} className="relative w-full py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        {/* Section header */}
-        <div className="mb-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="text-gray-400 text-sm mt-1">{subtitle}</p>
-            )}
-          </div>
+        <div className="mb-8">
+          <h2
+            className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
+            style={{
+              backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            {title}
+          </h2>
+
+          {subtitle && (
+            <p className="text-gray-400 text-xs sm:text-sm mt-2">
+              {subtitle}
+            </p>
+          )}
         </div>
+
 
         {/* Carousel container */}
         <div className="relative group/carousel">

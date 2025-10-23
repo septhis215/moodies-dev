@@ -211,10 +211,20 @@ export default function CelebSection() {
     <section id="celebs" className="relative w-full py-22 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">Your Moodies Icons</h2>
-          </div>
-          <p className="text-gray-400 text-sm mt-1">Discover the most popular stars and rising talents in entertainment</p>
+          <h2
+            className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
+            style={{
+              backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            Your Moodies Icons
+          </h2>
+
+          <p className="text-gray-400 text-xs sm:text-sm mt-2">
+            Discover the most popular stars and rising talents in entertainment
+          </p>
         </motion.div>
 
         <div className="relative group/carousel">

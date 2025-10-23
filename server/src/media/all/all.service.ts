@@ -42,7 +42,11 @@ export type TmdbPerson = {
         overview?: string;
     }[];
 };
-
+export type TrendingTerm = {
+    id: number;
+    title: string;
+    media_type: string; // "movie" | "tv" | "person" | etc.
+};
 function shuffleArray<T>(arr: T[]): T[] {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -1042,7 +1046,133 @@ export class AllService implements OnModuleInit {
             return true;
         });
     }
+    async getSearchSuggestions(query: string, limit: number = 6) {
+        const ttlSec = 60 * 5; // Cache for 5 minutes
+        const cacheKey = `search-suggestions-${query.toLowerCase()}-${limit}`;
 
+        // const cached = await this.redisService.get(cacheKey);
+        // if (cached) {
+        //     try {
+        //         return JSON.parse(cached);
+        //     } catch { }
+        // }
+
+        if (!this.token) {
+            this.logger.warn('TMDB_API_KEY not set; returning empty suggestions');
+            return [];
+        }
+
+        try {
+            // Search for both movies and TV shows
+            const [moviesData, tvData] = await Promise.all([
+                this.tmdb(`${this.baseUrl}/search/movie?language=en-US&query=${encodeURIComponent(query)}&page=1&include_adult=false`),
+                this.tmdb(`${this.baseUrl}/search/tv?language=en-US&query=${encodeURIComponent(query)}&page=1&include_adult=false`)
+            ]);
+
+            const movies = moviesData?.results ?? [];
+            const tvShows = tvData?.results ?? [];
+
+            // Combine and format results
+            const combined = [
+                ...movies.map(item => ({
+                    id: item.id,
+                    title: item.title ?? 'Untitled',
+                    type: 'movie' as const,
+                    year: item.release_date ? new Date(item.release_date).getFullYear() : null,
+                    poster_path: item.poster_path ?? null,
+                    popularity: item.popularity ?? 0,
+                    vote_average: item.vote_average ?? 0,
+                })),
+                ...tvShows.map(item => ({
+                    id: item.id,
+                    title: item.name ?? 'Untitled',
+                    type: 'tv' as const,
+                    year: item.first_air_date ? new Date(item.first_air_date).getFullYear() : null,
+                    poster_path: item.poster_path ?? null,
+                    popularity: item.popularity ?? 0,
+                    vote_average: item.vote_average ?? 0,
+                })),
+            ];
+
+            // Sort by popularity and rating, then limit
+            const results = combined
+                .filter(item => item.poster_path) // Only include items with posters for better UX
+                .sort((a, b) => {
+                    // Prioritize by popularity first, then by rating
+                    const popDiff = b.popularity - a.popularity;
+                    if (Math.abs(popDiff) > 10) return popDiff;
+                    return b.vote_average - a.vote_average;
+                })
+                .slice(0, limit);
+
+            // await this.redisService.set(cacheKey, JSON.stringify(results), ttlSec);
+            return results;
+
+        } catch (err) {
+            this.logger.error(`Failed to fetch search suggestions for "${query}"`, err as any);
+            return [];
+        }
+    }
+
+    async getTrendingSearchTerms(): Promise<TrendingTerm[]> {
+        const ttlSec = 60 * 60; // Cache for 1 hour
+        const cacheKey = 'trending-search-terms';
+
+        // const cached = await this.redisService.get(cacheKey);
+        // if (cached) {
+        //     try {
+        //         return JSON.parse(cached);
+        //     } catch { }
+        // }
+
+        if (!this.token) {
+            this.logger.warn('TMDB_API_KEY not set; returning fallback search terms');
+            return this.getFallbackSearchTerms();
+        }
+
+        try {
+            // Get trending movies and TV shows
+            const trendingData = await this.tmdb(`${this.baseUrl}/trending/all/week?language=en-US&page=1`);
+            const results = Array.isArray(trendingData?.results) ? trendingData.results : [];
+
+            // Map to id/title/media_type and dedupe by id
+            const seen = new Set<number>();
+            const terms: TrendingTerm[] = results
+                .map((item: any) => {
+                    const id = Number(item?.id) || 0;
+                    const title = item?.title ?? item?.name ?? null;
+                    const media_type = item?.media_type ?? (item?.title ? 'movie' : item?.name ? 'tv' : 'unknown');
+                    if (!id || !title) return null;
+                    return { id, title: String(title), media_type };
+                })
+                .filter(Boolean)
+                .filter((t: TrendingTerm) => {
+                    if (seen.has(t.id)) return false;
+                    seen.add(t.id);
+                    return true;
+                })
+                .slice(0, 9);
+
+            if (terms.length === 0) {
+                return this.getFallbackSearchTerms();
+            }
+
+            // await this.redisService.set(cacheKey, JSON.stringify(terms), ttlSec);
+            return terms;
+
+        } catch (err) {
+            this.logger.error('Failed to fetch trending search terms', err as any);
+            return this.getFallbackSearchTerms();
+        }
+    }
+
+    private getFallbackSearchTerms(): TrendingTerm[] {
+        return [
+            { id: 0, title: 'Avengers', media_type: 'movie' },
+            { id: 0, title: 'Stranger Things', media_type: 'tv' },
+            { id: 0, title: 'Batman', media_type: 'movie' },
+        ];
+    }
     async getTrendingReviews(limit = 40): Promise<{
         quote: string;
         name: string;

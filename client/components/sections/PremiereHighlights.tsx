@@ -167,9 +167,23 @@ export default function PremiereHighlights({
   return (
     <section id="premiere" className="py-22 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto  relative">
       <div className="flex items-end justify-between mb-8">
-        <div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">{title}</h2>
-          <p className="text-gray-400 text-base mt-2">{subtitle}</p>
+        <div >
+          <h2
+            className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
+            style={{
+              backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            {title}
+          </h2>
+
+          {subtitle && (
+            <p className="text-gray-400 text-xs sm:text-sm mt-2">
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
 

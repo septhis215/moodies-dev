@@ -2,7 +2,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -39,6 +39,7 @@ import { Button } from '@/components/ui/button';
 import type { All } from '@/types/all';
 import dynamic from "next/dynamic";
 import { createPortal } from 'react-dom';
+import { IconTrendingUp, IconX } from '@tabler/icons-react';
 
 // dynamic import (no SSR)
 const TrailerModal = dynamic(() => import("../../components/sections/TrailerModal"), { ssr: false });
@@ -168,7 +169,6 @@ export default function SearchResultsPage() {
 
     const years = Array.from({ length: 2025 - 1980 + 1 }, (_, i) => 1980 + i);
     const ratings = Array.from({ length: 11 }, (_, i) => i);
-    // Add these after the state declarations (around line 115)
     const decades = [
         { label: '1980s', start: 1980, end: 1989 },
         { label: '1990s', start: 1990, end: 1999 },
@@ -593,14 +593,114 @@ export default function SearchResultsPage() {
             </div>
         );
     };
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const [trendingTerms, setTrendingTerms] = useState<string[]>([
+        'Avengers', 'Stranger Things', 'Batman', 'Marvel', 'Game of Thrones', 'Breaking Bad'
+    ]);
+    const [loadingTrending, setLoadingTrending] = useState(false);
+
+    useEffect(() => {
+        const fetchTrendingTerms = async () => {
+            setLoadingTrending(true);
+            try {
+                const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/all/search/trending-terms`
+                );
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        setTrendingTerms(data);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch trending terms:', error);
+                // Keep fallback terms on error
+            } finally {
+                setLoadingTrending(false);
+            }
+        };
+
+        fetchTrendingTerms();
+    }, []);
 
     if (!query.trim()) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black text-white">
-                <div className="container mx-auto px-4 pt-24 pb-20 text-center">
-                    <Search className="mx-auto mb-6 h-20 w-20 text-gray-500" />
-                    <h1 className="text-3xl font-bold text-gray-300 mb-3">Start Your Search</h1>
-                    <p className="text-gray-400 text-lg">Enter a search term to discover amazing movies and TV shows</p>
+                <div className="container mx-auto px-4 pt-20 pb-10">
+                    <div className="max-w-2xl mx-auto">
+                        {/* Header Section */}
+                        <div className="text-center mb-10">
+                            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800/50 rounded-full mb-6 border border-gray-700">
+                                <Search className="h-8 w-8 text-gray-400" />
+                            </div>
+
+                            <h1 className="text-4xl font-bold text-white mb-2">
+                                Start Your Search
+                            </h1>
+                            <p className="text-gray-400 text-md">
+                                Discover movies and TV shows you'll love
+                            </p>
+                        </div>
+
+                        {/* Search Input */}
+                        <div className="relative mb-8">
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder="Search for movies, series..."
+                                className="w-full bg-gray-800/50 backdrop-blur-sm placeholder:text-gray-500 text-white rounded-full px-6 py-4 text-lg outline-none border border-gray-700 focus:border-[#e94f37] focus:ring-1 focus:ring-[#e94f37] transition-all"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        const value = (e.target as HTMLInputElement).value.trim();
+                                        if (value) {
+                                            router.push(`/search?q=${encodeURIComponent(value)}`);
+                                        }
+                                    }
+                                }}
+                                autoFocus
+                            />
+                            <button
+                                onClick={() => {
+                                    const value = searchInputRef.current?.value.trim();
+                                    if (value) {
+                                        router.push(`/search?q=${encodeURIComponent(value)}`);
+                                    }
+                                }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 bg-[#e94f37] hover:bg-[#e94f37]/90 rounded-full p-2.5 transition-colors"
+                            >
+                                <Search className="h-5 w-5 text-white" />
+                            </button>
+                        </div>
+
+                        {/* Trending Searches */}
+                        <div className="mb-4">
+                            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                                <TrendingUp size={20} className="text-[#e94f37]" />
+                                Trending Searches
+                            </h2>
+
+                            {loadingTrending ? (
+                                <div className="flex justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-700 border-t-[#e94f37]"></div>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {trendingTerms.map((term, index) => (
+                                        <button
+                                            key={term}
+                                            onClick={() => router.push(`/search?q=${encodeURIComponent(term)}`)}
+                                            className="bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-[#e94f37]/50 rounded-lg px-4 py-3 text-sm font-medium text-gray-300 hover:text-white transition-all text-left"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs text-[#e94f37] font-semibold mr-1">#{index + 1}</span>
+                                                <span>{term}</span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         );

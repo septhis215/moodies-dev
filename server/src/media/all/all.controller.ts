@@ -62,6 +62,23 @@ export class AllController {
     const parsedLimit = limit ? parseInt(limit, 20) : 30;
     return this.allService.getUpcomingTrailers(parsedLimit);
   }
+  @Get('search/suggestions')
+  async getSearchSuggestions(
+    @Query('q') query: string,
+    @Query('limit') limit?: string
+  ) {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const parsedLimit = limit ? parseInt(limit, 10) : 5;
+    return this.allService.getSearchSuggestions(query, parsedLimit);
+  }
+
+  @Get('search/trending-terms')
+  async getTrendingSearchTerms() {
+    return this.allService.getTrendingSearchTerms();
+  }
 
   // Enhanced recommendations endpoint with better error handling
   @Get(':type/:id/recommendations')
@@ -198,14 +215,52 @@ export class AllController {
     }
   }
 
+  @Get('upcoming-trailers-feed')
+  async getUpcomingTrailers(
+    @Query('limit') limit?: string,
+  ) {
+    const limitNum = limit ? parseInt(limit, 10) : 30;
+    const trailers = await this.allService.getUpcomingTrailers(limitNum);
 
+    const formatted = trailers.map(item => ({
+      id: item.id,
+      title: item.title,
+      name: item.title,
+      overview: item.overview,
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      release_date: item.release_date,
+      first_air_date: item.release_date,
+      original_language: 'en',
+      genres: item.genres || [],
+      vote_average: item.vote_average,
+      media_type: item.type,
+      primary_video: {
+        key: item.trailer_key,
+        name: `${item.title} - Official Trailer`,
+        type: 'Trailer',
+        site: 'YouTube'
+      },
+      videos: [{
+        key: item.trailer_key,
+        name: `${item.title} - Official Trailer`,
+        type: 'Trailer',
+        site: 'YouTube',
+        official: true,
+      }]
+    }));
+
+    return formatted;
+  }
+
+  // Optimize the existing getVideoFeed with caching
   @Get('video-feed')
   async getVideoFeed(
-    @Query('page') page: string = '1',
-    @Query('mediaType') mediaType?: 'movie' | 'tv'
+    @Query('page') page?: string,
+    @Query('mediaType') mediaType?: 'movie' | 'tv',
   ) {
-    const pageNum = parseInt(page, 10);
-    return this.allService.getVideoFeed(pageNum, mediaType);
+    const pageNum = page ? parseInt(page, 10) : 1;
+    return await this.allService.getVideoFeed(pageNum, mediaType);
   }
 
   @Get('movie/:id/videos')

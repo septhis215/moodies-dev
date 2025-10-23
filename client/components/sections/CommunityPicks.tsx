@@ -85,8 +85,22 @@ export default function CommunityPicks({
     return (
         <section id="community" className="relative w-full py-16 px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl">
             <div className="mb-6">
-                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">{title}</h2>
-                <p className="text-gray-400 text-sm mt-1">{subtitle}</p>
+                <h2
+                    className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
+                    style={{
+                        backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                    }}
+                >
+                    {title}
+                </h2>
+
+                {subtitle && (
+                    <p className="text-gray-400 text-xs sm:text-sm mt-2">
+                        {subtitle}
+                    </p>
+                )}
             </div>
             <InfiniteMovingCards items={reviews} direction="left" speed="very-slow" />
         </section>

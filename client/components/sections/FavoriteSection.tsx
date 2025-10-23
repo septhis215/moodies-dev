@@ -214,10 +214,22 @@ export default function FavoritesSection({
     <section id="favorites" className="relative py-26 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-900 via-black to-gray-900 max-w-7xl mx-auto">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+          <h2
+            className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
+            style={{
+              backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
             {title}
           </h2>
-          <p className="text-gray-400 text-sm mt-1">{subtitle}</p>
+
+          {subtitle && (
+            <p className="text-gray-400 text-xs sm:text-sm mt-2">
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
 

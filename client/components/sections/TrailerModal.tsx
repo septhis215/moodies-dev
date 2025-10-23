@@ -143,7 +143,7 @@ export default function TrailerModal({
                 <div className="flex flex-col flex-1 min-w-0 relative z-10">
                   <h2
                     // clamp ensures title never gets too big on narrow screens or too small on huge screens
-                    style={{ fontSize: 'clamp(1.125rem, 3.2vw, 2.25rem)' }}
+                    style={{ fontSize: 'clamp(1.125rem, 3.2vw, 2rem)' }}
                     className="font-extrabold text-white drop-shadow-2xl leading-tight cursor-pointer mb-2 sm:mb-3 md:mb-4"
                     onClick={() => handleClick(trailer)}
                   >
@@ -203,7 +203,7 @@ export default function TrailerModal({
                 <p
                   className={
                     // responsive text sizing + constrained width for better readability
-                    "text-gray-300 text-sm sm:text-base md:text-lg leading-snug sm:leading-normal md:leading-relaxed max-w-full md:max-w-3xl break-words"
+                    "text-gray-300 text-sm sm:text-base md:text-md leading-snug sm:leading-normal md:leading-relaxed max-w-full md:max-w-3xl break-words"
                   }
                 >
                   {isExpanded
@@ -229,7 +229,7 @@ export default function TrailerModal({
             {trailer.recommendations && trailer.recommendations?.length > 0 && (
               <div className="p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-gray-400 font-semibold text-sm sm:text-base lg:text-lg uppercase tracking-wide">
+                  <h3 className="text-gray-400 font-semibold text-sm sm:text-base lg:text-md uppercase tracking-wide">
                     You Might Also Like
                   </h3>
                   <span className="text-sm text-gray-500 bg-gray-800/50 px-2 py-1 rounded-full">
