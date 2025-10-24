@@ -1,0 +1,657 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "question": "What's your ideal Friday night?",
+      "options": [
+        {
+          "text": "Cozy movie night at home",
+          "genres": ["drama", "romance"],
+          "mood": "relaxed"
+        },
+        {
+          "text": "Action-packed adventure",
+          "genres": ["action", "thriller"],
+          "mood": "energetic"
+        },
+        {
+          "text": "Mind-bending mysteries",
+          "genres": ["mystery", "thriller", "sci-fi"],
+          "mood": "thoughtful"
+        },
+        {
+          "text": "Laughing until I cry",
+          "genres": ["comedy"],
+          "mood": "fun"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "question": "Pick a setting that excites you:",
+      "options": [
+        {
+          "text": "Outer space & distant galaxies",
+          "genres": ["sci-fi", "adventure"],
+          "mood": "adventurous"
+        },
+        {
+          "text": "Medieval castles & kingdoms",
+          "genres": ["fantasy", "adventure"],
+          "mood": "epic"
+        },
+        {
+          "text": "Modern city streets",
+          "genres": ["crime", "thriller", "drama"],
+          "mood": "realistic"
+        },
+        {
+          "text": "Haunted mansions",
+          "genres": ["horror", "mystery"],
+          "mood": "thrilling"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "question": "What emotion do you want to feel?",
+      "options": [
+        {
+          "text": "Heart-warming joy",
+          "genres": ["family", "animation", "comedy"],
+          "mood": "happy"
+        },
+        {
+          "text": "Edge-of-seat suspense",
+          "genres": ["thriller", "horror", "mystery"],
+          "mood": "intense"
+        },
+        {
+          "text": "Deep emotional connection",
+          "genres": ["drama", "romance"],
+          "mood": "emotional"
+        },
+        {
+          "text": "Pure excitement",
+          "genres": ["action", "adventure"],
+          "mood": "energetic"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "question": "Choose your companion:",
+      "options": [
+        {
+          "text": "A loyal sidekick",
+          "genres": ["adventure", "comedy", "family"],
+          "mood": "fun"
+        },
+        {
+          "text": "A mysterious stranger",
+          "genres": ["thriller", "mystery", "romance"],
+          "mood": "intriguing"
+        },
+        {
+          "text": "Going solo",
+          "genres": ["drama", "thriller"],
+          "mood": "independent"
+        },
+        {
+          "text": "A whole squad",
+          "genres": ["action", "comedy", "adventure"],
+          "mood": "social"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "question": "What time of day resonates with you?",
+      "options": [
+        {
+          "text": "Dawn - new beginnings",
+          "genres": ["drama", "romance", "family"],
+          "mood": "hopeful"
+        },
+        {
+          "text": "Noon - peak energy",
+          "genres": ["action", "adventure", "comedy"],
+          "mood": "energetic"
+        },
+        {
+          "text": "Dusk - mysterious transitions",
+          "genres": ["mystery", "thriller", "fantasy"],
+          "mood": "mysterious"
+        },
+        {
+          "text": "Midnight - darkness calls",
+          "genres": ["horror", "thriller", "crime"],
+          "mood": "dark"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "question": "Pick a superpower:",
+      "options": [
+        {
+          "text": "Time travel",
+          "genres": ["sci-fi", "adventure", "fantasy"],
+          "mood": "adventurous"
+        },
+        {
+          "text": "Mind reading",
+          "genres": ["mystery", "thriller", "drama"],
+          "mood": "analytical"
+        },
+        {
+          "text": "Super strength",
+          "genres": ["action", "adventure"],
+          "mood": "powerful"
+        },
+        {
+          "text": "Invisibility",
+          "genres": ["thriller", "mystery", "comedy"],
+          "mood": "sneaky"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "question": "What's your idea of a perfect meal?",
+      "options": [
+        {
+          "text": "Fancy 5-course dinner",
+          "genres": ["drama", "romance"],
+          "mood": "sophisticated"
+        },
+        {
+          "text": "Street food adventure",
+          "genres": ["comedy", "adventure"],
+          "mood": "casual"
+        },
+        {
+          "text": "Home-cooked comfort food",
+          "genres": ["family", "drama"],
+          "mood": "cozy"
+        },
+        {
+          "text": "Quick energy snacks",
+          "genres": ["action", "thriller"],
+          "mood": "fast-paced"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "question": "Choose your weather:",
+      "options": [
+        {
+          "text": "Sunny and bright",
+          "genres": ["comedy", "family", "romance"],
+          "mood": "cheerful"
+        },
+        {
+          "text": "Thunderstorms",
+          "genres": ["thriller", "horror", "drama"],
+          "mood": "dramatic"
+        },
+        {
+          "text": "Misty fog",
+          "genres": ["mystery", "thriller", "fantasy"],
+          "mood": "mysterious"
+        },
+        {
+          "text": "Snow-covered landscape",
+          "genres": ["fantasy", "drama", "adventure"],
+          "mood": "magical"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "question": "Pick a color palette:",
+      "options": [
+        {
+          "text": "Vibrant & colorful",
+          "genres": ["animation", "comedy", "family"],
+          "mood": "joyful"
+        },
+        {
+          "text": "Dark & moody",
+          "genres": ["thriller", "horror", "crime"],
+          "mood": "intense"
+        },
+        {
+          "text": "Warm & golden",
+          "genres": ["romance", "drama", "family"],
+          "mood": "warm"
+        },
+        {
+          "text": "Cool & metallic",
+          "genres": ["sci-fi", "action", "thriller"],
+          "mood": "futuristic"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "question": "What motivates your favorite characters?",
+      "options": [
+        {
+          "text": "Love & relationships",
+          "genres": ["romance", "drama"],
+          "mood": "emotional"
+        },
+        {
+          "text": "Justice & revenge",
+          "genres": ["action", "thriller", "crime"],
+          "mood": "intense"
+        },
+        {
+          "text": "Discovery & knowledge",
+          "genres": ["sci-fi", "mystery", "adventure"],
+          "mood": "curious"
+        },
+        {
+          "text": "Survival",
+          "genres": ["thriller", "horror", "action"],
+          "mood": "tense"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "question": "Choose your soundtrack:",
+      "options": [
+        {
+          "text": "Epic orchestral scores",
+          "genres": ["fantasy", "adventure", "action"],
+          "mood": "epic"
+        },
+        {
+          "text": "Indie acoustic vibes",
+          "genres": ["drama", "romance", "comedy"],
+          "mood": "indie"
+        },
+        {
+          "text": "Eerie ambient sounds",
+          "genres": ["horror", "thriller", "mystery"],
+          "mood": "creepy"
+        },
+        {
+          "text": "Upbeat pop hits",
+          "genres": ["comedy", "family", "romance"],
+          "mood": "upbeat"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "question": "What's your tolerance for plot twists?",
+      "options": [
+        {
+          "text": "Blow my mind!",
+          "genres": ["mystery", "thriller", "sci-fi"],
+          "mood": "surprised"
+        },
+        {
+          "text": "Some surprises are nice",
+          "genres": ["drama", "thriller"],
+          "mood": "balanced"
+        },
+        {
+          "text": "Keep it straightforward",
+          "genres": ["comedy", "family", "romance"],
+          "mood": "simple"
+        },
+        {
+          "text": "I love predicting endings",
+          "genres": ["mystery", "crime"],
+          "mood": "analytical"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "question": "Pick a decade:",
+      "options": [
+        {
+          "text": "The roaring 20s",
+          "genres": ["drama", "romance", "crime"],
+          "mood": "vintage"
+        },
+        {
+          "text": "The groovy 70s",
+          "genres": ["comedy", "drama"],
+          "mood": "retro"
+        },
+        {
+          "text": "The neon 80s",
+          "genres": ["action", "comedy", "sci-fi"],
+          "mood": "nostalgic"
+        },
+        {
+          "text": "The future",
+          "genres": ["sci-fi", "thriller", "action"],
+          "mood": "futuristic"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "question": "What's your favorite type of humor?",
+      "options": [
+        {
+          "text": "Witty one-liners",
+          "genres": ["comedy", "action"],
+          "mood": "clever"
+        },
+        {
+          "text": "Slapstick & physical comedy",
+          "genres": ["comedy", "family"],
+          "mood": "silly"
+        },
+        {
+          "text": "Dark & satirical",
+          "genres": ["comedy", "thriller", "crime"],
+          "mood": "dark"
+        },
+        {
+          "text": "Wholesome & heartwarming",
+          "genres": ["family", "comedy", "romance"],
+          "mood": "sweet"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "question": "Choose your conflict type:",
+      "options": [
+        {
+          "text": "Man vs Nature",
+          "genres": ["adventure", "thriller", "drama"],
+          "mood": "survival"
+        },
+        {
+          "text": "Man vs Self",
+          "genres": ["drama", "mystery"],
+          "mood": "introspective"
+        },
+        {
+          "text": "Man vs Society",
+          "genres": ["drama", "crime", "thriller"],
+          "mood": "rebellious"
+        },
+        {
+          "text": "Man vs Technology",
+          "genres": ["sci-fi", "thriller"],
+          "mood": "cautionary"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "question": "What's your attention span like?",
+      "options": [
+        {
+          "text": "Quick & snappy (TV series)",
+          "genres": ["comedy", "thriller"],
+          "mediaType": "tv",
+          "mood": "bingeable"
+        },
+        {
+          "text": "Slow burn storytelling",
+          "genres": ["drama", "mystery"],
+          "mood": "patient"
+        },
+        {
+          "text": "Fast-paced action",
+          "genres": ["action", "thriller"],
+          "mood": "intense"
+        },
+        {
+          "text": "Long epic sagas (TV series)",
+          "genres": ["fantasy", "drama", "sci-fi"],
+          "mediaType": "tv",
+          "mood": "epic"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "question": "Pick an animal:",
+      "options": [
+        {
+          "text": "Wolf - loyal & fierce",
+          "genres": ["action", "thriller", "adventure"],
+          "mood": "brave"
+        },
+        {
+          "text": "Cat - mysterious & independent",
+          "genres": ["mystery", "thriller"],
+          "mood": "mysterious"
+        },
+        {
+          "text": "Dog - friendly & loyal",
+          "genres": ["family", "comedy", "drama"],
+          "mood": "loyal"
+        },
+        {
+          "text": "Eagle - visionary & free",
+          "genres": ["adventure", "fantasy", "drama"],
+          "mood": "free"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "question": "What scares you most?",
+      "options": [
+        {
+          "text": "The unknown",
+          "genres": ["horror", "mystery", "thriller"],
+          "mood": "fearful"
+        },
+        {
+          "text": "Losing loved ones",
+          "genres": ["drama", "thriller"],
+          "mood": "emotional"
+        },
+        {
+          "text": "Failure",
+          "genres": ["drama", "action"],
+          "mood": "motivated"
+        },
+        {
+          "text": "Nothing - I'm fearless!",
+          "genres": ["action", "adventure", "comedy"],
+          "mood": "confident"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "question": "Choose your ending:",
+      "options": [
+        {
+          "text": "Happily ever after",
+          "genres": ["romance", "family", "comedy"],
+          "mood": "optimistic"
+        },
+        {
+          "text": "Bittersweet",
+          "genres": ["drama", "romance"],
+          "mood": "realistic"
+        },
+        {
+          "text": "Cliffhanger",
+          "genres": ["thriller", "mystery", "sci-fi"],
+          "mood": "curious"
+        },
+        {
+          "text": "Open to interpretation",
+          "genres": ["drama", "mystery", "sci-fi"],
+          "mood": "thoughtful"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "question": "What's your approach to life?",
+      "options": [
+        {
+          "text": "Live fast, die young",
+          "genres": ["action", "thriller", "crime"],
+          "mood": "reckless"
+        },
+        {
+          "text": "Stop and smell the roses",
+          "genres": ["drama", "romance", "family"],
+          "mood": "mindful"
+        },
+        {
+          "text": "Question everything",
+          "genres": ["mystery", "sci-fi", "thriller"],
+          "mood": "analytical"
+        },
+        {
+          "text": "Go with the flow",
+          "genres": ["comedy", "adventure", "romance"],
+          "mood": "easygoing"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "question": "Pick a beverage:",
+      "options": [
+        {
+          "text": "Strong black coffee",
+          "genres": ["thriller", "crime", "drama"],
+          "mood": "intense"
+        },
+        {
+          "text": "Herbal tea",
+          "genres": ["drama", "romance", "family"],
+          "mood": "calm"
+        },
+        {
+          "text": "Energy drink",
+          "genres": ["action", "sci-fi", "adventure"],
+          "mood": "energetic"
+        },
+        {
+          "text": "Fancy cocktail",
+          "genres": ["romance", "comedy", "drama"],
+          "mood": "sophisticated"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "question": "What's your dream vacation?",
+      "options": [
+        {
+          "text": "Tropical beach resort",
+          "genres": ["romance", "comedy", "family"],
+          "mood": "relaxed"
+        },
+        {
+          "text": "Mountain hiking adventure",
+          "genres": ["adventure", "thriller", "drama"],
+          "mood": "adventurous"
+        },
+        {
+          "text": "European city tour",
+          "genres": ["drama", "romance", "comedy"],
+          "mood": "cultured"
+        },
+        {
+          "text": "Staycation with Netflix",
+          "genres": ["comedy", "drama", "thriller"],
+          "mood": "cozy"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "question": "Choose your vehicle:",
+      "options": [
+        {
+          "text": "Sports car",
+          "genres": ["action", "thriller", "crime"],
+          "mood": "fast"
+        },
+        {
+          "text": "Spaceship",
+          "genres": ["sci-fi", "adventure", "fantasy"],
+          "mood": "futuristic"
+        },
+        {
+          "text": "Bicycle",
+          "genres": ["comedy", "family", "drama"],
+          "mood": "eco-friendly"
+        },
+        {
+          "text": "Magic carpet",
+          "genres": ["fantasy", "adventure", "family"],
+          "mood": "magical"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "question": "What's your guilty pleasure?",
+      "options": [
+        {
+          "text": "Cheesy rom-coms",
+          "genres": ["romance", "comedy"],
+          "mood": "romantic"
+        },
+        {
+          "text": "Over-the-top action",
+          "genres": ["action", "adventure"],
+          "mood": "explosive"
+        },
+        {
+          "text": "Reality TV drama",
+          "genres": ["drama", "comedy"],
+          "mediaType": "tv",
+          "mood": "dramatic"
+        },
+        {
+          "text": "Spooky stories",
+          "genres": ["horror", "thriller", "mystery"],
+          "mood": "spooky"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "question": "Pick your spirit:",
+      "options": [
+        {
+          "text": "Optimistic & hopeful",
+          "genres": ["family", "comedy", "romance"],
+          "mood": "positive"
+        },
+        {
+          "text": "Cynical & realistic",
+          "genres": ["drama", "thriller", "crime"],
+          "mood": "realistic"
+        },
+        {
+          "text": "Curious & questioning",
+          "genres": ["mystery", "sci-fi", "drama"],
+          "mood": "inquisitive"
+        },
+        {
+          "text": "Rebellious & bold",
+          "genres": ["action", "thriller", "adventure"],
+          "mood": "rebellious"
+        }
+      ]
+    }
+  ]
+}

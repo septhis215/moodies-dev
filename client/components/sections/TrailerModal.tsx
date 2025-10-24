@@ -140,7 +140,7 @@ export default function TrailerModal({
                 )}
 
                 {/* Title + Pills */}
-                <div className="flex flex-col flex-1 min-w-0 relative z-10">
+                <div className="flex flex-col flex-1 min-w-0 relative z-10 mt-8">
                   <h2
                     // clamp ensures title never gets too big on narrow screens or too small on huge screens
                     style={{ fontSize: 'clamp(1.125rem, 3.2vw, 2rem)' }}
