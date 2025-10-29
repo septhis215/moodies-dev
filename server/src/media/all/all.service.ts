@@ -18,6 +18,7 @@ export type TmdbAll = {
     vote_count?: number;
     popularity?: number;
     origin_country?: string[];
+    original_language?: string;
     recommendations?: TmdbAll[];
     type?: 'movie' | 'tv';
     trailer_key?: string | null;
@@ -106,21 +107,41 @@ export class AllService implements OnModuleInit {
 
     // Generic helper: returns response.data (not only results)
     private async tmdb(endpoint: string) {
-        const normalizedEndpoint = endpoint.startsWith('http')
+        // Normalize baseUrl + endpoint to avoid double-slashes
+        const base = this.baseUrl.replace(/\/+$/, '');       // remove trailing slashes
+        const path = endpoint.startsWith('http')
             ? endpoint
-            : `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+            : `${base}/${endpoint.replace(/^\/+/, '')}`;      // remove leading slashes from endpoint
 
-        const response = await firstValueFrom(
-            this.httpService.get(normalizedEndpoint, {
-                headers: {
-                    Authorization: `Bearer ${this.token}`,
-                    Accept: 'application/json',
-                },
-            }),
-        );
+        try {
+            const response = await firstValueFrom(
+                this.httpService.get(path, {
+                    headers: {
+                        Authorization: `Bearer ${this.token}`,
+                        Accept: 'application/json',
+                    },
+                })
+            );
 
-        return response.data;
+            return response.data;
+        } catch (err: any) {
+            const status = err?.response?.status;
+            if (status === 404) {
+                // Resource not found — return null so callers can skip this item
+                this.logger.warn(`TMDB 404: ${path}`);
+                return null;
+            }
+            if (status === 429) {
+                this.logger.warn(`TMDB rate limited (429) on ${path}`);
+                // optionally implement a short retry/backoff here
+                return null;
+            }
+            // Log and rethrow unexpected errors so higher-level handler can decide
+            this.logger.error(`TMDB request failed: ${path}`, err);
+            throw err;
+        }
     }
+
 
     // === Genres loader (in-memory map) ===
     async loadGenres() {
@@ -1893,6 +1914,313 @@ export class AllService implements OnModuleInit {
 
     async getTvVideos(id: number) {
         return await this.tmdb(`tv/${id}/videos`);
+    }
+
+    async getUpcomingFeeds(page: number = 1, limit: number = 35): Promise<{
+        results: any[];
+        page: number;
+        total_pages: number;
+        hasMore: boolean;
+    }> {
+        const ttlSec = this.CACHE_TTL.TRAILERS;
+        const globalCacheKey = `trailers-upcoming-global`;
+        const pageCacheKey = `trailers-upcoming-page-${page}-${limit}`;
+
+        if (!this.token) {
+            this.logger.warn("TMDB_API_KEY not set; returning empty trailers");
+            return { results: [], page, total_pages: 0, hasMore: false };
+        }
+
+        try {
+            // Check page cache first for instant response
+            // const cachedPage = await this.redisService.get(pageCacheKey);
+            // if (cachedPage) {
+            //     try {
+            //         return JSON.parse(cachedPage);
+            //     } catch { }
+            // }
+
+            const today = new Date();
+            const todayStr = today.toISOString().split("T")[0];
+
+            const futureDate = new Date();
+            futureDate.setMonth(futureDate.getMonth() + 6);
+            const futureDateStr = futureDate.toISOString().split("T")[0];
+
+            // Generate session seed
+            const sessionSeed = Math.floor(Date.now() / (1000 * 60 * 15));
+            const pageSeed = sessionSeed + page;
+
+            // Calculate which TMDB pages to fetch based on our page number
+            // This distributes content across pages for variety
+            const tmdbPagesPerRequest = 4; // Fetch 4 TMDB pages per request
+            const startTmdbPage = ((page - 1) * 2) + 1; // Offset TMDB pages
+            const endTmdbPage = startTmdbPage + tmdbPagesPerRequest;
+
+            const items: TmdbAll[] = [];
+
+            const fetchTrailers = async (mediaType: "movie" | "tv") => {
+                const fetchedItems: TmdbAll[] = [];
+
+                for (let tmdbPage = startTmdbPage; tmdbPage < endTmdbPage; tmdbPage++) {
+                    try {
+                        const url =
+                            mediaType === "movie"
+                                ? `discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${todayStr}&primary_release_date.lte=${futureDateStr}&page=${tmdbPage}`
+                                : `discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&first_air_date.lte=${futureDateStr}&page=${tmdbPage}`;
+
+                        const data = await this.tmdb(url);
+                        const results = data?.results ?? [];
+
+                        // Process with higher concurrency for speed
+                        const trailerTasks = results.map((m: any) => async () => {
+                            const rd = m.release_date ?? m.first_air_date;
+                            if (!rd || new Date(rd) < today) return null;
+
+                            if (!m.poster_path || !m.overview || m.overview.length < 10) return null;
+
+                            try {
+                                // Fetch videos and details in parallel
+                                const [videosData, details] = await Promise.all([
+                                    this.tmdb(`${mediaType}/${m.id}/videos?language=en-US`),
+                                    this.tmdb(`${mediaType}/${m.id}?language=en-US`)
+                                ]);
+
+                                const trailer = (videosData?.results ?? []).find(
+                                    (v: any) =>
+                                        (v.type === "Trailer" || v.type === "Teaser") &&
+                                        v.site === "YouTube" &&
+                                        v.key
+                                );
+
+                                // Store ALL videos for later enrichment, not just the first trailer
+                                const allVideos = videosData?.results ?? [];
+
+                                return {
+                                    id: m.id,
+                                    title: m.title ?? m.name ?? "Untitled",
+                                    overview: m.overview ?? "",
+                                    poster_path: m.poster_path ?? null,
+                                    backdrop_path: m.backdrop_path ?? null,
+                                    release_date: rd,
+                                    vote_average: m.vote_average || 0,
+                                    vote_count: m.vote_count || 0,
+                                    trailer_key: trailer?.key || null, // Make optional since enrichWithVideos will verify
+                                    type: mediaType,
+                                    recommendations: [],
+                                    runtime: mediaType === "movie" ? details.runtime ?? null : null,
+                                    number_of_episodes: mediaType === "tv" ? details.number_of_episodes ?? null : null,
+                                    genres: details.genres ? details.genres.map((g: any) => g.name) : [],
+                                    popularity: m.popularity || 0,
+                                    original_language: m.original_language || 'en',
+                                    // Store videos for enrichment
+                                    videos: allVideos,
+                                } as TmdbAll;
+                            } catch {
+                                return null;
+                            }
+                        });
+
+                        // Higher concurrency limit for faster processing
+                        const pageResults = (await this.withConcurrencyLimit(trailerTasks, 8))
+                            .filter((item): item is TmdbAll => item !== null);
+
+                        fetchedItems.push(...pageResults);
+                    } catch (err) {
+                        this.logger.error(`Failed to fetch ${mediaType} page ${tmdbPage}`, err);
+                    }
+                }
+
+                return fetchedItems;
+            };
+
+            // Fetch both movie and TV concurrently
+            const [movieItems, tvItems] = await Promise.all([
+                fetchTrailers("movie"),
+                fetchTrailers("tv")
+            ]);
+
+            items.push(...movieItems, ...tvItems);
+
+            // Remove duplicates
+            const uniqueItems = Array.from(
+                new Map(items.map(item => [item.id, item])).values()
+            );
+
+            this.logger.log(`Page ${page}: Fetched ${uniqueItems.length} unique items before video enrichment`);
+
+            // Apply shuffling and quality scoring BEFORE enrichment
+            const shuffled = this.shuffleUpcomingTrailers(uniqueItems, pageSeed);
+
+            // Enrich with video availability checks
+            // Request more items than limit to account for videos that might not be available
+            const itemsToEnrich = shuffled.slice(0, Math.min(shuffled.length, limit + 15));
+            const enrichedItems = await this.enrichWithVideos(itemsToEnrich, pageSeed);
+
+            this.logger.log(`Page ${page}: ${enrichedItems.length} items with verified videos`);
+
+            // Take the requested limit from enriched results
+            const paginatedResults = enrichedItems.slice(0, limit);
+
+            // Always assume there's more content for smooth infinite scroll
+            // We'll naturally hit the end when TMDB runs out of pages
+            const hasMore = paginatedResults.length >= limit;
+
+            const response = {
+                results: paginatedResults,
+                page,
+                total_pages: 100, // Virtual total for infinite scroll
+                hasMore
+            };
+
+            // Cache this page result
+            // await this.redisService.set(pageCacheKey, JSON.stringify(response), ttlSec);
+
+            // Populate recommendations in background (don't await)
+            if (paginatedResults.length > 0) {
+                setTimeout(async () => {
+                    const tasks = paginatedResults.map(item => async () => {
+                        try {
+                            item.recommendations = await this.getSmartRecommendations(item.type!, item.id, 3);
+                            return item;
+                        } catch (err) {
+                            this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
+                            return item;
+                        }
+                    });
+
+                    await this.withConcurrencyLimit(tasks, 3);
+                }, 100);
+            }
+
+            return response;
+        } catch (err) {
+            this.logger.error("Failed to fetch upcoming trailers feed", err as any);
+            return { results: [], page, total_pages: 0, hasMore: false };
+        }
+    }
+
+    /**
+     * Shuffle upcoming trailers with quality-based tiering and randomization
+     */
+    private shuffleUpcomingTrailers(items: TmdbAll[], seed: number): TmdbAll[] {
+        if (items.length === 0) return items;
+
+        // Calculate quality score for each item
+        const scoredItems = items.map(item => ({
+            item,
+            qualityScore: this.calculateUpcomingQualityScore(item),
+            releaseDateScore: this.getReleaseDateProximityScore(item),
+        }));
+
+        // Sort by combined score with randomization
+        const jitter = 3.0; // Randomness factor
+
+        const seededRandomForId = (id: number, offset = 0) => {
+            const x = Math.sin((seed + offset) * 9301 + id * 49297) * 43758.5453123;
+            return Math.abs(x - Math.floor(x));
+        };
+
+        scoredItems.sort((a, b) => {
+            const scoreDiff = (b.qualityScore + b.releaseDateScore) - (a.qualityScore + a.releaseDateScore);
+
+            // Add randomization
+            const randA = seededRandomForId(a.item.id);
+            const randB = seededRandomForId(b.item.id);
+            const randomFactor = (randB - randA) * jitter;
+
+            return scoreDiff + randomFactor;
+        });
+
+        // Group into tiers after sorting
+        const tiers = {
+            premium: [] as TmdbAll[],
+            high: [] as TmdbAll[],
+            medium: [] as TmdbAll[],
+        };
+
+        scoredItems.forEach(scored => {
+            const totalScore = scored.qualityScore + scored.releaseDateScore;
+            if (totalScore >= 45) tiers.premium.push(scored.item);
+            else if (totalScore >= 30) tiers.high.push(scored.item);
+            else tiers.medium.push(scored.item);
+        });
+
+        // Mix tiers with weighted distribution
+        const result: TmdbAll[] = [];
+        let pIdx = 0, hIdx = 0, mIdx = 0;
+
+        while (pIdx < tiers.premium.length || hIdx < tiers.high.length || mIdx < tiers.medium.length) {
+            // 3 premium items
+            for (let i = 0; i < 3 && pIdx < tiers.premium.length; i++) {
+                result.push(tiers.premium[pIdx++]);
+            }
+
+            // 2 high quality items
+            for (let i = 0; i < 2 && hIdx < tiers.high.length; i++) {
+                result.push(tiers.high[hIdx++]);
+            }
+
+            // 1 medium quality item for variety
+            if (mIdx < tiers.medium.length) {
+                result.push(tiers.medium[mIdx++]);
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Calculate quality score for upcoming trailers
+     */
+    private calculateUpcomingQualityScore(item: TmdbAll): number {
+        let score = 0;
+
+        // Popularity score (log scale)
+        score += Math.log10((item.popularity || 1) + 1) * 10;
+
+        // Rating score
+        if (item.vote_average && item.vote_average > 0) {
+            score += item.vote_average * 3;
+        }
+
+        // Vote count score (indicates buzz/anticipation)
+        score += Math.log10((item.vote_count || 1) + 1) * 5;
+
+        // Content quality indicators
+        if (item.backdrop_path) score += 3;
+        if (item.overview && item.overview.length > 100) score += 2;
+        if (item.genres && item.genres.length > 0) score += 2;
+
+        // Media type preference
+        if (item.type === 'movie') score += 2;
+
+        // Language diversity bonus
+        if (item.original_language === 'en') score += 3;
+        else if (['ko', 'ja', 'es', 'fr'].includes(item.original_language || '')) score += 4;
+
+        return score;
+    }
+
+    /**
+     * Score based on release date proximity (sooner releases score higher)
+     */
+    private getReleaseDateProximityScore(item: TmdbAll): number {
+        if (!item.release_date) return 0;
+
+        const releaseDate = new Date(item.release_date);
+        const today = new Date();
+        const daysUntilRelease = Math.floor((releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Score based on proximity
+        if (daysUntilRelease <= 7) return 20;        // Within a week
+        if (daysUntilRelease <= 14) return 15;       // Within 2 weeks
+        if (daysUntilRelease <= 30) return 12;       // Within a month
+        if (daysUntilRelease <= 60) return 8;        // Within 2 months
+        if (daysUntilRelease <= 90) return 5;        // Within 3 months
+        if (daysUntilRelease <= 180) return 2;       // Within 6 months
+
+        return 0;
     }
 }
 

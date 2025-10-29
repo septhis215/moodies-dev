@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Volume2, VolumeX, Heart, Bookmark, Star, ExternalLink,
-  Sparkles, Search, Info, X, Pause, Play
+  Sparkles, Search, Info, X, Pause, Play,
+  Calendar
 } from 'lucide-react';
 import { All } from '@/types/all';
 import Link from 'next/link';
@@ -152,12 +153,13 @@ export default function VideoFeedPage() {
       const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
       let endpoint: string;
-      let randomPage: number | undefined;
 
       if (activeCategory === 'upcoming') {
+       
         endpoint = `${base}/all/upcoming-trailers-feed?limit=30`;
       } else {
         // find an unfetched page up to N attempts
+        let randomPage: number;
         let attempts = 0;
         do {
           randomPage = getRandomPage();
@@ -171,6 +173,14 @@ export default function VideoFeedPage() {
         }
 
         endpoint = `${base}/all/video-feed?page=${randomPage}`;
+
+        // Track fetched page only for 'all' category
+        setFetchedPages(prev => {
+          const next = new Set(prev);
+          next.add(randomPage);
+          fetchedPagesRef.current = new Set(next);
+          return next;
+        });
       }
 
       const res = await fetch(endpoint);
@@ -185,18 +195,12 @@ export default function VideoFeedPage() {
         const shuffled = [...results].sort(() => Math.random() - 0.5);
         setVideos(prev => [...prev, ...shuffled]);
 
-        if (activeCategory === 'all' && randomPage) {
-          // update ref + state with functional update
-          setFetchedPages(prev => {
-            const next = new Set(prev);
-            next.add(randomPage!);
-            fetchedPagesRef.current = new Set(next);
-            // if you have 50 pages max:
-            setHasMore(next.size < 50);
-            return next;
-          });
+        // For 'all' category, check if we've fetched enough pages
+        if (activeCategory === 'all') {
+          setHasMore(fetchedPagesRef.current.size < 100);
         } else {
-          setHasMore(false); // upcoming category limited
+          // For 'upcoming', always allow more fetches (backend handles variety)
+          setHasMore(true);
         }
       } else {
         setHasMore(false);
@@ -479,10 +483,31 @@ export default function VideoFeedPage() {
                             transition={{ delay: 0.12 }}
                             className="flex items-center gap-2 flex-wrap"
                           >
-                            <div className="flex items-center gap-1 bg-yellow-500/40 px-2.5 py-1 rounded-lg border border-yellow-400/50">
-                              <Star className="w-3.5 h-3.5 text-yellow-300" fill="currentColor" />
-                              <span className="text-yellow-100 font-bold text-sm">{currentVideo.vote_average.toFixed(1)}</span>
-                            </div>
+                            {Number.isFinite(Number(currentVideo?.vote_average)) && (
+                              (() => {
+                                const va = Number(currentVideo.vote_average);
+                                const isUpcoming = va === 0;
+
+                                return (
+                                  <div
+                                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border ${isUpcoming
+                                      ? "bg-indigo-500/40 text-indigo-100 border-indigo-400/50"
+                                      : "bg-yellow-500/40 text-yellow-100 border-yellow-400/50"
+                                      }`}
+                                  >
+                                    {/* hide star for "Upcoming" */}
+                                    {!isUpcoming && (
+                                      <Star className="w-3.5 h-3.5 text-yellow-300" fill="currentColor" />
+                                    )}
+
+                                    <span className="font-bold text-sm">
+                                      {isUpcoming ? "Upcoming" : va.toFixed(1)}
+                                    </span>
+                                  </div>
+                                );
+                              })()
+                            )}
+
                             <span className="px-2.5 py-1 bg-white/20 rounded-lg border border-white/30 text-white text-xs font-bold uppercase">{currentVideo.media_type}</span>
                             <span className="px-2.5 py-1 bg-red-500/30 rounded-lg border border-red-400/40 text-red-200 text-xs font-bold uppercase">{currentVideo.primary_video.type}</span>
                           </motion.div>
@@ -596,11 +621,31 @@ export default function VideoFeedPage() {
                         <h2 className="text-white font-bold text-xl md:text-2xl leading-tight mb-3">
                           {currentVideo.title || currentVideo.name}
                         </h2>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className="flex items-center gap-1.5 bg-yellow-500/30 px-3 py-1.5 rounded-lg border border-yellow-400/40">
-                            <Star className="w-4 h-4 text-yellow-400" fill="currentColor" />
-                            <span className="text-yellow-300 font-bold text-xs">{currentVideo.vote_average.toFixed(1)}</span>
-                          </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {Number.isFinite(Number(currentVideo?.vote_average)) && (
+                            (() => {
+                              const va = Number(currentVideo.vote_average);
+                              const isUpcoming = va === 0;
+
+                              return (
+                                <div
+                                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border ${isUpcoming
+                                    ? "bg-indigo-500/40 text-indigo-100 border-indigo-400/50"
+                                    : "bg-yellow-500/40 text-yellow-100 border-yellow-400/50"
+                                    }`}
+                                >
+                                  {/* hide star for "Upcoming" */}
+                                  {!isUpcoming && (
+                                    <Star className="w-3.5 h-3.5 text-yellow-300" fill="currentColor" />
+                                  )}
+
+                                  <span className="font-bold text-sm">
+                                    {isUpcoming ? "Upcoming" : va.toFixed(1)}
+                                  </span>
+                                </div>
+                              );
+                            })()
+                          )}
                           <span className="px-3 py-1.5 bg-white/10 rounded-lg border border-white/20 text-white text-xs font-bold uppercase">{currentVideo.media_type}</span>
                           {currentVideo.primary_video?.type && (
                             <span className="px-3 py-1.5 bg-red-500/20 rounded-lg border border-red-400/30 text-red-300 text-xs font-bold uppercase">{currentVideo.primary_video.type}</span>
@@ -636,23 +681,6 @@ export default function VideoFeedPage() {
                             <div className="text-white/50 text-xs font-medium mb-1">Media Type</div>
                             <div className="text-white font-bold text-base uppercase">{currentVideo.media_type}</div>
                           </div>
-
-                          <div className="p-4 bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/10">
-                            <div className="text-white/50 text-xs font-medium mb-1">Rating</div>
-                            <div className="flex items-center gap-1">
-                              <span className="flex items-center gap-2 text-white font-bold text-base" aria-label={`Rating ${currentVideo?.vote_average ?? 'No rating'}`}>
-                                {Number.isFinite(+currentVideo?.vote_average) && +currentVideo!.vote_average > 0 ? (
-                                  <>
-                                    <Star className="w-4 h-4 text-yellow-300" />
-                                    <span>{(+currentVideo!.vote_average).toFixed(1)}</span>
-                                  </>
-                                ) : (
-                                  <>New</>
-                                )}
-                              </span>
-                            </div>
-                          </div>
-
                           <div className="p-4 bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/10">
                             <div className="text-white/50 text-xs font-medium mb-1">Video Type</div>
                             <div className="text-white font-bold text-sm uppercase">

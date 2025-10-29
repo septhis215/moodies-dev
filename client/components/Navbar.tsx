@@ -22,6 +22,7 @@ import {
 } from "./ui/resizable-navbar";
 import SearchBar from "./ui/searchbar";
 import Link from "next/link";
+import { Infinity, List, Loader, MouseIcon, PhoneIcon, Repeat } from "lucide-react";
 
 const routes = [
   { name: "Home", href: "/" },
@@ -345,9 +346,16 @@ export function NavbarComponent() {
             <IconUsers size={24} className="!w-6 !h-6" />
             <span className="sr-only">Community</span>
           </Link>
+          <Link
+            href="/feed"
+            className="hidden md:inline-flex items-center gap-2 text-gray-200 hover:text-white"
+          >
+            <MouseIcon size={24} className="!w-6 !h-6" />
+            <span className="sr-only">Your Feeds</span>
+          </Link>
 
           <Link
-            href="/your-moods"
+            href="/#your-moods"
             className="hidden md:inline-flex items-center gap-2 text-gray-200 hover:text-white"
           >
             <IconMoodSmile size={24} className="!w-6 !h-6" />

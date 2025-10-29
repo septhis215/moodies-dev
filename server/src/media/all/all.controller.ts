@@ -216,41 +216,50 @@ export class AllController {
   }
 
   @Get('upcoming-trailers-feed')
-  async getUpcomingTrailers(
+  async getUpcomingTrailersFeed(
+    @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    const limitNum = limit ? parseInt(limit, 10) : 30;
-    const trailers = await this.allService.getUpcomingTrailers(limitNum);
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 30) : 30;
 
-    const formatted = trailers.map(item => ({
-      id: item.id,
-      title: item.title,
-      name: item.title,
-      overview: item.overview,
-      poster_path: item.poster_path,
-      backdrop_path: item.backdrop_path,
-      release_date: item.release_date,
-      first_air_date: item.release_date,
-      original_language: 'en',
-      genres: item.genres || [],
-      vote_average: item.vote_average,
-      media_type: item.type,
-      primary_video: {
-        key: item.trailer_key,
-        name: `${item.title} - Official Trailer`,
-        type: 'Trailer',
-        site: 'YouTube'
-      },
-      videos: [{
-        key: item.trailer_key,
-        name: `${item.title} - Official Trailer`,
-        type: 'Trailer',
-        site: 'YouTube',
-        official: true,
-      }]
-    }));
+    const response = await this.allService.getUpcomingFeeds(pageNum, limitNum);
 
-    return formatted;
+    // Format the results - handle both enriched and non-enriched data
+    const formatted = response.results.map(item => {
+      // Get the correct title
+      const title = item.title || item.name || 'Untitled';
+
+      // Get the correct release date
+      const releaseDate = item.release_date || item.first_air_date;
+
+      return {
+        id: item.id,
+        title: title,
+        name: title,
+        overview: item.overview || '',
+        poster_path: item.poster_path,
+        backdrop_path: item.backdrop_path,
+        release_date: releaseDate,
+        first_air_date: releaseDate,
+        original_language: item.original_language || 'en',
+        genres: item.genres || [],
+        vote_average: item.vote_average || 0,
+        vote_count: item.vote_count || 0,
+        popularity: item.popularity || 0,
+        media_type: item.media_type,
+        // Use enriched video data if available
+        primary_video: item.primary_video || null,
+        videos: item.videos || []
+      };
+    });
+
+    return {
+      results: formatted,
+      page: response.page,
+      total_pages: response.total_pages,
+      hasMore: response.hasMore
+    };
   }
 
   // Optimize the existing getVideoFeed with caching

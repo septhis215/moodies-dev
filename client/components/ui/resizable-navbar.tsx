@@ -72,8 +72,8 @@ export const Navbar = ({ children, className }: NavbarProps) => {
       animate={{ y: hidden ? "-100%" : "0%" }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
       className={cn(
-        "fixed inset-x-0 top-0 z-50 w-full flex items-center px-4",
-        "backdrop-blur-md bg-gradient-to-b to-transparent",
+        "fixed inset-x-0 top-0 z-100 w-full flex items-center px-4",
+        "backdrop-blur-sm bg-gradient-to-b to-transparent",
         "h-32 md:h-24",
         className
       )}

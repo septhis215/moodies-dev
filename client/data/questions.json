@@ -6,22 +6,34 @@
       "options": [
         {
           "text": "Cozy movie night at home",
-          "genres": ["drama", "romance"],
+          "genres": [
+            "drama",
+            "romance"
+          ],
           "mood": "relaxed"
         },
         {
           "text": "Action-packed adventure",
-          "genres": ["action", "thriller"],
+          "genres": [
+            "action",
+            "thriller"
+          ],
           "mood": "energetic"
         },
         {
           "text": "Mind-bending mysteries",
-          "genres": ["mystery", "thriller", "sci-fi"],
+          "genres": [
+            "mystery",
+            "thriller",
+            "sci-fi"
+          ],
           "mood": "thoughtful"
         },
         {
           "text": "Laughing until I cry",
-          "genres": ["comedy"],
+          "genres": [
+            "comedy"
+          ],
           "mood": "fun"
         }
       ]
@@ -32,22 +44,35 @@
       "options": [
         {
           "text": "Outer space & distant galaxies",
-          "genres": ["sci-fi", "adventure"],
+          "genres": [
+            "sci-fi",
+            "adventure"
+          ],
           "mood": "adventurous"
         },
         {
           "text": "Medieval castles & kingdoms",
-          "genres": ["fantasy", "adventure"],
+          "genres": [
+            "fantasy",
+            "adventure"
+          ],
           "mood": "epic"
         },
         {
           "text": "Modern city streets",
-          "genres": ["crime", "thriller", "drama"],
+          "genres": [
+            "crime",
+            "thriller",
+            "drama"
+          ],
           "mood": "realistic"
         },
         {
           "text": "Haunted mansions",
-          "genres": ["horror", "mystery"],
+          "genres": [
+            "horror",
+            "mystery"
+          ],
           "mood": "thrilling"
         }
       ]
@@ -58,22 +83,36 @@
       "options": [
         {
           "text": "Heart-warming joy",
-          "genres": ["family", "animation", "comedy"],
+          "genres": [
+            "family",
+            "animation",
+            "comedy"
+          ],
           "mood": "happy"
         },
         {
           "text": "Edge-of-seat suspense",
-          "genres": ["thriller", "horror", "mystery"],
+          "genres": [
+            "thriller",
+            "horror",
+            "mystery"
+          ],
           "mood": "intense"
         },
         {
           "text": "Deep emotional connection",
-          "genres": ["drama", "romance"],
+          "genres": [
+            "drama",
+            "romance"
+          ],
           "mood": "emotional"
         },
         {
           "text": "Pure excitement",
-          "genres": ["action", "adventure"],
+          "genres": [
+            "action",
+            "adventure"
+          ],
           "mood": "energetic"
         }
       ]
@@ -84,22 +123,37 @@
       "options": [
         {
           "text": "A loyal sidekick",
-          "genres": ["adventure", "comedy", "family"],
+          "genres": [
+            "adventure",
+            "comedy",
+            "family"
+          ],
           "mood": "fun"
         },
         {
           "text": "A mysterious stranger",
-          "genres": ["thriller", "mystery", "romance"],
+          "genres": [
+            "thriller",
+            "mystery",
+            "romance"
+          ],
           "mood": "intriguing"
         },
         {
           "text": "Going solo",
-          "genres": ["drama", "thriller"],
+          "genres": [
+            "drama",
+            "thriller"
+          ],
           "mood": "independent"
         },
         {
           "text": "A whole squad",
-          "genres": ["action", "comedy", "adventure"],
+          "genres": [
+            "action",
+            "comedy",
+            "adventure"
+          ],
           "mood": "social"
         }
       ]
@@ -110,22 +164,38 @@
       "options": [
         {
           "text": "Dawn - new beginnings",
-          "genres": ["drama", "romance", "family"],
+          "genres": [
+            "drama",
+            "romance",
+            "family"
+          ],
           "mood": "hopeful"
         },
         {
           "text": "Noon - peak energy",
-          "genres": ["action", "adventure", "comedy"],
+          "genres": [
+            "action",
+            "adventure",
+            "comedy"
+          ],
           "mood": "energetic"
         },
         {
           "text": "Dusk - mysterious transitions",
-          "genres": ["mystery", "thriller", "fantasy"],
+          "genres": [
+            "mystery",
+            "thriller",
+            "fantasy"
+          ],
           "mood": "mysterious"
         },
         {
           "text": "Midnight - darkness calls",
-          "genres": ["horror", "thriller", "crime"],
+          "genres": [
+            "horror",
+            "thriller",
+            "crime"
+          ],
           "mood": "dark"
         }
       ]
@@ -136,22 +206,37 @@
       "options": [
         {
           "text": "Time travel",
-          "genres": ["sci-fi", "adventure", "fantasy"],
+          "genres": [
+            "sci-fi",
+            "adventure",
+            "fantasy"
+          ],
           "mood": "adventurous"
         },
         {
           "text": "Mind reading",
-          "genres": ["mystery", "thriller", "drama"],
+          "genres": [
+            "mystery",
+            "thriller",
+            "drama"
+          ],
           "mood": "analytical"
         },
         {
           "text": "Super strength",
-          "genres": ["action", "adventure"],
+          "genres": [
+            "action",
+            "adventure"
+          ],
           "mood": "powerful"
         },
         {
           "text": "Invisibility",
-          "genres": ["thriller", "mystery", "comedy"],
+          "genres": [
+            "thriller",
+            "mystery",
+            "comedy"
+          ],
           "mood": "sneaky"
         }
       ]
@@ -162,22 +247,34 @@
       "options": [
         {
           "text": "Fancy 5-course dinner",
-          "genres": ["drama", "romance"],
+          "genres": [
+            "drama",
+            "romance"
+          ],
           "mood": "sophisticated"
         },
         {
           "text": "Street food adventure",
-          "genres": ["comedy", "adventure"],
+          "genres": [
+            "comedy",
+            "adventure"
+          ],
           "mood": "casual"
         },
         {
           "text": "Home-cooked comfort food",
-          "genres": ["family", "drama"],
+          "genres": [
+            "family",
+            "drama"
+          ],
           "mood": "cozy"
         },
         {
           "text": "Quick energy snacks",
-          "genres": ["action", "thriller"],
+          "genres": [
+            "action",
+            "thriller"
+          ],
           "mood": "fast-paced"
         }
       ]
@@ -188,22 +285,38 @@
       "options": [
         {
           "text": "Sunny and bright",
-          "genres": ["comedy", "family", "romance"],
+          "genres": [
+            "comedy",
+            "family",
+            "romance"
+          ],
           "mood": "cheerful"
         },
         {
           "text": "Thunderstorms",
-          "genres": ["thriller", "horror", "drama"],
+          "genres": [
+            "thriller",
+            "horror",
+            "drama"
+          ],
           "mood": "dramatic"
         },
         {
           "text": "Misty fog",
-          "genres": ["mystery", "thriller", "fantasy"],
+          "genres": [
+            "mystery",
+            "thriller",
+            "fantasy"
+          ],
           "mood": "mysterious"
         },
         {
           "text": "Snow-covered landscape",
-          "genres": ["fantasy", "drama", "adventure"],
+          "genres": [
+            "fantasy",
+            "drama",
+            "adventure"
+          ],
           "mood": "magical"
         }
       ]
@@ -214,22 +327,38 @@
       "options": [
         {
           "text": "Vibrant & colorful",
-          "genres": ["animation", "comedy", "family"],
+          "genres": [
+            "animation",
+            "comedy",
+            "family"
+          ],
           "mood": "joyful"
         },
         {
           "text": "Dark & moody",
-          "genres": ["thriller", "horror", "crime"],
+          "genres": [
+            "thriller",
+            "horror",
+            "crime"
+          ],
           "mood": "intense"
         },
         {
           "text": "Warm & golden",
-          "genres": ["romance", "drama", "family"],
+          "genres": [
+            "romance",
+            "drama",
+            "family"
+          ],
           "mood": "warm"
         },
         {
           "text": "Cool & metallic",
-          "genres": ["sci-fi", "action", "thriller"],
+          "genres": [
+            "sci-fi",
+            "action",
+            "thriller"
+          ],
           "mood": "futuristic"
         }
       ]
@@ -240,22 +369,37 @@
       "options": [
         {
           "text": "Love & relationships",
-          "genres": ["romance", "drama"],
+          "genres": [
+            "romance",
+            "drama"
+          ],
           "mood": "emotional"
         },
         {
           "text": "Justice & revenge",
-          "genres": ["action", "thriller", "crime"],
+          "genres": [
+            "action",
+            "thriller",
+            "crime"
+          ],
           "mood": "intense"
         },
         {
           "text": "Discovery & knowledge",
-          "genres": ["sci-fi", "mystery", "adventure"],
+          "genres": [
+            "sci-fi",
+            "mystery",
+            "adventure"
+          ],
           "mood": "curious"
         },
         {
           "text": "Survival",
-          "genres": ["thriller", "horror", "action"],
+          "genres": [
+            "thriller",
+            "horror",
+            "action"
+          ],
           "mood": "tense"
         }
       ]
@@ -266,22 +410,38 @@
       "options": [
         {
           "text": "Epic orchestral scores",
-          "genres": ["fantasy", "adventure", "action"],
+          "genres": [
+            "fantasy",
+            "adventure",
+            "action"
+          ],
           "mood": "epic"
         },
         {
           "text": "Indie acoustic vibes",
-          "genres": ["drama", "romance", "comedy"],
+          "genres": [
+            "drama",
+            "romance",
+            "comedy"
+          ],
           "mood": "indie"
         },
         {
           "text": "Eerie ambient sounds",
-          "genres": ["horror", "thriller", "mystery"],
+          "genres": [
+            "horror",
+            "thriller",
+            "mystery"
+          ],
           "mood": "creepy"
         },
         {
           "text": "Upbeat pop hits",
-          "genres": ["comedy", "family", "romance"],
+          "genres": [
+            "comedy",
+            "family",
+            "romance"
+          ],
           "mood": "upbeat"
         }
       ]
@@ -292,22 +452,36 @@
       "options": [
         {
           "text": "Blow my mind!",
-          "genres": ["mystery", "thriller", "sci-fi"],
+          "genres": [
+            "mystery",
+            "thriller",
+            "sci-fi"
+          ],
           "mood": "surprised"
         },
         {
           "text": "Some surprises are nice",
-          "genres": ["drama", "thriller"],
+          "genres": [
+            "drama",
+            "thriller"
+          ],
           "mood": "balanced"
         },
         {
           "text": "Keep it straightforward",
-          "genres": ["comedy", "family", "romance"],
+          "genres": [
+            "comedy",
+            "family",
+            "romance"
+          ],
           "mood": "simple"
         },
         {
           "text": "I love predicting endings",
-          "genres": ["mystery", "crime"],
+          "genres": [
+            "mystery",
+            "crime"
+          ],
           "mood": "analytical"
         }
       ]
@@ -318,22 +492,37 @@
       "options": [
         {
           "text": "The roaring 20s",
-          "genres": ["drama", "romance", "crime"],
+          "genres": [
+            "drama",
+            "romance",
+            "crime"
+          ],
           "mood": "vintage"
         },
         {
           "text": "The groovy 70s",
-          "genres": ["comedy", "drama"],
+          "genres": [
+            "comedy",
+            "drama"
+          ],
           "mood": "retro"
         },
         {
           "text": "The neon 80s",
-          "genres": ["action", "comedy", "sci-fi"],
+          "genres": [
+            "action",
+            "comedy",
+            "sci-fi"
+          ],
           "mood": "nostalgic"
         },
         {
           "text": "The future",
-          "genres": ["sci-fi", "thriller", "action"],
+          "genres": [
+            "sci-fi",
+            "thriller",
+            "action"
+          ],
           "mood": "futuristic"
         }
       ]
@@ -344,22 +533,36 @@
       "options": [
         {
           "text": "Witty one-liners",
-          "genres": ["comedy", "action"],
+          "genres": [
+            "comedy",
+            "action"
+          ],
           "mood": "clever"
         },
         {
           "text": "Slapstick & physical comedy",
-          "genres": ["comedy", "family"],
+          "genres": [
+            "comedy",
+            "family"
+          ],
           "mood": "silly"
         },
         {
           "text": "Dark & satirical",
-          "genres": ["comedy", "thriller", "crime"],
+          "genres": [
+            "comedy",
+            "thriller",
+            "crime"
+          ],
           "mood": "dark"
         },
         {
           "text": "Wholesome & heartwarming",
-          "genres": ["family", "comedy", "romance"],
+          "genres": [
+            "family",
+            "comedy",
+            "romance"
+          ],
           "mood": "sweet"
         }
       ]
@@ -370,22 +573,36 @@
       "options": [
         {
           "text": "Man vs Nature",
-          "genres": ["adventure", "thriller", "drama"],
+          "genres": [
+            "adventure",
+            "thriller",
+            "drama"
+          ],
           "mood": "survival"
         },
         {
           "text": "Man vs Self",
-          "genres": ["drama", "mystery"],
+          "genres": [
+            "drama",
+            "mystery"
+          ],
           "mood": "introspective"
         },
         {
           "text": "Man vs Society",
-          "genres": ["drama", "crime", "thriller"],
+          "genres": [
+            "drama",
+            "crime",
+            "thriller"
+          ],
           "mood": "rebellious"
         },
         {
           "text": "Man vs Technology",
-          "genres": ["sci-fi", "thriller"],
+          "genres": [
+            "sci-fi",
+            "thriller"
+          ],
           "mood": "cautionary"
         }
       ]
@@ -396,23 +613,36 @@
       "options": [
         {
           "text": "Quick & snappy (TV series)",
-          "genres": ["comedy", "thriller"],
+          "genres": [
+            "comedy",
+            "thriller"
+          ],
           "mediaType": "tv",
           "mood": "bingeable"
         },
         {
           "text": "Slow burn storytelling",
-          "genres": ["drama", "mystery"],
+          "genres": [
+            "drama",
+            "mystery"
+          ],
           "mood": "patient"
         },
         {
           "text": "Fast-paced action",
-          "genres": ["action", "thriller"],
+          "genres": [
+            "action",
+            "thriller"
+          ],
           "mood": "intense"
         },
         {
           "text": "Long epic sagas (TV series)",
-          "genres": ["fantasy", "drama", "sci-fi"],
+          "genres": [
+            "fantasy",
+            "drama",
+            "sci-fi"
+          ],
           "mediaType": "tv",
           "mood": "epic"
         }
@@ -424,22 +654,37 @@
       "options": [
         {
           "text": "Wolf - loyal & fierce",
-          "genres": ["action", "thriller", "adventure"],
+          "genres": [
+            "action",
+            "thriller",
+            "adventure"
+          ],
           "mood": "brave"
         },
         {
           "text": "Cat - mysterious & independent",
-          "genres": ["mystery", "thriller"],
+          "genres": [
+            "mystery",
+            "thriller"
+          ],
           "mood": "mysterious"
         },
         {
           "text": "Dog - friendly & loyal",
-          "genres": ["family", "comedy", "drama"],
+          "genres": [
+            "family",
+            "comedy",
+            "drama"
+          ],
           "mood": "loyal"
         },
         {
           "text": "Eagle - visionary & free",
-          "genres": ["adventure", "fantasy", "drama"],
+          "genres": [
+            "adventure",
+            "fantasy",
+            "drama"
+          ],
           "mood": "free"
         }
       ]
@@ -450,22 +695,36 @@
       "options": [
         {
           "text": "The unknown",
-          "genres": ["horror", "mystery", "thriller"],
+          "genres": [
+            "horror",
+            "mystery",
+            "thriller"
+          ],
           "mood": "fearful"
         },
         {
           "text": "Losing loved ones",
-          "genres": ["drama", "thriller"],
+          "genres": [
+            "drama",
+            "thriller"
+          ],
           "mood": "emotional"
         },
         {
           "text": "Failure",
-          "genres": ["drama", "action"],
+          "genres": [
+            "drama",
+            "action"
+          ],
           "mood": "motivated"
         },
         {
           "text": "Nothing - I'm fearless!",
-          "genres": ["action", "adventure", "comedy"],
+          "genres": [
+            "action",
+            "adventure",
+            "comedy"
+          ],
           "mood": "confident"
         }
       ]
@@ -476,22 +735,37 @@
       "options": [
         {
           "text": "Happily ever after",
-          "genres": ["romance", "family", "comedy"],
+          "genres": [
+            "romance",
+            "family",
+            "comedy"
+          ],
           "mood": "optimistic"
         },
         {
           "text": "Bittersweet",
-          "genres": ["drama", "romance"],
+          "genres": [
+            "drama",
+            "romance"
+          ],
           "mood": "realistic"
         },
         {
           "text": "Cliffhanger",
-          "genres": ["thriller", "mystery", "sci-fi"],
+          "genres": [
+            "thriller",
+            "mystery",
+            "sci-fi"
+          ],
           "mood": "curious"
         },
         {
           "text": "Open to interpretation",
-          "genres": ["drama", "mystery", "sci-fi"],
+          "genres": [
+            "drama",
+            "mystery",
+            "sci-fi"
+          ],
           "mood": "thoughtful"
         }
       ]
@@ -502,22 +776,38 @@
       "options": [
         {
           "text": "Live fast, die young",
-          "genres": ["action", "thriller", "crime"],
+          "genres": [
+            "action",
+            "thriller",
+            "crime"
+          ],
           "mood": "reckless"
         },
         {
           "text": "Stop and smell the roses",
-          "genres": ["drama", "romance", "family"],
+          "genres": [
+            "drama",
+            "romance",
+            "family"
+          ],
           "mood": "mindful"
         },
         {
           "text": "Question everything",
-          "genres": ["mystery", "sci-fi", "thriller"],
+          "genres": [
+            "mystery",
+            "sci-fi",
+            "thriller"
+          ],
           "mood": "analytical"
         },
         {
           "text": "Go with the flow",
-          "genres": ["comedy", "adventure", "romance"],
+          "genres": [
+            "comedy",
+            "adventure",
+            "romance"
+          ],
           "mood": "easygoing"
         }
       ]
@@ -528,22 +818,38 @@
       "options": [
         {
           "text": "Strong black coffee",
-          "genres": ["thriller", "crime", "drama"],
+          "genres": [
+            "thriller",
+            "crime",
+            "drama"
+          ],
           "mood": "intense"
         },
         {
           "text": "Herbal tea",
-          "genres": ["drama", "romance", "family"],
+          "genres": [
+            "drama",
+            "romance",
+            "family"
+          ],
           "mood": "calm"
         },
         {
           "text": "Energy drink",
-          "genres": ["action", "sci-fi", "adventure"],
+          "genres": [
+            "action",
+            "sci-fi",
+            "adventure"
+          ],
           "mood": "energetic"
         },
         {
           "text": "Fancy cocktail",
-          "genres": ["romance", "comedy", "drama"],
+          "genres": [
+            "romance",
+            "comedy",
+            "drama"
+          ],
           "mood": "sophisticated"
         }
       ]
@@ -554,22 +860,38 @@
       "options": [
         {
           "text": "Tropical beach resort",
-          "genres": ["romance", "comedy", "family"],
+          "genres": [
+            "romance",
+            "comedy",
+            "family"
+          ],
           "mood": "relaxed"
         },
         {
           "text": "Mountain hiking adventure",
-          "genres": ["adventure", "thriller", "drama"],
+          "genres": [
+            "adventure",
+            "thriller",
+            "drama"
+          ],
           "mood": "adventurous"
         },
         {
           "text": "European city tour",
-          "genres": ["drama", "romance", "comedy"],
+          "genres": [
+            "drama",
+            "romance",
+            "comedy"
+          ],
           "mood": "cultured"
         },
         {
           "text": "Staycation with Netflix",
-          "genres": ["comedy", "drama", "thriller"],
+          "genres": [
+            "comedy",
+            "drama",
+            "thriller"
+          ],
           "mood": "cozy"
         }
       ]
@@ -580,22 +902,38 @@
       "options": [
         {
           "text": "Sports car",
-          "genres": ["action", "thriller", "crime"],
+          "genres": [
+            "action",
+            "thriller",
+            "crime"
+          ],
           "mood": "fast"
         },
         {
           "text": "Spaceship",
-          "genres": ["sci-fi", "adventure", "fantasy"],
+          "genres": [
+            "sci-fi",
+            "adventure",
+            "fantasy"
+          ],
           "mood": "futuristic"
         },
         {
           "text": "Bicycle",
-          "genres": ["comedy", "family", "drama"],
+          "genres": [
+            "comedy",
+            "family",
+            "drama"
+          ],
           "mood": "eco-friendly"
         },
         {
           "text": "Magic carpet",
-          "genres": ["fantasy", "adventure", "family"],
+          "genres": [
+            "fantasy",
+            "adventure",
+            "family"
+          ],
           "mood": "magical"
         }
       ]
@@ -606,23 +944,36 @@
       "options": [
         {
           "text": "Cheesy rom-coms",
-          "genres": ["romance", "comedy"],
+          "genres": [
+            "romance",
+            "comedy"
+          ],
           "mood": "romantic"
         },
         {
           "text": "Over-the-top action",
-          "genres": ["action", "adventure"],
+          "genres": [
+            "action",
+            "adventure"
+          ],
           "mood": "explosive"
         },
         {
           "text": "Reality TV drama",
-          "genres": ["drama", "comedy"],
+          "genres": [
+            "drama",
+            "comedy"
+          ],
           "mediaType": "tv",
           "mood": "dramatic"
         },
         {
           "text": "Spooky stories",
-          "genres": ["horror", "thriller", "mystery"],
+          "genres": [
+            "horror",
+            "thriller",
+            "mystery"
+          ],
           "mood": "spooky"
         }
       ]
@@ -633,23 +984,446 @@
       "options": [
         {
           "text": "Optimistic & hopeful",
-          "genres": ["family", "comedy", "romance"],
+          "genres": [
+            "family",
+            "comedy",
+            "romance"
+          ],
           "mood": "positive"
         },
         {
           "text": "Cynical & realistic",
-          "genres": ["drama", "thriller", "crime"],
+          "genres": [
+            "drama",
+            "thriller",
+            "crime"
+          ],
           "mood": "realistic"
         },
         {
           "text": "Curious & questioning",
-          "genres": ["mystery", "sci-fi", "drama"],
+          "genres": [
+            "mystery",
+            "sci-fi",
+            "drama"
+          ],
           "mood": "inquisitive"
         },
         {
           "text": "Rebellious & bold",
-          "genres": ["action", "thriller", "adventure"],
+          "genres": [
+            "action",
+            "thriller",
+            "adventure"
+          ],
           "mood": "rebellious"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "question": "Pick your viewing snack:",
+      "options": [
+        {
+          "text": "Popcorn — classic & simple",
+          "genres": [
+            "comedy",
+            "family",
+            "romance"
+          ],
+          "mood": "cozy"
+        },
+        {
+          "text": "Spicy street food — bold flavours",
+          "genres": [
+            "action",
+            "thriller",
+            "crime"
+          ],
+          "mood": "edgy"
+        },
+        {
+          "text": "Gourmet tasting board — fancy night in",
+          "genres": [
+            "drama",
+            "romance"
+          ],
+          "mood": "sophisticated"
+        },
+        {
+          "text": "No snacks — all focus on the screen",
+          "genres": [
+            "mystery",
+            "thriller",
+            "sci-fi"
+          ],
+          "mood": "immersed"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "question": "How do you like the pace?",
+      "options": [
+        {
+          "text": "Lightning-fast, thrill ride",
+          "genres": [
+            "action",
+            "thriller"
+          ],
+          "mood": "adrenaline"
+        },
+        {
+          "text": "Slow burn — let it simmer",
+          "genres": [
+            "drama",
+            "mystery"
+          ],
+          "mood": "patient"
+        },
+        {
+          "text": "Mixed — highs and thoughtful lulls",
+          "genres": [
+            "sci-fi",
+            "drama",
+            "adventure"
+          ],
+          "mood": "balanced"
+        },
+        {
+          "text": "Anthology/snackable — short & varied",
+          "genres": [
+            "comedy",
+            "horror",
+            "drama"
+          ],
+          "mediaType": "tv",
+          "mood": "varied"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "question": "Which plot device gets you excited?",
+      "options": [
+        {
+          "text": "Time loops & alternate timelines",
+          "genres": [
+            "sci-fi",
+            "mystery"
+          ],
+          "mood": "mind-bending"
+        },
+        {
+          "text": "Heists & clever plans",
+          "genres": [
+            "crime",
+            "thriller",
+            "action"
+          ],
+          "mood": "clever"
+        },
+        {
+          "text": "Found family & relationships",
+          "genres": [
+            "drama",
+            "comedy",
+            "romance"
+          ],
+          "mood": "warm"
+        },
+        {
+          "text": "Supernatural secrets revealed slowly",
+          "genres": [
+            "fantasy",
+            "horror",
+            "mystery"
+          ],
+          "mood": "eerie"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "question": "Choose your hero type:",
+      "options": [
+        {
+          "text": "Reluctant hero — learns along the way",
+          "genres": [
+            "drama",
+            "adventure"
+          ],
+          "mood": "relatable"
+        },
+        {
+          "text": "Flawed antihero — morally grey",
+          "genres": [
+            "crime",
+            "thriller",
+            "drama"
+          ],
+          "mood": "complex"
+        },
+        {
+          "text": "Team of specialists — ensemble casts",
+          "genres": [
+            "action",
+            "sci-fi",
+            "comedy"
+          ],
+          "mood": "dynamic"
+        },
+        {
+          "text": "Everyday person in extraordinary events",
+          "genres": [
+            "mystery",
+            "drama",
+            "thriller"
+          ],
+          "mood": "grounded"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "question": "Visual style that draws you in:",
+      "options": [
+        {
+          "text": "Lush, cinematic visuals & sweeping shots",
+          "genres": [
+            "fantasy",
+            "drama",
+            "romance"
+          ],
+          "mood": "epic"
+        },
+        {
+          "text": "Gritty, handheld realism",
+          "genres": [
+            "crime",
+            "thriller",
+            "drama"
+          ],
+          "mood": "raw"
+        },
+        {
+          "text": "Stylized and neon — retro-future vibes",
+          "genres": [
+            "sci-fi",
+            "action"
+          ],
+          "mood": "nostalgic"
+        },
+        {
+          "text": "Minimalist, moody colour palettes",
+          "genres": [
+            "mystery",
+            "horror",
+            "drama"
+          ],
+          "mood": "brooding"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "question": "Do you enjoy meta easter eggs & callbacks?",
+      "options": [
+        {
+          "text": "Yes — hunting for tiny details is my jam",
+          "genres": [
+            "sci-fi",
+            "mystery",
+            "fantasy"
+          ],
+          "mood": "curious"
+        },
+        {
+          "text": "Sometimes — if they don’t distract",
+          "genres": [
+            "drama",
+            "comedy"
+          ],
+          "mood": "balanced"
+        },
+        {
+          "text": "Not really — I prefer a straightforward story",
+          "genres": [
+            "family",
+            "romance"
+          ],
+          "mood": "simple"
+        },
+        {
+          "text": "Only if it expands the world meaningfully",
+          "genres": [
+            "fantasy",
+            "sci-fi"
+          ],
+          "mood": "invested"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "question": "How long do episodes/movies need to be for you?",
+      "options": [
+        {
+          "text": "Short & snappy (20–30 min)",
+          "genres": [
+            "comedy",
+            "animation"
+          ],
+          "mediaType": "tv",
+          "mood": "light"
+        },
+        {
+          "text": "Standard (40–60 min) — steady",
+          "genres": [
+            "drama",
+            "thriller"
+          ],
+          "mediaType": "tv",
+          "mood": "engaged"
+        },
+        {
+          "text": "Movie-length — immersive (90–180 min)",
+          "genres": [
+            "fantasy",
+            "drama",
+            "action"
+          ],
+          "mood": "cinematic"
+        },
+        {
+          "text": "I don’t mind long-form epics (binge-friendly)",
+          "genres": [
+            "fantasy",
+            "sci-fi",
+            "drama"
+          ],
+          "mediaType": "tv",
+          "mood": "epic"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "question": "Language & subtitles — what’s your vibe?",
+      "options": [
+        {
+          "text": "Prefer local/English-dubbed content",
+          "genres": [
+            "comedy",
+            "drama"
+          ],
+          "mood": "accessible"
+        },
+        {
+          "text": "Original language with subtitles — always",
+          "genres": [
+            "drama",
+            "mystery",
+            "foreign"
+          ],
+          "mood": "authentic"
+        },
+        {
+          "text": "I’ll switch depending on acting & tone",
+          "genres": [
+            "any"
+          ],
+          "mood": "practical"
+        },
+        {
+          "text": "I love multilingual stories & cultural variety",
+          "genres": [
+            "drama",
+            "documentary",
+            "romance"
+          ],
+          "mood": "curious"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "question": "What kind of show endings satisfy you?",
+      "options": [
+        {
+          "text": "All loose ends tied up neatly",
+          "genres": [
+            "romance",
+            "family",
+            "comedy"
+          ],
+          "mood": "satisfied"
+        },
+        {
+          "text": "Bittersweet but meaningful",
+          "genres": [
+            "drama",
+            "romance"
+          ],
+          "mood": "reflective"
+        },
+        {
+          "text": "Ambiguous — room for discussion",
+          "genres": [
+            "mystery",
+            "sci-fi",
+            "drama"
+          ],
+          "mood": "thoughtful"
+        },
+        {
+          "text": "Huge twist ending that recontextualises everything",
+          "genres": [
+            "thriller",
+            "mystery",
+            "sci-fi"
+          ],
+          "mood": "shocked"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "question": "How interactive do you want your recommendations to feel?",
+      "options": [
+        {
+          "text": "I want prompts & choices — interactive storytelling",
+          "genres": [
+            "adventure",
+            "sci-fi",
+            "fantasy"
+          ],
+          "mediaType": "tv",
+          "mood": "playful"
+        },
+        {
+          "text": "Light personalization — a few suggestions tailored to me",
+          "genres": [
+            "comedy",
+            "drama"
+          ],
+          "mood": "casual"
+        },
+        {
+          "text": "Algorithm-only — surprise me based on data",
+          "genres": [
+            "any"
+          ],
+          "mood": "experimental"
+        },
+        {
+          "text": "Community curated lists & ratings influence picks",
+          "genres": [
+            "drama",
+            "comedy",
+            "documentary"
+          ],
+          "mood": "social"
         }
       ]
     }

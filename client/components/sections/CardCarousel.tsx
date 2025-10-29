@@ -439,20 +439,22 @@ export default function CardCarousel<T extends MovieLike>({
                       </TooltipProvider>
 
                       {/* Rating Badge */}
-                      {movie.vote_average && (
+                      {movie.vote_average !== undefined && movie.vote_average !== null && (
                         <div
                           className={`
-          flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-bold text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
-          ${movie.vote_average >= 7.5
-                              ? "bg-green-500/90 text-white border-green-400/50"
-                              : movie.vote_average >= 6
-                                ? "bg-yellow-500/90 text-black border-yellow-400/50"
-                                : "bg-red-500/90 text-white border-red-400/50"
+      flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-bold text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
+      ${movie.vote_average === 0
+                              ? "bg-sky-500/90 text-white border-sky-400/50"     
+                              : movie.vote_average >= 7.5
+                                ? "bg-green-500/90 text-white border-green-400/50"
+                                : movie.vote_average >= 6
+                                  ? "bg-yellow-500/90 text-black border-yellow-400/50"
+                                  : "bg-red-500/90 text-white border-red-400/50"
                             }
-        `}
+    `}
                         >
                           <Star size={10} className="sm:w-3 sm:h-3" fill="currentColor" />
-                          {movie.vote_average.toFixed(1)}
+                          {movie.vote_average === 0 ? "New" : movie.vote_average.toFixed(1)}
                         </div>
                       )}
                     </div>
@@ -513,16 +515,10 @@ export default function CardCarousel<T extends MovieLike>({
                                   <span>{year}</span>
                                 </div>
                               )}
-                              {movie.vote_count && (
+                              {Number(movie.vote_count) > 0 && (
                                 <div className="flex items-center gap-0.5 sm:gap-1">
                                   <Users size={10} className="sm:w-3 sm:h-3" />
                                   <span>{formatVoteCount(movie.vote_count)}</span>
-                                </div>
-                              )}
-                              {runtime && (
-                                <div className="flex items-center gap-0.5 sm:gap-1">
-                                  {contentType === "tv" ? <Tv size={10} className="sm:w-3 sm:h-3" /> : <Film size={10} className="sm:w-3 sm:h-3" />}
-                                  <span>{runtime}</span>
                                 </div>
                               )}
                               {(movie.origin_country?.length || true) && (

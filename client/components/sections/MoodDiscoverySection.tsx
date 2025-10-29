@@ -71,7 +71,7 @@ export default function MoodDiscoverySection() {
   ];
 
   return (
-    <section className="relative bg-black py-22 px-4 sm:px-6 lg:px-8 overflow-hidden max-w-7xl mx-auto">
+    <section id="your-moods"className="relative bg-black py-22 px-4 sm:px-6 lg:px-8 overflow-hidden max-w-7xl mx-auto">
       {/* Dynamic Animated Background */}
       <div className="absolute inset-0 opacity-30">
         <div

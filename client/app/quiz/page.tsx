@@ -1,6 +1,6 @@
 "use client";
 
-import { useState,useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, ChevronRight, Film, Tv, Heart, Star, Zap, Coffee, Trophy, X, Info, ArrowLeft, Award, TrendingUp, Clock, Flame, ExternalLink, Bookmark, Play } from 'lucide-react';
 import questionsData from '@/data/questions.json';
@@ -350,16 +350,16 @@ export default function MovieQuizPage() {
                                         repeat: Infinity,
                                         ease: "easeInOut"
                                     }}
-                                    className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#e94f37] via-[#ff6b58] to-[#e94f37] flex items-center justify-center"
+                                    className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#e94f37] via-[#ff6b58] to-[#e94f37] flex items-center justify-center"
                                 >
-                                    <Sparkles className="w-10 h-10 text-white" />
+                                    <Sparkles className="w-8 h-8 text-white" />
                                 </motion.div>
                             </motion.div>
 
-                            <h1 className="text-4xl sm:text-5xl font-bold text-center mb-4 bg-gradient-to-r from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent leading-tight">
+                            <h1 className="text-3xl sm:text-4xl font-bold text-center mb-4 bg-gradient-to-r from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent leading-tight">
                                 Discover Your Perfect Watch
                             </h1>
-                            <p className="text-zinc-400 text-center text-base mb-8">
+                            <p className="text-zinc-400 text-center text-base mb-6">
                                 Answer 5 quick questions and get AI-powered recommendations tailored just for you
                             </p>
 
@@ -460,7 +460,7 @@ export default function MovieQuizPage() {
                                 key={selectedQuestions[currentQuestion].id}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="text-2xl sm:text-3xl font-bold text-white mb-8 text-center leading-tight"
+                                className="text-2xl sm:text-3xl font-bold text-white mb-6 text-center leading-tight"
                             >
                                 {selectedQuestions[currentQuestion].question}
                             </motion.h2>
@@ -476,11 +476,11 @@ export default function MovieQuizPage() {
                                         whileHover={{ scale: 1.02, x: 8 }}
                                         whileTap={{ scale: 0.98 }}
                                         onClick={() => handleAnswer(option)}
-                                        className="w-full bg-gradient-to-r from-zinc-800/40 to-zinc-800/20 hover:from-zinc-800/70 hover:to-zinc-800/50 border border-zinc-700/30 hover:border-[#e94f37]/50 rounded-xl p-5 text-left transition-all group relative overflow-hidden"
+                                        className="w-full bg-gradient-to-r from-zinc-800/40 to-zinc-800/20 hover:from-zinc-800/70 hover:to-zinc-800/50 border border-zinc-700/30 hover:border-[#e94f37]/50 rounded-xl p-3 text-left transition-all group relative overflow-hidden"
                                     >
                                         <div className="absolute inset-0 bg-gradient-to-r from-[#e94f37]/0 via-[#e94f37]/5 to-[#e94f37]/0 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         <div className="flex items-center gap-4 relative z-10">
-                                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#e94f37]/20 to-[#ff6b58]/20 group-hover:from-[#e94f37] group-hover:to-[#ff6b58] flex items-center justify-center transition-all shadow-lg">
+                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#e94f37]/70 to-[#ff6b58]/50 group-hover:from-[#e94f37] group-hover:to-[#ff6b58] flex items-center justify-center transition-all shadow-lg">
                                                 {getIconForOption(idx)}
                                             </div>
                                             <span className="text-zinc-200 group-hover:text-white font-medium text-base sm:text-lg transition-colors flex-1">
@@ -698,19 +698,7 @@ export default function MovieQuizPage() {
                         >
                             {/* Top hero/backdrop */}
                             <div className="relative">
-                                {selectedMovie.backdrop_path ? (
-                                    <div className="relative h-28 sm:h-42 overflow-hidden">
-                                        <img
-                                            src={`https://image.tmdb.org/t/p/original${selectedMovie.backdrop_path}`}
-                                            alt={selectedMovie.title || selectedMovie.name}
-                                            className="w-full h-full object-cover object-top filter saturate-[1.05] contrast-[0.9] transform"
-                                            draggable={false}
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent" />
-                                    </div>
-                                ) : (
-                                    <div className="h-24 sm:h-32 bg-gradient-to-r from-zinc-900 to-zinc-800" />
-                                )}
+
 
                                 {/* Close button */}
                                 <button
@@ -754,12 +742,12 @@ export default function MovieQuizPage() {
                                                     onClick={(e) => e.stopPropagation()}
                                                     className="block"
                                                 >
-                                                    <h2 id="movie-title" className="text-2xl sm:text-3xl font-extrabold text-white leading-tight truncate hover:underline">
+                                                    <h2 id="movie-title" className="text-2xl sm:text-3xl font-extrabold text-white leading-tight truncate hover:text-[#ff6b58]">
                                                         {selectedMovie.title || selectedMovie.name}
                                                     </h2>
                                                 </a>
 
-                                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                <div className="mt-4 flex flex-wrap items-center gap-2">
                                                     <div className="flex items-center gap-2 bg-white/6 px-3 py-1 rounded-lg">
                                                         <Star className="w-4 h-4 text-yellow-400" />
                                                         <span className="text-white text-sm font-semibold">
@@ -773,7 +761,7 @@ export default function MovieQuizPage() {
                                                         </span>
                                                     )}
 
-                                                    <span className="px-3 py-1.5 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white text-sm rounded-lg font-semibold shadow-sm">
+                                                    <span className="px-3 py-1 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white text-sm rounded-lg font-semibold shadow-sm">
                                                         {selectedMovie.media_type === "tv" ? "TV Series" : "Movie"}
                                                     </span>
                                                 </div>
