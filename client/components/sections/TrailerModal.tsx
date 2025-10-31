@@ -232,7 +232,7 @@ export default function TrailerModal({
                   <h3 className="text-gray-400 font-semibold text-sm sm:text-base lg:text-md uppercase tracking-wide">
                     You Might Also Like
                   </h3>
-                  <span className="text-sm text-gray-500 bg-gray-800/50 px-2 py-1 rounded-full">
+                  <span className="text-xs text-gray-400 bg-gray-800/90 px-2 py-1 rounded-full">
                     {trailer.recommendations.length}
                   </span>
                 </div>

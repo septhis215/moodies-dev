@@ -56,6 +56,8 @@ function shuffleArray<T>(arr: T[]): T[] {
     }
     return a;
 }
+// strong disqualifier regex (word boundaries, allow hyphen/space variants)
+const DISQUALIFY_RE = /\b(red[-\s]?band|uncut|uncensored|nsfw|explicit|age[-\s]?restricted|18\+|adult|mature|tv[-\s]?ma|redband)\b/i;
 
 
 @Injectable()
@@ -763,7 +765,8 @@ export class AllService implements OnModuleInit {
             const data = await this.tmdb(`${this.baseUrl}/trending/all/week?language=en-US&page=1`);
             const results = Array.isArray(data?.results) ? data.results : [];
             if (!results.length) return [];
-            // Deduplicate by ID while preserving order (Korean content first)
+
+            // Deduplicate by ID while preserving order
             const uniqueItems: any[] = [];
             const seenIds = new Set<number>();
             for (const item of results) {
@@ -776,27 +779,68 @@ export class AllService implements OnModuleInit {
             // Process with enhanced trailer fetching
             const trailerTasks = uniqueItems.slice(0, limit * 2).map((m: any) => async (): Promise<TmdbAll | null> => {
                 try {
-                    const type = m.media_type; // Focus on TV series
+                    const type = m.media_type;
+                    const allowedRegions = ['US', 'GB', 'CA', 'AU'];
 
-                    // Fetch videos, details, and additional info in parallel
+                    // Fetch videos and details in parallel
                     const [videosData, details] = await Promise.all([
                         this.tmdb(`${this.baseUrl}/${type}/${m.id}/videos?language=en-US`),
                         this.tmdb(`${this.baseUrl}/${type}/${m.id}?language=en-US`).catch(() => null)
                     ]);
 
-                    // Enhanced trailer finding - look for multiple types
-                    const trailerTypes = ['Trailer', 'Teaser', 'Clip'];
-                    let trailer: any = null;
+                    const videos = videosData?.results || [];
 
-                    for (const trailerType of trailerTypes) {
-                        trailer = (videosData?.results ?? []).find(
-                            (v: any) => v.type === trailerType && v.site === 'YouTube'
-                        );
-                        if (trailer) break;
-                    }
+                    // Filter videos using the same criteria as processItemWithVideos
+                    const filteredVideos = videos.filter(v =>
+                        v.site === "YouTube" &&
+                        (v.type === "Trailer" || v.type === "Teaser" || v.type === "Clip") &&
+                        v.key &&
+                        v.key.length > 5 &&
+                        (allowedRegions.includes(v.iso_3166_1) || !v.iso_3166_1) &&
+                        v.name &&
+                        !/reaction/i.test(v.name) &&
+                        !/review/i.test(v.name) &&
+                        !/behind the scenes/i.test(v.name) &&
+                        !DISQUALIFY_RE.test(v.name)   // <-- Filter out red band / uncut / nsfw etc early
+                    );
 
-                    // Only return items that have trailers
-                    if (!trailer) return null;
+                    if (filteredVideos.length === 0) return null;
+
+                    // Check availability for top candidates
+                    const checkLimit = Math.min(filteredVideos.length, 5);
+                    const videosToCheck = filteredVideos.slice(0, checkLimit);
+
+                    const availabilityChecks = await Promise.allSettled(
+                        videosToCheck.map(async v => ({
+                            ...v,
+                            available: await this.isVideoAvailable(v.key)
+                        }))
+                    );
+
+                    const availableVideos = availabilityChecks
+                        .filter((result): result is PromiseFulfilledResult<any> =>
+                            result.status === 'fulfilled' && result.value.available
+                        )
+                        .map(result => result.value);
+
+                    if (availableVideos.length === 0) return null;
+
+                    // Score and sort videos
+                    const scoredVideos = availableVideos
+                        .filter(v => !/red\s*band/i.test(v.name))
+                        .map(v => ({
+                            ...v,
+                            score: this.calculateVideoScore(v)
+                        }))
+                        .sort((a, b) => b.score - a.score);
+
+
+                    // Optional: log after sorting
+                    scoredVideos.forEach(v => console.log(v.name, v.score));
+
+                    // Get the best video
+                    const bestVideo = scoredVideos[0];
+
 
                     return {
                         id: m.id,
@@ -808,9 +852,9 @@ export class AllService implements OnModuleInit {
                         vote_average: m.vote_average,
                         vote_count: m.vote_count,
                         popularity: m.popularity,
-                        trailer_key: trailer.key,
-                        recommendations: [], // Will be populated in background
-                        runtime: undefined, // Use undefined instead of null for TV
+                        trailer_key: bestVideo.key,
+                        recommendations: [],
+                        runtime: undefined,
                         genres: details?.genres ? details.genres.map((g: any) => g.name) : [],
                         origin_country: details?.origin_country ?? m.origin_country ?? [],
                         type: type,
@@ -829,8 +873,7 @@ export class AllService implements OnModuleInit {
             // Background population of recommendations
             this.populateRecommendationsBackground(withTrailers, cacheKey);
 
-            // Cache the results
-            // await this.redisService.set(cacheKey, JSON.stringify(withTrailers), ttlSec);
+            // Cache and shuffle results
             const shuffled = shuffleArray(withTrailers);
             return shuffled;
         } catch (err) {
@@ -1283,13 +1326,6 @@ export class AllService implements OnModuleInit {
         const ttlSec = this.CACHE_TTL.TRAILERS;
         const cacheKey = `trailers-upcoming-${limit}`;
 
-        // const cached = await this.redisService.get(cacheKey);
-        // if (cached) {
-        //     try {
-        //         return JSON.parse(cached) as TmdbAll[];
-        //     } catch { }
-        // }
-
         if (!this.token) {
             this.logger.warn("TMDB_API_KEY not set; returning empty trailers");
             return [];
@@ -1300,6 +1336,7 @@ export class AllService implements OnModuleInit {
             const today = new Date();
             const todayStr = today.toISOString().split("T")[0];
             const maxPages = 20;
+            const allowedRegions = ['US', 'GB', 'CA', 'AU'];
 
             const fetchTrailers = async (mediaType: "movie" | "tv") => {
                 for (let page = 1; page <= maxPages; page++) {
@@ -1323,10 +1360,51 @@ export class AllService implements OnModuleInit {
                                 this.tmdb(`${this.baseUrl}/${mediaType}/${m.id}?language=en-US`)
                             ]);
 
-                            const trailer = (videosData?.results ?? []).find(
-                                (v: any) => v.type === "Trailer" && v.site === "YouTube"
+                            const videos = videosData?.results || [];
+
+                            // Filter videos using the same criteria
+                            const filteredVideos = videos.filter(v =>
+                                v.site === "YouTube" &&
+                                (v.type === "Trailer" || v.type === "Teaser" || v.type === "Clip") &&
+                                v.key &&
+                                v.key.length > 5 &&
+                                (allowedRegions.includes(v.iso_3166_1) || !v.iso_3166_1) &&
+                                v.name &&
+                                !/reaction/i.test(v.name) &&
+                                !/review/i.test(v.name) &&
+                                !/behind the scenes/i.test(v.name) &&
+                                !DISQUALIFY_RE.test(v.name)   // <-- Filter out red band / uncut / nsfw etc early
                             );
-                            if (!trailer) return null;
+
+                            if (filteredVideos.length === 0) return null;
+
+                            // Check availability for top candidates
+                            const checkLimit = Math.min(filteredVideos.length, 5);
+                            const videosToCheck = filteredVideos.slice(0, checkLimit);
+
+                            const availabilityChecks = await Promise.allSettled(
+                                videosToCheck.map(async v => ({
+                                    ...v,
+                                    available: await this.isVideoAvailable(v.key)
+                                }))
+                            );
+
+                            const availableVideos = availabilityChecks
+                                .filter((result): result is PromiseFulfilledResult<any> =>
+                                    result.status === 'fulfilled' && result.value.available
+                                )
+                                .map(result => result.value);
+
+                            if (availableVideos.length === 0) return null;
+
+                            // Score and sort videos
+                            const scoredVideos = availableVideos.map(v => ({
+                                ...v,
+                                score: this.calculateVideoScore(v)
+                            })).sort((a, b) => b.score - a.score);
+
+                            // Get the best video
+                            const bestVideo = scoredVideos[0];
 
                             return {
                                 id: m.id,
@@ -1336,7 +1414,7 @@ export class AllService implements OnModuleInit {
                                 backdrop_path: m.backdrop_path ?? null,
                                 release_date: rd,
                                 vote_average: m.vote_average,
-                                trailer_key: trailer.key,
+                                trailer_key: bestVideo.key,
                                 type: mediaType,
                                 recommendations: [],
                                 runtime: mediaType === "movie" ? details.runtime ?? null : null,
@@ -1369,7 +1447,7 @@ export class AllService implements OnModuleInit {
                 )
                 .slice(0, limit);
 
-            // Populate recommendations in background (don't await)
+            // Populate recommendations in background
             setTimeout(async () => {
                 const tasks = sorted.map(item => async () => {
                     try {
@@ -1381,11 +1459,9 @@ export class AllService implements OnModuleInit {
                     }
                 });
 
-                const updatedItems = await this.withConcurrencyLimit(tasks, 3);
-                // await this.redisService.set(cacheKey, JSON.stringify(updatedItems), ttlSec);
+                await this.withConcurrencyLimit(tasks, 3);
             }, 100);
 
-            // await this.redisService.set(cacheKey, JSON.stringify(sorted), ttlSec);
             return sorted;
         } catch (err) {
             this.logger.error("Failed to fetch upcoming trailers", err as any);
@@ -1899,25 +1975,31 @@ export class AllService implements OnModuleInit {
 
     private calculateVideoScore(video: any): number {
         let score = 0;
+        const name = (video.name || "").toLowerCase();
 
-        // Official videos get priority
+        // Strong disqualifier: immediate fail score
+        const DISQUALIFY_RE = /\b(red[-\s]?band|uncut|uncensored|nsfw|explicit|age[-\s]?restricted|18\+|adult|mature|tv[-\s]?ma|redband)\b/i;
+        if (DISQUALIFY_RE.test(name)) {
+            return -100000;
+        }
+
         if (video.official) score += 10;
 
-        // Type scoring
         if (video.type === "Trailer") score += 8;
         else if (video.type === "Teaser") score += 5;
         else if (video.type === "Clip") score += 2;
 
-        // Quality scoring
-        if (video.size >= 1080) score += 5;
+        if (video.size >= 2160) score += 6;
+        else if (video.size >= 1080) score += 5;
         else if (video.size >= 720) score += 3;
         else if (video.size >= 480) score += 1;
 
-        // Prefer videos with "official" in the name
-        if (video.name && video.name.toLowerCase().includes('official')) score += 3;
+        if (name.includes("official")) score += 3;
+        if (name.includes("trailer")) score += 2;
 
-        // Prefer videos with "trailer" in the name
-        if (video.name && video.name.toLowerCase().includes('trailer')) score += 2;
+        if (name.includes("fan") || name.includes("leak") || name.includes("leaked")) score -= 6;
+
+        if (video.site === "YouTube") score += 2;
 
         return score;
     }
