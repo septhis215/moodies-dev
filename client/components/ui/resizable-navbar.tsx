@@ -73,15 +73,14 @@ export const Navbar = ({ children, className }: NavbarProps) => {
       transition={{ duration: 0.3, ease: "easeInOut" }}
       className={cn(
         "fixed inset-x-0 top-0 z-100 w-full flex items-center px-4",
-        "backdrop-blur-sm bg-gradient-to-b to-transparent",
+        "backdrop-blur-[4px] bg-gradient-to-b from-black/40 via-black/20 to-transparent",
         "h-32 md:h-24",
+        "transition-all duration-300 ease-in-out",
         className
       )}
       style={{
-        // keep your gradient mask styling
-        maskImage: "linear-gradient(to bottom, black 50%, transparent 100%)",
-        WebkitMaskImage:
-          "linear-gradient(to bottom, black 50%, transparent 100%)",
+        maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+        WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
       }}
     >
       {children}

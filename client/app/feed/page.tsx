@@ -476,8 +476,11 @@ export default function VideoFeedPage() {
         initial={{ y: -60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="fixed top-0 left-0 right-0 h-14 bg-gradient-to-b from-black/60 via-black/40 to-transparent backdrop-blur-xs z-50 flex items-center px-4 md:px-6"
-      >
+        className="fixed top-0 left-0 right-0 h-14 
+             bg-gradient-to-b from-black/70 via-black/40 to-transparent 
+             backdrop-blur-[3px] 
+             z-50 flex items-center px-4 md:px-6
+             transition-all duration-300 ease-in-out"   >
         <div className="w-full flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
