@@ -13,6 +13,7 @@ import { SearchModule } from './routes/search/search.module';
 import { MoodsController } from './routes/moods/moods.controller';
 import { MoodsModule } from './routes/moods/moods.module';
 import { QuizModule } from './quiz/quiz.module';
+import { CategoryModule } from './media/category/category.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { QuizModule } from './quiz/quiz.module';
     PeopleModule,
     SearchModule,
     MoodsModule,
+    CategoryModule,
   ],
   providers: [],
   controllers: [SearchController, MoodsController],
