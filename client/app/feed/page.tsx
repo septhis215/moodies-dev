@@ -535,8 +535,9 @@ export default function VideoFeedPage() {
           </div>
         </div>
       </motion.nav>
+
       {/* Debug Info */}
-      <div className="absolute top-20 right-4 z-50 bg-black/80 text-white text-xs p-3 rounded-lg font-mono">
+      <div className="absolute top-20 left-4 z-50 bg-black/80 text-white text-xs p-3 rounded-lg font-mono">
         <div className="font-bold mb-1 text-green-400">{activeCategory.toUpperCase()}</div>
         <div>Videos: {videos.length}</div>
         <div>Index: {currentIndex}</div>
