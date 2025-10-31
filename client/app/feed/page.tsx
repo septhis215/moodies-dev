@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { All } from '@/types/all';
 import Link from 'next/link';
+import ActionButtons from '@/components/ui/actionButtons';
 
 interface VideoItem {
   id: number;
@@ -674,7 +675,7 @@ export default function VideoFeedPage() {
                           whileHover={{ scale: 1.06 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => setPanelOpen(p => !p)}
-                          className={`p-3 rounded-xl transition-all backdrop-blur-md ${panelOpen ? 'bg-white text-black shadow-lg' : 'bg-white/20 border border-white/30 text-white hover:bg-white/30'}`}
+                          className={`p-2 rounded-xl transition-all backdrop-blur-md ${panelOpen ? 'bg-white text-black shadow-lg' : 'bg-white/20 border border-white/30 text-white hover:bg-white/30'}`}
                         >
                           <Info className="w-5 h-5" />
                         </motion.button>
@@ -702,55 +703,7 @@ export default function VideoFeedPage() {
                   )}
                 </AnimatePresence>
 
-                {/* Action Buttons */}
-                <motion.div
-                  initial={{ x: 50, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.2, duration: 0.36 }}
-                  className="absolute right-3 md:right-6 bottom-20 md:bottom-24 flex flex-col gap-4 md:gap-5 z-30"
-                >
-                  {[
-                    {
-                      onClick: togglePlayPause,
-                      icon: isPlaying ? <Pause className="w-5 h-5 md:w-6 md:h-6 text-white" /> : <Play className="w-5 h-5 md:w-6 md:h-6 text-white" />,
-                      label: isPlaying ? "Playing" : "Paused",
-                      active: isPlaying,
-                    },
-                    {
-                      onClick: () => setLiked(l => !l),
-                      icon: <Heart className={`w-5 h-5 md:w-6 md:h-6 ${liked ? "fill-white text-white" : "text-white"}`} />,
-                      label: liked ? "Liked" : "Like",
-                      active: liked,
-                    },
-                    {
-                      onClick: () => setSaved(s => !s),
-                      icon: <Bookmark className={`w-5 h-5 md:w-6 md:h-6 ${saved ? "fill-white text-white" : "text-white"}`} />,
-                      label: saved ? "Saved" : "Save",
-                      active: saved,
-                    },
-                    {
-                      onClick: toggleMute,
-                      icon: muted ? <VolumeX className="w-5 h-5 md:w-6 md:h-6 text-white" /> : <Volume2 className="w-5 h-5 md:w-6 md:h-6 text-white" />,
-                      label: muted ? "Muted" : "Sound",
-                      active: !muted,
-                    },
-                  ].map((btn, idx) => (
-                    <motion.button
-                      key={idx}
-                      whileHover={{ scale: 1.15 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={btn.onClick}
-                      className="group flex flex-col items-center gap-1"
-                    >
-                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full border flex items-center justify-center transition-all duration-300 ${btn.active ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] border-transparent shadow-[0_0_12px_rgba(233,79,55,0.7)] backdrop-blur-sm" : "bg-black/40 border-white/30 group-hover:border-white/50 group-hover:bg-white/10 backdrop-blur-sm"}`}>
-                        {btn.icon}
-                      </div>
-                      <span className={`text-xs md:text-sm font-medium transition-colors duration-200 ${btn.active ? "text-white" : "text-white/80 group-hover:text-white"}`}>
-                        {btn.label}
-                      </span>
-                    </motion.button>
-                  ))}
-                </motion.div>
+                <ActionButtons isPlaying={isPlaying} liked={liked} saved={saved} muted={muted} togglePlayPause={togglePlayPause} setLiked={setLiked} setSaved={setSaved} toggleMute={toggleMute} />
               </div>
 
               {/* Info Panel */}
