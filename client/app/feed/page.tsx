@@ -35,6 +35,12 @@ interface VideoItem {
 type Category = 'all' | 'upcoming';
 
 export default function VideoFeedPage() {
+  // Configuration constants
+  const PREFETCH_THRESHOLD = 5;
+  const WINDOW_SIZE = 20;
+  const CLEANUP_THRESHOLD = 10;
+  const INITIAL_FETCH_SIZE = 15;
+  const PREFETCH_SIZE = 10;
   const [expanded, setExpanded] = useState(false);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -43,9 +49,12 @@ export default function VideoFeedPage() {
   const fetchedPagesRef = useRef<Set<number>>(new Set());
   const [hasMore, setHasMore] = useState(true);
   const [activeCategory, setActiveCategory] = useState<Category>('all');
-  const fetchVideosRef = useRef<() => Promise<void>>(async () => { });
+  const isFetchingRef = useRef(false);
+  const nextPageRef = useRef(1);
+  const seenVideoIdsRef = useRef<Set<number>>(new Set());
+  const indexOffsetRef = useRef(0);
+  const retryCountRef = useRef(0);
 
-  // Persisted mute state
   const [muted, setMuted] = useState<boolean>(() => {
     try {
       const s = typeof window !== 'undefined' ? localStorage.getItem('videoMuted') : null;
@@ -70,11 +79,11 @@ export default function VideoFeedPage() {
   const currentVideo = videos[currentIndex];
   const [showScrollHint, setShowScrollHint] = useState(true);
 
-  const getContentType = (item: Partial<All>): "movie" | "tv" => {
-    if ((item as any).media_type) return (item as any).media_type;
-    if ((item as any).type === "movies" || (item as any).type === "movie") return "movie";
-    if ((item as any).type === "tv") return "tv";
-    if ((item as any).number_of_seasons || (item as any).first_air_date || (item as any).name) return "tv";
+  const getContentType = (item: any): "movie" | "tv" => {
+    if (item.media_type) return item.media_type;
+    if (item.type === "movies" || item.type === "movie") return "movie";
+    if (item.type === "tv") return "tv";
+    if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
     return "movie";
   };
 
@@ -82,99 +91,51 @@ export default function VideoFeedPage() {
     ? `/${getContentType(currentVideo) === 'tv' ? 'tv' : 'movies'}/${currentVideo.id}`
     : undefined;
 
-  // Scroll hint handler
-  useEffect(() => {
-    const handleScroll = () => {
-      if (containerRef.current) {
-        const scrollTop = containerRef.current.scrollTop;
-        setShowScrollHint(scrollTop <= 50);
-      }
-    };
-
-    const container = containerRef.current;
-    if (container) container.addEventListener('scroll', handleScroll);
-    return () => container?.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Auto-hide title bar
-  useEffect(() => {
-    setTitleBarVisible(true);
-    if (titleBarTimeoutRef.current) clearTimeout(titleBarTimeoutRef.current);
-
-    titleBarTimeoutRef.current = setTimeout(() => setTitleBarVisible(false), 3000);
-
-    return () => {
-      if (titleBarTimeoutRef.current) clearTimeout(titleBarTimeoutRef.current);
-    };
-  }, [currentIndex]);
-
-  // Persist muted preference
-  useEffect(() => {
-    try {
-      localStorage.setItem('videoMuted', String(muted));
-    } catch { }
-  }, [muted]);
-
-  // YouTube postMessage helper
-  const sendYouTubeCommand = (iframe: HTMLIFrameElement | undefined | null, func: string, args: any[] = []) => {
-    if (!iframe) return;
-    try {
-      iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
-    } catch { }
-  };
-
-  const toggleMute = useCallback(() => {
-    setMuted(prev => {
-      const next = !prev;
-      const iframe = currentVideo ? videoRefs.current.get(currentVideo.id) : undefined;
-      if (iframe) sendYouTubeCommand(iframe, next ? 'mute' : 'unMute');
-      return next;
-    });
-  }, [currentVideo]);
-
-  // Apply mute state when video changes
-  useEffect(() => {
-    if (!currentVideo) return;
-    const iframe = videoRefs.current.get(currentVideo.id);
-    if (iframe) {
-      const t = window.setTimeout(() => sendYouTubeCommand(iframe, muted ? 'mute' : 'unMute'), 250);
-      return () => clearTimeout(t);
+  // Smart prefetch function with deduplication
+  const fetchMoreVideos = useCallback(async (isInitial = false) => {
+    if (isFetchingRef.current) {
+      console.log('⏸️ Already fetching, skipping...');
+      return;
     }
-  }, [currentVideo?.id, muted]);
 
-  const getRandomPage = () => Math.floor(Math.random() * 20) + 1;
+    if (!isInitial && !hasMore) {
+      console.log('🛑 No more content available');
+      return;
+    }
 
-  async function fetchVideos() {
-    // avoid multiple concurrent fetches
-    if (loading) return;
-
+    isFetchingRef.current = true;
     setLoading(true);
+
     try {
       const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const limit = isInitial ? INITIAL_FETCH_SIZE : PREFETCH_SIZE;
 
       let endpoint: string;
+      let currentPage = 1;
 
       if (activeCategory === 'upcoming') {
-       
-        endpoint = `${base}/all/upcoming-trailers-feed?limit=30`;
+        currentPage = nextPageRef.current;
+        endpoint = `${base}/all/upcoming-trailers-feed?page=${currentPage}&limit=${limit}`;
+
+        console.log(`🎬 Fetching upcoming page ${currentPage} with limit ${limit}`);
       } else {
-        // find an unfetched page up to N attempts
         let randomPage: number;
         let attempts = 0;
         do {
-          randomPage = getRandomPage();
+          randomPage = Math.floor(Math.random() * 20) + 1;
           attempts++;
         } while (fetchedPagesRef.current.has(randomPage) && attempts < 50);
 
         if (attempts >= 50) {
-          // everything probably fetched
           setHasMore(false);
+          isFetchingRef.current = false;
+          setLoading(false);
           return;
         }
 
+        currentPage = randomPage;
         endpoint = `${base}/all/video-feed?page=${randomPage}`;
 
-        // Track fetched page only for 'all' category
         setFetchedPages(prev => {
           const next = new Set(prev);
           next.add(randomPage);
@@ -191,46 +152,211 @@ export default function VideoFeedPage() {
 
       const results = Array.isArray(data) ? data : (data.results || []);
 
-      if (results.length > 0) {
-        const shuffled = [...results].sort(() => Math.random() - 0.5);
-        setVideos(prev => [...prev, ...shuffled]);
+      console.log(`📦 Received ${results.length} videos from backend`);
 
-        // For 'all' category, check if we've fetched enough pages
-        if (activeCategory === 'all') {
-          setHasMore(fetchedPagesRef.current.size < 100);
+      if (results.length > 0) {
+        // Filter out duplicates using seenVideoIdsRef
+        const uniqueVideos = results.filter((video: VideoItem) => {
+          if (!video.primary_video?.key) {
+            console.log(`⚠️ Skipping video ${video.id} - no primary video key`);
+            return false;
+          }
+
+          if (seenVideoIdsRef.current.has(video.id)) {
+            return false;
+          }
+
+          seenVideoIdsRef.current.add(video.id);
+          return true;
+        });
+
+        console.log(`✅ ${uniqueVideos.length} unique videos (filtered ${results.length - uniqueVideos.length} duplicates)`);
+
+        if (uniqueVideos.length > 0) {
+          // Reset retry count on success
+          retryCountRef.current = 0;
+
+          // For upcoming, preserve order; for all, shuffle
+          const videosToAdd = activeCategory === 'upcoming'
+            ? uniqueVideos
+            : [...uniqueVideos].sort(() => Math.random() - 0.5);
+
+          setVideos(prev => [...prev, ...videosToAdd]);
+
+          // Increment page for upcoming
+          if (activeCategory === 'upcoming') {
+            nextPageRef.current += 1;
+          }
+
+          if (activeCategory === 'all') {
+            setHasMore(fetchedPagesRef.current.size < 100);
+          } else {
+            // Check if backend indicates more content
+            const backendHasMore = data.hasMore !== undefined ? data.hasMore : uniqueVideos.length >= Math.floor(limit * 0.7);
+            setHasMore(backendHasMore);
+            console.log(`📊 HasMore: ${backendHasMore} (unique: ${uniqueVideos.length}, limit: ${limit})`);
+          }
         } else {
-          // For 'upcoming', always allow more fetches (backend handles variety)
-          setHasMore(true);
+          // All duplicates - try next page with retry limit
+          console.log(`⚠️ All duplicates! Retry count: ${retryCountRef.current}`);
+
+          if (retryCountRef.current < 3) {
+            retryCountRef.current += 1;
+
+            if (activeCategory === 'upcoming') {
+              nextPageRef.current += 1;
+            }
+
+            isFetchingRef.current = false;
+            setLoading(false);
+
+            // Retry after a short delay
+            setTimeout(() => {
+              fetchMoreVideos(false);
+            }, 200);
+            return;
+          } else {
+            // Too many retries, stop fetching
+            console.log('🛑 Too many retries with duplicates, stopping fetch');
+            setHasMore(false);
+          }
         }
       } else {
+        console.log('⚠️ No results returned');
         setHasMore(false);
       }
     } catch (error) {
-      console.error('Error fetching videos:', error);
+      console.error('❌ Error fetching videos:', error);
       setHasMore(false);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  }
+  }, [activeCategory, hasMore, INITIAL_FETCH_SIZE, PREFETCH_SIZE]);
 
-  // Reset and fetch when category changes
+  // Memory cleanup
+  const cleanupOldVideos = useCallback(() => {
+    const videosAhead = videos.length - currentIndex;
+
+    if (currentIndex > CLEANUP_THRESHOLD && videosAhead > WINDOW_SIZE / 2) {
+      const keepFrom = Math.max(0, currentIndex - 2);
+
+      if (keepFrom > 0) {
+        setVideos(prev => {
+          const newVideos = prev.slice(keepFrom);
+
+          prev.slice(0, keepFrom).forEach(video => {
+            videoRefs.current.delete(video.id);
+          });
+
+          console.log(`🧹 Cleanup: Removed ${keepFrom} old videos, ${newVideos.length} remain`);
+          return newVideos;
+        });
+
+        indexOffsetRef.current += keepFrom;
+        setCurrentIndex(prev => prev - keepFrom);
+      }
+    }
+  }, [currentIndex, videos.length, CLEANUP_THRESHOLD, WINDOW_SIZE]);
+
+  // Smart prefetch trigger
   useEffect(() => {
+    const distanceFromEnd = videos.length - currentIndex - 1;
+
+    if (distanceFromEnd <= PREFETCH_THRESHOLD && hasMore && !isFetchingRef.current) {
+      console.log(`🔄 Prefetching: ${distanceFromEnd} videos from end (total: ${videos.length}, index: ${currentIndex})`);
+      fetchMoreVideos(false);
+    }
+  }, [currentIndex, videos.length, hasMore, PREFETCH_THRESHOLD, fetchMoreVideos]);
+
+  // Separate cleanup trigger
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      cleanupOldVideos();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [currentIndex, cleanupOldVideos]);
+
+  // Reset on category change
+  useEffect(() => {
+    console.log(`🔄 Switching to ${activeCategory} category`);
+
     setVideos([]);
     setCurrentIndex(0);
+    indexOffsetRef.current = 0;
+    seenVideoIdsRef.current = new Set();
     setFetchedPages(new Set());
+    fetchedPagesRef.current = new Set();
+    nextPageRef.current = 1;
+    retryCountRef.current = 0;
     setHasMore(true);
     setPanelOpen(false);
     setLiked(false);
     setSaved(false);
-    fetchVideos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCategory]);
-  // keep ref updated each render
-  useEffect(() => {
-    fetchVideosRef.current = fetchVideos;
-  }, [fetchVideos]); // fetchVideos is function reference but okay; or just [] if not memoized
+    isFetchingRef.current = false;
 
-  // Scroll/swipe handling
+    // Delay initial fetch slightly to ensure state is clean
+    setTimeout(() => {
+      fetchMoreVideos(true);
+    }, 100);
+  }, [activeCategory]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (containerRef.current) {
+        const scrollTop = containerRef.current.scrollTop;
+        setShowScrollHint(scrollTop <= 50);
+      }
+    };
+
+    const container = containerRef.current;
+    if (container) container.addEventListener('scroll', handleScroll);
+    return () => container?.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    setTitleBarVisible(true);
+    if (titleBarTimeoutRef.current) clearTimeout(titleBarTimeoutRef.current);
+
+    titleBarTimeoutRef.current = setTimeout(() => setTitleBarVisible(false), 3000);
+
+    return () => {
+      if (titleBarTimeoutRef.current) clearTimeout(titleBarTimeoutRef.current);
+    };
+  }, [currentIndex]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('videoMuted', String(muted));
+    } catch { }
+  }, [muted]);
+
+  const sendYouTubeCommand = (iframe: HTMLIFrameElement | undefined | null, func: string, args: any[] = []) => {
+    if (!iframe) return;
+    try {
+      iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+    } catch { }
+  };
+
+  const toggleMute = useCallback(() => {
+    setMuted(prev => {
+      const next = !prev;
+      const iframe = currentVideo ? videoRefs.current.get(currentVideo.id) : undefined;
+      if (iframe) sendYouTubeCommand(iframe, next ? 'mute' : 'unMute');
+      return next;
+    });
+  }, [currentVideo]);
+
+  useEffect(() => {
+    if (!currentVideo) return;
+    const iframe = videoRefs.current.get(currentVideo.id);
+    if (iframe) {
+      const t = window.setTimeout(() => sendYouTubeCommand(iframe, muted ? 'mute' : 'unMute'), 250);
+      return () => clearTimeout(t);
+    }
+  }, [currentVideo?.id, muted]);
+
   const handleScroll = useCallback((e: WheelEvent) => {
     if (panelRef.current?.contains(e.target as Node)) return;
 
@@ -248,9 +374,7 @@ export default function VideoFeedPage() {
       setLiked(false);
       setSaved(false);
     }
-
-    if (currentIndex >= videos.length - 3) fetchVideos();
-  }, [currentIndex, videos.length, fetchVideos]);
+  }, [currentIndex, videos.length]);
 
   const touchStartY = useRef(0);
   const handleTouchStart = (e: TouchEvent) => {
@@ -274,8 +398,6 @@ export default function VideoFeedPage() {
       setLiked(false);
       setSaved(false);
     }
-
-    if (currentIndex >= videos.length - 3) fetchVideos();
   };
 
   useEffect(() => {
@@ -293,7 +415,6 @@ export default function VideoFeedPage() {
     };
   }, [handleScroll]);
 
-  // Auto-play when video changes
   useEffect(() => {
     if (!currentVideo) return;
     setIsPlaying(true);
@@ -309,7 +430,6 @@ export default function VideoFeedPage() {
     return () => clearTimeout(t);
   }, [currentVideo?.id, muted]);
 
-  // First user gesture fallback
   useEffect(() => {
     if (!currentVideo) return;
     const onFirstGesture = () => {
@@ -327,7 +447,6 @@ export default function VideoFeedPage() {
     };
   }, [currentVideo?.id]);
 
-  // Iframe src with proper memoization
   const iframeSrc = useMemo(() => {
     if (!currentVideo?.primary_video?.key) return '';
     const key = currentVideo.primary_video.key;
@@ -351,7 +470,7 @@ export default function VideoFeedPage() {
   };
 
   return (
-    <div ref={containerRef} className="fixed inset-0 bg-black overflow-hidden">
+    <div ref={containerRef} className="fixed inset-0 w-full bg-black overflow-hidden">
       {/* Top Navigation Bar with Categories */}
       <motion.nav
         initial={{ y: -60, opacity: 0 }}
@@ -413,6 +532,33 @@ export default function VideoFeedPage() {
           </div>
         </div>
       </motion.nav>
+      {/* Debug Info */}
+      <div className="absolute top-20 right-4 z-50 bg-black/80 text-white text-xs p-3 rounded-lg font-mono">
+        <div className="font-bold mb-1 text-green-400">{activeCategory.toUpperCase()}</div>
+        <div>Videos: {videos.length}</div>
+        <div>Index: {currentIndex}</div>
+        <div>Distance: {videos.length - currentIndex - 1}</div>
+        <div>Next Page: {activeCategory === 'upcoming' ? nextPageRef.current : 'random'}</div>
+        <div>Seen IDs: {seenVideoIdsRef.current.size}</div>
+        <div className="flex gap-2">
+          <span>Fetching:</span>
+          <span className={isFetchingRef.current ? 'text-yellow-400' : 'text-green-400'}>
+            {isFetchingRef.current ? '🔄' : '✓'}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <span>Loading:</span>
+          <span className={loading ? 'text-yellow-400' : 'text-green-400'}>
+            {loading ? '🔄' : '✓'}
+          </span>
+        </div>
+        <div>HasMore: {hasMore ? '✓' : '✗'}</div>
+        <div className="mt-1 pt-1 border-t border-white/20">
+          <div className={videos.length - currentIndex - 1 <= PREFETCH_THRESHOLD ? 'text-yellow-300 font-bold' : 'text-green-300'}>
+            {videos.length - currentIndex - 1 <= PREFETCH_THRESHOLD ? '⚠️ SHOULD FETCH' : '✅ BUFFER OK'}
+          </div>
+        </div>
+      </div>
 
       {/* Main Content Area */}
       <div className="relative w-full h-screen bg-black flex items-center justify-center overflow-hidden">
@@ -426,21 +572,24 @@ export default function VideoFeedPage() {
               transition={{ duration: 0.28, ease: 'easeOut' }}
               className="absolute inset-0 flex"
             >
-              <div className="relative w-full h-full flex items-center justify-center">
+              <div className="relative w-full flex items-center justify-center m-0">
                 {/* Video Container */}
-                <div className="w-full h-[50vh] md:h-full flex items-center justify-center">
+                <div className="relative w-full h-full flex items-center justify-center">
                   <iframe
                     ref={el => { if (el && currentVideo) videoRefs.current.set(currentVideo.id, el); }}
                     title={currentVideo.title || currentVideo.name || `video-${currentVideo.id}`}
                     src={iframeSrc}
-                    className="w-full h-full object-contain bg-black"
+                    className="absolute top-1/2 left-1/2 min-w-full min-h-full -translate-x-1/2 -translate-y-1/2 bg-black"
                     allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
                     allowFullScreen
-                    style={{ border: 'none', pointerEvents: 'none' }}
+                    style={{
+                      border: 'none',
+                      pointerEvents: 'none',
+                      objectFit: 'cover', // doesn’t technically affect iframe but keeps consistency
+                    }}
                     onLoad={(e) => {
                       const iframe = e.currentTarget as HTMLIFrameElement;
                       if (currentVideo) videoRefs.current.set(currentVideo.id, iframe);
-
                       setTimeout(() => {
                         sendYouTubeCommand(iframe, 'playVideo', []);
                         if (!muted) sendYouTubeCommand(iframe, 'unMute', []);
@@ -449,6 +598,7 @@ export default function VideoFeedPage() {
                     }}
                   />
                 </div>
+
 
                 {/* Title Bar */}
                 <AnimatePresence>
@@ -786,6 +936,6 @@ export default function VideoFeedPage() {
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </div >
   );
 }

@@ -1774,35 +1774,18 @@ export class AllService implements OnModuleInit {
         return shuffled;
     }
 
-    private async isVideoAvailable(videoKey: string): Promise<boolean> {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-            const response = await fetch(
-                `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoKey}&format=json`,
-                {
-                    signal: controller.signal,
-                    method: 'GET'
-                }
-            );
-
-            clearTimeout(timeoutId);
-            return response.ok;
-        } catch (e) {
-            return false;
-        }
-    }
-
     private async enrichWithVideos(items: any[], seed: number) {
         const enriched: any[] = [];
         const allowedRegions = [
             "MY", "SG", "ID", "TH", "PH", "VN", "BN", "KH", "LA",
-            "HK", "TW", "IN", "AU", "NZ", "US", "GB", "KR" // Added KR for Korean content
+            "HK", "TW", "IN", "AU", "NZ", "US", "GB", "KR", "JP"
         ];
 
-        const targetCount = 20; // Increased target
-        const batchSize = 5;
+        // Process items until we have enough enriched results
+        const targetCount = Math.min(items.length, 30); // Target enriched count
+        const batchSize = 8; // Increased batch size for faster processing
+
+        this.logger.log(`Starting enrichment of ${items.length} items, target: ${targetCount}`);
 
         for (let i = 0; i < items.length && enriched.length < targetCount; i += batchSize) {
             const batch = items.slice(i, i + batchSize);
@@ -1815,36 +1798,53 @@ export class AllService implements OnModuleInit {
                 if (result.status === 'fulfilled' && result.value) {
                     enriched.push(result.value);
                     if (enriched.length >= targetCount) break;
+                } else if (result.status === 'rejected') {
+                    this.logger.error('Failed to process item:', result.reason);
                 }
             }
 
+            // Small delay between batches to avoid rate limiting
             if (i + batchSize < items.length && enriched.length < targetCount) {
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
         }
 
+        this.logger.log(`Enrichment complete: ${enriched.length} items with valid videos`);
         return enriched;
     }
 
     private async processItemWithVideos(item: any, allowedRegions: string[], seed: number) {
         try {
             const mediaType = item.title ? "movie" : "tv";
-            const videosResponse = await this.tmdb(`${mediaType}/${item.id}/videos`);
-            const videos = videosResponse.results || [];
 
+            // Use cached videos if already fetched
+            let videos = item.videos || [];
+
+            // If no videos in item, fetch them
+            if (videos.length === 0) {
+                const videosResponse = await this.tmdb(`${mediaType}/${item.id}/videos`);
+                videos = videosResponse.results || [];
+            }
+
+            // Filter videos based on criteria
             const filteredVideos = videos.filter(v =>
                 v.site === "YouTube" &&
                 (v.type === "Trailer" || v.type === "Teaser" || v.type === "Clip") &&
                 v.key &&
                 v.key.length > 5 &&
-                allowedRegions.includes(v.iso_3166_1 ?? null) &&
+                (allowedRegions.includes(v.iso_3166_1) || !v.iso_3166_1) && // Allow videos without region or in allowed regions
                 v.name &&
                 !v.name.toLowerCase().includes('reaction') &&
-                !v.name.toLowerCase().includes('review')
+                !v.name.toLowerCase().includes('review') &&
+                !v.name.toLowerCase().includes('behind the scenes')
             );
 
-            if (filteredVideos.length === 0) return null;
+            if (filteredVideos.length === 0) {
+                this.logger.debug(`No valid videos for ${mediaType} ${item.id}`);
+                return null;
+            }
 
+            // Check availability for top candidates
             const checkLimit = Math.min(filteredVideos.length, 5);
             const videosToCheck = filteredVideos.slice(0, checkLimit);
 
@@ -1861,8 +1861,12 @@ export class AllService implements OnModuleInit {
                 )
                 .map(result => result.value);
 
-            if (availableVideos.length === 0) return null;
+            if (availableVideos.length === 0) {
+                this.logger.debug(`No available videos for ${mediaType} ${item.id}`);
+                return null;
+            }
 
+            // Score and sort videos
             const scoredVideos = availableVideos.map(v => ({
                 ...v,
                 score: this.calculateVideoScore(v)
@@ -1870,10 +1874,16 @@ export class AllService implements OnModuleInit {
 
             const topVideos = scoredVideos.slice(0, 8);
 
-            // Enhanced primary video selection with more variety
-            const primaryCandidates = topVideos.slice(0, Math.min(6, topVideos.length));
+            // Enhanced primary video selection with variety
+            const primaryCandidates = topVideos.slice(0, Math.min(4, topVideos.length));
             const primaryIndex = this.getSeededRandom(item.id + seed, primaryCandidates.length);
             const primaryVideo = primaryCandidates[primaryIndex];
+
+            // Ensure primary video has required fields
+            if (!primaryVideo || !primaryVideo.key) {
+                this.logger.debug(`Primary video missing key for ${mediaType} ${item.id}`);
+                return null;
+            }
 
             return {
                 ...item,
@@ -1882,7 +1892,7 @@ export class AllService implements OnModuleInit {
                 primary_video: primaryVideo,
             };
         } catch (err) {
-            console.error(`Error processing item ${item.id}:`, err);
+            this.logger.error(`Error processing item ${item.id}:`, err);
             return null;
         }
     }
@@ -1890,15 +1900,24 @@ export class AllService implements OnModuleInit {
     private calculateVideoScore(video: any): number {
         let score = 0;
 
-        if (video.official) score += 5;
+        // Official videos get priority
+        if (video.official) score += 10;
 
+        // Type scoring
         if (video.type === "Trailer") score += 8;
-        else if (video.type === "Teaser") score += 4;
+        else if (video.type === "Teaser") score += 5;
         else if (video.type === "Clip") score += 2;
 
+        // Quality scoring
         if (video.size >= 1080) score += 5;
         else if (video.size >= 720) score += 3;
         else if (video.size >= 480) score += 1;
+
+        // Prefer videos with "official" in the name
+        if (video.name && video.name.toLowerCase().includes('official')) score += 3;
+
+        // Prefer videos with "trailer" in the name
+        if (video.name && video.name.toLowerCase().includes('trailer')) score += 2;
 
         return score;
     }
@@ -1916,6 +1935,23 @@ export class AllService implements OnModuleInit {
         return await this.tmdb(`tv/${id}/videos`);
     }
 
+    /**
+     * Check if a YouTube video is available (not blocked/deleted)
+     */
+    private async isVideoAvailable(videoKey: string): Promise<boolean> {
+        try {
+            // Use YouTube oEmbed API to check if video exists
+            const response = await fetch(
+                `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoKey}&format=json`,
+                { method: 'GET', signal: AbortSignal.timeout(3000) }
+            );
+            return response.ok;
+        } catch (err) {
+            // If request fails, assume video is not available
+            return false;
+        }
+    }
+
     async getUpcomingFeeds(page: number = 1, limit: number = 35): Promise<{
         results: any[];
         page: number;
@@ -1923,7 +1959,6 @@ export class AllService implements OnModuleInit {
         hasMore: boolean;
     }> {
         const ttlSec = this.CACHE_TTL.TRAILERS;
-        const globalCacheKey = `trailers-upcoming-global`;
         const pageCacheKey = `trailers-upcoming-page-${page}-${limit}`;
 
         if (!this.token) {
@@ -1947,17 +1982,16 @@ export class AllService implements OnModuleInit {
             futureDate.setMonth(futureDate.getMonth() + 6);
             const futureDateStr = futureDate.toISOString().split("T")[0];
 
-            // Generate session seed
-            const sessionSeed = Math.floor(Date.now() / (1000 * 60 * 15));
-            const pageSeed = sessionSeed + page;
-
-            // Calculate which TMDB pages to fetch based on our page number
-            // This distributes content across pages for variety
-            const tmdbPagesPerRequest = 4; // Fetch 4 TMDB pages per request
-            const startTmdbPage = ((page - 1) * 2) + 1; // Offset TMDB pages
+            // FIXED: Better page distribution to avoid overlaps
+            // Each page fetches from different TMDB pages with no overlap
+            const tmdbPagesPerRequest = 3; // Fetch 3 TMDB pages per request
+            const startTmdbPage = ((page - 1) * tmdbPagesPerRequest) + 1;
             const endTmdbPage = startTmdbPage + tmdbPagesPerRequest;
 
+            this.logger.log(`Page ${page}: Fetching TMDB pages ${startTmdbPage}-${endTmdbPage - 1}`);
+
             const items: TmdbAll[] = [];
+            const seenIds = new Set<number>(); // Track IDs within this request
 
             const fetchTrailers = async (mediaType: "movie" | "tv") => {
                 const fetchedItems: TmdbAll[] = [];
@@ -1974,6 +2008,9 @@ export class AllService implements OnModuleInit {
 
                         // Process with higher concurrency for speed
                         const trailerTasks = results.map((m: any) => async () => {
+                            // Skip if already seen in this request
+                            if (seenIds.has(m.id)) return null;
+
                             const rd = m.release_date ?? m.first_air_date;
                             if (!rd || new Date(rd) < today) return null;
 
@@ -1986,15 +2023,11 @@ export class AllService implements OnModuleInit {
                                     this.tmdb(`${mediaType}/${m.id}?language=en-US`)
                                 ]);
 
-                                const trailer = (videosData?.results ?? []).find(
-                                    (v: any) =>
-                                        (v.type === "Trailer" || v.type === "Teaser") &&
-                                        v.site === "YouTube" &&
-                                        v.key
-                                );
-
-                                // Store ALL videos for later enrichment, not just the first trailer
+                                // Store ALL videos for later enrichment
                                 const allVideos = videosData?.results ?? [];
+
+                                // Mark as seen
+                                seenIds.add(m.id);
 
                                 return {
                                     id: m.id,
@@ -2005,7 +2038,6 @@ export class AllService implements OnModuleInit {
                                     release_date: rd,
                                     vote_average: m.vote_average || 0,
                                     vote_count: m.vote_count || 0,
-                                    trailer_key: trailer?.key || null, // Make optional since enrichWithVideos will verify
                                     type: mediaType,
                                     recommendations: [],
                                     runtime: mediaType === "movie" ? details.runtime ?? null : null,
@@ -2016,13 +2048,14 @@ export class AllService implements OnModuleInit {
                                     // Store videos for enrichment
                                     videos: allVideos,
                                 } as TmdbAll;
-                            } catch {
+                            } catch (err) {
+                                this.logger.error(`Failed to fetch details for ${mediaType} ${m.id}`, err);
                                 return null;
                             }
                         });
 
                         // Higher concurrency limit for faster processing
-                        const pageResults = (await this.withConcurrencyLimit(trailerTasks, 8))
+                        const pageResults = (await this.withConcurrencyLimit(trailerTasks, 10))
                             .filter((item): item is TmdbAll => item !== null);
 
                         fetchedItems.push(...pageResults);
@@ -2042,29 +2075,35 @@ export class AllService implements OnModuleInit {
 
             items.push(...movieItems, ...tvItems);
 
-            // Remove duplicates
+            // Remove duplicates (shouldn't happen but safety check)
             const uniqueItems = Array.from(
                 new Map(items.map(item => [item.id, item])).values()
             );
 
             this.logger.log(`Page ${page}: Fetched ${uniqueItems.length} unique items before video enrichment`);
 
+            // FIXED: Generate consistent seed per page (not time-based)
+            // This ensures same page always returns same order
+            const pageSeed = page * 12345;
+
             // Apply shuffling and quality scoring BEFORE enrichment
             const shuffled = this.shuffleUpcomingTrailers(uniqueItems, pageSeed);
 
-            // Enrich with video availability checks
-            // Request more items than limit to account for videos that might not be available
-            const itemsToEnrich = shuffled.slice(0, Math.min(shuffled.length, limit + 15));
+            // FIXED: Request more items to account for filtering
+            // We need to enrich more items than the limit to ensure we get enough valid videos
+            const itemsToEnrich = shuffled.slice(0, Math.min(shuffled.length, limit * 2));
             const enrichedItems = await this.enrichWithVideos(itemsToEnrich, pageSeed);
 
-            this.logger.log(`Page ${page}: ${enrichedItems.length} items with verified videos`);
+            this.logger.log(`Page ${page}: ${enrichedItems.length} items with verified videos (from ${itemsToEnrich.length} candidates)`);
 
             // Take the requested limit from enriched results
             const paginatedResults = enrichedItems.slice(0, limit);
 
-            // Always assume there's more content for smooth infinite scroll
-            // We'll naturally hit the end when TMDB runs out of pages
-            const hasMore = paginatedResults.length >= limit;
+            // Determine if there's more content
+            // If we got close to the limit after enrichment, there's likely more
+            const hasMore = enrichedItems.length >= Math.floor(limit * 0.8) && uniqueItems.length >= limit;
+
+            this.logger.log(`Page ${page}: Returning ${paginatedResults.length} results, hasMore: ${hasMore}`);
 
             const response = {
                 results: paginatedResults,
@@ -2113,8 +2152,8 @@ export class AllService implements OnModuleInit {
             releaseDateScore: this.getReleaseDateProximityScore(item),
         }));
 
-        // Sort by combined score with randomization
-        const jitter = 3.0; // Randomness factor
+        // Sort by combined score with seeded randomization
+        const jitter = 2.5; // Reduced randomness for more consistency
 
         const seededRandomForId = (id: number, offset = 0) => {
             const x = Math.sin((seed + offset) * 9301 + id * 49297) * 43758.5453123;
@@ -2124,7 +2163,7 @@ export class AllService implements OnModuleInit {
         scoredItems.sort((a, b) => {
             const scoreDiff = (b.qualityScore + b.releaseDateScore) - (a.qualityScore + a.releaseDateScore);
 
-            // Add randomization
+            // Add seeded randomization
             const randA = seededRandomForId(a.item.id);
             const randB = seededRandomForId(b.item.id);
             const randomFactor = (randB - randA) * jitter;
@@ -2213,11 +2252,10 @@ export class AllService implements OnModuleInit {
         const daysUntilRelease = Math.floor((releaseDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
         // Score based on proximity
-        if (daysUntilRelease <= 7) return 20;        // Within a week
-        if (daysUntilRelease <= 14) return 15;       // Within 2 weeks
-        if (daysUntilRelease <= 30) return 12;       // Within a month
+        if (daysUntilRelease <= 14) return 12;       // Within 2 weeks
+        if (daysUntilRelease <= 30) return 10;       // Within a month
         if (daysUntilRelease <= 60) return 8;        // Within 2 months
-        if (daysUntilRelease <= 90) return 5;        // Within 3 months
+        if (daysUntilRelease <= 90) return 4;        // Within 3 months
         if (daysUntilRelease <= 180) return 2;       // Within 6 months
 
         return 0;
