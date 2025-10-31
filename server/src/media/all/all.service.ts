@@ -1977,32 +1977,48 @@ export class AllService implements OnModuleInit {
         let score = 0;
         const name = (video.name || "").toLowerCase();
 
-        // Strong disqualifier: immediate fail score
+        // 🚫 Strong disqualifiers
         const DISQUALIFY_RE = /\b(red[-\s]?band|uncut|uncensored|nsfw|explicit|age[-\s]?restricted|18\+|adult|mature|tv[-\s]?ma|redband)\b/i;
-        if (DISQUALIFY_RE.test(name)) {
-            return -100000;
-        }
+        if (DISQUALIFY_RE.test(name)) return -100000;
 
+        // ✅ Official video priority
         if (video.official) score += 10;
 
+        // ✅ Type priority
         if (video.type === "Trailer") score += 8;
         else if (video.type === "Teaser") score += 5;
         else if (video.type === "Clip") score += 2;
 
+        // ✅ Quality priority
         if (video.size >= 2160) score += 6;
         else if (video.size >= 1080) score += 5;
         else if (video.size >= 720) score += 3;
         else if (video.size >= 480) score += 1;
 
+        // ✅ Name hints
         if (name.includes("official")) score += 3;
         if (name.includes("trailer")) score += 2;
-
         if (name.includes("fan") || name.includes("leak") || name.includes("leaked")) score -= 6;
 
+        // ✅ Platform preference
         if (video.site === "YouTube") score += 2;
+
+        // 🕒 Recency scoring — give newer videos a boost
+        if (video.published_at) {
+            const publishedDate = new Date(video.published_at);
+            const now = new Date();
+            const ageInDays = (now.getTime() - publishedDate.getTime()) / (1000 * 60 * 60 * 24);
+
+            // Reward recent uploads (within ~2 years)
+            if (ageInDays < 30) score += 8;        // within 1 month
+            else if (ageInDays < 90) score += 4;   // within 3 months
+            else if (ageInDays < 180) score += 2;  // within 6 months
+            else if (ageInDays < 365) score += 1;  // within 1 year
+        }
 
         return score;
     }
+
 
     private getSeededRandom(seed: number, max: number): number {
         const x = Math.sin(seed) * 10000;

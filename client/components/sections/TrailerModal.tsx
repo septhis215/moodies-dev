@@ -91,7 +91,7 @@ export default function TrailerModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
       <div className="absolute inset-0 cursor-pointer" onClick={onClose} />
 
-      <div className="relative w-full h-full bg-black/80 backdrop-blur-md flex flex-col xl:flex-row gap-6 items-stretch overflow-hidden">
+      <div className="relative w-full h-full bg-black/80 backdrop-blur-md flex flex-col xl:flex-row gap-4 items-stretch overflow-hidden ">
 
         <button
           onClick={onClose}
@@ -103,7 +103,7 @@ export default function TrailerModal({
         </button>
 
         {/* Trailer player */}
-        <div className="flex-none w-full xl:flex-[2] flex justify-center items-center min-h-0 p-8">
+        <div className="flex-none w-full xl:flex-[2] flex justify-center items-center min-h-0 p-4 pl-8">
           <div className="w-full h-full flex justify-center items-center">
             <iframe
               className="w-full h-full rounded-xl shadow-2xl border border-gray-700 bg-black"
@@ -124,7 +124,7 @@ export default function TrailerModal({
           <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800 hover:scrollbar-thumb-gray-400">
 
             {/* Header */}
-            <div className="flex-shrink-0 p-3 sm:p-4 md:p-5 lg:p-6 pt-12 sm:pt-14 border-b border-gray-700/50 relative">
+            <div className="flex-shrink-0 p-3 sm:p-4 md:p-5 lg:p-6 pt-12 sm:pt-14 border-b border-gray-700/50 relative mt-6.5">
               <div className="flex gap-2 sm:gap-3 md:gap-4 lg:gap-6 items-start">
                 {trailer.poster_path && (
                   <div
@@ -140,11 +140,11 @@ export default function TrailerModal({
                 )}
 
                 {/* Title + Pills */}
-                <div className="flex flex-col flex-1 min-w-0 relative z-10 mt-8">
+                <div className="flex flex-col flex-1 min-w-0 relative z-10 ">
                   <h2
                     // clamp ensures title never gets too big on narrow screens or too small on huge screens
                     style={{ fontSize: 'clamp(1.125rem, 3.2vw, 2rem)' }}
-                    className="font-extrabold text-white drop-shadow-2xl leading-tight cursor-pointer mb-2 sm:mb-3 md:mb-4"
+                    className="font-extrabold text-white drop-shadow-2xl leading-tight cursor-pointer mb-2 sm:mb-3 md:mb-4 hover:text-[#e94f37]"
                     onClick={() => handleClick(trailer)}
                   >
                     {trailer.title}
