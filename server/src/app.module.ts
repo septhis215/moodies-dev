@@ -13,10 +13,20 @@ import { SearchModule } from './routes/search/search.module';
 import { MoodsController } from './routes/moods/moods.controller';
 import { MoodsModule } from './routes/moods/moods.module';
 import { PasswordModule } from './routes/auth/password.module';
+import { PassportModule } from '@nestjs/passport';
+import { JwtModule } from '@nestjs/jwt';
+
+
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    PassportModule.register({ session: false }),
+    JwtModule.register({
+      global: true,
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '30m' },
+    }),
     AuthModule,
     UserModule,
     PrismaModule,

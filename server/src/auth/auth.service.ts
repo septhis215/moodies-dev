@@ -14,9 +14,13 @@ import * as argon from 'argon2'; // for password hashing
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { v4 as uuid } from 'uuid';
+
+
 
 @Injectable({})
 export class AuthService {
+  jwt: any;
   constructor(
     private prismaService: PrismaService,
     private jwtService: JwtService,
@@ -120,22 +124,44 @@ export class AuthService {
     return { message: 'Password reset successful' };
   }
 
-  async signToken(
-    userId: string,
-    email: string,
-  ): Promise<{ access_token: string }> {
-    const payload = {
-      sub: userId,
-      email,
-    };
-    const secretKey = this.configService.get('JWT_SECRET');
-    const token = await this.jwtService.signAsync(payload, {
-      expiresIn: '15m', // expire duration
-      secret: secretKey,
-    });
+    async signToken(userId: string, email: string): Promise<string> {
+      return this.jwt.sign(
+        { sub: userId, email },
+        { expiresIn: '30m' }
+      );
+    }
+  async googleLoginOrRegister(params: {
+    email: string;
+    name?: string;
+    googleId: string;
+  }) {
+    const { email, name, googleId } = params;
 
-    return {
-      access_token: token,
-    };
+    let user = await this.prismaService.user.findUnique({ where: { email } });
+
+    if (!user) {
+      user = await this.prismaService.user.create({
+        data: {
+          email,
+          username: name || email.split('@')[0],
+          provider: 'google',
+          googleId,
+          password: await argon.hash(`google:${uuid()}`),
+        },
+      });
+    } else {
+      if (!user.googleId || user.provider !== 'google') {
+        await this.prismaService.user.update({
+          where: { id: user.id },
+          data: { googleId, provider: 'google' },
+        });
+      }
+    }
+
+    const token = await this.signToken(user.id, user.email);
+    return { access_token: token, user };
   }
+
+
+
 }
