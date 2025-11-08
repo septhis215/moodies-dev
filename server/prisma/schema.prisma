@@ -14,10 +14,12 @@ datasource db {
 }
 
 model User {
-  id                 String      @id @default(uuid())
+  id                 String      @id @default(cuid())
   username           String      @unique
   email              String      @unique
-  password           String
+  password           String?
+  provider           String?
+  googleId           String?     @unique
   avatarUrl          String?
   age                Int?
   preferredGenres    String[]    @default([])
@@ -26,6 +28,15 @@ model User {
   Quiz               Quiz[]
   Badge              Badge[]
   Watchlist          Watchlist[]
+}
+
+model EmailVerification {
+  id         String   @id @default(uuid())
+  email      String
+  code       String
+  expiresAt  DateTime
+  verified   Boolean  @default(false)
+  createdAt  DateTime @default(now())
 }
 
 model Quiz {

@@ -1,94 +1,137 @@
 "use client";
 
-import Image from "next/image";
-import Background from "../background";
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+const API =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000";
 
 export default function SignupPage() {
+  const [username, setUsername] = useState("");
+  const [email, setEmail]     = useState("");
+  const [password, setPassword] = useState("");
+  const [agree, setAgree] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const router = useRouter();
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErr("");
+    if (!agree) { setErr("Please agree to the Terms & Conditions."); return; }
+
+    try {
+      setLoading(true);
+      const res = await fetch(`${API}/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Sign up failed");
+
+      // auto-login if a token is returned
+      if (data?.token) {
+        localStorage.setItem("authToken", data.token);
+        router.push("/auth/onboarding"); // 👈 go to onboarding page
+      } else {
+        router.push("/auth/login");
+      }
+    } catch (e: any) {
+      setErr(e.message || "Sign up failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      {/* Background */}
-      <Background />
+    <>
+      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+        Create an account
+      </h2>
+      <p className="mt-2 text-sm text-white/70">
+        Already have an account?{" "}
+        <Link href="/auth/login" className="text-amber-400 hover:underline">
+          Log In
+        </Link>
+      </p>
 
-      {/* Card */}
-      <div className="bg-black/70 backdrop-blur-md p-8 rounded-2xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row items-center gap-6">
-        {/* Left side: Poster */}
-        <div className="w-full md:w-1/2">
-          <Image
-            src="/images/ironmanposter.jpeg" 
-            alt="Iron Man Poster"
-            width={500}
-            height={700}
-            className="rounded-xl shadow-lg"
-          />
-        </div>
+      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+          className="w-full px-4 py-3 rounded-xl bg-white/5 text-white placeholder:text-white/40
+                     border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
+                     focus:border-transparent transition"
+        />
 
-        {/* Right side: Form */}
-        <div className="w-full md:w-1/2 text-white">
-          <h2 className="text-2xl font-bold mb-2">Create an account</h2>
-          <p className="mb-6 text-sm">
-            Already have an account?{" "}
-            <Link href="/" className="text-orange-400 hover:underline">
-              Log In
-            </Link>
-          </p>
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="w-full px-4 py-3 rounded-xl bg-white/5 text-white placeholder:text-white/40
+                     border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
+                     focus:border-transparent transition"
+        />
 
-          {/* Name */}
-            <input
-              type="text"
-              placeholder="Username"
-              className="w-full p-3 mb-4 rounded-lg bg-transparent border border-gray-600 focus:border-blue-400 outline-none"
-            />
-          {/* Email */}
+        <input
+          type="password"
+          placeholder="Enter Your Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          className="w-full px-4 py-3 rounded-xl bg-white/5 text-white placeholder:text-white/40
+                     border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
+                     focus:border-transparent transition"
+        />
+
+        <label className="flex items-center gap-2 text-sm text-white/80 select-none">
           <input
-            type="email"
-            placeholder="Email"
-            className="w-full p-3 mb-4 rounded-lg bg-transparent border border-gray-600 focus:border-blue-400 outline-none"
+            type="checkbox"
+            checked={agree}
+            onChange={(e) => setAgree(e.target.checked)}
           />
+          I agree to the{" "}
+          <Link href="/terms" className="text-amber-400 hover:underline">
+            Terms &amp; Conditions
+          </Link>
+        </label>
 
-          {/* Password */}
-          <input
-            type="password"
-            placeholder="Enter Your Password"
-            className="w-full p-3 mb-4 rounded-lg bg-transparent border border-gray-600 focus:border-blue-400 outline-none"
-          />
+        {err && <p className="text-red-400 text-sm">{err}</p>}
 
-          {/* Terms */}
-          <div className="flex items-center mb-6 text-sm text-gray-400">
-            <input type="checkbox" id="terms" className="mr-2" />
-            <label htmlFor="terms">
-              I agree to the{" "}
-              <Link href="/terms" className="text-orange-400 hover:underline">
-                Terms & Conditions
-              </Link>
-            </label>
-          </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-3 rounded-xl font-bold
+                     bg-gradient-to-r from-amber-500 to-pink-500
+                     hover:from-amber-400 hover:to-pink-400
+                     shadow-[0_8px_30px_rgba(250,204,21,0.35)]
+                     transition disabled:opacity-60"
+        >
+          {loading ? "Creating..." : "Create"}
+        </button>
+      </form>
 
-          {/* Create button */}
-          <button className="w-full bg-black hover:bg-gray-700 py-3 rounded-lg font-semibold">
-            Create
-          </button>
-
-          {/* Divider */}
-          <div className="flex items-center my-6">
-            <hr className="flex-1 border-gray-600" />
-            <span className="px-3 text-sm text-gray-400">Or register with</span>
-            <hr className="flex-1 border-gray-600" />
-          </div>
-
-          {/* Social buttons */}
-          <div className="flex gap-4">
-            <button className="flex-1 flex items-center justify-center gap-2 bg-black text-white py-3 rounded-lg hover:bg-gray-700">
-              <Image src="/images/google.png" alt="Google" width={20} height={20} />
-              Google
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-2 bg-black text-white py-3 rounded-lg hover:bg-gray-700">
-              <Image src="/images/facebook.png" alt="Facebook" width={20} height={20} />
-              Facebook
-            </button>
-          </div>
-        </div>
+      <div className="flex items-center gap-3 my-6">
+        <div className="h-px flex-1 bg-white/10" />
+        <span className="text-xs text-white/50">Or register with</span>
+        <div className="h-px flex-1 bg-white/10" />
       </div>
-    </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <button className="py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition">
+          Google
+        </button>
+        <button className="py-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition">
+          Facebook
+        </button>
+      </div>
+    </>
   );
 }

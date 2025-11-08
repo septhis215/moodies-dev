@@ -2,6 +2,8 @@ import {
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  BadRequestException,
+  UnauthorizedException
 } from '@nestjs/common';
 import {
   ChangePasswordDto,
@@ -14,42 +16,48 @@ import * as argon from 'argon2'; // for password hashing
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { v4 as uuid } from 'uuid';
+
+
 
 @Injectable({})
 export class AuthService {
   constructor(
     private prismaService: PrismaService,
-    private jwtService: JwtService,
+    private readonly jwt: JwtService,
     private configService: ConfigService,
   ) {}
 
   async signup(dto: RegisterDto) {
+    // 1️⃣  check for existing email
+    const existing = await this.prismaService.user.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+    if (existing) {
+      throw new BadRequestException('Email already registered');
+    }
+
+    // 2️⃣  hash password
     const hashedPassword = await argon.hash(dto.password);
 
-    try {
-      const { password, ...rest } = dto; // remove the raw password from the dto object
-      const user = await this.prismaService.user.create({
-        data: {
-          ...rest,
-          password: hashedPassword,
-        },
-      });
+    // 3️⃣  create user (no createdAt field — Prisma fills it)
+    const user = await this.prismaService.user.create({
+      data: {
+        username: dto.username,
+        email: dto.email.toLowerCase(),
+        password: hashedPassword,
+        provider: 'credentials',
+      },
+    });
 
-      return this.signToken(user.id, user.email); // assign token session to user
-    } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ForbiddenException('Email or username already taken');
-        }
-        if (error.code === 'P2003') {
-          throw new ForbiddenException(
-            'Invalid foreign key references, related record not found',
-          ); // leave this for debugging
-        }
+    const token = await this.signToken(user.id, user.email);
 
-        throw new InternalServerErrorException('Something went wrong');
-      }
-    }
+    const { password, ...result } = user;
+    return {
+      message: 'User created successfully',
+      user: result,
+      token:token
+    };
   }
 
   async signin(dto: LoginDto) {
@@ -63,14 +71,33 @@ export class AuthService {
       throw new ForbiddenException('Email not found');
     }
 
+    if (!user.password) {
+    throw new BadRequestException(
+      'This account uses Google sign-in. Use "Continue with Google" or set a password first.'
+    );
+  }
+
     const pwMatches = await argon.verify(user.password, dto.password);
+    if (!pwMatches) throw new UnauthorizedException('Invalid email or password');
 
     if (!pwMatches) {
       throw new ForbiddenException('Password is incorrect');
     }
 
-    return this.signToken(user.id, user.email); // assign token session to user
+    const token = await this.signToken(user.id, user.email);
+
+    return {
+    message: 'Login successful',
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+    },
+    token,
+    };
   }
+
+  
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
     const user = await this.prismaService.user.findUnique({
@@ -80,20 +107,18 @@ export class AuthService {
     });
     if (!user) throw new ForbiddenException('User not found');
 
-    const pwMatches = await argon.verify(user.password, dto.oldPassword);
-    if (!pwMatches) throw new ForbiddenException('Old password is incorrect');
+    if (!user.password) {
+      throw new BadRequestException('No local password set for this account. Use "Set password" first.');
+    }
+    
+    
 
-    const newHashed = await argon.hash(dto.newPassword);
-    await this.prismaService.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        password: newHashed,
-      },
-    });
+    const ok = await argon.verify(user.password, dto.oldPassword);
+    if (!ok) throw new UnauthorizedException('Old password is incorrect');
 
-    return { message: 'Password changed successfully' };
+    const hash = await argon.hash(dto.newPassword);
+    await this.prismaService.user.update({ where: { id: userId }, data: { password: hash } });
+    return { ok: true };
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
@@ -120,22 +145,44 @@ export class AuthService {
     return { message: 'Password reset successful' };
   }
 
-  async signToken(
-    userId: string,
-    email: string,
-  ): Promise<{ access_token: string }> {
-    const payload = {
-      sub: userId,
-      email,
-    };
-    const secretKey = this.configService.get('JWT_SECRET');
-    const token = await this.jwtService.signAsync(payload, {
-      expiresIn: '15m', // expire duration
-      secret: secretKey,
+  private async signToken(userId: string, email: string) {
+    const payload = { sub: userId, email };
+    return this.jwt.signAsync(payload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: process.env.JWT_EXPIRES || '7d',
     });
-
-    return {
-      access_token: token,
-    };
   }
+
+  async googleLoginOrRegister(params: {
+    email: string;
+    name?: string;
+    googleId: string;
+  }) {
+    const { email, name, googleId } = params;
+
+    let user = await this.prismaService.user.findUnique({ where: { email } });
+
+    if (!user) {
+      user = await this.prismaService.user.create({
+        data: {
+          email,
+          username: name || email.split('@')[0],
+          provider: 'google',
+          googleId,
+          password: await argon.hash(`google:${uuid()}`),
+        },
+      });
+    } else {
+      if (!user.googleId || user.provider !== 'google') {
+        await this.prismaService.user.update({
+          where: { id: user.id },
+          data: { googleId, provider: 'google' },
+        });
+      }
+    }
+
+    const token = await this.signToken(user.id, user.email);
+    return { access_token: token, user };
+  }
+
 }

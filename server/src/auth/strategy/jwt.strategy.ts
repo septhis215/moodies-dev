@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
+import { AuthGuard, PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -20,6 +20,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       ignoreExpiration: false,
       secretOrKey: secret,
     });
+
+    console.log('[JwtStrategy] JWT_SECRET =', configService.get('JWT_SECRET'));
   }
 
   // can be used for user testing
@@ -34,4 +36,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     return user;
   }
+
 }
+
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {}
+
+
