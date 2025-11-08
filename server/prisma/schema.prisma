@@ -30,6 +30,15 @@ model User {
   Watchlist          Watchlist[]
 }
 
+model EmailVerification {
+  id         String   @id @default(uuid())
+  email      String
+  code       String
+  expiresAt  DateTime
+  verified   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
 model Quiz {
   id         String   @id @default(uuid())
   userId     String

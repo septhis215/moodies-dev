@@ -17,16 +17,15 @@ export default function ForgotPasswordPage() {
     setMsg("");
     setLoading(true);
     try {
-      const res = await fetch(`${API}/auth/check-email`, {
+      const res = await fetch(`${API}/auth/request-reset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Email not found");
+      if (!res.ok) throw new Error(data?.message || "Unable to send code");
 
-      // If no email service, forward to change-password directly
-      router.push(`/auth/change-password?email=${encodeURIComponent(email)}`);
+      router.push(`/auth/verify-code?email=${encodeURIComponent(email)}`);
     } catch (e: any) {
       setMsg(e.message || "Unable to process request");
     } finally {

@@ -78,8 +78,8 @@ export class RegisterDto {
   // })
   // preferredLanguages: string[];
 
-  @Type(() => Date)
-  @IsDate()
-  @IsNotEmpty()
-  createdAt: Date;
+  // @Type(() => Date)
+  // @IsDate()
+  // @IsNotEmpty()
+  // createdAt: Date;
 }

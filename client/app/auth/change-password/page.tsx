@@ -26,22 +26,23 @@ export default function ChangePasswordPage() {
 
     try {
       setLoading(true);
-      const res = await fetch(`${API}/auth/change-password`, {
+      const res = await fetch(`${API}/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, newPassword, confirmPassword }),
+        body: JSON.stringify({ email, newPassword }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to reset password");
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Failed to reset password");
 
       setMsg("Password changed! Redirecting to login…");
-      setTimeout(() => router.push("/auth/login"), 1500);
+      setTimeout(() => router.push("/auth/login"), 1200);
     } catch (e: any) {
       setMsg(e.message || "Failed to reset password");
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <>

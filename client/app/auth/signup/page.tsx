@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const API =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000";
@@ -13,6 +14,7 @@ export default function SignupPage() {
   const [agree, setAgree] = useState(false);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const router = useRouter();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,10 +33,10 @@ export default function SignupPage() {
 
       // auto-login if a token is returned
       if (data?.token) {
-        localStorage.setItem("token", data.token);
-        window.location.href = "/";
+        localStorage.setItem("authToken", data.token);
+        router.push("/auth/onboarding"); // 👈 go to onboarding page
       } else {
-        window.location.href = "/auth/login";
+        router.push("/auth/login");
       }
     } catch (e: any) {
       setErr(e.message || "Sign up failed");
