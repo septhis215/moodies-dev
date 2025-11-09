@@ -31,7 +31,7 @@ export class AuthService {
   signAccessToken(payload: { sub: number | string }) {
     return this.jwt.sign(
       { sub: String(payload.sub) },
-      { expiresIn: '7d' }              
+      { expiresIn: '1d' }              
     );
   }
 
