@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, Req, UseGuards, Delete, Param, ParseIntPipe } from "@nestjs/common";
 import { JwtGuard } from "../auth/guard/jwt.guard";
 import { WatchlistService } from "./watchlist.service";
 
@@ -20,5 +20,14 @@ export class WatchlistController {
   @Post("clear")
   clear(@Req() req) {
     return this.svc.clear(req.user.sub);
+  }
+
+  @Delete(':type/:id')
+  remove(
+    @Req() req,
+    @Param('type') type: 'movie' | 'tv',                
+    @Param('id', ParseIntPipe) id: number,              
+  ) {
+    return this.svc.removeFromWatchlist(req.user.id, type, id);
   }
 }

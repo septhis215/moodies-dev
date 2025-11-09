@@ -23,6 +23,18 @@ export class WatchlistService {
     return wl; 
   }
 
+    private async getOrCreateWatchlist(userId: string) {
+    let wl = await this.prisma.watchlist.findFirst({ where: { userId } });
+    if (!wl) {
+      wl = await this.prisma.watchlist.create({
+        data: { userId, movieId: [], seriesId: [] },
+      });
+    }
+    return wl;
+  }
+
+
+
   /** Get watchlist */
   async getAll(userId: string) {
     return this.ensureWatchlist(userId);
@@ -59,4 +71,36 @@ export class WatchlistService {
       data: { movieId: [], seriesId: [] },
     });
   }
+
+
+
+  async removeFromWatchlist(
+    userId: string,
+    type: 'movie' | 'tv',
+    tmdbId: number,
+  ) {
+    const wl = await this.getOrCreateWatchlist(userId);
+
+    const idStr = String(tmdbId);
+
+    if (type === 'movie') {
+      const updated = (wl.movieId ?? []).filter((x) => x !== idStr);
+      // IMPORTANT: update by unique primary key (id), not userId
+      await this.prisma.watchlist.update({
+        where: { id: wl.id },
+        data: { movieId: updated },
+      });
+      return { message: `Movie ${tmdbId} removed from watchlist` };
+    } else {
+      const updated = (wl.seriesId ?? []).filter((x) => x !== idStr);
+      await this.prisma.watchlist.update({
+        where: { id: wl.id },
+        data: { seriesId: updated },
+      });
+      return { message: `Series ${tmdbId} removed from watchlist` };
+    }
+  }
+
+
+
 }

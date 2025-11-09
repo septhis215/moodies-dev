@@ -118,38 +118,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (res.ok) {
           const raw = await res.json();
 
-          // (optional) dev debug to see the shape once:
           if (process.env.NODE_ENV !== "production") {
-            // comment out after you confirm the shape
-            // console.log("[/me] raw response:", raw);
           }
 
           const u = extractUser(raw);
-          // merge onto existing so undefined fields don't wipe earlier values
           setUser(prev => ({ ...(prev ?? {}), ...u }));
           return;
         }
-        // 404/5xx -> try next path
       } catch {
         /* try next path */
       }
     }
 
-    // All /me paths failed—keep JWT fallback if we have it
     setUser(curr => curr ?? (decodeJwt<any>(tkn) ? extractUser(decodeJwt<any>(tkn)) : null));
   }, [logoutSilent]);
 
 
-  // When token changes, fetch profile (we already set JWT fallback immediately)
   useEffect(() => {
     if (token) fetchMe(token);
   }, [token, fetchMe]);
 
-  // Init + cross-tab sync
   useEffect(() => {
     const t = localStorage.getItem("authToken");
     if (t) {
-      // show something immediately from JWT
       const p = decodeJwt<any>(t);
       if (p) setUser(extractUser(p));
       const exp = getExpMs(t);
