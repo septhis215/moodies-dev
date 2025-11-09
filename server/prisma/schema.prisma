@@ -31,12 +31,12 @@ model User {
 }
 
 model EmailVerification {
-  id         String   @id @default(uuid())
-  email      String
-  code       String
-  expiresAt  DateTime
-  verified   Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model Quiz {
@@ -101,8 +101,8 @@ model Mood {
   description String
   keywords    String[]
   tmdbGenres  Int[]
-  valence     Decimal  @db.Decimal(3, 2) @default(0)
-  arousal     Decimal  @db.Decimal(3, 2) @default(0)
+  valence     Decimal  @default(0) @db.Decimal(3, 2)
+  arousal     Decimal  @default(0) @db.Decimal(3, 2)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -134,7 +134,7 @@ model MoodLog {
 }
 
 model Recommendation {
-  id           String      @id @default(uuid())
+  id           String    @id @default(uuid())
   userId       String
   moodId       String
   tmdbId       Int
@@ -142,21 +142,21 @@ model Recommendation {
   title        String
   overview     String?
   genreIds     Int[]
-  voteAverage  Decimal     @db.Decimal(3, 2)
+  voteAverage  Decimal   @db.Decimal(3, 2)
   voteCount    Int
   releaseDate  String?
   posterPath   String?
   backdropPath String?
-  score        Decimal     @db.Decimal(4, 3)
+  score        Decimal   @db.Decimal(4, 3)
   reason       String
   algorithm    String
   metadata     Json?
-  viewed       Boolean     @default(false)
-  liked        Boolean     @default(false)
-  saved        Boolean     @default(false)
+  viewed       Boolean   @default(false)
+  liked        Boolean   @default(false)
+  saved        Boolean   @default(false)
   rating       Int?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   // Relations
   mood Mood @relation(fields: [moodId], references: [id], onDelete: Cascade)
@@ -174,7 +174,7 @@ model UserPreference {
   preferredGenres  Int[]
   dislikedGenres   Int[]
   preferredMoods   String[]
-  minRating        Decimal  @db.Decimal(3, 2) @default(6.0)
+  minRating        Decimal  @default(6.0) @db.Decimal(3, 2)
   preferredRuntime Json? // {min: number, max: number}
   languages        String[] @default(["en"])
   includeAdult     Boolean  @default(false)
@@ -186,24 +186,24 @@ model UserPreference {
 }
 
 model ContentCache {
-  id           String    @id @default(uuid())
-  tmdbId       Int
-  mediaType    MediaType
-  title        String
-  overview     String?
-  genreIds     Int[]
-  voteAverage  Decimal   @db.Decimal(3, 2)
-  voteCount    Int
-  releaseDate  String?
-  posterPath   String?
-  backdropPath String?
-  popularity   Decimal   @db.Decimal(8, 3)
-  adult        Boolean   @default(false)
+  id               String    @id @default(uuid())
+  tmdbId           Int
+  mediaType        MediaType
+  title            String
+  overview         String?
+  genreIds         Int[]
+  voteAverage      Decimal   @db.Decimal(3, 2)
+  voteCount        Int
+  releaseDate      String?
+  posterPath       String?
+  backdropPath     String?
+  popularity       Decimal   @db.Decimal(8, 3)
+  adult            Boolean   @default(false)
   originalLanguage String
-  metadata     Json?
-  lastFetched  DateTime  @default(now())
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  metadata         Json?
+  lastFetched      DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@unique([tmdbId, mediaType])
   @@index([genreIds])

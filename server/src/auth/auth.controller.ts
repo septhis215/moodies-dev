@@ -11,7 +11,8 @@ import {
   Req,
   Res,
   Put,
-  UnauthorizedException
+  UnauthorizedException,
+  NotFoundException
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GetUser } from 'src/auth/decorator';
@@ -20,10 +21,15 @@ import * as User2 from '@prisma/client';
 import * as argon from 'argon2';
 import { JwtGuard } from './guard';
 import { AuthGuard } from '@nestjs/passport';
-import type { Request, Response } from 'express';
+import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { sendVerificationCode } from '../utils/mailer';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { JwtService } from '@nestjs/jwt';
+import type { Response as ExpressResponse } from 'express';
+import * as bcrypt from 'bcrypt';
+
+
 
 const prisma = new PrismaClient();
 
@@ -31,6 +37,7 @@ const prisma = new PrismaClient();
 export class AuthController {
   constructor(
     private authService: AuthService,
+    private readonly jwt: JwtService,
     private readonly PrismaService: PrismaService,
   ) {}
 
@@ -75,43 +82,97 @@ export class AuthController {
   async googleAuth() {
   }
 
+@Get('google')
+@UseGuards(AuthGuard('google'))
+googleSignup(): void {
+  // passport redirects automatically
+}
+
+
 @Get('google/callback')
 @UseGuards(AuthGuard('google'))
-async googleCallback(@Req() req, @Res() res) {
-  const user = req.user;
+async googleSignupCallback(@Req() req: any, @Res() res: ExpressResponse) {
+  // profile is returned by GoogleStrategy.validate()
+  const profile = req.user;
+  const user = await this.authService.upsertGoogleUser(profile);
 
-  if (!user?.email) {
-      return res.status(400).json({ message: 'No email from Google' });
-    }
+  const mode: 'set' | 'verify' = user.password ? 'verify' : 'set';
 
-    try {
-      // Check user already exists by email
-      let existingUser = await prisma.user.findUnique({
-        where: { email: user.email },
-      });
+  // sign a SHORT-LIVED temp token (5 minutes)
+  const temp = this.jwt.sign(
+    { uid: user.id, mode },
+    { expiresIn: '5m', subject: String(user.id), jwtid: 'temp' },
+  );
 
-      if (!existingUser) {
-        existingUser = await prisma.user.create({
-          data: {
-            username: user.name,
-            email: user.email,
-            provider: 'google',
-            googleId: user.googleId,
-            password: user.password
-          },
-        });
-        console.log('✅ User created in Prisma:', existingUser);
-      } else {
-        console.log('✅ Existing user found:', existingUser.email);
-      }
+  const base = process.env.CLIENT_URL ?? 'http://localhost:3000';
+  const target =
+    mode === 'set'
+      ? `${base}/auth/password-create?token=${encodeURIComponent(temp)}`
+      : `${base}/auth/password-check?token=${encodeURIComponent(temp)}`;
 
-      return res.redirect("http://localhost:3000/")
-    } catch (err) {
-      console.error('❌ Prisma error:', err);
-      return res.status(500).json({ message: 'Database error', error: err });
-    }
+  return res.redirect(target);
+}
+
+/* ================= PASSWORD ENDPOINTS ================= */
+
+@Post('set-password')
+async setPassword(@Body() body: { token: string; password: string }) {
+  const { token, password } = body;
+
+  // 1) verify token safely
+  let payload: any;
+  try {
+    payload = this.jwt.verify(token); // MUST use same secret as when signing above
+  } catch (e: any) {
+    throw new UnauthorizedException(e.message);
   }
+  if (payload?.mode !== 'set') throw new UnauthorizedException('Invalid mode');
 
+  // 2) normalize uid
+  const uid = String(payload.uid);
+  if (!uid) throw new UnauthorizedException('Invalid user id');
+
+  // 3) hash + save
+  const hash = await bcrypt.hash(password, 10);
+  await this.PrismaService.user.update({
+    where: { id: uid },
+    data: { password: hash, provider: 'google' },
+  });
+
+  // 4) return real access token
+  const accessToken = this.authService.signAccessToken({ sub: uid });
+  return { token: accessToken };
+}
+
+@Post('verify-password')
+async verifyPassword(@Body() body: { token: string; password: string }) {
+  const { token, password } = body;
+
+  // 1) verify token safely
+  let payload: any;
+  try {
+    payload = this.jwt.verify(token);
+  } catch (e: any) {
+    throw new UnauthorizedException(e.message);
+  }
+  if (payload?.mode !== 'verify') throw new UnauthorizedException('Invalid mode');
+
+  // 2) normalize uid
+  const uid = String(payload.uid);
+  if (!uid) throw new UnauthorizedException('Invalid user id');
+
+  // 3) fetch + compare
+  const user = await this.PrismaService.user.findUnique({ where: { id: uid } });
+  if (!user) throw new NotFoundException('User not found');
+  if (!user.password) throw new UnauthorizedException('No password set');
+
+  const ok = await bcrypt.compare(password, user.password);
+  if (!ok) throw new UnauthorizedException('Wrong password');
+
+  // 4) return real access token
+  const accessToken = this.authService.signAccessToken({ sub: uid });
+  return { token: accessToken };
+}
 
   @Post('request-reset')
   async requestReset(@Body('email') email: string) {
@@ -206,7 +267,7 @@ async googleCallback(@Req() req, @Res() res) {
 
     // ✅ Correct property name for Prisma service
     return this.PrismaService.user.update({
-      where: { id: userId },
+      where: { id: String(userId) },
       data,
       select: {
         id: true,
@@ -217,6 +278,8 @@ async googleCallback(@Req() req, @Res() res) {
       },
     });
   }
+
+  
 
 
 

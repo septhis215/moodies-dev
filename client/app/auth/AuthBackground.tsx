@@ -34,8 +34,8 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
             priority
             className="object-cover scale-110 animate-slow-zoom"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/00 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/00 via-black/00 to-transparent" />
         </motion.div>
       </AnimatePresence>
     </div>

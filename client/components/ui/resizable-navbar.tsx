@@ -272,7 +272,7 @@ export const NavbarLogo = ({ className }: { className?: string }) => {
     >
       {" "}
       <Image
-        src="images/globe.svg"
+        src="/images/moodies.png"
         alt="logo"
         width={30}
         height={30}

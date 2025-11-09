@@ -27,6 +27,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { style } from "framer-motion/client";
+import { useWatchlist } from "@/hooks/useWatchlist";
 
 type MovieLike = {
   id: string | number;
@@ -95,6 +96,25 @@ export default function CardCarousel<T extends MovieLike>({
   >({});
   const [itemsPerView, setItemsPerView] = useState(4.5);
   const router = useRouter();
+
+  const { isInWatchlist: hookIsIn, add, remove, ready } = useWatchlist();
+
+  // use parent-provided handlers if present; otherwise use the hook
+  const _isInWatchlist = (item: T) =>
+    isInWatchlist ? isInWatchlist(item) : hookIsIn(String(item.id), toWatchType(item));
+
+  const _addToWatchlist = async (item: T) => {
+    if (onAddToWatchlist) return onAddToWatchlist(item);
+    if (!ready) { alert("Please login to use Watchlist"); return; }
+    await add(String(item.id), toWatchType(item));
+  };
+
+  const _removeFromWatchlist = async (item: T) => {
+    if (onRemoveFromWatchlist) return onRemoveFromWatchlist(item);
+    if (!ready) return;
+    await remove(String(item.id), toWatchType(item));
+  };
+
 
   // DOM ref for scroll container
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -231,40 +251,33 @@ export default function CardCarousel<T extends MovieLike>({
       });
       setWatchlistStates(states);
     }
-  }, [items, isInWatchlist]);
+  }, [items, isInWatchlist, hookIsIn, ready]);
 
   const handleWatchlistToggle = async (item: T, event: React.MouseEvent) => {
     event.stopPropagation();
 
     const itemId = item.id;
-    const isCurrentlyInWatchlist = isInWatchlist
-      ? isInWatchlist(item)
-      : watchlistStates[itemId];
+    const isCurrentlyInWatchlist = _isInWatchlist(item);
 
     setLoadingStates((prev) => ({ ...prev, [itemId]: true }));
 
     try {
       if (isCurrentlyInWatchlist) {
-        if (onRemoveFromWatchlist) {
-          await onRemoveFromWatchlist(item);
-        }
+        await _removeFromWatchlist(item);
         setWatchlistStates((prev) => ({ ...prev, [itemId]: false }));
       } else {
-        if (onAddToWatchlist) {
-          await onAddToWatchlist(item);
-        }
+        await _addToWatchlist(item);
         setWatchlistStates((prev) => ({ ...prev, [itemId]: true }));
       }
     } catch (error) {
       console.error("Error updating watchlist:", error);
-      setWatchlistStates((prev) => ({
-        ...prev,
-        [itemId]: isCurrentlyInWatchlist,
-      }));
+      // rollback
+      setWatchlistStates((prev) => ({ ...prev, [itemId]: isCurrentlyInWatchlist }));
     } finally {
       setLoadingStates((prev) => ({ ...prev, [itemId]: false }));
     }
   };
+
 
   const formatVoteCount = (count: number) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -301,6 +314,13 @@ export default function CardCarousel<T extends MovieLike>({
 
     return "";
   };
+
+
+  const toWatchType = (item: MovieLike): "movie" | "series" =>
+  (item.media_type ?? item.type) === "tv" || getContentType(item) === "tv"
+    ? "series"
+    : "movie";
+
 
   return (
     <>
@@ -373,9 +393,7 @@ export default function CardCarousel<T extends MovieLike>({
             {" "}
             {items.length ? (
               items.map((movie) => {
-                const inWatchlist = isInWatchlist
-                  ? isInWatchlist(movie)
-                  : watchlistStates[movie.id];
+                const inWatchlist = _isInWatchlist(movie) ?? watchlistStates[movie.id];
                 const isLoading = loadingStates[movie.id];
                 const contentType = getContentType(movie);
                 const movieTitle = getTitle(movie);

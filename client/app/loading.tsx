@@ -115,16 +115,31 @@ export default function AppLoading() {
               animate="animate"
               className="relative"
             >
-              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-2xl">
-                <Play className="text-white" size={28} fill="white" />
-              </div>
+              {/* Logo image */}
+              <motion.img
+                src="/images/moodies.png"
+                alt="Moodies Logo"
+                className="w-20 h-20 object-contain drop-shadow-[0_0_12px_rgba(255,150,0,0.5)]"
+                animate={{
+                  scale: [1, 1.05, 1],
+                  rotate: [0, 5, -5, 0],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+
+              {/* Rotating dashed ring around logo */}
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                className="absolute -inset-2 border-2 border-dashed border-orange-500/30 rounded-3xl"
+                className="absolute -inset-3 border-2 border-dashed border-orange-500/40 rounded-full"
               />
             </motion.div>
           </div>
+
 
           <h1 className="text-3xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent mb-2">
             Moodies

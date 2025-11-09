@@ -12,7 +12,7 @@ import {
   RegisterDto,
 } from 'src/auth/dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import * as argon from 'argon2'; // for password hashing
+import * as argon from 'argon2';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -28,8 +28,15 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
+  signAccessToken(payload: { sub: number | string }) {
+    return this.jwt.sign(
+      { sub: String(payload.sub) },
+      { expiresIn: '7d' }              
+    );
+  }
+
   async signup(dto: RegisterDto) {
-    // 1️⃣  check for existing email
+    // 1️check for existing email
     const existing = await this.prismaService.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
@@ -37,10 +44,10 @@ export class AuthService {
       throw new BadRequestException('Email already registered');
     }
 
-    // 2️⃣  hash password
+    // hash password
     const hashedPassword = await argon.hash(dto.password);
 
-    // 3️⃣  create user (no createdAt field — Prisma fills it)
+    // create user (no createdAt field — Prisma fills it)
     const user = await this.prismaService.user.create({
       data: {
         username: dto.username,
@@ -149,7 +156,7 @@ export class AuthService {
     const payload = { sub: userId, email };
     return this.jwt.signAsync(payload, {
       secret: process.env.JWT_SECRET,
-      expiresIn: process.env.JWT_EXPIRES || '7d',
+      expiresIn: process.env.JWT_EXPIRES || '1d',
     });
   }
 
@@ -183,6 +190,38 @@ export class AuthService {
 
     const token = await this.signToken(user.id, user.email);
     return { access_token: token, user };
+  }
+
+  async upsertGoogleUser(profile: any) {
+  const { email, name, picture, googleId } = profile;
+  let user = await this.prismaService.user.findUnique({ where: { email } });
+
+  if (!user) {
+    user = await this.prismaService.user.create({
+      data: {
+        email,
+        username: name,
+        avatarUrl: picture,
+        provider: 'google',
+        googleId,
+      },
+    });
+  } else {
+    user = await this.prismaService.user.update({
+      where: { email },
+      data: {
+        username: name,
+        avatarUrl: picture,
+        provider: 'google',
+      },
+    });
+  }
+
+  return user;
+}
+
+  signTempToken(payload: { uid: number; mode: 'set' | 'verify' }) {
+    return this.jwt.sign(payload, { expiresIn: '5m', subject: String(payload.uid), jwtid: 'temp' });
   }
 
 }

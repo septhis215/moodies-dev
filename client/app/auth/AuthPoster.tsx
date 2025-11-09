@@ -47,11 +47,11 @@ export default function AuthPoster({ slides, rotationMs = 10000 }: Props) {
           </div>
 
           {/* Title */}
-          <h2 className="mt-5 text-lg sm:text-xl font-extrabold tracking-wide 
+          {/* <h2 className="mt-5 text-lg sm:text-xl font-extrabold tracking-wide 
                          bg-gradient-to-r from-purple-300 via-pink-300 to-rose-300 
                          bg-clip-text text-transparent drop-shadow-md">
             {current.title}
-          </h2>
+          </h2> */}
 
           {/* Tagline */}
           {current.tagline && (

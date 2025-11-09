@@ -99,6 +99,10 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
     getThumbnailWindowSize()
   );
 
+  const goToList = () => {
+    router.push("/watchlist");
+  };
+
   return (
     <section
       className="relative w-full overflow-hidden 
@@ -366,12 +370,14 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                   </button>
 
                   <button
+                  onClick={goToList}
                     className="px-6 xl:px-8 py-3 xl:py-4
                     text-base xl:text-lg font-medium
                     bg-white/10 border border-white/20 text-white 
                     rounded-lg backdrop-blur-md hover:bg-white/20 
                     transition-all duration-200
                     flex items-center gap-2 cursor-pointer"
+                    
                   >
                     <IconPlus className="w-5 h-5 xl:w-6 xl:h-6" />
                     My List
