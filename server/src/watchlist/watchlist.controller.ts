@@ -9,12 +9,12 @@ export class WatchlistController {
 
   @Get()
   getAll(@Req() req) {
-    return this.svc.getAll(req.user.sub);
+    return this.svc.getAll(req.user.id);
   }
 
   @Post("toggle")
   toggle(@Req() req, @Body() body: { tmdbId: string; type: "movie" | "series" }) {
-    return this.svc.toggle(req.user.sub, body.tmdbId, body.type);
+    return this.svc.toggle(req.user.id, body.tmdbId, body.type);
   }
 
   @Post("clear")

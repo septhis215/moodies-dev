@@ -25,7 +25,7 @@ export default function VerifyCodePage() {
       const data = await res.json();
       if (!res.ok || !data?.success) throw new Error(data?.message || "Invalid or expired code");
 
-      // ✅ Verified → go to change password page
+      // Verified → go to change password page
       router.push(`/auth/change-password?email=${encodeURIComponent(email)}`);
     } catch (e: any) {
       setMsg(e.message || "Verification failed");

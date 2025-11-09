@@ -28,16 +28,14 @@ function isExpired(jwt?: string) {
 
 export async function fetchWatchlist() {
   const token = getToken();
-  if (!token || isExpired(token)) throw new Error("NO_TOKEN");
+  if (!token) throw new Error("NO_TOKEN");
   const r = await fetch(`${API_BASE}/watchlist`, {
-    headers: { Authorization: token },
+    headers: { "Content-Type": "application/json", Authorization: token },
     cache: "no-store",
-
   });
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
-  return r.json() as Promise<{ movieId: string[]; seriesId: string[] }>;
+  return r.json();
 }
-
 export async function toggleWatchlist(tmdbId: string, type: "movie"|"series") {
   const token = getToken();
   if (!token || isExpired(token)) throw new Error("NO_TOKEN");
