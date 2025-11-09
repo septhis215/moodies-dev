@@ -119,27 +119,29 @@ async googleSignupCallback(@Req() req: any, @Res() res: ExpressResponse) {
 async setPassword(@Body() body: { token: string; password: string }) {
   const { token, password } = body;
 
-  // 1) verify token safely
   let payload: any;
   try {
-    payload = this.jwt.verify(token); // MUST use same secret as when signing above
+    payload = this.jwt.verify(token); 
   } catch (e: any) {
     throw new UnauthorizedException(e.message);
   }
   if (payload?.mode !== 'set') throw new UnauthorizedException('Invalid mode');
 
-  // 2) normalize uid
   const uid = String(payload.uid);
   if (!uid) throw new UnauthorizedException('Invalid user id');
 
-  // 3) hash + save
-  const hash = await bcrypt.hash(password, 10);
-  await this.PrismaService.user.update({
-    where: { id: uid },
-    data: { password: hash, provider: 'google' },
-  });
 
-  // 4) return real access token
+  const hash = await argon.hash(password, {
+  type: argon.argon2id,   // recommended variant
+  memoryCost: 19456,       // ~19 MB
+  timeCost: 2,             // iterations
+  parallelism: 1,          // threads
+});
+await this.PrismaService.user.update({
+  where: { id: uid },
+  data: { password: hash,provider: 'google' },
+});
+
   const accessToken = this.authService.signAccessToken({ sub: uid });
   return { token: accessToken };
 }
@@ -148,7 +150,6 @@ async setPassword(@Body() body: { token: string; password: string }) {
 async verifyPassword(@Body() body: { token: string; password: string }) {
   const { token, password } = body;
 
-  // 1) verify token safely
   let payload: any;
   try {
     payload = this.jwt.verify(token);
@@ -157,19 +158,18 @@ async verifyPassword(@Body() body: { token: string; password: string }) {
   }
   if (payload?.mode !== 'verify') throw new UnauthorizedException('Invalid mode');
 
-  // 2) normalize uid
   const uid = String(payload.uid);
   if (!uid) throw new UnauthorizedException('Invalid user id');
 
-  // 3) fetch + compare
   const user = await this.PrismaService.user.findUnique({ where: { id: uid } });
   if (!user) throw new NotFoundException('User not found');
   if (!user.password) throw new UnauthorizedException('No password set');
 
-  const ok = await bcrypt.compare(password, user.password);
-  if (!ok) throw new UnauthorizedException('Wrong password');
+  const ok = await argon.verify(user.password, password);
+  if (!ok) {
+    throw new UnauthorizedException('Invalid credentials');
+  }
 
-  // 4) return real access token
   const accessToken = this.authService.signAccessToken({ sub: uid });
   return { token: accessToken };
 }
@@ -245,7 +245,7 @@ async verifyPassword(@Body() body: { token: string; password: string }) {
     @Req() req,
     @Body() body: { age?: number; preferredGenres?: string[]; preferredLanguages?: string[] }
   ) {
-    // ✅ Make sure req.user.sub is available
+    // Make sure req.user.sub is available
     console.log('[preferences] req.user =', req.user);
 
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
@@ -255,7 +255,7 @@ async verifyPassword(@Body() body: { token: string; password: string }) {
 
     const { age, preferredGenres, preferredLanguages } = body;
 
-    // ✅ Build Prisma-compatible update data
+    // Build Prisma-compatible update data
     const data: any = {};
     if (typeof age === 'number') data.age = age;
     if (Array.isArray(preferredGenres)) {
@@ -265,7 +265,7 @@ async verifyPassword(@Body() body: { token: string; password: string }) {
       data.preferredLanguages = { set: preferredLanguages }; // ✅ must use set:
     }
 
-    // ✅ Correct property name for Prisma service
+    // Correct property name for Prisma service
     return this.PrismaService.user.update({
       where: { id: String(userId) },
       data,

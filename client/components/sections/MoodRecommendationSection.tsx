@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Plus, Info, Share2, Sparkles, RefreshCw, ChevronRight, Shuffle } from 'lucide-react';
+import { Star, Plus, Info, Share2, Sparkles, RefreshCw, ChevronRight, Shuffle,Bookmark,BookmarkCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getMoodRecommendations } from '@/app/tv/action';
+import { useRouter } from 'next/navigation';
+import { useWatchlist } from '@/hooks/useWatchlist';
 
 interface Mood {
     id: string;
@@ -44,6 +46,11 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
     const [error, setError] = useState<string | null>(null);
     const [displayedMoods, setDisplayedMoods] = useState<Mood[]>([]);
     const [moodCount, setMoodCount] = useState(12); // Default to 12 moods
+
+    const router = useRouter();
+    const { add, remove, isInWatchlist, ready } = useWatchlist();
+    const [wlLoading, setWlLoading] = useState<Set<string>>(new Set());
+    const toHookType = (t: 'MOVIE' | 'TV') => (t === 'TV' ? 'series' : 'movie') as 'movie' | 'series';
 
     const getPosterUrl = (path?: string) =>
         path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
@@ -136,6 +143,34 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
         }
     };
 
+    const toggleWatchlist = async (rec: Recommendation) => {
+        if (!ready) {
+            router.push('/auth/login');
+            return;
+        }
+        const id = String(rec.tmdbId);
+        const kind = toHookType(rec.mediaType) as any;
+
+        setWlLoading(prev => new Set(prev).add(id));
+        try {
+            const inListNow = isInWatchlist(id, kind);
+            if (inListNow) {
+            await remove(id, kind);
+            } else {
+            await add(id, kind);
+            }
+        } catch (e) {
+            console.error('Watchlist toggle failed:', e);
+        } finally {
+            setWlLoading(prev => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+            });
+        }
+        };
+
+
     return (
         <section id="moods" className="relative px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto overflow-hidden">
             {/* Enhanced Animated Background */}
@@ -144,6 +179,7 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
                 <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-fuchsia-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '700ms' }} />
                 <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1400ms' }} />
             </div>
+            
 
             {/* Header */}
             <div className="relative mb-12">
@@ -369,7 +405,13 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
                             </div>
                         ) : recommendations.length > 0 ? (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
-                                {recommendations.map((rec, index) => (
+                                {recommendations.map((rec, index) => {
+                                    const id = String(rec.tmdbId);
+                                    const kind = toHookType(rec.mediaType);
+                                    const inList = isInWatchlist(id, kind as any);
+                                    const isBusy = wlLoading.has(id);
+
+                                    return (
                                     <motion.div
                                         key={rec.id}
                                         initial={{ opacity: 0, scale: 0.8 }}
@@ -419,10 +461,21 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
                                                             {/* Action Buttons */}
                                                             <div className="flex justify-center gap-2 mb-3">
                                                                 <button
-                                                                    onClick={(e) => { e.preventDefault(); }}
-                                                                    className="w-10 h-10 bg-white hover:bg-violet-500 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn"
+                                                                    onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    if (!isBusy) toggleWatchlist(rec);
+                                                                    }}
+                                                                    className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn
+                                                                    ${inList ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-white hover:bg-violet-500'}`}
+                                                                    title={inList ? 'Remove from Watchlist' : 'Add to Watchlist'}
                                                                 >
+                                                                    {isBusy ? (
+                                                                    <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                                                                    ) : inList ? (
+                                                                    <BookmarkCheck className="w-5 h-5 text-white" />
+                                                                    ) : (
                                                                     <Plus className="w-5 h-5 text-black group-hover/btn:text-white transition-colors" />
+                                                                    )}
                                                                 </button>
                                                                 <button
                                                                     className="w-10 h-10 bg-white hover:bg-violet-500 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn"
@@ -458,7 +511,8 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
                                             </div>
                                         </Link>
                                     </motion.div>
-                                ))}
+                                    );
+    })}
                             </div>
                         ) : (
                             <div className="flex items-center justify-center py-32">

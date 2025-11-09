@@ -60,7 +60,7 @@ export default function OnboardingPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to save");
-      router.push("/");
+      router.push("/auth/login");
     } catch (err: any) {
       setMsg(err.message);
     }
