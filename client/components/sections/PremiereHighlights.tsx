@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play, Star, Tv, Film } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { All } from "@/types/all";
+import Link from "next/link";
 
 const TrailerModal = dynamic(() => import("./TrailerModal"), { ssr: false });
 
@@ -20,7 +21,10 @@ async function fetchPremiereTrailers(): Promise<All[]> {
   }
 }
 
-async function fetchRecommendations(type: "movie" | "tv", id: number): Promise<All[]> {
+async function fetchRecommendations(
+  type: "movie" | "tv",
+  id: number
+): Promise<All[]> {
   const base = process.env.NEST_API_URL || "http://localhost:4000";
   try {
     const res = await fetch(`${base}/all/recommendations/${type}/${id}`);
@@ -43,11 +47,13 @@ export default function PremiereHighlights({
   data,
   title = "Fresh Off the Screen",
   subtitle = "Brand-new releases to set the mood.",
-  endpoint
+  endpoint,
 }: PremiereHighlightsProps) {
   const [trailers, setTrailers] = useState<All[]>(data || []);
   const [selectedTrailer, setSelectedTrailer] = useState<All | null>(null);
-  const [recommendationsCache, setRecommendationsCache] = useState<Record<number, All[]>>({});
+  const [recommendationsCache, setRecommendationsCache] = useState<
+    Record<number, All[]>
+  >({});
   const [loading, setLoading] = useState(!data);
   const [error, setError] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
@@ -55,7 +61,9 @@ export default function PremiereHighlights({
   const [startIndex, setStartIndex] = useState(0);
   const [itemsPerView, setItemsPerView] = useState(3);
 
-  const uniqueTrailers = Array.from(new Map(trailers.map(item => [item.id, item])).values());
+  const uniqueTrailers = Array.from(
+    new Map(trailers.map((item) => [item.id, item])).values()
+  );
 
   useEffect(() => {
     const updateLayout = () => {
@@ -110,7 +118,7 @@ export default function PremiereHighlights({
       let recs = recommendationsCache[id];
       if (!recs && type !== "person") {
         recs = await fetchRecommendations(type, id);
-        setRecommendationsCache(prev => ({ ...prev, [id]: recs }));
+        setRecommendationsCache((prev) => ({ ...prev, [id]: recs }));
       }
       setSelectedTrailer({ ...trailer, recommendations: recs || [] });
     } catch {
@@ -121,24 +129,36 @@ export default function PremiereHighlights({
   const canScrollLeft = startIndex > 0;
   const canScrollRight = startIndex < uniqueTrailers.length - itemsPerView;
 
-  const scrollLeft = () => setStartIndex(prev => Math.max(0, prev - 3));
+  const scrollLeft = () => setStartIndex((prev) => Math.max(0, prev - 3));
   const scrollRight = () =>
-    setStartIndex(prev => Math.min(uniqueTrailers.length - itemsPerView, prev + 3));
+    setStartIndex((prev) =>
+      Math.min(uniqueTrailers.length - itemsPerView, prev + 3)
+    );
 
-  const visibleItems = uniqueTrailers.slice(startIndex, startIndex + itemsPerView);
+  const visibleItems = uniqueTrailers.slice(
+    startIndex,
+    startIndex + itemsPerView
+  );
 
   if (loading) {
     return (
       <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">{title}</h2>
-            <p className="text-gray-400 text-base mt-2">Loading incredible content...</p>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
+              {title}
+            </h2>
+            <p className="text-gray-400 text-base mt-2">
+              Loading incredible content...
+            </p>
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="aspect-[16/9] bg-gray-800 animate-pulse rounded-2xl" />
+            <div
+              key={i}
+              className="aspect-[16/9] bg-gray-800 animate-pulse rounded-2xl"
+            />
           ))}
         </div>
       </section>
@@ -148,7 +168,9 @@ export default function PremiereHighlights({
   if (error) {
     return (
       <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-8">{title}</h2>
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-8">
+          {title}
+        </h2>
         <div className="p-12 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl text-center border border-gray-700">
           <p className="text-gray-400 text-lg mb-4">{error}</p>
           <button
@@ -165,24 +187,27 @@ export default function PremiereHighlights({
   if (trailers.length === 0) return null;
 
   return (
-    <section id="premiere" className="py-22 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto  relative">
+    <section
+      id="premiere"
+      className="py-22 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto  relative"
+    >
       <div className="flex items-end justify-between mb-8">
-        <div >
-          <h2
-            className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
-            style={{
-              backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            {title}
-          </h2>
+        <div>
+          <Link href="/new-releases" className="group">
+            <h2
+              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text transition-opacity hover:opacity-80"
+              style={{
+                backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              {title}
+            </h2>
+          </Link>
 
           {subtitle && (
-            <p className="text-gray-400 text-xs sm:text-sm mt-2">
-              {subtitle}
-            </p>
+            <p className="text-gray-400 text-xs sm:text-sm mt-2">{subtitle}</p>
           )}
         </div>
       </div>
@@ -220,7 +245,9 @@ export default function PremiereHighlights({
             }
           }}
           className="grid grid-cols-1 lg:grid-cols-3 gap-6 touch-pan-y"
-        >          <AnimatePresence mode="popLayout">
+        >
+          {" "}
+          <AnimatePresence mode="popLayout">
             {visibleItems.map((item, index) => (
               <motion.div
                 key={item.id}
@@ -256,10 +283,11 @@ export default function PremiereHighlights({
                     <div
                       className={`
                                              flex items-center gap-1 px-2 py-1 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border group-hover:opacity-0 transition-opacity duration-300
-                                             ${item.type === "tv"
-                          ? "bg-blue-500/90 text-white border-blue-400/50"
-                          : "bg-purple-500/90 text-white border-purple-400/50"
-                        }
+                                             ${
+                                               item.type === "tv"
+                                                 ? "bg-blue-500/90 text-white border-blue-400/50"
+                                                 : "bg-purple-500/90 text-white border-purple-400/50"
+                                             }
                                            `}
                     >
                       {item.type === "tv" ? (
@@ -284,13 +312,21 @@ export default function PremiereHighlights({
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{
                         scale: hoveredId === item.id ? 1 : 0,
-                        opacity: hoveredId === item.id ? 1 : 0
+                        opacity: hoveredId === item.id ? 1 : 0,
                       }}
-                      transition={{ duration: 0.2, type: "spring", stiffness: 200 }}
+                      transition={{
+                        duration: 0.2,
+                        type: "spring",
+                        stiffness: 200,
+                      }}
                       className="absolute inset-0 flex items-center justify-center z-10"
                     >
                       <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-2xl backdrop-blur-sm">
-                        <Play size={24} className="text-black ml-1" fill="black" />
+                        <Play
+                          size={24}
+                          className="text-black ml-1"
+                          fill="black"
+                        />
                       </div>
                     </motion.div>
                   )}
@@ -320,7 +356,7 @@ export default function PremiereHighlights({
                   <motion.div
                     initial={false}
                     animate={{
-                      opacity: hoveredId === item.id ? 1 : 0
+                      opacity: hoveredId === item.id ? 1 : 0,
                     }}
                     className="absolute inset-0 rounded-2xl ring-2 ring-white/30 pointer-events-none"
                   />
@@ -331,15 +367,13 @@ export default function PremiereHighlights({
         </motion.div>
       </div>
 
-      {
-        selectedTrailer && (
-          <TrailerModal
-            trailer={selectedTrailer}
-            onClose={() => setSelectedTrailer(null)}
-            onSelectTrailer={handleSelectTrailer}
-          />
-        )
-      }
-    </section >
+      {selectedTrailer && (
+        <TrailerModal
+          trailer={selectedTrailer}
+          onClose={() => setSelectedTrailer(null)}
+          onSelectTrailer={handleSelectTrailer}
+        />
+      )}
+    </section>
   );
 }
