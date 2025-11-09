@@ -42,6 +42,7 @@ interface CategoryContentProps {
   totalPages: number;
   total: number;
   title: string;
+  subtitle?: string;
 }
 
 export function CategoryContent({
@@ -49,6 +50,7 @@ export function CategoryContent({
   currentPage,
   totalPages,
   title,
+  subtitle,
 }: CategoryContentProps) {
   const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const [isPending, startTransition] = useTransition();
@@ -123,8 +125,7 @@ export function CategoryContent({
           {suf}{" "}
         </sup>
         <span className="font-semibold">
-          {monthShort}{" "}
-          <span>{year}</span>
+          {monthShort} <span>{year}</span>
         </span>
       </span>
     );
@@ -155,7 +156,6 @@ export function CategoryContent({
             </p>
           </div>
         </div> */}
-
         {/* Loading Overlay */}
         {isPending && (
           <div
@@ -163,11 +163,10 @@ export function CategoryContent({
             style={{ inset: 0, position: "fixed" }}
           >
             <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 p-8 rounded-2xl shadow-2xl ring-1 ring-white/10 flex flex-col items-center gap-4">
-              <Loader2 className="w-18 h-18 text-cyan-400 animate-spin" />
+              <Loader2 className="w-18 h-18 text-[#ff6b58] animate-spin" />
             </div>
           </div>
         )}
-
         {/* Content with opacity when loading */}
         <div
           className={`transition-opacity duration-300 ${
@@ -177,31 +176,52 @@ export function CategoryContent({
           {/* Top 3 Featured Section */}
           {topThree.length > 0 && (
             <section className="space-y-6">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 blur-xl opacity-50" />
-                  <Crown className="relative w-10 h-10 text-amber-400" />
+              <section className="space-y-6">
+                <div className="flex flex-col gap-1 mb-8">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                    FEATURED COLLECTION
+                  </span>
+
+                  <h2
+                    className="
+                      text-xl sm:text-2xl lg:text-3xl font-black tracking-tight
+                      bg-gradient-to-r from-[#e94f37] to-[#ff6b58] bg-clip-text text-transparent
+                    "
+                  >
+                    {title}
+                  </h2>
+
+                  <p className="text-sm sm:text-base text-[#ff6b58]/80 font-medium tracking-wide italic">
+                    {subtitle}
+                  </p>
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
-                  {title}
-                </h2>
-              </div>
+              </section>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {topThree.map((item, idx) => (
                   <div
                     key={item.id}
-                    className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 ring-1 ring-white/10 shadow-2xl hover:ring-amber-500/50 transition-all duration-500"
+                    className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 ring-1 ring-white/10 shadow-2xl hover:ring-[#e94f37]/50 transition-all duration-500 flex flex-col"
                   >
                     {/* Rank Badge */}
-                    <div className="absolute top-4 left-4 z-20 w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center shadow-2xl ring-4 ring-white/20">
-                      <span className="text-2xl font-black text-white">
-                        #{idx + 1}
-                      </span>
+                    <div className="absolute top-3 left-3 z-20">
+                      <div
+                        className="
+                          px-3 py-1 
+                          rounded-md 
+                          bg-gradient-to-br from-neutral-900/80 to-neutral-800/60 
+                          border border-neutral-700/50 
+                          shadow-lg backdrop-blur-md
+                        "
+                      >
+                        <span className="text-sm font-bold text-white tracking-wide">
+                          #{idx + 1}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Backdrop Image */}
-                    <div className="relative aspect-video">
+                    <div className="relative aspect-video overflow-hidden">
                       <img
                         src={getImageUrl(item.backdrop_path)}
                         alt={getTitle(item)}
@@ -213,69 +233,93 @@ export function CategoryContent({
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
 
                       {/* Type Badge */}
-                      <div className="absolute top-4 right-4 px-3 py-1.5 bg-black/90 backdrop-blur-sm rounded-lg text-xs font-bold uppercase ring-1 ring-white/20">
-                        {item.type === "movie" ? "🎬 Movie" : "📺 TV Series"}
+                      <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-40 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
+                        <div
+                          className={`
+                            flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-medium text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
+                            ${
+                              item.type === "tv"
+                                ? "bg-blue-500/90 text-white border-blue-400/50"
+                                : "bg-purple-500/90 text-white border-purple-400/50"
+                            }
+                          `}
+                        >
+                          {item.type === "tv" ? (
+                            <Tv size={10} className="sm:w-3 sm:h-3" />
+                          ) : (
+                            <Film size={10} className="sm:w-3 sm:h-3" />
+                          )}
+                          {item.type === "tv" ? "Series" : "Movie"}
+                        </div>
                       </div>
                     </div>
 
                     {/* Content */}
-                    <div className="p-6 space-y-4">
-                      <h3 className="text-2xl font-black line-clamp-2 group-hover:text-amber-400 transition-colors">
+                    <div className="p-6 flex flex-col">
+                      {/* Title - Fixed height with line clamp */}
+                      <h3 className="text-2xl font-black line-clamp-2 min-h-[2.5rem] group-hover:text-[#ff6b58] transition-colors">
                         {getTitle(item)}
                       </h3>
 
-                      <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed">
+                      {/* Description - Fixed height with line clamp */}
+                      <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed min-h-[4.5rem] mt-3">
                         {item.overview || "No description available"}
                       </p>
 
-                      <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 backdrop-blur-sm rounded-full ring-1 ring-amber-500/30">
-                          <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                          <span className="text-sm font-bold">
-                            {item.vote_average > 0
-                              ? item.vote_average.toFixed(1)
-                              : "New"}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 text-sm text-gray-400">
-                          <Calendar className="w-4 h-4" />
-                          <span className="font-semibold">
-                            {getReleaseDate(item)}
-                          </span>
-                        </div>
-
-                        {item.number_of_seasons && (
-                          <span className="px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full text-xs font-bold">
-                            {item.number_of_seasons} Season
-                            {item.number_of_seasons > 1 ? "s" : ""}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Genres */}
-                      {item.genres && item.genres.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {item.genres.slice(0, 3).map((genre, i) => (
-                            <span
-                              key={i}
-                              className="px-2 py-1 bg-white/5 rounded-lg text-xs font-medium text-gray-300"
-                            >
-                              {genre}
+                      {/* Metadata section - Consistent spacing */}
+                      <div className="space-y-3 mt-4">
+                        {/* Rating and Date */}
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 backdrop-blur-sm rounded-full ring-1 ring-amber-500/30">
+                            <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                            <span className="text-sm font-bold">
+                              {item.vote_average > 0
+                                ? item.vote_average.toFixed(1)
+                                : "New"}
                             </span>
-                          ))}
-                        </div>
-                      )}
+                          </div>
 
-                      {/* Action Buttons */}
-                      <div className="flex gap-3 pt-2">
-                        <button className="flex-1 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105">
-                          <Play className="w-4 h-4" />
-                          Watch Now
-                        </button>
-                        <button className="px-4 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl font-bold transition-all flex items-center justify-center gap-2 hover:scale-105">
-                          <Info className="w-4 h-4" />
-                        </button>
+                          <div className="flex items-center gap-1.5 text-sm text-gray-400">
+                            <Calendar className="w-4 h-4" />
+                            <span className="font-semibold">
+                              {getReleaseDate(item)}
+                            </span>
+                          </div>
+
+                          {item.number_of_seasons && (
+                            <span className="px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full text-xs font-bold">
+                              {item.number_of_seasons} Season
+                              {item.number_of_seasons > 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Genres - Fixed height */}
+                        <div className="flex flex-wrap gap-2 min-h-[1.75rem] items-start">
+                          {item.genres && item.genres.length > 0 ? (
+                            item.genres.slice(0, 3).map((genre, i) => (
+                              <span
+                                key={i}
+                                className="px-2 py-1 bg-white/5 rounded-lg text-xs font-medium text-gray-300"
+                              >
+                                {genre}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="h-0 w-0 invisible">-</span>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3 pt-1">
+                          <button className="flex-1 px-4 py-3 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d44530] hover:to-[#ff5a47] rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105">
+                            <Play className="w-4 h-4" />
+                            Watch Now
+                          </button>
+                          <button className="px-4 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl font-bold transition-all flex items-center justify-center gap-2 hover:scale-105">
+                            <Info className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -286,22 +330,15 @@ export function CategoryContent({
 
           {/* Rest of Items Grid */}
           {restItems.length > 0 && (
-            <section className="space-y-6">
-              <div className="flex items-center gap-3">
-                <TrendingUp className="w-8 h-8 text-cyan-400" />
-                <h2 className="text-2xl sm:text-3xl font-black text-white">
-                  All Trending
-                </h2>
-              </div>
-
+            <section className="space-y-6 mt-10">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
                 {restItems.map((item) => (
                   <div
                     key={item.id}
-                    className="group relative rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 hover:ring-cyan-500/50 transition-all duration-300 cursor-pointer"
+                    className="group relative rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 hover:ring-[#ff6b58]/50 transition-all duration-300 cursor-pointer"
                   >
                     {/* Poster */}
-                    <div className="relative aspect-[2/3]">
+                    <div className="relative aspect-[2/3] overflow-hidden">
                       <img
                         src={getPosterUrl(item.poster_path)}
                         alt={getTitle(item)}
@@ -353,7 +390,7 @@ export function CategoryContent({
 
                     {/* Info */}
                     <div className="p-3">
-                      <h4 className="font-bold text-sm line-clamp-2 mb-2 group-hover:text-cyan-400 transition-colors">
+                      <h4 className="font-bold text-sm line-clamp-2 mb-2 group-hover:text-[#ff6b58] transition-colors">
                         {getTitle(item)}
                       </h4>
 
@@ -381,7 +418,7 @@ export function CategoryContent({
           )}
         </div>
 
-        {/* Pagination Controls */}
+        {/* Pagination Controls - Simplified Version */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-4 py-8">
             <button
@@ -394,62 +431,40 @@ export function CategoryContent({
             </button>
 
             <div className="flex items-center gap-2">
-              {/* First page */}
-              {currentPage > 3 && (
-                <>
-                  <button
-                    onClick={() => handlePageChange(1)}
-                    disabled={isPending}
-                    className="w-10 h-10 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition-all"
-                  >
-                    1
-                  </button>
-                  {currentPage > 4 && (
-                    <span className="text-gray-500">...</span>
-                  )}
-                </>
-              )}
+              {/* Show first 3 pages or pages around current page */}
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                // Calculate which page number to show
+                let pageNum;
+                if (currentPage <= 3) {
+                  // If we're at the start, show pages 1-5
+                  pageNum = i + 1;
+                } else {
+                  // Otherwise, show current page and 2 before/after
+                  pageNum = currentPage - 2 + i;
+                }
 
-              {/* Page numbers around current page */}
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter((page) => {
-                  return (
-                    page === currentPage ||
-                    page === currentPage - 1 ||
-                    page === currentPage + 1 ||
-                    page === currentPage - 2 ||
-                    page === currentPage + 2
-                  );
-                })
-                .map((page) => (
+                // Don't show if page number exceeds total pages
+                if (pageNum > totalPages) return null;
+
+                return (
                   <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
                     disabled={isPending}
                     className={`w-10 h-10 rounded-lg font-bold transition-all disabled:cursor-not-allowed ${
-                      page === currentPage
-                        ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
+                      pageNum === currentPage
+                        ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white"
                         : "bg-white/10 hover:bg-white/20"
                     } ${isPending ? "opacity-50" : ""}`}
                   >
-                    {page}
+                    {pageNum}
                   </button>
-                ))}
+                );
+              })}
 
-              {/* Last page */}
-              {currentPage < totalPages - 2 && (
-                <>
-                  {currentPage < totalPages - 3 && (
-                    <span className="text-gray-500">...</span>
-                  )}
-                  <button
-                    onClick={() => handlePageChange(totalPages)}
-                    disabled={isPending}
-                    className="w-10 h-10 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition-all"
-                  >
-                    {totalPages}
-                  </button>
-                </>
+              {/* Show ellipsis if there are more pages */}
+              {currentPage + 2 < totalPages && (
+                <span className="text-gray-500">...</span>
               )}
             </div>
 
