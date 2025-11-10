@@ -31,6 +31,7 @@ const routes = [
   { name: "Series", href: "/tv" },
   { name: "Community", href: "/community" },
   { name: "Your Moods", href: "/moods" },
+  { name: "Your List", href: "/watchlist" },
 ];
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"; 
