@@ -14,6 +14,7 @@ import { MoodsController } from './routes/moods/moods.controller';
 import { MoodsModule } from './routes/moods/moods.module';
 import { QuizModule } from './quiz/quiz.module';
 import { CategoryModule } from './media/category/category.module';
+import { WatchlistModule } from './watchlist/watchlist.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { CategoryModule } from './media/category/category.module';
     AuthModule,
     UserModule,
     PrismaModule,
+    WatchlistModule,
     RedisModule,
     MoviesModule,
     TvModule,

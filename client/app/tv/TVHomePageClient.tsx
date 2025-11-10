@@ -3,13 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import type { All } from '@/types/all';
 import type { ReviewItem } from '@/components/sections/CommunityPicks';
-import { Play, Star, Plus, Info, ChevronRight, ChevronLeft, Flame, Calendar, TrendingUp, Zap, Share2, Bookmark, Sparkles } from 'lucide-react';
+import { Play, Star, Plus, Info, ChevronRight, ChevronLeft, Flame, Calendar, TrendingUp, Zap, Share2, Bookmark, Sparkles, BookmarkCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from "framer-motion";
 import { ComingSoonSection } from '@/components/sections/ComingSoon';
 import MoodRecommendationsSection from '@/components/sections/MoodRecommendationSection';
 import { useScrollToHash } from "@/hooks/useScrollToHash";
+import { useRouter } from "next/navigation";
+import { useWatchlist } from "@/hooks/useWatchlist";
 export default function TVHomePageClient({
     trendingTV,
     popularTV,
@@ -36,6 +38,10 @@ export default function TVHomePageClient({
     moods?: any[];
 }) {
 
+    
+    const router = useRouter();
+    const { add, remove, isInWatchlist, ready } = useWatchlist();
+    const [wlLoading, setWlLoading] = useState(false);
     const [heroIndex, setHeroIndex] = useState(0);
     const heroShows = popularTV.slice(0, 18);
     const heroShow = heroShows[heroIndex];
@@ -200,6 +206,31 @@ export default function TVHomePageClient({
     const [featured, setFeatured] = useState(heroShows[0]); 
     const [index, setIndex] = useState(0);
 
+
+    const featuredInWatchlist =
+    featured?.id ? isInWatchlist(String(featured.id), "series") : false;
+
+    const handleFeaturedWatchlist = async () => {
+    if (!featured?.id) return;
+    if (!ready) {
+        router.push("/auth/login");
+        return;
+    }
+    setWlLoading(true);
+    try {
+        if (featuredInWatchlist) {
+        await remove(String(featured.id), "series");
+        } else {
+        await add(String(featured.id), "series");
+        }
+    } catch (err) {
+        console.error("Failed to update watchlist:", err);
+    } finally {
+        setWlLoading(false);
+    }
+    };
+
+
     /* ---------------- Page Layout ---------------- */
     return (
         <main className="bg-[#070707] text-white min-h-screen">
@@ -351,9 +382,34 @@ export default function TVHomePageClient({
                                                     View Details
                                                 </button>
                                             </Link>
-                                            <button className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl font-semibold transition-all flex items-center justify-center gap-2">
-                                                <Plus className="w-4 h-4" />
-                                            </button>
+                                                <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handleFeaturedWatchlist();
+                                                }}
+                                                disabled={wlLoading}
+                                                className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 border shadow-lg
+                                                    ${
+                                                    featuredInWatchlist
+                                                        ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
+                                                        : "bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                                                    }`}
+                                                >
+                                                {wlLoading ? (
+                                                    <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                                                ) : featuredInWatchlist ? (
+                                                    <>
+                                                    <BookmarkCheck className="w-4 h-4" />
+                                                    Added
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                    <Bookmark className="w-4 h-4" />
+                                                    Add
+                                                    </>
+                                                )}
+                                                </button>
+
                                         </div>
                                     </div>
                                 </motion.div>

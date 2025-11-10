@@ -23,16 +23,26 @@ import {
 import SearchBar from "./ui/searchbar";
 import Link from "next/link";
 import { Infinity, List, Loader, MouseIcon, PhoneIcon, Repeat } from "lucide-react";
-
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/context/AuthProvider";
 const routes = [
   { name: "Home", href: "/" },
   { name: "Movies", href: "/movies" },
   { name: "Series", href: "/tv" },
   { name: "Community", href: "/community" },
   { name: "Your Moods", href: "/moods" },
+  { name: "Your List", href: "/watchlist" },
 ];
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"; 
+type User = { name: string; username?: string; email: string; avatarUrl?: string };
+
+
+
+
 export function NavbarComponent() {
+  const router = useRouter();  
+  
   const [isOpen, setIsOpen] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const createdPortalRef = useRef<boolean>(false);
@@ -42,6 +52,7 @@ export function NavbarComponent() {
   const [activeMobileRoute, setActiveMobileRoute] = useState<string | null>(
     null
   );
+  const { user, isAuthenticated, logoutSilent } = useAuth();
 
   const routeOptions: Record<string, { label: string; hash: string }[]> = {
     "/": [
@@ -84,6 +95,14 @@ export function NavbarComponent() {
     ],
   };
 
+  
+
+  const logout = () => {
+    setIsOpen(false);
+    logoutSilent(); // clears token & user silently
+  };
+
+
   // Create/find portal root on mount. Clean up if we created it.
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -122,6 +141,7 @@ export function NavbarComponent() {
     if (isOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
   }, [isOpen]);
+
 
   // The full dropdown panel (rendered into portalRoot)
   const menuNode = (
@@ -278,19 +298,19 @@ export function NavbarComponent() {
                   className="mx-auto rounded-full overflow-hidden"
                   style={{ height: 88, width: 88 }}
                 >
-                  <Image
+                  {/* <Image
                     src="/images/facebook.png"
                     alt="avatar"
                     width={96}
                     height={96}
                     style={{ objectFit: "cover" }}
-                  />
+                  /> */}
                 </div>
                 <h3
                   className="mt-3 font-medium text-white"
                   style={{ fontSize: "clamp(0.95rem,1.6vh,1.15rem)" }}
                 >
-                  Guest
+                  {user?.username ?? user?.name ?? "Guest"}
                 </h3>
                 <p
                   className="mt-1"
@@ -299,17 +319,26 @@ export function NavbarComponent() {
                     fontSize: "clamp(0.85rem,1.2vh,0.95rem)",
                   }}
                 >
-                  guest@example.com
+                  {user?.email || "guest@example.com"}
                 </p>
 
                 <div className="mt-4">
-                  <Link
-                    href="/auth/login"
-                    onClick={() => setIsOpen(false)}
-                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-5 py-2 text-sm text-white hover:bg-white/5 transition"
-                  >
-                    Login
-                  </Link>
+                  {isAuthenticated ? (
+                    <button
+                      onClick={() => { setIsMobileOpen(false); logout(); }}
+                      className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
+                    >
+                      Logout
+                    </button>
+                  ) : (
+                    <Link
+                      href="/auth/login"
+                      onClick={() => setIsMobileOpen(false)}
+                      className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
+                    >
+                      Login
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -451,7 +480,7 @@ export function NavbarComponent() {
                               if (el) el.scrollIntoView({ behavior: "smooth" });
                             }}
                             className="block text-sm px-2 py-1 rounded-md transition
-        text-gray-300 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
+                              text-gray-300 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
                           >
                             {opt.label}
                           </Link>
@@ -467,19 +496,28 @@ export function NavbarComponent() {
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-full bg-white/5 overflow-hidden" />
                 <div>
-                  <div className="text-sm font-medium text-white">Guest</div>
-                  <div className="text-xs text-gray-300">guest@example.com</div>
+                  <div className="text-sm font-medium text-white">{user?.username ?? user?.name ?? "Guest"}</div>
+                  <div className="text-xs text-gray-300">{user?.email || "guest@example.com"}</div>
                 </div>
               </div>
 
               <div className="mt-4">
-                <Link
-                  href="/auth/login"
-                  onClick={() => setIsMobileOpen(false)}
-                  className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
-                >
-                  Login
-                </Link>
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => { setIsMobileOpen(false); logout(); }}
+                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
+                  >
+                    Logout
+                  </button>
+                ) : (
+                  <Link
+                    href="/auth/login"
+                    onClick={() => setIsMobileOpen(false)}
+                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
+                  >
+                    Login
+                  </Link>
+                )}
               </div>
             </div>
 
@@ -526,6 +564,8 @@ export function NavbarComponent() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      
     </Navbar>
   );
 }

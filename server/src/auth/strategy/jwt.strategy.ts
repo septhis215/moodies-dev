@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
+import { AuthGuard, PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -20,18 +20,26 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       ignoreExpiration: false,
       secretOrKey: secret,
     });
+
+    console.log('[JwtStrategy] JWT_SECRET =', configService.get('JWT_SECRET'));
   }
 
   // can be used for user testing
   async validate(payload: { sub: string; email: string }) {
     const user = await this.prismaService.user.findUnique({
       where: {
-        id: payload.sub, // sub represents an id
+        id: payload.sub, 
       },
     });
 
     if (!user) return null;
 
-    return user;
+    return { id: payload.sub, email: payload.email };
   }
+
 }
+
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {}
+
+

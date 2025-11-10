@@ -4,13 +4,16 @@
 import React, { useState, useEffect } from 'react';
 import type { All } from '@/types/all';
 import type { ReviewItem } from '@/components/sections/CommunityPicks';
-import { Star, Plus, Info, ChevronRight, ChevronLeft, Flame, Calendar, Heart, Share2, Bookmark, Film, Award, Ticket, MessageSquare, Globe, Users, Sparkles, Trophy, Zap } from 'lucide-react';
+import { Star, Plus, Info, ChevronRight, ChevronLeft, Flame, Calendar, Heart, Share2, Bookmark, Film, Award, Ticket, MessageSquare, Globe, Users, Sparkles, Trophy, Zap,BookmarkCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from "framer-motion";
 import { ComingSoonSection } from '@/components/sections/ComingSoon';
 import MoodRecommendationsSection from '@/components/sections/MoodRecommendationSection';
 import { useScrollToHash } from "@/hooks/useScrollToHash";
+import { useRouter } from "next/navigation";
+import { useWatchlist } from "@/hooks/useWatchlist";
+
 export default function MoviesHomePageClient({
     trendingMovies,
     popularMovies,
@@ -41,6 +44,11 @@ export default function MoviesHomePageClient({
     moods?: any[];
     newReleaseMovies: All[];
 }) {
+    
+    const router = useRouter();
+    const { add, remove, isInWatchlist, ready } = useWatchlist();
+    const [wlLoading, setWlLoading] = useState(false);
+    
     const [featured, setFeatured] = useState(trendingMovies[0]);
     const [index, setIndex] = useState(0);
     const heroMovies = trendingMovies.slice(0, 18);
@@ -133,6 +141,8 @@ export default function MoviesHomePageClient({
         );
     };
 
+    
+
     const Carousel = ({ items }: { items: All[] }) => {
         const [startIndex, setStartIndex] = useState(0);
         const [itemsPerView, setItemsPerView] = useState(6);
@@ -195,6 +205,32 @@ export default function MoviesHomePageClient({
             </div>
         );
     };
+
+
+    const featuredInWatchlist =
+    featured?.id ? isInWatchlist(String(featured.id), "movie") : false;
+
+    const handleFeaturedWatchlist = async () => {
+    if (!featured?.id) return;
+    if (!ready) {
+        // not logged in -> send user to login or show a toast if you prefer
+        router.push("/auth/login");
+        return;
+    }
+    setWlLoading(true);
+    try {
+        if (featuredInWatchlist) {
+        await remove(String(featured.id), "movie");
+        } else {
+        await add(String(featured.id), "movie");
+        }
+    } catch (e) {
+        console.error("Watchlist toggle failed:", e);
+    } finally {
+        setWlLoading(false);
+    }
+    };
+    
     return (
         <main className="relative bg-black text-white min-h-screen overflow-hidden">
             {/* Animated Background Pattern */}
@@ -337,9 +373,35 @@ export default function MoviesHomePageClient({
                                                     View Details
                                                 </button>
                                             </Link>
-                                            <button className="px-6 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105">
-                                                <Plus className="w-5 h-5" />
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handleFeaturedWatchlist();
+                                                }}
+                                                disabled={wlLoading}
+                                                className={`px-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105 border
+                                                    ${
+                                                    featuredInWatchlist
+                                                        ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
+                                                        : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
+                                                    }`}
+                                                title={featuredInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                                                >
+                                                {wlLoading ? (
+                                                    <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                                                ) : featuredInWatchlist ? (
+                                                    <>
+                                                    <BookmarkCheck className="w-5 h-5" />
+                                                    Added
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                    <Bookmark className="w-5 h-5" />
+                                                    Add
+                                                    </>
+                                                )}
                                             </button>
+
                                         </div>
                                     </div>
                                 </motion.div>

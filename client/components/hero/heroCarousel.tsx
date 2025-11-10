@@ -13,8 +13,9 @@ import {
   IconTags,
 } from "@tabler/icons-react";
 import "./hero.css";
-import { Film, Tv } from "lucide-react";
+import { Film, Tv , Bookmark,BookmarkCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useWatchlist } from "@/hooks/useWatchlist";
 
 type Props = { all: All[]; cycleMs?: number };
 
@@ -51,6 +52,37 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
     const routePath = contentType === "tv" ? "tv" : "movies";
     const href = `/${routePath}/${movie.id}`;
     router.push(href);
+  };
+
+  const { add, remove, isInWatchlist, ready } = useWatchlist();
+  const [wlLoading, setWlLoading] = useState(false);
+
+  const current = all[index];
+  type HookType = "movie" | "series";
+  const toHookType = (k: "movie" | "tv"): HookType => (k === "tv" ? "series" : "movie");
+  const currentKind: "movie" | "tv" = current ? getContentType(current) : "movie";
+  const currentInWatchlist = current?.id
+    ? isInWatchlist(String(current.id), toHookType(currentKind))
+    : false;
+
+  const toggleWatchlist = async () => {
+    if (!current?.id) return;
+    if (!ready) {
+      router.push("/auth/login");
+      return;
+    }
+    setWlLoading(true);
+    try {
+      if (currentInWatchlist) {
+        await remove(String(current.id), toHookType(currentKind));
+      } else {
+        await add(String(current.id), toHookType(currentKind));
+      }
+    } catch (e) {
+      console.error("Watchlist toggle failed:", e);
+    } finally {
+      setWlLoading(false);
+    }
   };
 
   // preload current + next (use browser Image object; not next/image)
@@ -98,6 +130,10 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
     index,
     getThumbnailWindowSize()
   );
+
+  const goToList = () => {
+    router.push("/watchlist");
+  };
 
   return (
     <section
@@ -258,25 +294,29 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                 {/* Buttons */}
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
                   <button
-                    className="px-6 py-3 text-sm font-semibold
-                    bg-gradient-to-r from-[#e94f37] to-pink-600 text-white 
-                    rounded-lg shadow-lg shadow-red-900/40
-                    hover:from-red-700 hover:to-pink-700 transition-all duration-200
-                    flex items-center justify-center gap-2 cursor-pointer"
-                    onClick={() => handleClick(all[index])}
+                    onClick={toggleWatchlist}
+                    disabled={wlLoading}
+                    className={`px-6 py-3 text-sm font-medium rounded-lg backdrop-blur-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer border
+                      ${
+                        currentInWatchlist
+                          ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
+                          : "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      }`}
+                    title={currentInWatchlist ? "Remove from My List" : "Add to My List"}
                   >
-                    <IconInfoCircle className="w-5 h-5" /> More Info
-                  </button>
-
-                  <button
-                    className="px-6 py-3 text-sm font-medium
-                    bg-white/10 border border-white/20 text-white 
-                    rounded-lg backdrop-blur-md hover:bg-white/20 
-                    transition-all duration-200
-                    flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <IconPlus className="w-5 h-5" />
-                    My List
+                    {wlLoading ? (
+                      <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                    ) : currentInWatchlist ? (
+                      <>
+                        <BookmarkCheck className="w-4 h-4" />
+                        Added
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="w-4 h-4" />
+                        My List
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -366,15 +406,29 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                   </button>
 
                   <button
-                    className="px-6 xl:px-8 py-3 xl:py-4
-                    text-base xl:text-lg font-medium
-                    bg-white/10 border border-white/20 text-white 
-                    rounded-lg backdrop-blur-md hover:bg-white/20 
-                    transition-all duration-200
-                    flex items-center gap-2 cursor-pointer"
+                    onClick={toggleWatchlist}
+                    disabled={wlLoading}
+                    className={`px-6 xl:px-8 py-3 xl:py-4 text-base xl:text-lg font-medium rounded-lg backdrop-blur-md transition-all duration-200 flex items-center gap-2 cursor-pointer border
+                      ${
+                        currentInWatchlist
+                          ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
+                          : "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      }`}
+                    title={currentInWatchlist ? "Remove from My List" : "Add to My List"}
                   >
-                    <IconPlus className="w-5 h-5 xl:w-6 xl:h-6" />
-                    My List
+                    {wlLoading ? (
+                      <span className="w-4 h-4 xl:w-5 xl:h-5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                    ) : currentInWatchlist ? (
+                      <>
+                        <BookmarkCheck className="w-5 h-5 xl:w-6 xl:h-6" />
+                        Added
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="w-5 h-5 xl:w-6 xl:h-6" />
+                        My List
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
