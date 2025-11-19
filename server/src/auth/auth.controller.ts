@@ -21,13 +21,11 @@ import * as User2 from '@prisma/client';
 import * as argon from 'argon2';
 import { JwtGuard } from './guard';
 import { AuthGuard } from '@nestjs/passport';
-import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { sendVerificationCode } from '../utils/mailer';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import type { Response as ExpressResponse } from 'express';
-import * as bcrypt from 'bcrypt';
 
 
 
@@ -132,10 +130,10 @@ async setPassword(@Body() body: { token: string; password: string }) {
 
 
   const hash = await argon.hash(password, {
-  type: argon.argon2id,   // recommended variant
-  memoryCost: 19456,       // ~19 MB
-  timeCost: 2,             // iterations
-  parallelism: 1,          // threads
+  type: argon.argon2id,   
+  memoryCost: 19456,       
+  timeCost: 2,             
+  parallelism: 1,         
 });
 await this.PrismaService.user.update({
   where: { id: uid },
@@ -238,6 +236,25 @@ async verifyPassword(@Body() body: { token: string; password: string }) {
     return { success: true, message: 'Password reset successful.' };
   }
 
+  @UseGuards(JwtGuard)
+  @Get('me')
+  async me(@Req() req: any) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.uid;
+    if (!userId) return null;
+    return this.PrismaService.user.findUnique({
+      where: { id: String(userId) },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        age: true,
+        preferredGenres: true,
+        preferredLanguages: true,
+      },
+    });
+  }
+
   
   @UseGuards(JwtGuard)
   @Put('me/preferences')
@@ -245,7 +262,7 @@ async verifyPassword(@Body() body: { token: string; password: string }) {
     @Req() req,
     @Body() body: { age?: number; preferredGenres?: string[]; preferredLanguages?: string[] }
   ) {
-    // Make sure req.user.sub is available
+
     console.log('[preferences] req.user =', req.user);
 
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
@@ -255,17 +272,16 @@ async verifyPassword(@Body() body: { token: string; password: string }) {
 
     const { age, preferredGenres, preferredLanguages } = body;
 
-    // Build Prisma-compatible update data
+
     const data: any = {};
     if (typeof age === 'number') data.age = age;
     if (Array.isArray(preferredGenres)) {
-      data.preferredGenres = { set: preferredGenres };  // ✅ must use set:
+      data.preferredGenres = { set: preferredGenres };  
     }
     if (Array.isArray(preferredLanguages)) {
-      data.preferredLanguages = { set: preferredLanguages }; // ✅ must use set:
+      data.preferredLanguages = { set: preferredLanguages }; 
     }
 
-    // Correct property name for Prisma service
     return this.PrismaService.user.update({
       where: { id: String(userId) },
       data,
@@ -277,8 +293,11 @@ async verifyPassword(@Body() body: { token: string; password: string }) {
         preferredLanguages: true,
       },
     });
+    
   }
 
+
+  
   
 
 
