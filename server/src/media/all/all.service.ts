@@ -193,12 +193,12 @@ export class AllService implements OnModuleInit {
             const [movies, tv] = await Promise.all([
                 this.tmdb(
                     `/discover/movie?sort_by=popularity.desc&include_adult=false&page=1
-                &primary_release_date.gte=${this.getRecentDate(365)} 
+                &primary_release_date.gte=${this.getRecentDate(60)} 
                 &without_keywords=13090,190720`
                 ),
                 this.tmdb(
                     `/discover/tv?sort_by=popularity.desc&include_adult=false&page=1
-                &first_air_date.gte=${this.getRecentDate(365)} 
+                &first_air_date.gte=${this.getRecentDate(60)} 
                 &without_keywords=13090,190720`
                 ),
             ]);
@@ -666,37 +666,65 @@ export class AllService implements OnModuleInit {
     async getKoreaTrending(limit = 30): Promise<TmdbAll[]> {
         const ttlSec = this.CACHE_TTL.BASIC_DATA;
         const cacheKey = `koreaTrending-${limit}`;
-        const cached = await this.redisService.get(cacheKey);
-        if (cached) {
-            try {
-                const parsed = JSON.parse(cached) as TmdbAll[];
-                return parsed.slice(0, limit);
-            } catch { }
-        }
 
         if (!this.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty koreaTrending');
             return [];
         }
+        try {
+            const cached = await this.redisService.get(cacheKey);
+            if (cached) {
+                const parsed = JSON.parse(cached) as TmdbAll[];
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed.slice(0, limit);
+                }
+            }
+        } catch (e) {
+            this.logger.debug('Failed to read koreaTrending cache', e);
+        }
+        const today = new Date().toISOString().split('T')[0];
+        const recentDate = this.getRecentDate(90);
 
         try {
-            // Fetch Korean TV + Korean Movies in parallel with TMDB-side filters
-            const [tvData, movieData] = await Promise.all([
-                this.tmdb(`${this.baseUrl}/discover/tv?with_original_language=ko&sort_by=popularity.desc&page=1&include_adult=false&without_keywords=13090,190720&certification_country=KR&certification.lte=15`),
-                this.tmdb(`${this.baseUrl}/discover/movie?with_original_language=ko&sort_by=popularity.desc&page=1&include_adult=false&without_keywords=13090,190720&certification_country=KR&certification.lte=15`)
-            ]);
+            const maxPages = 3; // relaxed: fewer pages
+            const collected: any[] = [];
 
-            let results = [
-                ...(tvData?.results ?? []),
-                ...(movieData?.results ?? [])
-            ];
+            const fetchPages = async (urlBase: string) => {
+                for (let page = 1; page <= maxPages; page++) {
+                    try {
+                        const data = await this.tmdb(`${urlBase}&page=${page}`);
+                        const results = data?.results ?? [];
+                        if (!results.length) break;
 
-            // Post-fetch aggressive filter
-            results = this.filterAdultishContent(results);
-            const uniqueItems = Array.from(
-                new Map(results.map((item) => [item.id, item])).values()
-            );
-            // Process basic info first and defer recommendations
+                        results.forEach(r => {
+                            const release = r.release_date ?? r.first_air_date;
+                            if (!release || release < recentDate || release > today) return;
+                            collected.push(r);
+                        });
+
+                        if (data.total_pages && page >= data.total_pages) break;
+                    } catch (e) {
+                        this.logger.debug(`Failed fetching page ${page} for ${urlBase}`, e);
+                        break;
+                    }
+                }
+            };
+
+            const tvBase = `${this.baseUrl}/discover/tv?with_original_language=ko&sort_by=popularity.desc&first_air_date.gte=${recentDate}&first_air_date.lte=${today}&include_adult=false&without_keywords=13090,190720&certification.lte=15`;
+            const movieBase = `${this.baseUrl}/discover/movie?with_original_language=ko&sort_by=popularity.desc&primary_release_date.gte=${recentDate}&primary_release_date.lte=${today}&include_adult=false&without_keywords=13090,190720&certification.lte=15`;
+
+            await Promise.all([fetchPages(tvBase), fetchPages(movieBase)]);
+
+            // Deduplicate
+            const uniqueMap = new Map<number, any>();
+            collected.forEach(item => {
+                if (!uniqueMap.has(item.id)) uniqueMap.set(item.id, item);
+            });
+            const uniqueItems = Array.from(uniqueMap.values());
+
+            // Sort by popularity
+            uniqueItems.sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
+
             const items: TmdbAll[] = uniqueItems.slice(0, limit).map(m => {
                 const type = m.media_type ?? (m.first_air_date ? 'tv' : 'movie');
                 return {
@@ -712,22 +740,23 @@ export class AllService implements OnModuleInit {
                     origin_country: m.origin_country ?? [],
                     genres: m.genre_ids?.map((id: number) => this.genreMap[id] || 'Unknown') ?? [],
                     type,
-                    recommendations: [], // Populate later in background
-                };
+                    recommendations: [],
+                } as TmdbAll;
             });
 
-            const shuffled = shuffleArray(items);
+            // Cache and background recommendations
+            try { await this.redisService.set(cacheKey, JSON.stringify(items), ttlSec); } catch { }
+            this.populateRecommendationsBackground(items, cacheKey);
 
-            // Cache and start background recommendation population
-            // await this.redisService.set(cacheKey, JSON.stringify(shuffled), ttlSec);
-            this.populateRecommendationsBackground(shuffled, cacheKey);
-
-            return shuffled.slice(0, Math.max(0, limit));
+            return items;
         } catch (err) {
             this.logger.error('Failed to fetch koreaTrending', err as any);
             return [];
         }
     }
+
+
+
 
     /**
  * Filters a results array (movies/tv) to remove adult-ish items.
