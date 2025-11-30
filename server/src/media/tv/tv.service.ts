@@ -137,6 +137,30 @@ export class TvService implements OnModuleInit {
     return await this.tmdb(`${type}/${id}/content_ratings`);
   }
 
+  private async fetchNextEpisode(id: number, infoRaw: any) {
+    if (infoRaw?.status !== 'Returning Series' && infoRaw?.status !== 'In Production') {
+      return null;
+    }
+
+    try {
+      if (infoRaw?.next_episode_to_air) {
+        return {
+          episode_number: infoRaw.next_episode_to_air.episode_number,
+          season_number: infoRaw.next_episode_to_air.season_number,
+          name: infoRaw.next_episode_to_air.name,
+          overview: infoRaw.next_episode_to_air.overview,
+          air_date: infoRaw.next_episode_to_air.air_date,
+          runtime: infoRaw.next_episode_to_air.runtime,
+          still_path: infoRaw.next_episode_to_air.still_path,
+        };
+      }
+      return null;
+    } catch (err) {
+      this.logger.warn(`Failed to fetch next episode for TV ${id}`, err);
+      return null;
+    }
+  }
+
   async tvDetails(id: number, p0: any) {
     const detectedType: ContentType = 'tv';
 
@@ -222,6 +246,7 @@ export class TvService implements OnModuleInit {
       return 'NR';
     };
 
+    const nextEpisode = await this.fetchNextEpisode(id, infoRaw);
     const contentRating = getContentRating(contentRatingsRaw);
 
     const info = {
@@ -258,6 +283,8 @@ export class TvService implements OnModuleInit {
       last_air_date: infoRaw?.last_air_date ?? null,
       networks: infoRaw?.networks ?? [],
       seasons: infoRaw?.seasons ?? [],
+      next_episode_to_air: nextEpisode,
+      last_episode_to_air: infoRaw?.last_episode_to_air || null,
     };
 
     const credits = {
@@ -1323,7 +1350,7 @@ export class TvService implements OnModuleInit {
       return [];
     }
   }
-  
+
   async getUpcomingTrailers(limit = 60): Promise<TmdbTv[]> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
@@ -1449,8 +1476,8 @@ export class TvService implements OnModuleInit {
     }> = (data.results ?? [])
       .filter((v: any) => {
         return (
-          Boolean(v?.key) && 
-          (v?.site?.toLowerCase() === 'youtube') && 
+          Boolean(v?.key) &&
+          (v?.site?.toLowerCase() === 'youtube') &&
           Boolean(v?.official) && // Official content only
           (typeof v?.size === 'number' ? v.size >= MIN_SIZE : true) && // HD quality or unknown
           PRIORITY_TYPES.includes(v?.type) // Relevant video types
@@ -1472,7 +1499,7 @@ export class TvService implements OnModuleInit {
         const bDate = new Date(b.published_at ?? 0).getTime();
         return bDate - aDate;
       })
-      .slice(0, 30) 
+      .slice(0, 30)
       .map((v: any) => ({
         id: v?.id ?? "",
         key: v?.key ?? "",
