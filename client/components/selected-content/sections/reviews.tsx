@@ -98,7 +98,7 @@ export default function ReviewsSection({
     const now = new Date().toISOString();
     const newReview: Review = {
       id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      author: payload.author || "Anonymous",
+      author: "Guest User",
       author_details: {
         username: payload.author?.toLowerCase() || "anonymous",
         name: payload.author || undefined,
@@ -460,11 +460,6 @@ function ReviewForm({
     e?.preventDefault();
     setError(null);
 
-    if (!author.trim()) {
-      setError("👤 Please enter your name");
-      return;
-    }
-
     if (!mood) {
       setError("🎭 Pick a mood that matches your vibe");
       return;
@@ -500,220 +495,425 @@ function ReviewForm({
   const displayRating = hoveredStar !== null ? hoveredStar : rating;
 
   return (
-    <div className="relative overflow-hidden">
-      {/* Animated background gradient */}
-      <div className="absolute inset-0 animate-pulse" />
+    <div className="relative">
+      {/* Dynamic background based on mood */}
+      <div
+        className={`absolute inset-0 rounded-2xl transition-all duration-500 ${
+          mood === "amazing"
+            ? "bg-gradient-to-br from-orange-500/20 to-red-500/20"
+            : mood === "loved"
+            ? "bg-gradient-to-br from-pink-500/20 to-rose-500/20"
+            : mood === "enjoyed"
+            ? "bg-gradient-to-br from-green-500/20 to-emerald-500/20"
+            : mood === "okay"
+            ? "bg-gradient-to-br from-slate-500/20 to-gray-500/20"
+            : mood === "meh"
+            ? "bg-gradient-to-br from-gray-600/20 to-slate-600/20"
+            : mood === "disliked"
+            ? "bg-gradient-to-br from-slate-700/20 to-gray-700/20"
+            : "bg-slate-900/50"
+        }`}
+      />
 
-      <div className="relative backdrop-blur-sm">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Hero Header */}
-          <div className="text-center pb-4 border-b border-white/10">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 mb-3 shadow-lg">
-              <svg
-                className="w-8 h-8 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+      <form
+        onSubmit={handleSubmit}
+        className="relative space-y-5 p-6 rounded-2xl border transition-all duration-500"
+        style={{
+          borderColor:
+            mood === "amazing"
+              ? "rgba(249, 115, 22, 0.3)"
+              : mood === "loved"
+              ? "rgba(236, 72, 153, 0.3)"
+              : mood === "enjoyed"
+              ? "rgba(34, 197, 94, 0.3)"
+              : mood === "okay"
+              ? "rgba(100, 116, 139, 0.3)"
+              : mood === "meh"
+              ? "rgba(75, 85, 99, 0.3)"
+              : mood === "disliked"
+              ? "rgba(71, 85, 105, 0.3)"
+              : "rgba(255, 255, 255, 0.1)",
+        }}
+      >
+        {/* Header with dynamic accent */}
+        <div
+          className="pb-4 border-b transition-colors duration-500"
+          style={{
+            borderColor:
+              mood === "amazing"
+                ? "rgba(249, 115, 22, 0.2)"
+                : mood === "loved"
+                ? "rgba(236, 72, 153, 0.2)"
+                : mood === "enjoyed"
+                ? "rgba(34, 197, 94, 0.2)"
+                : mood === "okay"
+                ? "rgba(100, 116, 139, 0.2)"
+                : mood === "meh"
+                ? "rgba(75, 85, 99, 0.2)"
+                : mood === "disliked"
+                ? "rgba(71, 85, 105, 0.2)"
+                : "rgba(255, 255, 255, 0.1)",
+          }}
+        >
+          <h3 className="text-xl font-bold text-white">Write a Review</h3>
+          <p
+            className={`text-sm mt-1 transition-colors duration-500 ${
+              mood === "amazing"
+                ? "text-orange-300"
+                : mood === "loved"
+                ? "text-pink-300"
+                : mood === "enjoyed"
+                ? "text-green-300"
+                : mood === "okay"
+                ? "text-slate-400"
+                : mood === "meh"
+                ? "text-gray-400"
+                : mood === "disliked"
+                ? "text-slate-500"
+                : "text-slate-400"
+            }`}
+          >
+            {mood === "amazing"
+              ? "🔥 Amazing! Tell us what made it incredible"
+              : mood === "loved"
+              ? "❤️ You loved it! Share what touched your heart"
+              : mood === "enjoyed"
+              ? "😊 Great! What did you enjoy most?"
+              : mood === "okay"
+              ? "😐 It was okay. What worked and what didn't?"
+              : mood === "meh"
+              ? "😕 Not impressed? Tell us why"
+              : mood === "disliked"
+              ? "😞 Sorry it disappointed. What went wrong?"
+              : "Share your experience with the community"}
+          </p>
+        </div>
+
+        {/* Mood Selection */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-300 mb-3">
+            How did it make you feel?
+          </label>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {[
+              {
+                emoji: "🔥",
+                label: "Amazing",
+                value: "amazing",
+                color: "from-orange-500 to-red-500",
+              },
+              {
+                emoji: "❤️",
+                label: "Loved it",
+                value: "loved",
+                color: "from-pink-500 to-rose-500",
+              },
+              {
+                emoji: "😊",
+                label: "Enjoyed",
+                value: "enjoyed",
+                color: "from-green-500 to-emerald-500",
+              },
+              {
+                emoji: "😐",
+                label: "It's okay",
+                value: "okay",
+                color: "from-slate-500 to-gray-500",
+              },
+              {
+                emoji: "😕",
+                label: "Meh",
+                value: "meh",
+                color: "from-gray-600 to-slate-600",
+              },
+              {
+                emoji: "😞",
+                label: "Disliked",
+                value: "disliked",
+                color: "from-slate-700 to-gray-700",
+              },
+            ].map((m) => (
+              <button
+                key={m.value}
+                type="button"
+                onClick={() => setMood(m.value)}
+                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-lg transition-all duration-300 cursor-pointer ${
+                  mood === m.value
+                    ? `bg-gradient-to-br ${m.color} shadow-lg scale-105 border-2 border-white/30`
+                    : "bg-slate-900/30 hover:bg-slate-800/50 border border-white/10"
+                }`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-3xl font-black text-white mb-2">
-              Drop Your Review
-            </h3>
-            <p className="text-slate-400">We'd love to hear what you think!</p>
-          </div>
-
-          {/* Two Column Layout */}
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Left Column - Quick Info */}
-            <div className="space-y-5">
-              {/* Name Input Card */}
-              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl p-5 border border-white/10 backdrop-blur">
-                <label className="block text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
-                  <span className="text-xl">👤</span>
-                  Who are you?
-                </label>
-                <input
-                  value={author}
-                  onChange={(e) => setAuthor(e.target.value)}
-                  placeholder="Enter your name..."
-                  className="w-full bg-black/30 text-white placeholder-slate-500 rounded-xl px-4 py-3.5 border border-white/5 focus:border-violet-400/50 focus:ring-4 focus:ring-violet-400/10 transition-all outline-none text-lg"
-                />
-              </div>
-
-              {/* Mood Selection Card */}
-              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl p-5 border border-white/10 backdrop-blur">
-                <label className="block text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
-                  <span className="text-xl">🎭</span>
-                  How did it make you feel?
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {moods.map((m) => (
-                    <button
-                      key={m.value}
-                      type="button"
-                      onClick={() => setMood(m.value)}
-                      className={`relative flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-300 cursor-pointer ${
-                        mood === m.value
-                          ? `bg-gradient-to-br ${m.color} shadow-lg scale-105`
-                          : "bg-black/30 hover:bg-black/50 border border-white/10"
-                      }`}
-                    >
-                      <span className="text-3xl">{m.emoji}</span>
-                      <span
-                        className={`text-xs font-semibold ${
-                          mood === m.value ? "text-white" : "text-slate-400"
-                        }`}
-                      >
-                        {m.label}
-                      </span>
-                      {mood === m.value && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center">
-                          <svg
-                            className="w-3 h-3 text-green-500"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Star Rating Card */}
-              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl p-5 border border-white/10 backdrop-blur">
-                <label className="block text-sm font-bold text-slate-200 mb-3 flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <span className="text-xl">⭐</span>
-                    Your Score
-                  </span>
-                </label>
-                <div className="flex items-center justify-center gap-1 py-2">
-                  {Array.from({ length: 5 }).map((_, i) => {
-                    const starValue = (i + 1) * 2;
-                    const active =
-                      displayRating !== null && displayRating >= starValue;
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => toggleStar(i + 1)}
-                        onMouseEnter={() => setHoveredStar(starValue)}
-                        onMouseLeave={() => setHoveredStar(null)}
-                        className="p-1 transition-transform hover:scale-125 cursor-pointer"
-                      >
-                        <Star
-                          size={36}
-                          className={`transition-all duration-200 ${
-                            active
-                              ? "text-yellow-400 fill-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]"
-                              : "text-slate-700"
-                          }`}
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Review Text */}
-            <div className="space-y-5">
-              <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-2xl p-5 border border-white/10 backdrop-blur h-full flex flex-col">
-                <label className="block text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
-                  <span className="text-xl">💭</span>
-                  Share your thoughts
-                </label>
-                <textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="What stood out to you? Any favorite moments? Would you recommend it to others? Share the details..."
-                  rows={11}
-                  className="flex-1 w-full bg-black/30 text-white placeholder-slate-500 rounded-xl px-4 py-3 border border-white/5 focus:border-violet-400/50 focus:ring-4 focus:ring-violet-400/10 transition-all outline-none resize-none"
-                />
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="group relative w-full sm:w-auto px-4 py-2 mt-3 rounded-lg bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white text-sm font-medium shadow cursor-pointer"
+                <span className="text-2xl">{m.emoji}</span>
+                <span
+                  className={`text-[10px] font-medium ${
+                    mood === m.value ? "text-white" : "text-slate-400"
+                  }`}
                 >
-                  <span className="relative z-10 flex items-center justify-center gap-2">
-                    {submitting ? (
-                      <>
-                        <svg
-                          className="animate-spin h-5 w-5"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                            fill="none"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                        Publishing...
-                      </>
-                    ) : (
-                      <>Post</>
-                    )}
-                  </span>
-                </button>
-                <div className="flex items-center justify-between mt-3 text-xs">
-                  <span
-                    className={`font-medium ${
-                      content.length < 10 ? "text-slate-500" : "text-green-400"
-                    }`}
-                  >
-                    {content.length} characters
-                  </span>
-                  <span className="text-slate-500">
-                    {content.length < 10
-                      ? `${10 - content.length} more needed`
-                      : "✓ Good to go!"}
-                  </span>
-                </div>
-              </div>
+                  {m.label}
+                </span>
+                {mood === m.value && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-lg">
+                    <svg
+                      className="w-2.5 h-2.5 text-green-600"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Combined Quote Card - Name, Rating, and Review */}
+        <div
+          className="relative bg-slate-900/50 rounded-lg p-6 border transition-all"
+          style={{
+            borderColor: mood
+              ? mood === "amazing"
+                ? "rgba(249, 115, 22, 0.3)"
+                : mood === "loved"
+                ? "rgba(236, 72, 153, 0.3)"
+                : mood === "enjoyed"
+                ? "rgba(34, 197, 94, 0.3)"
+                : mood === "okay"
+                ? "rgba(100, 116, 139, 0.3)"
+                : mood === "meh"
+                ? "rgba(75, 85, 99, 0.3)"
+                : "rgba(71, 85, 105, 0.3)"
+              : "rgba(255, 255, 255, 0.1)",
+          }}
+        >
+          {/* Opening quote mark */}
+          <svg
+            className="absolute top-4 left-4 w-8 h-8 opacity-20 transition-colors"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            style={{
+              color:
+                mood === "amazing"
+                  ? "rgb(249, 115, 22)"
+                  : mood === "loved"
+                  ? "rgb(236, 72, 153)"
+                  : mood === "enjoyed"
+                  ? "rgb(34, 197, 94)"
+                  : mood === "okay"
+                  ? "rgb(100, 116, 139)"
+                  : mood === "meh"
+                  ? "rgb(75, 85, 99)"
+                  : mood === "disliked"
+                  ? "rgb(71, 85, 105)"
+                  : "rgb(255, 255, 255)",
+            }}
+          >
+            <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+          </svg>
+
+          {/* Name input section */}
+          <div className="flex items-center gap-3 mb-4 pl-10">
+            <div
+              className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-800 border-2 transition-colors flex items-center justify-center"
+              style={{
+                borderColor:
+                  mood === "amazing"
+                    ? "rgb(249, 115, 22)"
+                    : mood === "loved"
+                    ? "rgb(236, 72, 153)"
+                    : mood === "enjoyed"
+                    ? "rgb(34, 197, 94)"
+                    : mood === "okay"
+                    ? "rgb(100, 116, 139)"
+                    : mood === "meh"
+                    ? "rgb(75, 85, 99)"
+                    : mood === "disliked"
+                    ? "rgb(71, 85, 105)"
+                    : "rgba(255, 255, 255, 0.3)",
+              }}
+            >
+              <span className="text-slate-400 text-sm font-semibold">
+                {author ? author.charAt(0).toUpperCase() : "G"}
+              </span>
             </div>
+
+            <input
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+              placeholder="Guest User"
+              className="flex-1 bg-transparent text-white placeholder-slate-500 text-sm font-medium focus:outline-none"
+            />
           </div>
 
-          {/* Error Alert */}
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-3 p-4 bg-red-500/10 border-2 border-red-500/30 rounded-xl backdrop-blur"
-            >
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
-                <span className="text-lg">⚠️</span>
-              </div>
-              <span className="text-red-300 font-medium">{error}</span>
-            </motion.div>
-          )}
+          {/* Rating section */}
+          <div className="flex items-center justify-center gap-1 py-3 mb-4">
+            {Array.from({ length: 5 }).map((_, i) => {
+              const starValue = (i + 1) * 2;
+              const active =
+                displayRating !== null && displayRating >= starValue;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => toggleStar(i + 1)}
+                  onMouseEnter={() => setHoveredStar(starValue)}
+                  onMouseLeave={() => setHoveredStar(null)}
+                  className="p-0.5 transition-transform hover:scale-110 cursor-pointer"
+                >
+                  <Star
+                    size={24}
+                    className={`transition-colors ${
+                      active
+                        ? "text-yellow-400 fill-yellow-400"
+                        : "text-slate-700 hover:text-slate-600"
+                    }`}
+                  />
+                </button>
+              );
+            })}
+          </div>
 
-          {/* Submit Section */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 pt-2"></div>
-        </form>
-      </div>
+          {/* Review textarea */}
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Share your thoughts about this title. What did you like or dislike? Would you recommend it?"
+            rows={6}
+            className="w-full bg-transparent text-white placeholder-slate-500 resize-none text-sm focus:outline-none mb-4"
+          />
+
+          {/* Closing quote mark */}
+          <svg
+            className="absolute bottom-4 right-4 w-8 h-8 opacity-20 transition-colors rotate-180"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            style={{
+              color:
+                mood === "amazing"
+                  ? "rgb(249, 115, 22)"
+                  : mood === "loved"
+                  ? "rgb(236, 72, 153)"
+                  : mood === "enjoyed"
+                  ? "rgb(34, 197, 94)"
+                  : mood === "okay"
+                  ? "rgb(100, 116, 139)"
+                  : mood === "meh"
+                  ? "rgb(75, 85, 99)"
+                  : mood === "disliked"
+                  ? "rgb(71, 85, 105)"
+                  : "rgb(255, 255, 255)",
+            }}
+          >
+            <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+          </svg>
+
+          {/* Bottom author attribution and character count */}
+          <div
+            className="flex items-center justify-between pt-4 border-t transition-colors"
+            style={{
+              borderColor: mood
+                ? mood === "amazing"
+                  ? "rgba(249, 115, 22, 0.2)"
+                  : mood === "loved"
+                  ? "rgba(236, 72, 153, 0.2)"
+                  : mood === "enjoyed"
+                  ? "rgba(34, 197, 94, 0.2)"
+                  : mood === "okay"
+                  ? "rgba(100, 116, 139, 0.2)"
+                  : mood === "meh"
+                  ? "rgba(75, 85, 99, 0.2)"
+                  : "rgba(71, 85, 105, 0.2)"
+                : "rgba(255, 255, 255, 0.1)",
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">—</span>
+              <span
+                className="text-xs font-medium transition-colors"
+                style={{
+                  color:
+                    mood === "amazing"
+                      ? "rgb(249, 115, 22)"
+                      : mood === "loved"
+                      ? "rgb(236, 72, 153)"
+                      : mood === "enjoyed"
+                      ? "rgb(34, 197, 94)"
+                      : mood === "okay"
+                      ? "rgb(100, 116, 139)"
+                      : mood === "meh"
+                      ? "rgb(75, 85, 99)"
+                      : mood === "disliked"
+                      ? "rgb(71, 85, 105)"
+                      : "rgb(148, 163, 184)",
+                }}
+              >
+                {author || "Guest User"}
+              </span>
+            </div>
+            <span
+              className={`text-xs mr-8 ${
+                content.length < 10 ? "text-slate-500" : "text-slate-400"
+              }`}
+            >
+              {content.length < 10 ? `${10 - content.length} more needed` : "✓"}
+            </span>
+          </div>
+        </div>
+
+        {/* Error Alert */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg"
+          >
+            <svg
+              className="w-4 h-4 text-red-400 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span className="text-red-300 text-xs">{error}</span>
+          </motion.div>
+        )}
+
+        {/* Submit Button */}
+        <div className="flex justify-end pt-2">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="px-6 py-2.5 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm"
+            style={{
+              background:
+                mood === "amazing"
+                  ? "linear-gradient(to right, rgb(249, 115, 22), rgb(239, 68, 68))"
+                  : mood === "loved"
+                  ? "linear-gradient(to right, rgb(236, 72, 153), rgb(244, 63, 94))"
+                  : mood === "enjoyed"
+                  ? "linear-gradient(to right, rgb(34, 197, 94), rgb(16, 185, 129))"
+                  : mood === "okay"
+                  ? "linear-gradient(to right, rgb(100, 116, 139), rgb(107, 114, 128))"
+                  : mood === "meh"
+                  ? "linear-gradient(to right, rgb(75, 85, 99), rgb(100, 116, 139))"
+                  : mood === "disliked"
+                  ? "linear-gradient(to right, rgb(71, 85, 105), rgb(107, 114, 128))"
+                  : "white",
+              color: mood ? "white" : "black",
+            }}
+          >
+            {submitting ? "Submitting..." : "Submit Review"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

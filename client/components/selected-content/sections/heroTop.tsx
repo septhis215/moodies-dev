@@ -82,15 +82,14 @@ export type MovieDetailsData = {
   raw?: any;
 };
 
-// TV API data structure (matching your updated TvService)
 export type TvDetailsData = {
   info: {
     id: number;
     title: string;
     original_title?: string;
     overview: string;
-    release_date: string; // maps to first_air_date
-    runtime: number; // normalized from episode_run_time
+    release_date: string;
+    runtime: number;
     budget: number;
     revenue: number;
     vote_average: number;
@@ -111,9 +110,8 @@ export type TvDetailsData = {
     adult: boolean;
     created_by?: Array<{ id: number; name: string }>;
     content_type: "tv";
-    director?: string; // creator name
+    director?: string;
     content_rating?: string;
-    // TV-specific fields
     number_of_seasons?: number;
     number_of_episodes?: number;
     episode_run_time?: number[];
@@ -121,6 +119,22 @@ export type TvDetailsData = {
     last_air_date?: string;
     networks?: Array<{ id: number; name: string; logo_path?: string }>;
     seasons?: Array<any>;
+    next_episode_to_air?: {
+      episode_number: number;
+      season_number: number;
+      name: string;
+      overview?: string;
+      air_date: string;
+      runtime?: number;
+      still_path?: string;
+    } | null;
+    last_episode_to_air?: {
+      episode_number: number;
+      season_number: number;
+      name: string;
+      air_date: string;
+      runtime?: number;
+    } | null;
   };
   credits: {
     cast: Array<{
@@ -218,6 +232,32 @@ function TrailerModal({
 }
 
 function StarRating({ rating }: { rating: number }) {
+  // If rating is 0 or very low, show empty stars with "Not Rated Yet"
+  if (rating === 0 || rating < 0.5) {
+    return (
+      <div className="flex items-center gap-1 text-sm">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <svg
+            key={i}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            className="w-4 h-4 text-white/30"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 .587l3.668 7.431L23.4 9.75l-5.7 5.56L19.336 24 12 20.202 4.663 24l1.636-8.69L.6 9.75l7.732-1.732L12 .587z"
+            />
+          </svg>
+        ))}
+        <span className="ml-2 text-xs text-white/85">Not Rated Yet</span>
+      </div>
+    );
+  }
+
   const fullStars = Math.round(rating / 2); // convert 0-10 -> 0-5
   return (
     <div className="flex items-center gap-1 text-sm">
@@ -238,7 +278,9 @@ function StarRating({ rating }: { rating: number }) {
           />
         </svg>
       ))}
-      <span className="ml-2 text-xs text-white/85">{rating.toFixed(1)}</span>
+      <span className="ml-2 text-sm font-semibold text-white/95 bg-white/10 px-2 py-0.5 rounded">
+        {rating.toFixed(1)}
+      </span>
     </div>
   );
 }
@@ -262,7 +304,8 @@ function formatRuntime(minutes: number): string {
 // Helper function to extract year from date string
 function extractYear(dateString: string): string {
   if (!dateString) return "Unknown";
-  return new Date(dateString).getFullYear().toString();
+  const year = new Date(dateString).getFullYear();
+  return isNaN(year) ? "Unknown" : year.toString();
 }
 
 // Helper function to find director/creator from crew or created_by
@@ -284,7 +327,13 @@ function findDirectorOrCreator(
 function ReadMore({ text, limit = 300 }: { text: string; limit?: number }) {
   const [expanded, setExpanded] = React.useState(false);
 
-  if (!text) return null;
+  if (!text || text.trim() === "") {
+    return (
+      <p className="max-w-3xl text-white/60 leading-relaxed text-xs sm:text-sm lg:text-sm xl:text-base italic">
+        No overview available
+      </p>
+    );
+  }
 
   const shouldTruncate = text.length > limit;
   const displayText =
@@ -335,7 +384,7 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
 
     return {
       id: data.info.id,
-      title: data.info.title,
+      title: data.info.title || "Untitled (N/A)",
       year: extractYear(data.info.release_date),
       poster: data.info.poster_path
         ? `https://image.tmdb.org/t/p/w500${data.info.poster_path}`
@@ -344,13 +393,17 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
         ? `https://image.tmdb.org/t/p/original${data.info.backdrop_path}`
         : "/placeholder-backdrop.jpg",
       genres: data.info.genres.map((g) => g.name),
-      runtime: formatRuntime(data.info.runtime),
+      runtime: formatRuntime(data.info.runtime || 0),
       rating: data.info.vote_average,
       overview: data.info.overview,
       director:
         data.info.director ||
-        findDirectorOrCreator(data.credits.crew, tvData?.info.created_by),
-      ageRating: data.info.content_rating,
+        findDirectorOrCreator(data.credits.crew, tvData?.info.created_by) ||
+        "Unknown (N/A)",
+      ageRating:
+        data.info.content_rating && data.info.content_rating.trim() !== ""
+          ? data.info.content_rating
+          : undefined,
     };
   }, [content, data]);
 
@@ -423,41 +476,81 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
                       {mappedContent.runtime}
                     </span>
                     {/* TV-specific info: seasons and episodes */}
-                    {contentType && tvInfo && (
+                    {contentType === "tv" && tvInfo && (
                       <>
-                        {tvInfo.number_of_seasons && (
-                          <span className="text-sm text-white/70 flex items-center gap-2">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="w-4 h-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                            >
-                              <rect
-                                width="18"
-                                height="18"
-                                x="3"
-                                y="3"
-                                rx="2"
-                                ry="2"
-                              />
-                              <line x1="9" x2="9" y1="9" y2="15" />
-                              <line x1="15" x2="15" y1="9" y2="15" />
-                            </svg>
-                            {tvInfo.number_of_seasons} Season
-                            {tvInfo.number_of_seasons !== 1 ? "s" : ""}
-                          </span>
-                        )}
-                        {tvInfo.number_of_episodes && (
-                          <span className="text-sm text-white/70">
-                            {tvInfo.number_of_episodes} Episodes
-                          </span>
-                        )}
+                        {tvInfo.number_of_seasons &&
+                          tvInfo.number_of_seasons > 0 && (
+                            <span className="text-sm text-white/70 flex items-center gap-2">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="w-4 h-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                              >
+                                <rect
+                                  width="18"
+                                  height="18"
+                                  x="3"
+                                  y="3"
+                                  rx="2"
+                                  ry="2"
+                                />
+                                <line x1="9" x2="9" y1="9" y2="15" />
+                                <line x1="15" x2="15" y1="9" y2="15" />
+                              </svg>
+                              {tvInfo.number_of_seasons} Season
+                              {tvInfo.number_of_seasons !== 1 ? "s" : ""}
+                            </span>
+                          )}
+                        {tvInfo.number_of_episodes &&
+                          tvInfo.number_of_episodes > 0 && (
+                            <span className="text-sm text-white/70">
+                              {tvInfo.number_of_episodes} Episodes
+                            </span>
+                          )}
                       </>
                     )}
                   </div>
                 </div>
+
+                {/* Additional Next Airing Info */}
+                {contentType === "tv" && tvInfo?.next_episode_to_air && (
+                  <div className="relative pl-10">
+                    <div className="absolute left-1 top-0 bottom-0 w-1 bg-gradient-to-b from-cyan-500/20 to-cyan-500/0 rounded-full"></div>
+                    <div
+                      className="absolute left-1 top-0 w-1 h-full bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full animate-pulse"
+                      style={{ animationDuration: "2s" }}
+                    ></div>
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-6">
+                      <div className="absolute inset-0 bg-cyan-500 rounded-full animate-ping opacity-20"></div>
+                      <div className="absolute inset-1 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full border-2 border-black"></div>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs text-cyan-400 font-black uppercase">
+                        Coming Next
+                      </p>
+                      <p className="text-base font-bold text-white leading-tight">
+                        {tvInfo.next_episode_to_air.name}
+                      </p>
+                      <div className="inline-flex items-center gap-2 px-2 py-1 bg-cyan-500/10 rounded">
+                        <span className="text-xs text-cyan-400 font-mono">
+                          S{tvInfo.next_episode_to_air.season_number}:E
+                          {tvInfo.next_episode_to_air.episode_number}
+                        </span>
+                        <span className="text-xs text-white/40">|</span>
+                        <span className="text-xs text-white/70">
+                          {new Date(
+                            tvInfo.next_episode_to_air.air_date
+                          ).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Director/Creator and Rating */}
                 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6">
@@ -488,9 +581,13 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
 
                 {/* Genres */}
                 <div className="flex items-center justify-center lg:justify-start gap-2 flex-wrap">
-                  {mappedContent.genres.map((g) => (
-                    <GenreBadge key={g}>{g}</GenreBadge>
-                  ))}
+                  {mappedContent.genres && mappedContent.genres.length > 0 && (
+                    <div className="flex items-center justify-center lg:justify-start gap-2 flex-wrap">
+                      {mappedContent.genres.map((g) => (
+                        <GenreBadge key={g}>{g}</GenreBadge>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Overview */}
@@ -550,12 +647,12 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
-                        strokeWidth={1.5}
+                        strokeWidth={2}
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          d="M7.5 8.25h9m-9 3h6.75M21 12c0 4.418-4.03 8-9 8-1.043 0-2.047-.158-2.975-.45L4.5 20.25l1.196-2.392C4.65 16.76 4 14.463 4 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
                         />
                       </svg>
                       <span>Review</span>
