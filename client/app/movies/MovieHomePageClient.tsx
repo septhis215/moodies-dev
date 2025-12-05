@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import type { All } from '@/types/all';
 import type { ReviewItem } from '@/components/sections/CommunityPicks';
-import { Star, Plus, Info, ChevronRight, ChevronLeft, Flame, Calendar, Heart, Share2, Bookmark, Film, Award, Ticket, MessageSquare, Globe, Users, Sparkles, Trophy, Zap,BookmarkCheck } from 'lucide-react';
+import { Star, Plus, Info, ChevronRight, ChevronLeft, Flame, Calendar, Heart, Share2, Bookmark, Film, Award, Ticket, MessageSquare, Globe, Users, Sparkles, Trophy, Zap, BookmarkCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,7 +13,7 @@ import MoodRecommendationsSection from '@/components/sections/MoodRecommendation
 import { useScrollToHash } from "@/hooks/useScrollToHash";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
-
+import { Carousel } from '@/components/ui/Carousel';
 export default function MoviesHomePageClient({
     trendingMovies,
     popularMovies,
@@ -44,13 +44,11 @@ export default function MoviesHomePageClient({
     moods?: any[];
     newReleaseMovies: All[];
 }) {
-    
+
     const router = useRouter();
     const { add, remove, isInWatchlist, ready } = useWatchlist();
     const [wlLoading, setWlLoading] = useState(false);
-    
-    const [featured, setFeatured] = useState(trendingMovies[0]);
-    const [index, setIndex] = useState(0);
+    const [heroIndex, setHeroIndex] = useState(0);
     const heroMovies = trendingMovies.slice(0, 18);
     useScrollToHash(100);
     const getImageUrl = (path?: string) =>
@@ -58,26 +56,34 @@ export default function MoviesHomePageClient({
     const getPosterUrl = (path?: string) =>
         path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
 
+    // Keep `featured` derived from heroShows so it's always in sync
+    const featured = heroMovies[heroIndex] || heroMovies[0] || null;
+
+    // Auto-advance heroIndex every 8s
     useEffect(() => {
         if (!heroMovies.length) return;
-        const id = setInterval(() => setIndex((i) => (i + 1) % heroMovies.length), 5000);
+        const id = setInterval(() => {
+            setHeroIndex((i) => (heroMovies.length ? (i + 1) % heroMovies.length : 0));
+        }, 8000);
         return () => clearInterval(id);
     }, [heroMovies.length]);
 
-    const MovieCard = ({ movie, size = "default" }: { movie: All; size?: "default" | "large" | "wide" }) => {
+    const MovieCard = ({ show, size = "default" }: { show?: All; size?: "default" | "large" | "wide" }) => {
+        if (!show) return null; // safety check
+
         const isWide = size === "wide";
         const isLarge = size === "large";
 
         return (
             <div className="group relative h-full">
-                <Link href={`/movies/${movie.id}`} className="block h-full">
+                <Link href={`/movies/${show.id}`} className="block h-full">
                     <div
                         className={`relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 ${isWide ? "aspect-video" : "aspect-[2/3]"
                             }`}
                     >
                         <Image
-                            src={isWide ? getImageUrl(movie.backdrop_path) : getPosterUrl(movie.poster_path)}
-                            alt={movie.title || movie.name || ""}
+                            src={isWide ? getImageUrl(show.backdrop_path) : getPosterUrl(show.poster_path)}
+                            alt={show.title || show.name || ""}
                             fill
                             className="group-hover:scale-110 transition-transform duration-700 object-cover"
                         />
@@ -88,7 +94,7 @@ export default function MoviesHomePageClient({
                         {/* Rating Badge */}
                         <div className="absolute top-3 right-3 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-lg ring-1 ring-white/10">
                             <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-                            {movie.vote_average?.toFixed(1)}
+                            {show.vote_average?.toFixed(1)}
                         </div>
 
                         {/* Hover overlay */}
@@ -124,14 +130,14 @@ export default function MoviesHomePageClient({
 
                     <div className="mt-3 px-1">
                         <h4 className="font-bold text-sm sm:text-base line-clamp-2 group-hover:text-[#e94f37] transition-colors leading-tight text-white">
-                            {movie.title || movie.name}
+                            {show.title || show.name}
                         </h4>
                         <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-400">
-                            {movie.first_air_date && <span className="font-semibold">{movie.first_air_date.split("-")[0]}</span>}
-                            {movie.number_of_seasons && (
+                            {show.first_air_date && <span className="font-semibold">{show.first_air_date.split("-")[0]}</span>}
+                            {show.number_of_seasons && (
                                 <>
                                     <span>•</span>
-                                    <span className="font-semibold">{movie.number_of_seasons} Season{movie.number_of_seasons > 1 ? 's' : ''}</span>
+                                    <span className="font-semibold">{show.number_of_seasons} Season{show.number_of_seasons > 1 ? 's' : ''}</span>
                                 </>
                             )}
                         </div>
@@ -141,96 +147,35 @@ export default function MoviesHomePageClient({
         );
     };
 
-    
 
-    const Carousel = ({ items }: { items: All[] }) => {
-        const [startIndex, setStartIndex] = useState(0);
-        const [itemsPerView, setItemsPerView] = useState(6);
 
-        useEffect(() => {
-            const updateLayout = () => {
-                const w = window.innerWidth;
-                if (w < 640) setItemsPerView(2);
-                else if (w < 768) setItemsPerView(3);
-                else if (w < 1024) setItemsPerView(4);
-                else if (w < 1280) setItemsPerView(5);
-                else setItemsPerView(6);
-            };
 
-            updateLayout();
-            window.addEventListener("resize", updateLayout);
-            return () => window.removeEventListener("resize", updateLayout);
-        }, []);
-
-        const canScrollLeft = startIndex > 0;
-        const canScrollRight = startIndex < items.length - itemsPerView;
-
-        const scrollLeft = () => {
-            setStartIndex((prev) => Math.max(0, prev - itemsPerView));
-        };
-
-        const scrollRight = () => {
-            setStartIndex((prev) => Math.min(items.length - itemsPerView, prev + itemsPerView));
-        };
-
-        const visibleItems = items.slice(startIndex, startIndex + itemsPerView);
-
-        return (
-            <div className="relative group/carousel">
-                {canScrollLeft && (
-                    <button
-                        onClick={scrollLeft}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
-                        aria-label="Scroll left"
-                    >
-                        <ChevronLeft className="w-6 h-6" />
-                    </button>
-                )}
-
-                {canScrollRight && (
-                    <button
-                        onClick={scrollRight}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
-                        aria-label="Scroll right"
-                    >
-                        <ChevronRight className="w-6 h-6" />
-                    </button>
-                )}
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
-                    {visibleItems.map((item) => (
-                        <MovieCard key={item.id} movie={item} />
-                    ))}
-                </div>
-            </div>
-        );
-    };
 
 
     const featuredInWatchlist =
-    featured?.id ? isInWatchlist(String(featured.id), "movie") : false;
+        featured?.id ? isInWatchlist(String(featured.id), "movie") : false;
 
     const handleFeaturedWatchlist = async () => {
-    if (!featured?.id) return;
-    if (!ready) {
-        // not logged in -> send user to login or show a toast if you prefer
-        router.push("/auth/login");
-        return;
-    }
-    setWlLoading(true);
-    try {
-        if (featuredInWatchlist) {
-        await remove(String(featured.id), "movie");
-        } else {
-        await add(String(featured.id), "movie");
+        if (!featured?.id) return;
+        if (!ready) {
+            // not logged in -> send user to login or show a toast if you prefer
+            router.push("/auth/login");
+            return;
         }
-    } catch (e) {
-        console.error("Watchlist toggle failed:", e);
-    } finally {
-        setWlLoading(false);
-    }
+        setWlLoading(true);
+        try {
+            if (featuredInWatchlist) {
+                await remove(String(featured.id), "movie");
+            } else {
+                await add(String(featured.id), "movie");
+            }
+        } catch (e) {
+            console.error("Watchlist toggle failed:", e);
+        } finally {
+            setWlLoading(false);
+        }
     };
-    
+
     return (
         <main className="relative bg-black text-white min-h-screen overflow-hidden">
             {/* Animated Background Pattern */}
@@ -269,16 +214,16 @@ export default function MoviesHomePageClient({
                             <div className="relative flex-1 w-full h-full rounded-2xl overflow-hidden ring-1 ring-white/5">
                                 <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 p-3">
                                     {Array.from({ length: 18 }).map((_, i) => {
-                                        const s = heroMovies[(index + i) % heroMovies.length] || {};
+                                        const s = heroMovies[(heroIndex + i) % heroMovies.length] || {};
                                         const isActive = featured?.id === s.id;
                                         return (
                                             <button
                                                 key={i}
-                                                onClick={() => setFeatured(s)}
+                                                onClick={() => setHeroIndex((heroIndex + i) % heroMovies.length)}
                                                 className={`rounded-xl overflow-hidden border-2 transform transition-all duration-300
                                                 hover:scale-105 hover:z-10 focus:outline-none
                                                 ${isActive
-                                                        ? "border-[#e94f37] ring-4 ring-[#e94f37]/50 scale-105 shadow-2xl shadow-[#e94f37]/30"
+                                                        ? "border-[#e94f37]  scale-105 shadow-2xl shadow-[#e94f37]/30"
                                                         : "border-white/10 hover:border-[#e94f37]/50"
                                                     }`}
                                             >
@@ -350,12 +295,40 @@ export default function MoviesHomePageClient({
                                                     {featured.release_date.split("-")[0]}
                                                 </span>
                                             )}
-                                            {featured?.vote_average && (
+                                            {featured?.vote_average !== undefined && (
                                                 <div className="flex items-center gap-1.5 px-4 py-2 bg-amber-500/20 backdrop-blur-sm rounded-full ring-1 ring-amber-500/30">
                                                     <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                                                    <span className="text-xs font-bold text-white">{featured.vote_average > 0 ? featured.vote_average.toFixed(1) : "New"}</span>
+                                                    <span className="text-xs font-bold text-white">
+                                                        {featured.vote_average > 0 ? featured.vote_average.toFixed(1) : "New"}
+                                                    </span>
                                                 </div>
                                             )}
+
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handleFeaturedWatchlist();
+                                                }}
+                                                disabled={wlLoading}
+                                                className={`ml-auto px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2  shadow-lg
+s                                                    ${featuredInWatchlist
+                                                        ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
+                                                        : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
+                                                    }`}
+                                                title={featuredInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                                            >
+                                                {wlLoading ? (
+                                                    <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                                                ) : featuredInWatchlist ? (
+                                                    <>
+                                                        <BookmarkCheck className="w-5 h-5" />
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Bookmark className="w-5 h-5" />
+                                                    </>
+                                                )}
+                                            </button>
                                         </div>
 
                                         <h2 className="text-3xl sm:text-4xl font-black mb-4 leading-tight line-clamp-2 text-white">
@@ -373,34 +346,7 @@ export default function MoviesHomePageClient({
                                                     View Details
                                                 </button>
                                             </Link>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    handleFeaturedWatchlist();
-                                                }}
-                                                disabled={wlLoading}
-                                                className={`px-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105 border
-                                                    ${
-                                                    featuredInWatchlist
-                                                        ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-                                                        : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
-                                                    }`}
-                                                title={featuredInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
-                                                >
-                                                {wlLoading ? (
-                                                    <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
-                                                ) : featuredInWatchlist ? (
-                                                    <>
-                                                    <BookmarkCheck className="w-5 h-5" />
-                                                    Added
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                    <Bookmark className="w-5 h-5" />
-                                                    Add
-                                                    </>
-                                                )}
-                                            </button>
+
 
                                         </div>
                                     </div>
@@ -556,7 +502,7 @@ export default function MoviesHomePageClient({
                             </div>
                             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">Trending Now</h2>
                         </div>
-                        <Carousel items={trendingMovies} />
+                        <Carousel items={trendingMovies} CardComponent={MovieCard} />
                     </section>
                 )}
 
@@ -572,7 +518,7 @@ export default function MoviesHomePageClient({
                                 <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1 font-medium">Award-winning storytelling</p>
                             </div>
                         </div>
-                        <Carousel items={koreanMovies} />
+                        <Carousel items={koreanMovies} CardComponent={MovieCard} />
                     </section>
                 )}
 
@@ -808,7 +754,7 @@ export default function MoviesHomePageClient({
                     <section id="award-winners" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-950/40 via-yellow-950/30 to-black backdrop-blur-sm border border-amber-500/30 ring-1 ring-white/5 shadow-2xl">
                         {/* Radial golden glow */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 sm:w-96 lg:w-[600px] h-80 sm:h-96 lg:h-[600px] bg-gradient-to-r from-amber-600/20 to-yellow-600/20 rounded-full blur-3xl" />
-                        
+
                         {/* Subtle grid pattern */}
                         <div className="absolute inset-0 opacity-5">
                             <div className="absolute inset-0 bg-[linear-gradient(to_right,#fbbf24_1px,transparent_1px),linear-gradient(to_bottom,#fbbf24_1px,transparent_1px)] bg-[size:2rem_2rem]" />
@@ -942,7 +888,7 @@ export default function MoviesHomePageClient({
                                 ))}
                             </div>
                             {/* Rest in carousel */}
-                            {animatedMovies.length > 5 && <Carousel items={animatedMovies.slice(5)} />}
+                            {animatedMovies.length > 5 && <Carousel items={animatedMovies.slice(5)} CardComponent={MovieCard} />}
                         </div>
                     </section>
                 )}

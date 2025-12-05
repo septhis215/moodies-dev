@@ -80,7 +80,17 @@ export default function ActionButtons({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 30 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className="absolute right-3 sm:right-6 bottom-12 sm:bottom-20 flex flex-col gap-3 sm:gap-4 z-30"
+          className="
+        absolute 
+        right-4 
+        bottom-20
+        sm:right-6 
+        sm:bottom-24
+        md:right-8 
+        md:bottom-28
+        flex flex-col gap-3 sm:gap-4 z-30
+  action-landscape
+      "
         >
           {buttons.map((btn, idx) => (
             <motion.button
@@ -91,25 +101,26 @@ export default function ActionButtons({
               className="group flex flex-col items-center gap-0.5 sm:gap-1"
             >
               <div
-                className={`flex items-center justify-center rounded-full border transition-all duration-300 backdrop-blur-sm
-                  ${btn.active
+                className={`action-btn flex items-center justify-center rounded-full border transition-all duration-300 backdrop-blur-sm
+    ${btn.active
                     ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] border-transparent shadow-[0_0_8px_rgba(233,79,55,0.6)]"
-                    : "bg-black/40 border-white/20 group-hover:border-white/40 group-hover:bg-white/10"}
-                  w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14
-                `}
+                    : "bg-black/40 border-white/20 group-hover:border-white/40 group-hover:bg-white/10"
+                  }
+    w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14
+  `}
               >
+
                 {btn.icon &&
                   cloneElement(btn.icon, {
                     className:
-                      "text-white w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7",
+                      "action-icon text-white w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7",
                   })}
               </div>
               <span
-                className={`text-[10px] sm:text-[11px] md:text-xs lg:text-sm font-medium transition-colors duration-200 ${
-                  btn.active
-                    ? "text-white"
-                    : "text-white/75 group-hover:text-white"
-                }`}
+                className={`text-[10px] sm:text-[11px] md:text-xs lg:text-sm font-medium transition-colors duration-200 ${btn.active
+                  ? "text-white"
+                  : "text-white/75 group-hover:text-white"
+                  }`}
               >
                 {btn.label}
               </span>
@@ -118,5 +129,6 @@ export default function ActionButtons({
         </motion.div>
       )}
     </AnimatePresence>
+
   );
 }

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import type { All } from '@/types/all';
 import type { ReviewItem } from '@/components/sections/CommunityPicks';
-import { Play, Star, Plus, Info, ChevronRight, ChevronLeft, Flame, Calendar, TrendingUp, Zap, Share2, Bookmark, Sparkles, BookmarkCheck } from 'lucide-react';
+import { Play, Star, Plus, Info, ChevronRight, ChevronLeft, Flame, Calendar, TrendingUp, Zap, Share2, Bookmark, Sparkles, BookmarkCheck, Tv } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,6 +12,7 @@ import MoodRecommendationsSection from '@/components/sections/MoodRecommendation
 import { useScrollToHash } from "@/hooks/useScrollToHash";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { Carousel } from '@/components/ui/Carousel';
 export default function TVHomePageClient({
     trendingTV,
     popularTV,
@@ -38,7 +39,7 @@ export default function TVHomePageClient({
     moods?: any[];
 }) {
 
-    
+
     const router = useRouter();
     const { add, remove, isInWatchlist, ready } = useWatchlist();
     const [wlLoading, setWlLoading] = useState(false);
@@ -50,21 +51,22 @@ export default function TVHomePageClient({
     const getPosterUrl = (path?: string) =>
         path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
     useScrollToHash(100);
-    const nextHero = () =>
-        setHeroIndex((prev) => (heroShows.length ? (prev + 1) % heroShows.length : 0));
-    const prevHero = () =>
-        setHeroIndex((prev) =>
-            heroShows.length ? (prev - 1 + heroShows.length) % heroShows.length : 0
-        );
 
+    // Keep `featured` derived from heroShows so it's always in sync
+    const featured = heroShows[heroIndex] || heroShows[0] || null;
+
+    // Auto-advance heroIndex every 8s
     useEffect(() => {
         if (!heroShows.length) return;
-        const id = setInterval(() => setHeroIndex((i) => (i + 1) % heroShows.length), 8000);
+        const id = setInterval(() => {
+            setHeroIndex((i) => (heroShows.length ? (i + 1) % heroShows.length : 0));
+        }, 8000);
         return () => clearInterval(id);
     }, [heroShows.length]);
 
     /* ---------------- Compact TVCard ---------------- */
-    const TVCard = ({ show, size = "default" }: { show: All; size?: "default" | "large" | "wide" }) => {
+    const TVCard = ({ show, size = "default" }: { show?: All; size?: "default" | "large" | "wide" }) => {
+        if (!show) return null;
         const isWide = size === "wide";
         const isLarge = size === "large";
 
@@ -140,94 +142,29 @@ export default function TVHomePageClient({
         );
     };
 
-    /* ---------------- Fixed Carousel Component ---------------- */
-    const Carousel = ({ items }: { items: All[] }) => {
-        const [startIndex, setStartIndex] = useState(0);
-        const [itemsPerView, setItemsPerView] = useState(6);
-
-        useEffect(() => {
-            const updateLayout = () => {
-                const w = window.innerWidth;
-                if (w < 640) setItemsPerView(2);
-                else if (w < 768) setItemsPerView(3);
-                else if (w < 1024) setItemsPerView(4);
-                else if (w < 1280) setItemsPerView(5);
-                else setItemsPerView(6);
-            };
-
-            updateLayout();
-            window.addEventListener("resize", updateLayout);
-            return () => window.removeEventListener("resize", updateLayout);
-        }, []);
-
-        const canScrollLeft = startIndex > 0;
-        const canScrollRight = startIndex < items.length - itemsPerView;
-
-        const scrollLeft = () => {
-            setStartIndex((prev) => Math.max(0, prev - itemsPerView));
-        };
-
-        const scrollRight = () => {
-            setStartIndex((prev) => Math.min(items.length - itemsPerView, prev + itemsPerView));
-        };
-
-        const visibleItems = items.slice(startIndex, startIndex + itemsPerView);
-
-        return (
-            <div className="relative group/carousel">
-                {canScrollLeft && (
-                    <button
-                        onClick={scrollLeft}
-                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
-                        aria-label="Scroll left"
-                    >
-                        <ChevronLeft className="w-6 h-6" />
-                    </button>
-                )}
-
-                {canScrollRight && (
-                    <button
-                        onClick={scrollRight}
-                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
-                        aria-label="Scroll right"
-                    >
-                        <ChevronRight className="w-6 h-6" />
-                    </button>
-                )}
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
-                    {visibleItems.map((item) => (
-                        <TVCard key={item.id} show={item} />
-                    ))}
-                </div>
-            </div>
-        );
-    };
-    const [featured, setFeatured] = useState(heroShows[0]); 
-    const [index, setIndex] = useState(0);
 
 
     const featuredInWatchlist =
-    featured?.id ? isInWatchlist(String(featured.id), "series") : false;
+        featured?.id ? isInWatchlist(String(featured.id), "series") : false;
 
     const handleFeaturedWatchlist = async () => {
-    if (!featured?.id) return;
-    if (!ready) {
-        router.push("/auth/login");
-        return;
-    }
-    setWlLoading(true);
-    try {
-        if (featuredInWatchlist) {
-        await remove(String(featured.id), "series");
-        } else {
-        await add(String(featured.id), "series");
+        if (!featured?.id) return;
+        if (!ready) {
+            router.push("/auth/login");
+            return;
         }
-    } catch (err) {
-        console.error("Failed to update watchlist:", err);
-    } finally {
-        setWlLoading(false);
-    }
+        setWlLoading(true);
+        try {
+            if (featuredInWatchlist) {
+                await remove(String(featured.id), "series");
+            } else {
+                await add(String(featured.id), "series");
+            }
+        } catch (err) {
+            console.error("Failed to update watchlist:", err);
+        } finally {
+            setWlLoading(false);
+        }
     };
 
 
@@ -248,20 +185,17 @@ export default function TVHomePageClient({
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_100%)]" />
             </div>
             <section className="relative w-full text-white overflow-hidden">
-                {/* Top gradient for navbar readability */}
                 <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10" />
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-30 pb-20 relative z-20">
-                    {/* Content grid */}
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
                         {/* LEFT mosaic */}
                         <div className="md:col-span-7 col-span-1 rounded-3xl overflow-hidden bg-gradient-to-br from-zinc-900/80 via-zinc-900/50 to-zinc-950/80 backdrop-blur-xl p-6 flex flex-col ring-1 ring-white/10 shadow-2xl">
-                            {/* Heading inside the panel */}
                             <div className="mb-6">
                                 <div className="flex items-center gap-3 mb-2">
                                     <div className="relative">
                                         <div className="absolute inset-0 bg-gradient-to-r from-[#e94f37] to-orange-400 blur-xl opacity-50" />
-                                        <Zap className="relative w-8 h-8 text-[#e94f37]" />
+                                        <Tv className="relative w-8 h-8 text-[#e94f37]" />
                                     </div>
                                     <h1 className="text-4xl sm:text-5xl font-black leading-tight tracking-tight bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
                                         TV Series Hub
@@ -272,20 +206,21 @@ export default function TVHomePageClient({
                                 </p>
                             </div>
 
-                            <div className="relative flex-1 w-full h-full rounded-lg overflow-hidden">
-                                {/* mosaic grid of posters */}
-                                <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 p-2 animate-mosaic">
+                            <div className="relative flex-1 w-full h-full rounded-2xl overflow-hidden ring-1 ring-white/5">
+                                <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 p-3">
                                     {Array.from({ length: 18 }).map((_, i) => {
-                                        const s = heroShows[(index + i) % heroShows.length] || {};
+                                        const s = heroShows[(heroIndex + i) % heroShows.length] || {};
                                         const isActive = featured?.id === s.id;
-
                                         return (
                                             <button
                                                 key={i}
-                                                onClick={() => setFeatured(s)}
-                                                className={`rounded-md overflow-hidden border transform transition 
-              hover:scale-105 focus:outline-none 
-              ${isActive ? "border-[#e94f37] ring-2 ring-[#e94f37]" : "border-white/6"}`}
+                                                onClick={() => setHeroIndex((heroIndex + i) % heroShows.length)}
+                                                className={`rounded-xl overflow-hidden border-2 transform transition-all duration-300
+                                                hover:scale-105 hover:z-10 focus:outline-none
+                                                ${isActive
+                                                        ? "border-[#e94f37]  scale-105 shadow-2xl shadow-[#e94f37]/30"
+                                                        : "border-white/10 hover:border-[#e94f37]/50"
+                                                    }`}
                                             >
                                                 {s.poster_path ? (
                                                     <Image
@@ -302,22 +237,20 @@ export default function TVHomePageClient({
                                         );
                                     })}
                                 </div>
-
-                                {/* gradient overlay for cinematic depth */}
-                                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_55%,black_95%)]" />
+                                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.8)_95%)]" />
                             </div>
                         </div>
 
                         {/* RIGHT featured card */}
-                        <div className="md:col-span-5 col-span-1 flex items-stretch scale-[0.98]">
+                        <div className="md:col-span-5 col-span-1 flex items-stretch">
                             <AnimatePresence mode="wait">
                                 <motion.div
                                     key={featured?.id}
-                                    initial={{ opacity: 0, scale: 0.98 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.98 }}
-                                    transition={{ duration: 0.4, ease: "easeInOut" }}
-                                    className="relative flex flex-col w-full rounded-2xl bg-gradient-to-br from-black/70 via-black/40 to-transparent border border-white/10 shadow-2xl overflow-hidden"
+                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                                    className="relative flex flex-col w-full rounded-3xl bg-gradient-to-br from-zinc-900/90 via-zinc-900/50 to-black/90 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl overflow-hidden"
                                 >
                                     {featured?.backdrop_path && (
                                         <div className="absolute inset-0 -z-10">
@@ -325,13 +258,13 @@ export default function TVHomePageClient({
                                                 src={getImageUrl(featured.backdrop_path)}
                                                 alt={featured.title || featured.name || ""}
                                                 fill
-                                                className="object-cover opacity-30 blur-sm"
+                                                className="object-cover opacity-20 blur-sm"
                                             />
+                                            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/80 to-black" />
                                         </div>
                                     )}
 
-                                    {/* fixed-height hero image */}
-                                    <div className="relative w-full h-56 sm:h-72 rounded-t-2xl overflow-hidden">
+                                    <div className="relative w-full h-64 sm:h-80 rounded-t-3xl overflow-hidden">
                                         {featured?.backdrop_path ? (
                                             <>
                                                 <Image
@@ -340,75 +273,75 @@ export default function TVHomePageClient({
                                                     fill
                                                     className="object-cover"
                                                 />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
                                             </>
                                         ) : (
-                                            <div className="w-full h-full bg-zinc-800" />
+                                            <div className="w-full h-full bg-zinc-900" />
                                         )}
                                     </div>
 
-                                    {/* card body */}
-                                    {/* Content */}
-                                    <div className="relative p-6 flex flex-col flex-1">
+                                    <div className="relative p-6 sm:p-8 flex flex-col flex-1">
                                         <div className="flex items-center gap-2 flex-wrap mb-4">
-                                            <span className="px-3 py-1.5 bg-[#e94f37] text-white rounded-full text-xs font-bold uppercase tracking-wider">
+                                            <span className="px-4 py-2 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white rounded-full text-xs font-black uppercase tracking-wider shadow-lg">
                                                 Featured
                                             </span>
                                             {featured?.release_date && (
-                                                <span className="px-3 py-1.5 bg-white/10 rounded-full text-xs font-semibold">
+                                                <span className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-xs font-bold ring-1 ring-white/20">
                                                     {featured.release_date.split("-")[0]}
                                                 </span>
                                             )}
-                                            {featured?.vote_average && (
-                                                <div className="flex items-center gap-1 px-3 py-1.5 bg-amber-500/20 rounded-full">
-                                                    <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                                    <span className="text-xs font-bold">{featured.vote_average && featured.vote_average > 0 ? featured.vote_average.toFixed(1) : "New"}</span>
+                                            {featured?.vote_average !== undefined && (
+                                                <div className="flex items-center gap-1.5 px-4 py-2 bg-amber-500/20 backdrop-blur-sm rounded-full ring-1 ring-amber-500/30">
+                                                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                                                    <span className="text-xs font-bold text-white">
+                                                        {featured.vote_average > 0 ? featured.vote_average.toFixed(1) : "New"}
+                                                    </span>
                                                 </div>
                                             )}
-                                        </div>
 
-                                        <h2 className="text-2xl sm:text-3xl font-black mb-3 leading-tight line-clamp-2">
-                                            {featured?.title || "—"}
-                                        </h2>
-
-                                        <p className="text-sm sm:text-base text-gray-300 line-clamp-3  leading-relaxed">
-                                            {featured?.overview || "No description available"}
-                                        </p>
-
-                                        <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
-                                            <Link href={`/tv/${featured?.id}`} className="flex-1">
-                                                <button className="w-full px-6 py-3 bg-[#e94f37] hover:bg-[#d4452f] text-white rounded-xl font-bold transition-all transform hover:scale-105 flex items-center justify-center gap-2">
-                                                    <Info className="w-4 h-4" />
-                                                    View Details
-                                                </button>
-                                            </Link>
-                                                <button
+                                            <button
                                                 onClick={(e) => {
                                                     e.preventDefault();
                                                     handleFeaturedWatchlist();
                                                 }}
                                                 disabled={wlLoading}
-                                                className={`px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 border shadow-lg
-                                                    ${
-                                                    featuredInWatchlist
+                                                className={`ml-auto px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2  shadow-lg
+s                                                    ${featuredInWatchlist
                                                         ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-                                                        : "bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                                                        : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
                                                     }`}
-                                                >
+                                                title={featuredInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                                            >
                                                 {wlLoading ? (
                                                     <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
                                                 ) : featuredInWatchlist ? (
                                                     <>
-                                                    <BookmarkCheck className="w-4 h-4" />
-                                                    Added
+                                                        <BookmarkCheck className="w-5 h-5" />
                                                     </>
                                                 ) : (
                                                     <>
-                                                    <Bookmark className="w-4 h-4" />
-                                                    Add
+                                                        <Bookmark className="w-5 h-5" />
                                                     </>
                                                 )}
+                                            </button>
+                                        </div>
+
+                                        <h2 className="text-3xl sm:text-4xl font-black mb-4 leading-tight line-clamp-2 text-white">
+                                            {featured?.title || "—"}
+                                        </h2>
+
+                                        <p className="text-sm sm:text-base text-gray-300 line-clamp-3 mb-6 leading-relaxed">
+                                            {featured?.overview || "No description available"}
+                                        </p>
+
+                                        <div className="flex gap-3 mt-auto pt-6 border-t border-white/10">
+                                            <Link href={`/movies/${featured?.id}`} className="flex-1">
+                                                <button className="w-full px-6 py-4 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d4452f] hover:to-[#e94f37] text-white rounded-2xl font-bold transition-all transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg shadow-[#e94f37]/30">
+                                                    <Info className="w-5 h-5" />
+                                                    View Details
                                                 </button>
+                                            </Link>
+
 
                                         </div>
                                     </div>
@@ -444,7 +377,7 @@ export default function TVHomePageClient({
                                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </Link>
                         </div>
-                        <Carousel items={airingToday} />
+                        <Carousel items={airingToday} CardComponent={TVCard} />
                     </section>
                 )}
 
@@ -464,7 +397,7 @@ export default function TVHomePageClient({
                                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </Link>
                         </div>
-                        <Carousel items={popularTV} />
+                        <Carousel items={popularTV} CardComponent={TVCard} />
                     </section>
                 )}
 
@@ -574,37 +507,7 @@ export default function TVHomePageClient({
 
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
                                 {topRatedTV.slice(0, 12).map((show, idx) => (
-                                    <div key={show.id} className="group">
-                                        <Link href={`/tv/${show.id}`}>
-                                            <div>
-                                                <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-900 mb-2">
-                                                    {show.poster_path ? (
-                                                        <Image
-                                                            src={getPosterUrl(show.poster_path)}
-                                                            alt={show.title || show.name || ""}
-                                                            fill
-                                                            className="group-hover:scale-110 transition-transform duration-500 object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="bg-zinc-900 w-full h-full" />
-                                                    )}
-                                                    {idx < 3 && (
-                                                        <div className="absolute top-2 left-2 w-10 h-10 bg-[#e94f37] rounded-full flex items-center justify-center font-black text-lg shadow-lg">
-                                                            {idx + 1}
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <h3 className="text-xs sm:text-sm font-bold line-clamp-2 group-hover:text-[#e94f37] transition-colors">
-                                                    {show.title || show.name}
-                                                </h3>
-                                                <div className="flex items-center gap-1 text-[10px] sm:text-xs text-gray-400 mt-1">
-                                                    <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                                                    <span className="font-bold text-white">{show.vote_average && show.vote_average > 0 ? show.vote_average.toFixed(1) : "New"}</span>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    </div>
+                                    <TVCard key={show.id} show={show} />
                                 ))}
                             </div>
                         </section>
@@ -621,7 +524,7 @@ export default function TVHomePageClient({
                                     <h2 className="text-2xl sm:text-3xl font-black">Airing This Week</h2>
                                 </div>
                             </div>
-                            <Carousel items={airingThisWeek} />
+                            <Carousel items={airingThisWeek} CardComponent={TVCard} />
                         </section>
                     )
                 }
@@ -636,7 +539,7 @@ export default function TVHomePageClient({
                                     <h2 className="text-2xl sm:text-3xl font-black">K-Drama Collection</h2>
                                 </div>
                             </div>
-                            <Carousel items={KoreanTV} />
+                            <Carousel items={KoreanTV} CardComponent={TVCard} />
                         </section>
                     )
                 }

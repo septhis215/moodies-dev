@@ -1,4 +1,4 @@
-import { Calendar, ChevronDown, Star } from "lucide-react";
+import { Calendar, ChevronDown, Info, Plus, Share2, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
@@ -145,25 +145,33 @@ export function ComingSoonSection({
                                                                         </h4>
                                                                     </div>
                                                                 </div>
-
-                                                                {/* Footer */}
-                                                                <div className="p-4 bg-gradient-to-r from-neutral-900/95 to-neutral-800/90 border-t border-white/10 backdrop-blur-sm">
-                                                                    <div className="flex gap-2 items-center overflow-hidden">
-                                                                        {item.genres?.slice(0, 3).map((genre) => (
-                                                                            <span
-                                                                                key={genre}
-                                                                                className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-white/10 text-gray-300 max-w-[90px] truncate"
-                                                                                title={genre} // shows full genre on hover
+                                                                {/* Hover overlay */}
+                                                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                                                                        <div className="flex justify-center gap-2 mb-3">
+                                                                            <button
+                                                                                onClick={(e) => { e.preventDefault(); }}
+                                                                                className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
+                                                                                title="Add to List"
                                                                             >
-                                                                                {genre}
-                                                                            </span>
-                                                                        ))}
+                                                                                <Plus className="w-5 h-5 text-black" />
+                                                                            </button>
 
-                                                                        {item.genres && item.genres.length > 3 && (
-                                                                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-purple-500/20 text-purple-300">
-                                                                                +{item.genres.length - 3}
-                                                                            </span>
-                                                                        )}
+                                                                            <button
+                                                                                className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
+                                                                                title="More Info"
+                                                                            >
+                                                                                <Info className="w-5 h-5 text-black" />
+                                                                            </button>
+
+                                                                            <button
+                                                                                onClick={(e) => { e.preventDefault(); }}
+                                                                                className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
+                                                                                title="Share"
+                                                                            >
+                                                                                <Share2 className="w-5 h-5 text-black" />
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
 

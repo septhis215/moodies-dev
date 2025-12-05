@@ -270,3 +270,30 @@
 .animate-gradient {
   animation: gradient 6s ease infinite;
 }
+
+/* Landscape mode: height is small, width is large */
+@media (orientation: landscape) and (max-height: 480px) {
+  .action-landscape {
+    bottom: 8px !important;
+    right: 12px !important;
+    transform: scale(0.8); /* shrink whole group */
+    transform-origin: bottom right;
+  }
+
+  /* Shrink the circle buttons */
+  .action-landscape .action-btn {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  /* Shrink the icons */
+  .action-landscape .action-icon {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  /* Shrink the label text */
+  .action-landscape .action-label {
+    font-size: 9px !important;
+  }
+}
