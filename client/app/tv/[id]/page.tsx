@@ -8,6 +8,7 @@ import CardCarousel from "@/components/sections/CardCarousel";
 import TvSeasonsEpisodes from "@/components/selected-content/sections/TvSeasonsEpisodes";
 import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
 import Analytics from "@/components/selected-content/sections/analytics";
+import CommonCardCarousel from "@/components/sections/CommonCardCarousel";
 
 async function fetchDetails(id: string) {
   const base = process.env.NEST_API_URL ?? "http://localhost:4000";
@@ -94,7 +95,7 @@ export async function generateMetadata({
     `TV Show ${info.id ?? ""}`;
 
   const metadata: Metadata = {
-    title
+    title,
   };
 
   return metadata;
@@ -158,7 +159,7 @@ export default async function TvPage({
           />
 
           <hr className="border-white/8 my-14" />
-          <ExtraDetails data={data} contentId={id}/>
+          <ExtraDetails data={data} contentId={id} />
 
           <hr className="border-white/8 my-14" />
           <ReviewsSection
@@ -168,7 +169,7 @@ export default async function TvPage({
           />
 
           <hr className="border-white/8 my-14" />
-          <CardCarousel
+          <CommonCardCarousel
             title="Something Similar"
             subtitle="TV shows you may also enjoy"
             items={recommendations}

@@ -6,6 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Users2, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Swal from "sweetalert2";
+import { useAuth } from "@/app/context/AuthProvider";
 
 type Review = {
   id: string;
@@ -219,9 +221,9 @@ export default function ReviewsSection({
                     </div>
 
                     {/* Review content with proper text wrapping */}
-                    <div className="text-slate-300 text-sm leading-relaxed max-h-36 overflow-hidden">
+                    <div className="text-slate-300 text-sm leading-relaxed">
                       <div className="relative">
-                        <p className="line-clamp-6 break-words">{r.content}</p>
+                        <p className="break-words">{r.content}</p>
                       </div>
                     </div>
 
@@ -292,7 +294,7 @@ export default function ReviewsSection({
       </div>
 
       {/* Write a review form */}
-      <div className="mt-8 rounded-3xl p-8 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 border-2 border-white/10 shadow-2xl">
+      <div className="mt-8 rounded-3xl p-6 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl">
         <ReviewForm onSubmit={addLocalReview} />
       </div>
     </section>
@@ -404,6 +406,7 @@ function ReviewForm({
     mood?: string;
   }) => void;
 }) {
+  const { isAuthenticated, user } = useAuth();
   const [author, setAuthor] = useState("");
   const [content, setContent] = useState("");
   const [rating, setRating] = useState<number | null>(null);
@@ -412,44 +415,12 @@ function ReviewForm({
   const [submitting, setSubmitting] = useState(false);
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
 
-  const moods = [
-    {
-      emoji: "🎬",
-      label: "Epic",
-      value: "epic",
-      color: "from-purple-500 to-pink-500",
-    },
-    {
-      emoji: "❤️",
-      label: "Loved",
-      value: "loved",
-      color: "from-red-500 to-rose-500",
-    },
-    {
-      emoji: "😄",
-      label: "Fun",
-      value: "fun",
-      color: "from-yellow-500 to-orange-500",
-    },
-    {
-      emoji: "😮",
-      label: "Shocking",
-      value: "shocking",
-      color: "from-blue-500 to-cyan-500",
-    },
-    {
-      emoji: "😴",
-      label: "Boring",
-      value: "boring",
-      color: "from-slate-500 to-gray-500",
-    },
-    {
-      emoji: "💔",
-      label: "Bad",
-      value: "bad",
-      color: "from-gray-600 to-slate-600",
-    },
-  ];
+  // Set author name from authenticated user on mount
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setAuthor(user.username ?? user.name ?? "");
+    }
+  }, [isAuthenticated, user]);
 
   function toggleStar(index: number) {
     const newRating = index * 2;
@@ -459,6 +430,22 @@ function ReviewForm({
   function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      Swal.fire({
+        icon: "warning",
+        title: "Not Logged In",
+        text: "You need to be logged in to write a review.",
+        confirmButtonText: "Go to Login",
+        confirmButtonColor: "#e94f37",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = "/auth/login";
+        }
+      });
+      return;
+    }
 
     if (!mood) {
       setError("🎭 Pick a mood that matches your vibe");
@@ -478,21 +465,59 @@ function ReviewForm({
     setSubmitting(true);
     try {
       onSubmit({
-        author: author.trim(),
+        author: user?.username ?? user?.name ?? "Anonymous",
         content: content.trim(),
         rating: rating,
         mood: mood,
       });
-      setAuthor("");
+
+      // Show success message
+      Swal.fire({
+        icon: "success",
+        title: "Review Submitted!",
+        text: "Thank you for sharing your thoughts!",
+        confirmButtonColor: "#e94f37",
+        timer: 2000,
+      });
+
       setContent("");
       setRating(null);
       setMood(null);
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to submit review. Please try again.",
+        confirmButtonColor: "#e94f37",
+      });
     } finally {
       setSubmitting(false);
     }
   }
 
   const displayRating = hoveredStar !== null ? hoveredStar : rating;
+
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="relative rounded-3xl p-6 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="text-4xl mb-4">🔐</div>
+          <h3 className="text-xl font-bold text-white mb-2">Write a Review</h3>
+          <p className="text-slate-300 mb-6">
+            You need to be logged in to write a review and share your thoughts
+            with the community.
+          </p>
+          <Link
+            href="/auth/login"
+            className="px-6 py-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white font-medium hover:shadow-lg transition-shadow"
+          >
+            Sign In to Write a Review
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
@@ -517,7 +542,7 @@ function ReviewForm({
 
       <form
         onSubmit={handleSubmit}
-        className="relative space-y-5 p-6 rounded-2xl border transition-all duration-500"
+        className="relative space-y-3 p-5 rounded-2xl transition-all duration-500"
         style={{
           borderColor:
             mood === "amazing"
@@ -536,28 +561,10 @@ function ReviewForm({
         }}
       >
         {/* Header with dynamic accent */}
-        <div
-          className="pb-4 border-b transition-colors duration-500"
-          style={{
-            borderColor:
-              mood === "amazing"
-                ? "rgba(249, 115, 22, 0.2)"
-                : mood === "loved"
-                ? "rgba(236, 72, 153, 0.2)"
-                : mood === "enjoyed"
-                ? "rgba(34, 197, 94, 0.2)"
-                : mood === "okay"
-                ? "rgba(100, 116, 139, 0.2)"
-                : mood === "meh"
-                ? "rgba(75, 85, 99, 0.2)"
-                : mood === "disliked"
-                ? "rgba(71, 85, 105, 0.2)"
-                : "rgba(255, 255, 255, 0.1)",
-          }}
-        >
-          <h3 className="text-xl font-bold text-white">Write a Review</h3>
+        <div className="transition-colors duration-500">
+          <h3 className="text-lg font-bold text-white">Write a Review</h3>
           <p
-            className={`text-sm mt-1 transition-colors duration-500 ${
+            className={`text-xs mt-0.5 transition-colors duration-500 ${
               mood === "amazing"
                 ? "text-orange-300"
                 : mood === "loved"
@@ -591,10 +598,10 @@ function ReviewForm({
 
         {/* Mood Selection */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-3">
+          <label className="block text-xs font-semibold text-slate-300 mb-2">
             How did it make you feel?
           </label>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
             {[
               {
                 emoji: "🔥",
@@ -637,24 +644,24 @@ function ReviewForm({
                 key={m.value}
                 type="button"
                 onClick={() => setMood(m.value)}
-                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-lg transition-all duration-300 cursor-pointer ${
+                className={`relative flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-300 cursor-pointer ${
                   mood === m.value
                     ? `bg-gradient-to-br ${m.color} shadow-lg scale-105 border-2 border-white/30`
                     : "bg-slate-900/30 hover:bg-slate-800/50 border border-white/10"
                 }`}
               >
-                <span className="text-2xl">{m.emoji}</span>
+                <span className="text-xl">{m.emoji}</span>
                 <span
-                  className={`text-[10px] font-medium ${
+                  className={`text-[9px] font-medium ${
                     mood === m.value ? "text-white" : "text-slate-400"
                   }`}
                 >
                   {m.label}
                 </span>
                 {mood === m.value && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-lg">
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-lg">
                     <svg
-                      className="w-2.5 h-2.5 text-green-600"
+                      className="w-1.5 h-1.5 text-green-600"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -672,27 +679,10 @@ function ReviewForm({
         </div>
 
         {/* Combined Quote Card - Name, Rating, and Review */}
-        <div
-          className="relative bg-slate-900/50 rounded-lg p-6 border transition-all"
-          style={{
-            borderColor: mood
-              ? mood === "amazing"
-                ? "rgba(249, 115, 22, 0.3)"
-                : mood === "loved"
-                ? "rgba(236, 72, 153, 0.3)"
-                : mood === "enjoyed"
-                ? "rgba(34, 197, 94, 0.3)"
-                : mood === "okay"
-                ? "rgba(100, 116, 139, 0.3)"
-                : mood === "meh"
-                ? "rgba(75, 85, 99, 0.3)"
-                : "rgba(71, 85, 105, 0.3)"
-              : "rgba(255, 255, 255, 0.1)",
-          }}
-        >
+        <div className="relative bg-slate-900/50 rounded-lg p-4 transition-all">
           {/* Opening quote mark */}
           <svg
-            className="absolute top-4 left-4 w-8 h-8 opacity-20 transition-colors"
+            className="absolute top-2 left-2 w-6 h-6 opacity-20 transition-colors"
             viewBox="0 0 24 24"
             fill="currentColor"
             style={{
@@ -715,10 +705,10 @@ function ReviewForm({
             <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
           </svg>
 
-          {/* Name input section */}
-          <div className="flex items-center gap-3 mb-4 pl-10">
+          {/* Name input section - Display only, not editable */}
+          <div className="flex items-center gap-2 mb-2 pl-8">
             <div
-              className="flex-shrink-0 w-10 h-10 rounded-full bg-slate-800 border-2 transition-colors flex items-center justify-center"
+              className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 border-2 transition-colors flex items-center justify-center"
               style={{
                 borderColor:
                   mood === "amazing"
@@ -736,21 +726,18 @@ function ReviewForm({
                     : "rgba(255, 255, 255, 0.3)",
               }}
             >
-              <span className="text-slate-400 text-sm font-semibold">
-                {author ? author.charAt(0).toUpperCase() : "G"}
+              <span className="text-slate-400 text-xs font-semibold">
+                {author ? author.charAt(0).toUpperCase() : "A"}
               </span>
             </div>
 
-            <input
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              placeholder="Guest User"
-              className="flex-1 bg-transparent text-white placeholder-slate-500 text-sm font-medium focus:outline-none"
-            />
+            <div className="flex-1 text-white text-xs font-medium">
+              {user?.username ?? user?.name ?? "User"}
+            </div>
           </div>
 
           {/* Rating section */}
-          <div className="flex items-center justify-center gap-1 py-3 mb-4">
+          <div className="flex items-center justify-center gap-0.5 py-2 mb-3">
             {Array.from({ length: 5 }).map((_, i) => {
               const starValue = (i + 1) * 2;
               const active =
@@ -765,7 +752,7 @@ function ReviewForm({
                   className="p-0.5 transition-transform hover:scale-110 cursor-pointer"
                 >
                   <Star
-                    size={24}
+                    size={18}
                     className={`transition-colors ${
                       active
                         ? "text-yellow-400 fill-yellow-400"
@@ -782,13 +769,13 @@ function ReviewForm({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Share your thoughts about this title. What did you like or dislike? Would you recommend it?"
-            rows={6}
-            className="w-full bg-transparent text-white placeholder-slate-500 resize-none text-sm focus:outline-none mb-4"
+            rows={4}
+            className="w-full bg-transparent text-white placeholder-slate-500 resize-none text-xs focus:outline-none mb-3"
           />
 
           {/* Closing quote mark */}
           <svg
-            className="absolute bottom-4 right-4 w-8 h-8 opacity-20 transition-colors rotate-180"
+            className="absolute bottom-2 right-2 w-6 h-6 opacity-20 transition-colors rotate-180"
             viewBox="0 0 24 24"
             fill="currentColor"
             style={{
@@ -812,24 +799,7 @@ function ReviewForm({
           </svg>
 
           {/* Bottom author attribution and character count */}
-          <div
-            className="flex items-center justify-between pt-4 border-t transition-colors"
-            style={{
-              borderColor: mood
-                ? mood === "amazing"
-                  ? "rgba(249, 115, 22, 0.2)"
-                  : mood === "loved"
-                  ? "rgba(236, 72, 153, 0.2)"
-                  : mood === "enjoyed"
-                  ? "rgba(34, 197, 94, 0.2)"
-                  : mood === "okay"
-                  ? "rgba(100, 116, 139, 0.2)"
-                  : mood === "meh"
-                  ? "rgba(75, 85, 99, 0.2)"
-                  : "rgba(71, 85, 105, 0.2)"
-                : "rgba(255, 255, 255, 0.1)",
-            }}
-          >
+          <div className="flex items-center justify-between pt-3 transition-colors">
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">—</span>
               <span
@@ -851,11 +821,11 @@ function ReviewForm({
                       : "rgb(148, 163, 184)",
                 }}
               >
-                {author || "Guest User"}
+                {user?.username ?? user?.name ?? "User"}
               </span>
             </div>
             <span
-              className={`text-xs mr-8 ${
+              className={`text-xs mr-6 ${
                 content.length < 10 ? "text-slate-500" : "text-slate-400"
               }`}
             >
@@ -869,10 +839,10 @@ function ReviewForm({
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg"
+            className="flex items-center gap-2 p-2 bg-red-500/10 border border-red-500/30 rounded-lg"
           >
             <svg
-              className="w-4 h-4 text-red-400 flex-shrink-0"
+              className="w-3 h-3 text-red-400 flex-shrink-0"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -891,7 +861,7 @@ function ReviewForm({
           <button
             type="submit"
             disabled={submitting}
-            className="px-6 py-2.5 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm"
+            className="px-4 py-1.5 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-xs"
             style={{
               background:
                 mood === "amazing"

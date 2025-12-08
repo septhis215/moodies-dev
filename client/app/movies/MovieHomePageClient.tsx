@@ -147,11 +147,6 @@ export default function MoviesHomePageClient({
         );
     };
 
-
-
-
-
-
     const featuredInWatchlist =
         featured?.id ? isInWatchlist(String(featured.id), "movie") : false;
 
