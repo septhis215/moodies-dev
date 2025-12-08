@@ -22,27 +22,36 @@ import {
 } from "./ui/resizable-navbar";
 import SearchBar from "./ui/searchbar";
 import Link from "next/link";
-import { Infinity, List, Loader, MouseIcon, PhoneIcon, Repeat } from "lucide-react";
+import {
+  Infinity,
+  List,
+  Loader,
+  MouseIcon,
+  PhoneIcon,
+  Repeat,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthProvider";
 const routes = [
   { name: "Home", href: "/" },
   { name: "Movies", href: "/movies" },
   { name: "Series", href: "/tv" },
-  { name: "Community", href: "/community" },
+  // { name: "Community", href: "/community" },
   { name: "Your Moods", href: "/moods" },
   { name: "Your List", href: "/watchlist" },
 ];
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"; 
-type User = { name: string; username?: string; email: string; avatarUrl?: string };
-
-
-
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+type User = {
+  name: string;
+  username?: string;
+  email: string;
+  avatarUrl?: string;
+};
 
 export function NavbarComponent() {
-  const router = useRouter();  
-  
+  const router = useRouter();
+
   const [isOpen, setIsOpen] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const createdPortalRef = useRef<boolean>(false);
@@ -54,54 +63,44 @@ export function NavbarComponent() {
   );
   const { user, isAuthenticated, logoutSilent } = useAuth();
 
-  const routeOptions: Record<string, { label: string; hash: string }[]> = {
+  const routeOptions: Record<string, { label: string; path: string }[]> = {
     "/": [
-      { label: "Trending", hash: "/#trending" },
-      { label: "Premieres", hash: "/#premiere" },
-      { label: "Moodies Mix", hash: "/#favorites" },
-      { label: "Korean Picks", hash: "/#korea-trending" },
-      { label: "Celebrities", hash: "/#celebs" },
-      { label: "Upcoming", hash: "/#upcoming" },
+      { label: "Trending", path: "/trending" },
+      { label: "New Releases", path: "/new-releases" },
+      { label: "Korean Hits", path: "/korea-hits" },
+      { label: "Moods", path: "/moods" },
+      { label: "Coming Soon", path: "/coming-soon" },
     ],
 
     "/movies": [
-      { label: "Trending", hash: "/movies#trending-movies" },
-      { label: "Top Rated", hash: "/movies#top-rated-movies" },
-      { label: "New Releases", hash: "/movies#new-release-movies" },
-      { label: "Korean", hash: "/movies#korean-movies" },
-      { label: "Upcoming", hash: "/movies#upcoming" },
-      { label: "Moods Matcher", hash: "/movies#moods" },
+      { label: "Trending", path: "/movies/trending" },
+      { label: "Top Rated", path: "/movies/top-rated" },
+      { label: "New Releases", path: "/movies/new-releases" },
+      { label: "Korean", path: "/movies/korean" },
+      { label: "Upcoming", path: "/movies/upcoming" },
+      { label: "Moods Matcher", path: "/movies/moods" },
     ],
 
     "/tv": [
-      { label: "Trending", hash: "/tv#trending-tv" },
-      { label: "Top Rated", hash: "/tv#top-rated-tv" },
-      { label: "New Releases", hash: "/tv#new-release-tv" },
-      { label: "Korean", hash: "/tv#korean-tv" },
-      { label: "Upcoming", hash: "/tv#upcoming" },
-      { label: "Moods Matcher", hash: "/tv#moods" },
-    ],
-
-    "/community": [
-      { label: "Forums", hash: "#forums" },
-      { label: "Clubs", hash: "#clubs" },
-      { label: "Reviews", hash: "#user-reviews" },
+      { label: "Trending", path: "/tv/trending" },
+      { label: "Top Rated", path: "/tv/top-rated" },
+      { label: "New Releases", path: "/tv/new-releases" },
+      { label: "Korean", path: "/tv/korean" },
+      { label: "Upcoming", path: "/tv/upcoming" },
+      { label: "Moods Matcher", path: "/tv/moods" },
     ],
 
     "/moods": [
-      { label: "Moodies Feed", hash: "/feed" },
-      { label: "Mood Wheels", hash: "/moods#mood-wheels" },
-      { label: "Categories", hash: "/moods#categories" },
+      { label: "Moodies Feed", path: "/feed" },
+      { label: "Mood Wheels", path: "/moods/mood-wheels" },
+      { label: "Categories", path: "/moods/categories" },
     ],
   };
-
-  
 
   const logout = () => {
     setIsOpen(false);
     logoutSilent(); // clears token & user silently
   };
-
 
   // Create/find portal root on mount. Clean up if we created it.
   useEffect(() => {
@@ -142,7 +141,6 @@ export function NavbarComponent() {
     else document.body.style.overflow = "";
   }, [isOpen]);
 
-
   // The full dropdown panel (rendered into portalRoot)
   const menuNode = (
     <AnimatePresence>
@@ -159,7 +157,7 @@ export function NavbarComponent() {
           initial={{ y: "-12%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "-12%", opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-stretch"
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
           style={{
             backdropFilter: "blur(14px)",
             background:
@@ -173,23 +171,26 @@ export function NavbarComponent() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.995, opacity: 0 }}
             transition={{ duration: 0.26, ease: "easeOut" }}
-            className="relative flex flex-col md:flex-row w-full mx-auto my-4 md:my-8 rounded-2xl"
+            className="relative flex flex-col md:flex-row w-full mx-auto rounded-2xl"
             style={{
               boxShadow: "0 30px 80px rgba(0,0,0,0.65)",
               border: "1px solid rgba(255,255,255,0.04)",
               background:
                 "linear-gradient(180deg, rgba(6,6,8,0.94), rgba(8,8,10,0.9))",
-              // slightly smaller overall but still fits
-              maxWidth: "min(1100px, calc(100vw - 96px))",
-              maxHeight: "calc(100vh - 96px)",
+              maxWidth: "min(1100px, calc(100vw - 2rem))",
+              minWidth: "300px", // Add this
+              maxHeight: "min(85vh, calc(100vh - 2rem))",
+              margin: "clamp(0.5rem, 2vh, 2rem)",
               overflow: "hidden",
               willChange: "transform, opacity",
             }}
           >
             {/* LEFT: routes */}
             <div
-              className="flex-1 md:basis-1/2 min-w-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.02),transparent)] px-6 md:px-10 py-6 md:py-10 flex flex-col justify-between gap-3 md:gap-6"
+              className="flex-1 md:basis-1/2 min-w-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.02),transparent)] flex flex-col justify-between"
               style={{
+                padding: "clamp(1rem, 3vw, 2.5rem) clamp(1.25rem, 4vw, 2.5rem)",
+                gap: "clamp(0.75rem, 2vh, 1.5rem)",
                 boxSizing: "border-box",
                 background:
                   "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
@@ -198,20 +199,23 @@ export function NavbarComponent() {
               <div className="pb-1">
                 <h2
                   className="font-semibold text-white leading-tight"
-                  style={{ fontSize: "clamp(1.75rem, 6.5vh, 3rem)" }}
+                  style={{ fontSize: "clamp(1.25rem, 4vw, 2.5rem)" }}
                 >
                   Explore
                 </h2>
                 <p
                   className="mt-1 text-gray-300"
-                  style={{ fontSize: "clamp(0.9rem, 1.6vh, 1.05rem)" }}
+                  style={{ fontSize: "clamp(0.75rem, 1.8vw, 1rem)" }}
                 >
                   Quick links to the main sections
                 </p>
               </div>
 
               {/* nav — on hover/focus set activeRoute */}
-              <nav className="flex-1 flex flex-col justify-center gap-2 md:gap-4">
+              <nav
+                className="flex-1 flex flex-col justify-center"
+                style={{ gap: "clamp(0.25rem, 1.5vh, 1rem)" }}
+              >
                 {routes.map((r) => (
                   <Link
                     key={r.href}
@@ -219,22 +223,28 @@ export function NavbarComponent() {
                     onMouseEnter={() => setActiveRoute(r.href)}
                     onFocus={() => setActiveRoute(r.href)}
                     onClick={() => setIsOpen(false)}
-                    className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${activeRoute === r.href
-                      ? "text-[#e94f37]"
-                      : "text-gray-100 hover:text-[#e94f37]"
-                      } pl-4`} // ⬅️ padding-left so line sits outside
+                    className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${
+                      activeRoute === r.href
+                        ? "text-[#e94f37]"
+                        : "text-gray-100 hover:text-[#e94f37]"
+                    } pl-3`}
                     style={{
-                      fontSize: "clamp(1.125rem, 4.2vh, 1.75rem)",
-                      paddingTop: "0.35rem",
-                      paddingBottom: "0.35rem",
+                      fontSize: "clamp(0.95rem, 2.8vw, 1.5rem)",
+                      paddingTop: "clamp(0.2rem, 0.8vh, 0.35rem)",
+                      paddingBottom: "clamp(0.2rem, 0.8vh, 0.35rem)",
                     }}
                   >
                     {/* active/hover indicator line */}
                     <span
-                      className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full bg-[#e94f37] transition-all duration-200 ${activeRoute === r.href
-                        ? "h-6 opacity-100"
-                        : "h-0 opacity-0 group-hover:h-4 group-hover:opacity-100"
-                        }`}
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-[#e94f37] transition-all duration-200`}
+                      style={{
+                        width: "clamp(2px, 0.3vw, 3px)",
+                        height:
+                          activeRoute === r.href
+                            ? "clamp(1rem, 3vh, 1.5rem)"
+                            : "0",
+                        opacity: activeRoute === r.href ? 1 : 0,
+                      }}
                     />
                     {r.name}
                   </Link>
@@ -242,40 +252,58 @@ export function NavbarComponent() {
               </nav>
 
               <div
-                className="pt-1 text-sm text-gray-400"
-                style={{ fontSize: "clamp(0.8rem,1.2vh,0.95rem)" }}
+                className="pt-1 text-gray-400"
+                style={{ fontSize: "clamp(0.7rem, 1.5vw, 0.875rem)" }}
               >
                 © {new Date().getFullYear()} Your App
               </div>
             </div>
 
-            {/* CENTER: options panel (uses the gap). Visible on md+ only. */}
+            {/* CENTER: options panel. Visible on md+ only. */}
             <div
-              className="hidden md:flex md:basis-1/2 flex-col items-start justify-center p-6"
+              className="hidden md:flex md:basis-1/2 flex-col items-start justify-center"
               style={{
+                padding: "clamp(1rem, 2.5vw, 1.5rem)",
                 background:
                   "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
                 borderLeft: "1px solid rgba(255,255,255,0.1)",
                 borderRight: "1px solid rgba(255,255,255,0.1)",
               }}
             >
-              <div className="w-full max-w-[260px]">
-                <h3 className="text-md font-semibold text-[#e94f37] mb-4">
+              <div
+                className="w-full"
+                style={{ maxWidth: "clamp(200px, 25vw, 280px)" }}
+              >
+                <h3
+                  className="font-semibold text-[#e94f37]"
+                  style={{
+                    fontSize: "clamp(0.8rem, 1.8vw, 1rem)",
+                    marginBottom: "clamp(0.75rem, 2vh, 1rem)",
+                  }}
+                >
                   {routes.find((x) => x.href === activeRoute)?.name ??
                     "Options"}
                 </h3>
 
-                <div className="flex flex-col gap-3">
+                <div
+                  className="flex flex-col"
+                  style={{ gap: "clamp(0.5rem, 1.5vh, 0.75rem)" }}
+                >
                   {(routeOptions[activeRoute] || []).map((opt) => (
                     <Link
-                      key={opt.hash}
-                      href={opt.hash}
+                      key={opt.path}
+                      href={opt.path}
                       onClick={() => setIsOpen(false)}
-                      className="relative px-4 py-2 rounded-lg text-gray-200
+                      className="relative rounded-lg text-gray-200
         hover:text-white transition-all duration-300
         before:absolute before:inset-0 before:rounded-lg before:border
         before:border-[#e94f37]/30 hover:before:border-[#e94f37]
         before:transition-all before:duration-300"
+                      style={{
+                        padding:
+                          "clamp(0.4rem, 1.2vh, 0.5rem) clamp(0.75rem, 2vw, 1rem)",
+                        fontSize: "clamp(0.8rem, 1.6vw, 0.95rem)",
+                      }}
                     >
                       {opt.label}
                     </Link>
@@ -286,8 +314,9 @@ export function NavbarComponent() {
 
             {/* RIGHT: profile — visible on lg and above */}
             <div
-              className="hidden lg:flex w-1/3 flex-none min-w-0 bg-[rgba(255,255,255,0.02)] px-6 py-8 items-center justify-center"
+              className="hidden lg:flex w-1/3 flex-none min-w-0 bg-[rgba(255,255,255,0.02)] items-center justify-center"
               style={{
+                padding: "clamp(1rem, 2.5vw, 2rem) clamp(1rem, 2vw, 1.5rem)",
                 boxSizing: "border-box",
                 background:
                   "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
@@ -296,7 +325,10 @@ export function NavbarComponent() {
               <div className="w-full max-w-xs text-center">
                 <div
                   className="mx-auto rounded-full overflow-hidden"
-                  style={{ height: 88, width: 88 }}
+                  style={{
+                    height: "clamp(64px, 10vw, 88px)",
+                    width: "clamp(64px, 10vw, 88px)",
+                  }}
                 >
                   {/* <Image
                     src="/images/facebook.png"
@@ -308,7 +340,7 @@ export function NavbarComponent() {
                 </div>
                 <h3
                   className="mt-3 font-medium text-white"
-                  style={{ fontSize: "clamp(0.95rem,1.6vh,1.15rem)" }}
+                  style={{ fontSize: "clamp(0.85rem, 1.8vw, 1.1rem)" }}
                 >
                   {user?.username ?? user?.name ?? "Guest"}
                 </h3>
@@ -316,7 +348,7 @@ export function NavbarComponent() {
                   className="mt-1"
                   style={{
                     color: "rgba(255,255,255,0.75)",
-                    fontSize: "clamp(0.85rem,1.2vh,0.95rem)",
+                    fontSize: "clamp(0.75rem, 1.5vw, 0.9rem)",
                   }}
                 >
                   {user?.email || "guest@example.com"}
@@ -325,8 +357,16 @@ export function NavbarComponent() {
                 <div className="mt-4">
                   {isAuthenticated ? (
                     <button
-                      onClick={() => { setIsMobileOpen(false); logout(); }}
-                      className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
+                      onClick={() => {
+                        setIsMobileOpen(false);
+                        logout();
+                      }}
+                      className="inline-flex items-center justify-center rounded-full border border-white/20 text-white hover:bg-white/5"
+                      style={{
+                        padding:
+                          "clamp(0.4rem, 1vh, 0.5rem) clamp(0.75rem, 2vw, 1rem)",
+                        fontSize: "clamp(0.75rem, 1.5vw, 0.875rem)",
+                      }}
                     >
                       Logout
                     </button>
@@ -334,7 +374,12 @@ export function NavbarComponent() {
                     <Link
                       href="/auth/login"
                       onClick={() => setIsMobileOpen(false)}
-                      className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
+                      className="inline-flex items-center justify-center rounded-full border border-white/20 text-white hover:bg-white/5"
+                      style={{
+                        padding:
+                          "clamp(0.4rem, 1vh, 0.5rem) clamp(0.75rem, 2vw, 1rem)",
+                        fontSize: "clamp(0.75rem, 1.5vw, 0.875rem)",
+                      }}
                     >
                       Login
                     </Link>
@@ -347,16 +392,26 @@ export function NavbarComponent() {
             <button
               onClick={() => setIsOpen(false)}
               aria-label="Close menu"
-              className="absolute right-4 top-4 md:right-6 md:top-6 rounded-full bg-white/10 p-2 hover:bg-white/20 focus:outline-none"
-              style={{ backdropFilter: "blur(6px)" }}
+              className="absolute rounded-full bg-white/10 hover:bg-white/20 focus:outline-none"
+              style={{
+                right: "clamp(0.75rem, 2vw, 1.5rem)",
+                top: "clamp(0.75rem, 2vw, 1.5rem)",
+                padding: "clamp(0.4rem, 1vw, 0.5rem)",
+                backdropFilter: "blur(6px)",
+              }}
             >
-              <IconX className="text-white" />
+              <IconX
+                className="text-white"
+                style={{
+                  width: "clamp(18px, 3vw, 24px)",
+                  height: "clamp(18px, 3vw, 24px)",
+                }}
+              />
             </button>
           </motion.div>
         </motion.div>
-      )
-      }
-    </AnimatePresence >
+      )}
+    </AnimatePresence>
   );
 
   return (
@@ -445,50 +500,42 @@ export function NavbarComponent() {
             <h3 className="text-2xl font-semibold text-white">Explore</h3>
             <p className="text-sm text-gray-300">Quick links</p>
 
-            <nav className="flex flex-col gap-3 mt-4">
+            <nav
+              className="flex-1 flex flex-col justify-center"
+              style={{ gap: "clamp(0.25rem, 1.5vh, 1rem)" }}
+            >
               {routes.map((r) => (
-                <div key={r.href} className="flex flex-col">
-                  <button
-                    onClick={() =>
-                      setActiveMobileRoute((prev) =>
-                        prev === r.href ? null : r.href
-                      )
-                    }
-                    className={`flex justify-between items-center py-3 px-2 rounded-md text-lg transition ${activeMobileRoute === r.href
-                      ? "text-[#e94f37] bg-[#e94f37]/10"
-                      : "text-gray-100 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
-                      }`}
-                  >
-                    <span>{r.name}</span>
-                    <span className="text-[#e94f37]">
-                      {activeMobileRoute === r.href ? "−" : "+"}
-                    </span>
-                  </button>
-
-                  {/* Sub-options (routeOptions) */}
-                  {activeMobileRoute === r.href && (
-                    <ul className="pl-4 mt-1 flex flex-col gap-2">
-                      {(routeOptions[r.href] || []).map((opt) => (
-                        <li key={opt.hash}>
-                          <Link
-                            href={opt.hash}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setIsMobileOpen(false);
-                              // Optionally scroll to section:
-                              const el = document.querySelector(opt.hash);
-                              if (el) el.scrollIntoView({ behavior: "smooth" });
-                            }}
-                            className="block text-sm px-2 py-1 rounded-md transition
-                              text-gray-300 hover:text-[#e94f37] hover:bg-[#e94f37]/10"
-                          >
-                            {opt.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                <Link
+                  key={r.href}
+                  href={r.href} // Directly linking to the page URL
+                  onMouseEnter={() => setActiveRoute(r.href)}
+                  onFocus={() => setActiveRoute(r.href)}
+                  onClick={() => setIsOpen(false)}
+                  className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${
+                    activeRoute === r.href
+                      ? "text-[#e94f37]"
+                      : "text-gray-100 hover:text-[#e94f37]"
+                  } pl-3`}
+                  style={{
+                    fontSize: "clamp(0.95rem, 2.8vw, 1.5rem)",
+                    paddingTop: "clamp(0.2rem, 0.8vh, 0.35rem)",
+                    paddingBottom: "clamp(0.2rem, 0.8vh, 0.35rem)",
+                  }}
+                >
+                  {/* active/hover indicator line */}
+                  <span
+                    className={`absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-[#e94f37] transition-all duration-200`}
+                    style={{
+                      width: "clamp(2px, 0.3vw, 3px)",
+                      height:
+                        activeRoute === r.href
+                          ? "clamp(1rem, 3vh, 1.5rem)"
+                          : "0",
+                      opacity: activeRoute === r.href ? 1 : 0,
+                    }}
+                  />
+                  {r.name}
+                </Link>
               ))}
             </nav>
 
@@ -496,15 +543,22 @@ export function NavbarComponent() {
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-full bg-white/5 overflow-hidden" />
                 <div>
-                  <div className="text-sm font-medium text-white">{user?.username ?? user?.name ?? "Guest"}</div>
-                  <div className="text-xs text-gray-300">{user?.email || "guest@example.com"}</div>
+                  <div className="text-sm font-medium text-white">
+                    {user?.username ?? user?.name ?? "Guest"}
+                  </div>
+                  <div className="text-xs text-gray-300">
+                    {user?.email || "guest@example.com"}
+                  </div>
                 </div>
               </div>
 
               <div className="mt-4">
                 {isAuthenticated ? (
                   <button
-                    onClick={() => { setIsMobileOpen(false); logout(); }}
+                    onClick={() => {
+                      setIsMobileOpen(false);
+                      logout();
+                    }}
                     className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
                   >
                     Logout
@@ -564,8 +618,6 @@ export function NavbarComponent() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      
     </Navbar>
   );
 }
