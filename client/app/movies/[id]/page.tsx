@@ -5,6 +5,7 @@ import MovieDetails from "@/components/selected-content/sections/extras";
 import ReviewsSection from "@/components/selected-content/sections/reviews";
 import CardCarousel from "@/components/sections/CardCarousel";
 import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
+import CommonCardCarousel from "@/components/sections/CommonCardCarousel";
 
 async function fetchDetails(id: string) {
   const base = process.env.NEST_API_URL ?? "http://localhost:4000";
@@ -125,7 +126,7 @@ export default async function MoviePage({
           <ReviewsSection reviews={data.reviews} contentId={id} />
 
           <hr className="border-white/8 my-14" />
-          <CardCarousel
+          <CommonCardCarousel
             title="Something Similar"
             subtitle="Films you may also enjoy"
             items={recommendations}
