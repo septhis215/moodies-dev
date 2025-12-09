@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import type { All } from '@/types/all';
 import type { ReviewItem } from '@/components/sections/CommunityPicks';
-import { Star, Plus, Info, ChevronRight, ChevronLeft, Flame, Calendar, Heart, Share2, Bookmark, Film, Award, Ticket, MessageSquare, Globe, Users, Sparkles, Trophy, Zap, BookmarkCheck } from 'lucide-react';
+import { Star, Plus, Info, ChevronRight, ChevronLeft, Flame, Calendar, Heart, Share2, Bookmark, Film, Award, Ticket, MessageSquare, Globe, Users, Sparkles, Trophy, Zap, BookmarkCheck, ThumbsUp } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from "framer-motion";
@@ -486,7 +486,7 @@ s                                                    ${featuredInWatchlist
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5 mt-6">
                             {newReleaseMovies.slice(3, 9).map((movie) => (
-                                <MovieCard key={movie.id} movie={movie} />
+                                <MovieCard key={movie.id} show={movie} />
                             ))}
                         </div>
                     </section>
@@ -508,11 +508,17 @@ s                                                    ${featuredInWatchlist
 
                 {/* Korean Cinema */}
                 {koreanMovies.length > 0 && (
-                    <section id="korean-movies" className="relative bg-gradient-to-br from-rose-950/30 via-pink-950/20 to-transparent backdrop-blur-sm p-5 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl border border-rose-500/20 ring-1 ring-white/5 shadow-2xl overflow-hidden">
-                        <div className="absolute top-0 left-0 w-64 sm:w-80 lg:w-96 h-64 sm:h-80 lg:h-96 bg-rose-500/10 rounded-full blur-3xl" />
-
+                    <section id="korean-movies" className="relative">
                         <div className="relative flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-                            <div className="text-3xl sm:text-4xl lg:text-5xl">🇰🇷</div>
+                            <div className="text-3xl sm:text-4xl lg:text-5xl">
+                                <Image
+                                    src="/images/south-korea.png"
+                                    alt="Korean flag"
+                                    width={40}
+                                    height={40}
+                                    className="rounded-full object-cover border border-white/20"
+                                />
+                            </div>
                             <div>
                                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">Korean Cinema</h2>
                                 <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1 font-medium">Award-winning storytelling</p>
@@ -522,84 +528,137 @@ s                                                    ${featuredInWatchlist
                     </section>
                 )}
 
-                {/* Enhanced Community Activity */}
                 <section className="relative">
                     <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
                         <div className="relative">
                             <div className="absolute inset-0 bg-purple-500 blur-xl opacity-50" />
                             <Users className="relative w-7 h-7 sm:w-8 sm:h-8 text-purple-400" />
                         </div>
-                        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">Community Pulse</h2>
+                        <div>
+                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">Community Pulse</h2>
+                            <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">What the community loves right now</p>
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
                         {[
                             {
-                                title: "Most Saved",
+                                title: "Most Liked",
+                                subtitle: "Top rated by users",
                                 data: popularMovies,
-                                icon: <Bookmark className="w-4 h-4 sm:w-5 sm:h-5" />,
-                                gradient: "from-pink-950/40 to-pink-950/20",
-                                border: "border-pink-500/30",
-                                iconBg: "bg-pink-500/20",
-                                textColor: "text-pink-400",
-                                hoverColor: "group-hover:text-pink-400",
+                                icon: <ThumbsUp className="w-4 h-4 sm:w-5 sm:h-5" />,
+                                gradient: "from-emerald-950/40 to-emerald-950/20",
+                                border: "border-emerald-500/30",
+                                iconBg: "bg-emerald-500/20",
+                                textColor: "text-emerald-400",
+                                hoverColor: "group-hover:text-emerald-400",
+                                statIcon: <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />,
                             },
                             {
-                                title: "Hot Discussions",
+                                title: "Most Reviews",
+                                subtitle: "Highly discussed films",
                                 data: movieTrailers,
                                 icon: <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />,
-                                gradient: "from-orange-950/40 to-orange-950/20",
-                                border: "border-orange-500/30",
-                                iconBg: "bg-orange-500/20",
-                                textColor: "text-orange-400",
-                                hoverColor: "group-hover:text-orange-400",
+                                gradient: "from-blue-950/40 to-blue-950/20",
+                                border: "border-blue-500/30",
+                                iconBg: "bg-blue-500/20",
+                                textColor: "text-blue-400",
+                                hoverColor: "group-hover:text-blue-400",
+                                statIcon: <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5" />,
                             },
                             {
-                                title: "Rising Stars",
+                                title: "Most Saved",
+                                subtitle: "Popular watchlist picks",
                                 data: trendingMovies,
-                                icon: <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />,
-                                gradient: "from-cyan-950/40 to-cyan-950/20",
-                                border: "border-cyan-500/30",
-                                iconBg: "bg-cyan-500/20",
-                                textColor: "text-cyan-400",
-                                hoverColor: "group-hover:text-cyan-400",
+                                icon: <Bookmark className="w-4 h-4 sm:w-5 sm:h-5" />,
+                                gradient: "from-amber-950/40 to-amber-950/20",
+                                border: "border-amber-500/30",
+                                iconBg: "bg-amber-500/20",
+                                textColor: "text-amber-400",
+                                hoverColor: "group-hover:text-amber-400",
+                                statIcon: <Bookmark className="w-3 h-3 sm:w-3.5 sm:h-3.5" />,
                             },
                         ].map((section, idx) => (
                             <div key={idx} className={`bg-gradient-to-br ${section.gradient} border ${section.border} rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 backdrop-blur-sm ring-1 ring-white/5 shadow-xl`}>
-                                <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5 lg:mb-6">
-                                    <div className={`w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 ${section.iconBg} rounded-lg sm:rounded-xl flex items-center justify-center ${section.textColor} ring-1 ring-white/10`}>
-                                        {section.icon}
+                                {/* Header */}
+                                <div className="flex items-center justify-between mb-5 sm:mb-6">
+                                    <div className="flex items-center gap-2 sm:gap-3">
+                                        <div className={`w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 ${section.iconBg} rounded-lg sm:rounded-xl flex items-center justify-center ${section.textColor} ring-1 ring-white/10 shadow-lg`}>
+                                            {section.icon}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-base sm:text-lg text-white">{section.title}</h3>
+                                            <p className="text-[10px] sm:text-xs text-gray-400 font-medium mt-0.5">{section.subtitle}</p>
+                                        </div>
                                     </div>
-                                    <h3 className="font-black text-base sm:text-lg text-white">{section.title}</h3>
                                 </div>
 
+                                {/* Movies List */}
                                 <div className="space-y-3 sm:space-y-4">
-                                    {section.data.slice(0, 5).map((m, i) => (
-                                        <Link key={m.id} href={`/movies/${m.id}`} className="flex items-center gap-2 sm:gap-3 group">
-                                            <span className={`text-2xl sm:text-3xl font-black ${section.textColor} opacity-30 w-6 sm:w-8`}>{i + 1}</span>
-                                            <div className="relative w-12 h-16 sm:w-14 sm:h-20 rounded-md sm:rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-white/10 shadow-lg">
-                                                {m.poster_path && (
-                                                    <Image
-                                                        src={getPosterUrl(m.poster_path)}
-                                                        alt=""
-                                                        fill
-                                                        className="object-cover group-hover:scale-110 transition-transform duration-500"
-                                                    />
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className={`font-bold text-xs sm:text-sm text-white line-clamp-1 ${section.hoverColor} transition-colors`}>
-                                                    {m.title}
+                                    {section.data.slice(0, 5).map((m, i) => {
+                                        // Generate mock stats based on movie data
+                                        const mockStats = {
+                                            likes: Math.floor(m.vote_average * 0.7) || Math.floor(Math.random() * 5000) + 1000,
+                                            reviews: Math.floor(m.vote_average * 0.3) || Math.floor(Math.random() * 2000) + 500,
+                                            saves: Math.floor(m.popularity * 100) || Math.floor(Math.random() * 3000) + 800,
+                                        };
+
+                                        const getStat = () => {
+                                            if (idx === 0) return `${(mockStats.likes / 1000).toFixed(1)}K likes`;
+                                            if (idx === 1) return `${(mockStats.reviews / 1000).toFixed(1)}K reviews`;
+                                            return `${(mockStats.saves / 1000).toFixed(1)}K saves`;
+                                        };
+
+                                        return (
+                                            <Link key={m.id} href={`/movies/${m.id}`} className="flex items-center gap-2 sm:gap-3 group">
+                                                {/* Rank Number */}
+                                                <span className={`text-2xl sm:text-3xl font-black ${section.textColor} opacity-30 w-6 sm:w-8 flex-shrink-0`}>{i + 1}</span>
+
+                                                {/* Poster */}
+                                                <div className="relative w-12 h-16 sm:w-14 sm:h-20 rounded-md sm:rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-white/10 shadow-lg">
+                                                    {m.poster_path && (
+                                                        <Image
+                                                            src={getPosterUrl(m.poster_path)}
+                                                            alt=""
+                                                            fill
+                                                            className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                                        />
+                                                    )}
                                                 </div>
-                                                <div className="flex items-center justify-between text-[10px] sm:text-xs mt-1 sm:mt-1.5">
-                                                    <span className="text-gray-500 font-semibold">{m.release_date?.split('-')[0]}</span>
-                                                    <div className="flex items-center gap-0.5 sm:gap-1">
-                                                        <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-400 fill-yellow-400" />
-                                                        <span className="font-bold text-white">{m.vote_average && m.vote_average > 0 ? m.vote_average.toFixed(1) : "New"}</span>
+
+                                                {/* Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className={`font-bold text-xs sm:text-sm text-white line-clamp-2 mb-1 ${section.hoverColor} transition-colors`}>
+                                                        {m.title}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-[10px] sm:text-xs">
+                                                        <div className="flex items-center gap-0.5 sm:gap-1">
+                                                            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-400 fill-yellow-400" />
+                                                            <span className="font-bold text-white">{m.vote_average && m.vote_average > 0 ? m.vote_average.toFixed(1) : "New"}</span>
+                                                        </div>
+                                                        <span className="text-gray-500">•</span>
+                                                        <span className="text-gray-400 font-semibold">{m.release_date?.split('-')[0]}</span>
+                                                    </div>
+                                                    {/* Supporting Stat */}
+                                                    <div className={`flex items-center gap-1 mt-1.5 sm:mt-2 ${section.textColor}`}>
+                                                        {section.statIcon}
+                                                        <span className="text-[10px] sm:text-xs font-bold">{getStat()}</span>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </Link>
-                                    ))}
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Footer Stats Summary */}
+                                <div className={`mt-5 sm:mt-6 pt-4 sm:pt-5 border-t ${section.border}`}>
+                                    <div className="flex items-center justify-between text-[10px] sm:text-xs">
+                                        <span className="text-gray-400 font-medium">Total engagement</span>
+                                        <span className={`font-bold ${section.textColor}`}>
+                                            {idx === 0 && `${(section.data.slice(0, 5).reduce((acc, m) => acc + (m.vote_average || 0), 0) * 0.7 / 1000).toFixed(0)}K+`}
+                                            {idx === 1 && `${(section.data.slice(0, 5).reduce((acc, m) => acc + (m.vote_average || 0), 0) * 0.3 / 1000).toFixed(0)}K+`}
+                                            {idx === 2 && `${(section.data.slice(0, 5).reduce((acc, m) => acc + (m.popularity || 0), 0) * 100 / 1000).toFixed(0)}K+`}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -649,22 +708,22 @@ s                                                    ${featuredInWatchlist
                     </section>
                 )}
 
-                {/* ACTION-PACKED - Fixed Layout */}
+                {/* ACTION-PACKED - Toned Down Design */}
                 {actionMovies.length > 0 && (
-                    <section id="action-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-red-950/40 via-orange-950/30 to-black backdrop-blur-sm border border-red-500/30 ring-1 ring-white/5 shadow-2xl">
-                        {/* Background gradients */}
-                        <div className="absolute top-0 right-0 w-64 sm:w-80 lg:w-[400px] h-64 sm:h-80 lg:h-[400px] bg-gradient-to-bl from-red-600/20 to-transparent rounded-full blur-3xl animate-pulse" />
-                        <div className="absolute bottom-0 left-0 w-48 sm:w-64 lg:w-[350px] h-48 sm:h-64 lg:h-[350px] bg-gradient-to-tr from-orange-600/20 to-transparent rounded-full blur-3xl animate-pulse delay-700" />
+                    <section id="action-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-zinc-900/60 to-black backdrop-blur-sm border border-zinc-700/30 ring-1 ring-white/5 shadow-xl">
+                        {/* Subtle background gradient */}
+                        <div className="absolute top-0 right-0 w-64 sm:w-80 lg:w-[400px] h-64 sm:h-80 lg:h-[400px] bg-gradient-to-bl from-zinc-700/10 to-transparent rounded-full blur-3xl" />
+
                         <div className="relative p-4 sm:p-5 lg:p-6">
                             {/* Section Title */}
                             <div className="flex items-center gap-3 sm:gap-4 mb-5 sm:mb-6">
                                 <div className="relative">
-                                    <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 rounded-xl blur-xl opacity-50" />
-                                    <div className="relative w-9 h-9 sm:w-11 sm:h-11 lg:w-12 lg:h-12 bg-gradient-to-br from-red-600 to-orange-600 rounded-xl flex items-center justify-center ring-2 ring-red-500/50">
-                                        <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                                    <div className="absolute inset-0 bg-zinc-600 rounded-xl blur-lg opacity-30" />
+                                    <div className="relative w-9 h-9 sm:w-11 sm:h-11 lg:w-12 lg:h-12 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-xl flex items-center justify-center ring-1 ring-zinc-600/50">
+                                        <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-300" />
                                     </div>
                                 </div>
-                                <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 bg-clip-text text-transparent">
+                                <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-zinc-200">
                                     Action-Packed
                                 </h2>
                             </div>
@@ -674,7 +733,7 @@ s                                                    ${featuredInWatchlist
                                 {/* Featured Card */}
                                 {actionMovies[0] && (
                                     <Link href={`/movies/${actionMovies[0].id}`} className="lg:col-span-2 group">
-                                        <div className="relative aspect-[16/9] rounded-xl sm:rounded-2xl overflow-hidden bg-black ring-1 ring-red-500/30 shadow-xl">
+                                        <div className="relative aspect-[16/9] rounded-xl sm:rounded-2xl overflow-hidden bg-black ring-1 ring-zinc-700/30 shadow-lg">
                                             {actionMovies[0].backdrop_path && (
                                                 <>
                                                     <Image
@@ -687,7 +746,7 @@ s                                                    ${featuredInWatchlist
                                                 </>
                                             )}
                                             <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-                                                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold line-clamp-2 text-white group-hover:text-red-400 transition-colors">
+                                                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold line-clamp-2 text-white group-hover:text-zinc-300 transition-colors">
                                                     {actionMovies[0].title}
                                                 </h3>
                                                 <div className="flex items-center gap-2 mt-2">
@@ -707,8 +766,8 @@ s                                                    ${featuredInWatchlist
                                 {/* Side List (2–5) */}
                                 <div className="space-y-3 sm:space-y-4">
                                     {actionMovies.slice(1, 5).map((movie, idx) => (
-                                        <Link key={movie.id} href={`/movies/${movie.id}`} className="group flex gap-3 bg-gradient-to-r from-red-950/60 to-orange-950/40 rounded-xl p-3 hover:border-red-500/60 border border-red-500/30 transition">
-                                            <div className="relative w-14 h-18 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-red-500/30">
+                                        <Link key={movie.id} href={`/movies/${movie.id}`} className="group flex gap-3 bg-zinc-900/60 rounded-xl p-3 hover:border-zinc-600/60 border border-zinc-700/30 transition">
+                                            <div className="relative w-14 h-18 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-zinc-700/30">
                                                 {movie.poster_path && (
                                                     <Image
                                                         src={getPosterUrl(movie.poster_path)}
@@ -719,7 +778,7 @@ s                                                    ${featuredInWatchlist
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <h4 className="font-bold text-md line-clamp-2 text-white group-hover:text-red-400 transition-colors">
+                                                <h4 className="font-bold text-md line-clamp-2 text-white group-hover:text-zinc-300 transition-colors">
                                                     {movie.title}
                                                 </h4>
                                                 <div className="flex items-center gap-1.5 text-[13px] text-gray-400 mt-1">
@@ -738,18 +797,17 @@ s                                                    ${featuredInWatchlist
                                 </div>
                             </div>
 
-                            {/* More Movies (aligned smaller grid) */}
+                            {/* More Movies */}
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 mt-5">
                                 {actionMovies.slice(5, 11).map((movie) => (
-                                    <MovieCard key={movie.id} movie={movie} />
+                                    <MovieCard key={movie.id} show={movie} />
                                 ))}
                             </div>
                         </div>
                     </section>
                 )}
 
-
-                {/* AWARD WINNERS - Prestigious Design */}
+                {/* AWARD WINNERS - Toned Down Design */}
                 {awardWinners.length > 0 && (
                     <section id="award-winners" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-950/40 via-yellow-950/30 to-black backdrop-blur-sm border border-amber-500/30 ring-1 ring-white/5 shadow-2xl">
                         {/* Radial golden glow */}
@@ -774,47 +832,8 @@ s                                                    ${featuredInWatchlist
                                     <p className="text-xs sm:text-sm text-gray-300 mt-1 sm:mt-2 font-semibold hidden sm:block">Critically acclaimed masterpieces</p>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
-                                {awardWinners.slice(0, 10).map((movie, idx) => (
-                                    <Link key={movie.id} href={`/movies/${movie.id}`} className="group">
-                                        <div className="relative aspect-[3/4] rounded-xl sm:rounded-2xl overflow-hidden bg-zinc-900 ring-2 ring-amber-500/30 hover:ring-amber-400/60 transition-all shadow-2xl">
-                                            {movie.poster_path && (
-                                                <>
-                                                    <Image
-                                                        src={getPosterUrl(movie.poster_path)}
-                                                        alt={movie.title || ""}
-                                                        fill
-                                                        className="object-cover group-hover:scale-110 transition-transform duration-700"
-                                                    />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                </>
-                                            )}
+                            <Carousel items={awardWinners} CardComponent={MovieCard} />
 
-                                            {/* Prominent Award Badge */}
-                                            <div className="absolute top-2 left-2 sm:top-3 sm:left-3 w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-full flex items-center justify-center shadow-2xl ring-4 ring-white/20 transform group-hover:scale-110 group-hover:rotate-12 transition-transform">
-                                                <Trophy className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white" />
-                                            </div>
-
-                                            {/* Rating Badge */}
-                                            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-black/90 backdrop-blur-md px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border-2 border-amber-400/50 ring-1 ring-white/10 shadow-xl">
-                                                <div className="flex items-center gap-0.5 sm:gap-1">
-                                                    <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 text-amber-400 fill-amber-400" />
-                                                    <span className="text-xs sm:text-sm font-black text-white">{movie.vote_average && movie.vote_average > 0 ? movie.vote_average.toFixed(1) : "New"}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Hover Info */}
-                                            <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform">
-                                                <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-                                                    <div className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-amber-500 rounded text-[9px] sm:text-[10px] font-black uppercase tracking-wide">Award Winner</div>
-                                                </div>
-                                                <h4 className="font-bold text-xs sm:text-sm line-clamp-2 mb-1 text-white">{movie.title}</h4>
-                                                <div className="text-[10px] sm:text-xs text-gray-400 font-semibold">{movie.release_date?.split('-')[0]}</div>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
                         </div>
                     </section>
                 )}
@@ -850,125 +869,39 @@ s                                                    ${featuredInWatchlist
                                 </div>
                             </div>
 
-                            {/* Featured Row with playful cards */}
-                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-4 sm:gap-5 mb-5 sm:mb-6 lg:mb-8">
-                                {animatedMovies.slice(0, 5).map((movie, idx) => (
-                                    <Link key={movie.id} href={`/movies/${movie.id}`} className="group">
-                                        <div className="relative aspect-[3/4] rounded-2xl sm:rounded-3xl overflow-hidden bg-zinc-900 border-2 sm:border-4 border-purple-500/40 hover:border-pink-400/60 transition-all shadow-2xl transform hover:-translate-y-2 hover:rotate-1 duration-300">
-                                            {movie.poster_path && (
-                                                <>
-                                                    <Image
-                                                        src={getPosterUrl(movie.poster_path)}
-                                                        alt={movie.title || ""}
-                                                        fill
-                                                        className="object-cover group-hover:scale-110 transition-transform duration-700"
-                                                    />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-purple-900/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                </>
-                                            )}
-
-                                            {/* Sparkle Badge with animation */}
-                                            <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center animate-bounce shadow-xl ring-4 ring-white/30">
-                                                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                                            </div>
-
-                                            {/* Info on hover */}
-                                            <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform">
-                                                <h4 className="font-bold text-xs sm:text-sm line-clamp-2 mb-1.5 sm:mb-2 text-white">{movie.title}</h4>
-                                                <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
-                                                    <div className="flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-amber-500/20 backdrop-blur-sm rounded-full">
-                                                        <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-400 fill-amber-400" />
-                                                        <span className="font-bold text-white">{movie.vote_average && movie.vote_average > 0 ? movie.vote_average.toFixed(1) : "New"}</span>
-                                                    </div>
-                                                    <span className="text-gray-400 font-semibold">{movie.release_date?.split('-')[0]}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
-                            {/* Rest in carousel */}
-                            {animatedMovies.length > 5 && <Carousel items={animatedMovies.slice(5)} CardComponent={MovieCard} />}
+                            {/* Use Carousel instead of custom grid */}
+                            <Carousel items={animatedMovies} CardComponent={MovieCard} />
                         </div>
                     </section>
                 )}
 
-                {/* INDIE SPOTLIGHT - Artistic Design */}
+                {/* INDIE SPOTLIGHT - Simplified Design */}
                 {indieMovies.length > 0 && (
-                    <section id="indie-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-950/40 via-slate-950/30 to-black backdrop-blur-sm border border-indigo-500/30 ring-1 ring-white/5 shadow-2xl">
-                        {/* Artistic gradient */}
-                        <div className="absolute top-0 right-0 w-80 sm:w-96 lg:w-[500px] h-80 sm:h-96 lg:h-[500px] bg-gradient-to-bl from-indigo-600/20 to-transparent rounded-full blur-3xl" />
-
-                        {/* Film grain texture effect */}
-                        <div className="absolute inset-0 opacity-5">
-                            <div className="absolute inset-0" style={{
-                                backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 400 400\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")',
-                                backgroundSize: '200px 200px'
-                            }} />
-                        </div>
+                    <section id="indie-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/60 to-black backdrop-blur-sm border border-slate-700/30 ring-1 ring-white/5 shadow-xl">
+                        {/* Subtle gradient */}
+                        <div className="absolute top-0 right-0 w-80 sm:w-96 lg:w-[500px] h-80 sm:h-96 lg:h-[500px] bg-gradient-to-bl from-slate-700/10 to-transparent rounded-full blur-3xl" />
 
                         <div className="relative p-5 sm:p-6 lg:p-8">
                             <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
                                 <div className="relative">
-                                    <div className="absolute inset-0 bg-indigo-500 rounded-xl sm:rounded-2xl blur-xl opacity-50" />
-                                    <div className="relative w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-xl sm:rounded-2xl flex items-center justify-center ring-2 ring-indigo-500/50 shadow-xl">
-                                        <Film className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white" />
+                                    <div className="absolute inset-0 bg-slate-600 rounded-xl sm:rounded-2xl blur-lg opacity-30" />
+                                    <div className="relative w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl sm:rounded-2xl flex items-center justify-center ring-1 ring-slate-600/50 shadow-lg">
+                                        <Film className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-slate-300" />
                                     </div>
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-indigo-400">Indie Spotlight</h2>
+                                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-200">Indie Spotlight</h2>
                                     <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">Hidden gems & festival favorites</p>
                                 </div>
                             </div>
 
-                            {/* Masonry-style Grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4">
-                                {indieMovies.slice(0, 10).map((movie, idx) => {
-                                    return (
-                                        <Link
-                                            key={movie.id}
-                                            href={`/movies/${movie.id}`}
-                                            className="group"
-                                        >
-                                            <div className={`relative aspect-[4/5] rounded-xl sm:rounded-2xl overflow-hidden bg-zinc-900 border border-indigo-500/20 hover:border-indigo-400/50 transition-all shadow-lg`}>
-                                                {movie.poster_path && (
-                                                    <>
-                                                        <Image
-                                                            src={getPosterUrl(movie.poster_path)}
-                                                            alt={movie.title || ""}
-                                                            fill
-                                                            className="object-cover group-hover:scale-110 transition-transform duration-700"
-                                                        />
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-                                                    </>
-                                                )}
+                            <Carousel items={indieMovies} CardComponent={MovieCard} />
 
-                                                {/* Indie Badge */}
-                                                <div className="absolute top-2 left-2 sm:top-3 sm:left-3 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-indigo-500/90 backdrop-blur-sm rounded text-[9px] sm:text-xs font-bold">
-                                                    INDIE
-                                                </div>
-
-                                                {/* Info on hover */}
-                                                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 transform translate-y-2 group-hover:translate-y-0 transition-transform">
-                                                    <h4 className="font-bold text-xs sm:text-sm line-clamp-2 mb-1.5 sm:mb-2 text-white">{movie.title}</h4>
-                                                    <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs">
-                                                        <div className="flex items-center gap-0.5 sm:gap-1">
-                                                            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-400 fill-amber-400" />
-                                                            <span className="font-bold text-white">{movie.vote_average && movie.vote_average > 0 ? movie.vote_average.toFixed(1) : "New"}</span>
-                                                        </div>
-                                                        <span className="text-gray-400 font-semibold">{movie.release_date?.split('-')[0]}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    );
-                                })}
-                            </div>
                         </div>
                     </section>
                 )}
                 {moods && moods.length > 0 && (
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="max-w-7xl mx-auto w-full">
                         <MoodRecommendationsSection moods={moods} mediaType="movie" />
                     </div>
                 )}

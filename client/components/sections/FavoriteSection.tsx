@@ -211,7 +211,7 @@ export default function FavoritesSection({
   if (favorites.length === 0) return null;
 
   return (
-    <section id="favorites" className="relative py-26 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-900 via-black to-gray-900 max-w-7xl mx-auto">
+    <section id="favorites" className="relative py-26 px-4 sm:px-6 lg:px-8  max-w-7xl mx-auto">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>
           <h2

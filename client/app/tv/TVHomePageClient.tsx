@@ -357,9 +357,7 @@ s                                                    ${featuredInWatchlist
 
                 {/* Airing Today */}
                 {airingToday && airingToday.length > 0 && (
-                    <section id="airing-today" className="relative bg-gradient-to-br from-red-950/30 via-orange-950/20 to-transparent backdrop-blur-sm p-6 sm:p-8 lg:p-10 rounded-3xl border border-red-500/20 ring-1 ring-white/5 shadow-2xl overflow-hidden">
-                        {/* Decorative elements */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/10 rounded-full blur-3xl" />
+                    <section id="airing-today" className="relative ">
 
                         <div className="relative flex items-center justify-between mb-8">
                             <div className="flex items-center gap-4">
@@ -442,7 +440,7 @@ s                                                    ${featuredInWatchlist
                                             <div className="flex items-center gap-6">
                                                 <div className="flex items-center gap-2">
                                                     <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-                                                    <span className="font-bold text-lg text-white">{newReleaseTV[0].vote_average?.toFixed(1)}</span>
+                                                    <span className="font-bold text-white">{newReleaseTV[0].vote_average && newReleaseTV[0].vote_average > 0 ? newReleaseTV[0].vote_average.toFixed(1) : "New"}</span>
                                                 </div>
                                                 <span className="text-gray-300 font-semibold">{newReleaseTV[0].release_date}</span>
                                             </div>
@@ -532,10 +530,16 @@ s                                                    ${featuredInWatchlist
                 {/* K-Drama Collection */}
                 {
                     KoreanTV && KoreanTV.length > 0 && (
-                        <section id="korean-tv" className="bg-gradient-to-br from-purple-900/10 to-pink-900/10 p-4 sm:p-6 lg:p-8 rounded-2xl border border-purple-500/10">
+                        <section id="korean-tv" className="relative">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
-                                    <span className="text-3xl">🇰🇷</span>
+                                    <Image
+                                        src="/images/south-korea.png"
+                                        alt="Korean flag"
+                                        width={40}
+                                        height={40}
+                                        className="rounded-full object-cover border border-white/20"
+                                    />
                                     <h2 className="text-2xl sm:text-3xl font-black">K-Drama Collection</h2>
                                 </div>
                             </div>
@@ -658,7 +662,7 @@ s                                                    ${featuredInWatchlist
                     />
                 )}
                 {moods && moods.length > 0 && (
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
+                    <div className="max-w-7xl mx-auto">
                         <MoodRecommendationsSection moods={moods} mediaType="tv" />
                     </div>
                 )}

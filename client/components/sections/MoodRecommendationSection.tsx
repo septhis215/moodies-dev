@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Plus, Info, Share2, Sparkles, RefreshCw, ChevronRight, Shuffle,Bookmark,BookmarkCheck } from 'lucide-react';
+import { Star, Plus, Info, Share2, Sparkles, RefreshCw, ChevronRight, Shuffle, Bookmark, BookmarkCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getMoodRecommendations } from '@/app/tv/action';
 import { useRouter } from 'next/navigation';
@@ -155,31 +155,31 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
         try {
             const inListNow = isInWatchlist(id, kind);
             if (inListNow) {
-            await remove(id, kind);
+                await remove(id, kind);
             } else {
-            await add(id, kind);
+                await add(id, kind);
             }
         } catch (e) {
             console.error('Watchlist toggle failed:', e);
         } finally {
             setWlLoading(prev => {
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
             });
         }
-        };
+    };
 
 
     return (
-        <section id="moods" className="relative px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto overflow-hidden">
+        <section id="moods" className="relative  w-full max-w-7xl mx-auto overflow-hidden">
             {/* Enhanced Animated Background */}
             <div className="absolute inset-0 -z-10">
                 <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl animate-pulse" />
                 <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-fuchsia-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '700ms' }} />
                 <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1400ms' }} />
             </div>
-            
+
 
             {/* Header */}
             <div className="relative mb-12">
@@ -412,107 +412,107 @@ export default function MoodRecommendationsSection({ moods, mediaType }: MoodRec
                                     const isBusy = wlLoading.has(id);
 
                                     return (
-                                    <motion.div
-                                        key={rec.id}
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{
-                                            delay: index * 0.05,
-                                            type: "spring",
-                                            stiffness: 260,
-                                            damping: 20
-                                        }}
-                                    >
-                                        <Link href={`/${rec.mediaType.toLowerCase()}/${rec.tmdbId}`}>
-                                            <div className="group relative block">
-                                                {/* Poster Container */}
-                                                <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-zinc-900 mb-3 shadow-2xl ring-1 ring-white/10 group-hover:ring-2 group-hover:ring-violet-500/50 transition-all duration-300">
-                                                    {rec.posterPath && (
-                                                        <Image
-                                                            src={getPosterUrl(rec.posterPath)}
-                                                            alt={rec.title}
-                                                            fill
-                                                            className="object-cover transition-transform duration-700 group-hover:scale-110"
-                                                        />
-                                                    )}
+                                        <motion.div
+                                            key={rec.id}
+                                            initial={{ opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{
+                                                delay: index * 0.05,
+                                                type: "spring",
+                                                stiffness: 260,
+                                                damping: 20
+                                            }}
+                                        >
+                                            <Link href={`/${rec.mediaType.toLowerCase()}/${rec.tmdbId}`}>
+                                                <div className="group relative block">
+                                                    {/* Poster Container */}
+                                                    <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-zinc-900 mb-3 shadow-2xl ring-1 ring-white/10 group-hover:ring-2 group-hover:ring-violet-500/50 transition-all duration-300">
+                                                        {rec.posterPath && (
+                                                            <Image
+                                                                src={getPosterUrl(rec.posterPath)}
+                                                                alt={rec.title}
+                                                                fill
+                                                                className="object-cover transition-transform duration-700 group-hover:scale-110"
+                                                            />
+                                                        )}
 
-                                                    {/* Enhanced Gradient Overlay */}
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
+                                                        {/* Enhanced Gradient Overlay */}
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
 
-                                                    {/* Match Score Badge - Enhanced */}
-                                                    <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full backdrop-blur-md font-black text-xs shadow-lg ring-1 ring-white/20"
-                                                        style={{
-                                                            background: `linear-gradient(135deg, ${selectedMood.color}F5 0%, ${selectedMood.color}DD 100%)`,
-                                                            color: '#ffffff',
-                                                        }}
-                                                    >
-                                                        ✨ {Math.round(rec.score * 100)}%
-                                                    </div>
+                                                        {/* Match Score Badge - Enhanced */}
+                                                        <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full backdrop-blur-md font-black text-xs shadow-lg ring-1 ring-white/20"
+                                                            style={{
+                                                                background: `linear-gradient(135deg, ${selectedMood.color}F5 0%, ${selectedMood.color}DD 100%)`,
+                                                                color: '#ffffff',
+                                                            }}
+                                                        >
+                                                            ✨ {Math.round(rec.score * 100)}%
+                                                        </div>
 
-                                                    {/* Rating Badge - Enhanced */}
-                                                    <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md font-bold text-xs flex items-center gap-1 shadow-lg ring-1 ring-white/10">
-                                                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                                                        <span className="text-white">{rec.voteAverage && rec.voteAverage > 0 ? rec.voteAverage.toFixed(1) : "New"}</span>
-                                                    </div>
+                                                        {/* Rating Badge - Enhanced */}
+                                                        <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md font-bold text-xs flex items-center gap-1 shadow-lg ring-1 ring-white/10">
+                                                            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                                                            <span className="text-white">{rec.voteAverage && rec.voteAverage > 0 ? rec.voteAverage.toFixed(1) : "New"}</span>
+                                                        </div>
 
-                                                    {/* Hover Actions - Enhanced */}
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                                                        <div className="absolute inset-0 flex flex-col justify-end p-4">
-                                                            {/* Action Buttons */}
-                                                            <div className="flex justify-center gap-2 mb-3">
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    if (!isBusy) toggleWatchlist(rec);
-                                                                    }}
-                                                                    className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn
+                                                        {/* Hover Actions - Enhanced */}
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                                            <div className="absolute inset-0 flex flex-col justify-end p-4">
+                                                                {/* Action Buttons */}
+                                                                <div className="flex justify-center gap-2 mb-3">
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.preventDefault();
+                                                                            if (!isBusy) toggleWatchlist(rec);
+                                                                        }}
+                                                                        className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn
                                                                     ${inList ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-white hover:bg-violet-500'}`}
-                                                                    title={inList ? 'Remove from Watchlist' : 'Add to Watchlist'}
-                                                                >
-                                                                    {isBusy ? (
-                                                                    <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
-                                                                    ) : inList ? (
-                                                                    <BookmarkCheck className="w-5 h-5 text-white" />
-                                                                    ) : (
-                                                                    <Plus className="w-5 h-5 text-black group-hover/btn:text-white transition-colors" />
-                                                                    )}
-                                                                </button>
-                                                                <button
-                                                                    className="w-10 h-10 bg-white hover:bg-violet-500 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn"
-                                                                >
-                                                                    <Info className="w-5 h-5 text-black group-hover/btn:text-white transition-colors" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => { e.preventDefault(); }}
-                                                                    className="w-10 h-10 bg-white hover:bg-violet-500 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn"
-                                                                >
-                                                                    <Share2 className="w-5 h-5 text-black group-hover/btn:text-white transition-colors" />
-                                                                </button>
+                                                                        title={inList ? 'Remove from Watchlist' : 'Add to Watchlist'}
+                                                                    >
+                                                                        {isBusy ? (
+                                                                            <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                                                                        ) : inList ? (
+                                                                            <BookmarkCheck className="w-5 h-5 text-white" />
+                                                                        ) : (
+                                                                            <Plus className="w-5 h-5 text-black group-hover/btn:text-white transition-colors" />
+                                                                        )}
+                                                                    </button>
+                                                                    <button
+                                                                        className="w-10 h-10 bg-white hover:bg-violet-500 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn"
+                                                                    >
+                                                                        <Info className="w-5 h-5 text-black group-hover/btn:text-white transition-colors" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => { e.preventDefault(); }}
+                                                                        className="w-10 h-10 bg-white hover:bg-violet-500 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn"
+                                                                    >
+                                                                        <Share2 className="w-5 h-5 text-black group-hover/btn:text-white transition-colors" />
+                                                                    </button>
+                                                                </div>
+                                                                {/* Reason */}
+                                                                <p className="text-xs text-center text-white font-semibold line-clamp-2 leading-relaxed">
+                                                                    {rec.reason}
+                                                                </p>
                                                             </div>
-                                                            {/* Reason */}
-                                                            <p className="text-xs text-center text-white font-semibold line-clamp-2 leading-relaxed">
-                                                                {rec.reason}
-                                                            </p>
                                                         </div>
                                                     </div>
-                                                </div>
 
-                                                {/* Title and Genres */}
-                                                <div className="px-1">
-                                                    <h4 className="font-bold text-sm text-white line-clamp-2 leading-tight mb-1.5 group-hover:text-violet-400 transition-colors">
-                                                        {rec.title}
-                                                    </h4>
-                                                    {rec.genreNames && rec.genreNames.length > 0 && (
-                                                        <p className="text-xs text-gray-500 font-medium">
-                                                            {rec.genreNames.slice(0, 2).join(' • ')}
-                                                        </p>
-                                                    )}
+                                                    {/* Title and Genres */}
+                                                    <div className="px-1">
+                                                        <h4 className="font-bold text-sm text-white line-clamp-2 leading-tight mb-1.5 group-hover:text-violet-400 transition-colors">
+                                                            {rec.title}
+                                                        </h4>
+                                                        {rec.genreNames && rec.genreNames.length > 0 && (
+                                                            <p className="text-xs text-gray-500 font-medium">
+                                                                {rec.genreNames.slice(0, 2).join(' • ')}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </Link>
-                                    </motion.div>
+                                            </Link>
+                                        </motion.div>
                                     );
-    })}
+                                })}
                             </div>
                         ) : (
                             <div className="flex items-center justify-center py-32">

@@ -47,7 +47,7 @@ export class TvService implements OnModuleInit {
   private readonly token: string;
   private genreMap: Record<number, string> = {};
   private readonly maxConcurrentRequests = 5;
-  private readonly MIN_REQUIRED_ITEMS = 25;
+  private readonly MIN_REQUIRED_ITEMS = 30;
 
   private readonly CACHE_TTL = {
     BASIC_DATA: 60 * 5,
@@ -1364,12 +1364,10 @@ export class TvService implements OnModuleInit {
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
       const maxPages = 20;
-      const nextMonth = new Date();
-      nextMonth.setMonth(nextMonth.getMonth() + 3);
-      const nextMonthStr = nextMonth.toISOString().split('T')[0];
 
       for (let page = 1; page <= maxPages && items.length < minRequired; page++) {
-        const url = `discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&first_air_date.lte=${nextMonthStr}&page=${page}`;
+        const url = `/discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&page=${page}
+`;
 
         const data = await this.tmdb(url);
         const results = data?.results ?? [];
