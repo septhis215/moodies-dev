@@ -129,6 +129,7 @@ export default async function MoviePage({
           <CommonCardCarousel
             title="Something Similar"
             subtitle="Films you may also enjoy"
+            type="movie"
             items={recommendations}
           />
         </div>

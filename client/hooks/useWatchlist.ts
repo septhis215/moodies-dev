@@ -6,6 +6,14 @@ import {
   toggleWatchlist,
   type WatchType,
 } from "@/utils/watchlistClient";
+import { useToast } from "@/app/context/ToastContext";
+
+type ToastMeta = {
+  title?: string | null;
+  posterUrl?: string | null;
+  variant?: "info" | "success" | "warning" | "error";
+  duration?: number;
+};
 
 export function useWatchlist() {
   // local sets for fast lookup
@@ -15,6 +23,8 @@ export function useWatchlist() {
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false); // true after first load
   const [error, setError] = useState<string>("");
+
+  const { toast } = useToast(); // use toast hook
 
   /** initial fetch */
   const refresh = useCallback(async () => {
@@ -59,8 +69,9 @@ export function useWatchlist() {
     [movieIds, seriesIds]
   );
 
+  // add / remove now accept optional meta so callers can provide title/poster
   const add = useCallback(
-    async (tmdbId: string | number, type: WatchType) => {
+    async (tmdbId: string | number, type: WatchType, meta?: ToastMeta) => {
       const id = String(tmdbId);
 
       // optimistic add
@@ -83,6 +94,15 @@ export function useWatchlist() {
               n.delete(id);
               return n;
             });
+        } else {
+          // Success -> show toast (pass title/poster if provided)
+          toast(
+            "Added to your watchlist",
+            meta?.variant ?? "info",
+            meta?.duration ?? 3500,
+            meta?.title ?? null,
+            meta?.posterUrl ?? null
+          );
         }
       } catch (e: any) {
         // rollback on error
@@ -100,18 +120,19 @@ export function useWatchlist() {
           });
 
         if (String(e?.message || e).includes("NO_TOKEN")) {
-          alert("Please log in to use Watchlist");
+          // replaced alert with toast
+          toast("Please log in to use Watchlist", "warning", 3500, null, null);
           return;
         }
         console.error("[useWatchlist] add error:", e);
         throw e;
       }
     },
-    []
+    [toast]
   );
 
   const remove = useCallback(
-    async (tmdbId: string | number, type: WatchType) => {
+    async (tmdbId: string | number, type: WatchType, meta?: ToastMeta) => {
       const id = String(tmdbId);
 
       // optimistic remove
@@ -134,6 +155,15 @@ export function useWatchlist() {
         if (!res.removed) {
           if (type === "movie") setMovieIds((s) => new Set(s).add(id));
           else setSeriesIds((s) => new Set(s).add(id));
+        } else {
+          // Success -> show toast
+          toast(
+            "Removed from your watchlist",
+            meta?.variant ?? "info",
+            meta?.duration ?? 3500,
+            meta?.title ?? null,
+            meta?.posterUrl ?? null
+          );
         }
       } catch (e: any) {
         // rollback on error
@@ -141,14 +171,15 @@ export function useWatchlist() {
         else setSeriesIds((s) => new Set(s).add(id));
 
         if (String(e?.message || e).includes("NO_TOKEN")) {
-          alert("Please log in to use Watchlist");
+          // replaced alert with toast
+          toast("Please log in to use Watchlist", "warning", 3500, null, null);
           return;
         }
         console.error("[useWatchlist] remove error:", e);
         throw e;
       }
     },
-    []
+    [toast]
   );
 
   return {

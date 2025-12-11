@@ -3,6 +3,9 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { useRouter } from "next/navigation";
+import { Bookmark, BookmarkCheck } from "lucide-react";
 
 // Original Content type for internal use
 export type Content = {
@@ -362,16 +365,16 @@ interface HeroContentCardProps {
 
 export function HeroContentCard({ content, data }: HeroContentCardProps) {
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
+  const router = useRouter();
+
+  const { isInWatchlist, add, remove, ready } = useWatchlist();
 
   const contentType = data?.info?.content_type === "tv" ? "tv" : "movies";
-  const tvInfo = contentType ? (data as TvDetailsData).info : null;
-
+  const tvInfo = contentType === "tv" ? (data as TvDetailsData).info : null;
   const trailerKey = data?.trailer?.key;
-
   const contentId = data?.info?.id ?? content?.id ?? null;
   const viewAllRef = contentId ? `/${contentType}/${contentId}/reviews` : "#";
 
-  // If data prop is provided, map it to the Content format
   const mappedContent: Content = React.useMemo(() => {
     if (content) return content;
 
@@ -406,6 +409,48 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
           : undefined,
     };
   }, [content, data]);
+
+  const watchType = contentType === "tv" ? "series" : "movie";
+  const inWatchlist = contentId
+    ? isInWatchlist(String(contentId), watchType)
+    : false;
+  const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
+
+  const handleWatchlistToggle = async () => {
+    if (!contentId) return;
+
+    if (!ready) {
+      router.push("/auth/login");
+      return;
+    }
+
+    setIsTogglingWatchlist(true);
+
+    try {
+      const posterUrl = mappedContent.poster;
+      const title = mappedContent.title;
+
+      if (inWatchlist) {
+        await remove(String(contentId), watchType, {
+          title,
+          posterUrl,
+          variant: "info",
+          duration: 3500,
+        });
+      } else {
+        await add(String(contentId), watchType, {
+          title,
+          posterUrl,
+          variant: "info",
+          duration: 3500,
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling watchlist:", error);
+    } finally {
+      setIsTogglingWatchlist(false);
+    }
+  };
 
   return (
     <>
@@ -611,20 +656,29 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
                     <span>Trailer</span>
                   </button>
 
-                  <button className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-6 py-3 rounded-lg hover:bg-white/20 transition-colors">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-5 h-5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeWidth={1.5}
-                        d="M12 21l-8-4V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12l-8 4z"
-                      />
-                    </svg>
-                    <span>Watchlist</span>
+                  <button
+                    onClick={handleWatchlistToggle}
+                    disabled={isTogglingWatchlist}
+                    className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg transition-all font-medium ${
+                      inWatchlist
+                        ? "bg-green-500/90 border border-green-400/50 text-white hover:bg-green-600/90"
+                        : "bg-white/10 border border-white/20 hover:bg-white/20"
+                    } ${
+                      isTogglingWatchlist
+                        ? "opacity-70 cursor-not-allowed"
+                        : "cursor-pointer"
+                    }`}
+                  >
+                    {isTogglingWatchlist ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : inWatchlist ? (
+                      <BookmarkCheck className="w-5 h-5" />
+                    ) : (
+                      <Bookmark className="w-5 h-5" />
+                    )}
+                    <span>
+                      {inWatchlist ? "In Watchlist" : "Add to Watchlist"}
+                    </span>
                   </button>
 
                   <button className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-6 py-3 rounded-lg hover:bg-white/20 transition-colors">
