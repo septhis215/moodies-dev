@@ -705,7 +705,7 @@ s                                                    ${featuredInWatchlist
 
                 {/* ACTION-PACKED - Toned Down Design */}
                 {actionMovies.length > 0 && (
-                    <section id="action-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-zinc-900/60 to-black backdrop-blur-sm border border-zinc-700/30 ring-1 ring-white/5 shadow-xl">
+                    <section id="action-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-zinc-900/60 to-black backdrop-blur-sm shadow-xl">
                         {/* Subtle background gradient */}
                         <div className="absolute top-0 right-0 w-64 sm:w-80 lg:w-[400px] h-64 sm:h-80 lg:h-[400px] bg-gradient-to-bl from-zinc-700/10 to-transparent rounded-full blur-3xl" />
 
@@ -804,7 +804,7 @@ s                                                    ${featuredInWatchlist
 
                 {/* AWARD WINNERS - Toned Down Design */}
                 {awardWinners.length > 0 && (
-                    <section id="award-winners" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-950/40 via-yellow-950/30 to-black backdrop-blur-sm border border-amber-500/30 ring-1 ring-white/5 shadow-2xl">
+                    <section id="award-winners" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-950/40 via-yellow-950/30 to-black backdrop-blur-sm  shadow-2xl">
                         {/* Radial golden glow */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 sm:w-96 lg:w-[600px] h-80 sm:h-96 lg:h-[600px] bg-gradient-to-r from-amber-600/20 to-yellow-600/20 rounded-full blur-3xl" />
 
@@ -835,7 +835,7 @@ s                                                    ${featuredInWatchlist
 
                 {/* ANIMATED FEATURES - Playful Design */}
                 {animatedMovies.length > 0 && (
-                    <section id="animated-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-purple-950/40 via-pink-950/30 to-blue-950/30 backdrop-blur-sm border border-purple-500/30 ring-1 ring-white/5 shadow-2xl">
+                    <section id="animated-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-purple-950/40 via-pink-950/30 to-blue-950/30 backdrop-blur-sm  shadow-2xl">
                         {/* Colorful gradient orbs */}
                         <div className="absolute top-0 left-0 w-64 sm:w-80 lg:w-96 h-64 sm:h-80 lg:h-96 bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-full blur-3xl animate-pulse" />
                         <div className="absolute bottom-0 right-0 w-64 sm:w-80 lg:w-96 h-64 sm:h-80 lg:h-96 bg-gradient-to-tl from-blue-600/20 to-cyan-600/20 rounded-full blur-3xl animate-pulse delay-1000" />
@@ -872,7 +872,7 @@ s                                                    ${featuredInWatchlist
 
                 {/* INDIE SPOTLIGHT - Simplified Design */}
                 {indieMovies.length > 0 && (
-                    <section id="indie-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/60 to-black backdrop-blur-sm border border-slate-700/30 ring-1 ring-white/5 shadow-xl">
+                    <section id="indie-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/60 to-black backdrop-blur-sm  shadow-xl">
                         {/* Subtle gradient */}
                         <div className="absolute top-0 right-0 w-80 sm:w-96 lg:w-[500px] h-80 sm:h-96 lg:h-[500px] bg-gradient-to-bl from-slate-700/10 to-transparent rounded-full blur-3xl" />
 
