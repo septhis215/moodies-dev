@@ -10,6 +10,12 @@ import {
   IconX,
   IconUsers,
   IconMoodSmile,
+  IconUser,
+  IconSettings,
+  IconLogout,
+  IconLogin,
+  IconUserPlus,
+  IconChevronDown,
 } from "@tabler/icons-react";
 import {
   Navbar,
@@ -23,6 +29,7 @@ import {
 import SearchBar from "./ui/searchbar";
 import Link from "next/link";
 import {
+  Bookmark,
   Infinity,
   List,
   Loader,
@@ -32,6 +39,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthProvider";
+import DropdownPortal from "./ui/dropdownPortal";
 const routes = [
   { name: "Home", href: "/" },
   { name: "Movies", href: "/movies" },
@@ -52,7 +60,8 @@ type User = {
 export function NavbarComponent() {
   const router = useRouter();
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // for the big site menu (menu-portal)
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const createdPortalRef = useRef<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -96,9 +105,49 @@ export function NavbarComponent() {
       { label: "Categories", path: "/moods/categories" },
     ],
   };
+  const dropdownTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const dropdownContentRef = useRef<HTMLDivElement | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+
+  // hover timer to avoid flicker
+  const hoverTimeoutRef = useRef<number | null>(null);
+
+  const openProfile = (immediate = false) => {
+    if (!dropdownTriggerRef.current) return;
+    const rect = dropdownTriggerRef.current.getBoundingClientRect();
+
+    setDropdownPosition({
+      top: rect.bottom + 8,
+      left: rect.right - 224,
+    });
+
+    if (hoverTimeoutRef.current) {
+      window.clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+
+    if (immediate) setIsProfileOpen(true);
+    else setIsProfileOpen(true);
+  };
+
+  const closeProfile = (delay = 120) => {
+    if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = window.setTimeout(() => {
+      setIsProfileOpen(false);
+      hoverTimeoutRef.current = null;
+    }, delay) as unknown as number;
+  };
+
+  const toggleProfile = () => {
+    if (isProfileOpen) {
+      setIsProfileOpen(false);
+    } else {
+      openProfile(true);
+    }
+  };
 
   const logout = () => {
-    setIsOpen(false);
+    setIsProfileOpen(false);
     logoutSilent(); // clears token & user silently
   };
 
@@ -122,11 +171,12 @@ export function NavbarComponent() {
     };
   }, []);
 
-  // close on Escape
+  // close on Escape (still closes both)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setIsOpen(false);
+        setIsProfileOpen(false);
+        setIsMenuOpen(false);
         setIsMobileOpen(false);
         setIsMobileSearchOpen(false);
       }
@@ -135,16 +185,46 @@ export function NavbarComponent() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // lock body scroll while desktop menu is open
+  // lock body scroll while desktop SITE menu is open (NOT the profile dropdown)
   useEffect(() => {
-    if (isOpen) document.body.style.overflow = "hidden";
+    if (isMenuOpen) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
-  }, [isOpen]);
+  }, [isMenuOpen]);
+
+  // close profile on outside click (works across portal boundary)
+  useEffect(() => {
+    const onDocDown = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+
+      if (
+        dropdownTriggerRef.current &&
+        dropdownTriggerRef.current.contains(target)
+      ) {
+        // clicked trigger -> let button click handler handle toggling
+        return;
+      }
+      if (
+        dropdownContentRef.current &&
+        dropdownContentRef.current.contains(target)
+      ) {
+        // clicked inside dropdown content -> keep open
+        return;
+      }
+
+      // otherwise close profile dropdown
+      setIsProfileOpen(false);
+    };
+
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
+  }, []);
+
 
   // The full dropdown panel (rendered into portalRoot)
   const menuNode = (
     <AnimatePresence>
-      {isOpen && (
+      {isMenuOpen && (
         <motion.div
           key="menu-dropdown"
           id="site-menu"
@@ -222,12 +302,11 @@ export function NavbarComponent() {
                     href={r.href}
                     onMouseEnter={() => setActiveRoute(r.href)}
                     onFocus={() => setActiveRoute(r.href)}
-                    onClick={() => setIsOpen(false)}
-                    className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${
-                      activeRoute === r.href
-                        ? "text-[#e94f37]"
-                        : "text-gray-100 hover:text-[#e94f37]"
-                    } pl-3`}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${activeRoute === r.href
+                      ? "text-[#e94f37]"
+                      : "text-gray-100 hover:text-[#e94f37]"
+                      } pl-3`}
                     style={{
                       fontSize: "clamp(0.95rem, 2.8vw, 1.5rem)",
                       paddingTop: "clamp(0.2rem, 0.8vh, 0.35rem)",
@@ -293,7 +372,7 @@ export function NavbarComponent() {
                     <Link
                       key={opt.path}
                       href={opt.path}
-                      onClick={() => setIsOpen(false)}
+                      onClick={() => setIsMenuOpen(false)}
                       className="relative rounded-lg text-gray-200
         hover:text-white transition-all duration-300
         before:absolute before:inset-0 before:rounded-lg before:border
@@ -390,7 +469,7 @@ export function NavbarComponent() {
 
             {/* Close X */}
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={() => setIsMenuOpen(false)}
               aria-label="Close menu"
               className="absolute rounded-full bg-white/10 hover:bg-white/20 focus:outline-none"
               style={{
@@ -415,38 +494,44 @@ export function NavbarComponent() {
   );
 
   return (
-    <Navbar className="fixed top-0 left-0 right-0 z-50">
+    <Navbar className="fixed top-0 left-0 right-0 z-999">
       <NavBody className="hidden lg:flex">
         <NavbarLogo />
 
-        {/* Placeholder - inline nav left empty since menu contains links */}
-        <div />
-
-        <div className="flex items-center gap-3">
+        {/* Navigation Links */}
+        <div className="flex items-center gap-1">
           <Link
-            href="/community"
-            className="hidden md:inline-flex items-center gap-2 text-gray-200 hover:text-white"
+            href="/watchlist"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+            title="Watchlist"
           >
-            <IconUsers size={24} className="!w-6 !h-6" />
-            <span className="sr-only">Community</span>
+            <Bookmark size={20} className="!w-5 !h-5" />
+            <span className="text-sm font-medium">Watchlist</span>
           </Link>
+
           <Link
             href="/feed"
-            className="hidden md:inline-flex items-center gap-2 text-gray-200 hover:text-white"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+            title="Your Feed"
           >
-            <MouseIcon size={24} className="!w-6 !h-6" />
-            <span className="sr-only">Your Feeds</span>
+            <MouseIcon size={20} className="!w-5 !h-5" />
+            <span className="text-sm font-medium">Feed</span>
           </Link>
 
           <Link
             href="/#your-moods"
-            className="hidden md:inline-flex items-center gap-2 text-gray-200 hover:text-white"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+            title="Your Moods"
           >
-            <IconMoodSmile size={24} className="!w-6 !h-6" />
-            <span className="sr-only">Your Moods</span>
+            <IconMoodSmile size={20} className="!w-5 !h-5" />
+            <span className="text-sm font-medium">Moods</span>
           </Link>
+        </div>
 
-          <div className="hidden sm:inline-flex items-center">
+        {/* Right Side Actions */}
+        <div className="flex items-center gap-3">
+          {/* Search Bar */}
+          <div className="inline-flex items-center">
             <SearchBar
               placeholder="Search movies, series..."
               onSearch={(q) => {
@@ -455,15 +540,143 @@ export function NavbarComponent() {
             />
           </div>
 
+          {/* Menu Button */}
           <button
-            aria-expanded={isOpen}
+            aria-expanded={isMenuOpen}
             aria-controls="site-menu"
-            onClick={() => setIsOpen((s) => !s)}
-            className="ml-2 rounded-md border border-[#e94f37]/40 bg-[#e94f37]/10 px-3 py-2 text-white hover:bg-[#e94f37]/20 focus:outline-none focus:ring-2 focus:ring-[#e94f37]"
+            onClick={() => setIsMenuOpen((s) => !s)}
+            className="rounded-lg border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-600 transition-all"
             title="Open menu"
           >
-            <IconMenu2 className="text-[#e94f37]" />
+            <IconMenu2 size={20} />
           </button>
+
+          {/* Divider */}
+          <div className="h-8 w-px bg-slate-700/50" />
+
+          {/* Profile Section */}
+          <div
+            className="relative"
+            onMouseEnter={() => openProfile()}
+            onMouseLeave={() => closeProfile()}
+          >
+            <button
+              ref={dropdownTriggerRef}
+              onClick={toggleProfile}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-all"
+            >
+              {/* Avatar */}
+              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden ring-2 ring-slate-800 group-hover:ring-slate-600 transition-all">
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.username || "User"} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-sm font-bold text-slate-300">
+                    {(user?.username?.[0] || user?.name?.[0] || "G").toUpperCase()}
+                  </span>
+                )}
+              </div>
+
+              {/* User Info */}
+              <div className="hidden xl:block text-left">
+                <div className="text-sm font-semibold text-white leading-tight">
+                  {user?.username ?? user?.name ?? "Guest"}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {isAuthenticated ? "View Profile" : "Sign In"}
+                </div>
+              </div>
+
+              {/* Dropdown Icon */}
+              <IconChevronDown size={16} className="text-gray-400 hidden xl:block" />
+            </button>
+
+            <DropdownPortal>
+              {isProfileOpen && (
+                <div
+                  ref={dropdownContentRef}
+                  onMouseEnter={() => {
+                    // keep open while hovering dropdown content
+                    if (hoverTimeoutRef.current) {
+                      window.clearTimeout(hoverTimeoutRef.current);
+                      hoverTimeoutRef.current = null;
+                    }
+                    setIsProfileOpen(true);
+                  }}
+                  onMouseLeave={() => closeProfile()}
+                  className="fixed z-[999999] w-56 bg-slate-900 border border-slate-800 rounded-xl shadow-xl overflow-hidden backdrop-blur-sm transition-all"
+                  style={{
+                    top: dropdownPosition.top,
+                    left: dropdownPosition.left,
+                  }}
+                >
+                  {/* Header */}
+                  <div className="p-4 border-b border-slate-800">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
+                        {user?.avatarUrl ? (
+                          <img src={user.avatarUrl} alt={user.username || "User"} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-bold text-slate-300">
+                            {(user?.username?.[0] || user?.name?.[0] || "G").toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-white truncate">
+                          {user?.username ?? user?.name ?? "Guest"}
+                        </div>
+                        <div className="text-xs text-gray-400 truncate">
+                          {user?.email || "guest@example.com"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Items */}
+                  <div className="p-2">
+                    {isAuthenticated ? (
+                      <>
+                        <Link href="/profile" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+                          <IconUser size={18} />
+                          <span>My Profile</span>
+                        </Link>
+
+                        <Link href="/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+                          <IconSettings size={18} />
+                          <span>Settings</span>
+                        </Link>
+
+                        <div className="my-2 h-px bg-slate-800" />
+
+                        <button
+                          onClick={() => {
+                            setIsProfileOpen(false);
+                            logout();
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
+                        >
+                          <IconLogout size={18} />
+                          <span>Logout</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link href="/auth/login" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+                          <IconLogin size={18} />
+                          <span>Login</span>
+                        </Link>
+
+                        <Link href="/auth/register" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+                          <IconUserPlus size={18} />
+                          <span>Sign Up</span>
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </DropdownPortal>
+          </div>
         </div>
       </NavBody>
 
@@ -510,12 +723,11 @@ export function NavbarComponent() {
                   href={r.href} // Directly linking to the page URL
                   onMouseEnter={() => setActiveRoute(r.href)}
                   onFocus={() => setActiveRoute(r.href)}
-                  onClick={() => setIsOpen(false)}
-                  className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${
-                    activeRoute === r.href
-                      ? "text-[#e94f37]"
-                      : "text-gray-100 hover:text-[#e94f37]"
-                  } pl-3`}
+                  onClick={() => setIsProfileOpen(false)}
+                  className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${activeRoute === r.href
+                    ? "text-[#e94f37]"
+                    : "text-gray-100 hover:text-[#e94f37]"
+                    } pl-3`}
                   style={{
                     fontSize: "clamp(0.95rem, 2.8vw, 1.5rem)",
                     paddingTop: "clamp(0.2rem, 0.8vh, 0.35rem)",

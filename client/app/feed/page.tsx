@@ -1,5 +1,5 @@
 'use client';
-
+import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -10,6 +10,7 @@ import {
 import { All } from '@/types/all';
 import Link from 'next/link';
 import ActionButtons from '@/components/ui/actionButtons';
+import Image from "next/image";
 
 interface VideoItem {
   id: number;
@@ -483,12 +484,19 @@ export default function VideoFeedPage() {
              z-50 flex items-center px-4 md:px-6
              transition-all duration-300 ease-in-out"   >
         <div className="w-full flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <motion.div whileHover={{ scale: 1.05 }} className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
-            </motion.div>
+          <Link
+            href="/"
+            className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal"
+          >
+            <Image
+              src="/images/moodies.png"
+              alt="logo"
+              width={30}
+              height={30}
+            />
+            <span className="font-medium text-white">Moodies</span>
           </Link>
+
 
           {/* Category Tabs */}
           <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md rounded-xl p-1 border border-white/10">
