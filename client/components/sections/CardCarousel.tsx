@@ -101,20 +101,45 @@ export default function CardCarousel<T extends MovieLike>({
 
   // use parent-provided handlers if present; otherwise use the hook
   const _isInWatchlist = (item: T) =>
-    isInWatchlist ? isInWatchlist(item) : hookIsIn(String(item.id), toWatchType(item));
+    isInWatchlist
+      ? isInWatchlist(item)
+      : hookIsIn(String(item.id), toWatchType(item));
 
   const _addToWatchlist = async (item: T) => {
     if (onAddToWatchlist) return onAddToWatchlist(item);
-    if (!ready) { alert("Please login to use Watchlist"); return; }
-    await add(String(item.id), toWatchType(item));
+    if (!ready) {
+      router.push("/auth/login");
+      return;
+    }
+
+    const title = getTitle(item) ?? null;
+    const posterUrl = posterGetter(item) ?? null;
+
+    await add(String(item.id), toWatchType(item), {
+      title,
+      posterUrl,
+      variant: "info",
+      duration: 3500,
+    });
   };
 
   const _removeFromWatchlist = async (item: T) => {
     if (onRemoveFromWatchlist) return onRemoveFromWatchlist(item);
-    if (!ready) return;
-    await remove(String(item.id), toWatchType(item));
-  };
+    if (!ready) {
+      router.push("/auth/login");
+      return;
+    }
 
+    const title = getTitle(item) ?? null;
+    const posterUrl = posterGetter(item) ?? null;
+
+    await remove(String(item.id), toWatchType(item), {
+      title,
+      posterUrl,
+      variant: "info",
+      duration: 3500,
+    });
+  };
 
   // DOM ref for scroll container
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -272,12 +297,14 @@ export default function CardCarousel<T extends MovieLike>({
     } catch (error) {
       console.error("Error updating watchlist:", error);
       // rollback
-      setWatchlistStates((prev) => ({ ...prev, [itemId]: isCurrentlyInWatchlist }));
+      setWatchlistStates((prev) => ({
+        ...prev,
+        [itemId]: isCurrentlyInWatchlist,
+      }));
     } finally {
       setLoadingStates((prev) => ({ ...prev, [itemId]: false }));
     }
   };
-
 
   const formatVoteCount = (count: number) => {
     if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -315,12 +342,10 @@ export default function CardCarousel<T extends MovieLike>({
     return "";
   };
 
-
   const toWatchType = (item: MovieLike): "movie" | "series" =>
-  (item.media_type ?? item.type) === "tv" || getContentType(item) === "tv"
-    ? "series"
-    : "movie";
-
+    (item.media_type ?? item.type) === "tv" || getContentType(item) === "tv"
+      ? "series"
+      : "movie";
 
   return (
     <>
@@ -393,7 +418,8 @@ export default function CardCarousel<T extends MovieLike>({
             {" "}
             {items.length ? (
               items.map((movie) => {
-                const inWatchlist = _isInWatchlist(movie) ?? watchlistStates[movie.id];
+                const inWatchlist =
+                  _isInWatchlist(movie) ?? watchlistStates[movie.id];
                 const isLoading = loadingStates[movie.id];
                 const contentType = getContentType(movie);
                 const movieTitle = getTitle(movie);

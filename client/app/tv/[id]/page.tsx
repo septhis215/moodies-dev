@@ -172,6 +172,7 @@ export default async function TvPage({
           <CommonCardCarousel
             title="Something Similar"
             subtitle="TV shows you may also enjoy"
+            type="tv"
             items={recommendations}
           />
         </div>

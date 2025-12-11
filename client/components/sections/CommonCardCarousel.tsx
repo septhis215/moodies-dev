@@ -10,12 +10,14 @@ import { Star, Plus, Info, Share2 } from "lucide-react";
 interface CommonCardCarouselProps {
   title: string;
   subtitle?: string;
+  type?: "movie" | "tv";
   items: All[];
 }
 
 export default function CommonCardCarousel({
   title,
   subtitle,
+  type,
   items,
 }: CommonCardCarouselProps) {
   const getPosterUrl = (path?: string) =>
@@ -31,10 +33,11 @@ export default function CommonCardCarousel({
     if (!show) return null;
 
     const isWide = size === "wide";
+    const linkHref = type === "tv" ? `/tv/${show.id}` : `/movies/${show.id}`;
 
     return (
       <div className="group relative h-full">
-        <Link href={`/movies/${show.id}`} className="block h-full">
+        <Link href={linkHref} className="block h-full">
           <div
             className={`relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 ${
               isWide ? "aspect-video" : "aspect-[2/3]"

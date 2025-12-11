@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Star, Trash2 } from "lucide-react";
+import { useToast } from "@/app/context/ToastContext";
 
 /* -------------------- Types -------------------- */
 type Watchlist = { movieId: string[]; seriesId: string[] };
@@ -97,6 +98,7 @@ const imgUrl = (path?: string | null, size = "w500") =>
 /* -------------------- Page -------------------- */
 
 export default function WatchlistPage() {
+  const { toast } = useToast();
   const [data, setData] = useState<Watchlist | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string>("");
@@ -184,6 +186,22 @@ export default function WatchlistPage() {
     const id = String(idNum);
     if (!token) return;
 
+    // Find the item to get its details for the toast
+    const item =
+      kind === "movie"
+        ? movieItems.find((m) => m.id === idNum)
+        : tvItems.find((t) => t.id === idNum);
+
+    const title = item
+      ? kind === "movie"
+        ? (item as TmdbMovie).title
+        : (item as TmdbTv).name
+      : "Item";
+
+    const posterUrl = item?.poster_path
+      ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+      : null;
+
     // optimistic update
     const prev = { data, movieItems, tvItems } as const;
     setBusyIds((s) => [...s, `${kind}:${id}`]);
@@ -224,14 +242,26 @@ export default function WatchlistPage() {
       }
 
       if (!res.ok) {
-        // rollback on failure
         throw new Error(`${res.status} ${res.statusText}`);
       }
+
+      // Show success toast with poster and title
+      toast("Removed from your watchlist", "info", 3500, title, posterUrl);
     } catch (e) {
       // rollback UI
       setData(prev.data);
       setMovieItems(prev.movieItems);
       setTvItems(prev.tvItems);
+
+      // Show error toast
+      toast(
+        `Couldn't remove ${title} from your watchlist. Please try again.`,
+        "error",
+        3500,
+        null,
+        null
+      );
+
       console.error("Remove failed:", e);
     } finally {
       setBusyIds((s) => s.filter((k) => k !== `${kind}:${id}`));
@@ -240,8 +270,8 @@ export default function WatchlistPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto w-full max-w-7xl px-6 py-16">
-        <header className="mb-10">
+      <div className="mx-auto w-full max-w-7xl px-12 py-16">
+        <header className="mb-10 mt-10">
           <h1 className="text-4xl font-black">Your Watchlist</h1>
           <p className="text-gray-400 text-sm font-medium mt-2">
             Movies and series you've saved.
