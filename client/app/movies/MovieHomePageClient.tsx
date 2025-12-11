@@ -1,19 +1,41 @@
 // Enhanced Movies Homepage - MovieHomePageClient.tsx
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import type { All } from '@/types/all';
-import type { ReviewItem } from '@/components/sections/CommunityPicks';
-import { Star, Plus, Info, ChevronRight, ChevronLeft, Flame, Calendar, Heart, Share2, Bookmark, Film, Award, Ticket, MessageSquare, Globe, Users, Sparkles, Trophy, Zap, BookmarkCheck, ThumbsUp } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
+import React, { useState, useEffect } from "react";
+import type { All } from "@/types/all";
+import type { ReviewItem } from "@/components/sections/CommunityPicks";
+import {
+    Star,
+    Plus,
+    Info,
+    ChevronRight,
+    ChevronLeft,
+    Flame,
+    Calendar,
+    Heart,
+    Share2,
+    Bookmark,
+    Film,
+    Award,
+    Ticket,
+    MessageSquare,
+    Globe,
+    Users,
+    Sparkles,
+    Trophy,
+    Zap,
+    BookmarkCheck,
+    ThumbsUp,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ComingSoonSection } from '@/components/sections/ComingSoon';
-import MoodRecommendationsSection from '@/components/sections/MoodRecommendationSection';
+import { ComingSoonSection } from "@/components/sections/ComingSoon";
+import MoodRecommendationsSection from "@/components/sections/MoodRecommendationSection";
 import { useScrollToHash } from "@/hooks/useScrollToHash";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
-import { Carousel } from '@/components/ui/Carousel';
+import { Carousel } from "@/components/ui/Carousel";
 export default function MoviesHomePageClient({
     trendingMovies,
     popularMovies,
@@ -28,7 +50,6 @@ export default function MoviesHomePageClient({
     actionMovies,
     moods,
     newReleaseMovies,
-
 }: {
     trendingMovies: All[];
     popularMovies: All[];
@@ -44,7 +65,6 @@ export default function MoviesHomePageClient({
     moods?: any[];
     newReleaseMovies: All[];
 }) {
-
     const router = useRouter();
     const { add, remove, isInWatchlist, ready } = useWatchlist();
     const [wlLoading, setWlLoading] = useState(false);
@@ -63,16 +83,26 @@ export default function MoviesHomePageClient({
     useEffect(() => {
         if (!heroMovies.length) return;
         const id = setInterval(() => {
-            setHeroIndex((i) => (heroMovies.length ? (i + 1) % heroMovies.length : 0));
+            setHeroIndex((i) =>
+                heroMovies.length ? (i + 1) % heroMovies.length : 0
+            );
         }, 8000);
         return () => clearInterval(id);
     }, [heroMovies.length]);
 
-    const MovieCard = ({ show, size = "default" }: { show?: All; size?: "default" | "large" | "wide" }) => {
+    const MovieCard = ({
+        show,
+        size = "default",
+    }: {
+        show?: All;
+        size?: "default" | "large" | "wide";
+    }) => {
         if (!show) return null; // safety check
 
         const isWide = size === "wide";
         const isLarge = size === "large";
+
+        const inWL = isInWatchlist(String(show.id), "movie");
 
         return (
             <div className="group relative h-full">
@@ -82,7 +112,11 @@ export default function MoviesHomePageClient({
                             }`}
                     >
                         <Image
-                            src={isWide ? getImageUrl(show.backdrop_path) : getPosterUrl(show.poster_path)}
+                            src={
+                                isWide
+                                    ? getImageUrl(show.backdrop_path)
+                                    : getPosterUrl(show.poster_path)
+                            }
                             alt={show.title || show.name || ""}
                             fill
                             className="group-hover:scale-110 transition-transform duration-700 object-cover"
@@ -102,11 +136,49 @@ export default function MoviesHomePageClient({
                             <div className="absolute bottom-0 left-0 right-0 p-4">
                                 <div className="flex justify-center gap-2 mb-3">
                                     <button
-                                        onClick={(e) => { e.preventDefault(); }}
-                                        className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
-                                        title="Add to List"
+                                        onClick={async (e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (!ready) {
+                                                router.push("/auth/login");
+                                                return;
+                                            }
+                                            setWlLoading(true);
+                                            try {
+                                                const title = show?.title ?? show?.name ?? null;
+                                                const posterUrl = show?.poster_path
+                                                    ? getPosterUrl(show.poster_path)
+                                                    : null;
+                                                if (inWL) {
+                                                    await remove(String(show.id), "movie", {
+                                                        title,
+                                                        posterUrl,
+                                                    });
+                                                } else {
+                                                    await add(String(show.id), "movie", {
+                                                        title,
+                                                        posterUrl,
+                                                    });
+                                                }
+                                            } catch (err) {
+                                                console.error("toggle watchlist error", err);
+                                            } finally {
+                                                setWlLoading(false);
+                                            }
+                                        }}
+                                        aria-pressed={inWL}
+                                        title={inWL ? "Remove from List" : "Add to List"}
+                                        className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl
+                      ${inWL
+                                                ? "bg-emerald-500 ring-emerald-300/40 text-white"
+                                                : "bg-white text-black"
+                                            }`}
                                     >
-                                        <Plus className="w-5 h-5 text-black" />
+                                        {inWL ? (
+                                            <BookmarkCheck className="w-5 h-5 text-white" />
+                                        ) : (
+                                            <Plus className="w-5 h-5 text-black" />
+                                        )}
                                     </button>
 
                                     <button
@@ -117,7 +189,9 @@ export default function MoviesHomePageClient({
                                     </button>
 
                                     <button
-                                        onClick={(e) => { e.preventDefault(); }}
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                        }}
                                         className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
                                         title="Share"
                                     >
@@ -133,11 +207,18 @@ export default function MoviesHomePageClient({
                             {show.title || show.name}
                         </h4>
                         <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-400">
-                            {show.first_air_date && <span className="font-semibold">{show.first_air_date.split("-")[0]}</span>}
+                            {show.first_air_date && (
+                                <span className="font-semibold">
+                                    {show.first_air_date.split("-")[0]}
+                                </span>
+                            )}
                             {show.number_of_seasons && (
                                 <>
                                     <span>•</span>
-                                    <span className="font-semibold">{show.number_of_seasons} Season{show.number_of_seasons > 1 ? 's' : ''}</span>
+                                    <span className="font-semibold">
+                                        {show.number_of_seasons} Season
+                                        {show.number_of_seasons > 1 ? "s" : ""}
+                                    </span>
                                 </>
                             )}
                         </div>
@@ -147,22 +228,30 @@ export default function MoviesHomePageClient({
         );
     };
 
-    const featuredInWatchlist =
-        featured?.id ? isInWatchlist(String(featured.id), "movie") : false;
+    const featuredInWatchlist = featured?.id
+        ? isInWatchlist(String(featured.id), "movie")
+        : false;
 
     const handleFeaturedWatchlist = async () => {
         if (!featured?.id) return;
         if (!ready) {
-            // not logged in -> send user to login or show a toast if you prefer
+            // not logged in -> send user to login
             router.push("/auth/login");
             return;
         }
         setWlLoading(true);
         try {
+            const title = featured?.title ?? featured?.name ?? null;
+            const posterUrl = featured?.poster_path
+                ? getPosterUrl(featured.poster_path)
+                : featured?.backdrop_path
+                    ? getImageUrl(featured.backdrop_path)
+                    : null;
+
             if (featuredInWatchlist) {
-                await remove(String(featured.id), "movie");
+                await remove(String(featured.id), "movie", { title, posterUrl });
             } else {
-                await add(String(featured.id), "movie");
+                await add(String(featured.id), "movie", { title, posterUrl });
             }
         } catch (e) {
             console.error("Watchlist toggle failed:", e);
@@ -209,12 +298,15 @@ export default function MoviesHomePageClient({
                             <div className="relative flex-1 w-full h-full rounded-2xl overflow-hidden ring-1 ring-white/5">
                                 <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 p-3">
                                     {Array.from({ length: 18 }).map((_, i) => {
-                                        const s = heroMovies[(heroIndex + i) % heroMovies.length] || {};
+                                        const s =
+                                            heroMovies[(heroIndex + i) % heroMovies.length] || {};
                                         const isActive = featured?.id === s.id;
                                         return (
                                             <button
                                                 key={i}
-                                                onClick={() => setHeroIndex((heroIndex + i) % heroMovies.length)}
+                                                onClick={() =>
+                                                    setHeroIndex((heroIndex + i) % heroMovies.length)
+                                                }
                                                 className={`rounded-xl overflow-hidden border-2 transform transition-all duration-300
                                                 hover:scale-105 hover:z-10 focus:outline-none
                                                 ${isActive
@@ -294,7 +386,9 @@ export default function MoviesHomePageClient({
                                                 <div className="flex items-center gap-1.5 px-4 py-2 bg-amber-500/20 backdrop-blur-sm rounded-full ring-1 ring-amber-500/30">
                                                     <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                                                     <span className="text-xs font-bold text-white">
-                                                        {featured.vote_average > 0 ? featured.vote_average.toFixed(1) : "New"}
+                                                        {featured.vote_average > 0
+                                                            ? featured.vote_average.toFixed(1)
+                                                            : "New"}
                                                     </span>
                                                 </div>
                                             )}
@@ -310,7 +404,11 @@ s                                                    ${featuredInWatchlist
                                                         ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
                                                         : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
                                                     }`}
-                                                title={featuredInWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                                                title={
+                                                    featuredInWatchlist
+                                                        ? "Remove from Watchlist"
+                                                        : "Add to Watchlist"
+                                                }
                                             >
                                                 {wlLoading ? (
                                                     <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
@@ -341,8 +439,6 @@ s                                                    ${featuredInWatchlist
                                                     View Details
                                                 </button>
                                             </Link>
-
-
                                         </div>
                                     </div>
                                 </motion.div>
@@ -362,7 +458,9 @@ s                                                    ${featuredInWatchlist
                                 <div className="absolute inset-0 bg-amber-500 blur-xl opacity-50" />
                                 <Ticket className="relative w-9 h-9 text-amber-400" />
                             </div>
-                            <h2 className="text-3xl sm:text-4xl font-black text-white">Box Office Hits</h2>
+                            <h2 className="text-3xl sm:text-4xl font-black text-white">
+                                Box Office Hits
+                            </h2>
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {popularMovies.slice(0, 4).map((movie, idx) => (
@@ -381,16 +479,24 @@ s                                                    ${featuredInWatchlist
                                         )}
 
                                         <div className="absolute inset-0 p-8 flex flex-col justify-end">
-                                            <div className="text-8xl font-black text-white/5 absolute top-6 right-6">#{idx + 1}</div>
+                                            <div className="text-8xl font-black text-white/5 absolute top-6 right-6">
+                                                #{idx + 1}
+                                            </div>
                                             <h3 className="text-3xl font-black mb-3 group-hover:text-[#e94f37] transition-colors text-white">
                                                 {movie.title}
                                             </h3>
                                             <div className="flex items-center gap-4 text-sm">
                                                 <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 backdrop-blur-sm rounded-full">
                                                     <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                                                    <span className="font-bold text-white">{movie.vote_average && movie.vote_average > 0 ? movie.vote_average.toFixed(1) : "New"}</span>
+                                                    <span className="font-bold text-white">
+                                                        {movie.vote_average && movie.vote_average > 0
+                                                            ? movie.vote_average.toFixed(1)
+                                                            : "New"}
+                                                    </span>
                                                 </div>
-                                                <span className="text-gray-300 font-semibold">{movie.release_date?.split('-')[0]}</span>
+                                                <span className="text-gray-300 font-semibold">
+                                                    {movie.release_date?.split("-")[0]}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -408,11 +514,16 @@ s                                                    ${featuredInWatchlist
                                 <div className="absolute inset-0 bg-cyan-400 blur-xl opacity-50" />
                                 <Sparkles className="relative w-9 h-9 text-cyan-400" />
                             </div>
-                            <h2 className="text-3xl sm:text-4xl font-black text-white">New Releases</h2>
+                            <h2 className="text-3xl sm:text-4xl font-black text-white">
+                                New Releases
+                            </h2>
                         </div>
                         <div className="grid grid-cols-12 gap-5">
                             {newReleaseMovies[0] && (
-                                <Link href={`/movies/${newReleaseMovies[0].id}`} className="col-span-12 lg:col-span-8 group">
+                                <Link
+                                    href={`/movies/${newReleaseMovies[0].id}`}
+                                    className="col-span-12 lg:col-span-8 group"
+                                >
                                     <div className="relative h-96 lg:h-[500px] rounded-3xl overflow-hidden bg-zinc-900 ring-1 ring-white/10 shadow-2xl">
                                         {newReleaseMovies[0].backdrop_path && (
                                             <>
@@ -431,16 +542,25 @@ s                                                    ${featuredInWatchlist
                                                 <Sparkles className="w-4 h-4" />
                                                 NEW RELEASE
                                             </div>
-                                            <h3 className="text-4xl font-black mb-4 line-clamp-2 text-white">{newReleaseMovies[0].title}</h3>
+                                            <h3 className="text-4xl font-black mb-4 line-clamp-2 text-white">
+                                                {newReleaseMovies[0].title}
+                                            </h3>
                                             <p className="text-gray-200 line-clamp-2 mb-6 max-w-3xl text-lg leading-relaxed">
                                                 {newReleaseMovies[0].overview}
                                             </p>
                                             <div className="flex items-center gap-6">
                                                 <div className="flex items-center gap-2">
                                                     <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-                                                    <span className="font-bold text-lg text-white">{newReleaseMovies[0].vote_average && newReleaseMovies[0].vote_average > 0 ? newReleaseMovies[0].vote_average.toFixed(1) : "New"}</span>
+                                                    <span className="font-bold text-lg text-white">
+                                                        {newReleaseMovies[0].vote_average &&
+                                                            newReleaseMovies[0].vote_average > 0
+                                                            ? newReleaseMovies[0].vote_average.toFixed(1)
+                                                            : "New"}
+                                                    </span>
                                                 </div>
-                                                <span className="text-gray-300 font-semibold">{newReleaseMovies[0].release_date}</span>
+                                                <span className="text-gray-300 font-semibold">
+                                                    {newReleaseMovies[0].release_date}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -448,7 +568,11 @@ s                                                    ${featuredInWatchlist
                             )}
                             <div className="col-span-12 lg:col-span-4 grid grid-cols-2 lg:grid-cols-1 gap-5">
                                 {newReleaseMovies.slice(1, 3).map((movie) => (
-                                    <Link key={movie.id} href={`/movies/${movie.id}`} className="group">
+                                    <Link
+                                        key={movie.id}
+                                        href={`/movies/${movie.id}`}
+                                        className="group"
+                                    >
                                         <div className="relative h-48 lg:h-[238px] rounded-2xl overflow-hidden bg-zinc-900 ring-1 ring-white/10 shadow-xl">
                                             {movie.backdrop_path && (
                                                 <>
@@ -469,9 +593,15 @@ s                                                    ${featuredInWatchlist
                                                 <div className="flex items-center gap-3 text-sm">
                                                     <div className="flex items-center gap-1">
                                                         <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                                                        <span className="font-bold text-white">{movie.vote_average && movie.vote_average > 0 ? movie.vote_average.toFixed(1) : "New"}</span>
+                                                        <span className="font-bold text-white">
+                                                            {movie.vote_average && movie.vote_average > 0
+                                                                ? movie.vote_average.toFixed(1)
+                                                                : "New"}
+                                                        </span>
                                                     </div>
-                                                    <span className="text-gray-400 font-semibold">{movie.release_date?.split('-')[0]}</span>
+                                                    <span className="text-gray-400 font-semibold">
+                                                        {movie.release_date?.split("-")[0]}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -495,7 +625,9 @@ s                                                    ${featuredInWatchlist
                                 <div className="absolute inset-0 bg-[#e94f37] blur-xl opacity-50" />
                                 <Flame className="relative w-7 h-7 sm:w-8 sm:h-8 text-[#e94f37]" />
                             </div>
-                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">Trending Now</h2>
+                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">
+                                Trending Now
+                            </h2>
                         </div>
                         <Carousel items={trendingMovies} CardComponent={MovieCard} />
                     </section>
@@ -515,8 +647,12 @@ s                                                    ${featuredInWatchlist
                                 />
                             </div>
                             <div>
-                                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">Korean Cinema</h2>
-                                <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1 font-medium">Award-winning storytelling</p>
+                                <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">
+                                    Korean Cinema
+                                </h2>
+                                <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1 font-medium">
+                                    Award-winning storytelling
+                                </p>
                             </div>
                         </div>
                         <Carousel items={koreanMovies} CardComponent={MovieCard} />
@@ -530,8 +666,12 @@ s                                                    ${featuredInWatchlist
                             <Users className="relative w-7 h-7 sm:w-8 sm:h-8 text-purple-400" />
                         </div>
                         <div>
-                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">Community Pulse</h2>
-                            <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">What the community loves right now</p>
+                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">
+                                Community Pulse
+                            </h2>
+                            <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">
+                                What the community loves right now
+                            </p>
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
@@ -558,7 +698,9 @@ s                                                    ${featuredInWatchlist
                                 iconBg: "bg-blue-500/20",
                                 textColor: "text-blue-400",
                                 hoverColor: "group-hover:text-blue-400",
-                                statIcon: <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5" />,
+                                statIcon: (
+                                    <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                                ),
                             },
                             {
                                 title: "Most Saved",
@@ -573,16 +715,25 @@ s                                                    ${featuredInWatchlist
                                 statIcon: <Bookmark className="w-3 h-3 sm:w-3.5 sm:h-3.5" />,
                             },
                         ].map((section, idx) => (
-                            <div key={idx} className={`bg-gradient-to-br ${section.gradient} border ${section.border} rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 backdrop-blur-sm ring-1 ring-white/5 shadow-xl`}>
+                            <div
+                                key={idx}
+                                className={`bg-gradient-to-br ${section.gradient} border ${section.border} rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 backdrop-blur-sm ring-1 ring-white/5 shadow-xl`}
+                            >
                                 {/* Header */}
                                 <div className="flex items-center justify-between mb-5 sm:mb-6">
                                     <div className="flex items-center gap-2 sm:gap-3">
-                                        <div className={`w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 ${section.iconBg} rounded-lg sm:rounded-xl flex items-center justify-center ${section.textColor} ring-1 ring-white/10 shadow-lg`}>
+                                        <div
+                                            className={`w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 ${section.iconBg} rounded-lg sm:rounded-xl flex items-center justify-center ${section.textColor} ring-1 ring-white/10 shadow-lg`}
+                                        >
                                             {section.icon}
                                         </div>
                                         <div>
-                                            <h3 className="font-black text-base sm:text-lg text-white">{section.title}</h3>
-                                            <p className="text-[10px] sm:text-xs text-gray-400 font-medium mt-0.5">{section.subtitle}</p>
+                                            <h3 className="font-black text-base sm:text-lg text-white">
+                                                {section.title}
+                                            </h3>
+                                            <p className="text-[10px] sm:text-xs text-gray-400 font-medium mt-0.5">
+                                                {section.subtitle}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -592,21 +743,39 @@ s                                                    ${featuredInWatchlist
                                     {section.data.slice(0, 5).map((m, i) => {
                                         // Generate mock stats based on movie data
                                         const mockStats = {
-                                            likes: Math.floor(m.vote_average * 0.7) || Math.floor(Math.random() * 5000) + 1000,
-                                            reviews: Math.floor(m.vote_average * 0.3) || Math.floor(Math.random() * 2000) + 500,
-                                            saves: Math.floor(m.popularity * 100) || Math.floor(Math.random() * 3000) + 800,
+                                            likes:
+                                                Math.floor(m.vote_average * 0.7) ||
+                                                Math.floor(Math.random() * 5000) + 1000,
+                                            reviews:
+                                                Math.floor(m.vote_average * 0.3) ||
+                                                Math.floor(Math.random() * 2000) + 500,
+                                            saves:
+                                                Math.floor(m.popularity * 100) ||
+                                                Math.floor(Math.random() * 3000) + 800,
                                         };
 
                                         const getStat = () => {
-                                            if (idx === 0) return `${(mockStats.likes / 1000).toFixed(1)}K likes`;
-                                            if (idx === 1) return `${(mockStats.reviews / 1000).toFixed(1)}K reviews`;
+                                            if (idx === 0)
+                                                return `${(mockStats.likes / 1000).toFixed(1)}K likes`;
+                                            if (idx === 1)
+                                                return `${(mockStats.reviews / 1000).toFixed(
+                                                    1
+                                                )}K reviews`;
                                             return `${(mockStats.saves / 1000).toFixed(1)}K saves`;
                                         };
 
                                         return (
-                                            <Link key={m.id} href={`/movies/${m.id}`} className="flex items-center gap-2 sm:gap-3 group">
+                                            <Link
+                                                key={m.id}
+                                                href={`/movies/${m.id}`}
+                                                className="flex items-center gap-2 sm:gap-3 group"
+                                            >
                                                 {/* Rank Number */}
-                                                <span className={`text-2xl sm:text-3xl font-black ${section.textColor} opacity-30 w-6 sm:w-8 flex-shrink-0`}>{i + 1}</span>
+                                                <span
+                                                    className={`text-2xl sm:text-3xl font-black ${section.textColor} opacity-30 w-6 sm:w-8 flex-shrink-0`}
+                                                >
+                                                    {i + 1}
+                                                </span>
 
                                                 {/* Poster */}
                                                 <div className="relative w-12 h-16 sm:w-14 sm:h-20 rounded-md sm:rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-white/10 shadow-lg">
@@ -622,21 +791,33 @@ s                                                    ${featuredInWatchlist
 
                                                 {/* Info */}
                                                 <div className="flex-1 min-w-0">
-                                                    <div className={`font-bold text-xs sm:text-sm text-white line-clamp-2 mb-1 ${section.hoverColor} transition-colors`}>
+                                                    <div
+                                                        className={`font-bold text-xs sm:text-sm text-white line-clamp-2 mb-1 ${section.hoverColor} transition-colors`}
+                                                    >
                                                         {m.title}
                                                     </div>
                                                     <div className="flex items-center gap-2 text-[10px] sm:text-xs">
                                                         <div className="flex items-center gap-0.5 sm:gap-1">
                                                             <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-400 fill-yellow-400" />
-                                                            <span className="font-bold text-white">{m.vote_average && m.vote_average > 0 ? m.vote_average.toFixed(1) : "New"}</span>
+                                                            <span className="font-bold text-white">
+                                                                {m.vote_average && m.vote_average > 0
+                                                                    ? m.vote_average.toFixed(1)
+                                                                    : "New"}
+                                                            </span>
                                                         </div>
                                                         <span className="text-gray-500">•</span>
-                                                        <span className="text-gray-400 font-semibold">{m.release_date?.split('-')[0]}</span>
+                                                        <span className="text-gray-400 font-semibold">
+                                                            {m.release_date?.split("-")[0]}
+                                                        </span>
                                                     </div>
                                                     {/* Supporting Stat */}
-                                                    <div className={`flex items-center gap-1 mt-1.5 sm:mt-2 ${section.textColor}`}>
+                                                    <div
+                                                        className={`flex items-center gap-1 mt-1.5 sm:mt-2 ${section.textColor}`}
+                                                    >
                                                         {section.statIcon}
-                                                        <span className="text-[10px] sm:text-xs font-bold">{getStat()}</span>
+                                                        <span className="text-[10px] sm:text-xs font-bold">
+                                                            {getStat()}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </Link>
@@ -645,13 +826,44 @@ s                                                    ${featuredInWatchlist
                                 </div>
 
                                 {/* Footer Stats Summary */}
-                                <div className={`mt-5 sm:mt-6 pt-4 sm:pt-5 border-t ${section.border}`}>
+                                <div
+                                    className={`mt-5 sm:mt-6 pt-4 sm:pt-5 border-t ${section.border}`}
+                                >
                                     <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                                        <span className="text-gray-400 font-medium">Total engagement</span>
+                                        <span className="text-gray-400 font-medium">
+                                            Total engagement
+                                        </span>
                                         <span className={`font-bold ${section.textColor}`}>
-                                            {idx === 0 && `${(section.data.slice(0, 5).reduce((acc, m) => acc + (m.vote_average || 0), 0) * 0.7 / 1000).toFixed(0)}K+`}
-                                            {idx === 1 && `${(section.data.slice(0, 5).reduce((acc, m) => acc + (m.vote_average || 0), 0) * 0.3 / 1000).toFixed(0)}K+`}
-                                            {idx === 2 && `${(section.data.slice(0, 5).reduce((acc, m) => acc + (m.popularity || 0), 0) * 100 / 1000).toFixed(0)}K+`}
+                                            {idx === 0 &&
+                                                `${(
+                                                    (section.data
+                                                        .slice(0, 5)
+                                                        .reduce(
+                                                            (acc, m) => acc + (m.vote_average || 0),
+                                                            0
+                                                        ) *
+                                                        0.7) /
+                                                    1000
+                                                ).toFixed(0)}K+`}
+                                            {idx === 1 &&
+                                                `${(
+                                                    (section.data
+                                                        .slice(0, 5)
+                                                        .reduce(
+                                                            (acc, m) => acc + (m.vote_average || 0),
+                                                            0
+                                                        ) *
+                                                        0.3) /
+                                                    1000
+                                                ).toFixed(0)}K+`}
+                                            {idx === 2 &&
+                                                `${(
+                                                    (section.data
+                                                        .slice(0, 5)
+                                                        .reduce((acc, m) => acc + (m.popularity || 0), 0) *
+                                                        100) /
+                                                    1000
+                                                ).toFixed(0)}K+`}
                                         </span>
                                     </div>
                                 </div>
@@ -677,20 +889,29 @@ s                                                    ${featuredInWatchlist
                                 <div className="absolute inset-0 bg-rose-500 blur-xl opacity-50" />
                                 <Heart className="relative w-7 h-7 sm:w-8 sm:h-8 text-rose-400" />
                             </div>
-                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">Critics Corner</h2>
+                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">
+                                Critics Corner
+                            </h2>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
                             {movieReviews.slice(0, 6).map((review, idx) => (
-                                <div key={idx} className="bg-gradient-to-br from-zinc-900/80 to-zinc-950/80 backdrop-blur-sm border border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 hover:border-rose-500/50 transition-all ring-1 ring-white/5 shadow-xl">
+                                <div
+                                    key={idx}
+                                    className="bg-gradient-to-br from-zinc-900/80 to-zinc-950/80 backdrop-blur-sm border border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 hover:border-rose-500/50 transition-all ring-1 ring-white/5 shadow-xl"
+                                >
                                     <div className="flex items-start gap-2 sm:gap-3 mb-3 sm:mb-4">
                                         <div className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-rose-500/20 rounded-full flex items-center justify-center flex-shrink-0 ring-1 ring-rose-500/30">
                                             <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="font-bold text-xs sm:text-sm line-clamp-1 text-white">{review.title || review.name}</h4>
+                                            <h4 className="font-bold text-xs sm:text-sm line-clamp-1 text-white">
+                                                {review.title || review.name}
+                                            </h4>
                                             <div className="flex items-center gap-1 mt-1">
                                                 <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                                <span className="text-xs font-bold text-white">{review.rating?.toFixed(1) || "—"}</span>
+                                                <span className="text-xs font-bold text-white">
+                                                    {review.rating?.toFixed(1) || "—"}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -705,7 +926,10 @@ s                                                    ${featuredInWatchlist
 
                 {/* ACTION-PACKED - Toned Down Design */}
                 {actionMovies.length > 0 && (
-                    <section id="action-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-zinc-900/60 to-black backdrop-blur-sm shadow-xl">
+                    <section
+                        id="action-movies"
+                        className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-zinc-900/60 to-black backdrop-blur-sm border border-zinc-700/30 ring-1 ring-white/5 shadow-xl"
+                    >
                         {/* Subtle background gradient */}
                         <div className="absolute top-0 right-0 w-64 sm:w-80 lg:w-[400px] h-64 sm:h-80 lg:h-[400px] bg-gradient-to-bl from-zinc-700/10 to-transparent rounded-full blur-3xl" />
 
@@ -727,7 +951,10 @@ s                                                    ${featuredInWatchlist
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
                                 {/* Featured Card */}
                                 {actionMovies[0] && (
-                                    <Link href={`/movies/${actionMovies[0].id}`} className="lg:col-span-2 group">
+                                    <Link
+                                        href={`/movies/${actionMovies[0].id}`}
+                                        className="lg:col-span-2 group"
+                                    >
                                         <div className="relative aspect-[16/9] rounded-xl sm:rounded-2xl overflow-hidden bg-black ring-1 ring-zinc-700/30 shadow-lg">
                                             {actionMovies[0].backdrop_path && (
                                                 <>
@@ -747,11 +974,14 @@ s                                                    ${featuredInWatchlist
                                                 <div className="flex items-center gap-2 mt-2">
                                                     <div className="flex items-center gap-1 px-2 py-1 bg-amber-500/20 rounded-full text-xs font-bold">
                                                         <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                                        {actionMovies[0].vote_average && actionMovies[0].vote_average > 0
+                                                        {actionMovies[0].vote_average &&
+                                                            actionMovies[0].vote_average > 0
                                                             ? actionMovies[0].vote_average.toFixed(1)
                                                             : "New"}
                                                     </div>
-                                                    <span className="text-gray-400 text-xs">{actionMovies[0].release_date?.split("-")[0]}</span>
+                                                    <span className="text-gray-400 text-xs">
+                                                        {actionMovies[0].release_date?.split("-")[0]}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -761,7 +991,11 @@ s                                                    ${featuredInWatchlist
                                 {/* Side List (2–5) */}
                                 <div className="space-y-3 sm:space-y-4">
                                     {actionMovies.slice(1, 5).map((movie, idx) => (
-                                        <Link key={movie.id} href={`/movies/${movie.id}`} className="group flex gap-3 bg-zinc-900/60 rounded-xl p-3 hover:border-zinc-600/60 border border-zinc-700/30 transition">
+                                        <Link
+                                            key={movie.id}
+                                            href={`/movies/${movie.id}`}
+                                            className="group flex gap-3 bg-zinc-900/60 rounded-xl p-3 hover:border-zinc-600/60 border border-zinc-700/30 transition"
+                                        >
                                             <div className="relative w-14 h-18 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-zinc-700/30">
                                                 {movie.poster_path && (
                                                     <Image
@@ -804,7 +1038,10 @@ s                                                    ${featuredInWatchlist
 
                 {/* AWARD WINNERS - Toned Down Design */}
                 {awardWinners.length > 0 && (
-                    <section id="award-winners" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-950/40 via-yellow-950/30 to-black backdrop-blur-sm  shadow-2xl">
+                    <section
+                        id="award-winners"
+                        className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-950/40 via-yellow-950/30 to-black backdrop-blur-sm border border-amber-500/30 ring-1 ring-white/5 shadow-2xl"
+                    >
                         {/* Radial golden glow */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 sm:w-96 lg:w-[600px] h-80 sm:h-96 lg:h-[600px] bg-gradient-to-r from-amber-600/20 to-yellow-600/20 rounded-full blur-3xl" />
 
@@ -824,28 +1061,36 @@ s                                                    ${featuredInWatchlist
                                     <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-300 bg-clip-text text-transparent">
                                         Award Winners
                                     </h2>
-                                    <p className="text-xs sm:text-sm text-gray-300 mt-1 sm:mt-2 font-semibold hidden sm:block">Critically acclaimed masterpieces</p>
+                                    <p className="text-xs sm:text-sm text-gray-300 mt-1 sm:mt-2 font-semibold hidden sm:block">
+                                        Critically acclaimed masterpieces
+                                    </p>
                                 </div>
                             </div>
                             <Carousel items={awardWinners} CardComponent={MovieCard} />
-
                         </div>
                     </section>
                 )}
 
                 {/* ANIMATED FEATURES - Playful Design */}
                 {animatedMovies.length > 0 && (
-                    <section id="animated-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-purple-950/40 via-pink-950/30 to-blue-950/30 backdrop-blur-sm  shadow-2xl">
+                    <section
+                        id="animated-movies"
+                        className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-purple-950/40 via-pink-950/30 to-blue-950/30 backdrop-blur-sm border border-purple-500/30 ring-1 ring-white/5 shadow-2xl"
+                    >
                         {/* Colorful gradient orbs */}
                         <div className="absolute top-0 left-0 w-64 sm:w-80 lg:w-96 h-64 sm:h-80 lg:h-96 bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-full blur-3xl animate-pulse" />
                         <div className="absolute bottom-0 right-0 w-64 sm:w-80 lg:w-96 h-64 sm:h-80 lg:h-96 bg-gradient-to-tl from-blue-600/20 to-cyan-600/20 rounded-full blur-3xl animate-pulse delay-1000" />
 
                         {/* Dotted pattern */}
                         <div className="absolute inset-0 opacity-10">
-                            <div className="absolute inset-0" style={{
-                                backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
-                                backgroundSize: '20px 20px'
-                            }} />
+                            <div
+                                className="absolute inset-0"
+                                style={{
+                                    backgroundImage:
+                                        "radial-gradient(circle, white 1px, transparent 1px)",
+                                    backgroundSize: "20px 20px",
+                                }}
+                            />
                         </div>
 
                         <div className="relative p-5 sm:p-6 lg:p-8">
@@ -860,7 +1105,9 @@ s                                                    ${featuredInWatchlist
                                     <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
                                         Animated Magic
                                     </h2>
-                                    <p className="text-xs sm:text-sm text-gray-300 mt-1 sm:mt-2 font-semibold hidden sm:block">Enchanting stories for all ages</p>
+                                    <p className="text-xs sm:text-sm text-gray-300 mt-1 sm:mt-2 font-semibold hidden sm:block">
+                                        Enchanting stories for all ages
+                                    </p>
                                 </div>
                             </div>
 
@@ -872,7 +1119,10 @@ s                                                    ${featuredInWatchlist
 
                 {/* INDIE SPOTLIGHT - Simplified Design */}
                 {indieMovies.length > 0 && (
-                    <section id="indie-movies" className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/60 to-black backdrop-blur-sm  shadow-xl">
+                    <section
+                        id="indie-movies"
+                        className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/60 to-black backdrop-blur-sm border border-slate-700/30 ring-1 ring-white/5 shadow-xl"
+                    >
                         {/* Subtle gradient */}
                         <div className="absolute top-0 right-0 w-80 sm:w-96 lg:w-[500px] h-80 sm:h-96 lg:h-[500px] bg-gradient-to-bl from-slate-700/10 to-transparent rounded-full blur-3xl" />
 
@@ -885,13 +1135,16 @@ s                                                    ${featuredInWatchlist
                                     </div>
                                 </div>
                                 <div>
-                                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-200">Indie Spotlight</h2>
-                                    <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">Hidden gems & festival favorites</p>
+                                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-200">
+                                        Indie Spotlight
+                                    </h2>
+                                    <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">
+                                        Hidden gems & festival favorites
+                                    </p>
                                 </div>
                             </div>
 
                             <Carousel items={indieMovies} CardComponent={MovieCard} />
-
                         </div>
                     </section>
                 )}
@@ -903,4 +1156,4 @@ s                                                    ${featuredInWatchlist
             </div>
         </main>
     );
-} 
+}

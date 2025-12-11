@@ -13,7 +13,7 @@ import {
   IconTags,
 } from "@tabler/icons-react";
 import "./hero.css";
-import { Film, Tv , Bookmark,BookmarkCheck } from "lucide-react";
+import { Film, Tv, Bookmark, BookmarkCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
 
@@ -59,8 +59,11 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
   const current = all[index];
   type HookType = "movie" | "series";
-  const toHookType = (k: "movie" | "tv"): HookType => (k === "tv" ? "series" : "movie");
-  const currentKind: "movie" | "tv" = current ? getContentType(current) : "movie";
+  const toHookType = (k: "movie" | "tv"): HookType =>
+    k === "tv" ? "series" : "movie";
+  const currentKind: "movie" | "tv" = current
+    ? getContentType(current)
+    : "movie";
   const currentInWatchlist = current?.id
     ? isInWatchlist(String(current.id), toHookType(currentKind))
     : false;
@@ -73,10 +76,20 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
     }
     setWlLoading(true);
     try {
+      const title = (current?.title || (current as any).name) ?? null;
+      const posterUrl =
+        tmdbImage(current.poster_path ?? current.backdrop_path, "w154") ?? null;
+
       if (currentInWatchlist) {
-        await remove(String(current.id), toHookType(currentKind));
+        await remove(String(current.id), toHookType(currentKind), {
+          title,
+          posterUrl,
+        });
       } else {
-        await add(String(current.id), toHookType(currentKind));
+        await add(String(current.id), toHookType(currentKind), {
+          title,
+          posterUrl,
+        });
       }
     } catch (e) {
       console.error("Watchlist toggle failed:", e);
@@ -114,7 +127,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
       </section>
     );
   }
- 
+
   // Get dynamic thumbnail window size based on screen size
   const getThumbnailWindowSize = () => {
     if (typeof window !== "undefined") {
@@ -165,8 +178,9 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           return (
             <div
               key={m.id}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${active ? "opacity-100" : "opacity-0 pointer-events-none"
-                }`}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                active ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
               aria-hidden={!active}
             >
               <Image
@@ -189,7 +203,6 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
               {/* Center spotlight effect */}
               <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.08)_35%,transparent_80%)] mix-blend-lighten" />
             </div>
-
           );
         })}
 
@@ -302,7 +315,11 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                           ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
                           : "bg-white/10 border-white/20 text-white hover:bg-white/20"
                       }`}
-                    title={currentInWatchlist ? "Remove from My List" : "Add to My List"}
+                    title={
+                      currentInWatchlist
+                        ? "Remove from My List"
+                        : "Add to My List"
+                    }
                   >
                     {wlLoading ? (
                       <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
@@ -414,7 +431,11 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                           ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
                           : "bg-white/10 border-white/20 text-white hover:bg-white/20"
                       }`}
-                    title={currentInWatchlist ? "Remove from My List" : "Add to My List"}
+                    title={
+                      currentInWatchlist
+                        ? "Remove from My List"
+                        : "Add to My List"
+                    }
                   >
                     {wlLoading ? (
                       <span className="w-4 h-4 xl:w-5 xl:h-5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
