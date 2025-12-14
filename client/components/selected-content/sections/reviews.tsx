@@ -118,6 +118,21 @@ export default function ReviewsSection({
   // build base path depending on contentType (movie or tv)
   const basePath = contentType === "tv" ? "tv" : "movies";
   const viewAllHref = contentId ? `/${basePath}/${contentId}/reviews` : "#";
+  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(
+    new Set()
+  );
+
+  const toggleExpand = (reviewId: string) => {
+    setExpandedReviews((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(reviewId)) {
+        newSet.delete(reviewId);
+      } else {
+        newSet.add(reviewId);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <section className="space-y-6">
@@ -168,27 +183,35 @@ export default function ReviewsSection({
         </div>
       </div>
 
-      {/* Top 3 grid - Fixed with proper constraints */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Top 3 grid - Dynamic layout based on expanded state */}
+      <div
+        className={`grid gap-6 transition-all duration-300 ease-in-out ${
+          expandedReviews.size > 0
+            ? "grid-cols-1"
+            : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+        }`}
+      >
         <AnimatePresence mode="popLayout">
-          {topThree.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="col-span-1 md:col-span-3 text-slate-400"
-            >
-              No reviews yet — be the first to share your thoughts.
-            </motion.div>
-          ) : (
-            topThree.map((r, idx) => (
+          {topThree.map((r, idx) => {
+            const isExpanded = expandedReviews.has(r.id);
+            const contentPreview = r.content.slice(0, 150);
+            const needsTruncation = r.content.length > 150;
+
+            return (
               <motion.div
                 key={r.id}
                 layout
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
-                whileHover={{ scale: 1.02 }}
-                className="relative rounded-2xl p-5 border border-white/8 bg-gradient-to-br from-slate-900/70 to-slate-800/70 shadow-lg overflow-hidden"
+                transition={{
+                  layout: { duration: 0.3, ease: "easeInOut" },
+                  opacity: { duration: 0.2 },
+                }}
+                whileHover={{ scale: isExpanded ? 1 : 1.01 }}
+                className={`relative rounded-2xl p-5 border border-white/8 bg-gradient-to-br from-slate-900/70 to-slate-800/70 shadow-lg overflow-hidden ${
+                  isExpanded ? "col-span-1" : ""
+                }`}
               >
                 <div className="flex items-start gap-4 min-w-0">
                   <div className="flex-shrink-0">
@@ -220,17 +243,27 @@ export default function ReviewsSection({
                       </div>
                     </div>
 
-                    {/* Review content with proper text wrapping */}
+                    {/* Review content with expand/collapse */}
                     <div className="text-slate-300 text-sm leading-relaxed">
                       <div className="relative">
-                        <p className="break-words">{r.content}</p>
+                        <p className="break-words">
+                          {isExpanded ? r.content : contentPreview}
+                          {!isExpanded && needsTruncation && "..."}
+                        </p>
+                        {needsTruncation && (
+                          <button
+                            onClick={() => toggleExpand(r.id)}
+                            className="mt-2 text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+                          >
+                            {isExpanded ? "Show less" : "Read more"}
+                          </button>
+                        )}
                       </div>
                     </div>
 
-                    {/* Action buttons - wrapped properly */}
+                    {/* Action buttons */}
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                       <div className="flex items-center gap-3 min-w-0">
-                        {/* Link to the dedicated all-reviews page */}
                         {contentId ? (
                           <Link
                             href={`/${basePath}/${contentId}/reviews?highlight=${encodeURIComponent(
@@ -271,8 +304,8 @@ export default function ReviewsSection({
                   />
                 </svg>
               </motion.div>
-            ))
-          )}
+            );
+          })}
         </AnimatePresence>
       </div>
 

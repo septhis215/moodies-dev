@@ -666,7 +666,7 @@ export function NavbarComponent() {
                           <span>Login</span>
                         </Link>
 
-                        <Link href="/auth/register" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+                        <Link href="/auth/signup" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
                           <IconUserPlus size={18} />
                           <span>Sign Up</span>
                         </Link>
