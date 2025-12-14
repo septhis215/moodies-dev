@@ -6,6 +6,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Carousel } from "@/components/ui/Carousel";
 import { Star, Plus, Info, Share2 } from "lucide-react";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Bookmark, BookmarkCheck } from "lucide-react";
 
 interface CommonCardCarouselProps {
   title: string;
@@ -20,8 +24,57 @@ export default function CommonCardCarousel({
   type,
   items,
 }: CommonCardCarouselProps) {
+  const router = useRouter();
+  const { isInWatchlist: hookIsIn, add, remove, ready } = useWatchlist();
+  const [loadingStates, setLoadingStates] = useState<
+    Record<string | number, boolean>
+  >({});
+
   const getPosterUrl = (path?: string) =>
     path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
+
+  const toWatchType = (show: All): "movie" | "series" =>
+    type === "tv" ? "series" : "movie";
+
+  const handleWatchlistToggle = async (show: All, event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!ready) {
+      router.push("/auth/login");
+      return;
+    }
+
+    const itemId = show.id;
+    const isCurrentlyInWatchlist = hookIsIn(String(itemId), toWatchType(show));
+
+    setLoadingStates((prev) => ({ ...prev, [itemId]: true }));
+
+    try {
+      const title = show.title || show.name || null;
+      const posterUrl = getPosterUrl(show.poster_path ?? undefined);
+
+      if (isCurrentlyInWatchlist) {
+        await remove(String(itemId), toWatchType(show), {
+          title,
+          posterUrl,
+          variant: "info",
+          duration: 3500,
+        });
+      } else {
+        await add(String(itemId), toWatchType(show), {
+          title,
+          posterUrl,
+          variant: "info",
+          duration: 3500,
+        });
+      }
+    } catch (error) {
+      console.error("Error updating watchlist:", error);
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
 
   const MovieCard = ({
     show,
@@ -66,11 +119,29 @@ export default function CommonCardCarousel({
                   <button
                     onClick={(e) => {
                       e.preventDefault();
+                      handleWatchlistToggle(show, e);
                     }}
-                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
-                    title="Add to List"
+                    disabled={loadingStates[show.id]}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${
+                      hookIsIn(String(show.id), toWatchType(show))
+                        ? "bg-green-500 text-white"
+                        : "bg-white text-black"
+                    }`}
+                    title={
+                      loadingStates[show.id]
+                        ? "Loading..."
+                        : hookIsIn(String(show.id), toWatchType(show))
+                        ? "Remove from Watchlist"
+                        : "Add to Watchlist"
+                    }
                   >
-                    <Plus className="w-5 h-5 text-black" />
+                    {loadingStates[show.id] ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : hookIsIn(String(show.id), toWatchType(show)) ? (
+                      <BookmarkCheck className="w-5 h-5" />
+                    ) : (
+                      <Plus className="w-5 h-5" />
+                    )}
                   </button>
 
                   <button

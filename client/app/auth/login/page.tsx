@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 
 const API =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:4000";
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
+  "http://localhost:4000";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -29,7 +30,7 @@ export default function LoginPage() {
       const token: string | undefined = data?.access_token || data?.token;
       if (!token) throw new Error("No token returned from server");
       localStorage.setItem("authToken", data.token);
-      
+
       // Day * hr * min * sec * ms
       const expiryMs = Date.now() + 1 * 24 * 60 * 60 * 1000;
       localStorage.setItem("authTokenExpiry", String(expiryMs));
@@ -50,95 +51,228 @@ export default function LoginPage() {
   const onGoogle = () => {
     // Preserve return path
     const from = typeof window !== "undefined" ? window.location.pathname : "/";
-    window.location.href = `${API}/auth/google?from=${encodeURIComponent(from)}`;
+    window.location.href = `${API}/auth/google?from=${encodeURIComponent(
+      from
+    )}`;
   };
 
   return (
-    <>
-      <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-        Welcome back
-      </h2>
-
-      <p className="mt-2 text-sm text-white/70">
-        New here?{" "}
-        <Link href="/auth/signup" className="text-amber-400 hover:underline">
-          Create an account
-        </Link>
-      </p>
-      <br/>
-
-      {/* Email / password */}
-      <form onSubmit={onSubmit} className="space-y-4">
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full px-4 py-3 rounded-xl bg-white/5 text-white placeholder:text-white/40
-                     border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
-                     focus:border-transparent transition"
-        />
-
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Enter Your Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full px-4 py-3 pr-12 rounded-xl bg-white/5 text-white placeholder:text-white/40
-                       border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
-                       focus:border-transparent transition"
-          />
-
-          <button
-            type="button"
-            onClick={() => setShowPassword((s) => !s)}
-            aria-label={showPassword ? "Hide password" : "Show password"}
-            title={showPassword ? "Hide password" : "Show password"}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-md
-                       hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+    <div className="w-full max-w-md mx-auto px-6 py-4">
+      {/* Header Section */}
+      <div className="text-center mb-4">
+        <div className="inline-block p-2 rounded-none sm:rounded-xl bg-gradient-to-br from-amber-500/20 to-pink-500/20 mb-2">
+          <svg
+            className="w-6 h-6 text-amber-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            {showPassword ? (
-              // Eye-off icon (password visible -> show "hide" icon)
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.04.144-2.046.414-3.0M3 3l18 18M9.88 9.88A3 3 0 0012 15a3 3 0 003-3c0-.482-.122-.935-.335-1.326" />
-              </svg>
-            ) : (
-              // Eye icon (password hidden -> show "view" icon)
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7s-8.268-2.943-9.542-7z" />
-              </svg>
-            )}
-          </button>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+            />
+          </svg>
         </div>
 
-        <div className="text-right">
+        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-amber-400 to-pink-400 bg-clip-text text-transparent">
+          Welcome back
+        </h2>
+
+        <p className="mt-2 text-sm text-white/60">
+          New here?{" "}
+          <Link
+            href="/auth/signup"
+            className="text-amber-400 hover:text-amber-300 font-semibold transition-colors underline-offset-4 hover:underline"
+          >
+            Create an account
+          </Link>
+        </p>
+      </div>
+
+      {/* Form Section */}
+      <form onSubmit={onSubmit} className="space-y-3">
+        {/* Email Input */}
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-white/80 ml-1">
+            Email Address
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg
+                className="h-4 w-4 text-white/40"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
+                />
+              </svg>
+            </div>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full pl-10 pr-3 py-2.5 rounded-none sm:rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
+                         border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
+                         focus:border-amber-400/50 focus:bg-white/10 transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Password Input */}
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-white/80 ml-1">
+            Password
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg
+                className="h-4 w-4 text-white/40"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
+              </svg>
+            </div>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full pl-10 pr-10 py-2.5 rounded-none sm:rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
+                         border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
+                         focus:border-amber-400/50 focus:bg-white/10 transition-all"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              title={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1.5 rounded-lg
+                         hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/40 transition-colors"
+            >
+              {showPassword ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-white/60"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.04.144-2.046.414-3.0M3 3l18 18M9.88 9.88A3 3 0 0012 15a3 3 0 003-3c0-.482-.122-.935-.335-1.326"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 text-white/60"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7s-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Forgot Password Link */}
+        <div className="flex justify-end">
           <Link
             href="/auth/forgot-password"
-            className="text-sm text-white/60 hover:text-white"
+            className="text-xs text-white/50 hover:text-amber-400 transition-colors font-medium"
           >
             Forgot Password?
           </Link>
         </div>
 
-        {err && <p className="text-red-400 text-sm">{err}</p>}
+        {/* Error Message */}
+        {err && (
+          <div className="p-2.5 rounded-none sm:rounded-lg bg-red-500/10 border border-red-500/30">
+            <p className="text-red-400 text-xs flex items-center gap-2">
+              <svg
+                className="w-4 h-4 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {err}
+            </p>
+          </div>
+        )}
 
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 rounded-xl font-bold
-                     bg-gradient-to-r from-amber-500 to-pink-500
-                     hover:from-amber-400 hover:to-pink-400
+          className="w-full py-2.5 rounded-none sm:rounded-lg font-bold text-sm text-white
+                     bg-gradient-to-r from-amber-500 via-amber-400 to-pink-500
+                     hover:from-amber-400 hover:via-amber-300 hover:to-pink-400
                      shadow-[0_8px_30px_rgba(250,204,21,0.35)]
-                     transition disabled:opacity-60"
+                     hover:shadow-[0_12px_40px_rgba(250,204,21,0.45)]
+                     transform hover:scale-[1.02] active:scale-[0.98]
+                     transition-all duration-200 disabled:opacity-60 disabled:hover:scale-100 disabled:cursor-not-allowed"
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              Logging in...
+            </span>
+          ) : (
+            "Login"
+          )}
         </button>
-
       </form>
-    </>
+    </div>
   );
 }
