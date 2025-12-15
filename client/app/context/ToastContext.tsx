@@ -10,7 +10,8 @@ type ToastItem = {
   duration?: number;
   title?: string | null;
   posterUrl?: string | null;
-  createdAt: number; // Timestamp for independent progress tracking
+  imageSize?: { width: number; height: number };
+  createdAt: number;
 };
 
 const ToastContext = createContext({
@@ -19,7 +20,8 @@ const ToastContext = createContext({
     variant?: "info" | "success" | "warning" | "error",
     duration?: number,
     title?: string | null,
-    posterUrl?: string | null
+    posterUrl?: string | null,
+    imageSize?: { width: number; height: number }
   ) => {},
 });
 
@@ -32,20 +34,28 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       variant: "info" | "success" | "warning" | "error" = "info",
       duration: number = 3500,
       title: string | null = null,
-      posterUrl: string | null = null
+      posterUrl: string | null = null,
+      imageSize?: { width: number; height: number }
     ) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      // Capture the exact moment this toast was created
       const createdAt = performance.now();
 
       setToasts((s) => [
         ...s,
-        { id, message, variant, duration, title, posterUrl, createdAt },
+        {
+          id,
+          message,
+          variant,
+          duration,
+          title,
+          posterUrl,
+          imageSize,
+          createdAt,
+        },
       ]);
     },
     []
   );
-
   const remove = useCallback((id: string) => {
     setToasts((s) => s.filter((t) => t.id !== id));
   }, []);
@@ -88,6 +98,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               duration={t.duration}
               title={t.title}
               posterUrl={t.posterUrl}
+              imageSize={t.imageSize}
               onClose={() => remove(t.id)}
               createdAt={t.createdAt}
             />

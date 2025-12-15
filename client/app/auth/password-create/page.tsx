@@ -9,7 +9,7 @@ export default function PasswordCreate() {
   const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,6 +22,12 @@ export default function PasswordCreate() {
     if (!res.ok) return setError(data.message || "Failed to set password");
 
     localStorage.setItem("authToken", data.token);
+
+    if (data.user?.email) {
+      localStorage.setItem("signupEmail", data.user.email);
+      localStorage.setItem("signupPassword", password);
+    }
+
     router.push("/auth/onboarding");
   }
 
@@ -29,7 +35,7 @@ export default function PasswordCreate() {
     <main className="auth-page">
       <h1 className="text-xl font-semibold">Create your password</h1>
       <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-         <div className="relative">
+        <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
             placeholder="Enter a new password"
@@ -88,7 +94,9 @@ export default function PasswordCreate() {
           </button>
         </div>
         {error && <p className="text-red-400 text-sm">{error}</p>}
-        <button className="w-full rounded-xl px-5 py-3 font-semibold text-white transition-all bg-gradient-to-r from-amber-500 to-pink-500 hover:brightness-110">Continue</button>
+        <button className="w-full rounded-xl px-5 py-3 font-semibold text-white transition-all bg-gradient-to-r from-amber-500 to-pink-500 hover:brightness-110">
+          Continue
+        </button>
       </form>
     </main>
   );

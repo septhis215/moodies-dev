@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
 
 const API =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -10,42 +11,20 @@ const API =
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const { signIn, isLoading: authLoading } = useAuth();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr("");
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/auth/signin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Login failed");
 
-      const token: string | undefined = data?.access_token || data?.token;
-      if (!token) throw new Error("No token returned from server");
-      localStorage.setItem("authToken", data.token);
+    const result = await signIn(email, password);
 
-      // Day * hr * min * sec * ms
-      const expiryMs = Date.now() + 1 * 24 * 60 * 60 * 1000;
-      localStorage.setItem("authTokenExpiry", String(expiryMs));
-      localStorage.setItem("user", JSON.stringify(data.user || {}));
-
-      if (data?.user) {
-        localStorage.setItem("authUser", JSON.stringify(data.user));
-      }
-
-      window.location.href = "/";
-    } catch (e: any) {
-      setErr(e.message || "Login failed");
-    } finally {
-      setLoading(false);
+    if (!result.success) {
+      setErr(result.error || "Login failed");
     }
+    // Success case is handled by the hook (toasts + redirect)
   };
 
   const onGoogle = () => {
@@ -239,7 +218,7 @@ export default function LoginPage() {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={loading}
+          disabled={authLoading}
           className="w-full py-2.5 rounded-none sm:rounded-lg font-bold text-sm text-white
                      bg-gradient-to-r from-amber-500 via-amber-400 to-pink-500
                      hover:from-amber-400 hover:via-amber-300 hover:to-pink-400
@@ -248,7 +227,7 @@ export default function LoginPage() {
                      transform hover:scale-[1.02] active:scale-[0.98]
                      transition-all duration-200 disabled:opacity-60 disabled:hover:scale-100 disabled:cursor-not-allowed"
         >
-          {loading ? (
+          {authLoading ? (
             <span className="flex items-center justify-center gap-2">
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                 <circle
