@@ -103,9 +103,8 @@ export default function TVHomePageClient({
       <div className="group relative h-full">
         <Link href={`/tv/${show.id}`} className="block h-full">
           <div
-            className={`relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 ${
-              isWide ? "aspect-video" : "aspect-[2/3]"
-            }`}
+            className={`relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 ${isWide ? "aspect-video" : "aspect-[2/3]"
+              }`}
           >
             <Image
               src={
@@ -169,16 +168,14 @@ export default function TVHomePageClient({
                     }}
                     disabled={isLoading}
                     className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl
-                                        ${
-                                          inWL
-                                            ? "bg-emerald-500 ring-emerald-300/40 text-white"
-                                            : "bg-white text-black"
-                                        }
-                                        ${
-                                          isLoading
-                                            ? "opacity-70 cursor-not-allowed"
-                                            : ""
-                                        }`}
+                                        ${inWL
+                        ? "bg-emerald-500 ring-emerald-300/40 text-white"
+                        : "bg-white text-black"
+                      }
+                                        ${isLoading
+                        ? "opacity-70 cursor-not-allowed"
+                        : ""
+                      }`}
                     title={inWL ? "Remove from List" : "Add to List"}
                   >
                     {isLoading ? (
@@ -255,8 +252,8 @@ export default function TVHomePageClient({
       const posterUrl = featured?.poster_path
         ? getPosterUrl(featured.poster_path)
         : featured?.backdrop_path
-        ? getImageUrl(featured.backdrop_path)
-        : null;
+          ? getImageUrl(featured.backdrop_path)
+          : null;
 
       if (featuredInWatchlist) {
         await remove(String(featured.id), "series", { title, posterUrl });
@@ -322,11 +319,10 @@ export default function TVHomePageClient({
                         }
                         className={`rounded-xl overflow-hidden border-2 transform transition-all duration-300
                                                 hover:scale-105 hover:z-10 focus:outline-none
-                                                ${
-                                                  isActive
-                                                    ? "border-[#e94f37]  scale-105 shadow-2xl shadow-[#e94f37]/30"
-                                                    : "border-white/10 hover:border-[#e94f37]/50"
-                                                }`}
+                                                ${isActive
+                            ? "border-[#e94f37]  scale-105 shadow-2xl shadow-[#e94f37]/30"
+                            : "border-white/10 hover:border-[#e94f37]/50"
+                          }`}
                       >
                         {s.poster_path ? (
                           <Image
@@ -414,11 +410,10 @@ export default function TVHomePageClient({
                         }}
                         disabled={loadingStates["featured"]}
                         className={`ml-auto px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg
-        ${
-          featuredInWatchlist
-            ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-            : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
-        }
+        ${featuredInWatchlist
+                            ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
+                            : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
+                          }
         ${loadingStates["featured"] ? "opacity-70 cursor-not-allowed" : ""}`}
                         title={
                           featuredInWatchlist
@@ -574,7 +569,7 @@ export default function TVHomePageClient({
                           <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
                           <span className="font-bold text-white">
                             {newReleaseTV[0].vote_average &&
-                            newReleaseTV[0].vote_average > 0
+                              newReleaseTV[0].vote_average > 0
                               ? newReleaseTV[0].vote_average.toFixed(1)
                               : "New"}
                           </span>
@@ -818,15 +813,15 @@ export default function TVHomePageClient({
                                       <div>
                                         {show.first_air_date
                                           ? new Date(
-                                              show.first_air_date
-                                            ).getFullYear()
+                                            show.first_air_date
+                                          ).getFullYear()
                                           : "TBA"}
                                       </div>
                                       <div className="flex items-center gap-1">
                                         <Star className="w-3 h-3 text-yellow-400" />
                                         <span className="font-bold text-white">
                                           {show.vote_average &&
-                                          show.vote_average > 0
+                                            show.vote_average > 0
                                             ? show.vote_average.toFixed(1)
                                             : "New"}
                                         </span>

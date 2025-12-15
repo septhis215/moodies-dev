@@ -71,204 +71,142 @@ export default function MoodDiscoverySection() {
   ];
 
   return (
-    <section id="your-moods"className="relative bg-black py-22 px-4 sm:px-6 lg:px-8 overflow-hidden max-w-7xl mx-auto">
-      {/* Dynamic Animated Background */}
-      <div className="absolute inset-0 opacity-30">
+    <section
+      id="your-moods"
+      className="relative bg-black py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
+    >
+      {/* Header */}
+      <div className="text-center mb-10">
         <div
-          className="absolute w-[600px] h-[600px] bg-purple-600 rounded-full blur-3xl transition-all duration-1000 ease-out"
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium"
           style={{
-            left: `${mousePosition.x * 0.5}%`,
-            top: `${mousePosition.y * 0.5}%`,
-            transform: 'translate(-50%, -50%)'
+            backgroundColor: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(148,163,184,0.06)",
+            color: "#e6e6e6",
           }}
-        ></div>
-        <div
-          className="absolute w-[500px] h-[500px] bg-pink-600 rounded-full blur-3xl transition-all duration-1000 ease-out"
-          style={{
-            right: `${(100 - mousePosition.x) * 0.3}%`,
-            bottom: `${(100 - mousePosition.y) * 0.3}%`,
-            transform: 'translate(50%, 50%)'
-          }}
-        ></div>
-        <div className="absolute w-[400px] h-[400px] bg-blue-600 rounded-full blur-3xl top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
-      </div>
-
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-white rounded-full opacity-20"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${5 + Math.random() * 10}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 5}s`
-            }}
-          ></div>
-        ))}
-      </div>
-
-      <div className="relative max-w-7xl mx-auto">
-        {/* Enhanced Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600/30 to-pink-600/30 backdrop-blur-sm border border-purple-500/30 text-white px-5 py-2.5 rounded-full text-sm font-semibold mb-6 shadow-lg shadow-purple-500/20">
-            <Sparkles className="w-4 h-4 animate-pulse" />
-            <span>AI-Powered Discovery</span>
-            <Zap className="w-4 h-4" />
-          </div>
-
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-4 tracking-tight">
-            Find Your Perfect{' '}
-            <span className="relative inline-block">
-              <span className="absolute inset-0 bg-gradient-to-r from-purple-400 via-pink-400 to-rose-400 blur-xl opacity-50"></span>
-              <span className="relative bg-gradient-to-r from-purple-400 via-pink-400 to-rose-400 bg-clip-text text-transparent">
-                Mood Match
-              </span>
-            </span>
-          </h2>
-
-          <p className="text-gray-400 text-base sm:text-md max-w-2xl mx-auto leading-relaxed">
-            Unlock personalized content through intelligent mood detection and interactive discovery tools
-          </p>
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>AI-powered discovery</span>
+          <Zap className="w-4 h-4" />
         </div>
 
-        {/* Enhanced Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {cards.map((card, index) => {
-            const Icon = card.icon;
-            const isHovered = hoveredCard === card.id;
+        <h2 className="mt-6 text-3xl sm:text-4xl lg:text-4xl font-extrabold text-white tracking-tight">
+          Find your perfect{" "}
+          <span >Mood Match</span>
+        </h2>
 
-            return (
-              <Link
-                key={card.id}
-                href={card.href}
-                className="group relative"
-                onMouseEnter={() => setHoveredCard(card.id)}
-                onMouseLeave={() => setHoveredCard(null)}
-                style={{
-                  animationDelay: `${index * 100}ms`
-                }}
+        <p className="mt-3 text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto">
+          Personalized content and recommendations based on your mood — simple,
+          fast and unobtrusive.
+        </p>
+      </div>
+
+      {/* Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          const isHovered = hoveredCard === card.id;
+
+          return (
+            <Link
+              key={card.id}
+              href={card.href}
+              className="relative group"
+              onMouseEnter={() => setHoveredCard(card.id)}
+              onMouseLeave={() => setHoveredCard(null)}
+            >
+              {/* outer glow */}
+              <div
+                className={`absolute inset-0 rounded-3xl blur-2xl transition-opacity duration-300 
+          ${isHovered ? "opacity-50" : "opacity-30"}`}
               >
-                {/* Card Container with 3D effect */}
-                <div className={`relative overflow-hidden rounded-3xl transition-all duration-500 ${isHovered ? 'scale-105 -translate-y-2' : 'scale-100'
-                  }`}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    transform: isHovered ? 'rotateX(5deg) rotateY(-5deg)' : 'rotateX(0) rotateY(0)'
-                  }}>
-                  {/* Multi-layer Gradient Background */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-95`}></div>
-                  <div className={`absolute inset-0 bg-gradient-to-t from-black/40 to-transparent`}></div>
+                <div className={`w-full h-full bg-gradient-to-br ${card.gradient}`} />
+              </div>
 
-                  {/* Animated mesh gradient overlay */}
-                  <div className="absolute inset-0 opacity-30">
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent animate-pulse"></div>
-                  </div>
+              <div
+                className={`relative h-full rounded-3xl overflow-hidden
+          bg-gradient-to-br ${card.gradient}
+          transition-all duration-300
+          ${isHovered ? "scale-[1.05] -translate-y-2" : "scale-100"}
+          `}
+              >
+                {/* dark overlay for readability */}
+                <div className="absolute inset-0 bg-black/45" />
 
-                  {/* Noise Texture */}
-                  <div className="absolute inset-0 opacity-10 mix-blend-overlay" style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' /%3E%3C/svg%3E")`
-                  }}></div>
-
-                  {/* Shimmer effect */}
-                  <div className={`absolute inset-0 transition-all duration-700 ${isHovered ? 'opacity-100' : 'opacity-0'
-                    }`}>
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 animate-shimmer"></div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="relative p-6 flex flex-col h-full min-h-[240px]">
-                    {/* Large Emoji Background with parallax */}
-                    <div className={`absolute right-2 top-2 text-7xl transition-all duration-700 ${isHovered ? 'scale-125 rotate-12 opacity-40' : 'scale-100 rotate-0 opacity-20'
-                      }`}>
-                      {card.emoji}
-                    </div>
-
-                    {/* Top Row: Icon Badge + Stats */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/20 shadow-xl transition-all duration-500 ${isHovered ? 'scale-110 rotate-6 bg-white/30' : 'scale-100 rotate-0'
-                        }`}>
-                        <Icon className="w-7 h-7 text-white drop-shadow-lg" />
-                      </div>
-
-                      <div className={`px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 transition-all duration-300 ${isHovered ? 'scale-105' : 'scale-100'
-                        }`}>
-                        <p className="text-xs font-bold text-white">{card.stats}</p>
-                      </div>
-                    </div>
-
-                    {/* Text Content */}
-                    <div className="flex-1 space-y-2">
-                      <div className={`inline-block px-2 py-0.5 rounded-md ${card.accentColor} bg-opacity-20 backdrop-blur-sm mb-1`}>
-                        <p className="text-xs font-semibold text-white/90">{card.subtitle}</p>
-                      </div>
-
-                      <h3 className="text-2xl font-black text-white tracking-tight leading-tight">
-                        {card.title}
-                      </h3>
-
-                      <p className="text-white/80 text-sm leading-relaxed">
-                        {card.description}
-                      </p>
-                    </div>
-
-                    {/* Enhanced CTA */}
-                    <div className={`flex items-center justify-between mt-5 pt-4 border-t border-white/10 transition-all duration-300 ${isHovered ? 'translate-x-0' : '-translate-x-1'
-                      }`}>
-                      <div className="flex items-center gap-2 text-white font-bold text-sm">
-                        <span>Explore Now</span>
-                        <ArrowRight className={`w-4 h-4 transition-transform duration-300 ${isHovered ? 'translate-x-2' : 'translate-x-0'
-                          }`} />
-                      </div>
-                      <Stars className={`w-5 h-5 text-white/60 transition-all duration-300 ${isHovered ? 'rotate-180 text-white' : 'rotate-0'
-                        }`} />
-                    </div>
-                  </div>
-
-                  {/* Bottom Glow Line */}
-                  <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-white to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-60' : 'opacity-0'
-                    }`}></div>
-
-                  {/* Corner Accent */}
-                  <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-white/20 to-transparent rounded-bl-3xl transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'
-                    }`}></div>
+                {/* shimmer highlight */}
+                <div
+                  className={`absolute inset-0 transition-opacity duration-500
+            ${isHovered ? "opacity-60" : "opacity-0"}`}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-shimmer" />
                 </div>
 
-                {/* Enhanced Outer Glow */}
-                <div className={`absolute inset-0 rounded-3xl transition-all duration-500 ${isHovered ? 'opacity-100 scale-105' : 'opacity-0 scale-100'
-                  } -z-10`}>
-                  <div className={`absolute inset-0 bg-gradient-to-br ${card.gradient} blur-2xl opacity-60`}></div>
-                </div>
+                {/* content */}
+                <div className="relative p-6 flex flex-col min-h-[260px] text-white">
+                  {/* top row */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white/20 backdrop-blur border border-white/30 shadow-lg">
+                      <Icon className="w-6 h-6 text-white" />
+                    </div>
 
-                {/* Hover Ring */}
-                <div className={`absolute inset-0 rounded-3xl border-2 border-white/0 transition-all duration-300 ${isHovered ? 'border-white/30 scale-105' : 'border-white/0 scale-100'
-                  }`}></div>
-              </Link>
-            );
-          })}
-        </div>
+                    <span className="text-xs font-semibold text-white/80">
+                      {card.stats}
+                    </span>
+                  </div>
+
+                  {/* emoji accent */}
+                  <div
+                    className={`absolute right-4 top-4 text-7xl transition-all duration-500
+              ${isHovered ? "opacity-40 scale-125 rotate-6" : "opacity-25"}`}
+                  >
+                    {card.emoji}
+                  </div>
+
+                  {/* text */}
+                  <div className="flex-1">
+                    <p className="text-xs uppercase tracking-wide text-white/80 mb-1">
+                      {card.subtitle}
+                    </p>
+                    <h3 className="text-2xl font-black leading-tight">
+                      {card.title}
+                    </h3>
+                    <p className="mt-2 text-sm text-white/85">
+                      {card.description}
+                    </p>
+                  </div>
+
+                  {/* CTA */}
+                  <div className="mt-6">
+                    <div
+                      className={`flex items-center justify-between px-4 py-3 rounded-xl
+                bg-gradient-to-r from-black/30 to-black/10
+                border border-white/20
+                transition-all duration-300
+                ${isHovered ? "translate-x-1" : ""}
+                `}
+                    >
+                      <span className="font-bold">Explore</span>
+                      <ArrowRight
+                        className={`w-4 h-4 transition-transform duration-300
+                  ${isHovered ? "translate-x-1" : ""}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+
+            </Link>
+          );
+        })}
       </div>
+
 
       <style>{`
-        @keyframes shimmer {
-          0% {
-            transform: translateX(-100%) skewX(-12deg);
-          }
-          100% {
-            transform: translateX(200%) skewX(-12deg);
-          }
-        }
-        .animate-shimmer {
-          animation: shimmer 2s ease-in-out infinite;
-        }
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-20px);
-          }
+        /* small accessibility improvement: focus outline */
+        a:focus > div {
+          outline: 3px solid rgba(233,79,55,0.12);
+          outline-offset: 3px;
         }
       `}</style>
     </section>

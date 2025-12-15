@@ -1,5 +1,6 @@
 "use client";
-
+import { useRouter } from "next/navigation";
+import { useWatchlist } from "@/hooks/useWatchlist";
 import { useState, useEffect, use } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,6 +30,14 @@ import {
   Zap,
   TrendingUp,
   Users2,
+  Clapperboard,
+  Layers,
+  PieChart,
+  Info,
+  Share2,
+  BookmarkCheck,
+  Plus,
+  Car,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -123,6 +132,8 @@ interface Collaboration {
   name: string;
   count: number;
   projects: string[];
+  profile_path: string;
+
 }
 export default function CelebrityDetailPage({
   params,
@@ -142,6 +153,18 @@ export default function CelebrityDetailPage({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [similarPeople, setSimilarPeople] = useState<SimilarPerson[]>([]);
   const [upcomingProjects, setUpcomingProjects] = useState<any[]>([]);
+  const router = useRouter();
+  const { add, remove, isInWatchlist, ready } = useWatchlist();
+  const [watchlistStates, setWatchlistStates] = useState<
+    Record<string | number, boolean>
+  >({});
+  const [loadingStates, setLoadingStates] = useState<
+    Record<string | number, boolean>
+  >({});
+  const getImageUrl = (path?: string) =>
+    path ? `https://image.tmdb.org/t/p/original${path}` : "/coming-soon.png";
+  const getPosterUrl = (path?: string) =>
+    path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
 
   useEffect(() => {
     const fetchPerson = async () => {
@@ -209,9 +232,171 @@ export default function CelebrityDetailPage({
     );
   }
 
+
+  const TVCard = ({
+    show,
+    size = "default",
+  }: {
+    show?: All;
+    size?: "default" | "large" | "wide";
+  }) => {
+    if (!show) return null;
+    const isWide = size === "wide";
+    const isLarge = size === "large";
+
+    // Make sure these are being read from parent scope
+    const inWL = isInWatchlist(String(show.id), "series");
+    const isLoading = loadingStates[show.id] || false;
+
+    return (
+      <div className="group relative h-full">
+        <Link href={`/tv/${show.id}`} className="block h-full">
+          <div
+            className={`relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 ${isWide ? "aspect-video" : "aspect-[2/3]"
+              }`}
+          >
+            <Image
+              src={
+                isWide
+                  ? getImageUrl(show.backdrop_path)
+                  : getPosterUrl(show.poster_path)
+              }
+              alt={show.title || show.name || ""}
+              fill
+              className="group-hover:scale-110 transition-transform duration-700 object-cover"
+            />
+
+            {/* Gradient overlay for depth */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            <div className="absolute top-3 right-3 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-lg ring-1 ring-white/10">
+              <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+              {show.vote_average && show.vote_average > 0
+                ? show.vote_average.toFixed(1)
+                : "New"}
+            </div>
+
+            {/* Hover overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <div className="flex justify-center gap-2 mb-3">
+                  <button
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!ready) {
+                        router.push("/auth/login");
+                        return;
+                      }
+                      const itemId = show.id;
+                      setLoadingStates((prev) => ({ ...prev, [itemId]: true }));
+                      try {
+                        const title = show?.title ?? show?.name ?? null;
+                        const posterUrl = show?.poster_path
+                          ? getPosterUrl(show.poster_path)
+                          : null;
+                        if (inWL) {
+                          await remove(String(show.id), "series", {
+                            title,
+                            posterUrl,
+                          });
+                        } else {
+                          await add(String(show.id), "series", {
+                            title,
+                            posterUrl,
+                          });
+                        }
+                      } catch (err) {
+                        console.error("toggle watchlist error", err);
+                      } finally {
+                        setLoadingStates((prev) => ({
+                          ...prev,
+                          [itemId]: false,
+                        }));
+                      }
+                    }}
+                    disabled={isLoading}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl
+                                          ${inWL
+                        ? "bg-emerald-500 ring-emerald-300/40 text-white"
+                        : "bg-white text-black"
+                      }
+                                          ${isLoading
+                        ? "opacity-70 cursor-not-allowed"
+                        : ""
+                      }`}
+                    title={inWL ? "Remove from List" : "Add to List"}
+                  >
+                    {isLoading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : inWL ? (
+                      <BookmarkCheck className="w-5 h-5 text-white" />
+                    ) : (
+                      <Plus className="w-5 h-5 text-black" />
+                    )}
+                  </button>
+
+                  <button
+                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
+                    title="More Info"
+                  >
+                    <Info className="w-5 h-5 text-black" />
+                  </button>
+
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                    }}
+                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
+                    title="Share"
+                  >
+                    <Share2 className="w-5 h-5 text-black" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 px-1">
+            <h4 className="font-bold text-sm sm:text-base line-clamp-2 group-hover:text-[#e94f37] transition-colors leading-tight text-white">
+              {show.title || show.name}
+            </h4>
+            <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-400">
+              {show.first_air_date && (
+                <span className="font-semibold">
+                  {show.first_air_date.split("-")[0]}
+                </span>
+              )}
+              {show.number_of_seasons && (
+                <>
+                  <span>•</span>
+                  <span className="font-semibold">
+                    {show.number_of_seasons} Season
+                    {show.number_of_seasons > 1 ? "s" : ""}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </Link>
+      </div>
+    );
+  };
+
+
+
+
   const Carousel = ({ items }: { items: any[] }) => {
     const [startIndex, setStartIndex] = useState(0);
     const [itemsPerView, setItemsPerView] = useState(6);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+      const check = () => setIsMobile(window.innerWidth < 640);
+      check();
+      window.addEventListener("resize", check);
+      return () => window.removeEventListener("resize", check);
+    }, []);
 
     useEffect(() => {
       const updateLayout = () => {
@@ -241,11 +426,13 @@ export default function CelebrityDetailPage({
       );
     };
 
-    const visibleItems = items.slice(startIndex, startIndex + itemsPerView);
+    const visibleItems = isMobile
+      ? items
+      : items.slice(startIndex, startIndex + itemsPerView);
 
     return (
       <div className="relative group/carousel">
-        {canScrollLeft && (
+        {!isMobile && canScrollLeft && (
           <button
             onClick={scrollLeft}
             className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
@@ -255,7 +442,7 @@ export default function CelebrityDetailPage({
           </button>
         )}
 
-        {canScrollRight && (
+        {!isMobile && canScrollRight && (
           <button
             onClick={scrollRight}
             className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
@@ -265,14 +452,20 @@ export default function CelebrityDetailPage({
           </button>
         )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+        <div
+          className={
+            isMobile
+              ? "flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide"
+              : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5"
+          }
+        >
           {visibleItems.map((person, idx) => (
             <motion.div
               key={person.id}
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: idx * 0.05 }}
-              className="group cursor-pointer"
+              transition={{ delay: idx * 0.03 }}
+              className={isMobile ? "min-w-[140px] snap-start" : "group cursor-pointer"}
             >
               <Link href={`/celeb/${person.id}`}>
                 <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-[#111] mb-3 group-hover:ring-2 group-hover:ring-[#e94f37] transition-all">
@@ -289,6 +482,7 @@ export default function CelebrityDetailPage({
                     </div>
                   )}
                 </div>
+
                 <h3 className="text-white font-semibold text-sm text-center line-clamp-2 mb-1">
                   {person.name}
                 </h3>
@@ -299,6 +493,7 @@ export default function CelebrityDetailPage({
             </motion.div>
           ))}
         </div>
+
       </div>
     );
   };
@@ -319,8 +514,8 @@ export default function CelebrityDetailPage({
     selectedTab === "all"
       ? allCredits
       : selectedTab === "movies"
-      ? movieCredits
-      : tvCredits;
+        ? movieCredits
+        : tvCredits;
   const getCreditDate = (credit: any) =>
     credit.release_date || credit.first_air_date || "";
 
@@ -395,839 +590,472 @@ export default function CelebrityDetailPage({
 
   const totalGenreWorks = Object.values(genreStats).reduce((a, b) => a + b, 0);
 
-  return (
-    <div className="min-h-screen bg-black">
-      {/* Hero Section with Enhanced Design */}
-      <div className="relative overflow-hidden">
-        {/* Animated Background */}
-        <div className="absolute inset-0">
-          {/* Base gradients */}
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800/20 to-black" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-gray-900/60 to-transparent" />
-
-          {/* Animated orbs */}
-          <motion.div
-            animate={{
-              scale: [1, 1.2, 1],
-              rotate: [0, 90, 0],
-            }}
-            transition={{
-              duration: 20,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            className="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-full blur-3xl"
-          />
-          <motion.div
-            animate={{
-              scale: [1.2, 1, 1.2],
-              rotate: [90, 0, 90],
-            }}
-            transition={{
-              duration: 15,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            className="absolute -bottom-40 -right-40 w-96 h-96 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl"
-          />
-          <motion.div
-            animate={{
-              scale: [1, 1.3, 1],
-              x: [0, 50, 0],
-            }}
-            transition={{
-              duration: 25,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            className="absolute top-1/2 left-1/2 w-96 h-96 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-full blur-3xl"
-          />
-
-          <div
-            className="absolute inset-0 opacity-10"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
-              backgroundSize: "40px 40px",
-            }}
-          />
-        </div>
-
-        {/* Content */}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-32">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Profile Image */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="relative flex justify-center lg:justify-start"
-            >
-              <div className="relative group">
-                <div className="absolute -inset-4 bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 rounded-3xl opacity-75 blur-2xl group-hover:opacity-100 transition duration-500" />
-                <div className="relative w-80 h-[480px] rounded-3xl overflow-hidden ring-4 ring-white/20 group-hover:ring-white/40 transition-all duration-300 shadow-2xl">
-                  {person.profile_path ? (
-                    <Image
-                      src={`https://image.tmdb.org/t/p/w500${person.profile_path}`}
-                      alt={person.name}
-                      fill
-                      className="object-cover"
-                      priority
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-700/30">
-                      <Users2 size={120} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Info */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="space-y-6"
-            >
-              {/* Department Badge */}
-              {person.known_for_department && (
-                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-red-500/20 to-orange-500/20 backdrop-blur-xl px-6 py-3 rounded-full border border-red-500/30">
-                  <Award className="w-5 h-5 text-red-400" />
-                  <span className="text-red-400 font-bold text-sm">
-                    {person.known_for_department}
-                  </span>
-                </div>
-              )}
-
-              {/* Name */}
-              <h1 className="text-6xl lg:text-7xl font-black leading-tight">
-                <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
-                  {person.name}
-                </span>
-              </h1>
-
-              {/* Quick Info Pills */}
-              <div className="flex flex-wrap gap-3">
-                {person.birthday && (
-                  <div className="bg-white/5 backdrop-blur-xl px-5 py-2.5 rounded-full flex items-center gap-2 border border-white/10">
-                    <Calendar className="w-4 h-4 text-red-400" />
-                    <span className="text-sm font-semibold text-white">
-                      {new Date(person.birthday).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                      {age && ` (${age})`}
-                    </span>
-                  </div>
-                )}
-                {person.place_of_birth && (
-                  <div className="bg-white/5 backdrop-blur-xl px-5 py-2.5 rounded-full flex items-center gap-2 border border-white/10">
-                    <MapPin className="w-4 h-4 text-blue-400" />
-                    <span className="text-sm font-semibold text-white truncate max-w-xs">
-                      {person.place_of_birth}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 pt-4">
-                <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 text-center border border-white/10 hover:border-red-500/50 transition-all group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  <div className="relative text-4xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent mb-1">
-                    {allCredits.length}
-                  </div>
-                  <div className="relative text-sm text-gray-400 font-medium">
-                    Projects
-                  </div>
-                </div>
-
-                <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 text-center border border-white/10 hover:border-purple-500/50 transition-all group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  <div className="relative text-4xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent mb-1">
-                    {person.popularity?.toFixed(0) || 0}
-                  </div>
-                  <div className="relative text-sm text-gray-400 font-medium">
-                    Popularity
-                  </div>
-                </div>
-
-                <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 text-center border border-white/10 hover:border-yellow-500/50 transition-all group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  <div className="relative text-4xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent mb-1">
-                    {displayCredits.filter((c) => c.vote_average >= 7).length}
-                  </div>
-                  <div className="relative text-sm text-gray-400 font-medium">
-                    Top Rated
-                  </div>
-                </div>
-              </div>
-
-              {/* Social Links */}
-              {person.external_ids && (
-                <div className="flex gap-3 pt-2">
-                  {person.external_ids.instagram_id && (
-                    <a
-                      href={`https://instagram.com/${person.external_ids.instagram_id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-12 h-12 bg-white/5 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10 hover:bg-gradient-to-r hover:from-red-500/20 hover:to-orange-500/20 hover:border-red-500/30 transition-all"
-                    >
-                      <Instagram className="w-5 h-5 text-white" />
-                    </a>
-                  )}
-                  {person.external_ids.twitter_id && (
-                    <a
-                      href={`https://twitter.com/${person.external_ids.twitter_id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-12 h-12 bg-white/5 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10 hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-cyan-500/20 hover:border-blue-500/30 transition-all"
-                    >
-                      <Twitter className="w-5 h-5 text-white" />
-                    </a>
-                  )}
-                  {person.external_ids.facebook_id && (
-                    <a
-                      href={`https://facebook.com/${person.external_ids.facebook_id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-12 h-12 bg-white/5 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10 hover:bg-gradient-to-r hover:from-blue-600/20 hover:to-indigo-600/20 hover:border-blue-600/30 transition-all"
-                    >
-                      <Facebook className="w-5 h-5 text-white" />
-                    </a>
-                  )}
-                  {person.external_ids.imdb_id && (
-                    <a
-                      href={`https://www.imdb.com/name/${person.external_ids.imdb_id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-12 h-12 bg-white/5 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/10 hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-500/30 transition-all"
-                    >
-                      <Star className="w-5 h-5 text-white" />
-                    </a>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Wave Divider */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 120" fill="none" className="w-full h-16">
-            <path
-              d="M0 0L60 10C120 20 240 40 360 46.7C480 53 600 47 720 43.3C840 40 960 40 1080 46.7C1200 53 1320 67 1380 73.3L1440 80V120H0V0Z"
-              fill="#000000"
-            />
-          </svg>
-        </div>
+  const SectionHeader = ({ icon: Icon, title }) => (
+    <div className="flex items-center gap-3 mb-4">
+      <div className="w-10 h-10 rounded-xl bg-[#e94f37]/20 flex items-center justify-center">
+        <Icon className="w-5 h-5 text-[#e94f37]" />
       </div>
+      <h2 className="text-xl sm:text-2xl font-bold">{title}</h2>
+    </div>
+  );
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-20">
-        {/* Biography */}
-        {person.biography && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-xl shadow-red-500/20">
-                <Sparkles className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-5xl font-black text-white">
-                About {person.name.split(" ")[0]}
-              </h2>
-            </div>
-            <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-white/20 transition-all">
-              <p className="text-gray-300 leading-relaxed text-lg">
-                {displayBio}
-              </p>
-              {shouldTruncateBio && (
-                <button
-                  onClick={() => setBioExpanded(!bioExpanded)}
-                  className="mt-6 text-red-400 hover:text-red-300 font-semibold text-sm flex items-center gap-2 transition-colors"
-                >
-                  {bioExpanded ? (
-                    <>
-                      <ChevronUp className="w-4 h-4" /> Show less
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="w-4 h-4" /> Read more
-                    </>
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-black via-zinc-950 to-black text-white">
+      {/* Container */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <header className="relative grid lg:grid-cols-2 gap-2 mt-8 ">
+          {/* LEFT: Profile card */}
+          <div className="flex justify-center lg:justify-start">
+            <div className="relative w-full max-w-[320px] rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 shadow-lg">
+              {/* Decorative accent circle */}
+              <div
+                aria-hidden
+                className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-10"
+                style={{ background: "#e94f37" }}
+              />
+
+              {/* Image / poster */}
+              <div className="relative w-full h-[430px] bg-zinc-900">
+                {person?.profile_path ? (
+                  <img
+                    src={`https://image.tmdb.org/t/p/w500${person.profile_path}`}
+                    alt={person?.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-zinc-400">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" className="text-zinc-500">
+                      <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.5"></circle>
+                      <path d="M4 20c0-3.314 2.686-6 6-6h4c3.314 0 6 2.686 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path>
+                    </svg>
+                  </div>
+                )}
+
+                {/* overlay badge row (top-left) */}
+                <div className="absolute top-4 left-4 flex items-center gap-2">
+                  {person?.known_for_department && (
+                    <span
+                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold"
+                      style={{
+                        background: "rgba(0,0,0,0.45)",
+                        border: "1px solid rgba(255,255,255,0.04)",
+                        color: "#ffd6cf",
+                      }}
+                    >
+                      <Award className="w-3.5 h-3.5 text-[#e94f37]" />
+                      {person.known_for_department}
+                    </span>
                   )}
-                </button>
-              )}
-            </div>
-          </motion.section>
-        )}
+                </div>
 
-        {/* Collaborations */}
-        {collaborations && collaborations.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-xl shadow-green-500/20">
-                <Users className="w-8 h-8 text-white" />
+                {/* bottom overlay with small meta + social icons */}
+                <div className="absolute left-0 right-0 bottom-0 px-4 py-3 bg-gradient-to-t from-black/75 to-transparent flex items-center justify-between gap-4">
+                  <div className="text-sm text-zinc-200">
+                    <div className="font-semibold">{person?.name}</div>
+                    <div className="text-xs text-zinc-400">
+                      {person?.birthday ? new Date(person.birthday).getFullYear() : "—"}
+                      {person.place_of_birth ? ` • ${person.place_of_birth}` : ""}
+                    </div>
+                  </div>
+
+
+                </div>
               </div>
-              <h2 className="text-5xl font-black text-white">
-                Frequent Collaborators
-              </h2>
+
+
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {collaborations.slice(0, 6).map((collab, idx) => (
-                <Link
-                  key={collab.id}
-                  href={`/celeb/${collab.id}`}
-                  className="block"
+          </div>
+
+          {/* RIGHT: Info & stats */}
+          <div className="space-y-6 mt-24">
+            {/* Name + roles */}
+            <div>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tighter leading-tight">
+                <span className="block text-white">{person?.name}</span>
+                {/* <span className="block mt-1 text-[#e94f37] text-lg font-medium">
+                  {person?.known_for_department ? `• ${person.known_for_department}` : ""}
+                </span> */}
+              </h1>
+            </div>
+
+            {/* Quick info pills */}
+            <div className="flex flex-wrap gap-2">
+              {person?.birthday && (
+                <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-zinc-900 border border-zinc-800 text-sm">
+                  <Calendar className="w-4 h-4 text-[#e94f37]" />
+                  <span className="text-zinc-200 text-sm">{new Date(person.birthday).toLocaleDateString()}</span>
+                </div>
+              )}
+
+              {person?.place_of_birth && (
+                <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-zinc-900 border border-zinc-800 text-sm max-w-xs truncate">
+                  <MapPin className="w-4 h-4 text-[#e94f37]" />
+                  <span className="text-zinc-200 text-sm">{person.place_of_birth}</span>
+                </div>
+              )}
+
+              {/* additional pills can go here */}
+            </div>
+
+            {/* Stats grid (responsive) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { label: "Projects", value: allCredits?.length ?? 0, Icon: Film },
+                { label: "Top Rated", value: allCredits?.filter(c => c.vote_average >= 7)?.length ?? 0, Icon: Star },
+                { label: "Popularity", value: Math.round(person?.popularity ?? 0), Icon: TrendingUp },
+              ].map((s, i) => (
+                <div
+                  key={i}
+                  className="relative bg-zinc-900 border border-zinc-800 rounded-2xl p-3 sm:p-4 flex items-center gap-3 hover:shadow-[0_8px_30px_rgba(233,79,55,0.06)] transition"
                 >
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-green-500/50 hover:scale-105 transition-all group cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-white font-bold text-xl mb-1 group-hover:text-green-400 transition-colors">
-                          {collab.name}
-                        </h3>
-                        <p className="text-gray-500 text-sm">
-                          Co-starred in {collab.count} project
-                          {collab.count > 1 ? "s" : ""}
-                        </p>
-                      </div>
-                      <div className="px-4 py-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-full border border-green-500/30">
-                        <span className="text-green-400 text-xl font-black">
-                          {collab.count}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      {collab.projects.slice(0, 3).map((project, i) => (
-                        <p key={i} className="text-gray-400 text-sm truncate">
-                          • {project}
-                        </p>
-                      ))}
-                    </div>
-                  </motion.div>
-                </Link>
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(180deg, rgba(233,79,55,0.12), rgba(0,0,0,0.0))" }}>
+                    <s.Icon className="w-5 h-5 text-[#e94f37]" />
+                  </div>
+
+                  <div>
+                    <div className="text-lg font-bold text-white">{s.value}</div>
+                    <div className="text-xs text-zinc-400">{s.label}</div>
+                  </div>
+                </div>
               ))}
             </div>
-          </motion.section>
-        )}
 
-        {/* Career Statistics */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-xl shadow-yellow-500/20">
-              <Trophy className="w-8 h-8 text-white" />
+            {/* small actions / share */}
+            <div className="flex items-center gap-3 mt-1">
+              {person?.external_ids?.instagram_id && (
+                <a
+                  href={`https://instagram.com/${person.external_ids.instagram_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-9 h-9 rounded-full bg-black/40 border border-white/5 flex items-center justify-center text-zinc-200 hover:bg-[#e94f37] hover:text-black transition"
+                  aria-label="Open Instagram"
+                >
+                  <Instagram className="w-4 h-4" />
+                </a>
+              )}
+              {person?.external_ids?.twitter_id && (
+                <a
+                  href={`https://twitter.com/${person.external_ids.twitter_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-9 h-9 rounded-full bg-black/40 border border-white/5 flex items-center justify-center text-zinc-200 hover:bg-[#e94f37] hover:text-black transition"
+                  aria-label="Open Twitter"
+                >
+                  <Twitter className="w-4 h-4" />
+                </a>
+              )}
+              {person?.external_ids?.imdb_id && (
+                <a
+                  href={`https://www.imdb.com/name/${person.external_ids.imdb_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-9 h-9 rounded-full bg-black/40 border border-white/5 flex items-center justify-center text-zinc-200 hover:bg-[#e94f37] hover:text-black transition"
+                  aria-label="Open IMDb"
+                >
+                  <Star className="w-4 h-4" />
+                </a>
+              )}
+              <a href={`https://www.google.com/search?q=${encodeURIComponent(person?.name || "")}`} target="_blank" rel="noreferrer" className="text-sm text-zinc-400 hover:text-white">
+                More on web
+              </a>
             </div>
-            <h2 className="text-5xl font-black text-white">
-              Career Statistics
-            </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-xl rounded-2xl p-8 border border-blue-500/20 hover:border-blue-500/40 hover:scale-105 transition-all group text-center"
-            >
-              <Film className="w-12 h-12 text-blue-400 mx-auto mb-4 group-hover:scale-110 transition-transform" />
-              <div className="text-5xl font-black text-white mb-2">
-                {movieCredits.length}
-              </div>
-              <div className="text-sm text-gray-400 font-medium">
-                Feature Films
-              </div>
-            </motion.div>
+        </header>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-xl rounded-2xl p-8 border border-purple-500/20 hover:border-purple-500/40 hover:scale-105 transition-all group text-center"
-            >
-              <Tv className="w-12 h-12 text-purple-400 mx-auto mb-4 group-hover:scale-110 transition-transform" />
-              <div className="text-5xl font-black text-white mb-2">
-                {tvCredits.length}
-              </div>
-              <div className="text-sm text-gray-400 font-medium">
-                TV Productions
-              </div>
-            </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 backdrop-blur-xl rounded-2xl p-8 border border-yellow-500/20 hover:border-yellow-500/40 hover:scale-105 transition-all group text-center"
-            >
-              <Star
-                className="w-12 h-12 text-yellow-400 mx-auto mb-4 group-hover:scale-110 transition-transform"
-                fill="currentColor"
-              />
-              <div className="text-5xl font-black text-white mb-2">
-                {allCredits.filter((c) => c.vote_average >= 7).length}
-              </div>
-              <div className="text-sm text-gray-400 font-medium">
-                Highly Rated
-              </div>
-            </motion.div>
+        {/* Divider accent */}
+        <div className="my-10 h-px bg-zinc-800" />
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-xl rounded-2xl p-8 border border-green-500/20 hover:border-green-500/40 hover:scale-105 transition-all group text-center"
-            >
-              <Clock className="w-12 h-12 text-green-400 mx-auto mb-4 group-hover:scale-110 transition-transform" />
-              <div className="text-5xl font-black text-white mb-2">
-                {person.birthday
-                  ? new Date().getFullYear() -
-                    new Date(person.birthday).getFullYear()
-                  : 0}
-                +
-              </div>
-              <div className="text-sm text-gray-400 font-medium">
-                Years Active
-              </div>
-            </motion.div>
-          </div>
-        </motion.section>
+        {/* ABOUT */}
+        {person?.biography && (
+          <section className="space-y-4">
+            <SectionHeader icon={Sparkles} title="Biography" />
 
-        {/* Genre Stats */}
-        {topGenres.length > 0 && (
-          <section>
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-xl shadow-purple-500/20">
-                <Film className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-5xl font-black text-white">
-                Genre Breakdown
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Genre Chart */}
-              <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10">
-                <h3 className="text-2xl font-bold mb-6 text-white">
-                  Top Genres
-                </h3>
-                <div className="space-y-6">
-                  {topGenres.map(([genre, count], idx) => {
-                    const percentage =
-                      totalGenreWorks > 0 ? (count / totalGenreWorks) * 100 : 0;
-                    const colors = [
-                      "from-red-500 to-orange-500",
-                      "from-purple-500 to-pink-500",
-                      "from-blue-500 to-cyan-500",
-                      "from-green-500 to-emerald-500",
-                      "from-yellow-500 to-amber-500",
-                    ];
-                    return (
-                      <div key={genre}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-white font-semibold">
-                            {genre}
-                          </span>
-                          <span className="text-gray-400 text-sm">
-                            {count} works ({percentage.toFixed(0)}%)
-                          </span>
-                        </div>
-                        <div className="w-full h-4 bg-gray-800 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${percentage}%` }}
-                            transition={{ duration: 1, delay: idx * 0.1 }}
-                            className={`h-full bg-gradient-to-r ${colors[idx]}`}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+            <div className="relative bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+              <p
+                className={`text-zinc-300 leading-relaxed transition-all duration-300 ${bioExpanded ? "" : "line-clamp-5"
+                  }`}
+              >
+                {person.biography}
+              </p>
 
-              {/* Genre Summary */}
-              <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 space-y-8">
-                <div>
-                  <p className="text-gray-400 text-sm mb-3">Most Frequent</p>
-                  <p className="text-4xl font-black bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
-                    {topGenres[0]?.[0] || "N/A"}
-                  </p>
-                  <p className="text-red-400 font-semibold mt-1">
-                    {topGenres[0]?.[1] || 0} works
-                  </p>
-                </div>
-                <div className="border-t border-white/10 pt-8">
-                  <p className="text-gray-400 text-sm mb-3">Total Genres</p>
-                  <p className="text-4xl font-black text-white">
-                    {Object.keys(genreStats).length}
-                  </p>
-                  <p className="text-gray-500 text-sm mt-1">
-                    Across {allCredits.length} productions
-                  </p>
-                </div>
-                <div className="border-t border-white/10 pt-8">
-                  <p className="text-gray-400 text-sm mb-4">Specialization</p>
-                  <div className="flex flex-wrap gap-2">
-                    {topGenres.slice(0, 3).map(([genre]) => (
-                      <span
-                        key={genre}
-                        className="px-4 py-2 bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30 rounded-full text-red-400 text-sm font-bold hover:scale-105 transition-transform cursor-pointer"
-                      >
-                        {genre}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+              {/* fade overlay when collapsed */}
+              {!bioExpanded && (
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-zinc-900 to-transparent rounded-b-2xl" />
+              )}
+
+              {/* toggle */}
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => setBioExpanded(!bioExpanded)}
+                  className="text-sm font-semibold text-[#e94f37] hover:underline"
+                >
+                  {bioExpanded ? "Show less" : "Read more"}
+                </button>
               </div>
             </div>
           </section>
         )}
 
-        {/* Photos */}
-        {person.images?.profiles && person.images.profiles.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-xl shadow-pink-500/20">
-                  <Camera className="w-8 h-8 text-white" />
+
+        {/* Collaborators */}
+        {collaborations?.length > 0 && (
+          <section className="space-y-4 mt-8">
+            <SectionHeader icon={Users} title="Frequent Collaborators" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {collaborations.slice(0, 6).map((c) => (
+                <a
+                  key={c.id}
+                  href={`/celeb/${c.id}`}
+                  className="group relative bg-zinc-900 border border-zinc-800 rounded-2xl p-4 hover:border-[#e94f37] transition"
+                >
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#e94f37]/10 to-transparent opacity-0 group-hover:opacity-100 transition" />
+
+                  <div className="relative flex items-start gap-4">
+                    {/* avatar */}
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center ">
+                      {c.profile_path ? (
+                        <img
+                          src={`https://image.tmdb.org/t/p/w342${c.profile_path}`}
+                          alt={c.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-zinc-500">
+                          No image
+                        </div>
+                      )}
+                    </div>
+
+
+                    <div className="flex-1">
+                      <div className="font-semibold">{c.name}</div>
+                      <div className="text-xs text-zinc-400">
+                        {c.count} projects together
+                      </div>
+
+                      <div className="mt-2 text-xs text-zinc-500 line-clamp-2">
+                        {c.projects?.slice(0, 3).join(" • ")}
+                      </div>
+                    </div>
+
+                    <span className="text-[#e94f37] font-bold">{c.count}</span>
+                  </div>
+                </a>
+              ))}
+            </div>
+
+          </section>
+        )}
+
+        {/* Career Stats */}
+        <section className="mt-10 space-y-4">
+          <SectionHeader icon={Trophy} title="Career Stats" />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center hover:border-[#e94f37] transition">
+              <div className="text-3xl font-bold">{movieCredits?.length ?? 0}</div>
+              <div className="text-xs text-zinc-400 mt-1">Feature Films</div>
+            </div>
+
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center hover:border-[#e94f37] transition">
+              <div className="text-3xl font-bold">{tvCredits?.length ?? 0}</div>
+              <div className="text-xs text-zinc-400 mt-1">TV Productions</div>
+            </div>
+
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center hover:border-[#e94f37] transition">
+              <div className="text-3xl font-bold">{allCredits?.filter?.((c) => c.vote_average >= 7)?.length ?? 0}</div>
+              <div className="text-xs text-zinc-400 mt-1">Highly Rated</div>
+            </div>
+
+            {/* <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center hover:border-[#e94f37] transition">
+              <div className="text-3xl font-bold">
+                {person?.birthday ? (new Date().getFullYear() - new Date(person.birthday).getFullYear()) : "-"}
+              </div>
+              <div className="text-xs text-zinc-400 mt-1">Years Active (est.)</div>
+            </div> */}
+          </div>
+        </section>
+
+        {/* Genre Breakdown */}
+        {Object.keys(genreStats || {}).length > 0 && (
+          <section className="mt-10 space-y-4">
+            <SectionHeader icon={PieChart} title="Genre Breakdown" />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* bars */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
+                {topGenres.map(([genre, count]) => {
+                  const pct = Math.round((count / totalGenreWorks) * 100);
+                  return (
+                    <div key={genre}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>{genre}</span>
+                        <span className="text-zinc-400">{pct}%</span>
+                      </div>
+                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-[#e94f37] to-orange-400"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* summary */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col justify-center">
+                <div className="flex items-center gap-3 mb-4">
+                  <Layers className="w-5 h-5 text-[#e94f37]" />
+                  <span className="text-sm text-zinc-400">Most Frequent Genre</span>
                 </div>
-                <div>
-                  <h2 className="text-5xl font-black text-white">Gallery</h2>
-                  <p className="text-gray-500 text-sm mt-1">
-                    {person.images.profiles.length} photos
-                  </p>
+                <div className="text-2xl font-bold">{topGenres[0]?.[0]}</div>
+                <div className="text-sm text-zinc-400 mt-1">
+                  {topGenres[0]?.[1]} projects
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              {person.images.profiles.slice(0, 12).map((img, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: idx * 0.05 }}
-                  whileHover={{ scale: 1.05 }}
-                  className="relative aspect-[2/3] rounded-2xl overflow-hidden cursor-pointer group bg-gray-900 ring-2 ring-white/10 hover:ring-pink-500/50 transition-all"
-                  onClick={() =>
-                    setSelectedImage(
-                      `https://image.tmdb.org/t/p/original${img.file_path}`
-                    )
-                  }
+
+          </section>
+        )}
+
+        {/* Gallery (minimal, professional) */}
+        {person?.images?.profiles?.length > 0 && (
+          <section className="mt-10 space-y-4">
+            <SectionHeader icon={Camera} title="Photo Gallery" />
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {person.images.profiles.slice(0, 12).map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedImage?.(`https://image.tmdb.org/t/p/original${img.file_path}`)}
+                  className="rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-[#e94f37] transition"
                 >
-                  <Image
+                  <img
                     src={`https://image.tmdb.org/t/p/w342${img.file_path}`}
-                    alt={`${person.name} photo`}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    alt={`${person.name} photo ${i}`}
+                    style={{ width: "100%", height: "220px", objectFit: "cover", display: "block" }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                    <Camera className="w-6 h-6 text-white" />
-                  </div>
-                </motion.div>
+                </button>
               ))}
             </div>
-          </motion.section>
+          </section>
         )}
 
         {/* Upcoming Projects */}
-        {upcomingProjects && upcomingProjects.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-xl shadow-cyan-500/20">
-                <Calendar className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-5xl font-black text-white">Coming Soon</h2>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-              {upcomingProjects.slice(0, 6).map((project, idx) => (
-                <motion.div
-                  key={project.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  className="group"
-                >
-                  <Link
-                    href={`/${project.media_type === "tv" ? "tv" : "movies"}/${
-                      project.id
-                    }`}
-                  >
-                    <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gray-900 mb-3 ring-2 ring-white/10 group-hover:ring-cyan-500/50 transition-all shadow-lg">
-                      {project.poster_path ? (
-                        <Image
-                          src={`https://image.tmdb.org/t/p/w342${project.poster_path}`}
-                          alt={project.title || project.name || ""}
-                          fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-700/30">
-                          <Film size={50} />
-                        </div>
-                      )}
-                      <div className="absolute top-3 left-3 px-3 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg shadow-lg">
-                        <span className="text-white text-xs font-bold">
-                          Upcoming
-                        </span>
-                      </div>
-                    </div>
-                    <h3 className="text-white font-semibold text-sm line-clamp-2 mb-1">
-                      {project.title || project.name}
-                    </h3>
-                    <p className="text-gray-500 text-xs">
-                      {project.release_date || project.first_air_date
-                        ? new Date(
-                            project.release_date || project.first_air_date
-                          ).toLocaleDateString("en-US", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })
-                        : "TBA"}
-                    </p>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          </motion.section>
-        )}
+        {upcomingProjects?.length > 0 && (
+          <section className="mt-10 space-y-4">
+            <SectionHeader icon={Clock} title="Upcoming Projects" />
 
-        {/* Similar Celebrities */}
-        {similarPeople && similarPeople.length > 0 && (
-          <section>
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-xl shadow-indigo-500/20">
-                <Users className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h2 className="text-5xl font-black text-white">
-                  You May Also Like
-                </h2>
-                <p className="text-gray-500 text-sm mt-1">
-                  Based on {person.known_for_department} with similar style
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-              {similarPeople.slice(0, 6).map((similar, idx) => (
-                <Link key={similar.id} href={`/celeb/${similar.id}`}>
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="group cursor-pointer"
-                  >
-                    <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gray-900 mb-3 ring-2 ring-white/10 group-hover:ring-indigo-500/50 transition-all">
-                      {similar.profile_path ? (
-                        <Image
-                          src={`https://image.tmdb.org/t/p/w342${similar.profile_path}`}
-                          alt={similar.name}
-                          fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-700/30">
-                          <Users2 size={28} />
-                        </div>
-                      )}
-                    </div>
-                    <h3 className="text-white font-bold text-sm text-center line-clamp-2">
-                      {similar.name}
-                    </h3>
-                    <p className="text-gray-500 text-xs text-center">
-                      {similar.known_for_department || "Actor"}
-                    </p>
-                  </motion.div>
-                </Link>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {upcomingProjects.slice(0, 6).map((p) => (
+                <a key={p.id} href={`/${p.media_type === "tv" ? "tv" : "movies"}/${p.id}`} className="block bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-[#e94f37] transition">
+                  {p.poster_path ? (
+                    <img src={`https://image.tmdb.org/t/p/w342${p.poster_path}`} alt={p.title || p.name} style={{ width: "100%", height: 260, objectFit: "cover" }} />
+                  ) : (
+                    <div className="w-full h-64 flex items-center justify-center text-zinc-500">No image</div>
+                  )}
+                  <div className="p-3">
+                    <div className="text-sm font-semibold text-white line-clamp-2">{p.title || p.name}</div>
+                    <div className="text-xs text-zinc-400 mt-1">{p.release_date || p.first_air_date ? new Date(p.release_date || p.first_air_date).toLocaleDateString() : "TBA"}</div>
+                  </div>
+                </a>
               ))}
             </div>
           </section>
         )}
 
-        {/* Filmography */}
-        <section>
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-xl shadow-cyan-500/20">
-                <Film className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-5xl font-black text-white">Filmography</h2>
-            </div>
+        {/* Similar People */}
+        {similarPeople?.length > 0 && (
+          <section className="mt-10 space-y-4">
+            <SectionHeader icon={Sparkles} title="You May Also Like" />
 
-            {/* Tab Filter */}
-            <div className="flex gap-2 bg-white/5 backdrop-blur-xl rounded-2xl p-1.5 border border-white/10">
-              <button
-                onClick={() => {
-                  setSelectedTab("all");
-                  setShowAllCredits(false);
-                }}
-                className={`px-6 py-3 rounded-xl text-sm font-bold transition-all ${
-                  selectedTab === "all"
-                    ? "bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                All ({allCredits.length})
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedTab("movies");
-                  setShowAllCredits(false);
-                }}
-                className={`px-6 py-3 rounded-xl text-sm font-bold transition-all ${
-                  selectedTab === "movies"
-                    ? "bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                Movies ({movieCredits.length})
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedTab("tv");
-                  setShowAllCredits(false);
-                }}
-                className={`px-6 py-3 rounded-xl text-sm font-bold transition-all ${
-                  selectedTab === "tv"
-                    ? "bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                TV ({tvCredits.length})
-              </button>
+
+            <Carousel items={similarPeople} />
+
+          </section>
+        )}
+
+        {/* FILMOGRAPHY */}
+        <section className="mt-10">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+            <SectionHeader icon={Clapperboard} title="Filmography" />
+
+            {/* Tabs */}
+            <div className="flex w-full sm:w-auto overflow-x-auto sm:overflow-visible">
+              <div className="flex gap-2 bg-zinc-900 border border-zinc-800 rounded-xl p-1 min-w-max">
+                <button
+                  className={`px-4 py-2 text-sm rounded-lg font-semibold whitespace-nowrap ${selectedTab === "all"
+                    ? "bg-[#e94f37] text-black"
+                    : "text-zinc-300"
+                    }`}
+                  onClick={() => {
+                    setSelectedTab("all");
+                    setShowAllCredits(false);
+                  }}
+                >
+                  All ({allCredits?.length ?? 0})
+                </button>
+
+                <button
+                  className={`px-4 py-2 text-sm rounded-lg font-semibold whitespace-nowrap ${selectedTab === "movies"
+                    ? "bg-[#e94f37] text-black"
+                    : "text-zinc-300"
+                    }`}
+                  onClick={() => {
+                    setSelectedTab("movies");
+                    setShowAllCredits(false);
+                  }}
+                >
+                  Movies ({movieCredits?.length ?? 0})
+                </button>
+
+                <button
+                  className={`px-4 py-2 text-sm rounded-lg font-semibold whitespace-nowrap ${selectedTab === "tv"
+                    ? "bg-[#e94f37] text-black"
+                    : "text-zinc-300"
+                    }`}
+                  onClick={() => {
+                    setSelectedTab("tv");
+                    setShowAllCredits(false);
+                  }}
+                >
+                  TV ({tvCredits?.length ?? 0})
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Credits Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-            {visibleCredits.map((credit, index) => (
-              <motion.div
-                key={`${credit.id}-${index}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="group"
-              >
-                <Link
-                  href={`/${credit.media_type === "tv" ? "tv" : "movies"}/${
-                    credit.id
-                  }`}
-                >
-                  <div className="relative aspect-[2/3] rounded-2xl overflow-hidden bg-gray-900 mb-3 ring-2 ring-white/10 group-hover:ring-red-500/50 transition-all">
-                    {credit.poster_path ? (
-                      <Image
-                        src={`https://image.tmdb.org/t/p/w342${credit.poster_path}`}
-                        alt={credit.title || credit.name || ""}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-700/30">
-                        <Film size={50} />
-                      </div>
-                    )}
-                    {credit.vote_average > 0 && (
-                      <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/80 backdrop-blur-sm px-3 py-1.5 rounded-lg">
-                        <Star
-                          className="w-4 h-4 text-yellow-400"
-                          fill="currentColor"
-                        />
-                        <span className="text-white text-sm font-bold">
-                          {credit.vote_average.toFixed(1)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <h3 className="text-white font-bold text-sm line-clamp-2 mb-1">
-                    {credit.title || credit.name}
-                  </h3>
-                  {credit.character && (
-                    <p className="text-gray-500 text-xs line-clamp-1">
-                      as {credit.character}
-                    </p>
-                  )}
-                </Link>
-              </motion.div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {visibleCredits.slice(0, displayCredits.length).map((show, idx) => (
+              <TVCard key={show.id} show={show} />
             ))}
           </div>
 
-          {/* View All Button */}
+          {/* view all / collapse */}
           {displayCredits.length > 12 && (
             <div className="mt-8 text-center">
-              <button
-                onClick={() => setShowAllCredits(!showAllCredits)}
-                className="px-10 py-4 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-2xl font-bold hover:shadow-2xl hover:shadow-red-500/50 transition-all hover:scale-105 flex items-center gap-3 mx-auto"
-              >
-                {showAllCredits ? (
-                  <>
-                    Show Less <ChevronUp className="w-5 h-5" />
-                  </>
-                ) : (
-                  <>
-                    View All {displayCredits.length}{" "}
-                    <ChevronDown className="w-5 h-5" />
-                  </>
-                )}
+              <button onClick={() => setShowAllCredits(!showAllCredits)} className="px-6 py-3 rounded-full bg-[#e94f37] text-black font-semibold">
+                {showAllCredits ? "Show Less" : `View All (${displayCredits.length})`}
               </button>
             </div>
           )}
         </section>
       </div>
 
-      {/* Image Modal */}
-      <AnimatePresence>
-        {selectedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4"
-            onClick={() => setSelectedImage(null)}
-          >
-            <button
-              className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center hover:bg-white/20 transition-colors border border-white/20"
-              onClick={() => setSelectedImage(null)}
-            >
-              <X className="w-6 h-6 text-white" />
-            </button>
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              className="relative max-w-4xl max-h-[90vh] w-full h-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Image
-                src={selectedImage}
-                alt="Full size"
-                fill
-                className="object-contain"
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Simple image modal - inline minimal */}
+      {selectedImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4" onClick={() => setSelectedImage(null)}>
+          <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setSelectedImage(null)} className="absolute -top-4 -right-4 bg-zinc-900 border border-zinc-800 rounded-full w-10 h-10 flex items-center justify-center">✕</button>
+            <img src={selectedImage} alt="full" style={{ width: "100%", height: "auto", maxHeight: "80vh", objectFit: "contain" }} />
+          </div>
+        </div>
+      )}
     </div>
+
   );
 }

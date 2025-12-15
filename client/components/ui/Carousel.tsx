@@ -6,12 +6,19 @@ interface CarouselProps {
     items: All[];
     CardComponent: React.ComponentType<{ show?: All; size?: "default" | "large" | "wide" }>;
 }
-
 export const Carousel = ({ items, CardComponent }: CarouselProps) => {
     const [startIndex, setStartIndex] = useState(0);
     const [itemsPerView, setItemsPerView] = useState(6);
+    const [isMobile, setIsMobile] = useState(false);
 
-    // update itemsPerView on resize
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 640);
+        check();
+        window.addEventListener("resize", check);
+        return () => window.removeEventListener("resize", check);
+    }, []);
+
+    // Update itemsPerView on resize
     useEffect(() => {
         const updateLayout = () => {
             const w = window.innerWidth;
@@ -29,29 +36,21 @@ export const Carousel = ({ items, CardComponent }: CarouselProps) => {
 
     // Clamp startIndex whenever items length or itemsPerView changes
     useEffect(() => {
-        setStartIndex((prev) => {
-            const maxStart = Math.max(0, items.length - itemsPerView);
-            return Math.min(prev, maxStart);
-        });
+        setStartIndex(prev => Math.min(prev, Math.max(0, items.length - itemsPerView)));
     }, [items.length, itemsPerView]);
 
     const maxStart = Math.max(0, items.length - itemsPerView);
     const canScrollLeft = startIndex > 0;
     const canScrollRight = startIndex < maxStart;
 
-    const scrollLeft = () => {
-        setStartIndex((prev) => Math.max(0, prev - itemsPerView));
-    };
+    const scrollLeft = () => setStartIndex(prev => Math.max(0, prev - itemsPerView));
+    const scrollRight = () => setStartIndex(prev => Math.min(maxStart, prev + itemsPerView));
 
-    const scrollRight = () => {
-        setStartIndex((prev) => Math.min(maxStart, prev + itemsPerView));
-    };
-
-    const visibleItems = items.slice(startIndex, startIndex + itemsPerView);
+    const visibleItems = isMobile ? items : items.slice(startIndex, startIndex + itemsPerView);
 
     return (
         <div className="relative group/carousel">
-            {canScrollLeft && (
+            {!isMobile && canScrollLeft && (
                 <button
                     onClick={scrollLeft}
                     className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
@@ -61,7 +60,7 @@ export const Carousel = ({ items, CardComponent }: CarouselProps) => {
                 </button>
             )}
 
-            {canScrollRight && (
+            {!isMobile && canScrollRight && (
                 <button
                     onClick={scrollRight}
                     className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
@@ -71,11 +70,23 @@ export const Carousel = ({ items, CardComponent }: CarouselProps) => {
                 </button>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+            {/* On mobile: horizontal scroll */}
+            <div
+                className={
+                    isMobile
+                        ? "flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
+                        : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5"
+                }
+            >
                 {visibleItems.map(item => (
-                    <CardComponent key={item.id} show={item} />
+                    <div
+                        key={item.id}
+                        className={isMobile ? "flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px]" : ""}
+                    >
+                        <CardComponent show={item} />
+                    </div>
                 ))}
             </div>
         </div>
     );
-}
+};

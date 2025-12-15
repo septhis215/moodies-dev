@@ -403,7 +403,7 @@ export class PeopleService {
     const person = await this.getPersonDetails(id);
     const credits = person.combined_credits?.cast || [];
 
-    const collaborators = new Map<number, { name: string; count: number; projects: string[] }>();
+    const collaborators = new Map<number, { name: string; count: number; projects: string[]; profile_path: string }>();
 
     for (const credit of credits.slice(0, 50)) {
       try {
@@ -414,7 +414,7 @@ export class PeopleService {
           for (const cast of titleCredits.cast.slice(0, 10)) {
             if (cast.id !== id) {
               if (!collaborators.has(cast.id)) {
-                collaborators.set(cast.id, { name: cast.name, count: 0, projects: [] });
+                collaborators.set(cast.id, { name: cast.name, count: 0, projects: [], profile_path: cast.profile_path || '' });
               }
               const collab = collaborators.get(cast.id);
               if (!collab) continue;
