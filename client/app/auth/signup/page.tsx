@@ -39,6 +39,10 @@ export default function SignupPage() {
 
       if (data?.token) {
         localStorage.setItem("authToken", data.token);
+
+        localStorage.setItem("signupEmail", email);
+        localStorage.setItem("signupPassword", password);
+
         router.push("/auth/onboarding");
       } else {
         router.push("/auth/login");

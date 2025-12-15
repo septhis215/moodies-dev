@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/app/context/ToastContext";
+import { useAuth } from "@/hooks/useAuth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -75,11 +77,13 @@ const Chip: React.FC<{
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const { signIn, isLoading: authLoading } = useAuth();
 
   const [age, setAge] = useState<number>(18);
   const [genres, setGenres] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
-  const [msg, setMsg] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const toggle = (list: string[], set: (v: string[]) => void, v: string) =>
     list.includes(v) ? set(list.filter((x) => x !== v)) : set([...list, v]);
@@ -91,10 +95,26 @@ export default function OnboardingPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting || authLoading) return;
+
     const token = localStorage.getItem("authToken");
-    if (!token) return setMsg("Not logged in!");
+    if (!token) {
+      toast("Not logged in!", "error", 3000, "Authentication Error", null);
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
+      // Save preferences
+      toast(
+        "Saving your preferences...",
+        "info",
+        3000,
+        "Setting Up Your Profile",
+        null
+      );
+
       const res = await fetch(`${API_BASE}/auth/me/preferences`, {
         method: "PUT",
         headers: {
@@ -107,11 +127,45 @@ export default function OnboardingPage() {
           preferredLanguages: languages,
         }),
       });
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to save");
-      router.push("/auth/login");
+      if (!res.ok)
+        throw new Error(data.message || "Failed to save preferences");
+
+      // Success toast for preferences
+      toast(
+        "Preferences saved successfully!",
+        "success",
+        2000,
+        "Profile Updated",
+        null
+      );
+
+      // Small delay to let user see the success message
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // Get stored credentials for auto sign-in
+      const storedEmail = localStorage.getItem("signupEmail");
+      const storedPassword = localStorage.getItem("signupPassword");
+
+      if (storedEmail && storedPassword) {
+        // Use the auth hook to sign in (it handles toasts internally)
+        await signIn(storedEmail, storedPassword);
+      } else {
+        // No credentials stored, just redirect to login
+        toast(
+          "Please log in to continue",
+          "info",
+          3000,
+          "Setup Complete",
+          null
+        );
+        router.push("/auth/login");
+      }
     } catch (err: any) {
-      setMsg(err.message);
+      toast(err.message || "An error occurred", "error", 4000, "Error", null);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -248,27 +302,23 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        {msg && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-center backdrop-blur-sm">
-            <p className="text-sm text-red-400">{msg}</p>
-          </div>
-        )}
-
         <button
           type="submit"
           onClick={handleSubmit}
-          disabled={!canSubmit}
+          disabled={!canSubmit || isSubmitting || authLoading}
           className={[
             "w-full rounded-xl px-5 py-3.5 font-semibold text-white transition-all relative overflow-hidden group",
-            canSubmit
+            canSubmit && !isSubmitting && !authLoading
               ? "bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 hover:shadow-xl hover:shadow-pink-500/30"
               : "bg-white/5 text-white/30 cursor-not-allowed",
           ].join(" ")}
         >
-          {canSubmit && (
+          {canSubmit && !isSubmitting && !authLoading && (
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
           )}
-          <span className="relative">Save Preferences</span>
+          <span className="relative">
+            {isSubmitting || authLoading ? "Processing..." : "Save Preferences"}
+          </span>
         </button>
       </div>
 

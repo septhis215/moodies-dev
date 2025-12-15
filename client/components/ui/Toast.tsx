@@ -6,10 +6,11 @@ interface ToastProps {
   message: string;
   onClose: () => void;
   variant?: "info" | "success" | "warning" | "error";
-  duration?: number; // ms
-  createdAt: number; // Timestamp when toast was created
+  duration?: number;
+  createdAt: number;
   title?: string | null;
   posterUrl?: string | null;
+  imageSize?: { width: number; height: number };
 }
 
 const ACCENT: Record<string, string> = {
@@ -27,6 +28,7 @@ const Toast: React.FC<ToastProps> = ({
   createdAt,
   title = null,
   posterUrl = null,
+  imageSize
 }) => {
   const [progress, setProgress] = React.useState(0);
   const rafRef = React.useRef<number | null>(null);
@@ -203,8 +205,19 @@ const Toast: React.FC<ToastProps> = ({
       >
         <div className="m-toast__left" aria-hidden>
           {posterUrl ? (
-            // simple img tag to avoid next/image layout complexity inside floating toasts
-            <img src={posterUrl} alt={title ?? "poster"} />
+            imageSize ? (
+              <img
+                src={posterUrl}
+                alt={title ?? "poster"}
+                style={{
+                  width: `${imageSize.width}px`,
+                  height: `${imageSize.height}px`,
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <img src={posterUrl} alt={title ?? "poster"} />
+            )
           ) : (
             <div className="m-toast__placeholder" aria-hidden>
               {title ? title.slice(0, 2).toUpperCase() : "?"}

@@ -37,7 +37,7 @@ export class AuthController {
     private authService: AuthService,
     private readonly jwt: JwtService,
     private readonly PrismaService: PrismaService,
-  ) {}
+  ) { }
 
   @HttpCode(HttpStatus.CREATED)
   @Post('signup')
@@ -74,103 +74,114 @@ export class AuthController {
   logout(@GetUser() user: User2.User) {
     return { message: 'Loggout out successfullly' };
   }
- 
+
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleAuth() {
   }
 
-@Get('google')
-@UseGuards(AuthGuard('google'))
-googleSignup(): void {
-  // passport redirects automatically
-}
-
-
-@Get('google/callback')
-@UseGuards(AuthGuard('google'))
-async googleSignupCallback(@Req() req: any, @Res() res: ExpressResponse) {
-  // profile is returned by GoogleStrategy.validate()
-  const profile = req.user;
-  const user = await this.authService.upsertGoogleUser(profile);
-
-  const mode: 'set' | 'verify' = user.password ? 'verify' : 'set';
-
-  // sign a SHORT-LIVED temp token (5 minutes)
-  const temp = this.jwt.sign(
-    { uid: user.id, mode },
-    { expiresIn: '5m', subject: String(user.id), jwtid: 'temp' },
-  );
-
-  const base = process.env.CLIENT_URL ?? 'http://localhost:3000';
-  const target =
-    mode === 'set'
-      ? `${base}/auth/password-create?token=${encodeURIComponent(temp)}`
-      : `${base}/auth/password-check?token=${encodeURIComponent(temp)}`;
-
-  return res.redirect(target);
-}
-
-/* ================= PASSWORD ENDPOINTS ================= */
-
-@Post('set-password')
-async setPassword(@Body() body: { token: string; password: string }) {
-  const { token, password } = body;
-
-  let payload: any;
-  try {
-    payload = this.jwt.verify(token); 
-  } catch (e: any) {
-    throw new UnauthorizedException(e.message);
-  }
-  if (payload?.mode !== 'set') throw new UnauthorizedException('Invalid mode');
-
-  const uid = String(payload.uid);
-  if (!uid) throw new UnauthorizedException('Invalid user id');
-
-
-  const hash = await argon.hash(password, {
-  type: argon.argon2id,   
-  memoryCost: 19456,       
-  timeCost: 2,             
-  parallelism: 1,         
-});
-await this.PrismaService.user.update({
-  where: { id: uid },
-  data: { password: hash,provider: 'google' },
-});
-
-  const accessToken = this.authService.signAccessToken({ sub: uid });
-  return { token: accessToken };
-}
-
-@Post('verify-password')
-async verifyPassword(@Body() body: { token: string; password: string }) {
-  const { token, password } = body;
-
-  let payload: any;
-  try {
-    payload = this.jwt.verify(token);
-  } catch (e: any) {
-    throw new UnauthorizedException(e.message);
-  }
-  if (payload?.mode !== 'verify') throw new UnauthorizedException('Invalid mode');
-
-  const uid = String(payload.uid);
-  if (!uid) throw new UnauthorizedException('Invalid user id');
-
-  const user = await this.PrismaService.user.findUnique({ where: { id: uid } });
-  if (!user) throw new NotFoundException('User not found');
-  if (!user.password) throw new UnauthorizedException('No password set');
-
-  const ok = await argon.verify(user.password, password);
-  if (!ok) {
-    throw new UnauthorizedException('Invalid credentials');
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  googleSignup(): void {
+    // passport redirects automatically
   }
 
-  const accessToken = this.authService.signAccessToken({ sub: uid });
-  return { token: accessToken };
-}
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleSignupCallback(@Req() req: any, @Res() res: ExpressResponse) {
+    // profile is returned by GoogleStrategy.validate()
+    const profile = req.user;
+    const user = await this.authService.upsertGoogleUser(profile);
+
+    const mode: 'set' | 'verify' = user.password ? 'verify' : 'set';
+
+    // sign a SHORT-LIVED temp token (5 minutes)
+    const temp = this.jwt.sign(
+      { uid: user.id, mode },
+      { expiresIn: '5m', subject: String(user.id), jwtid: 'temp' },
+    );
+
+    const base = process.env.CLIENT_URL ?? 'http://localhost:3000';
+    const target =
+      mode === 'set'
+        ? `${base}/auth/password-create?token=${encodeURIComponent(temp)}`
+        : `${base}/auth/password-check?token=${encodeURIComponent(temp)}`;
+
+    return res.redirect(target);
+  }
+
+  /* ================= PASSWORD ENDPOINTS ================= */
+
+  @Post('set-password')
+  async setPassword(@Body() body: { token: string; password: string }) {
+    const { token, password } = body;
+
+    let payload: any;
+    try {
+      payload = this.jwt.verify(token);
+    } catch (e: any) {
+      throw new UnauthorizedException(e.message);
+    }
+    if (payload?.mode !== 'set') throw new UnauthorizedException('Invalid mode');
+
+    const uid = String(payload.uid);
+    if (!uid) throw new UnauthorizedException('Invalid user id');
+
+    const hash = await argon.hash(password, {
+      type: argon.argon2id,
+      memoryCost: 19456,
+      timeCost: 2,
+      parallelism: 1,
+    });
+
+    await this.PrismaService.user.update({
+      where: { id: uid },
+      data: { password: hash, provider: 'google' },
+    });
+
+    const user = await this.PrismaService.user.findUnique({
+      where: { id: uid },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        avatarUrl: true,
+      },
+    });
+
+    const accessToken = this.authService.signAccessToken({ sub: uid });
+
+    return { token: accessToken, user };
+  }
+
+  @Post('verify-password')
+  async verifyPassword(@Body() body: { token: string; password: string }) {
+    const { token, password } = body;
+
+    let payload: any;
+    try {
+      payload = this.jwt.verify(token);
+    } catch (e: any) {
+      throw new UnauthorizedException(e.message);
+    }
+    if (payload?.mode !== 'verify') throw new UnauthorizedException('Invalid mode');
+
+    const uid = String(payload.uid);
+    if (!uid) throw new UnauthorizedException('Invalid user id');
+
+    const user = await this.PrismaService.user.findUnique({ where: { id: uid } });
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.password) throw new UnauthorizedException('No password set');
+
+    const ok = await argon.verify(user.password, password);
+    if (!ok) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const accessToken = this.authService.signAccessToken({ sub: uid });
+    return { token: accessToken };
+  }
 
   @Post('request-reset')
   async requestReset(@Body('email') email: string) {
@@ -255,7 +266,7 @@ async verifyPassword(@Body() body: { token: string; password: string }) {
     });
   }
 
-  
+
   @UseGuards(JwtGuard)
   @Put('me/preferences')
   async upsertMyPreferences(
@@ -276,10 +287,10 @@ async verifyPassword(@Body() body: { token: string; password: string }) {
     const data: any = {};
     if (typeof age === 'number') data.age = age;
     if (Array.isArray(preferredGenres)) {
-      data.preferredGenres = { set: preferredGenres };  
+      data.preferredGenres = { set: preferredGenres };
     }
     if (Array.isArray(preferredLanguages)) {
-      data.preferredLanguages = { set: preferredLanguages }; 
+      data.preferredLanguages = { set: preferredLanguages };
     }
 
     return this.PrismaService.user.update({
@@ -293,12 +304,12 @@ async verifyPassword(@Body() body: { token: string; password: string }) {
         preferredLanguages: true,
       },
     });
-    
+
   }
 
 
-  
-  
+
+
 
 
 

@@ -40,6 +40,8 @@ import {
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthProvider";
 import DropdownPortal from "./ui/dropdownPortal";
+import { useToast } from "@/app/context/ToastContext";
+
 const routes = [
   { name: "Home", href: "/" },
   { name: "Movies", href: "/movies" },
@@ -57,6 +59,9 @@ type User = {
   avatarUrl?: string;
 };
 
+const MOODIES_LOGO = "/images/moodies.png";
+const MOODIES_SIZE = { width: 30, height: 30 };
+
 export function NavbarComponent() {
   const router = useRouter();
 
@@ -71,6 +76,7 @@ export function NavbarComponent() {
     null
   );
   const { user, isAuthenticated, logoutSilent } = useAuth();
+  const { toast } = useToast();
 
   const routeOptions: Record<string, { label: string; path: string }[]> = {
     "/": [
@@ -148,7 +154,19 @@ export function NavbarComponent() {
 
   const logout = () => {
     setIsProfileOpen(false);
-    logoutSilent(); // clears token & user silently
+
+    toast(
+      "You've been logged out successfully",
+      "info",
+      3000,
+      "Goodbye!",
+      MOODIES_LOGO,
+      MOODIES_SIZE
+    );
+
+    setTimeout(() => {
+      logoutSilent();
+    }, 500);
   };
 
   // Create/find portal root on mount. Clean up if we created it.
@@ -219,7 +237,6 @@ export function NavbarComponent() {
     document.addEventListener("mousedown", onDocDown);
     return () => document.removeEventListener("mousedown", onDocDown);
   }, []);
-
 
   // The full dropdown panel (rendered into portalRoot)
   const menuNode = (
@@ -303,10 +320,11 @@ export function NavbarComponent() {
                     onMouseEnter={() => setActiveRoute(r.href)}
                     onFocus={() => setActiveRoute(r.href)}
                     onClick={() => setIsMenuOpen(false)}
-                    className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${activeRoute === r.href
-                      ? "text-[#e94f37]"
-                      : "text-gray-100 hover:text-[#e94f37]"
-                      } pl-3`}
+                    className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${
+                      activeRoute === r.href
+                        ? "text-[#e94f37]"
+                        : "text-gray-100 hover:text-[#e94f37]"
+                    } pl-3`}
                     style={{
                       fontSize: "clamp(0.95rem, 2.8vw, 1.5rem)",
                       paddingTop: "clamp(0.2rem, 0.8vh, 0.35rem)",
@@ -568,10 +586,18 @@ export function NavbarComponent() {
               {/* Avatar */}
               <div className="h-9 w-9 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden ring-2 ring-slate-800 group-hover:ring-slate-600 transition-all">
                 {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.username || "User"} className="w-full h-full object-cover" />
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.username || "User"}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <span className="text-sm font-bold text-slate-300">
-                    {(user?.username?.[0] || user?.name?.[0] || "G").toUpperCase()}
+                    {(
+                      user?.username?.[0] ||
+                      user?.name?.[0] ||
+                      "G"
+                    ).toUpperCase()}
                   </span>
                 )}
               </div>
@@ -587,7 +613,10 @@ export function NavbarComponent() {
               </div>
 
               {/* Dropdown Icon */}
-              <IconChevronDown size={16} className="text-gray-400 hidden xl:block" />
+              <IconChevronDown
+                size={16}
+                className="text-gray-400 hidden xl:block"
+              />
             </button>
 
             <DropdownPortal>
@@ -614,10 +643,18 @@ export function NavbarComponent() {
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
                         {user?.avatarUrl ? (
-                          <img src={user.avatarUrl} alt={user.username || "User"} className="w-full h-full object-cover" />
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.username || "User"}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <span className="text-sm font-bold text-slate-300">
-                            {(user?.username?.[0] || user?.name?.[0] || "G").toUpperCase()}
+                            {(
+                              user?.username?.[0] ||
+                              user?.name?.[0] ||
+                              "G"
+                            ).toUpperCase()}
                           </span>
                         )}
                       </div>
@@ -636,12 +673,18 @@ export function NavbarComponent() {
                   <div className="p-2">
                     {isAuthenticated ? (
                       <>
-                        <Link href="/profile" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+                        <Link
+                          href="/profile"
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                        >
                           <IconUser size={18} />
                           <span>My Profile</span>
                         </Link>
 
-                        <Link href="/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+                        <Link
+                          href="/settings"
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                        >
                           <IconSettings size={18} />
                           <span>Settings</span>
                         </Link>
@@ -661,12 +704,18 @@ export function NavbarComponent() {
                       </>
                     ) : (
                       <>
-                        <Link href="/auth/login" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+                        <Link
+                          href="/auth/login"
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                        >
                           <IconLogin size={18} />
                           <span>Login</span>
                         </Link>
 
-                        <Link href="/auth/signup" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all">
+                        <Link
+                          href="/auth/signup"
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                        >
                           <IconUserPlus size={18} />
                           <span>Sign Up</span>
                         </Link>
@@ -724,10 +773,11 @@ export function NavbarComponent() {
                   onMouseEnter={() => setActiveRoute(r.href)}
                   onFocus={() => setActiveRoute(r.href)}
                   onClick={() => setIsProfileOpen(false)}
-                  className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${activeRoute === r.href
-                    ? "text-[#e94f37]"
-                    : "text-gray-100 hover:text-[#e94f37]"
-                    } pl-3`}
+                  className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${
+                    activeRoute === r.href
+                      ? "text-[#e94f37]"
+                      : "text-gray-100 hover:text-[#e94f37]"
+                  } pl-3`}
                   style={{
                     fontSize: "clamp(0.95rem, 2.8vw, 1.5rem)",
                     paddingTop: "clamp(0.2rem, 0.8vh, 0.35rem)",
