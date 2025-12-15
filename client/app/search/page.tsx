@@ -40,6 +40,7 @@ import type { All } from "@/types/all";
 import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import { IconTrendingUp, IconX } from "@tabler/icons-react";
+import Pagination from "@/components/ui/pagination";
 
 // dynamic import (no SSR)
 const TrailerModal = dynamic(
@@ -530,139 +531,22 @@ export default function SearchResultsPage() {
       (includeAdult ? 1 : 0)
     );
   };
+  const [pageSize, setPageSize] = useState(25);
 
   // Enhanced pagination component
   const renderPagination = () => {
     if (totalPages <= 1) return null;
 
-    const getVisiblePages = () => {
-      const delta = 2;
-      const range = [];
-      const rangeWithDots = [];
-
-      for (
-        let i = Math.max(2, currentPage - delta);
-        i <= Math.min(totalPages - 1, currentPage + delta);
-        i++
-      ) {
-        range.push(i);
-      }
-
-      if (currentPage - delta > 2) {
-        rangeWithDots.push(1, "...");
-      } else {
-        rangeWithDots.push(1);
-      }
-
-      rangeWithDots.push(...range);
-
-      if (currentPage + delta < totalPages - 1) {
-        rangeWithDots.push("...", totalPages);
-      } else {
-        rangeWithDots.push(totalPages);
-      }
-
-      return rangeWithDots;
-    };
-
-    const visiblePages = getVisiblePages();
-
     return (
-      <div className="flex flex-col items-center gap-6 mt-16">
-        {/* Main pagination controls */}
-        <div className="flex items-center gap-2">
-          {/* Previous button */}
-          <Button
-            variant="outline"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => p - 1)}
-            className="h-12 px-4 bg-gray-800/60 border-gray-600/50 text-gray-300 hover:bg-gray-700/80 hover:text-white hover:border-orange-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 backdrop-blur-sm"
-          >
-            <ChevronLeft size={18} className="mr-1" />
-            Previous
-          </Button>
-
-          {/* Page numbers */}
-          <div className="flex items-center gap-3 mx-4">
-            {visiblePages.map((page, index) => {
-              if (page === "...") {
-                return (
-                  <div
-                    key={`dots-${index}`}
-                    className="flex items-center justify-center w-12 h-12 text-gray-500"
-                  >
-                    <MoreHorizontal size={16} />
-                  </div>
-                );
-              }
-
-              const isActive = page === currentPage;
-              return (
-                <Button
-                  key={page}
-                  variant={isActive ? "default" : "outline"}
-                  onClick={() => setCurrentPage(page as number)}
-                  className={`w-10 h-10 text-sm font-medium transition-all duration-300 backdrop-blur-sm ${
-                    isActive
-                      ? "bg-gradient-to-r from-orange-500 to-red-500 text-white border-transparent shadow-lg hover:shadow-orange-500/30 scale-105"
-                      : "bg-gray-800/60 border-gray-600/50 text-gray-300 hover:bg-gray-700/80 hover:text-white hover:border-orange-400/50 hover:scale-105"
-                  }`}
-                >
-                  {page}
-                </Button>
-              );
-            })}
-          </div>
-
-          {/* Next button */}
-          <Button
-            variant="outline"
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => p + 1)}
-            className="h-12 px-4 bg-gray-800/60 border-gray-600/50 text-gray-300 hover:bg-gray-700/80 hover:text-white hover:border-orange-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 backdrop-blur-sm"
-          >
-            Next
-            <ChevronRight size={18} className="ml-1" />
-          </Button>
-        </div>
-
-        {/* Enhanced pagination info */}
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <span>
-              Page {currentPage} of {totalPages.toLocaleString()}
-            </span>
-            <span>•</span>
-            <span>{totalResults.toLocaleString()} total results</span>
-          </div>
-
-          {/* Quick jump controls */}
-          <div className="flex items-center gap-2">
-            {currentPage > 1 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCurrentPage(1)}
-                className="text-xs text-gray-400 hover:text-orange-400 hover:bg-orange-500/10 transition-all duration-200"
-              >
-                First page
-              </Button>
-            )}
-            {currentPage < totalPages && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCurrentPage(totalPages)}
-                className="text-xs text-gray-400 hover:text-orange-400 hover:bg-orange-500/10 transition-all duration-200"
-              >
-                Last page
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalResults={totalResults}
+        onPageChange={(p) => setCurrentPage(p)}
+      />
     );
   };
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [trendingTerms, setTrendingTerms] = useState<any[]>([
     { id: 0, title: "Avengers", media_type: "movie" },
@@ -676,8 +560,7 @@ export default function SearchResultsPage() {
       setLoadingTrending(true);
       try {
         const response = await fetch(
-          `${
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
           }/all/search/trending-terms`
         );
         if (response.ok) {
@@ -788,532 +671,421 @@ export default function SearchResultsPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="container mx-auto pt-30 pb-10">
-        <div className="max-w-7xl mx-auto px-4">
-          {/* Header Section */}
-          <div className="text-center mb-5">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent mb-8">
-                Search results for "{query}"
-              </h1>
-              {!loading && (
-                <p className="text-gray-400 text-md flex items-center gap-2">
-                  <span>{totalResults.toLocaleString()} results found</span>
-                  {hasActiveFilters && (
-                    <Badge
-                      variant="outline"
-                      className="text-orange-400 border-orange-400/50 bg-orange-500/10"
-                    >
-                      {getActiveFilterCount()} filters applied
-                    </Badge>
-                  )}
-                </p>
-              )}
-            </div>
-          </div>
-          {/* Enhanced Advanced Filters Section */}
-          <div className="bg-gray-800/40 backdrop-blur-md rounded-2xl p-6 border border-gray-700/50 shadow-2xl mb-8">
-            <div className="flex flex-wrap items-center gap-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className={`bg-gradient-to-r from-gray-800/80 to-gray-700/80 backdrop-blur-sm border-gray-600 text-white hover:from-gray-700 hover:to-gray-600 transition-all duration-300 ${
-                  hasActiveFilters
-                    ? "border-orange-500/50 text-orange-300 shadow-orange-500/20 shadow-lg"
-                    : ""
-                }`}
-              >
-                <SlidersHorizontal size={16} className="mr-2" />
-                Advanced Filters
+      <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8 pt-32 pb-10">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
+          <div className="w-full sm:w-auto text-left sm:text-left">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent mb-2 break-words">
+              Search results for "{query}"
+            </h1>
+            {!loading && (
+              <p className="text-gray-400 text-sm sm:text-md flex items-center gap-2">
+                <span>{totalResults.toLocaleString()} results found</span>
                 {hasActiveFilters && (
                   <Badge
-                    variant="secondary"
-                    className="ml-2 bg-orange-500 text-white"
+                    variant="outline"
+                    className="text-orange-400 border-orange-400/50 bg-orange-500/10 ml-2"
                   >
-                    {getActiveFilterCount()}
+                    {getActiveFilterCount()} filters applied
                   </Badge>
                 )}
-                <ChevronDown
-                  size={16}
-                  className={`ml-2 transition-transform duration-300 ${
-                    showFilters ? "rotate-180" : ""
-                  }`}
-                />
-              </Button>
+              </p>
+            )}
+          </div>
 
-              {/* Quick Filters */}
-              <div className="flex gap-3">
-                {(["all", "movie", "tv"] as const).map((type) => (
-                  <Badge
-                    key={type}
-                    variant={filterType === type ? "default" : "outline"}
-                    className={`cursor-pointer transition-all duration-200 px-4 py-2 font-medium ${
-                      filterType === type
-                        ? "bg-gradient-to-r from-orange-500 to-red-500 text-white border-transparent shadow-lg hover:shadow-orange-500/25"
-                        : "border-gray-600 text-gray-300 hover:text-white hover:border-orange-400 hover:bg-orange-500/20 hover:shadow-lg"
-                    }`}
-                    onClick={() => setFilterType(type)}
-                  >
-                    {type === "all" ? (
-                      <>
-                        <Sparkles size={12} className="mr-1" />
-                        All
-                      </>
-                    ) : type === "movie" ? (
-                      <>
-                        <Film size={12} className="mr-1" />
-                        Movies
-                      </>
-                    ) : (
-                      <>
-                        <Tv size={12} className="mr-1" />
-                        TV Shows
-                      </>
-                    )}
-                  </Badge>
-                ))}
-              </div>
-
+          {/* Top controls on the right (stack on mobile) */}
+          <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-all duration-300 ${hasActiveFilters
+                ? "bg-gradient-to-r from-orange-500 to-red-500 border-orange-500/50 text-white-300 shadow-lg"
+                : "border-gray-600 text-white"
+                }`}
+              aria-expanded={showFilters}
+            >
+              <SlidersHorizontal size={16} />
+              <span className="truncate">Advanced Filters</span>
               {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearAllFilters}
-                  className="text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
-                >
-                  <RotateCcw size={14} className="mr-1" />
-                  Reset all
-                </Button>
+                <Badge variant="secondary" className="ml-2 bg-gray-500 text-white">
+                  {getActiveFilterCount()}
+                </Badge>
               )}
+              <ChevronDown
+                size={16}
+                className={`ml-1 transition-transform duration-300 ${showFilters ? "rotate-180" : ""}`}
+              />
+            </Button>
+
+            <div className="flex gap-2 mt-2 sm:mt-0">
+              {(["all", "movie", "tv"] as const).map((type) => (
+                <Badge
+                  key={type}
+                  variant={filterType === type ? "default" : "outline"}
+                  className={`cursor-pointer transition-all duration-200 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 ${filterType === type
+                    ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg"
+                    : "border-gray-600 text-gray-300 hover:text-white hover:border-orange-400"
+                    }`}
+                  onClick={() => setFilterType(type)}
+                >
+                  {type === "all" ? (
+                    <>
+                      <Sparkles size={12} />
+                      <span className="hidden sm:inline">All</span>
+                    </>
+                  ) : type === "movie" ? (
+                    <>
+                      <Film size={12} />
+                      <span className="hidden sm:inline">Movies</span>
+                    </>
+                  ) : (
+                    <>
+                      <Tv size={12} />
+                      <span className="hidden sm:inline">TV</span>
+                    </>
+                  )}
+                </Badge>
+              ))}
             </div>
-
-            {/* Expanded Advanced Filters */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0, y: -20 }}
-                  animate={{ height: "auto", opacity: 1, y: 0 }}
-                  exit={{ height: 0, opacity: 0, y: -20 }}
-                  transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                  className="border-t border-gray-700/50 pt-8 mt-6"
-                >
-                  <div className="grid gap-8">
-                    {/* Sort & Content Type Row */}
-                    <div className="flex flex-col lg:flex-row gap-8">
-                      {/* Sort Options */}
-                      <div className="flex-1 space-y-4">
-                        <label className="text-sm font-semibold text-gray-200 flex items-center gap-2">
-                          <TrendingUp size={16} className="text-blue-400" />
-                          Sort Results By
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                          {[
-                            {
-                              key: "relevance",
-                              label: "Most Relevant",
-                              icon: Search,
-                            },
-                            {
-                              key: "rating",
-                              label: "Highest Rated",
-                              icon: Award,
-                            },
-                            { key: "date", label: "Most Recent", icon: Clock },
-                            {
-                              key: "popularity",
-                              label: "Most Popular",
-                              icon: TrendingUp,
-                            },
-                          ].map((option) => {
-                            const Icon = option.icon;
-                            const isActive = sortBy === option.key;
-                            return (
-                              <button
-                                key={option.key}
-                                onClick={() => setSortBy(option.key as any)}
-                                className={`flex items-center gap-2 p-2 rounded-xl text-sm font-small transition-all duration-300 border ${
-                                  isActive
-                                    ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400/50 shadow-lg scale-105"
-                                    : "bg-gray-800/60 text-gray-300 border-gray-600/50 hover:bg-gray-700/80 hover:text-white hover:border-blue-400/50 hover:scale-102"
-                                }`}
-                              >
-                                <Icon size={16} />
-                                {option.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Adult Content Toggle */}
-                      <div className="flex flex-col items-start gap-4">
-                        <label className="text-sm font-semibold text-gray-200">
-                          Content Rating
-                        </label>
-                        <div className="flex items-center gap-3 bg-gray-800/60 p-2 rounded-xl border border-gray-600/50">
-                          <span className="text-sm text-gray-300">
-                            Include Adult Content
-                          </span>
-                          <div
-                            role="switch"
-                            aria-checked={includeAdult}
-                            onClick={() => setIncludeAdult(!includeAdult)}
-                            className={`relative inline-flex items-center h-5 w-10 rounded-full transition-all duration-300 cursor-pointer ${
-                              includeAdult ? "bg-red-500" : "bg-gray-600"
-                            }`}
-                          >
-                            <span
-                              className={`absolute left-1 h-4 w-4 rounded-full bg-white shadow transition-transform duration-300 ${
-                                includeAdult ? "translate-x-6" : "translate-x-0"
-                              }`}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Year & Rating Filters - Compact Side by Side */}
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {/* Year Range Filter */}
-                      <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm rounded-2xl p-5 border border-gray-700/50">
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="p-2 bg-blue-500/20 rounded-lg">
-                            <Calendar size={16} className="text-blue-400" />
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-semibold text-white">
-                              Release Year
-                            </h3>
-                            <p className="text-xs text-gray-400">
-                              Filter by release date
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Quick Decade Selection */}
-                        <div className="mb-4">
-                          <div className="flex flex-wrap gap-1.5">
-                            {decades.map((decade) => {
-                              const isSelected =
-                                yearRange[0] === decade.start &&
-                                yearRange[1] === decade.end;
-                              return (
-                                <button
-                                  key={decade.label}
-                                  onClick={() =>
-                                    setDecade(decade.start, decade.end)
-                                  }
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                                    isSelected
-                                      ? "bg-blue-500 text-white shadow-md"
-                                      : "bg-gray-700/50 text-gray-300 hover:bg-gray-700 hover:text-white"
-                                  }`}
-                                >
-                                  {decade.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Custom Year Selection */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-xs text-gray-400 mb-1.5 block">
-                              From
-                            </label>
-                            <select
-                              value={yearRange[0]}
-                              onChange={(e) =>
-                                setYearRange([
-                                  parseInt(e.target.value),
-                                  yearRange[1],
-                                ])
-                              }
-                              className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg 
-                        text-white text-xs focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20 
-                        transition-all cursor-pointer"
-                            >
-                              {years.map((year) => (
-                                <option key={year} value={year}>
-                                  {year}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="text-xs text-gray-400 mb-1.5 block">
-                              To
-                            </label>
-                            <select
-                              value={yearRange[1]}
-                              onChange={(e) =>
-                                setYearRange([
-                                  yearRange[0],
-                                  parseInt(e.target.value),
-                                ])
-                              }
-                              className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg 
-                        text-white text-xs focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20 
-                        transition-all cursor-pointer"
-                            >
-                              {years.map((year) => (
-                                <option key={year} value={year}>
-                                  {year}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Selected Range Display */}
-                        <div className="mt-3 flex items-center justify-between px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                          <span className="text-xs text-gray-400">Range:</span>
-                          <span className="text-xs font-bold text-blue-400">
-                            {yearRange[0]} - {yearRange[1]}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Rating Range Filter */}
-                      <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm rounded-2xl p-5 border border-gray-700/50">
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="p-2 bg-yellow-500/20 rounded-lg">
-                            <Star
-                              size={16}
-                              className="text-yellow-400 fill-yellow-400"
-                            />
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-semibold text-white">
-                              Rating Filter
-                            </h3>
-                            <p className="text-xs text-gray-400">
-                              Show specific ratings
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Quick Rating Presets */}
-                        <div className="mb-4">
-                          <div className="grid grid-cols-2 gap-1.5">
-                            {quickRatingPresets.map((preset) => {
-                              const isSelected =
-                                ratingRange[0] === preset.min &&
-                                ratingRange[1] === preset.max;
-                              return (
-                                <button
-                                  key={preset.label}
-                                  onClick={() =>
-                                    setRatingRange([preset.min, preset.max])
-                                  }
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1.5 ${
-                                    isSelected
-                                      ? "bg-yellow-500 text-gray-900 shadow-md"
-                                      : "bg-gray-700/50 text-gray-300 hover:bg-gray-700 hover:text-white"
-                                  }`}
-                                >
-                                  {isSelected && <Check size={12} />}
-                                  {preset.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Custom Min/Max Selection */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-xs text-gray-400 mb-1.5 block">
-                              Min
-                            </label>
-                            <select
-                              value={ratingRange[0]}
-                              onChange={(e) =>
-                                setRatingRange([
-                                  parseInt(e.target.value),
-                                  ratingRange[1],
-                                ])
-                              }
-                              className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg 
-                        text-white text-xs focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/20 
-                        transition-all cursor-pointer"
-                            >
-                              {ratings.map((rating) => (
-                                <option key={rating} value={rating}>
-                                  {rating} ★
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="text-xs text-gray-400 mb-1.5 block">
-                              Max
-                            </label>
-                            <select
-                              value={ratingRange[1]}
-                              onChange={(e) =>
-                                setRatingRange([
-                                  ratingRange[0],
-                                  parseInt(e.target.value),
-                                ])
-                              }
-                              className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg 
-                        text-white text-xs focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400/20 
-                        transition-all cursor-pointer"
-                            >
-                              {ratings.map((rating) => (
-                                <option key={rating} value={rating}>
-                                  {rating} ★
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Selected Rating Display */}
-                        <div className="mt-3 flex items-center justify-between px-3 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                          <span className="text-xs text-gray-400">Range:</span>
-                          <span className="text-xs font-bold text-yellow-400">
-                            {ratingRange[0]} ★ - {ratingRange[1]} ★
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Genres */}
-                  <div className="mt-8">
-                    <label className="text-sm font-medium text-gray-200 mb-4 block flex items-center gap-2">
-                      <Film size={16} className="text-purple-400" />
-                      Genres
-                      {selectedGenres.length > 0 && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs bg-purple-500/20 border-purple-400/50 text-purple-300"
-                        >
-                          {selectedGenres.length} selected
-                        </Badge>
-                      )}
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                      {availableGenres.map((genre) => {
-                        const isSelected = selectedGenres.includes(genre);
-                        return (
-                          <Badge
-                            key={genre}
-                            variant={isSelected ? "default" : "outline"}
-                            className={`cursor-pointer text-center justify-center transition-all duration-300 px-2.5 py-2 font-small ${
-                              isSelected
-                                ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-lg scale-105 hover:scale-110"
-                                : "border-gray-600 text-gray-300 hover:text-white hover:border-purple-400 hover:bg-purple-500/20 hover:shadow-lg hover:scale-105"
-                            }`}
-                            onClick={() => handleGenreToggle(genre)}
-                          >
-                            {genre}
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Countries */}
-                  <div className="mt-8">
-                    <label className="text-sm font-medium text-gray-200 mb-4 block flex items-center gap-2">
-                      <Globe size={16} className="text-green-400" />
-                      Countries
-                      {selectedCountries.length > 0 && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs bg-green-500/20 border-green-400/50 text-green-300"
-                        >
-                          {selectedCountries.length} selected
-                        </Badge>
-                      )}
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                      {availableCountries.map((country) => {
-                        const isSelected = selectedCountries.includes(
-                          country.code
-                        );
-                        return (
-                          <Badge
-                            key={country.code}
-                            variant={isSelected ? "default" : "outline"}
-                            className={`cursor-pointer text-center justify-center transition-all duration-300 px-2.5 py-2 font-small ${
-                              isSelected
-                                ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-transparent shadow-lg scale-105 hover:scale-110"
-                                : "border-gray-600 text-gray-300 hover:text-white hover:border-green-400 hover:bg-green-500/20 hover:shadow-lg hover:scale-105"
-                            }`}
-                            onClick={() => handleCountryToggle(country.code)}
-                          >
-                            {country.name}
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Filter Actions */}
-                  <div className="flex justify-between items-center pt-4 mt-4 border-t border-gray-700/50">
-                    <div className="text-sm text-gray-400">
-                      {hasActiveFilters
-                        ? `${getActiveFilterCount()} filters active`
-                        : "No filters applied"}
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={clearAllFilters}
-                        disabled={!hasActiveFilters}
-                        className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <RotateCcw size={14} className="mr-1" />
-                        Reset All
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        onClick={() => setShowFilters(false)}
-                        className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-                      >
-                        Apply Filters
-                      </Button>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
-        {/* Loading State */}
+
+        {/* Filters Panel (collapsible) */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.28 }}
+              className="mb-6 bg-gray-800/40 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-gray-700/50 shadow-sm"
+            >
+              {/* Row 1: Sort + Content Toggle + Adult */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Sort */}
+                <div className="sm:col-span-2">
+                  <label className="text-sm font-semibold text-gray-200 flex items-center gap-2 mb-2">
+                    <TrendingUp size={16} />
+                    Sort Results By
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: "relevance", label: "Most Relevant", icon: Search },
+                      { key: "rating", label: "Highest Rated", icon: Award },
+                      { key: "date", label: "Most Recent", icon: Clock },
+                      { key: "popularity", label: "Most Popular", icon: TrendingUp },
+                    ].map((option) => {
+                      const Icon = option.icon;
+                      const isActive = sortBy === option.key;
+                      return (
+                        <button
+                          key={option.key}
+                          onClick={() => setSortBy(option.key as any)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${isActive
+                            ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400/50 shadow"
+                            : "bg-gray-800/60 text-gray-300 border-gray-600/50 hover:bg-gray-700/80"
+                            }`}
+                        >
+                          <Icon size={14} />
+                          <span className="truncate">{option.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Adult Toggle */}
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="flex-1">
+                    <label className="text-sm font-semibold text-gray-200">Content Rating</label>
+                    <p className="text-xs text-gray-400">Include adult content in results</p>
+                  </div>
+                  <div
+                    role="switch"
+                    aria-checked={includeAdult}
+                    onClick={() => setIncludeAdult(!includeAdult)}
+                    className={`relative inline-flex items-center h-6 w-12 rounded-full transition-colors duration-200 cursor-pointer ${includeAdult ? "bg-red-500" : "bg-gray-600"
+                      }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform duration-200 ${includeAdult ? "translate-x-6" : "translate-x-1"
+                        }`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Year & Rating (stack on mobile) */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Year */}
+                <div className="rounded-2xl p-4 border border-gray-700/50 bg-gradient-to-br from-gray-800/60 to-gray-900/60">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-blue-500/20 rounded-lg">
+                      <Calendar size={16} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">Release Year</h3>
+                      <p className="text-xs text-gray-400">Filter by release date</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {decades.map((decade) => {
+                      const isSelected = yearRange[0] === decade.start && yearRange[1] === decade.end;
+                      return (
+                        <button
+                          key={decade.label}
+                          onClick={() => setDecade(decade.start, decade.end)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium ${isSelected ? "bg-blue-500 text-white" : "bg-gray-700/50 text-gray-300"
+                            }`}
+                        >
+                          {decade.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1.5 block">From</label>
+                      <select
+                        value={yearRange[0]}
+                        onChange={(e) => setYearRange([parseInt(e.target.value), yearRange[1]])}
+                        className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg text-white text-xs"
+                      >
+                        {years.map((year) => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1.5 block">To</label>
+                      <select
+                        value={yearRange[1]}
+                        onChange={(e) => setYearRange([yearRange[0], parseInt(e.target.value)])}
+                        className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg text-white text-xs"
+                      >
+                        {years.map((year) => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-xs">
+                    <span className="text-gray-400">Range:</span>
+                    <span className="font-bold text-blue-400 text-sm">
+                      {yearRange[0]} - {yearRange[1]}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Rating */}
+                <div className="rounded-2xl p-4 border border-gray-700/50 bg-gradient-to-br from-gray-800/60 to-gray-900/60">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 bg-yellow-500/20 rounded-lg">
+                      <Star size={16} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">Rating Filter</h3>
+                      <p className="text-xs text-gray-400">Show specific ratings</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {quickRatingPresets.map((preset) => {
+                      const isSelected = ratingRange[0] === preset.min && ratingRange[1] === preset.max;
+                      return (
+                        <button
+                          key={preset.label}
+                          onClick={() => setRatingRange([preset.min, preset.max])}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1 ${isSelected ? "bg-yellow-600 text-white-900" : "bg-gray-700/50 text-gray-300"
+                            }`}
+                        >
+                          {isSelected && <Check size={12} />}
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1.5 block">Min</label>
+                      <select
+                        value={ratingRange[0]}
+                        onChange={(e) => setRatingRange([parseInt(e.target.value), ratingRange[1]])}
+                        className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg text-white text-xs"
+                      >
+                        {ratings.map((rating) => (
+                          <option key={rating} value={rating}>
+                            {rating} ★
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-400 mb-1.5 block">Max</label>
+                      <select
+                        value={ratingRange[1]}
+                        onChange={(e) => setRatingRange([ratingRange[0], parseInt(e.target.value)])}
+                        className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg text-white text-xs"
+                      >
+                        {ratings.map((rating) => (
+                          <option key={rating} value={rating}>
+                            {rating} ★
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between px-3 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-xs">
+                    <span className="text-gray-400">Range:</span>
+                    <span className="font-bold text-yellow-400 text-sm">
+                      {ratingRange[0]} ★ - {ratingRange[1]} ★
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Genres & Countries stacked for mobile */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-200 mb-3 block flex items-center gap-2">
+                    <Film size={16} />
+                    Genres
+                    {selectedGenres.length > 0 && (
+                      <Badge variant="outline" className="text-xs text-gray-200 bg-purple-500/20 ml-2">
+                        {selectedGenres.length} selected
+                      </Badge>
+                    )}
+                  </label>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {availableGenres.map((genre) => {
+                      const isSelected = selectedGenres.includes(genre);
+                      return (
+                        <button
+                          key={genre}
+                          onClick={() => handleGenreToggle(genre)}
+                          className={`px-2 py-2 text-xs rounded-lg text-center font-medium transition-all duration-150 ${isSelected
+                            ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                            : "bg-gray-700/50 text-gray-300"
+                            }`}
+                        >
+                          {genre}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-200 mb-3 block flex items-center gap-2">
+                    <Globe size={16} />
+                    Countries
+                    {selectedCountries.length > 0 && (
+                      <Badge variant="outline" className="text-xs text-gray-200 bg-green-500/20 ml-2">
+                        {selectedCountries.length} selected
+                      </Badge>
+                    )}
+                  </label>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {availableCountries.map((country) => {
+                      const isSelected = selectedCountries.includes(country.code);
+                      return (
+                        <button
+                          key={country.code}
+                          onClick={() => handleCountryToggle(country.code)}
+                          className={`px-2 py-2 text-xs rounded-lg text-center font-medium transition-all duration-150 ${isSelected
+                            ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
+                            : "bg-gray-700/50 text-gray-300"
+                            }`}
+                        >
+                          {country.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer actions */}
+              <div className="mt-4 pt-3 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+
+                {/* Filter count */}
+                <div className="text-sm text-gray-400">
+                  {hasActiveFilters ? `${getActiveFilterCount()} filters active` : "No filters applied"}
+                </div>
+
+                {/* Buttons */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+
+                  {/* Reset button (text on desktop, icon-only on mobile) */}
+                  <Button
+                    size="sm"
+                    onClick={clearAllFilters}
+                    disabled={!hasActiveFilters}
+                    className="
+    flex items-center gap-1 justify-center
+    rounded-lg px-3 py-1.5
+    border border-slate-400/30
+    text-slate-300
+    hover:bg-slate-400/10 hover:border-slate-400/60
+    active:scale-95 transition
+    disabled:opacity-40
+  "
+                  >
+                    <RotateCcw size={14} />
+
+                    {/* Hide label on mobile */}
+                    <span className="hidden sm:inline">Reset</span>
+                  </Button>
+
+                  {/* Apply button */}
+                  <Button
+                    size="sm"
+                    onClick={() => setShowFilters(false)}
+                    className="
+        flex-1 sm:flex-none
+        bg-gradient-to-r from-orange-400 to-red-500 
+        text-white shadow-sm
+        py-2.5 rounded-xl
+      "
+                  >
+                    Apply
+                  </Button>
+                </div>
+              </div>
+
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Loading */}
         {loading && (
-          <div className="space-y-8">
-            {/* Best Match Skeleton */}
-            <div className="bg-gray-800/30 rounded-2xl p-6 border border-gray-700">
-              <Skeleton className="h-6 w-48 bg-gray-700 mb-4" />
-              <div className="flex gap-6">
-                <Skeleton className="w-32 h-48 bg-gray-700 rounded-lg flex-shrink-0" />
-                <div className="flex-1 space-y-4">
-                  <Skeleton className="h-8 w-3/4 bg-gray-700" />
+          <div className="space-y-6">
+            <div className="bg-gray-800/30 rounded-2xl p-4 border border-gray-700">
+              <Skeleton className="h-5 w-40 bg-gray-700 mb-3" />
+              <div className="flex gap-4">
+                <Skeleton className="w-24 h-36 bg-gray-700 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-3">
+                  <Skeleton className="h-6 w-3/4 bg-gray-700" />
                   <Skeleton className="h-4 w-full bg-gray-700" />
                   <Skeleton className="h-4 w-2/3 bg-gray-700" />
-                  <div className="flex gap-2">
-                    <Skeleton className="h-6 w-16 bg-gray-700" />
-                    <Skeleton className="h-6 w-20 bg-gray-700" />
-                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Grid Skeleton */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-[2/3] w-full bg-gray-800/50 rounded-xl" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="aspect-[2/3] w-full bg-gray-800/50 rounded-lg" />
                   <Skeleton className="h-4 w-full bg-gray-800/50" />
                   <Skeleton className="h-3 w-3/4 bg-gray-800/50" />
                 </div>
@@ -1321,44 +1093,32 @@ export default function SearchResultsPage() {
             </div>
           </div>
         )}
-        {/* Error State */}
+
+        {/* Error */}
         {error && (
-          <div className="text-center py-16">
-            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-8 max-w-md mx-auto">
-              <X className="mx-auto mb-4 h-16 w-16 text-red-400" />
-              <h2 className="text-2xl font-semibold text-red-300 mb-3">
-                Search Failed
-              </h2>
-              <p className="text-gray-400 mb-6">{error}</p>
-              <Button
-                onClick={() => window.location.reload()}
-                className="bg-red-500 hover:bg-red-600 text-white"
-              >
+          <div className="text-center py-12">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 max-w-md mx-auto">
+              <X className="mx-auto mb-3 h-14 w-14 text-red-400" />
+              <h2 className="text-xl font-semibold text-red-300 mb-2">Search Failed</h2>
+              <p className="text-gray-400 mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()} className="bg-red-500 hover:bg-red-600 text-white w-full">
                 Try Again
               </Button>
             </div>
           </div>
         )}
+
         {/* Results */}
         {!loading && !error && (
           <>
             {results.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="bg-gray-800/30 border border-gray-700 rounded-2xl p-12 max-w-lg mx-auto">
-                  <Search className="mx-auto mb-6 h-20 w-20 text-gray-500" />
-                  <h2 className="text-2xl font-semibold text-gray-300 mb-4">
-                    No results found
-                  </h2>
-                  <p className="text-gray-400 mb-6">
-                    Try adjusting your search terms or filters to discover more
-                    content
-                  </p>
+              <div className="text-center py-12">
+                <div className="bg-gray-800/30 border border-gray-700 rounded-2xl p-8 max-w-lg mx-auto">
+                  <Search className="mx-auto mb-4 h-16 w-16 text-gray-500" />
+                  <h2 className="text-xl font-semibold text-gray-300 mb-2">No results found</h2>
+                  <p className="text-gray-400 mb-4">Try adjusting your search terms or filters to discover more content</p>
                   {hasActiveFilters && (
-                    <Button
-                      onClick={clearAllFilters}
-                      variant="outline"
-                      className="border-orange-500 text-orange-400 hover:bg-orange-500/10"
-                    >
+                    <Button onClick={clearAllFilters} variant="outline" className="border-orange-500 text-orange-400">
                       Clear all filters
                     </Button>
                   )}
@@ -1366,252 +1126,155 @@ export default function SearchResultsPage() {
               </div>
             ) : (
               <>
-                {/* Best Match Section */}
+                {/* Best Match */}
                 {bestMatch && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-12 px-4 sm:px-6 lg:px-35"
-                  >
-                    <div className="flex items-center gap-3 mb-6">
-                      <Sparkles className="text-gold-400" size={24} />
-                      <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent">
-                        Your Best Match
-                      </h2>
-                    </div>
-
-                    <div className="bg-gradient-to-r from-gray-800/50 via-gray-800/30 to-gray-800/50 backdrop-blur-md rounded-3xl p-8 border border-gray-700/50 shadow-2xl">
-                      <div className="flex flex-col lg:flex-row gap-8">
-                        {/* Poster */}
-                        <div className="flex-shrink-0">
-                          <div
-                            className="relative group cursor-pointer"
-                            onClick={() => handleCardClick(bestMatch)}
-                          >
-                            <div className="relative w-48 h-72 rounded-2xl overflow-hidden border-2 border-gray-600 group-hover:border-orange-500/50 transition-all duration-300">
-                              <Image
-                                src={getPosterUrl(bestMatch)}
-                                alt={getTitle(bestMatch)}
-                                fill
-                                className="object-cover group-hover:scale-105 transition-transform duration-500"
-                              />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center">
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                  <div className="bg-orange-500/20 backdrop-blur-sm rounded-full p-4 border border-orange-500/50">
-                                    <Play
-                                      className="text-white"
-                                      size={24}
-                                      fill="white"
-                                    />
-                                  </div>
-                                </div>
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+                    <div className="flex flex-col sm:flex-row gap-4 items-start bg-gradient-to-r from-gray-800/50 to-gray-800/30 rounded-3xl p-4 border border-gray-700/50">
+                      <div className="flex-shrink-0">
+                        <div
+                          className="relative w-36 h-52 sm:w-48 sm:h-72 rounded-2xl overflow-hidden border-2 border-gray-600 group hover:border-orange-500/50 transition-all duration-300 cursor-pointer"
+                          onClick={() => handleCardClick(bestMatch)}
+                        >
+                          <Image
+                            src={getPosterUrl(bestMatch)}
+                            alt={getTitle(bestMatch)}
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <div className="bg-orange-500/20 backdrop-blur-sm rounded-full p-3 border border-orange-500/50">
+                                <Play className="text-white" size={20} />
                               </div>
                             </div>
                           </div>
                         </div>
+                      </div>
 
-                        {/* Content */}
-                        <div className="flex-1 space-y-6">
-                          <div>
-                            <div className="flex items-center gap-3 mb-3">
-                              <Badge
-                                className={`${
-                                  bestMatch.type === "tv"
-                                    ? "bg-blue-500 text-white"
-                                    : "bg-purple-500 text-white"
-                                }`}
-                              >
-                                {bestMatch.type === "tv" ? (
-                                  <>
-                                    <Tv size={12} className="mr-1" />
-                                    TV Series
-                                  </>
-                                ) : (
-                                  <>
-                                    <Film size={12} className="mr-1" />
-                                    Movie
-                                  </>
-                                )}
-                              </Badge>
-                              <div className="flex items-center gap-1">
-                                <Star
-                                  className="text-yellow-400"
-                                  size={16}
-                                  fill="currentColor"
-                                />
-                                <span className="text-white font-semibold">
-                                  {bestMatch.vote_average.toFixed(1)}
-                                </span>
-                                <span className="text-gray-400">
-                                  ({(bestMatch.vote_count / 1000).toFixed(1)}K
-                                  votes)
-                                </span>
-                              </div>
-                            </div>
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <Badge className={`${bestMatch.type === "tv" ? "bg-blue-500" : "bg-purple-500"} text-white`}>
+                            {bestMatch.type === "tv" ? <><Tv size={12} className="mr-1" />TV Series</> : <><Film size={12} className="mr-1" />Movie</>}
+                          </Badge>
 
-                            <h3 className="text-3xl font-bold text-white mb-2">
-                              {getTitle(bestMatch)}
-                            </h3>
-
-                            <div className="flex items-center gap-4 text-gray-300 mb-4">
-                              {getReleaseYear(bestMatch) && (
-                                <div className="flex items-center gap-1">
-                                  <Calendar size={16} />
-                                  <span>{getReleaseYear(bestMatch)}</span>
-                                </div>
-                              )}
-                              {bestMatch.origin_country &&
-                                bestMatch.origin_country.length > 0 && (
-                                  <div className="flex items-center gap-1">
-                                    <Globe size={16} />
-                                    <span>
-                                      {getCountryName(
-                                        bestMatch.origin_country[0]
-                                      )}
-                                    </span>
-                                  </div>
-                                )}
-                            </div>
+                          <div className="flex items-center gap-2">
+                            <Star size={14} className="text-yellow-400" fill="currentColor" />
+                            <span className="text-white font-semibold">{bestMatch.vote_average.toFixed(1)}</span>
+                            <span className="text-gray-400 text-xs">({(bestMatch.vote_count / 1000).toFixed(1)}K votes)</span>
                           </div>
+                        </div>
 
-                          <p className="text-gray-300 text-lg leading-relaxed">
-                            {bestMatch.overview}
-                          </p>
+                        <h3 className="text-xl sm:text-2xl font-bold text-white">{getTitle(bestMatch)}</h3>
 
-                          {getGenres(bestMatch).length > 0 && (
-                            <div className="flex flex-wrap gap-2">
-                              {getGenres(bestMatch).map((genre) => (
-                                <Badge
-                                  key={genre}
-                                  variant="outline"
-                                  className="border-gray-500 text-gray-300 bg-gray-700/50"
-                                >
-                                  {genre}
-                                </Badge>
-                              ))}
+                        <div className="flex items-center gap-4 text-gray-300 text-sm">
+                          {getReleaseYear(bestMatch) && (
+                            <div className="flex items-center gap-1">
+                              <Calendar size={14} />
+                              <span>{getReleaseYear(bestMatch)}</span>
                             </div>
                           )}
-
-                          <div className="flex gap-4">
-                            <Button
-                              onClick={() => handlePlayTrailer(bestMatch)}
-                              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-orange-500/25 transition-all duration-200"
-                            >
-                              <Play
-                                size={16}
-                                className="mr-2"
-                                fill="currentColor"
-                              />
-                              Play Trailer
-                            </Button>
-                            <Button
-                              onClick={() => handleCardClick(bestMatch)}
-                              variant="outline"
-                              className="border-gray-600 text-black hover:bg-gray-700/50 hover:text-white"
-                            >
-                              <Info size={16} className="mr-2" />
-                              More Info
-                            </Button>
-                          </div>
+                          {bestMatch.origin_country?.length > 0 && (
+                            <div className="flex items-center gap-1">
+                              <Globe size={14} />
+                              <span>{getCountryName(bestMatch.origin_country[0])}</span>
+                            </div>
+                          )}
                         </div>
+
+                        <p className="text-gray-300 text-sm line-clamp-4">{bestMatch.overview}</p>
+
+                        {getGenres(bestMatch).length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {getGenres(bestMatch).map((genre) => (
+                              <Badge key={genre} variant="outline" className="border-gray-500 text-gray-300 bg-gray-700/50">
+                                {genre}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex flex-row gap-2 mt-10 w-full">
+
+                          {/* Play Trailer */}
+                          <Button
+                            onClick={() => handlePlayTrailer(bestMatch)}
+                            className="
+      flex-1 sm:flex-none
+      bg-gradient-to-r from-orange-400 to-rose-500
+      text-white font-medium
+      hover:opacity-90 active:scale-95
+      transition rounded-xl
+      flex items-center justify-center
+    "
+                          >
+                            <Play size={18} className="mr-0 sm:mr-2" />
+                            <span className="hidden sm:inline">Play Trailer</span>
+                          </Button>
+
+                          {/* More Info */}
+                          <Button
+                            onClick={() => handleCardClick(bestMatch)}
+                            variant="outline"
+                            className="
+      flex-1 sm:flex-none
+    border border-slate-400/30
+    text-slate-300
+    bg-primary
+    hover:bg-slate-400/10 hover:border-slate-400/60
+    active:scale-95 transition
+    disabled:opacity-40 rounded-xl
+      flex items-center justify-center
+    "
+                          >
+                            <Info size={18} className="mr-0 sm:mr-2 " />
+                            <span className="hidden sm:inline">More Info</span>
+                          </Button>
+
+                        </div>
+
                       </div>
                     </div>
                   </motion.div>
                 )}
 
-                {/* Featured Results (Top 2) */}
+                {/* Top Results */}
                 {results.length > 0 && (
-                  <div className="mb-12 px-4 sm:px-6 lg:px-35">
-                    <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
+                  <div className="mb-8">
+                    <h2 className="text-lg sm:text-2xl font-bold mb-4 bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
                       Top Results
                     </h2>
-                    <div className="grid md:grid-cols-2 gap-8">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {results.slice(0, 2).map((item) => (
                         <motion.div
                           key={`featured-${item.id}`}
-                          initial={{ opacity: 0, y: 20 }}
+                          initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="relative group cursor-pointer rounded-2xl overflow-hidden bg-gray-800/30 backdrop-blur-sm border border-gray-700 hover:border-orange-500/50 transition-all duration-300"
+                          className="relative group cursor-pointer rounded-2xl overflow-hidden bg-gray-800/30 p-0 border border-gray-700 hover:border-orange-500/50 transition-all duration-300"
                           onClick={() => handleCardClick(item)}
                         >
-                          <div className="relative h-64 md:h-80">
+                          <div className="relative h-44 sm:h-64">
                             <Image
                               src={getBackdropUrl(item)}
                               alt={getTitle(item)}
                               fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-500"
+                              className="object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-
-                            {/* Play Button */}
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                              <div className="bg-orange-500/20 backdrop-blur-sm rounded-full p-6 border border-orange-500/50">
-                                <Play
-                                  className="text-white drop-shadow-lg"
-                                  size={28}
-                                  fill="white"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Content */}
-                            <div className="absolute bottom-0 left-0 right-0 p-6">
-                              <div className="flex items-center gap-3 mb-3">
-                                <Badge
-                                  variant="outline"
-                                  className="bg-black/60 backdrop-blur-sm text-white border-white/30 font-medium"
-                                >
-                                  {item.type === "tv" ? (
-                                    <Tv size={12} className="mr-1" />
-                                  ) : (
-                                    <Film size={12} className="mr-1" />
-                                  )}
-                                  {item.type === "tv" ? "Series" : "Movie"}
+                            <div className="absolute bottom-3 left-3 right-3">
+                              <div className="flex items-center gap-3 mb-2">
+                                <Badge className={`${item.type === "tv" ? "bg-blue-500" : "bg-purple-500"} text-white`}>
+                                  {item.type === "tv" ? <><Tv size={12} className="mr-1" />Series</> : <><Film size={12} className="mr-1" />Movie</>}
                                 </Badge>
+
                                 <div className="flex items-center gap-1 text-orange-400">
                                   <Star size={14} fill="currentColor" />
-                                  <span className="text-sm font-semibold text-white">
-                                    {item.vote_average.toFixed(1)}
-                                  </span>
+                                  <span className="text-sm font-semibold text-white">{item.vote_average.toFixed(1)}</span>
                                 </div>
                               </div>
 
-                              <h3 className="text-2xl font-bold text-white mb-3 drop-shadow-lg">
-                                {getTitle(item)}
-                              </h3>
+                              <h3 className="text-lg sm:text-2xl font-bold text-white drop-shadow-lg line-clamp-2">{getTitle(item)}</h3>
 
-                              <div className="flex items-center gap-4 text-sm text-gray-200 mb-4">
-                                {getReleaseYear(item) && (
-                                  <div className="flex items-center gap-1">
-                                    <Calendar size={14} />
-                                    <span>{getReleaseYear(item)}</span>
-                                  </div>
-                                )}
-                                <div className="flex items-center gap-1">
-                                  <Users size={14} />
-                                  <span>
-                                    {(item.vote_count / 1000).toFixed(1)}K
-                                  </span>
-                                </div>
-                              </div>
-
-                              <p className="text-gray-200 text-sm line-clamp-2 mb-4 drop-shadow">
-                                {item.overview}
-                              </p>
-
-                              {getGenres(item).length > 0 && (
-                                <div className="flex gap-2">
-                                  {getGenres(item).map((genre) => (
-                                    <Badge
-                                      key={genre}
-                                      variant="outline"
-                                      className="text-xs border-gray-400 text-gray-200 bg-black/30 backdrop-blur-sm"
-                                    >
-                                      {genre}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
                             </div>
                           </div>
                         </motion.div>
@@ -1620,35 +1283,26 @@ export default function SearchResultsPage() {
                   </div>
                 )}
 
-                {/* All Results */}
-                <div className="mb-12 px-4 sm:px-6 lg:px-35">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-200 flex items-center gap-2">
-                      <Search size={20} />
+                {/* All Results / Grid or List */}
+                <div className="mb-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg sm:text-2xl font-bold text-gray-200 flex items-center gap-2">
+                      <Search size={18} />
                       All Results
                     </h2>
 
-                    {/* View Toggle */}
                     <div className="flex items-center gap-2">
-                      <div className="bg-gray-800/60 backdrop-blur-md rounded-xl p-1 flex border border-gray-600/50 shadow-lg">
+                      <div className="bg-gray-800/60 rounded-xl p-1 flex border border-gray-600/50">
                         <button
                           onClick={() => setViewMode("grid")}
-                          className={`p-3 rounded-lg transition-all duration-300 ${
-                            viewMode === "grid"
-                              ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg scale-105"
-                              : "text-gray-400 hover:text-white hover:bg-gray-700/50"
-                          }`}
+                          className={`p-2 rounded-lg transition-all duration-200 ${viewMode === "grid" ? "bg-gradient-to-r from-orange-500 to-red-500 text-white" : "text-gray-400 hover:text-white"}`}
                           aria-label="Grid view"
                         >
                           <Grid3X3 size={18} />
                         </button>
                         <button
                           onClick={() => setViewMode("list")}
-                          className={`p-3 rounded-lg transition-all duration-300 ${
-                            viewMode === "list"
-                              ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg scale-105"
-                              : "text-gray-400 hover:text-white hover:bg-gray-700/50"
-                          }`}
+                          className={`p-2 rounded-lg transition-all duration-200 ${viewMode === "list" ? "bg-gradient-to-r from-orange-500 to-red-500 text-white" : "text-gray-400 hover:text-white"}`}
                           aria-label="List view"
                         >
                           <List size={18} />
@@ -1658,172 +1312,96 @@ export default function SearchResultsPage() {
                   </div>
 
                   {viewMode === "grid" ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                       {results.map((item, index) => (
                         <motion.div
                           key={item.id}
-                          initial={{ opacity: 0, y: 20 }}
+                          initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.03 }}
+                          transition={{ delay: index * 0.02 }}
                           className="group cursor-pointer"
                           onClick={() => handleCardClick(item)}
                         >
-                          <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-gray-800/50 mb-3 border border-gray-700 group-hover:border-orange-500/50 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-orange-500/10">
-                            <Image
-                              src={getPosterUrl(item)}
-                              alt={getTitle(item)}
-                              fill
-                              className="object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
-
-                            {/* Overlay */}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors duration-300" />
-
-                            {/* Rating */}
-                            <div className="absolute top-3 right-3">
-                              <div className="flex items-center gap-1 bg-black/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs border border-gray-600">
-                                <Star
-                                  size={10}
-                                  className="text-orange-400"
-                                  fill="currentColor"
-                                />
-                                <span className="text-white font-medium">
-                                  {item.vote_average > 0
-                                    ? item.vote_average.toFixed(1)
-                                    : "New"}
-                                </span>
+                          <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-800/50 border border-gray-700 group-hover:border-orange-500/50 transition-all">
+                            <Image src={getPosterUrl(item)} alt={getTitle(item)} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
+                            <div className="absolute top-2 right-2">
+                              <div className="flex items-center gap-1 bg-black/80 rounded-lg px-2 py-1 text-xs border border-gray-600">
+                                <Star size={10} className="text-orange-400" fill="currentColor" />
+                                <span className="text-white text-xs font-medium">{item.vote_average > 0 ? item.vote_average.toFixed(1) : "New"}</span>
                               </div>
                             </div>
-
-                            {/* Type Badge */}
-                            <div className="absolute bottom-3 left-3">
-                              <Badge
-                                variant="outline"
-                                className={`text-xs font-medium ${
-                                  item.type === "tv"
-                                    ? "bg-blue-500/90 border-blue-400 text-white backdrop-blur-sm"
-                                    : "bg-purple-500/90 border-purple-400 text-white backdrop-blur-sm"
-                                }`}
-                              >
-                                {item.type === "tv" ? "Series" : "Movie"}
+                            <div className="absolute bottom-2 left-2">
+                              <Badge className={`${item.type === "tv" ? "bg-blue-500" : "bg-purple-500"} text-white`}>
+                                {item.type === "tv" ? <><Tv size={12} className="mr-1" />Series</> : <><Film size={12} className="mr-1" />Movie</>}
                               </Badge>
-                            </div>
-
-                            {/* Play Button */}
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                              <div className="bg-orange-500/30 backdrop-blur-sm rounded-full p-3 border border-orange-500/50">
-                                <Play
-                                  className="text-white"
-                                  size={18}
-                                  fill="white"
-                                />
-                              </div>
                             </div>
                           </div>
 
-                          <div className="space-y-2 mt-3">
-                            <h3 className="font-semibold text-sm text-white line-clamp-2 group-hover:text-orange-300 transition-colors">
-                              {getTitle(item)}
-                            </h3>
-                            <div className="flex items-center gap-2 text-xs text-gray-400">
-                              {getReleaseYear(item) && (
-                                <span className="text-gray-300">
-                                  {getReleaseYear(item)}
-                                </span>
-                              )}
-                              {getGenres(item)[0] && (
-                                <span className="text-gray-500">
-                                  • {getGenres(item)[0]}
-                                </span>
-                              )}
+                          <div className="mt-2">
+                            <h3 className="font-semibold text-sm text-white line-clamp-2 group-hover:text-orange-300">{getTitle(item)}</h3>
+                            <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                              {getReleaseYear(item) && <span className="text-gray-300">{getReleaseYear(item)}</span>}
+                              {getGenres(item)[0] && <span className="text-gray-500">• {getGenres(item)[0]}</span>}
                             </div>
                           </div>
                         </motion.div>
                       ))}
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {results.map((item, index) => (
                         <motion.div
                           key={item.id}
-                          initial={{ opacity: 0, x: -20 }}
+                          initial={{ opacity: 0, x: -8 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.02 }}
-                          className="flex gap-6 bg-gray-800/30 backdrop-blur-sm rounded-xl p-6 border border-gray-700 hover:bg-gray-700/30 hover:border-orange-500/50 transition-all duration-300 cursor-pointer group"
+                          transition={{ delay: index * 0.01 }}
+                          className="flex gap-4 bg-gray-800/30 rounded-lg p-3 border border-gray-700 hover:border-orange-500/50 transition-all cursor-pointer"
                           onClick={() => handleCardClick(item)}
                         >
-                          <div className="relative w-20 h-28 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0 border border-gray-600 group-hover:border-orange-500/50 transition-colors">
-                            <Image
-                              src={getPosterUrl(item)}
-                              alt={getTitle(item)}
-                              fill
-                              className="object-cover"
-                            />
+                          <div className="relative w-20 h-28 rounded-md overflow-hidden flex-shrink-0 border border-gray-600">
+                            <Image src={getPosterUrl(item)} alt={getTitle(item)} fill className="object-cover" />
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between mb-3">
-                              <h3 className="font-semibold text-white text-xl line-clamp-1 group-hover:text-orange-300 transition-colors">
-                                {getTitle(item)}
-                              </h3>
-                              <div className="flex items-center gap-3 ml-4 flex-shrink-0">
+                            <div className="flex items-start justify-between">
+                              <h3 className="font-semibold text-white text-base line-clamp-2">{getTitle(item)}</h3>
+                              <div className="flex items-center gap-3 ml-2">
                                 <div className="flex items-center gap-1 text-orange-400">
-                                  <Star size={16} fill="currentColor" />
-                                  <span className="text-sm font-medium text-white">
-                                    {item.vote_average.toFixed(1)}
-                                  </span>
+                                  <Star size={14} fill="currentColor" />
+                                  <span className="text-sm font-medium text-white">{item.vote_average.toFixed(1)}</span>
                                 </div>
-                                <Badge
-                                  variant="outline"
-                                  className={`text-xs font-medium ${
-                                    item.type === "tv"
-                                      ? "border-blue-400 text-blue-300 bg-blue-500/10"
-                                      : "border-purple-400 text-purple-300 bg-purple-500/10"
-                                  }`}
-                                >
-                                  {item.type === "tv" ? "Series" : "Movie"}
+                                <Badge className={`${item.type === "tv" ? "bg-blue-500" : "bg-purple-500"} text-white`}>
+                                  {item.type === "tv" ? <><Tv size={12} className="mr-1" />Series</> : <><Film size={12} className="mr-1" />Movie</>}
                                 </Badge>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-4 text-sm text-gray-400 mb-3">
+                            <div className="flex items-center gap-3 text-sm text-gray-400 mt-2">
                               {getReleaseYear(item) && (
                                 <div className="flex items-center gap-1">
                                   <Calendar size={14} />
-                                  <span className="text-gray-300">
-                                    {getReleaseYear(item)}
-                                  </span>
+                                  <span className="text-gray-300">{getReleaseYear(item)}</span>
                                 </div>
                               )}
                               <div className="flex items-center gap-1">
                                 <Users size={14} />
-                                <span className="text-gray-300">
-                                  {(item.vote_count / 1000).toFixed(1)}K votes
-                                </span>
+                                <span className="text-gray-300">{(item.vote_count / 1000).toFixed(1)}K votes</span>
                               </div>
-                              {item.origin_country &&
-                                item.origin_country.length > 0 && (
-                                  <div className="flex items-center gap-1">
-                                    <Globe size={14} />
-                                    <span className="text-gray-300">
-                                      {getCountryName(item.origin_country[0])}
-                                    </span>
-                                  </div>
-                                )}
+                              {item.origin_country?.length > 0 && (
+                                <div className="flex items-center gap-1">
+                                  <Globe size={14} />
+                                  <span className="text-gray-300">{getCountryName(item.origin_country[0])}</span>
+                                </div>
+                              )}
                             </div>
 
-                            <p className="text-gray-300 text-sm line-clamp-2 mb-3">
-                              {item.overview}
-                            </p>
+                            <p className="text-gray-300 text-sm line-clamp-3 mt-2">{item.overview}</p>
 
                             {getGenres(item).length > 0 && (
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 mt-2">
                                 {getGenres(item).map((genre) => (
-                                  <Badge
-                                    key={genre}
-                                    variant="outline"
-                                    className="text-xs border-gray-500 text-gray-300 bg-gray-700/30"
-                                  >
+                                  <Badge key={genre} variant="outline" className="text-xs border-gray-500 text-gray-300">
                                     {genre}
                                   </Badge>
                                 ))}
@@ -1839,28 +1417,26 @@ export default function SearchResultsPage() {
             )}
           </>
         )}
-        {/* Enhanced Pagination */}
+
+        {/* Pagination */}
         {renderPagination()}
-        {/* Results Summary */}
+
+        {/* Results Summary Footer */}
         {!loading && !error && results.length > 0 && (
-          <div className="text-center mt-8">
-            <div className="inline-flex items-center gap-2 bg-gray-800/40 backdrop-blur-sm rounded-lg px-6 py-3 border border-gray-700/50">
-              <span className="text-gray-300">
-                Showing {(currentPage - 1) * 20 + 1} -{" "}
-                {Math.min(currentPage * 20, totalResults)} of{" "}
-                {totalResults.toLocaleString()} results
+          <div className="text-center mt-6">
+            <div className="inline-flex items-center gap-2 bg-gray-800/40 backdrop-blur-sm rounded-lg px-4 py-2 border border-gray-700/50">
+              <span className="text-gray-300 text-sm">
+                Showing {(currentPage - 1) * 20 + 1} - {Math.min(currentPage * 20, totalResults)} of {totalResults.toLocaleString()} results
               </span>
               {hasActiveFilters && (
-                <Badge
-                  variant="outline"
-                  className="text-orange-400 border-orange-400/50 bg-orange-500/10 ml-2"
-                >
+                <Badge variant="outline" className="text-orange-400 border-orange-400/50 bg-orange-500/10 ml-2">
                   {getActiveFilterCount()} filters active
                 </Badge>
               )}
             </div>
           </div>
         )}
+
         {/* Trailer Modal */}
         {selectedTrailer && (
           <TrailerModal
@@ -1872,4 +1448,5 @@ export default function SearchResultsPage() {
       </div>
     </div>
   );
+
 }
