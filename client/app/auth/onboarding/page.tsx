@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/app/context/ToastContext";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -77,6 +77,7 @@ const Chip: React.FC<{
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { signIn, isLoading: authLoading } = useAuth();
 
@@ -84,6 +85,29 @@ export default function OnboardingPage() {
   const [genres, setGenres] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 🔥 NEW: Handle token from URL (Google OAuth)
+  useEffect(() => {
+    const urlToken = searchParams.get("token");
+
+    if (urlToken) {
+      // Store the token from Google OAuth
+      localStorage.setItem("authToken", urlToken);
+      const expiryMs = Date.now() + 1 * 24 * 60 * 60 * 1000;
+      localStorage.setItem("authTokenExpiry", String(expiryMs));
+
+      // Clean up URL without the token
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      toast(
+        "Connected with Google! Now set your preferences.",
+        "success",
+        3000,
+        "Almost there",
+        null
+      );
+    }
+  }, [searchParams, toast]);
 
   const toggle = (list: string[], set: (v: string[]) => void, v: string) =>
     list.includes(v) ? set(list.filter((x) => x !== v)) : set([...list, v]);
@@ -144,23 +168,26 @@ export default function OnboardingPage() {
       // Small delay to let user see the success message
       await new Promise((resolve) => setTimeout(resolve, 800));
 
-      // Get stored credentials for auto sign-in
+      // 🔥 UPDATED: Check if this is a Google OAuth user or regular signup
       const storedEmail = localStorage.getItem("signupEmail");
       const storedPassword = localStorage.getItem("signupPassword");
 
       if (storedEmail && storedPassword) {
-        // Use the auth hook to sign in (it handles toasts internally)
+        // Regular signup - auto sign in with stored credentials
         await signIn(storedEmail, storedPassword);
       } else {
-        // No credentials stored, just redirect to login
+        // Google OAuth user - already has token, just redirect to home
         toast(
-          "Please log in to continue",
-          "info",
-          3000,
-          "Setup Complete",
+          "Setup complete! Welcome to Moodies!",
+          "success",
+          2000,
+          "You're all set",
           null
         );
-        router.push("/auth/login");
+
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 500);
       }
     } catch (err: any) {
       toast(err.message || "An error occurred", "error", 4000, "Error", null);

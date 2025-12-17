@@ -92,23 +92,27 @@ export class AuthController {
   async googleSignupCallback(@Req() req: any, @Res() res: ExpressResponse) {
     // profile is returned by GoogleStrategy.validate()
     const profile = req.user;
-    const user = await this.authService.upsertGoogleUser(profile);
 
-    const mode: 'set' | 'verify' = user.password ? 'verify' : 'set';
-
-    // sign a SHORT-LIVED temp token (5 minutes)
-    const temp = this.jwt.sign(
-      { uid: user.id, mode },
-      { expiresIn: '5m', subject: String(user.id), jwtid: 'temp' },
-    );
+    // Use the existing googleLoginOrRegister method which handles both login and signup
+    const { access_token, user } = await this.authService.googleLoginOrRegister({
+      email: profile.email,
+      name: profile.name,
+      googleId: profile.googleId,
+    });
 
     const base = process.env.CLIENT_URL ?? 'http://localhost:3000';
-    const target =
-      mode === 'set'
-        ? `${base}/auth/password-create?token=${encodeURIComponent(temp)}`
-        : `${base}/auth/password-check?token=${encodeURIComponent(temp)}`;
 
-    return res.redirect(target);
+    // Check if user has completed onboarding (has preferences set)
+    const needsOnboarding = !user.age || !user.preferredGenres?.length || !user.preferredLanguages?.length;
+
+    if (needsOnboarding) {
+      // New user or incomplete profile - redirect to onboarding with token
+      return res.redirect(`${base}/auth/onboarding?token=${encodeURIComponent(access_token)}`);
+    }
+
+    // Existing user with complete profile - redirect directly to home with token
+    // The AuthContext will pick up the token and show the toast
+    return res.redirect(`${base}/?token=${encodeURIComponent(access_token)}&google_login=true`);
   }
 
   /* ================= PASSWORD ENDPOINTS ================= */
