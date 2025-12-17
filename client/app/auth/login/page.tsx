@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const { signIn, isLoading: authLoading } = useAuth();
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -27,7 +28,10 @@ export default function LoginPage() {
     // Success case is handled by the hook (toasts + redirect)
   };
 
-  const onGoogle = () => {
+  const handleGoogleLogin = () => {
+    if (googleLoading) return;
+    setGoogleLoading(true);
+
     // Preserve return path
     const from = typeof window !== "undefined" ? window.location.pathname : "/";
     window.location.href = `${API}/auth/google?from=${encodeURIComponent(
@@ -252,6 +256,62 @@ export default function LoginPage() {
           )}
         </button>
       </form>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3 my-4">
+        <div className="h-px flex-1 bg-white/10" />
+        <span className="text-xs text-white/50">Or continue with</span>
+        <div className="h-px flex-1 bg-white/10" />
+      </div>
+
+      {/* Google Button */}
+      <button
+        type="button"
+        onClick={handleGoogleLogin}
+        disabled={googleLoading}
+        aria-label="Continue with Google"
+        className="w-full relative flex items-center justify-center gap-2.5
+                   rounded-none sm:rounded-lg px-3 py-2.5
+                   bg-zinc-900/70 text-white text-sm
+                   border border-white/10
+                   backdrop-blur
+                   shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_6px_24px_rgba(0,0,0,0.35)]
+                   hover:bg-zinc-900/90 hover:border-white/20
+                   active:scale-[0.99]
+                   transition-all
+                   focus:outline-none focus:ring-2 focus:ring-amber-400/70 focus:ring-offset-2 focus:ring-offset-black
+                   disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {/* Google 'G' icon */}
+        <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+          <path
+            fill="#EA4335"
+            d="M24 9.5c3.54 0 6.72 1.22 9.23 3.6l6.9-6.9C35.9 2.2 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l8.36 6.49C12.7 13.64 17.9 9.5 24 9.5z"
+          />
+          <path
+            fill="#4285F4"
+            d="M46.5 24c0-1.64-.15-3.2-.43-4.7H24v9h12.7c-.55 2.97-2.22 5.5-4.72 7.2l7.2 5.58C43.84 37.72 46.5 31.36 46.5 24z"
+          />
+          <path
+            fill="#FBBC04"
+            d="M11 27.71A14.46 14.46 0 0 1 10.5 24c0-1.29.18-2.54.5-3.71L2.64 13.22A23.902 23.902 0 0 0 0 24c0 3.86.92 7.5 2.56 10.78l8.44-7.07z"
+          />
+          <path
+            fill="#34A853"
+            d="M24 48c6.42 0 11.82-2.12 15.76-5.8l-7.2-5.58C30.37 38.5 27.42 39.5 24 39.5c-6.1 0-11.3-4.14-13.08-9.71l-8.36 6.99C6.51 42.62 14.62 48 24 48z"
+          />
+        </svg>
+
+        <span className="font-medium">
+          {googleLoading ? "Redirecting…" : "Continue with Google"}
+        </span>
+
+        {/* subtle inner sheen */}
+        <span
+          className="pointer-events-none absolute inset-0 rounded-none sm:rounded-lg"
+          style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)" }}
+        />
+      </button>
     </div>
   );
 }
