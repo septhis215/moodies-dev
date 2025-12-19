@@ -88,7 +88,7 @@ export default function TrailerModal({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
+    <div className="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md z-[999999]">
       <div className="absolute inset-0 cursor-pointer" onClick={onClose} />
 
       <div className="relative w-full h-full bg-black/80 backdrop-blur-md flex flex-col xl:flex-row gap-4 items-stretch overflow-hidden ">

@@ -263,9 +263,8 @@ export function ComingSoonSection({
                   </div>
                 </div>
                 <ChevronDown
-                  className={`w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-all duration-300 ${
-                    openMonth === monthYear ? "rotate-180" : ""
-                  }`}
+                  className={`w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-all duration-300 ${openMonth === monthYear ? "rotate-180" : ""
+                    }`}
                 />
               </button>
 
@@ -296,7 +295,7 @@ export function ComingSoonSection({
                           );
                           const daysUntil = Math.ceil(
                             (releaseDate.getTime() - Date.now()) /
-                              (1000 * 60 * 60 * 24)
+                            (1000 * 60 * 60 * 24)
                           );
                           const inWatchlist =
                             _isInWatchlist(item) ?? watchlistStates[item.id];
@@ -336,13 +335,11 @@ export function ComingSoonSection({
 
                                   {item.vote_average &&
                                     item.vote_average > 0 && (
-                                      <div className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-amber-500/90 backdrop-blur-sm px-2 py-1 rounded-lg shadow-lg z-10 transition-opacity duration-300 group-hover:opacity-0">
-                                        <div className="flex items-center gap-0.5">
-                                          <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white fill-white" />
-                                          <span className="text-[10px] sm:text-xs font-bold text-white">
-                                            {item.vote_average.toFixed(1)}
-                                          </span>
-                                        </div>
+                                      <div className="absolute top-3 right-3 bg-black/80 backdrop-blur text-white px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ring-1 ring-white/10">
+                                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                                        {item.vote_average && item.vote_average > 0
+                                          ? item.vote_average.toFixed(1)
+                                          : "New"}
                                       </div>
                                     )}
 
@@ -403,15 +400,13 @@ export function ComingSoonSection({
                                                   handleWatchlistToggle(item, e)
                                                 }
                                                 disabled={isLoading}
-                                                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-xl ${
-                                                  inWatchlist
-                                                    ? "bg-green-500/90 hover:bg-green-600"
-                                                    : "bg-white/95 hover:bg-white"
-                                                } ${
-                                                  isLoading
+                                                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-xl ${inWatchlist
+                                                  ? "bg-green-500/90 hover:bg-green-600"
+                                                  : "bg-white/95 hover:bg-white"
+                                                  } ${isLoading
                                                     ? "opacity-70 cursor-not-allowed"
                                                     : ""
-                                                }`}
+                                                  }`}
                                                 whileTap={{ scale: 0.9 }}
                                               >
                                                 {isLoading ? (
@@ -440,8 +435,8 @@ export function ComingSoonSection({
                                                 {isLoading
                                                   ? "Updating..."
                                                   : inWatchlist
-                                                  ? "Remove from Watchlist"
-                                                  : "Add to Watchlist"}
+                                                    ? "Remove from Watchlist"
+                                                    : "Add to Watchlist"}
                                               </div>
                                             </TooltipContent>
                                           </Tooltip>

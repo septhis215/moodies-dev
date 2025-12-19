@@ -74,7 +74,7 @@ export const Carousel = ({ items, CardComponent }: CarouselProps) => {
             <div
                 className={
                     isMobile
-                        ? "flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
+                        ? "flex gap-4 overflow-x-auto  scrollbar-hide"
                         : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5"
                 }
             >

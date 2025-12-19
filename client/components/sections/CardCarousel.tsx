@@ -236,9 +236,8 @@ export default function CardCarousel<T extends MovieLike>({
   };
 
   // CSS flex-basis calc (percentage + gaps) so initial render has correct layout even before JS measurement
-  const cardBasisCss = `calc((100% - ${
-    Math.max(0, itemsPerView - 1) * GAP_PX
-  }px) / ${itemsPerView})`;
+  const cardBasisCss = `calc((100% - ${Math.max(0, itemsPerView - 1) * GAP_PX
+    }px) / ${itemsPerView})`;
 
   const getContentType = (item: MovieLike): "movie" | "tv" => {
     if (item.media_type) return item.media_type;
@@ -472,11 +471,10 @@ export default function CardCarousel<T extends MovieLike>({
                                 disabled={isLoading}
                                 className={`
               p-1.5 sm:p-2 rounded-full shadow-lg backdrop-blur-md border transition-all duration-200
-              ${
-                inWatchlist
-                  ? "bg-green-500/90 border-green-400/50 text-white hover:bg-green-600/90"
-                  : "bg-black/50 border-white/30 text-white hover:bg-black/70 hover:border-white/50"
-              }
+              ${inWatchlist
+                                    ? "bg-green-500/90 border-green-400/50 text-white hover:bg-green-600/90"
+                                    : "bg-black/50 border-white/30 text-white hover:bg-black/70 hover:border-white/50"
+                                  }
               ${isLoading ? "opacity-70 cursor-not-allowed" : "hover:scale-110"}
             `}
                                 whileTap={{ scale: 0.9 }}
@@ -513,8 +511,8 @@ export default function CardCarousel<T extends MovieLike>({
                                 {isLoading
                                   ? "Updating..."
                                   : inWatchlist
-                                  ? "Remove from Watchlist"
-                                  : "Add to Watchlist"}
+                                    ? "Remove from Watchlist"
+                                    : "Add to Watchlist"}
                               </div>
                             </TooltipContent>
                           </Tooltip>
@@ -526,15 +524,14 @@ export default function CardCarousel<T extends MovieLike>({
                             <div
                               className={`
       flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-bold text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
-      ${
-        movie.vote_average === 0
-          ? "bg-sky-500/90 text-white border-sky-400/50"
-          : movie.vote_average >= 7.5
-          ? "bg-green-500/90 text-white border-green-400/50"
-          : movie.vote_average >= 6
-          ? "bg-yellow-500/90 text-black border-yellow-400/50"
-          : "bg-red-500/90 text-white border-red-400/50"
-      }
+      ${movie.vote_average === 0
+                                  ? "bg-sky-500/90 text-white border-sky-400/50"
+                                  : movie.vote_average >= 7.5
+                                    ? "bg-green-500/90 text-white border-green-400/50"
+                                    : movie.vote_average >= 6
+                                      ? "bg-yellow-500/90 text-black border-yellow-400/50"
+                                      : "bg-red-500/90 text-white border-red-400/50"
+                                }
     `}
                             >
                               <Star
@@ -554,11 +551,10 @@ export default function CardCarousel<T extends MovieLike>({
                         <div
                           className={`
         flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-medium text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
-        ${
-          contentType === "tv"
-            ? "bg-blue-500/90 text-white border-blue-400/50"
-            : "bg-purple-500/90 text-white border-purple-400/50"
-        }
+        ${contentType === "tv"
+                              ? "bg-blue-500/90 text-white border-blue-400/50"
+                              : "bg-purple-500/90 text-white border-purple-400/50"
+                            }
       `}
                         >
                           {contentType === "tv" ? (
@@ -616,17 +612,7 @@ export default function CardCarousel<T extends MovieLike>({
                                     <span>{year}</span>
                                   </div>
                                 )}
-                                {Number(movie.vote_count) > 0 && (
-                                  <div className="flex items-center gap-0.5 sm:gap-1">
-                                    <Users
-                                      size={10}
-                                      className="sm:w-3 sm:h-3"
-                                    />
-                                    <span>
-                                      {formatVoteCount(movie.vote_count)}
-                                    </span>
-                                  </div>
-                                )}
+
                                 {(movie.origin_country?.length || true) && (
                                   <span className="text-orange-400 font-semibold">
                                     {movie.origin_country?.[0]}

@@ -267,11 +267,10 @@ export default function MoodRecommendationsSection({
               className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full hover:shadow-lg hover:shadow-violet-500/50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed group"
             >
               <RefreshCw
-                className={`w-4 h-4 text-white ${
-                  loading
-                    ? "animate-spin"
-                    : "group-hover:rotate-180 transition-transform duration-500"
-                }`}
+                className={`w-4 h-4 text-white ${loading
+                  ? "animate-spin"
+                  : "group-hover:rotate-180 transition-transform duration-500"
+                  }`}
               />
               <span className="text-sm font-bold text-white">New Picks</span>
             </motion.button>
@@ -525,8 +524,8 @@ export default function MoodRecommendationsSection({
                             <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md font-bold text-xs flex items-center gap-1 shadow-lg ring-1 ring-white/10">
                               <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                               <span className="text-white">
-                                {rec.voteAverage && rec.voteAverage > 0
-                                  ? rec.voteAverage.toFixed(1)
+                                {Number(rec.voteAverage) && Number(rec.voteAverage) > 0
+                                  ? Number(rec.voteAverage).toFixed(1)
                                   : "New"}
                               </span>
                             </div>
@@ -543,16 +542,14 @@ export default function MoodRecommendationsSection({
                                     }}
                                     disabled={isBusy}
                                     className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn
-                                        ${
-                                          inList
-                                            ? "bg-emerald-500 hover:bg-emerald-600"
-                                            : "bg-white hover:bg-violet-500"
-                                        }
-                                        ${
-                                          isBusy
-                                            ? "opacity-70 cursor-not-allowed"
-                                            : ""
-                                        }`}
+                                        ${inList
+                                        ? "bg-emerald-500 hover:bg-emerald-600"
+                                        : "bg-white hover:bg-violet-500"
+                                      }
+                                        ${isBusy
+                                        ? "opacity-70 cursor-not-allowed"
+                                        : ""
+                                      }`}
                                     title={
                                       inList
                                         ? "Remove from Watchlist"
