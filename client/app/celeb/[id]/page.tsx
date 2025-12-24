@@ -40,6 +40,7 @@ import {
   Car,
 } from "lucide-react";
 import Link from "next/link";
+import { All } from "@/types/all";
 
 interface Person {
   id: number;
@@ -231,7 +232,13 @@ export default function CelebrityDetailPage({
       </div>
     );
   }
-
+  const getContentType = (item: any): "movie" | "tv" => {
+    if (item.media_type) return item.media_type;
+    if (item.type === "movies" || item.type === "movie") return "movie";
+    if (item.type === "tv") return "tv";
+    if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
+    return "movie";
+  };
 
   const TVCard = ({
     show,
@@ -250,7 +257,7 @@ export default function CelebrityDetailPage({
 
     return (
       <div className="group relative h-full">
-        <Link href={`/tv/${show.id}`} className="block h-full">
+        <Link href={`/${getContentType(show) === 'tv' ? 'tv' : 'movies'}/${show.id}`} className="block h-full">
           <div
             className={`relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 ${isWide ? "aspect-video" : "aspect-[2/3]"
               }`}
