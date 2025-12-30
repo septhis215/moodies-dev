@@ -145,18 +145,20 @@ export function CategoryContent({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-black text-white p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-12 mt-18">
-        {/* Page Info */}
-        {/* <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-black mb-2">Trending Now</h1>
-            <p className="text-gray-400">
-              Showing {data.length} of {total} items • Page {currentPage} of{" "}
-              {totalPages}
-            </p>
-          </div>
-        </div> */}
-        {/* Loading Overlay */}
+      <div
+        className="
+          mx-auto
+          w-full
+          max-w-[92%]
+          sm:max-w-[88%]
+          md:max-w-[820px]
+          lg:max-w-[980px]
+          xl:max-w-[1100px]
+          2xl:max-w-[1200px]
+          space-y-12
+          mt-18
+        "
+      >
         {isPending && (
           <div
             className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md overflow-hidden"

@@ -346,22 +346,20 @@ export class CategoryService {
     totalPages: number;
   }> {
     if (!this.token) {
-      this.logger.warn('TMDB_API_KEY not set; returning empty Upcoming');
+      this.logger.warn('TMDB_API_KEY not set; returning empty New Releases');
       return { data: [], total: 0, page: 1, totalPages: 0 };
     }
 
     try {
-      // Get date range - from tomorrow onwards
+      // 📅 Date range: last 30 days → today
       const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      const fromDate = new Date(today);
+      fromDate.setDate(fromDate.getDate() - 30);
 
-      const oneYearAhead = new Date(today);
-      oneYearAhead.setDate(oneYearAhead.getDate() + 365);
-      const futureDate = oneYearAhead.toISOString().split('T')[0];
+      const fromStr = fromDate.toISOString().split('T')[0];
+      const todayStr = today.toISOString().split('T')[0];
 
-      // Calculate which TMDB pages we need
+      // Pagination math
       const itemsPerTmdbPage = 20;
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit;
@@ -374,146 +372,105 @@ export class CategoryService {
         pagesToFetch.push(p);
       }
 
-      // Fetch movies releasing after today
-      const movieTasks = pagesToFetch.map((p) => async () => {
-        return this.tmdb(
-          `/discover/movie?include_adult=false&include_video=false&language=en-US&page=${p}&primary_release_date.gte=${tomorrowStr}&primary_release_date.lte=${futureDate}&sort_by=popularity.desc`,
-        );
-      });
+      // 🎬 Movies (recent releases)
+      const movieTasks = pagesToFetch.map((p) => async () =>
+        this.tmdb(
+          `/discover/movie?include_adult=false&language=en-US&page=${p}` +
+          `&primary_release_date.gte=${fromStr}` +
+          `&primary_release_date.lte=${todayStr}` +
+          `&sort_by=popularity.desc`,
+        ),
+      );
 
-      // Fetch TV shows airing after today
-      const tvTasks = pagesToFetch.map((p) => async () => {
-        return this.tmdb(
-          `/discover/tv?include_adult=false&include_null_first_air_dates=false&language=en-US&page=${p}&first_air_date.gte=${tomorrowStr}&first_air_date.lte=${futureDate}&sort_by=popularity.desc`,
-        );
-      });
+      // 📺 TV (recently aired)
+      const tvTasks = pagesToFetch.map((p) => async () =>
+        this.tmdb(
+          `/discover/tv?include_adult=false&include_null_first_air_dates=false` +
+          `&language=en-US&page=${p}` +
+          `&first_air_date.gte=${fromStr}` +
+          `&first_air_date.lte=${todayStr}` +
+          `&sort_by=popularity.desc`,
+        ),
+      );
 
-      // Fetch both in parallel
       const [moviePages, tvPages] = await Promise.all([
         this.withConcurrencyLimit<any>(movieTasks),
         this.withConcurrencyLimit<any>(tvTasks),
       ]);
 
-      // Get total results from TMDB
+      // Estimated totals
       const totalMovieResults = moviePages[0]?.total_results || 0;
       const totalTvResults = tvPages[0]?.total_results || 0;
       const totalTmdbResults = totalMovieResults + totalTvResults;
 
-      // Combine results
+      // Merge results
       const movieResults = moviePages.flatMap((page) =>
         (page?.results ?? []).map((m: any) => ({ ...m, media_type: 'movie' })),
       );
+
       const tvResults = tvPages.flatMap((page) =>
         (page?.results ?? []).map((t: any) => ({ ...t, media_type: 'tv' })),
       );
 
       const allResults = [...movieResults, ...tvResults];
 
-      // Filter out items with missing critical data
+      // ✅ Validate + ensure RECENT (not future)
       const validResults = allResults.filter((item: any) => {
         const releaseDate = new Date(
           item.release_date || item.first_air_date || '',
         );
-        const isFuture = releaseDate > today;
 
-        const hasTitle = !!(item.title || item.name);
-        const hasOverview = !!item.overview && item.overview.trim().length > 0;
-        const hasPoster = !!item.poster_path;
-        const hasBackdrop = !!item.backdrop_path;
-        const hasReleaseDate = !!(item.release_date || item.first_air_date);
-        const hasValidRating = typeof item.vote_average === 'number';
-        const hasId = !!item.id;
+        const isRecent =
+          releaseDate >= fromDate &&
+          releaseDate <= today;
 
         return (
-          isFuture &&
-          hasId &&
-          hasTitle &&
-          hasOverview &&
-          hasPoster &&
-          hasBackdrop &&
-          hasReleaseDate &&
-          hasValidRating
+          isRecent &&
+          item.id &&
+          (item.title || item.name) &&
+          item.overview?.trim().length > 0 &&
+          item.poster_path &&
+          item.backdrop_path &&
+          typeof item.vote_average === 'number'
         );
       });
 
-      // Dedupe by id and type
+      // Dedupe
       const uniqueMap = new Map<string, any>();
       for (const item of validResults) {
         const key = `${item.media_type}-${item.id}`;
-        if (!uniqueMap.has(key)) {
-          uniqueMap.set(key, item);
-        }
+        if (!uniqueMap.has(key)) uniqueMap.set(key, item);
       }
-      const uniqueItems = Array.from(uniqueMap.values());
 
-      // Sort by popularity (descending - most popular first)
-      uniqueItems.sort((a, b) => {
-        return (b.popularity || 0) - (a.popularity || 0);
-      });
-
-      // Format basic data
-      let basicItems: TmdbAll[] = uniqueItems
-        .map((m: any) => ({
-          id: m.id,
-          title: m.title ?? m.name ?? 'Untitled',
-          overview: m.overview ?? '',
-          poster_path: m.poster_path ?? null,
-          backdrop_path: m.backdrop_path ?? null,
-          release_date: m.release_date ?? m.first_air_date ?? null,
-          vote_average: m.vote_average ?? 0,
-          vote_count: m.vote_count ?? 0,
-          popularity: m.popularity ?? 0,
-          origin_country: m.origin_country ?? [],
-          genres: m.genre_ids
-            ? m.genre_ids
-                .map((id: number) => this.genreMap[id])
-                .filter((genre) => genre && genre !== 'Unknown')
-            : [],
-          type: m.media_type,
-          recommendations: [],
-        }))
-        .filter((item) => {
-          return (
-            item.title &&
-            item.title.trim().length > 0 &&
-            item.overview &&
-            item.overview.trim().length > 0 &&
-            item.poster_path &&
-            item.backdrop_path &&
-            item.release_date &&
-            item.genres.length > 0
-          );
-        });
-
-      // Fetch missing origin countries for movies
-      const movieWithoutCountry = basicItems.filter(
-        (m) =>
-          m.type === 'movie' &&
-          (!m.origin_country || m.origin_country.length === 0),
+      const uniqueItems = Array.from(uniqueMap.values()).sort(
+        (a, b) => (b.popularity || 0) - (a.popularity || 0),
       );
 
-      if (movieWithoutCountry.length > 0) {
-        const movieDetails = await Promise.allSettled(
-          movieWithoutCountry.map((movie) =>
-            this.tmdb(`/movie/${movie.id}?language=en-US`).catch(() => null),
-          ),
-        );
+      // Format
+      const basicItems: TmdbAll[] = uniqueItems.map((m: any) => ({
+        id: m.id,
+        title: m.title ?? m.name ?? 'Untitled',
+        overview: m.overview ?? '',
+        poster_path: m.poster_path ?? null,
+        backdrop_path: m.backdrop_path ?? null,
+        release_date: m.release_date ?? m.first_air_date ?? null,
+        vote_average: m.vote_average ?? 0,
+        vote_count: m.vote_count ?? 0,
+        popularity: m.popularity ?? 0,
+        origin_country: m.origin_country ?? [],
+        genres: m.genre_ids
+          ? m.genre_ids
+            .map((id: number) => this.genreMap[id])
+            .filter(Boolean)
+          : [],
+        type: m.media_type,
+        recommendations: [],
+      }));
 
-        movieDetails.forEach((res, i) => {
-          if (res.status === 'fulfilled' && res.value) {
-            const detail = res.value;
-            const countryCodes =
-              detail.production_countries?.map((c: any) => c.iso_3166_1) ?? [];
-            movieWithoutCountry[i].origin_country = countryCodes;
-          }
-        });
-      }
-
-      // Paginate the combined results
+      // Paginate combined list
       const startOffset = startIndex % itemsPerTmdbPage;
       const paginatedData = basicItems.slice(startOffset, startOffset + limit);
 
-      // Use TMDB's total as estimate (accounting for ~80% passing filters)
       const estimatedTotal = Math.floor(totalTmdbResults * 0.8);
       const totalPagesCalc = Math.ceil(estimatedTotal / limit);
 
@@ -524,7 +481,7 @@ export class CategoryService {
         totalPages: totalPagesCalc,
       };
     } catch (err) {
-      this.logger.error('Failed to fetch Upcoming', err as any);
+      this.logger.error('Failed to fetch New Releases', err as any);
       return { data: [], total: 0, page: 1, totalPages: 0 };
     }
   }
@@ -782,8 +739,8 @@ export class CategoryService {
           origin_country: m.origin_country ?? [],
           genres: m.genre_ids
             ? m.genre_ids
-                .map((id: number) => this.genreMap[id])
-                .filter((genre) => genre && genre !== 'Unknown')
+              .map((id: number) => this.genreMap[id])
+              .filter((genre) => genre && genre !== 'Unknown')
             : [],
           type: m.media_type,
           recommendations: [],

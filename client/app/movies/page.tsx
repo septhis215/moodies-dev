@@ -1,17 +1,17 @@
-import React from 'react';
-import type { All } from '@/types/all';
-import type { ReviewItem } from '@/components/sections/CommunityPicks';
-import MoviesHomePageClient from './MovieHomePageClient';
+import React from "react";
+import type { All } from "@/types/all";
+import type { ReviewItem } from "@/components/sections/CommunityPicks";
+import MoviesHomePageClient from "./MovieHomePageClient";
 
-const BASE_URL = process.env.NEST_API_URL || 'http://localhost:4000';
+const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
 
 async function fetchWithFallback<T>(endpoint: string, fallback: T): Promise<T> {
   try {
     const res = await fetch(`${BASE_URL}${endpoint}`, {
       next: { revalidate: 60 },
       headers: {
-        'Content-Type': 'application/json',
-      }
+        "Content-Type": "application/json",
+      },
     });
 
     if (!res.ok) {
@@ -33,73 +33,87 @@ async function fetchMoods() {
     });
 
     if (!res.ok) {
-      console.error('Failed to fetch moods');
+      console.error("Failed to fetch moods");
       return [];
     }
 
     return res.json();
   } catch (error) {
-    console.error('Error fetching moods:', error);
+    console.error("Error fetching moods:", error);
     return [];
   }
 }
 
 async function fetchTrendingMovies() {
-  return fetchWithFallback<All[]>('/movies/featured?limit=25', []);
+  return fetchWithFallback<All[]>("/movies/featured?limit=25", []);
 }
 
 async function fetchPopularMovies() {
-  return fetchWithFallback<All[]>('/movies/trending?limit=25', []);
+  return fetchWithFallback<All[]>("/movies/trending?limit=25", []);
 }
 
 async function fetchTopRatedMovies() {
-  return fetchWithFallback<All[]>('/movies/favorites?limit=30', []);
+  return fetchWithFallback<All[]>("/movies/favorites?limit=30", []);
 }
 
 async function fetchMovieTrailers() {
-  return fetchWithFallback<All[]>('/movies/trailers?limit=25', []);
+  return fetchWithFallback<All[]>("/movies/trailers?limit=25", []);
 }
 
 async function fetchNewMovieTrailers() {
-  return fetchWithFallback<All[]>('/movies/upcoming-trailers?limit=40', []);
+  return fetchWithFallback<All[]>("/movies/upcoming-trailers?limit=40", []);
 }
 
 async function fetchKoreanMovies() {
-  return fetchWithFallback<All[]>('/movies/koreaTrending?limit=25', []);
+  return fetchWithFallback<All[]>("/movies/koreaTrending?limit=25", []);
 }
 
 async function fetchMovieReviews() {
-  return fetchWithFallback<ReviewItem[]>('/movies/trending-reviews?limit=20', []);
+  return fetchWithFallback<ReviewItem[]>(
+    "/movies/trending-reviews?limit=20",
+    []
+  );
 }
 // Add to your page.tsx server component
 async function fetchAnimatedMovies() {
-  return fetchWithFallback<All[]>('/movies/animated-movies?limit=20', []);
+  return fetchWithFallback<All[]>("/movies/animated-movies?limit=20", []);
 }
 
 async function fetchActionMovies() {
-  return fetchWithFallback<All[]>('/movies/action-movies?limit=20', []);
+  return fetchWithFallback<All[]>("/movies/action-movies?limit=20", []);
 }
 
 async function fetchIndieMovies() {
-  return fetchWithFallback<All[]>('/movies/indie-movies?limit=20', []);
+  return fetchWithFallback<All[]>("/movies/indie-movies?limit=20", []);
 }
 
 async function fetchAwardWinners() {
-  return fetchWithFallback<All[]>('/movies/award-winners?limit=25', []);
+  return fetchWithFallback<All[]>("/movies/award-winners?limit=25", []);
 }
 
 async function fetchNewReleases() {
-    return fetchWithFallback<All[]>('/movies/new-releases?limit=30', []);
+  const result = await fetchWithFallback<{ data: All[] } | All[]>(
+    "/movies/new-releases?page=1&limit=30",
+    { data: [] }
+  );
+
+  if (Array.isArray(result)) {
+    return result;
+  }
+
+  return result.data || [];
 }
 
 export const metadata = {
-  title: 'Movies - Discover Trending Films',
-  description: 'Explore trending movies, box office hits, top-rated classics, and upcoming releases. Stay updated with new trailers and community reviews.',
-  keywords: 'movies, films, box office, trending movies, top rated, upcoming releases, movie reviews',
+  title: "Movies - Discover Trending Films",
+  description:
+    "Explore trending movies, box office hits, top-rated classics, and upcoming releases. Stay updated with new trailers and community reviews.",
+  keywords:
+    "movies, films, box office, trending movies, top rated, upcoming releases, movie reviews",
   openGraph: {
-    title: 'Movies - Moodies',
-    description: 'Discover trending movies and upcoming releases',
-    type: 'website',
+    title: "Movies - Moodies",
+    description: "Discover trending movies and upcoming releases",
+    type: "website",
   },
 };
 
@@ -117,7 +131,7 @@ export default async function MoviesHomePage() {
     awardWinners,
     actionMovies,
     moods,
-    newReleaseMovies
+    newReleaseMovies,
   ] = await Promise.all([
     fetchTrendingMovies(),
     fetchPopularMovies(),
@@ -131,7 +145,7 @@ export default async function MoviesHomePage() {
     fetchAwardWinners(),
     fetchActionMovies(),
     fetchMoods(),
-    fetchNewReleases()
+    fetchNewReleases(),
   ]);
 
   return (

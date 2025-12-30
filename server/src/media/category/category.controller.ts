@@ -20,7 +20,7 @@ export class CategoryController {
     return this.categoryService.getTrending(page, limit);
   }
 
-  @Get('new-releases')
+  @Get('fresh-off-the-screen')
   async newReleases(
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 20,

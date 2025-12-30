@@ -193,7 +193,7 @@ export default function PremiereHighlights({
     >
       <div className="flex items-end justify-between mb-8">
         <div>
-          <Link href="/new-releases" className="group">
+          <Link href="/fresh-off-the-screen" className="group">
             <h2
               className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text transition-opacity hover:opacity-80"
               style={{
