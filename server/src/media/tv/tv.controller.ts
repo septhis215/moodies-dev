@@ -28,15 +28,23 @@ export class TvController {
   }
 
   @Get('airing/today')
-  async getAiringToday(@Query('limit') limit?: string) {
+  async getAiringToday(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.tvService.airingToday(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.tvService.airingToday(parsedLimit, parsedPage);
   }
 
   @Get('airing/week')
-  async getAiringThisWeek(@Query('limit') limit?: string) {
+  async getAiringThisWeek(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.tvService.airingThisWeek(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.tvService.airingThisWeek(parsedLimit, parsedPage);
   }
 
   @Get('revenue')
@@ -46,9 +54,13 @@ export class TvController {
   }
 
   @Get('trending')
-  async trending(@Query('limit') limit?: string) {
+  async trending(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.tvService.getTrending(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.tvService.getTrending(parsedLimit, parsedPage);
   }
 
   @Get('featured')
@@ -64,15 +76,23 @@ export class TvController {
   }
 
   @Get('favorites')
-  async favorites(@Query('limit') limit?: string) {
+  async favorites(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.tvService.getFavorites(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.tvService.getFavorites(parsedLimit, parsedPage);
   }
 
   @Get('koreaTrending')
-  async koreaTrending(@Query('limit') limit?: string) {
+  async koreaTrending(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.tvService.getKoreaTrending(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.tvService.getKoreaTrending(parsedLimit, parsedPage);
   }
 
   @Get('trending-reviews')
@@ -88,9 +108,13 @@ export class TvController {
   }
 
   @Get('new-releases')
-  async newReleases(@Query('limit') limit?: string) {
+  async newReleases(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 20;
-    return this.tvService.getNewReleases(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.tvService.getNewReleases(parsedLimit, parsedPage);
   }
 
   // Enhanced recommendations endpoint with better error handling

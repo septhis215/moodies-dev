@@ -5,7 +5,7 @@ const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
 
 async function fetchNewReleases(page: number = 1) {
   const res = await fetch(
-    `${BASE_URL}/category/new-releases?page=${page}&limit=20`,
+    `${BASE_URL}/category/fresh-off-the-screen?page=${page}&limit=20`,
     {
       cache: "no-store",
     }
@@ -31,8 +31,8 @@ export default async function NewReleasePage({
         currentPage={upcoming.page}
         totalPages={upcoming.totalPages}
         total={upcoming.total}
-        title={"New Releases"}
-        subtitle={"Latest Movies and TV Shows"}
+        title={"Fresh Off The Screen"}
+        subtitle={"The latest movies and TV shows just released"}
       />
     </main>
   );
