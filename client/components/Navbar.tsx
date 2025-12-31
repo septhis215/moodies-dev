@@ -88,20 +88,24 @@ export function NavbarComponent() {
     ],
 
     "/movies": [
-      { label: "Trending", path: "/movies/trending" },
-      { label: "Top Rated", path: "/movies/top-rated" },
+      { label: "Box Office Hits", path: "/movies/box-office" },
       { label: "New Releases", path: "/movies/new-releases" },
-      { label: "Korean", path: "/movies/korean" },
-      { label: "Upcoming", path: "/movies/upcoming" },
+      { label: "Featured Now", path: "/movies/featured" },
+      { label: "Korean Cinema", path: "/movies/korean-cinema" },
+      { label: "Action-Packed", path: "/movies/action" },
+      { label: "Award Winners", path: "/movies/award-winners" },
+      { label: "Animated Magic", path: "/movies/animated" },
+      { label: "Indie Spotlight", path: "/movies/indie" },
       { label: "Moods Matcher", path: "/movies/moods" },
     ],
 
     "/tv": [
-      { label: "Trending", path: "/tv/trending" },
-      { label: "Top Rated", path: "/tv/top-rated" },
+      { label: "Airing Today", path: "/tv/airing/today" },
+      { label: "Trending Now", path: "/tv/trending" },
       { label: "New Releases", path: "/tv/new-releases" },
-      { label: "Korean", path: "/tv/korean" },
-      { label: "Upcoming", path: "/tv/upcoming" },
+      { label: "Top Rated", path: "/tv/top-rated" },
+      { label: "Airing This Week", path: "/tv/airing/week" },
+      { label: "K-Drama Collection", path: "/tv/k-drama" },
       { label: "Moods Matcher", path: "/tv/moods" },
     ],
 
@@ -247,264 +251,370 @@ export function NavbarComponent() {
           id="site-menu"
           transition={{
             type: "spring",
-            stiffness: 300,
-            damping: 32,
+            stiffness: 280,
+            damping: 30,
             mass: 0.8,
           }}
-          initial={{ y: "-12%", opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: "-12%", opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           style={{
-            backdropFilter: "blur(14px)",
+            backdropFilter: "blur(24px)",
             background:
-              "linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.65) 100%)",
-            willChange: "transform, opacity",
+              "linear-gradient(135deg, rgba(0,0,0,0.88) 0%, rgba(15,15,25,0.92) 100%)",
+            willChange: "opacity",
           }}
         >
-          {/* inner card: 3-column layout (left nav / center options / right profile) */}
+          {/* Animated background particles */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(25)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute rounded-full"
+                style={{
+                  width: Math.random() * 3 + 1,
+                  height: Math.random() * 3 + 1,
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  background: `rgba(233, 79, 55, ${Math.random() * 0.3 + 0.1})`,
+                }}
+                animate={{
+                  y: [0, -30, 0],
+                  x: [0, Math.random() * 20 - 10, 0],
+                  opacity: [0.2, 0.8, 0.2],
+                  scale: [1, 1.2, 1],
+                }}
+                transition={{
+                  duration: 3 + Math.random() * 2,
+                  repeat: Number.POSITIVE_INFINITY,
+                  delay: Math.random() * 2,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Main content card */}
           <motion.div
-            initial={{ scale: 0.995, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.995, opacity: 0 }}
-            transition={{ duration: 0.26, ease: "easeOut" }}
-            className="relative flex flex-col md:flex-row w-full mx-auto rounded-2xl"
+            initial={{ scale: 0.92, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.92, opacity: 0, y: 20 }}
+            transition={{
+              duration: 0.4,
+              ease: [0.22, 1, 0.36, 1],
+              opacity: { duration: 0.25 },
+            }}
+            className="relative flex flex-col lg:flex-row w-full mx-auto rounded-3xl overflow-hidden"
             style={{
-              boxShadow: "0 30px 80px rgba(0,0,0,0.65)",
-              border: "1px solid rgba(255,255,255,0.04)",
+              maxWidth: "min(1300px, calc(100vw - 2rem))",
+              maxHeight: "min(85vh, 820px)",
               background:
-                "linear-gradient(180deg, rgba(6,6,8,0.94), rgba(8,8,10,0.9))",
-              maxWidth: "min(1100px, calc(100vw - 2rem))",
-              minWidth: "300px", // Add this
-              maxHeight: "min(85vh, calc(100vh - 2rem))",
-              margin: "clamp(0.5rem, 2vh, 2rem)",
-              overflow: "hidden",
-              willChange: "transform, opacity",
+                "linear-gradient(135deg, rgba(20,20,30,0.98) 0%, rgba(10,10,15,0.96) 100%)",
+              boxShadow:
+                "0 50px 100px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.06) inset, 0 0 100px rgba(233,79,55,0.15)",
+              border: "1px solid rgba(255,255,255,0.08)",
             }}
           >
-            {/* LEFT: routes */}
+            {/* Gradient overlay borders */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/50 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/30 to-transparent" />
+            </div>
+
+            {/* LEFT SECTION - Navigation */}
             <div
-              className="flex-1 md:basis-1/2 min-w-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.02),transparent)] flex flex-col justify-between"
+              className="flex-1 lg:basis-[45%] flex flex-col justify-between relative"
               style={{
-                padding: "clamp(1rem, 3vw, 2.5rem) clamp(1.25rem, 4vw, 2.5rem)",
-                gap: "clamp(0.75rem, 2vh, 1.5rem)",
-                boxSizing: "border-box",
+                padding: "clamp(2rem, 4vw, 3.5rem) clamp(2rem, 4vw, 3rem)",
+                gap: "clamp(1.5rem, 3vh, 2.5rem)",
                 background:
-                  "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
+                  "radial-gradient(circle at top left, rgba(233,79,55,0.12), transparent 70%)",
               }}
             >
-              <div className="pb-1">
+              {/* Decorative corner element */}
+              <div className="absolute top-0 left-0 w-32 h-32 opacity-20">
+                <div className="absolute inset-0 bg-gradient-to-br from-[#e94f37] to-transparent blur-3xl" />
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="relative z-10"
+              >
                 <h2
-                  className="font-semibold text-white leading-tight"
-                  style={{ fontSize: "clamp(1.25rem, 4vw, 2.5rem)" }}
+                  className="font-bold leading-tight mb-3"
+                  style={{
+                    fontSize: "clamp(2rem, 5vw, 3.5rem)",
+                    background:
+                      "linear-gradient(135deg, #ffffff 0%, #e0e0e0 50%, #888 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
                 >
                   Explore
                 </h2>
                 <p
-                  className="mt-1 text-gray-300"
-                  style={{ fontSize: "clamp(0.75rem, 1.8vw, 1rem)" }}
+                  className="text-gray-400 font-light"
+                  style={{ fontSize: "clamp(0.9rem, 2vw, 1.1rem)" }}
                 >
-                  Quick links to the main sections
+                  Discover what moves you
                 </p>
-              </div>
+              </motion.div>
 
-              {/* nav — on hover/focus set activeRoute */}
+              {/* Navigation Links */}
+
               <nav
-                className="flex-1 flex flex-col justify-center"
-                style={{ gap: "clamp(0.25rem, 1.5vh, 1rem)" }}
+                className="flex-1 flex flex-col justify-center relative z-10"
+                style={{ gap: "clamp(0.6rem, 2vh, 1.6rem)" }}
               >
-                {routes.map((r) => (
-                  <Link
-                    key={r.href}
-                    href={r.href}
-                    onMouseEnter={() => setActiveRoute(r.href)}
-                    onFocus={() => setActiveRoute(r.href)}
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${
-                      activeRoute === r.href
-                        ? "text-[#e94f37]"
-                        : "text-gray-100 hover:text-[#e94f37]"
-                    } pl-3`}
-                    style={{
-                      fontSize: "clamp(0.95rem, 2.8vw, 1.5rem)",
-                      paddingTop: "clamp(0.2rem, 0.8vh, 0.35rem)",
-                      paddingBottom: "clamp(0.2rem, 0.8vh, 0.35rem)",
-                    }}
-                  >
-                    {/* active/hover indicator line */}
-                    <span
-                      className={`absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-[#e94f37] transition-all duration-200`}
-                      style={{
-                        width: "clamp(2px, 0.3vw, 3px)",
-                        height:
-                          activeRoute === r.href
-                            ? "clamp(1rem, 3vh, 1.5rem)"
-                            : "0",
-                        opacity: activeRoute === r.href ? 1 : 0,
-                      }}
-                    />
-                    {r.name}
-                  </Link>
-                ))}
+                {routes.map((r, idx) => {
+                  const isActive = activeRoute === r.href;
+
+                  return (
+                    <motion.div
+                      key={r.href}
+                      initial={{ opacity: 0, x: -30 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.15 + idx * 0.05, duration: 0.4 }}
+                      className="relative"
+                    >
+                      <div className="flex items-center justify-between">
+                        {/* ROOT OPTION (button, not link) */}
+                        <button
+                          type="button"
+                          onClick={() => setActiveRoute(r.href)}
+                          className="group relative flex items-center flex-1 text-left pl-4 py-2 rounded-2xl transition-all"
+                        >
+                          {/* Active glow bar */}
+                          <motion.div
+                            className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 rounded-full bg-gradient-to-b from-[#e94f37] to-orange-500"
+                            initial={false}
+                            animate={{
+                              height: isActive ? "2.5rem" : 0,
+                              opacity: isActive ? 1 : 0,
+                            }}
+                            transition={{ duration: 0.25 }}
+                          />
+
+                          <span
+                            className={`font-semibold transition-colors ${
+                              isActive
+                                ? "text-[#e94f37]"
+                                : "text-gray-300 group-hover:text-white"
+                            }`}
+                            style={{
+                              fontSize: "clamp(1.1rem, 3.2vw, 2rem)",
+                              letterSpacing: "-0.02em",
+                            }}
+                          >
+                            {r.name}
+                          </span>
+                        </button>
+
+                        {/* GO TO ROOT BUTTON */}
+                        <Link
+                          href={r.href}
+                          onClick={() => setIsMenuOpen(false)}
+                          className="
+                            ml-3 px-3 py-1 rounded-full text-sm font-medium
+                            text-[#e94f37]
+                            bg-[#e94f37]/10
+                            border border-[#e94f37]/30
+                            hover:bg-[#e94f37]/20
+                            hover:border-[#e94f37]/50
+                            transition
+                          "
+                        >
+                          Go to {r.name}
+                        </Link>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </nav>
 
-              <div
-                className="pt-1 text-gray-400"
-                style={{ fontSize: "clamp(0.7rem, 1.5vw, 0.875rem)" }}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="text-gray-500 text-sm font-light relative z-10"
               >
-                © {new Date().getFullYear()} Your App
-              </div>
+                © {new Date().getFullYear()} Moodies • All rights reserved
+              </motion.div>
             </div>
 
-            {/* CENTER: options panel. Visible on md+ only. */}
+            {/* DIVIDER */}
+            <div className="hidden lg:block w-px bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+
+            {/* RIGHT SECTION - Dynamic Content */}
             <div
-              className="hidden md:flex md:basis-1/2 flex-col items-start justify-center"
+              className="flex-1 lg:basis-[55%] flex flex-col relative overflow-hidden"
               style={{
-                padding: "clamp(1rem, 2.5vw, 1.5rem)",
+                padding: "clamp(2rem, 4vw, 3.5rem) clamp(2rem, 4vw, 3rem)",
                 background:
-                  "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
-                borderLeft: "1px solid rgba(255,255,255,0.1)",
-                borderRight: "1px solid rgba(255,255,255,0.1)",
+                  "radial-gradient(circle at bottom right, rgba(233,79,55,0.08), transparent 60%)",
               }}
             >
-              <div
-                className="w-full"
-                style={{ maxWidth: "clamp(200px, 25vw, 280px)" }}
+              {/* Decorative corner element */}
+              <div className="absolute bottom-0 right-0 w-40 h-40 opacity-15">
+                <div className="absolute inset-0 bg-gradient-to-tl from-orange-500 to-transparent blur-3xl" />
+              </div>
+
+              {/* Content area */}
+              <motion.div
+                key={activeRoute}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+                className="flex-1 flex flex-col relative z-10 h-full overflow-y-auto pr-12 hide-scrollbar"
+                style={{
+                  scrollbarGutter: "stable both-edges",
+                  scrollbarWidth: "none",
+                  msOverflowStyle: "none",
+                }}
               >
-                <h3
-                  className="font-semibold text-[#e94f37]"
-                  style={{
-                    fontSize: "clamp(0.8rem, 1.8vw, 1rem)",
-                    marginBottom: "clamp(0.75rem, 2vh, 1rem)",
-                  }}
-                >
-                  {routes.find((x) => x.href === activeRoute)?.name ??
-                    "Options"}
-                </h3>
+                {/* Section Title */}
+                <div className="mb-8">
+                  <motion.div
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#e94f37]/10 border border-[#e94f37]/30 mb-4"
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <div className="w-2 h-2 rounded-full bg-[#e94f37] animate-pulse" />
+                    <span className="text-[#e94f37] text-sm font-medium">
+                      {routes.find((x) => x.href === activeRoute)?.name}
+                    </span>
+                  </motion.div>
 
-                <div
-                  className="flex flex-col"
-                  style={{ gap: "clamp(0.5rem, 1.5vh, 0.75rem)" }}
-                >
-                  {(routeOptions[activeRoute] || []).map((opt) => (
-                    <Link
-                      key={opt.path}
-                      href={opt.path}
-                      onClick={() => setIsMenuOpen(false)}
-                      className="relative rounded-lg text-gray-200
-        hover:text-white transition-all duration-300
-        before:absolute before:inset-0 before:rounded-lg before:border
-        before:border-[#e94f37]/30 hover:before:border-[#e94f37]
-        before:transition-all before:duration-300"
-                      style={{
-                        padding:
-                          "clamp(0.4rem, 1.2vh, 0.5rem) clamp(0.75rem, 2vw, 1rem)",
-                        fontSize: "clamp(0.8rem, 1.6vw, 0.95rem)",
-                      }}
-                    >
-                      {opt.label}
-                    </Link>
-                  ))}
+                  <h3
+                    className="font-bold text-white leading-tight"
+                    style={{ fontSize: "clamp(1.5rem, 3vw, 2.2rem)" }}
+                  >
+                    Quick Actions
+                  </h3>
                 </div>
-              </div>
+
+                {/* Options Grid */}
+                <div className="pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                  {/* Options Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+                    {(routeOptions[activeRoute] || []).map((opt, idx) => (
+                      <motion.div
+                        key={opt.path}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 + idx * 0.05 }}
+                      >
+                        <Link
+                          href={opt.path}
+                          onClick={() => setIsMenuOpen(false)}
+                          className="group relative block p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-[#e94f37]/50 transition-all duration-300 overflow-hidden"
+                        >
+                          <motion.div
+                            className="absolute inset-0 bg-gradient-to-br from-[#e94f37]/10 via-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                            initial={false}
+                          />
+                          <div className="relative z-10">
+                            <span className="text-white font-medium block mb-1 group-hover:text-[#e94f37] transition-colors">
+                              {opt.label}
+                            </span>
+                            <span className="text-gray-500 text-sm">
+                              Explore →
+                            </span>
+                          </div>
+                          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-[#e94f37]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Profile Section */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="pt-6 border-t border-white/[0.08]"
+                  >
+                    <div className="flex items-center gap-4">
+                      {/* Avatar with gradient ring */}
+                      <div className="relative">
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 blur-md opacity-50" />
+                        <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 p-[2px]">
+                          <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center overflow-hidden">
+                            {user?.avatarUrl ? (
+                              <img
+                                src={user.avatarUrl}
+                                alt={user.username || "User"}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-xl font-bold text-gray-300">
+                                {(
+                                  user?.username?.[0] ||
+                                  user?.name?.[0] ||
+                                  "G"
+                                ).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* User info */}
+                      <div className="flex-1">
+                        <h4 className="text-white font-semibold text-lg">
+                          {user?.username ?? user?.name ?? "Guest"}
+                        </h4>
+                        <p className="text-gray-400 text-sm">
+                          {user?.email || "guest@example.com"}
+                        </p>
+                      </div>
+
+                      {/* Action button */}
+                      {isAuthenticated ? (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            logout();
+                          }}
+                          className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-medium transition-all"
+                        >
+                          Logout
+                        </motion.button>
+                      ) : (
+                        <Link
+                          href="/auth/login"
+                          onClick={() => setIsMenuOpen(false)}
+                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#e94f37] to-orange-500 hover:from-[#e94f37]/90 hover:to-orange-500/90 text-white font-medium transition-all"
+                        >
+                          Sign In
+                        </Link>
+                      )}
+                    </div>
+                  </motion.div>
+                </div>
+              </motion.div>
             </div>
 
-            {/* RIGHT: profile — visible on lg and above */}
-            <div
-              className="hidden lg:flex w-1/3 flex-none min-w-0 bg-[rgba(255,255,255,0.02)] items-center justify-center"
-              style={{
-                padding: "clamp(1rem, 2.5vw, 2rem) clamp(1rem, 2vw, 1.5rem)",
-                boxSizing: "border-box",
-                background:
-                  "radial-gradient(circle at top left, rgba(233,79,55,0.1), transparent)",
-              }}
-            >
-              <div className="w-full max-w-xs text-center">
-                <div
-                  className="mx-auto rounded-full overflow-hidden"
-                  style={{
-                    height: "clamp(64px, 10vw, 88px)",
-                    width: "clamp(64px, 10vw, 88px)",
-                  }}
-                >
-                  {/* <Image
-                    src="/images/facebook.png"
-                    alt="avatar"
-                    width={96}
-                    height={96}
-                    style={{ objectFit: "cover" }}
-                  /> */}
-                </div>
-                <h3
-                  className="mt-3 font-medium text-white"
-                  style={{ fontSize: "clamp(0.85rem, 1.8vw, 1.1rem)" }}
-                >
-                  {user?.username ?? user?.name ?? "Guest"}
-                </h3>
-                <p
-                  className="mt-1"
-                  style={{
-                    color: "rgba(255,255,255,0.75)",
-                    fontSize: "clamp(0.75rem, 1.5vw, 0.9rem)",
-                  }}
-                >
-                  {user?.email || "guest@example.com"}
-                </p>
-
-                <div className="mt-4">
-                  {isAuthenticated ? (
-                    <button
-                      onClick={() => {
-                        setIsMobileOpen(false);
-                        logout();
-                      }}
-                      className="inline-flex items-center justify-center rounded-full border border-white/20 text-white hover:bg-white/5"
-                      style={{
-                        padding:
-                          "clamp(0.4rem, 1vh, 0.5rem) clamp(0.75rem, 2vw, 1rem)",
-                        fontSize: "clamp(0.75rem, 1.5vw, 0.875rem)",
-                      }}
-                    >
-                      Logout
-                    </button>
-                  ) : (
-                    <Link
-                      href="/auth/login"
-                      onClick={() => setIsMobileOpen(false)}
-                      className="inline-flex items-center justify-center rounded-full border border-white/20 text-white hover:bg-white/5"
-                      style={{
-                        padding:
-                          "clamp(0.4rem, 1vh, 0.5rem) clamp(0.75rem, 2vw, 1rem)",
-                        fontSize: "clamp(0.75rem, 1.5vw, 0.875rem)",
-                      }}
-                    >
-                      Login
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Close X */}
-            <button
+            {/* Close Button */}
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8, rotate: -90 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, scale: 0.8, rotate: 90 }}
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
               onClick={() => setIsMenuOpen(false)}
               aria-label="Close menu"
-              className="absolute rounded-full bg-white/10 hover:bg-white/20 focus:outline-none"
-              style={{
-                right: "clamp(0.75rem, 2vw, 1.5rem)",
-                top: "clamp(0.75rem, 2vw, 1.5rem)",
-                padding: "clamp(0.4rem, 1vw, 0.5rem)",
-                backdropFilter: "blur(6px)",
-              }}
+              className="absolute top-6 right-10 p-3 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 backdrop-blur-xl focus:outline-none transition-all group"
             >
-              <IconX
-                className="text-white"
-                style={{
-                  width: "clamp(18px, 3vw, 24px)",
-                  height: "clamp(18px, 3vw, 24px)",
-                }}
-              />
-            </button>
+              <IconX className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+            </motion.button>
           </motion.div>
         </motion.div>
       )}
@@ -758,57 +868,151 @@ export function NavbarComponent() {
         onClose={() => setIsMobileOpen(false)}
       >
         <div className="w-full px-4">
-          <div className="flex flex-col gap-6 py-2">
-            <h3 className="text-2xl font-semibold text-white">Explore</h3>
-            <p className="text-sm text-gray-300">Quick links</p>
+          {/* Animated particles background inside menu */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
+            {[...Array(15)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 bg-[#e94f37] rounded-full"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                }}
+                animate={{
+                  y: [0, -100, 0],
+                  x: [0, Math.random() * 50 - 25, 0],
+                  opacity: [0, 0.6, 0],
+                }}
+                transition={{
+                  duration: 3 + Math.random() * 2,
+                  repeat: Number.POSITIVE_INFINITY,
+                  delay: Math.random() * 2,
+                }}
+              />
+            ))}
+          </div>
+
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{
+              visible: { transition: { staggerChildren: 0.07 } },
+            }}
+            className="relative flex flex-col gap-6 py-2"
+          >
+            <motion.h3
+              variants={{
+                hidden: { opacity: 0, y: -10 },
+                visible: { opacity: 1, y: 0 },
+              }}
+              className="text-3xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent"
+            >
+              Explore
+            </motion.h3>
+
+            <motion.p
+              variants={{
+                hidden: { opacity: 0, y: -10 },
+                visible: { opacity: 1, y: 0 },
+              }}
+              className="text-sm text-gray-400"
+            >
+              Quick links
+            </motion.p>
 
             <nav
               className="flex-1 flex flex-col justify-center"
               style={{ gap: "clamp(0.25rem, 1.5vh, 1rem)" }}
             >
-              {routes.map((r) => (
-                <Link
+              {routes.map((r, idx) => (
+                <motion.div
                   key={r.href}
-                  href={r.href} // Directly linking to the page URL
-                  onMouseEnter={() => setActiveRoute(r.href)}
-                  onFocus={() => setActiveRoute(r.href)}
-                  onClick={() => setIsProfileOpen(false)}
-                  className={`relative font-medium transition-all duration-100 ease-out leading-snug group ${
-                    activeRoute === r.href
-                      ? "text-[#e94f37]"
-                      : "text-gray-100 hover:text-[#e94f37]"
-                  } pl-3`}
-                  style={{
-                    fontSize: "clamp(0.95rem, 2.8vw, 1.5rem)",
-                    paddingTop: "clamp(0.2rem, 0.8vh, 0.35rem)",
-                    paddingBottom: "clamp(0.2rem, 0.8vh, 0.35rem)",
+                  variants={{
+                    hidden: { opacity: 0, x: -20 },
+                    visible: { opacity: 1, x: 0 },
                   }}
                 >
-                  {/* active/hover indicator line */}
-                  <span
-                    className={`absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-[#e94f37] transition-all duration-200`}
+                  <Link
+                    href={r.href}
+                    onMouseEnter={() => setActiveRoute(r.href)}
+                    onFocus={() => setActiveRoute(r.href)}
+                    onClick={() => setIsMobileOpen(false)}
+                    className={`relative font-semibold transition-all duration-200 ease-out leading-snug group flex items-center ${
+                      activeRoute === r.href
+                        ? "text-[#e94f37]"
+                        : "text-gray-100 hover:text-[#e94f37]"
+                    } pl-3 py-2 rounded-lg`}
                     style={{
-                      width: "clamp(2px, 0.3vw, 3px)",
-                      height:
-                        activeRoute === r.href
-                          ? "clamp(1rem, 3vh, 1.5rem)"
-                          : "0",
-                      opacity: activeRoute === r.href ? 1 : 0,
+                      fontSize: "clamp(0.95rem, 2.8vw, 1.5rem)",
+                      paddingTop: "clamp(0.3rem, 0.8vh, 0.5rem)",
+                      paddingBottom: "clamp(0.3rem, 0.8vh, 0.5rem)",
                     }}
-                  />
-                  {r.name}
-                </Link>
+                  >
+                    {/* Gradient background on hover */}
+                    <motion.div
+                      className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#e94f37]/10 to-transparent"
+                      initial={{ opacity: 0, x: -10 }}
+                      whileHover={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2 }}
+                    />
+
+                    {/* Active/hover indicator line */}
+                    <motion.span
+                      className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-gradient-to-b from-[#e94f37] to-orange-500"
+                      animate={{
+                        width: activeRoute === r.href ? "4px" : "0px",
+                        height:
+                          activeRoute === r.href
+                            ? "clamp(1rem, 3vh, 1.5rem)"
+                            : "0",
+                        opacity: activeRoute === r.href ? 1 : 0,
+                      }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                    />
+
+                    <span className="relative z-10">{r.name}</span>
+                  </Link>
+                </motion.div>
               ))}
             </nav>
 
-            <div className="mt-6 border-t border-white/6 pt-4">
+            <motion.div
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1 },
+              }}
+              className="mt-6 pt-6 border-t border-white/[0.08]"
+            >
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-white/5 overflow-hidden" />
+                {/* Avatar with gradient ring */}
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 blur-md opacity-50" />
+                  <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 p-[2px]">
+                    <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center overflow-hidden">
+                      {user?.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.username || "User"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-sm font-bold text-gray-300">
+                          {(
+                            user?.username?.[0] ||
+                            user?.name?.[0] ||
+                            "G"
+                          ).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div>
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-sm font-semibold text-white">
                     {user?.username ?? user?.name ?? "Guest"}
                   </div>
-                  <div className="text-xs text-gray-300">
+                  <div className="text-xs text-gray-400">
                     {user?.email || "guest@example.com"}
                   </div>
                 </div>
@@ -816,31 +1020,38 @@ export function NavbarComponent() {
 
               <div className="mt-4">
                 {isAuthenticated ? (
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       setIsMobileOpen(false);
                       logout();
                     }}
-                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
+                    className="inline-flex items-center justify-center rounded-xl border border-white/20 px-4 py-2.5 text-sm text-white hover:bg-white/5 backdrop-blur-sm transition-all w-full"
                   >
                     Logout
-                  </button>
+                  </motion.button>
                 ) : (
                   <Link
                     href="/auth/login"
                     onClick={() => setIsMobileOpen(false)}
-                    className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/5"
+                    className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#e94f37] to-orange-500 hover:from-[#e94f37]/90 hover:to-orange-500/90 px-4 py-2.5 text-sm text-white transition-all w-full"
                   >
-                    Login
+                    Get Started
                   </Link>
                 )}
               </div>
-            </div>
+            </motion.div>
 
-            <div className="mt-6 text-xs text-gray-400">
-              © {new Date().getFullYear()} Your App
-            </div>
-          </div>
+            <motion.div
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1 },
+              }}
+              className="mt-6 text-xs text-gray-500 text-center"
+            >
+              © {new Date().getFullYear()} Moodies
+            </motion.div>
+          </motion.div>
         </div>
       </MobileNavMenu>
 
