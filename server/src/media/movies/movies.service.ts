@@ -340,34 +340,40 @@ export class MoviesService implements OnModuleInit {
     await this.loadGenres();
   }
 
-  async getFeatured(limit = 30): Promise<TmdbMovie[]> {
+  async getFeatured(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbMovie[] | { data: TmdbMovie[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty featured');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
-      const maxPages = 5;
+      let currentPage = 1;
 
-      while (allResults.length < minRequired && page <= maxPages) {
+      const maxPages = page !== undefined ? 20 : 5;
+
+      while (allResults.length < minRequired && currentPage <= maxPages) {
         const movies = await this.tmdb(
-          `discover/movie?sort_by=popularity.desc&include_adult=false&page=${page}&primary_release_date.gte=${this.getRecentDate(365)}&without_keywords=13090,190720`,
+          `discover/movie?sort_by=popularity.desc&include_adult=false&page=${currentPage}&primary_release_date.gte=${this.getRecentDate(365)}&without_keywords=13090,190720`,
         );
 
         const results = movies?.results ?? [];
         allResults.push(...results);
-        page++;
+        currentPage++;
 
         if (results.length === 0) break;
       }
+
       const uniqueItems = Array.from(
         new Map(allResults.map((item) => [item.id, item])).values()
       );
-      const all: TmdbMovie[] = uniqueItems.map((m: any) => ({
+
+      const basicItems: TmdbMovie[] = uniqueItems.map((m: any) => ({
         id: m.id,
         title: m.title ?? m.name ?? 'Untitled',
         overview: m.overview ?? '',
@@ -387,29 +393,45 @@ export class MoviesService implements OnModuleInit {
         type: m.media_type ?? (m.title ? 'movie' : 'tv'),
       }));
 
-      const shuffled = shuffleArray(all);
-      return shuffled.slice(0, minRequired);
+      const items = page !== undefined ? basicItems : shuffleArray(basicItems);
+
+      if (!page) {
+        return items.slice(0, minRequired);
+      }
+
+      const total = items.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = items.slice(startIndex, endIndex);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch featured', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
-  async getTrending(limit = 30): Promise<TmdbMovie[]> {
+  async getTrending(limit = 30, page?: number): Promise<TmdbMovie[] | { data: TmdbMovie[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty trending');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
-      const maxPages = 5;
+      let currentPage = 1;
+      const maxPages = page !== undefined ? 20 : 5;
 
-      while (allResults.length < minRequired && page <= maxPages) {
-        const data = await this.tmdb(`trending/movie/day?include_adult=false&page=${page}`);
+      while (allResults.length < minRequired && currentPage <= maxPages) {
+        const data = await this.tmdb(`trending/movie/day?include_adult=false&page=${currentPage}`);
 
         const results = (data?.results ?? []).filter((m: any) => {
           const date = new Date(m.release_date ?? m.first_air_date ?? '');
@@ -417,40 +439,56 @@ export class MoviesService implements OnModuleInit {
         });
 
         allResults.push(...results);
-        page++;
+        currentPage++;
 
         if (results.length === 0) break;
       }
+
       const uniqueItems = Array.from(
         new Map(allResults.map((item) => [item.id, item])).values()
       );
-      const basicItems: TmdbMovie[] = uniqueItems
-        .slice(0, minRequired)
-        .map((m: any) => ({
-          id: m.id,
-          title: m.title ?? m.name ?? 'Untitled',
-          overview: m.overview ?? '',
-          poster_path: m.poster_path ?? null,
-          backdrop_path: m.backdrop_path ?? null,
-          release_date: m.release_date ?? m.first_air_date ?? null,
-          vote_average: m.vote_average,
-          vote_count: m.vote_count,
-          popularity: m.popularity,
-          origin_country: m.origin_country ?? [],
-          genres: m.genre_ids
-            ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
-            : [],
-          type: m.media_type,
-          recommendations: [],
-        }));
 
-      const shuffled = shuffleArray(basicItems);
-      this.populateRecommendationsBackground(shuffled);
+      const basicItems: TmdbMovie[] = uniqueItems.map((m: any) => ({
+        id: m.id,
+        title: m.title ?? m.name ?? 'Untitled',
+        overview: m.overview ?? '',
+        poster_path: m.poster_path ?? null,
+        backdrop_path: m.backdrop_path ?? null,
+        release_date: m.release_date ?? m.first_air_date ?? null,
+        vote_average: m.vote_average,
+        vote_count: m.vote_count,
+        popularity: m.popularity,
+        origin_country: m.origin_country ?? [],
+        genres: m.genre_ids
+          ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
+          : [],
+        type: m.media_type,
+        recommendations: [],
+      }));
 
-      return shuffled;
+      if (!page) {
+        const homepageItems = basicItems.slice(0, minRequired);
+        this.populateRecommendationsBackground(homepageItems);
+        return homepageItems;
+      }
+
+      const total = basicItems.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = basicItems.slice(startIndex, endIndex);
+
+      this.populateRecommendationsBackground(paginatedData);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch trending', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
@@ -748,36 +786,42 @@ export class MoviesService implements OnModuleInit {
     }
   }
 
-  async getKoreaTrending(limit = 30): Promise<TmdbMovie[]> {
+  async getKoreaTrending(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbMovie[] | { data: TmdbMovie[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty koreaTrending');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
-      const maxPages = 5;
+      let currentPage = 1;
 
-      while (allResults.length < minRequired && page <= maxPages) {
+      const maxPages = page !== undefined ? 20 : 5;
+
+      while (allResults.length < minRequired && currentPage <= maxPages) {
         const movieData = await this.tmdb(
-          `discover/movie?with_original_language=ko&sort_by=popularity.desc&page=${page}&include_adult=false&without_keywords=13090,190720`,
+          `discover/movie?with_original_language=ko&sort_by=popularity.desc&page=${currentPage}&include_adult=false&without_keywords=13090,190720`,
         );
 
         const results = movieData?.results ?? [];
         const filtered = this.filterAdultishContent(results);
 
         allResults.push(...filtered);
-        page++;
+        currentPage++;
 
         if (filtered.length === 0) break;
       }
+
       const uniqueItems = Array.from(
         new Map(allResults.map((item) => [item.id, item])).values()
       );
-      const items: TmdbMovie[] = uniqueItems.slice(0, minRequired).map((m) => {
+
+      const items: TmdbMovie[] = uniqueItems.map((m) => {
         const type = 'movie'
         return {
           id: m.id,
@@ -798,13 +842,29 @@ export class MoviesService implements OnModuleInit {
         };
       });
 
-      const shuffled = shuffleArray(items);
-      this.populateRecommendationsBackground(shuffled);
+      if (!page) {
+        const homepageItems = items.slice(0, minRequired);
+        this.populateRecommendationsBackground(homepageItems);
+        return homepageItems;
+      }
 
-      return shuffled;
+      const total = items.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = items.slice(startIndex, endIndex);
+
+      this.populateRecommendationsBackground(paginatedData);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch koreaTrending', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
@@ -1366,190 +1426,138 @@ export class MoviesService implements OnModuleInit {
     return trailerMap;
   }
 
-  async getNewReleases(limit = 30): Promise<TmdbMovie[]> {
+  async getNewReleases(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbMovie[] | { data: TmdbMovie[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn("TMDB_API_KEY not set; returning empty new releases");
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
+      const currentYear = new Date().getFullYear();
       const items: TmdbMovie[] = [];
-      const today = new Date();
-      const lastMonth = new Date();
-      lastMonth.setDate(today.getDate() - 30);
 
-      const todayStr = today.toISOString().split("T")[0];
-      const lastMonthStr = lastMonth.toISOString().split("T")[0];
+      // Fetch MORE pages (20 instead of 5)
+      const maxPages = 20;
 
-      const lastWeek = new Date();
-      lastWeek.setDate(today.getDate() - 7);
-      const lastWeekStr = lastWeek.toISOString().split("T")[0];
+      // Fetch popular movies from this year
+      for (let currentPage = 1; currentPage <= maxPages && items.length < minRequired * 2; currentPage++) {
+        const url = `discover/movie?language=en-US&sort_by=popularity.desc&primary_release_year=${currentYear}&page=${currentPage}&include_adult=false`;
 
-      const maxPages = 5;
-
-      // --- Helper for strict filtering by date ---
-      const isWithinRange = (dateStr: string, from: string, to: string) => {
-        if (!dateStr) return false;
-        const d = new Date(dateStr).getTime();
-        return d >= new Date(from).getTime() && d <= new Date(to).getTime();
-      };
-
-      // --- Fetch popular releases (last 30 days) ---
-      for (let page = 1; page <= maxPages && items.length < minRequired; page++) {
-        const url = `discover/movie?language=en-US&sort_by=popularity.desc&release_date.gte=${lastMonthStr}&release_date.lte=${todayStr}&with_release_type=3|2&page=${page}`;
-
-        const data = await this.tmdb(url);
-        const results = data?.results ?? [];
-        const filtered = this.filterAdultishContent(results);
-
-        const trailerTasks = filtered
-          .filter((m: any) => isWithinRange(m.release_date, lastMonthStr, todayStr)) // filter strictly here
-          .map((m: any) => async () => {
-            try {
-              const [videosData, details] = await Promise.all([
-                this.tmdb(`movie/${m.id}/videos?language=en-US`),
-                this.tmdb(`movie/${m.id}?language=en-US`),
-              ]);
-
-              const trailer = (videosData?.results ?? []).find(
-                (v: any) => v.type === "Trailer" && v.site === "YouTube"
-              );
-              if (!trailer) return null;
-
-              return {
-                id: m.id,
-                title: m.title ?? "Untitled",
-                overview: m.overview ?? "",
-                poster_path: m.poster_path ?? null,
-                backdrop_path: m.backdrop_path ?? null,
-                release_date: m.release_date,
-                vote_average: m.vote_average,
-                trailer_key: trailer.key,
-                type: "movie" as ContentType,
-                recommendations: [],
-                genres: details.genres ? details.genres.map((g: any) => g.name) : [],
-              } as TmdbMovie;
-            } catch {
-              return null;
-            }
-          });
-
-        const pageResults = (
-          await this.withConcurrencyLimit(trailerTasks)
-        ).filter((item): item is TmdbMovie => item !== null);
-
-        items.push(...pageResults);
-      }
-
-      // --- Fallback: fetch by release date (last 7 days) ---
-      if (items.length < minRequired) {
-        for (let page = 1; page <= maxPages && items.length < minRequired; page++) {
-          const url = `discover/movie?language=en-US&sort_by=release_date.desc&release_date.gte=${lastWeekStr}&release_date.lte=${todayStr}&with_release_type=3|2&page=${page}`;
+        try {
           const data = await this.tmdb(url);
           const results = data?.results ?? [];
-          const filtered = this.filterAdultishContent(results);
 
-          const trailerTasks = filtered
-            .filter((m: any) => isWithinRange(m.release_date, lastWeekStr, todayStr)) // strict filter again
-            .map((m: any) => async () => {
-              try {
-                const [videosData, details] = await Promise.all([
-                  this.tmdb(`movie/${m.id}/videos?language=en-US`),
-                  this.tmdb(`movie/${m.id}?language=en-US`),
-                ]);
+          // Less strict filtering - just basic content check
+          const filtered = results.filter((m: any) => {
+            return (
+              m.id &&
+              (m.title || m.name) &&
+              m.poster_path && // Only require poster
+              m.release_date
+            );
+          });
 
-                const trailer = (videosData?.results ?? []).find(
-                  (v: any) => v.type === "Trailer" && v.site === "YouTube"
-                );
-                if (!trailer) return null;
+          // Map to TmdbMovie format (NO trailer fetching!)
+          const mapped: TmdbMovie[] = filtered.map((m: any) => ({
+            id: m.id,
+            title: m.title ?? "Untitled",
+            overview: m.overview ?? "",
+            poster_path: m.poster_path ?? null,
+            backdrop_path: m.backdrop_path ?? null,
+            release_date: m.release_date,
+            vote_average: m.vote_average ?? 0,
+            vote_count: m.vote_count ?? 0,
+            popularity: m.popularity ?? 0,
+            origin_country: m.origin_country ?? [],
+            type: "movie",
+            recommendations: [],
+            genres: m.genre_ids
+              ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
+              : [],
+          }));
 
-                return {
-                  id: m.id,
-                  title: m.title ?? "Untitled",
-                  overview: m.overview ?? "",
-                  poster_path: m.poster_path ?? null,
-                  backdrop_path: m.backdrop_path ?? null,
-                  release_date: m.release_date,
-                  vote_average: m.vote_average,
-                  trailer_key: trailer.key,
-                  type: "movie" as ContentType,
-                  recommendations: [],
-                  genres: details.genres ? details.genres.map((g: any) => g.name) : [],
-                } as TmdbMovie;
-              } catch {
-                return null;
-              }
-            });
-
-          const pageResults = (
-            await this.withConcurrencyLimit(trailerTasks)
-          ).filter((item): item is TmdbMovie => item !== null);
-
-          items.push(...pageResults);
+          items.push(...mapped);
+        } catch (err) {
+          this.logger.warn(`Failed to fetch page ${currentPage}`, err);
         }
       }
 
-      // --- Deduplicate & filter by poster/backdrop ---
-      const withImages = items.filter(
-        (item) => item.backdrop_path && item.poster_path
-      );
+      // Deduplicate
       const uniqueItems = Array.from(
-        new Map(withImages.map((i) => [i.id, i])).values()
+        new Map(items.map((i) => [i.id, i])).values()
       );
 
-      // --- Final strict filter by release window ---
-      const strictlyFiltered = uniqueItems.filter((m) =>
-        isWithinRange(m.release_date, lastMonthStr, todayStr)
-      );
-
-      // --- Sort by release_date (most recent first) ---
-      const sorted = strictlyFiltered.sort(
+      // Sort by release date (most recent first)
+      const sorted = uniqueItems.sort(
         (a, b) =>
-          new Date(b.release_date).getTime() - new Date(a.release_date).getTime()
+          new Date(b.release_date || 0).getTime() - new Date(a.release_date || 0).getTime()
       );
 
+      // If page parameter is provided, return paginated format
+      if (page !== undefined) {
+        const total = sorted.length;
+        const totalPages = Math.ceil(total / limit);
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedData = sorted.slice(startIndex, endIndex);
+
+        return {
+          data: paginatedData,
+          page,
+          totalPages,
+          total,
+        };
+      }
+
+      // Otherwise return simple array (backwards compatible)
       return sorted.slice(0, limit);
     } catch (err) {
       this.logger.error("Failed to fetch new movie releases", err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
-
-  // Get Action Movies
-  async getActionMovies(limit = 25): Promise<TmdbMovie[]> {
+  async getActionMovies(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbMovie[] | { data: TmdbMovie[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty actionMovies');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
+      let currentPage = 1;
+
       const maxPages = 5;
 
-      while (allResults.length < minRequired && page <= maxPages) {
+      while (allResults.length < minRequired && currentPage <= maxPages) {
         const movieData = await this.tmdb(
-          `discover/movie?with_genres=28&sort_by=popularity.desc&page=${page}&include_adult=false&vote_count.gte=500`,
+          `discover/movie?with_genres=28&sort_by=popularity.desc&page=${currentPage}&include_adult=false&vote_count.gte=500`,
         );
 
         const results = movieData?.results ?? [];
         const filtered = this.filterAdultishContent(results);
 
         allResults.push(...filtered);
-        page++;
+        currentPage++;
 
         if (filtered.length === 0) break;
       }
+
       const uniqueItems = Array.from(
         new Map(allResults.map((item) => [item.id, item])).values()
       );
 
-      const items: TmdbMovie[] = uniqueItems.slice(0, minRequired).map((m) => ({
+      const items: TmdbMovie[] = uniqueItems.map((m) => ({
         id: m.id,
         title: m.title ?? m.name ?? 'Untitled',
         overview: m.overview ?? '',
@@ -1565,47 +1573,69 @@ export class MoviesService implements OnModuleInit {
         recommendations: [],
       }));
 
-      const shuffled = shuffleArray(items);
-      this.populateRecommendationsBackground(shuffled);
+      if (!page) {
+        const homepageItems = items.slice(0, minRequired);
+        this.populateRecommendationsBackground(homepageItems);
+        return homepageItems;
+      }
 
-      return shuffled;
+      const paginationPool = items.slice(0, minRequired);
+      const total = paginationPool.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = paginationPool.slice(startIndex, endIndex);
+
+      this.populateRecommendationsBackground(paginatedData);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch actionMovies', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
-  // Get Animated Movies
-  async getAnimatedMovies(limit = 25): Promise<TmdbMovie[]> {
+  async getAnimatedMovies(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbMovie[] | { data: TmdbMovie[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty animatedMovies');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
+      let currentPage = 1;
+
       const maxPages = 5;
 
-      while (allResults.length < minRequired && page <= maxPages) {
+      while (allResults.length < minRequired && currentPage <= maxPages) {
         const movieData = await this.tmdb(
-          `discover/movie?with_genres=16&sort_by=popularity.desc&page=${page}&include_adult=false&vote_count.gte=300`,
+          `discover/movie?with_genres=16&sort_by=popularity.desc&page=${currentPage}&include_adult=false&vote_count.gte=300`,
         );
 
         const results = movieData?.results ?? [];
         const filtered = this.filterAdultishContent(results);
 
         allResults.push(...filtered);
-        page++;
+        currentPage++;
 
         if (filtered.length === 0) break;
       }
+
       const uniqueItems = Array.from(
         new Map(allResults.map((item) => [item.id, item])).values()
       );
-      const items: TmdbMovie[] = uniqueItems.slice(0, minRequired).map((m) => ({
+
+      const items: TmdbMovie[] = uniqueItems.map((m) => ({
         id: m.id,
         title: m.title ?? m.name ?? 'Untitled',
         overview: m.overview ?? '',
@@ -1621,13 +1651,30 @@ export class MoviesService implements OnModuleInit {
         recommendations: [],
       }));
 
-      const shuffled = shuffleArray(items);
-      this.populateRecommendationsBackground(shuffled);
+      if (!page) {
+        const homepageItems = items.slice(0, minRequired);
+        this.populateRecommendationsBackground(homepageItems);
+        return homepageItems;
+      }
 
-      return shuffled;
+      const paginationPool = items.slice(0, minRequired);
+      const total = paginationPool.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = paginationPool.slice(startIndex, endIndex);
+
+      this.populateRecommendationsBackground(paginatedData);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch animatedMovies', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
@@ -1687,37 +1734,42 @@ export class MoviesService implements OnModuleInit {
     }
   }
 
-  // Get Award Winners (High rated, popular movies)
-  async getAwardWinners(limit = 25): Promise<TmdbMovie[]> {
+  async getAwardWinners(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbMovie[] | { data: TmdbMovie[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty awardWinners');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
+      let currentPage = 1;
+
       const maxPages = 5;
 
-      while (allResults.length < minRequired && page <= maxPages) {
+      while (allResults.length < minRequired && currentPage <= maxPages) {
         const movieData = await this.tmdb(
-          `discover/movie?sort_by=vote_average.desc&page=${page}&include_adult=false&vote_count.gte=700&vote_average.gte=7.0`,
+          `discover/movie?sort_by=vote_average.desc&page=${currentPage}&include_adult=false&vote_count.gte=700&vote_average.gte=7.0`,
         );
 
         const results = movieData?.results ?? [];
         const filtered = this.filterAdultishContent(results);
 
         allResults.push(...filtered);
-        page++;
+        currentPage++;
 
         if (filtered.length === 0) break;
       }
+
       const uniqueItems = Array.from(
         new Map(allResults.map((item) => [item.id, item])).values()
       );
-      const items: TmdbMovie[] = uniqueItems.slice(0, minRequired).map((m) => ({
+
+      const items: TmdbMovie[] = uniqueItems.map((m) => ({
         id: m.id,
         title: m.title ?? m.name ?? 'Untitled',
         overview: m.overview ?? '',
@@ -1733,48 +1785,69 @@ export class MoviesService implements OnModuleInit {
         recommendations: [],
       }));
 
-      const shuffled = shuffleArray(items);
-      this.populateRecommendationsBackground(shuffled);
+      if (!page) {
+        const homepageItems = items.slice(0, minRequired);
+        this.populateRecommendationsBackground(homepageItems);
+        return homepageItems;
+      }
 
-      return shuffled;
+      const paginationPool = items.slice(0, minRequired);
+      const total = paginationPool.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = paginationPool.slice(startIndex, endIndex);
+
+      this.populateRecommendationsBackground(paginatedData);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch awardWinners', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
-  // Get Indie Movies (lower budget, high critical acclaim)
-  async getIndieMovies(limit = 25): Promise<TmdbMovie[]> {
+  async getIndieMovies(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbMovie[] | { data: TmdbMovie[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty indieMovies');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
+      let currentPage = 1;
+
       const maxPages = 5;
 
-      // Using Drama genre (18) as proxy for indie + sorting by vote average
-      while (allResults.length < minRequired && page <= maxPages) {
+      while (allResults.length < minRequired && currentPage <= maxPages) {
         const movieData = await this.tmdb(
-          `discover/movie?with_genres=18&sort_by=vote_average.desc&page=${page}&include_adult=false&vote_count.gte=100&vote_count.lte=5000&vote_average.gte=7.0`,
+          `discover/movie?with_genres=18&sort_by=vote_average.desc&page=${currentPage}&include_adult=false&vote_count.gte=100&vote_count.lte=5000&vote_average.gte=7.0`,
         );
 
         const results = movieData?.results ?? [];
         const filtered = this.filterAdultishContent(results);
 
         allResults.push(...filtered);
-        page++;
+        currentPage++;
 
         if (filtered.length === 0) break;
       }
+
       const uniqueItems = Array.from(
         new Map(allResults.map((item) => [item.id, item])).values()
       );
-      const items: TmdbMovie[] = uniqueItems.slice(0, minRequired).map((m) => ({
+
+      const items: TmdbMovie[] = uniqueItems.map((m) => ({
         id: m.id,
         title: m.title ?? m.name ?? 'Untitled',
         overview: m.overview ?? '',
@@ -1790,13 +1863,30 @@ export class MoviesService implements OnModuleInit {
         recommendations: [],
       }));
 
-      const shuffled = shuffleArray(items);
-      this.populateRecommendationsBackground(shuffled);
+      if (!page) {
+        const homepageItems = items.slice(0, minRequired);
+        this.populateRecommendationsBackground(homepageItems);
+        return homepageItems;
+      }
 
-      return shuffled;
+      const paginationPool = items.slice(0, minRequired);
+      const total = paginationPool.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = paginationPool.slice(startIndex, endIndex);
+
+      this.populateRecommendationsBackground(paginatedData);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch indieMovies', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 

@@ -213,15 +213,16 @@ export default function TVHomePageClient({
                 </button>
 
                 {/* Info */}
-                <button onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  router.push(`/tv/${show.id}`);
-                }} className="w-11 h-11 bg-white rounded-full sm:flex items-center justify-center shadow-lg hidden  active:scale-95 hover:bg-[#e94f37] cursor-pointer">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    router.push(`/tv/${show.id}`);
+                  }}
+                  className="w-11 h-11 bg-white rounded-full sm:flex items-center justify-center shadow-lg hidden  active:scale-95 hover:bg-[#e94f37] cursor-pointer"
+                >
                   <Info className="w-5 h-5 text-black" />
                 </button>
-
-
               </div>
             </div>
           </div>
@@ -254,7 +255,6 @@ export default function TVHomePageClient({
     );
   };
 
-
   const featuredInWatchlist = featured?.id
     ? isInWatchlist(String(featured.id), "series")
     : false;
@@ -273,8 +273,8 @@ export default function TVHomePageClient({
       const posterUrl = featured?.poster_path
         ? getPosterUrl(featured.poster_path)
         : featured?.backdrop_path
-          ? getImageUrl(featured.backdrop_path)
-          : null;
+        ? getImageUrl(featured.backdrop_path)
+        : null;
 
       if (featuredInWatchlist) {
         await remove(String(featured.id), "series", { title, posterUrl });
@@ -340,10 +340,11 @@ export default function TVHomePageClient({
                         }
                         className={`rounded-xl overflow-hidden border-2 transform transition-all duration-300
                                                 hover:scale-105 hover:z-10 focus:outline-none
-                                                ${isActive
-                            ? "border-[#e94f37]  scale-105 shadow-2xl shadow-[#e94f37]/30"
-                            : "border-white/10 hover:border-[#e94f37]/50"
-                          }`}
+                                                ${
+                                                  isActive
+                                                    ? "border-[#e94f37]  scale-105 shadow-2xl shadow-[#e94f37]/30"
+                                                    : "border-white/10 hover:border-[#e94f37]/50"
+                                                }`}
                       >
                         {s.poster_path ? (
                           <Image
@@ -431,10 +432,11 @@ export default function TVHomePageClient({
                         }}
                         disabled={loadingStates["featured"]}
                         className={`ml-auto px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg
-        ${featuredInWatchlist
-                            ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-                            : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
-                          }
+        ${
+          featuredInWatchlist
+            ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
+            : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
+        }
         ${loadingStates["featured"] ? "opacity-70 cursor-not-allowed" : ""}`}
                         title={
                           featuredInWatchlist
@@ -544,14 +546,24 @@ export default function TVHomePageClient({
         {/* New This Week - Responsive Grid */}
         {newReleaseTV && newReleaseTV.length > 0 && (
           <section id="new-release-tv" className="relative">
-            <div className="flex items-center gap-4 mb-10">
-              <div className="relative">
-                <div className="absolute inset-0 bg-cyan-400 blur-xl opacity-50" />
-                <Sparkles className="relative w-9 h-9 text-cyan-400" />
+            <div className="flex items-center justify-between mb-10">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-cyan-400 blur-xl opacity-50" />
+                  <Sparkles className="relative w-9 h-9 text-cyan-400" />
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-black text-white">
+                  New Releases
+                </h2>
               </div>
-              <h2 className="text-3xl sm:text-4xl font-black text-white">
-                New Releases
-              </h2>
+
+              <Link
+                href="/tv/new-releases"
+                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group"
+              >
+                View All
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
 
             <div className="grid grid-cols-12 gap-5">
@@ -590,7 +602,7 @@ export default function TVHomePageClient({
                           <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
                           <span className="font-bold text-white">
                             {newReleaseTV[0].vote_average &&
-                              newReleaseTV[0].vote_average > 0
+                            newReleaseTV[0].vote_average > 0
                               ? newReleaseTV[0].vote_average.toFixed(1)
                               : "New"}
                           </span>
@@ -663,6 +675,14 @@ export default function TVHomePageClient({
                   Top Rated Series
                 </h2>
               </div>
+
+              <Link
+                href="/tv/top-rated"
+                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group"
+              >
+                View All
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
@@ -683,6 +703,14 @@ export default function TVHomePageClient({
                   Airing This Week
                 </h2>
               </div>
+
+              <Link
+                href="/tv/airing/week"
+                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group"
+              >
+                View All
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
             <Carousel items={airingThisWeek} CardComponent={TVCard} />
           </section>
@@ -704,11 +732,18 @@ export default function TVHomePageClient({
                   K-Drama Collection
                 </h2>
               </div>
+
+              <Link
+                href="/tv/k-drama"
+                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group"
+              >
+                View All
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
             <Carousel items={KoreanTV} CardComponent={TVCard} />
           </section>
         )}
-
         <section className="relative">
           {/* Header (shared) */}
           <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -766,18 +801,23 @@ export default function TVHomePageClient({
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-11 h-11 rounded-lg flex items-center justify-center ${sec.color === "emerald"
-                          ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-white/10"
-                          : sec.color === "blue"
+                        className={`w-11 h-11 rounded-lg flex items-center justify-center ${
+                          sec.color === "emerald"
+                            ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-white/10"
+                            : sec.color === "blue"
                             ? "bg-blue-500/20 text-blue-400 ring-1 ring-white/10"
                             : "bg-amber-500/20 text-amber-400 ring-1 ring-white/10"
-                          }`}
+                        }`}
                       >
                         {sec.icon}
                       </div>
                       <div>
-                        <h3 className="font-black text-lg text-white">{sec.title}</h3>
-                        <p className="text-xs text-gray-400 mt-0.5">{sec.subtitle}</p>
+                        <h3 className="font-black text-lg text-white">
+                          {sec.title}
+                        </h3>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {sec.subtitle}
+                        </p>
                       </div>
                     </div>
 
@@ -786,8 +826,8 @@ export default function TVHomePageClient({
                         sec.key === "most-liked"
                           ? "/discover/most-liked"
                           : sec.key === "most-reviewed"
-                            ? "/discover/most-reviewed"
-                            : "/discover/most-saved"
+                          ? "/discover/most-reviewed"
+                          : "/discover/most-saved"
                       }
                       className="text-xs font-semibold text-gray-300 hover:text-white"
                     >
@@ -812,9 +852,13 @@ export default function TVHomePageClient({
 
                       const getStatText = () => {
                         if (sec.key === "most-liked")
-                          return `${(mockStats.likes / 1000).toFixed(1)}K likes`;
+                          return `${(mockStats.likes / 1000).toFixed(
+                            1
+                          )}K likes`;
                         if (sec.key === "most-reviewed")
-                          return `${(mockStats.reviews / 1000).toFixed(1)}K reviews`;
+                          return `${(mockStats.reviews / 1000).toFixed(
+                            1
+                          )}K reviews`;
                         return `${(mockStats.saves / 1000).toFixed(1)}K saves`;
                       };
 
@@ -823,7 +867,8 @@ export default function TVHomePageClient({
                           key={m.id}
                           href={`/tv/${m.id}`}
                           className="flex items-center gap-3 group"
-                        ><div className="relative w-16 aspect-[2/3] sm:w-18 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-white/10 shadow-md">
+                        >
+                          <div className="relative w-16 aspect-[2/3] sm:w-18 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-white/10 shadow-md">
                             {m.poster_path ? (
                               <Image
                                 src={getPosterUrl(m.poster_path)}
@@ -837,7 +882,6 @@ export default function TVHomePageClient({
                             )}
                           </div>
 
-
                           {/* Info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
@@ -847,7 +891,9 @@ export default function TVHomePageClient({
 
                               <div className="text-right text-[11px] text-gray-400">
                                 <div>
-                                  {m.first_air_date ? m.first_air_date.split("-")[0] : "TBA"}
+                                  {m.first_air_date
+                                    ? m.first_air_date.split("-")[0]
+                                    : "TBA"}
                                 </div>
                               </div>
                             </div>
@@ -876,26 +922,54 @@ export default function TVHomePageClient({
 
                   {/* Card footer summary */}
                   <div className="mt-4 pt-3 border-t border-white/6 flex items-center justify-between">
-                    <div className="text-xs text-gray-400">Total engagement</div>
+                    <div className="text-xs text-gray-400">
+                      Total engagement
+                    </div>
                     <div
-                      className={`text-sm font-bold ${sec.color === "emerald"
-                        ? "text-emerald-400"
-                        : sec.color === "blue"
+                      className={`text-sm font-bold ${
+                        sec.color === "emerald"
+                          ? "text-emerald-400"
+                          : sec.color === "blue"
                           ? "text-blue-400"
                           : "text-amber-400"
-                        }`}
+                      }`}
                     >
                       {/* simple summarized metric */}
-                      {sec.key === "most-liked" && `${((sec.data || []).slice(0, 3).reduce((acc, m) => acc + (m.vote_average || 0), 0) * 0.7 / 1000).toFixed(0)}K+`}
-                      {sec.key === "most-reviewed" && `${((sec.data || []).slice(0, 3).reduce((acc, m) => acc + (m.vote_average || 0), 0) * 0.3 / 1000).toFixed(0)}K+`}
-                      {sec.key === "most-saved" && `${((sec.data || []).slice(0, 3).reduce((acc, m) => acc + (m.popularity || 0), 0) * 100 / 1000).toFixed(0)}K+`}
+                      {sec.key === "most-liked" &&
+                        `${(
+                          ((sec.data || [])
+                            .slice(0, 3)
+                            .reduce(
+                              (acc, m) => acc + (m.vote_average || 0),
+                              0
+                            ) *
+                            0.7) /
+                          1000
+                        ).toFixed(0)}K+`}
+                      {sec.key === "most-reviewed" &&
+                        `${(
+                          ((sec.data || [])
+                            .slice(0, 3)
+                            .reduce(
+                              (acc, m) => acc + (m.vote_average || 0),
+                              0
+                            ) *
+                            0.3) /
+                          1000
+                        ).toFixed(0)}K+`}
+                      {sec.key === "most-saved" &&
+                        `${(
+                          ((sec.data || [])
+                            .slice(0, 3)
+                            .reduce((acc, m) => acc + (m.popularity || 0), 0) *
+                            100) /
+                          1000
+                        ).toFixed(0)}K+`}
                     </div>
                   </div>
                 </article>
               ))}
             </div>
-
-
           </div>
 
           {/* =========================
@@ -955,8 +1029,12 @@ export default function TVHomePageClient({
                       {section.icon}
                     </div>
                     <div>
-                      <h3 className="font-black text-base sm:text-lg text-white">{section.title}</h3>
-                      <p className="text-[10px] sm:text-xs text-gray-400 font-medium mt-0.5">{section.subtitle}</p>
+                      <h3 className="font-black text-base sm:text-lg text-white">
+                        {section.title}
+                      </h3>
+                      <p className="text-[10px] sm:text-xs text-gray-400 font-medium mt-0.5">
+                        {section.subtitle}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -981,7 +1059,9 @@ export default function TVHomePageClient({
                       if (idx === 0)
                         return `${(mockStats.likes / 1000).toFixed(1)}K likes`;
                       if (idx === 1)
-                        return `${(mockStats.reviews / 1000).toFixed(1)}K reviews`;
+                        return `${(mockStats.reviews / 1000).toFixed(
+                          1
+                        )}K reviews`;
                       return `${(mockStats.saves / 1000).toFixed(1)}K saves`;
                     };
 
@@ -992,7 +1072,9 @@ export default function TVHomePageClient({
                         className="flex items-center gap-2 sm:gap-3 group"
                       >
                         {/* Rank Number */}
-                        <span className={`text-2xl sm:text-3xl font-black ${section.textColor} opacity-30 w-6 sm:w-8 flex-shrink-0`}>
+                        <span
+                          className={`text-2xl sm:text-3xl font-black ${section.textColor} opacity-30 w-6 sm:w-8 flex-shrink-0`}
+                        >
                           {i + 1}
                         </span>
 
@@ -1010,21 +1092,29 @@ export default function TVHomePageClient({
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <div className={`font-bold text-xs sm:text-sm text-white line-clamp-2 mb-1 ${section.hoverColor} transition-colors`}>
+                          <div
+                            className={`font-bold text-xs sm:text-sm text-white line-clamp-2 mb-1 ${section.hoverColor} transition-colors`}
+                          >
                             {m.title}
                           </div>
                           <div className="flex items-center gap-2 text-[10px] sm:text-xs">
                             <div className="flex items-center gap-0.5 sm:gap-1">
                               <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-400 fill-yellow-400" />
                               <span className="font-bold text-white">
-                                {m.vote_average && m.vote_average > 0 ? m.vote_average.toFixed(1) : "New"}
+                                {m.vote_average && m.vote_average > 0
+                                  ? m.vote_average.toFixed(1)
+                                  : "New"}
                               </span>
                             </div>
                             <span className="text-gray-500">•</span>
-                            <span className="text-gray-400 font-semibold">{m.first_air_date?.split("-")[0]}</span>
+                            <span className="text-gray-400 font-semibold">
+                              {m.first_air_date?.split("-")[0]}
+                            </span>
                           </div>
                           {/* Supporting Stat */}
-                          <div className={`flex items-center gap-1 mt-1.5 sm:mt-2 ${section.textColor}`}>
+                          <div
+                            className={`flex items-center gap-1 mt-1.5 sm:mt-2 ${section.textColor}`}
+                          >
                             {section.statIcon}
                             <span className="text-[10px] sm:text-xs font-bold">
                               {getStat()}
@@ -1037,15 +1127,22 @@ export default function TVHomePageClient({
                 </div>
 
                 {/* Footer Stats Summary */}
-                <div className={`mt-5 sm:mt-6 pt-4 sm:pt-5 border-t ${section.border}`}>
+                <div
+                  className={`mt-5 sm:mt-6 pt-4 sm:pt-5 border-t ${section.border}`}
+                >
                   <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                    <span className="text-gray-400 font-medium">Total engagement</span>
+                    <span className="text-gray-400 font-medium">
+                      Total engagement
+                    </span>
                     <span className={`font-bold ${section.textColor}`}>
                       {idx === 0 &&
                         `${(
                           (section.data
                             .slice(0, 5)
-                            .reduce((acc, m) => acc + (m.vote_average || 0), 0) *
+                            .reduce(
+                              (acc, m) => acc + (m.vote_average || 0),
+                              0
+                            ) *
                             0.7) /
                           1000
                         ).toFixed(0)}K+`}
@@ -1053,7 +1150,10 @@ export default function TVHomePageClient({
                         `${(
                           (section.data
                             .slice(0, 5)
-                            .reduce((acc, m) => acc + (m.vote_average || 0), 0) *
+                            .reduce(
+                              (acc, m) => acc + (m.vote_average || 0),
+                              0
+                            ) *
                             0.3) /
                           1000
                         ).toFixed(0)}K+`}

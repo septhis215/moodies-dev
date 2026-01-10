@@ -566,21 +566,25 @@ export class TvService implements OnModuleInit {
     }
   }
 
-  async getTrending(limit = 30): Promise<TmdbTv[]> {
+  async getTrending(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbTv[] | { data: TmdbTv[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty trending');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
+      let currentPage = 1;
+
       const maxPages = 5;
 
-      while (allResults.length < minRequired && page <= maxPages) {
-        const data = await this.tmdb(`/trending/tv/day?include_adult=false&page=${page}`);
+      while (allResults.length < minRequired && currentPage <= maxPages) {
+        const data = await this.tmdb(`/trending/tv/day?include_adult=false&page=${currentPage}`);
 
         const results = (data?.results ?? []).filter((m: any) => {
           const date = new Date(m.release_date ?? m.first_air_date ?? '');
@@ -588,151 +592,216 @@ export class TvService implements OnModuleInit {
         });
 
         allResults.push(...results);
-        page++;
+        currentPage++;
 
         if (results.length === 0) break;
       }
+
       const uniqueItems = Array.from(
         new Map(allResults.map((item) => [item.id, item])).values()
       );
-      const basicItems: TmdbTv[] = uniqueItems
-        .slice(0, minRequired)
-        .map((m: any) => ({
-          id: m.id,
-          title: m.title ?? m.name ?? 'Untitled',
-          overview: m.overview ?? '',
-          poster_path: m.poster_path ?? null,
-          backdrop_path: m.backdrop_path ?? null,
-          release_date: m.release_date ?? m.first_air_date ?? null,
-          vote_average: m.vote_average,
-          vote_count: m.vote_count,
-          popularity: m.popularity,
-          origin_country: m.origin_country ?? [],
-          genres: m.genre_ids
-            ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
-            : [],
-          type: m.media_type,
-          recommendations: [],
-        }));
 
-      const shuffled = shuffleArray(basicItems);
-      this.populateRecommendationsBackground(shuffled);
+      const items: TmdbTv[] = uniqueItems.map((m: any) => ({
+        id: m.id,
+        title: m.title ?? m.name ?? 'Untitled',
+        overview: m.overview ?? '',
+        poster_path: m.poster_path ?? null,
+        backdrop_path: m.backdrop_path ?? null,
+        release_date: m.release_date ?? m.first_air_date ?? null,
+        vote_average: m.vote_average,
+        vote_count: m.vote_count,
+        popularity: m.popularity,
+        origin_country: m.origin_country ?? [],
+        genres: m.genre_ids
+          ? m.genre_ids.map((id: number) => this.genreMap[id] || 'Unknown')
+          : [],
+        type: m.media_type,
+        recommendations: [],
+      }));
 
-      return shuffled;
+      if (!page) {
+        const homepageItems = items.slice(0, minRequired);
+        this.populateRecommendationsBackground(homepageItems);
+        return homepageItems;
+      }
+
+      const paginationPool = items.slice(0, minRequired);
+      const total = paginationPool.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = paginationPool.slice(startIndex, endIndex);
+
+      this.populateRecommendationsBackground(paginatedData);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch trending', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
-  async airingToday(limit = 30): Promise<TmdbTv[]> {
+  async airingToday(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbTv[] | { data: TmdbTv[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty airing today');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
+      let currentPage = 1;
+
       const maxPages = 5;
 
-      while (allResults.length < minRequired && page <= maxPages) {
-        const data = await this.tmdb(`/tv/airing_today?language=en-US&page=${page}`);
+      while (allResults.length < minRequired && currentPage <= maxPages) {
+        const data = await this.tmdb(`/tv/airing_today?language=en-US&page=${currentPage}`);
         const results = data?.results ?? [];
         const filtered = this.filterAdultishContent(results);
 
         allResults.push(...filtered);
-        page++;
+        currentPage++;
 
         if (filtered.length === 0) break;
       }
+
       const uniqueItems = Array.from(
         new Map(allResults.map((item) => [item.id, item])).values()
       );
-      const items: TmdbTv[] = uniqueItems
-        .slice(0, minRequired)
-        .map((m) => this.mapToTmdbTv(m, true));
 
-      const shuffled = shuffleArray(items);
-      this.populateRecommendationsBackground(shuffled);
+      const items: TmdbTv[] = uniqueItems.map((m) => this.mapToTmdbTv(m, true));
 
-      return shuffled;
+      if (!page) {
+        const homepageItems = items.slice(0, minRequired);
+        this.populateRecommendationsBackground(homepageItems);
+        return homepageItems;
+      }
+
+      const paginationPool = items.slice(0, minRequired);
+      const total = paginationPool.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = paginationPool.slice(startIndex, endIndex);
+
+      this.populateRecommendationsBackground(paginatedData);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch airing today', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
-  async airingThisWeek(limit = 30): Promise<TmdbTv[]> {
+  async airingThisWeek(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbTv[] | { data: TmdbTv[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty airing this week');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
+      let currentPage = 1;
+
       const maxPages = 5;
 
-      while (allResults.length < minRequired && page <= maxPages) {
-        const data = await this.tmdb(`/tv/on_the_air?language=en-US&page=${page}`);
+      while (allResults.length < minRequired && currentPage <= maxPages) {
+        const data = await this.tmdb(`/tv/on_the_air?language=en-US&page=${currentPage}`);
         const results = data?.results ?? [];
         const filtered = this.filterAdultishContent(results);
 
         allResults.push(...filtered);
-        page++;
+        currentPage++;
 
         if (filtered.length === 0) break;
       }
+
       const uniqueItems = Array.from(
         new Map(allResults.map((item) => [item.id, item])).values()
       );
-      const items: TmdbTv[] = uniqueItems
-        .slice(0, minRequired)
-        .map((m) => this.mapToTmdbTv(m, true));
 
-      const shuffled = shuffleArray(items);
-      this.populateRecommendationsBackground(shuffled);
+      const items: TmdbTv[] = uniqueItems.map((m) => this.mapToTmdbTv(m, true));
 
-      return shuffled;
+      if (!page) {
+        const homepageItems = items.slice(0, minRequired);
+        this.populateRecommendationsBackground(homepageItems);
+        return homepageItems;
+      }
+
+      const paginationPool = items.slice(0, minRequired);
+      const total = paginationPool.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = paginationPool.slice(startIndex, endIndex);
+
+      this.populateRecommendationsBackground(paginatedData);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch airing this week', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
-  async getFavorites(limit = 30): Promise<TmdbTv[]> {
+  async getFavorites(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbTv[] | { data: TmdbTv[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty favorites');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
+      let currentPage = 1;
+
       const maxPages = 5;
 
-      while (allResults.length < minRequired && page <= maxPages) {
-        const data = await this.tmdb(`/trending/tv/day?page=${page}`);
+      while (allResults.length < minRequired && currentPage <= maxPages) {
+        const data = await this.tmdb(`/trending/tv/day?page=${currentPage}`);
         const results = data?.results ?? [];
         const filtered = results.filter((item: any) => item.media_type === 'tv');
         const clean = this.filterAdultishContent(filtered);
 
         allResults.push(...clean);
-        page++;
+        currentPage++;
 
         if (clean.length === 0) break;
       }
+
       const uniqueItems = Array.from(
         new Map(allResults.map((item) => [item.id, item])).values()
       );
-      const all: TmdbTv[] = uniqueItems.map((m: any) => ({
+
+      const items: TmdbTv[] = uniqueItems.map((m: any) => ({
         id: m.id,
         title: m.title ?? m.name ?? 'Untitled',
         overview: m.overview ?? '',
@@ -746,11 +815,27 @@ export class TvService implements OnModuleInit {
         type: m.media_type,
       }));
 
-      const shuffled = shuffleArray(all);
-      return shuffled.slice(0, minRequired);
+      if (!page) {
+        const homepageItems = items.slice(0, minRequired);
+        return homepageItems;
+      }
+
+      const paginationPool = items.slice(0, minRequired);
+      const total = paginationPool.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = paginationPool.slice(startIndex, endIndex);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch favorites', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
@@ -1091,29 +1176,33 @@ export class TvService implements OnModuleInit {
     }
   }
 
-  async getKoreaTrending(limit = 30): Promise<TmdbTv[]> {
+  async getKoreaTrending(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbTv[] | { data: TmdbTv[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty koreaTrending');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       let allResults: any[] = [];
-      let page = 1;
+      let currentPage = 1;
+
       const maxPages = 5;
 
-      while (allResults.length < minRequired && page <= maxPages) {
+      while (allResults.length < minRequired && currentPage <= maxPages) {
         const tvData = await this.tmdb(
-          `discover/tv?with_original_language=ko&sort_by=popularity.desc&page=${page}&include_adult=false&without_keywords=13090,190720`,
+          `discover/tv?with_original_language=ko&sort_by=popularity.desc&page=${currentPage}&include_adult=false&without_keywords=13090,190720`,
         );
 
         const results = tvData?.results ?? [];
         const filtered = this.filterAdultishContent(results);
 
         allResults.push(...filtered);
-        page++;
+        currentPage++;
 
         if (filtered.length === 0) break;
       }
@@ -1122,7 +1211,7 @@ export class TvService implements OnModuleInit {
         new Map(allResults.map((item) => [item.id, item])).values()
       );
 
-      const items: TmdbTv[] = uniqueItems.slice(0, minRequired).map((m) => {
+      const items: TmdbTv[] = uniqueItems.map((m) => {
         const type = 'tv'
         return {
           id: m.id,
@@ -1143,13 +1232,30 @@ export class TvService implements OnModuleInit {
         };
       });
 
-      const shuffled = shuffleArray(items);
-      this.populateRecommendationsBackground(shuffled);
+      if (!page) {
+        const homepageItems = items.slice(0, minRequired);
+        this.populateRecommendationsBackground(homepageItems);
+        return homepageItems;
+      }
 
-      return shuffled;
+      const paginationPool = items.slice(0, minRequired);
+      const total = paginationPool.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = paginationPool.slice(startIndex, endIndex);
+
+      this.populateRecommendationsBackground(paginatedData);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
       this.logger.error('Failed to fetch koreaTrending', err as any);
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 
@@ -1232,30 +1338,32 @@ export class TvService implements OnModuleInit {
     }
   }
 
-  async getNewReleases(limit = 30): Promise<TmdbTv[]> {
+  async getNewReleases(
+    limit = 30,
+    page?: number
+  ): Promise<TmdbTv[] | { data: TmdbTv[], page: number, totalPages: number, total: number }> {
     const minRequired = Math.max(this.MIN_REQUIRED_ITEMS, limit);
 
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty new releases');
-      return [];
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
 
     try {
       const items: TmdbTv[] = [];
       const today = new Date();
       const maxPages = 20;
-      // last 7 days
+
       const lastWeek = new Date();
       lastWeek.setDate(today.getDate() - 7);
       const lastWeekStr = lastWeek.toISOString().split("T")[0];
 
-      // next 7 days
       const nextWeek = new Date();
       nextWeek.setDate(today.getDate() + 7);
       const nextWeekStr = nextWeek.toISOString().split("T")[0];
 
-      for (let page = 1; page <= maxPages && items.length < minRequired; page++) {
-        const url = `discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${lastWeekStr}&first_air_date.lte=${nextWeekStr}&page=${page}`;
+      for (let currentPage = 1; currentPage <= maxPages && items.length < minRequired * 2; currentPage++) {
+        const url = `discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${lastWeekStr}&first_air_date.lte=${nextWeekStr}&page=${currentPage}`;
 
         const data = await this.tmdb(url);
         const results = data?.results ?? [];
@@ -1273,6 +1381,7 @@ export class TvService implements OnModuleInit {
               (v: any) => v.type === 'Trailer' && v.site === 'YouTube',
             );
             if (!trailer) return null;
+
             return {
               id: m.id,
               title: m.title ?? m.name ?? 'Untitled',
@@ -1303,11 +1412,10 @@ export class TvService implements OnModuleInit {
 
       const withImages = items.filter((item) => item.backdrop_path !== null && item.poster_path !== null);
 
-      // Deduplicate by `id`
       const uniqueItems = Array.from(
         new Map(withImages.map((item) => [item.id, item])).values()
       );
-      // ---- Priority sorting ----
+
       const todayStr = today.toISOString().split("T")[0];
       const yesterdayStr = new Date(today); yesterdayStr.setDate(today.getDate() - 1);
       const tomorrowStr = new Date(today); tomorrowStr.setDate(today.getDate() + 1);
@@ -1329,25 +1437,37 @@ export class TvService implements OnModuleInit {
         [[], []],
       );
 
-      // Sort priority by exact date (today first, then ±1, then +2)
       const orderedPriority = priority.sort(
         (a, b) =>
           new Date(a.release_date).getTime() - new Date(b.release_date).getTime(),
       );
 
-      // Sort others normally by date
       const orderedOthers = others.sort(
         (a, b) =>
           new Date(a.release_date).getTime() - new Date(b.release_date).getTime(),
       );
 
-      // Combine: priority first, then others
-      const sorted = [...orderedPriority, ...orderedOthers].slice(0, limit);
+      const sorted = [...orderedPriority, ...orderedOthers];
 
-      return sorted;
+      if (!page) {
+        return sorted.slice(0, minRequired);
+      }
+
+      const total = sorted.length;
+      const totalPages = Math.ceil(total / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedData = sorted.slice(startIndex, endIndex);
+
+      return {
+        data: paginatedData,
+        page,
+        totalPages,
+        total,
+      };
     } catch (err) {
-      this.logger.error('Failed to fetch upcoming trailers', err as any);
-      return [];
+      this.logger.error('Failed to fetch new releases', err as any);
+      return page ? { data: [], page: 1, totalPages: 0, total: 0 } : [];
     }
   }
 

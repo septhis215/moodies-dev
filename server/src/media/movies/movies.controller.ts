@@ -23,15 +23,23 @@ export class MoviesController {
   }
 
   @Get('trending')
-  async trending(@Query('limit') limit?: string) {
+  async trending(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.movieService.getTrending(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.movieService.getTrending(parsedLimit, parsedPage);
   }
 
   @Get('featured')
-  async featured(@Query('limit') limit?: string) {
+  async featured(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string, // ✅ Add page parameter
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.movieService.getFeatured(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.movieService.getFeatured(parsedLimit, parsedPage);
   }
 
   @Get('trailers')
@@ -47,9 +55,13 @@ export class MoviesController {
   }
 
   @Get('koreaTrending')
-  async koreaTrending(@Query('limit') limit?: string) {
+  async koreaTrending(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.movieService.getKoreaTrending(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.movieService.getKoreaTrending(parsedLimit, parsedPage);
   }
 
   @Get('trending-reviews')
@@ -213,16 +225,25 @@ export class MoviesController {
       console.log(err);
     }
   }
+
   @Get('action-movies')
-  async actionMovies(@Query('limit') limit?: string) {
+  async actionMovies(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.movieService.getActionMovies(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.movieService.getActionMovies(parsedLimit, parsedPage);
   }
 
   @Get('animated-movies')
-  async animatedMovies(@Query('limit') limit?: string) {
+  async animatedMovies(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.movieService.getAnimatedMovies(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.movieService.getAnimatedMovies(parsedLimit, parsedPage);
   }
 
   @Get('documentary-movies')
@@ -232,20 +253,33 @@ export class MoviesController {
   }
 
   @Get('award-winners')
-  async awardWinners(@Query('limit') limit?: string) {
+  async awardWinners(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.movieService.getAwardWinners(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.movieService.getAwardWinners(parsedLimit, parsedPage);
   }
 
   @Get('indie-movies')
-  async indieMovies(@Query('limit') limit?: string) {
+  async indieMovies(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 25;
-    return this.movieService.getIndieMovies(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.movieService.getIndieMovies(parsedLimit, parsedPage);
   }
+
   @Get('new-releases')
-  async newReleases(@Query('limit') limit?: string) {
+  async newReleases(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 20;
-    return this.movieService.getNewReleases(parsedLimit);
+    const parsedPage = page ? parseInt(page, 10) : undefined;
+    return this.movieService.getNewReleases(parsedLimit, parsedPage);
   }
 
   @Get('videos/:type/:id')
