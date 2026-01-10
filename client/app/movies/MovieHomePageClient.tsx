@@ -641,7 +641,7 @@ s                                                    ${featuredInWatchlist
                             </div>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5 mt-6">
-                            {newReleaseMovies.slice(3, 9).map((movie) => (
+                            {newReleaseMovies.slice(3, 10).map((movie) => (
                                 <MovieCard key={movie.id} show={movie} />
                             ))}
                         </div>
