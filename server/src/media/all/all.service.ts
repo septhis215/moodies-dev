@@ -175,13 +175,13 @@ export class AllService implements OnModuleInit {
     // Featured (recent + trending, small cache)
     async getFeatured(limit = 30): Promise<TmdbAll[]> {
         const ttlSec = this.CACHE_TTL.BASIC_DATA;
-        // const cacheKey = `featured`;
-        // const cached = await this.redisService.get(cacheKey);
-        // if (cached) {
-        //     try {
-        //         return (JSON.parse(cached) as TmdbAll[]).slice(0, limit);
-        //     } catch { }
-        // }
+        const cacheKey = `featured`;
+        const cached = await this.redisService.get(cacheKey);
+        if (cached) {
+            try {
+                return (JSON.parse(cached) as TmdbAll[]).slice(0, limit);
+            } catch { }
+        }
 
         if (!this.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty featured');
@@ -225,7 +225,7 @@ export class AllService implements OnModuleInit {
             const shuffled = shuffleArray(all);
             const sliced = shuffled.slice(0, Math.max(0, limit));
 
-            // await this.redisService.set(cacheKey, JSON.stringify(sliced), ttlSec);
+            await this.redisService.set(cacheKey, JSON.stringify(sliced), ttlSec);
             return sliced;
         } catch (err) {
             this.logger.error('Failed to fetch featured', err as any);
