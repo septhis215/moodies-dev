@@ -14,20 +14,24 @@ datasource db {
 }
 
 model User {
-  id                 String      @id @default(cuid())
-  username           String      @unique
-  email              String      @unique
+  id                 String        @id @default(cuid())
+  username           String        @unique
+  email              String        @unique
   password           String?
   provider           String?
-  googleId           String?     @unique
+  googleId           String?       @unique
   avatarUrl          String?
   age                Int?
-  preferredGenres    String[]    @default([])
-  preferredLanguages String[]    @default([])
-  createdAt          DateTime    @default(now())
+  preferredGenres    String[]      @default([])
+  preferredLanguages String[]      @default([])
+  reviewWarningScore Int           @default(0)
+  reviewBannedUntil  DateTime?
+  createdAt          DateTime      @default(now())
   Quiz               Quiz[]
   Badge              Badge[]
   Watchlist          Watchlist[]
+  reviews            Review[]
+  reviewReplies      ReviewReply[]
 }
 
 model EmailVerification {
@@ -77,6 +81,44 @@ model Series {
   rating      Float?
   moodTags    String[] @default([])
   createdAt   DateTime @default(now())
+}
+
+model Review {
+  id            String        @id @default(uuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId        Int
+  mediaType     MediaType
+  rating        Int           @db.SmallInt
+  content       String
+  moodEmojis    String[]
+  status        ReviewStatus  @default(PUBLISHED)
+  flaggedReason String?
+  toxicityScore Float?
+  profanityHit  Boolean       @default(false)
+  affectsRating Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  replies       ReviewReply[]
+
+  @@index([tmdbId, mediaType])
+  @@index([rating])
+  @@index([status])
+  @@index([createdAt])
+  @@map("reviews")
+}
+
+model ReviewReply {
+  id        String   @id @default(uuid())
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([reviewId])
+  @@map("review_replies")
 }
 
 model Movie {
@@ -211,6 +253,12 @@ model ContentCache {
   @@index([popularity])
   @@index([lastFetched])
   @@map("content_cache")
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  FLAGGED
+  REJECTED // not used for now, will be used with IBM MAX toxicity detection ML Modal
 }
 
 enum MediaType {
