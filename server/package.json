@@ -48,6 +48,7 @@
     "class-validator": "^0.14.2",
     "joi": "^18.0.1",
     "jsonwebtoken": "^9.0.2",
+    "leo-profanity": "^1.8.0",
     "mongodb": "^6.19.0",
     "mongoose": "^8.18.0",
     "ms": "^2.1.3",

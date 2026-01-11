@@ -15,6 +15,8 @@ import { MoodsModule } from './routes/moods/moods.module';
 import { QuizModule } from './quiz/quiz.module';
 import { CategoryModule } from './media/category/category.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
+import { ReviewModule } from './routes/review/review.module';
+import { ModerationModule } from './routes/moderation/moderation.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { WatchlistModule } from './watchlist/watchlist.module';
     SearchModule,
     MoodsModule,
     CategoryModule,
+    ReviewModule,
+    ModerationModule,
   ],
   providers: [],
   controllers: [SearchController, MoodsController],
