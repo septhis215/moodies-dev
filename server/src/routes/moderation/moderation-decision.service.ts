@@ -3,12 +3,17 @@ import { ReviewStatus } from '@prisma/client';
 
 @Injectable()
 export class ModerationDecisionService {
-  decide(toxicity: { score: number; severe: boolean }) {
+  decide(toxicity: { score: number | string; severe: boolean }) {
     console.log('⚖️ Moderation Decision:', toxicity);
-    
+
+    const score =
+      typeof toxicity.score === 'string'
+        ? parseFloat(toxicity.score)
+        : toxicity.score;
+
     // Severe toxicity = reject immediately
     if (toxicity.severe) {
-      return { 
+      return {
         reject: true,
         status: ReviewStatus.REJECTED,
         affectsRating: false,
@@ -17,7 +22,7 @@ export class ModerationDecisionService {
     }
 
     // High toxicity (0.4-0.79) = flag and warn
-    if (toxicity.score >= 0.4) {
+    if (score >= 0.4) {
       return {
         reject: false,
         status: ReviewStatus.FLAGGED,
@@ -27,7 +32,7 @@ export class ModerationDecisionService {
     }
 
     // Medium toxicity (0.25-0.39) = flag but no warning
-    if (toxicity.score >= 0.25) {
+    if (score >= 0.25) {
       return {
         reject: false,
         status: ReviewStatus.FLAGGED,

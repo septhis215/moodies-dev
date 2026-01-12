@@ -12,6 +12,11 @@ import { ProfanityFilterService } from '../moderation/profanity-filter.service';
 import { ToxicityAnalysisService } from '../moderation/toxicity-analysis.service';
 import { UserService } from './../user/user.service';
 import { ReviewStatus } from '@prisma/client';
+import {
+  ReviewEntity,
+  ReviewReplyEntity,
+  ReviewWithRepliesEntity,
+} from './entities';
 
 @Injectable()
 export class ReviewService {
@@ -24,16 +29,30 @@ export class ReviewService {
   ) {}
 
   async createReview(userId: string, dto: CreateReviewDto) {
-    const profanityHit = this.profanityFilter.check(dto.content);
-    if (profanityHit.block) {
-      throw new BadRequestException('Please rephrase your review.');
+    console.log('🚀 createReview called for userId:', userId);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { reviewBannedUntil: true },
+    });
+
+    console.log('👤 User ban status:', user?.reviewBannedUntil);
+    
+    const profanityResult = this.profanityFilter.check(dto.content);
+
+    if (profanityResult.block) {
+      throw new BadRequestException(
+        'Your review contains excessive profanity. Please rephrase to continue.',
+      );
     }
 
     const toxicity = await this.toxicityService.analyze(dto.content);
     const decision = this.moderationDecision.decide(toxicity);
 
     if (decision.reject) {
-      throw new BadRequestException('Review rejected. Please rewrite.');
+      throw new BadRequestException(
+        'Review contains harmful content. Please rewrite with constructive criticism.',
+      );
     }
 
     const review = await this.prisma.review.create({
@@ -46,7 +65,7 @@ export class ReviewService {
         moodEmojis: dto.moodEmojis,
         status: decision.status,
         affectsRating: decision.affectsRating,
-        profanityHit: profanityHit.hit,
+        profanityHit: profanityResult.hit,
         toxicityScore: toxicity.score,
       },
       include: {
@@ -64,7 +83,8 @@ export class ReviewService {
       await this.userService.applyReviewWarning(userId);
     }
 
-    return review;
+    const reviewEntity = new ReviewEntity(review);
+    return reviewEntity.toPublic();
   }
 
   async createReply(userId: string, reviewId: string, dto: CreateReplyDto) {
@@ -82,8 +102,10 @@ export class ReviewService {
     }
 
     const toxicity = await this.toxicityService.analyze(dto.content);
-    if (toxicity.severe) {
-      throw new BadRequestException('Reply contains harmful content.');
+    if (toxicity.severe || toxicity.score >= 0.4) {
+      throw new BadRequestException(
+        'Reply contains inappropriate content. Please rewrite.',
+      );
     }
 
     const reply = await this.prisma.reviewReply.create({
@@ -103,11 +125,14 @@ export class ReviewService {
       },
     });
 
-    if (toxicity.score >= 0.4) {
-      await this.userService.applyReviewWarning(userId);
-    }
+    console.log('✅ Reply created (no warning applied):', {
+      replyId: reply.id,
+      userId,
+      toxicityScore: toxicity.score,
+    });
 
-    return reply;
+    const replyEntity = new ReviewReplyEntity(reply);
+    return replyEntity.toPublic();
   }
 
   async getReviews(query: ReviewQueryDto) {
@@ -122,7 +147,6 @@ export class ReviewService {
         skip,
         take: limit,
         orderBy: [
-          // Flagged reviews go to bottom
           { status: 'asc' }, // PUBLISHED < FLAGGED
           { createdAt: 'desc' },
         ],
@@ -153,8 +177,13 @@ export class ReviewService {
       this.prisma.review.count({ where }),
     ]);
 
+    // Convert to entities and sanitize
+    const reviewEntities = reviews.map(
+      (review) => new ReviewWithRepliesEntity(review),
+    );
+
     return {
-      reviews,
+      reviews: reviewEntities.map((r) => r.toPublic()),
       pagination: {
         page,
         limit,
@@ -177,7 +206,7 @@ export class ReviewService {
         where: {
           tmdbId,
           mediaType: mediaType as any,
-          status: ReviewStatus.PUBLISHED, // Only show published reviews
+          status: ReviewStatus.PUBLISHED,
         },
         skip,
         take: limit,
@@ -217,7 +246,6 @@ export class ReviewService {
       }),
     ]);
 
-    // Calculate top 3 mood emojis
     const allMoodEmojis = reviews.flatMap((r) => r.moodEmojis);
     const moodCounts = allMoodEmojis.reduce(
       (acc, emoji) => {
@@ -232,8 +260,13 @@ export class ReviewService {
       .slice(0, 3)
       .map(([emoji, count]) => ({ emoji, count }));
 
+    // Convert to entities and sanitize
+    const reviewEntities = reviews.map(
+      (review) => new ReviewWithRepliesEntity(review),
+    );
+
     return {
-      reviews,
+      reviews: reviewEntities.map((r) => r.toPublic()),
       topMoods,
       pagination: {
         page,
@@ -241,6 +274,16 @@ export class ReviewService {
         total,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  async getReviewBanStatus(user: { reviewBannedUntil?: Date }) {
+    const now = new Date();
+    const bannedDate = user.reviewBannedUntil;
+
+    return {
+      banned: !!bannedDate && bannedDate > now,
+      bannedUntil: bannedDate && bannedDate > now ? bannedDate : null,
     };
   }
 }
