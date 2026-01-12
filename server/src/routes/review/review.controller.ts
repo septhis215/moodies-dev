@@ -16,16 +16,18 @@ import { ReviewBanGuard } from './guard/review-ban.guard';
 import { ReviewService } from './review.service';
 
 @Controller('reviews')
-@UseGuards(JwtAuthGuard, ReviewBanGuard)
+@UseGuards(JwtAuthGuard)
 export class ReviewController {
   constructor(private readonly reviewsService: ReviewService) {}
 
   @Post()
+  @UseGuards(ReviewBanGuard) 
   createReview(@Req() req, @Body() dto: CreateReviewDto) {
     return this.reviewsService.createReview(req.user.id, dto);
   }
 
   @Post(':id/replies')
+  @UseGuards(ReviewBanGuard) !
   replyToReview(
     @Req() req,
     @Param('id') reviewId: string,
@@ -52,5 +54,10 @@ export class ReviewController {
       page,
       limit,
     );
+  }
+
+  @Get('me/ban-status')
+  getBanStatus(@Req() req) {
+    return this.reviewsService.getReviewBanStatus(req.user);
   }
 }
