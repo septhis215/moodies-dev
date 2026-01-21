@@ -208,9 +208,9 @@ export default function CelebSection() {
   if (!celebs.length) return null;
 
   return (
-    <section id="celebs" className="relative w-full py-22 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <section id="celebs" className="relative w-full py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <div className="mx-auto">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-8">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10">
           <h2
             className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
             style={{
@@ -261,7 +261,7 @@ export default function CelebSection() {
                     {/* --- Top: Profile Section (taller, responsive) --- */}
                     <div
                       onClick={() => handleOpenPerson(celeb)}
-                      className="relative w-full h-48 sm:h-56 md:h-64 cursor-pointer flex-shrink-0"
+                      className="relative w-full h-36 sm:h-48 md:h-56 cursor-pointer flex-shrink-0"
                     >
                       <Image
                         src={

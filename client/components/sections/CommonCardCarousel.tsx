@@ -92,9 +92,8 @@ export default function CommonCardCarousel({
       <div className="group relative h-full">
         <Link href={linkHref} className="block h-full">
           <div
-            className={`relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 ${
-              isWide ? "aspect-video" : "aspect-[2/3]"
-            }`}
+            className={`relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 ${isWide ? "aspect-video" : "aspect-[2/3]"
+              }`}
           >
             <Image
               src={getPosterUrl(show.poster_path ?? undefined)}
@@ -122,17 +121,16 @@ export default function CommonCardCarousel({
                       handleWatchlistToggle(show, e);
                     }}
                     disabled={loadingStates[show.id]}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${
-                      hookIsIn(String(show.id), toWatchType(show))
+                    className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${hookIsIn(String(show.id), toWatchType(show))
                         ? "bg-green-500 text-white"
                         : "bg-white text-black"
-                    }`}
+                      }`}
                     title={
                       loadingStates[show.id]
                         ? "Loading..."
                         : hookIsIn(String(show.id), toWatchType(show))
-                        ? "Remove from Watchlist"
-                        : "Add to Watchlist"
+                          ? "Remove from Watchlist"
+                          : "Add to Watchlist"
                     }
                   >
                     {loadingStates[show.id] ? (
@@ -151,15 +149,7 @@ export default function CommonCardCarousel({
                     <Info className="w-5 h-5 text-black" />
                   </button>
 
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                    }}
-                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
-                    title="Share"
-                  >
-                    <Share2 className="w-5 h-5 text-black" />
-                  </button>
+
                 </div>
               </div>
             </div>

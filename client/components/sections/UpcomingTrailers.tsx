@@ -323,11 +323,10 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                         <div
                           className={`
                           flex items-center gap-1 px-2 py-1 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border group-hover:opacity-0 transition-opacity duration-300
-                          ${
-                            item.type === "tv"
+                          ${item.type === "tv"
                               ? "bg-blue-500/90 text-white border-blue-400/50"
                               : "bg-purple-500/90 text-white border-purple-400/50"
-                          }
+                            }
                         `}
                         >
                           {item.type === "tv" ? (

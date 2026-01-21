@@ -15,8 +15,8 @@ class SearchQueryDto {
     page?: number = 1;
 
     @IsOptional()
-    @IsIn(['all', 'movie', 'tv'])
-    type?: 'all' | 'movie' | 'tv' = 'all';
+    @IsIn(['all', 'movie', 'tv', 'person'])
+    type?: 'all' | 'movie' | 'tv' | 'person' = 'all';
 
     @IsOptional()
     @IsIn(['relevance', 'rating', 'date', 'popularity'])
@@ -79,6 +79,10 @@ class SearchSuggestionsDto {
     limit?: number = 5;
 
     @IsOptional()
+    @IsIn(['content', 'person'])
+    mode?: 'content' | 'person' = 'content';
+
+    @IsOptional()
     @Transform(({ value }) => value === 'true')
     regex_search?: boolean = false;
 }
@@ -113,6 +117,7 @@ export class SearchController {
         return this.searchService.getSearchSuggestions(
             query.q,
             query.limit,
+            query.mode,
             query.regex_search
         );
     }
@@ -137,7 +142,8 @@ export class SearchController {
             genres: this.searchService.getAvailableGenres(),
             countries: this.searchService.getAvailableCountries(),
             years: this.getAvailableYears(),
-            ratings: this.getAvailableRatings()
+            ratings: this.getAvailableRatings(),
+            types: this.getSearchTypes()
         };
     }
 
@@ -152,5 +158,14 @@ export class SearchController {
 
     private getAvailableRatings() {
         return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    }
+
+    private getSearchTypes() {
+        return [
+            { value: 'all', label: 'All' },
+            { value: 'movie', label: 'Movies' },
+            { value: 'tv', label: 'TV Shows' },
+            { value: 'person', label: 'People' }
+        ];
     }
 }

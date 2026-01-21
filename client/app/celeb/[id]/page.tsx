@@ -351,15 +351,7 @@ export default function CelebrityDetailPage({
                     <Info className="w-5 h-5 text-black" />
                   </button>
 
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                    }}
-                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
-                    title="Share"
-                  >
-                    <Share2 className="w-5 h-5 text-black" />
-                  </button>
+
                 </div>
               </div>
             </div>

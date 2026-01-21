@@ -449,15 +449,7 @@ export function ComingSoonSection({
                                           <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
                                         </button>
 
-                                        <button
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                          }}
-                                          className="w-8 h-8 sm:w-9 sm:h-9 bg-white/95 rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all shadow-xl"
-                                          title="Share"
-                                        >
-                                          <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
-                                        </button>
+
                                       </div>
                                     </div>
                                   </div>

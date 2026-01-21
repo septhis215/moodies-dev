@@ -351,7 +351,7 @@ export default function CardCarousel<T extends MovieLike>({
       <style jsx>{scrollbarStyles}</style>
       <section
         id={sectionId}
-        className="relative w-full py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
+        className="relative w-full py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
       >
         <div className="mb-8">
           {titleLink ? (

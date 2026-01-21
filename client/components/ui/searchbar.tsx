@@ -1,38 +1,45 @@
-// components/ui/SearchBarWithSuggestions.tsx
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { IconSearch, IconX, IconClock, IconArrowRight, IconTrendingUp } from "@tabler/icons-react";
+import { IconSearch, IconX, IconClock, IconArrowRight, IconTrendingUp, IconUser } from "@tabler/icons-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Film, Tv, Star } from 'lucide-react';
+import { Film, Tv, User } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 
 interface SearchSuggestion {
   id: number;
-  title: string;
-  type: 'movie' | 'tv';
-  year: number | null;
-  poster_path: string | null;
+  title?: string;
+  name?: string;
+  type: 'movie' | 'tv' | 'person';
+  year?: number | null;
+  poster_path?: string | null;
+  profile_path?: string | null;
+  known_for_department?: string;
 }
+
 interface TrendingTerm {
   id: number;
   title: string;
-  media_type: string; // "movie" | "tv" | "person" | etc.
-};
-interface SearchBarProps {
-  placeholder?: string;
-  onSearch?: (q: string) => void;
+  media_type: string;
 }
 
+interface SearchBarProps {
+  placeholder?: string;
+  onSearch?: (q: string, mode?: string) => void;
+}
+
+type SearchMode = 'content' | 'person';
+
 export default function SearchBarWithSuggestions({
-  placeholder = "Search movies, series...",
+  placeholder = "Search movies, series, celebrities...",
   onSearch,
 }: SearchBarProps) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
+  const [searchMode, setSearchMode] = useState<SearchMode>('content');
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -43,48 +50,60 @@ export default function SearchBarWithSuggestions({
 
   const router = useRouter();
 
-  // Mobile modal state
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
   const [targetWidth, setTargetWidth] = useState<number>(400);
-  const [mobileValue, setMobileValue] = useState<string>(value);
+  const [mobileValue, setMobileValue] = useState<string>("");
+  const [mobileMode, setMobileMode] = useState<SearchMode>('content');
 
   const prefersReduced = useReducedMotion();
   const debouncedValue = useDebounce(value, 300);
 
-  // Load search history
   useEffect(() => {
     const history = localStorage.getItem('searchHistory');
     if (history) {
-      setSearchHistory(JSON.parse(history));
+      try {
+        setSearchHistory(JSON.parse(history));
+      } catch { }
     }
   }, []);
 
-  const getContentType = (item: Partial<TrendingTerm>): "movie" | "tv" => {
-    if ((item as any).media_type) return (item as any).media_type;
-    if ((item as any).type === "movies" || (item as any).type === "movie")
-      return "movie";
+  // keep mobile UI in sync when opening/modal toggles or when searchMode/value changes
+  useEffect(() => {
+    setMobileValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    setMobileMode(searchMode);
+  }, [searchMode]);
+
+  const getContentType = (item: Partial<TrendingTerm>): "movie" | "tv" | "person" => {
+    if ((item as any).media_type) return (item as any).media_type as any;
+    if ((item as any).type === "movies" || (item as any).type === "movie") return "movie";
     if ((item as any).type === "tv") return "tv";
-    if (
-      (item as any).number_of_seasons ||
-      (item as any).first_air_date ||
-      (item as any).name
-    )
-      return "tv";
+    if ((item as any).type === "person") return "person";
+    if ((item as any).number_of_seasons || (item as any).first_air_date || (item as any).name) return "tv";
     return "movie";
   };
 
   const handleClick = async (movie: TrendingTerm) => {
     const contentType = getContentType(movie);
-    const routePath = contentType === "tv" ? "tv" : "movies";
-    const href = `/${routePath}/${movie.id}`;
+    let href: string;
+
+    if (contentType === "person") {
+      href = `/person/${movie.id}`;
+    } else {
+      const routePath = contentType === "tv" ? "tv" : "movies";
+      href = `/${routePath}/${movie.id}`;
+    }
+
     router.push(href);
   };
 
   const [trendingTerms, setTrendingTerms] = useState<TrendingTerm[]>([
     { id: 0, title: 'Avengers', media_type: 'movie' },
-    { id: 0, title: 'Stranger Things', media_type: 'tv' },
-    { id: 0, title: 'Batman', media_type: 'movie' },
+    { id: 1, title: 'Stranger Things', media_type: 'tv' },
+    { id: 2, title: 'Batman', media_type: 'movie' },
   ]);
   const [loadingTrending, setLoadingTrending] = useState(false);
 
@@ -103,7 +122,6 @@ export default function SearchBarWithSuggestions({
         }
       } catch (error) {
         console.error('Failed to fetch trending terms:', error);
-        // Keep fallback terms on error
       } finally {
         setLoadingTrending(false);
       }
@@ -112,33 +130,34 @@ export default function SearchBarWithSuggestions({
     fetchTrendingTerms();
   }, []);
 
-  // Fetch suggestions when debounced value changes
   useEffect(() => {
     if (debouncedValue.trim().length > 2 && open) {
-      fetchSuggestions(debouncedValue);
+      fetchSuggestions(debouncedValue, searchMode);
     } else {
       setSuggestions([]);
     }
-  }, [debouncedValue, open]);
+  }, [debouncedValue, open, searchMode]);
 
-  const fetchSuggestions = async (query: string) => {
+  const fetchSuggestions = async (query: string, mode: SearchMode) => {
     setLoadingSuggestions(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/all/search/suggestions?q=${encodeURIComponent(query)}&limit=6`
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/all/search/suggestions?q=${encodeURIComponent(query)}&limit=8&mode=${mode}`
       );
       if (response.ok) {
         const data = await response.json();
-        setSuggestions(data);
+        setSuggestions(Array.isArray(data) ? data : []);
+      } else {
+        setSuggestions([]);
       }
     } catch (error) {
       console.error('Failed to fetch suggestions:', error);
+      setSuggestions([]);
     } finally {
       setLoadingSuggestions(false);
     }
   };
 
-  // Compute mobile breakpoint & target width safely (client-only)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(max-width: 639px)");
@@ -159,14 +178,12 @@ export default function SearchBarWithSuggestions({
     };
   }, []);
 
-  // Focus the inline input when opened (desktop)
   useEffect(() => {
     if (open && !isMobile) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open, isMobile]);
 
-  // Click outside & escape to close
   useEffect(() => {
     const onDocPointer = (e: PointerEvent) => {
       if (mobileOpen) return;
@@ -197,34 +214,42 @@ export default function SearchBarWithSuggestions({
     };
   }, [mobileOpen]);
 
-  const handleSearch = (query: string) => {
+  const handleSearch = (query: string, mode: SearchMode = searchMode) => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) return;
 
-    // Add to search history
     const updatedHistory = [trimmedQuery, ...searchHistory.filter(h => h !== trimmedQuery)].slice(0, 10);
     setSearchHistory(updatedHistory);
     localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
 
-    // Navigate to search results
-    router.push(`/search?q=${encodeURIComponent(trimmedQuery)}`);
+    // Route based on search mode
+    if (mode === 'person') {
+      router.push(`/search?q=${encodeURIComponent(trimmedQuery)}&type=person`);
+    } else {
+      router.push(`/search?q=${encodeURIComponent(trimmedQuery)}`);
+    }
 
-    // Close search
     setOpen(false);
     setMobileOpen(false);
     setSuggestions([]);
 
-    onSearch?.(trimmedQuery);
+    onSearch?.(trimmedQuery, mode);
   };
 
   const handleSuggestionClick = (suggestion: SearchSuggestion) => {
-    const path = suggestion.type === 'tv' ? '/tv' : '/movies';
-    router.push(`${path}/${suggestion.id}`);
+    let path: string;
+
+    if (suggestion.type === 'person') {
+      path = `/person/${suggestion.id}`;
+    } else {
+      path = suggestion.type === 'tv' ? `/tv/${suggestion.id}` : `/movies/${suggestion.id}`;
+    }
+
+    router.push(path);
     setOpen(false);
     setSuggestions([]);
   };
 
-  // Show suggestions dropdown
   const showSuggestions = open && !isMobile && (
     suggestions.length > 0 ||
     loadingSuggestions ||
@@ -232,7 +257,6 @@ export default function SearchBarWithSuggestions({
     (value.trim().length === 0)
   );
 
-  // Mobile modal component
   const MobileModal = () => {
     if (typeof document === "undefined") return null;
 
@@ -256,16 +280,38 @@ export default function SearchBarWithSuggestions({
               transition={{ type: "spring", stiffness: 220, damping: 28 }}
               className="w-full max-w-lg px-6"
             >
+              {/* Mode Tabs */}
+              <div className="mb-3 flex gap-2 bg-white/10 backdrop-blur-md rounded-full p-1">
+                <button
+                  onClick={() => { setMobileMode('content'); setSearchMode('content'); }}
+                  className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${mobileMode === 'content'
+                      ? 'bg-[#e94f37] text-white'
+                      : 'text-gray-300 hover:text-white'
+                    }`}
+                >
+                  Movies & TV
+                </button>
+                <button
+                  onClick={() => { setMobileMode('person'); setSearchMode('person'); }}
+                  className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${mobileMode === 'person'
+                      ? 'bg-[#e94f37] text-white'
+                      : 'text-gray-300 hover:text-white'
+                    }`}
+                >
+                  People
+                </button>
+              </div>
+
               <div className="relative mb-4">
                 <input
                   value={mobileValue}
                   onChange={(e) => setMobileValue(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch(mobileValue);
+                      handleSearch(mobileValue, mobileMode);
                     }
                   }}
-                  placeholder={placeholder}
+                  placeholder={mobileMode === 'person' ? 'Search for actors, directors...' : 'Search movies & TV series...'}
                   className="w-full rounded-full px-4 py-3 bg-white/10 backdrop-blur-md text-white placeholder:text-gray-300 outline-none "
                   autoFocus
                 />
@@ -277,14 +323,13 @@ export default function SearchBarWithSuggestions({
                 </button>
               </div>
 
-              {/* Mobile suggestions */}
               <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 max-h-96 overflow-y-auto">
                 {trendingTerms.slice(0, 6).map((term, index) => (
                   <div
                     key={index}
                     onClick={() => {
                       setMobileValue(term.title);
-                      handleSearch(term.title);
+                      handleSearch(term.title, mobileMode);
                     }}
                     className="flex items-center gap-3 p-2 hover:bg-white/10 rounded cursor-pointer text-white"
                   >
@@ -306,7 +351,6 @@ export default function SearchBarWithSuggestions({
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   const updatePosition = useCallback(() => {
-    // Prefer the actual input element (animated width). Fallback to wrapper.
     const el = inputRef.current ?? wrapperRef.current;
     if (!el || typeof window === "undefined") {
       setAnchorRect(null);
@@ -316,23 +360,19 @@ export default function SearchBarWithSuggestions({
     setAnchorRect(r);
   }, [inputRef, wrapperRef]);
 
-  // Observe input/wrapper size changes (catches the framer-motion width animation)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const target = inputRef.current ?? wrapperRef.current;
     if (!target) return;
 
-    // disconnect previous
     resizeObserverRef.current?.disconnect();
 
     const ro = new ResizeObserver(() => {
-      // schedule an update on RAF for smoothness
       requestAnimationFrame(updatePosition);
     });
     ro.observe(target);
     resizeObserverRef.current = ro;
 
-    // initial read
     updatePosition();
 
     return () => {
@@ -341,7 +381,6 @@ export default function SearchBarWithSuggestions({
     };
   }, [updatePosition]);
 
-  // Recalculate on scroll/resize (capture scroll to catch inner scroll containers)
   useEffect(() => {
     if (typeof window === "undefined") return;
     let rafId: number | null = null;
@@ -360,31 +399,27 @@ export default function SearchBarWithSuggestions({
     };
   }, [updatePosition]);
 
-  // Ensure we recalc when the dropdown opens/closes (helps after toggle animation)
   useEffect(() => {
     if (!open || isMobile) return;
-    // immediate + slightly delayed to allow motion animation to update layout
     updatePosition();
     const id = window.setTimeout(updatePosition, 120);
     return () => clearTimeout(id);
   }, [open, isMobile, updatePosition]);
-  // keyboard navigation + refs for items
+
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
 
-  // helper to highlight matching substring in title
   const highlightMatch = useCallback((title: string, q: string) => {
     if (!q) return title;
     const qi = q.trim();
     if (!qi) return title;
-    const regex = new RegExp(`(${qi.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig");
+    const regex = new RegExp(`(${qi.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")})`, "ig");
     const parts = title.split(regex);
     return parts.map((part, i) =>
       regex.test(part) ? <mark key={i} className="bg-transparent text-[#e94f37] font-semibold">{part}</mark> : <span key={i}>{part}</span>
     );
   }, []);
 
-  // keyboard navigation for suggestions (when dropdown visible)
   useEffect(() => {
     if (!open || isMobile) {
       setHighlightedIndex(null);
@@ -409,7 +444,7 @@ export default function SearchBarWithSuggestions({
           e.preventDefault();
           handleSuggestionClick(suggestions[highlightedIndex]);
         } else if (value.trim()) {
-          handleSearch(value);
+          handleSearch(value, searchMode);
         }
       } else if (e.key === "Escape") {
         setOpen(false);
@@ -420,9 +455,8 @@ export default function SearchBarWithSuggestions({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, isMobile, showSuggestions, suggestions, highlightedIndex, value, handleSuggestionClick, handleSearch]);
+  }, [open, isMobile, showSuggestions, suggestions, highlightedIndex, value, searchMode]);
 
-  // Scroll highlighted item into view
   useEffect(() => {
     if (highlightedIndex === null) return;
     const el = itemRefs.current[highlightedIndex];
@@ -440,289 +474,332 @@ export default function SearchBarWithSuggestions({
     localStorage.removeItem('searchHistory');
   };
 
-  const portalRender =
-    (() => {
-      if (!showSuggestions || typeof document === "undefined" || !anchorRect) return null;
+  const getTypeIcon = (type: 'movie' | 'tv' | 'person') => {
+    switch (type) {
+      case 'person':
+        return <User size={12} className="text-purple-400" />;
+      case 'tv':
+        return <Tv size={12} className="text-blue-400" />;
+      case 'movie':
+      default:
+        return <Film size={12} className="text-emerald-400" />;
+    }
+  };
 
-      const padding = 8;
-      const inputRect = anchorRect;
-      const desiredWidth = Math.min(
-        Math.max(inputRect.width || targetWidth || 300, 260),
-        window.innerWidth - padding * 2
-      );
+  const getTypeLabel = (type: 'movie' | 'tv' | 'person') => {
+    switch (type) {
+      case 'person':
+        return 'Person';
+      case 'tv':
+        return 'TV';
+      case 'movie':
+      default:
+        return 'Movie';
+    }
+  };
 
-      const maxLeft = Math.max(window.innerWidth - desiredWidth - padding, padding);
-      const left = Math.min(Math.max(inputRect.left, padding), maxLeft);
+  const portalRender = (() => {
+    if (!showSuggestions || typeof document === "undefined" || !anchorRect) return null;
 
-      const dropdownHeightEstimate = Math.min(window.innerHeight * 0.56, 520);
-      let top = inputRect.bottom + 8;
-      if (top + dropdownHeightEstimate > window.innerHeight - padding) {
-        top = Math.max(inputRect.top - dropdownHeightEstimate - 8, padding);
-      }
+    const padding = 8;
+    const inputRect = anchorRect;
+    const desiredWidth = Math.min(
+      Math.max(inputRect.width || targetWidth || 300, 260),
+      window.innerWidth - padding * 2
+    );
 
-      // reset refs array length
-      itemRefs.current = [];
+    const maxLeft = Math.max(window.innerWidth - desiredWidth - padding, padding);
+    const left = Math.min(Math.max(inputRect.left, padding), maxLeft);
 
-      return createPortal(
-        <AnimatePresence>
-          <motion.div
-            key="search-suggestions-portal"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.12 }}
-            ref={suggestionsRef}
-            style={{
-              position: "fixed",
-              top,
-              left,
-              width: desiredWidth,
-              maxHeight: "56vh",
-              overflow: "hidden",
-              zIndex: 200000,
-              pointerEvents: "auto",
-            }}
-            className="bg-gradient-to-b from-[#060608]/85 to-[#0b0b0d]/85 backdrop-blur-md border border-gray-800 rounded-2xl shadow-2xl ring-1 ring-black/40"
-            role="listbox"
-            aria-label="Search suggestions"
-          >
-            {/* Sticky header */}
-            <div className="sticky top-0 z-10 bg-gradient-to-b from-[#060608]/90 to-transparent px-3 py-2 backdrop-blur-sm">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-baseline gap-3">
-                  <div className="text-sm font-semibold text-white">Suggestions</div>
-                  <div className="text-xs text-gray-400">{loadingSuggestions ? "Loading…" : `${suggestions.length} results`}</div>
-                </div>
+    const dropdownHeightEstimate = Math.min(window.innerHeight * 0.56, 520);
+    let top = inputRect.bottom + 8;
+    if (top + dropdownHeightEstimate > window.innerHeight - padding) {
+      top = Math.max(inputRect.top - dropdownHeightEstimate - 8, padding);
+    }
 
-                <div className="text-xs text-gray-400 flex items-center gap-2">
-                  <span className="hidden sm:inline">Press</span>
-                  <kbd className="px-2 py-0.5 rounded bg-gray-800 text-white">↑</kbd>
-                  <kbd className="px-2 py-0.5 rounded bg-gray-800 text-white">↓</kbd>
-                  <span className="hidden sm:inline">to navigate</span>
-                </div>
+    itemRefs.current = [];
+
+    return createPortal(
+      <AnimatePresence>
+        <motion.div
+          key="search-suggestions-portal"
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.12 }}
+          ref={suggestionsRef}
+          style={{
+            position: "fixed",
+            top,
+            left,
+            width: desiredWidth,
+            maxHeight: "56vh",
+            overflow: "hidden",
+            zIndex: 200000,
+            pointerEvents: "auto",
+          }}
+          className="bg-gradient-to-b from-[#060608]/85 to-[#0b0b0d]/85 backdrop-blur-md border border-gray-800 rounded-2xl shadow-2xl ring-1 ring-black/40"
+          role="listbox"
+          aria-label="Search suggestions"
+        >
+          <div className="sticky top-0 z-10 bg-gradient-to-b from-[#060608]/90 to-transparent px-3 py-2 backdrop-blur-sm">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="flex items-baseline gap-3">
+                <div className="text-sm font-semibold text-white">Suggestions</div>
+                <div className="text-xs text-gray-400">{loadingSuggestions ? "Loading…" : `${suggestions.length} results`}</div>
+              </div>
+
+              <div className="text-xs text-gray-400 flex items-center gap-2">
+                <span className="hidden sm:inline">Press</span>
+                <kbd className="px-2 py-0.5 rounded bg-gray-800 text-white">↑</kbd>
+                <kbd className="px-2 py-0.5 rounded bg-gray-800 text-white">↓</kbd>
+                <span className="hidden sm:inline">to navigate</span>
               </div>
             </div>
 
-            {/* Content scroll area */}
-            <div className="overflow-y-auto px-2 pb-2" style={{ maxHeight: "calc(56vh - 64px)" }}>
-              {/* Loading skeleton */}
-              {loadingSuggestions && (
-                <div className="space-y-2 pt-2">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="flex items-start gap-3 p-2 rounded-lg animate-pulse">
-                      <div className="w-12 h-16 rounded-md bg-gray-700/60 shrink-0" />
-                      <div className="flex-1">
-                        <div className="h-3 w-3/5 bg-gray-700/60 rounded mb-2" />
-                        <div className="h-3 w-1/3 bg-gray-700/60 rounded" />
-                      </div>
+            {/* Mode Tabs */}
+            <div className="flex gap-2 bg-white/5 rounded-full p-1">
+              <button
+                onClick={() => {
+                  setSearchMode('content');
+                  setSuggestions([]);
+                  if (value.trim().length > 2) fetchSuggestions(value, 'content');
+                }}
+                className={`flex-1 py-1.5 px-3 rounded-full text-xs font-medium transition-all ${searchMode === 'content'
+                    ? 'bg-[#e94f37] text-white'
+                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+              >
+                Movies & TV
+              </button>
+              <button
+                onClick={() => {
+                  setSearchMode('person');
+                  setSuggestions([]);
+                  if (value.trim().length > 2) fetchSuggestions(value, 'person');
+                }}
+                className={`flex-1 py-1.5 px-3 rounded-full text-xs font-medium transition-all ${searchMode === 'person'
+                    ? 'bg-[#e94f37] text-white'
+                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  }`}
+              >
+                People
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-y-auto px-2 pb-2" style={{ maxHeight: "calc(56vh - 100px)" }}>
+            {loadingSuggestions && (
+              <div className="space-y-2 pt-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-start gap-3 p-2 rounded-lg animate-pulse">
+                    <div className="w-12 h-16 rounded-md bg-gray-700/60 shrink-0" />
+                    <div className="flex-1">
+                      <div className="h-3 w-3/5 bg-gray-700/60 rounded mb-2" />
+                      <div className="h-3 w-1/3 bg-gray-700/60 rounded" />
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
+            )}
 
-              {/* Suggestions list (if any) */}
-              {!loadingSuggestions && suggestions.length > 0 && (
-                <div className="space-y-2 pt-2">
-                  {suggestions.map((s, idx) => {
-                    const isHighlighted = idx === highlightedIndex;
-                    const accent = isHighlighted ? "before:w-1" : "before:w-0";
-                    const bgClass = isHighlighted ? "bg-[#e94f37]/10" : "hover:bg-white/3";
-                    return (
-                      <div
-                        key={s.id}
-                        ref={(el) => (itemRefs.current[idx] = el)}
-                        role="option"
-                        aria-selected={isHighlighted}
-                        tabIndex={-1}
-                        onMouseEnter={() => setHighlightedIndex(idx)}
-                        onMouseLeave={() => setHighlightedIndex(null)}
-                        onClick={() => handleSuggestionClick(s)}
-                        className={`relative flex items-start gap-3 p-3 rounded-lg transition-colors duration-150 cursor-pointer ${bgClass}`}
-                      >
-                        {/* left accent (subtle) */}
-                        <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-10 ${accent} rounded-r-full bg-[#e94f37] transition-all`} />
+            {!loadingSuggestions && suggestions.length > 0 && (
+              <div className="space-y-2 pt-2">
+                {suggestions.map((s, idx) => {
+                  const isHighlighted = idx === highlightedIndex;
+                  const accent = isHighlighted ? "before:w-1" : "before:w-0";
+                  const bgClass = isHighlighted ? "bg-[#e94f37]/10" : "hover:bg-white/3";
+                  const displayTitle = s.title || s.name || 'Unknown';
+                  const imagePath = s.type === 'person' ? s.profile_path : s.poster_path;
 
-                        {/* thumbnail */}
-                        <div className="relative w-12 h-16 rounded-md overflow-hidden flex-shrink-0 bg-gray-800">
-                          {s.poster_path ? (
-                            <>
-                              <Image
-                                src={`https://image.tmdb.org/t/p/w154${s.poster_path}`}
-                                alt={s.title}
-                                fill
-                                className="object-cover"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent pointer-events-none" />
-                            </>
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">No Image</div>
-                          )}
-                        </div>
+                  return (
+                    <div
+                      key={`${s.type}-${s.id}`}
+                      ref={(el) => (itemRefs.current[idx] = el)}
+                      role="option"
+                      aria-selected={isHighlighted}
+                      tabIndex={-1}
+                      onMouseEnter={() => setHighlightedIndex(idx)}
+                      onMouseLeave={() => setHighlightedIndex(null)}
+                      onClick={() => handleSuggestionClick(s)}
+                      className={`relative flex items-start gap-3 p-3 rounded-lg transition-colors duration-150 cursor-pointer ${bgClass}`}
+                    >
+                      <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-10 ${accent} rounded-r-full bg-[#e94f37] transition-all`} />
 
-                        {/* main content */}
-                        <div className="flex-1 min-w-0 pl-4">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="text-sm text-white font-semibold truncate">{highlightMatch ? highlightMatch(s.title, value) : s.title}</div>
-                              {s.year && <div className="text-xs text-gray-400 mt-1">{s.year}</div>}
-                            </div>
-
-                            <div className="flex-shrink-0 ml-2 flex flex-col items-end gap-1">
-                              <div className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-gray-200 uppercase tracking-wide">{s.type === "tv" ? "TV" : "Movie"}</div>
-                              <div className="text-xs text-gray-400">{/* rating placeholder */}</div>
-                            </div>
+                      <div className="relative w-12 h-16 rounded-md overflow-hidden flex-shrink-0 bg-gray-800">
+                        {imagePath ? (
+                          <>
+                            <Image
+                              src={`https://image.tmdb.org/t/p/w154${imagePath}`}
+                              alt={displayTitle}
+                              fill
+                              className="object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent pointer-events-none" />
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-500">
+                            {s.type === 'person' ? <IconUser size={24} /> : <Film size={24} />}
                           </div>
-
-                          {/* divider & meta line */}
-                          <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
-                            <div className="truncate">{/* optional: genre or short overview here */}</div>
-                            <div className="ml-4 text-gray-500">{/* optional: runtime / year */}</div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Clear visual separation if suggestions exist */}
-              {!loadingSuggestions && suggestions.length > 0 && (
-                <div className="mt-3 mb-2 px-1">
-                  <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent" />
-                </div>
-              )}
-
-              {/* Recent Searches & Trending — single-column stacked layout */}
-              {!loadingSuggestions && suggestions.length === 0 && value.trim().length === 0 && (
-                <div className="pt-2 pb-3 space-y-4">
-                  {/* Recent searches */}
-                  {searchHistory.length > 0 && (
-                    <div className="bg-transparent rounded-lg px-2 py-2">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-xs font-medium text-gray-300">Recent searches</div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => { if (searchHistory[0]) handleSearch(searchHistory[0]); }}
-                            className="text-xs text-gray-400 hover:text-white transition"
-                            title="Search most recent"
-                          >
-                            Search last
-                          </button>
-
-                          <button
-                            onClick={clearAllHistory}
-                            className="text-xs text-gray-400 hover:text-white transition"
-                            title="Clear recent"
-                          >
-                            Clear
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <AnimatePresence>
-                          {searchHistory.slice(0, 8).map((term, i) => (
-                            <motion.div
-                              key={term + i}
-                              layout
-                              initial={{ opacity: 0, y: 6 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.96, height: 0 }}
-                              transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                              className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-white/3 transition"
-                            >
-                              <button
-                                onClick={() => handleSearch(term)}
-                                className="flex-1 text-left flex items-center gap-3 min-w-0"
-                              >
-                                <IconClock size={16} className="text-gray-400 flex-shrink-0" />
-                                <span className="truncate text-sm text-white">{term}</span>
-                              </button>
-
-                              <div className="flex items-center gap-2">
-                                {/* Run search icon */}
-                                <button
-                                  onClick={() => handleSearch(term)}
-                                  aria-label={`Run search ${term}`}
-                                  className="p-2 rounded bg-white/6 hover:bg-white/9 transition"
-                                  title="Run search"
-                                >
-                                  <IconArrowRight size={16} className="text-gray-100" />
-                                </button>
-
-                                {/* Remove from history icon */}
-                                <button
-                                  onClick={() => removeHistoryItem(term)}
-                                  aria-label={`Remove ${term} from history`}
-                                  className="p-2 rounded hover:bg-white/6 transition"
-                                  title="Remove"
-                                >
-                                  <IconX size={14} className="text-gray-400" />
-                                </button>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </AnimatePresence>
-
-                        {searchHistory.length > 8 && (
-                          <div className="text-xs text-gray-400 mt-1">Showing 8 of {searchHistory.length} recent searches</div>
                         )}
                       </div>
-                    </div>
-                  )}
 
-                  {/* Trending */}
-                  {(trendingTerms).length > 0 && (
-                    <div className="bg-transparent rounded-lg px-2 py-2">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-xs font-medium text-gray-300">Trending</div>
+                      <div className="flex-1 min-w-0 pl-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="text-sm text-white font-semibold truncate">
+                              {highlightMatch(displayTitle, value)}
+                            </div>
+                            {s.type === 'person' && s.known_for_department && (
+                              <div className="text-xs text-gray-400 mt-1">{s.known_for_department}</div>
+                            )}
+                            {s.year && s.type !== 'person' && (
+                              <div className="text-xs text-gray-400 mt-1">{s.year}</div>
+                            )}
+                          </div>
+
+                          <div className="flex-shrink-0 ml-2 flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-white/5 text-gray-200 uppercase tracking-wide">
+                              {getTypeIcon(s.type)}
+                              <span>{getTypeLabel(s.type)}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-                      <div className="space-y-2">
-                        {(trendingTerms).slice(0, 6).map((t, idx) => (
-                          <button
-                            key={t.id + idx}
-                            onClick={() => handleClick(t)}
-                            className="w-full text-left flex items-center gap-3 p-2 rounded-md bg-gradient-to-r from-white/3 to-white/6 hover:from-white/5 hover:to-white/8 transition"
+            {!loadingSuggestions && suggestions.length > 0 && (
+              <div className="mt-3 mb-2 px-1">
+                <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent" />
+              </div>
+            )}
+
+            {!loadingSuggestions && suggestions.length === 0 && value.trim().length === 0 && (
+              <div className="pt-2 pb-3 space-y-4">
+                {searchHistory.length > 0 && (
+                  <div className="bg-transparent rounded-lg px-2 py-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs font-medium text-gray-300">Recent searches</div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { if (searchHistory[0]) handleSearch(searchHistory[0], searchMode); }}
+                          className="text-xs text-gray-400 hover:text-white transition"
+                          title="Search most recent"
+                        >
+                          Search last
+                        </button>
+
+                        <button
+                          onClick={clearAllHistory}
+                          className="text-xs text-gray-400 hover:text-white transition"
+                          title="Clear recent"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <AnimatePresence>
+                        {searchHistory.slice(0, 8).map((term, i) => (
+                          <motion.div
+                            key={term + i}
+                            layout
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.96, height: 0 }}
+                            transition={{ type: "spring", stiffness: 260, damping: 22 }}
+                            className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-white/3 transition"
                           >
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#e94f37]/10 text-[#e94f37] font-semibold text-sm flex-shrink-0">
-                              {idx + 1}
+                            <button
+                              onClick={() => handleSearch(term, searchMode)}
+                              className="flex-1 text-left flex items-center gap-3 min-w-0"
+                            >
+                              <IconClock size={16} className="text-gray-400 flex-shrink-0" />
+                              <span className="truncate text-sm text-white">{term}</span>
+                            </button>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleSearch(term, searchMode)}
+                                aria-label={`Run search ${term}`}
+                                className="p-2 rounded bg-white/6 hover:bg-white/9 transition"
+                                title="Run search"
+                              >
+                                <IconArrowRight size={16} className="text-gray-100" />
+                              </button>
+
+                              <button
+                                onClick={() => removeHistoryItem(term)}
+                                aria-label={`Remove ${term} from history`}
+                                className="p-2 rounded hover:bg-white/6 transition"
+                                title="Remove"
+                              >
+                                <IconX size={14} className="text-gray-400" />
+                              </button>
                             </div>
-                            <div className="min-w-0">
-                              <div className="text-sm text-white truncate">{t.title}</div>
-                              <div className="text-xs text-gray-400">Trending now</div>
-                            </div>
-                          </button>
+                          </motion.div>
                         ))}
-                      </div>
+                      </AnimatePresence>
+
+                      {searchHistory.length > 8 && (
+                        <div className="text-xs text-gray-400 mt-1">Showing 8 of {searchHistory.length} recent searches</div>
+                      )}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* When nothing at all exists */}
-                  {searchHistory.length === 0 && (trendingTerms).length === 0 && (
-                    <div className="text-sm text-gray-400 px-2 py-3">No recent searches or trending terms available.</div>
-                  )}
-                </div>
-              )}
-            </div>
+                {(trendingTerms).length > 0 && (
+                  <div className="bg-transparent rounded-lg px-2 py-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs font-medium text-gray-300">Trending</div>
+                    </div>
 
-            {/* Sticky footer */}
-            <div className="sticky bottom-0 z-10 bg-gradient-to-t from-transparent to-[#060608]/90 px-3 py-2 border-t border-gray-800/60 flex items-center justify-between text-xs text-gray-400">
-              <div>{suggestions.length > 0 ? `${suggestions.length} suggestion${suggestions.length > 1 ? "s" : ""}` : "No direct matches"}</div>
-              <div className="hidden sm:flex items-center gap-2">Suggestions update as you type</div>
-            </div>
-          </motion.div>
-        </AnimatePresence >,
-        document.body
-      );
+                    <div className="space-y-2">
+                      {(trendingTerms).slice(0, 6).map((t, idx) => (
+                        <button
+                          key={t.id + idx}
+                          onClick={() => handleClick(t)}
+                          className="w-full text-left flex items-center gap-3 p-2 rounded-md bg-gradient-to-r from-white/3 to-white/6 hover:from-white/5 hover:to-white/8 transition"
+                        >
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#e94f37]/10 text-[#e94f37] font-semibold text-sm flex-shrink-0">
+                            {idx + 1}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm text-white truncate">{t.title}</div>
+                            <div className="text-xs text-gray-400">Trending now</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-    })();
+                {searchHistory.length === 0 && (trendingTerms).length === 0 && (
+                  <div className="text-sm text-gray-400 px-2 py-3">No recent searches or trending terms available.</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="sticky bottom-0 z-10 bg-gradient-to-t from-transparent to-[#060608]/90 px-3 py-2 border-t border-gray-800/60 flex items-center justify-between text-xs text-gray-400">
+            <div>{suggestions.length > 0 ? `${suggestions.length} suggestion${suggestions.length > 1 ? "s" : ""}` : "No direct matches"}</div>
+            <div className="hidden sm:flex items-center gap-2">Suggestions update as you type</div>
+          </div>
+        </motion.div>
+      </AnimatePresence>,
+      document.body
+    );
+  })();
 
   return (
     <>
       <div ref={wrapperRef} className="relative flex items-center gap-2">
         <div className="flex items-center flex-row-reverse relative">
-          {/* Search icon */}
           <button
             type="button"
             onClick={() => {
@@ -737,7 +814,6 @@ export default function SearchBarWithSuggestions({
             <IconSearch size={20} />
           </button>
 
-          {/* Animated search input (desktop only) */}
           <motion.div
             initial={false}
             animate={{ width: open && !resolvedIsMobile ? targetWidth : 0 }}
@@ -750,7 +826,7 @@ export default function SearchBarWithSuggestions({
               onChange={(e) => setValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  handleSearch(value);
+                  handleSearch(value, searchMode);
                 }
               }}
               onFocus={() => setOpen(true)}

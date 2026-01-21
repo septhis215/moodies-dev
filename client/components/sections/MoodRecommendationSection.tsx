@@ -575,14 +575,7 @@ export default function MoodRecommendationsSection({
                                   <button className="w-10 h-10 bg-white hover:bg-violet-500 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn">
                                     <Info className="w-5 h-5 text-black group-hover/btn:text-white transition-colors" />
                                   </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                    }}
-                                    className="w-10 h-10 bg-white hover:bg-violet-500 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-lg group/btn"
-                                  >
-                                    <Share2 className="w-5 h-5 text-black group-hover/btn:text-white transition-colors" />
-                                  </button>
+
                                 </div>
                                 {/* Reason */}
                                 <p className="text-xs text-center text-white font-semibold line-clamp-2 leading-relaxed">

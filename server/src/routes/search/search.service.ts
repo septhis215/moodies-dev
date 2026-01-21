@@ -8,7 +8,7 @@ import axios from 'axios';
 export interface SearchFilters {
     query: string;
     page?: number;
-    type?: 'all' | 'movie' | 'tv';
+    type?: 'all' | 'movie' | 'tv' | 'person';
     sort?: 'relevance' | 'rating' | 'date' | 'popularity';
     year_min?: number;
     year_max?: number;
@@ -26,12 +26,11 @@ export class SearchService implements OnModuleInit {
     private readonly baseUrl: string;
     private readonly token: string;
     private genreMap: Record<number, string> = {};
-    private genreIdMap: Record<string, number> = {}; // Reverse mapping
+    private genreIdMap: Record<string, number> = {};
     private countryMap: Record<string, string> = {};
     private readonly tmdbBaseUrl = 'https://api.themoviedb.org/3';
     private readonly apiKey = process.env.TMDB_API_KEY;
 
-    // Comprehensive country mapping
     private readonly countryList = [
         { code: 'US', name: 'United States' },
         { code: 'GB', name: 'United Kingdom' },
@@ -94,7 +93,6 @@ export class SearchService implements OnModuleInit {
         this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
     }
 
-    // Generic helper: returns response.data (not only results)
     private async tmdb(endpoint: string, params?: any) {
         const normalizedEndpoint = endpoint.startsWith('http')
             ? endpoint
@@ -113,7 +111,30 @@ export class SearchService implements OnModuleInit {
         return response.data;
     }
 
-    private normalizeResult(m: any, type: 'movie' | 'tv') {
+    private normalizeResult(m: any, type?: 'movie' | 'tv' | 'person') {
+        // Use media_type from result if type not provided
+        const mediaType = type || m.media_type;
+
+        if (mediaType === 'person') {
+            return {
+                id: m.id,
+                name: m.name ?? 'Unknown',
+                title: m.name ?? 'Unknown',
+                profile_path: m.profile_path ?? null,
+                known_for_department: m.known_for_department ?? 'Acting',
+                popularity: m.popularity || 0,
+                known_for: m.known_for?.slice(0, 3).map((item: any) => ({
+                    id: item.id,
+                    title: item.title ?? item.name ?? 'Untitled',
+                    media_type: item.media_type,
+                    poster_path: item.poster_path,
+                })) ?? [],
+                type: 'person',
+                media_type: 'person',
+                adult: m.adult || false,
+            };
+        }
+
         return {
             id: m.id,
             title: m.title ?? m.name ?? 'Untitled',
@@ -133,23 +154,21 @@ export class SearchService implements OnModuleInit {
                 m.genre_ids?.map((id: number) => this.genreMap[id]).filter(Boolean) ??
                 m.genres?.map((g: any) => g.name) ?? [],
             genre_ids: m.genre_ids ?? m.genres?.map((g: any) => g.id) ?? [],
-            type,
+            type: mediaType === 'tv' ? 'tv' : 'movie',
+            media_type: mediaType === 'tv' ? 'tv' : 'movie',
             adult: m.adult || false,
             video: m.video || false,
             recommendations: [],
         };
     }
 
-    // Enhanced regex and case-insensitive search
     private createSearchRegex(query: string, isRegexSearch: boolean): RegExp | null {
         if (!isRegexSearch) {
-            // Case-insensitive search with word boundaries and partial matches
             const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             return new RegExp(escapedQuery, 'i');
         }
 
         try {
-            // If regex search is enabled, try to create a regex pattern
             return new RegExp(query, 'i');
         } catch (error) {
             this.logger.warn(`Invalid regex pattern: ${query}, falling back to literal search`);
@@ -187,7 +206,6 @@ export class SearchService implements OnModuleInit {
 
     async loadCountries() {
         try {
-            // Initialize country mapping
             for (const country of this.countryList) {
                 this.countryMap[country.code] = country.name;
             }
@@ -204,19 +222,21 @@ export class SearchService implements OnModuleInit {
         ]);
     }
 
-    private buildTMDBParams(filters: SearchFilters, mediaType: 'movie' | 'tv') {
+    private buildTMDBParams(filters: SearchFilters, mediaType: 'movie' | 'tv' | 'person') {
         const params: any = {
             language: 'en-US',
             include_adult: filters.include_adult || false,
             page: filters.page || 1,
         };
 
-        // For regex/case-insensitive search, we'll handle filtering client-side
         if (!filters.regex_search) {
             params.query = filters.query;
         }
 
-        // Year filtering
+        if (mediaType === 'person') {
+            return params;
+        }
+
         if (filters.year_min || filters.year_max) {
             if (mediaType === 'movie') {
                 if (filters.year_min) params['primary_release_date.gte'] = `${filters.year_min}-01-01`;
@@ -227,7 +247,6 @@ export class SearchService implements OnModuleInit {
             }
         }
 
-        // Genre filtering
         if (filters.genres) {
             const genreNames = filters.genres.split(',');
             const genreIds = genreNames
@@ -239,7 +258,6 @@ export class SearchService implements OnModuleInit {
             }
         }
 
-        // Country filtering
         if (filters.countries) {
             const countryCodes = filters.countries.split(',').map(c => c.trim());
             if (countryCodes.length > 0) {
@@ -247,7 +265,6 @@ export class SearchService implements OnModuleInit {
             }
         }
 
-        // Rating filtering
         if (filters.rating_min !== undefined) {
             params['vote_average.gte'] = filters.rating_min;
         }
@@ -261,58 +278,50 @@ export class SearchService implements OnModuleInit {
     private findBestMatch(results: any[], query: string, searchRegex: RegExp | null): any | null {
         if (results.length === 0) return null;
 
-        // Score each result based on multiple factors
         const scoredResults = results.map(item => {
             let score = 0;
             const title = item.title || item.name || '';
             const overview = item.overview || '';
 
-            // Exact title match gets highest score
             if (title.toLowerCase() === query.toLowerCase()) {
                 score += 100;
-            }
-            // Title starts with query
-            else if (title.toLowerCase().startsWith(query.toLowerCase())) {
+            } else if (title.toLowerCase().startsWith(query.toLowerCase())) {
                 score += 80;
-            }
-            // Title contains query
-            else if (searchRegex && this.matchesSearchPattern(title, searchRegex)) {
+            } else if (searchRegex && this.matchesSearchPattern(title, searchRegex)) {
                 score += 60;
-            }
-            // Overview contains query
-            else if (searchRegex && this.matchesSearchPattern(overview, searchRegex)) {
+            } else if (searchRegex && this.matchesSearchPattern(overview, searchRegex)) {
                 score += 30;
             }
 
-            // Boost score based on popularity and rating
             score += (item.popularity || 0) * 0.1;
-            score += (item.vote_average || 0) * 2;
-            score += Math.log((item.vote_count || 1) + 1) * 5;
 
-            // Boost for recent releases
-            const releaseDate = item.release_date || item.first_air_date;
-            if (releaseDate) {
-                const releaseYear = new Date(releaseDate).getFullYear();
-                const currentYear = new Date().getFullYear();
-                const yearDiff = currentYear - releaseYear;
-                if (yearDiff <= 5) {
-                    score += (5 - yearDiff) * 2;
+            if (item.type === 'person' || item.media_type === 'person') {
+                score += (item.popularity || 0) * 0.5;
+            } else {
+                score += (item.vote_average || 0) * 2;
+                score += Math.log((item.vote_count || 1) + 1) * 5;
+
+                const releaseDate = item.release_date || item.first_air_date;
+                if (releaseDate) {
+                    const releaseYear = new Date(releaseDate).getFullYear();
+                    const currentYear = new Date().getFullYear();
+                    const yearDiff = currentYear - releaseYear;
+                    if (yearDiff <= 5) {
+                        score += (5 - yearDiff) * 2;
+                    }
                 }
             }
 
             return { ...item, searchScore: score };
         });
 
-        // Return the highest scoring item
         return scoredResults.sort((a, b) => b.searchScore - a.searchScore)[0];
     }
 
     async search(filters: SearchFilters) {
         const { query, page = 1, type = 'all', regex_search = false } = filters;
-        // clamp the requested page
         const safePage = Math.min(page, 25);
 
-        // if user asks beyond page 25, just return an empty result set
         if (page > 25) {
             return {
                 page: 25,
@@ -333,51 +342,70 @@ export class SearchService implements OnModuleInit {
             let totalResults = 0;
             const totalPages = 25;
 
-            // Create search pattern for enhanced matching
             const searchRegex = this.createSearchRegex(query, regex_search);
-
-            // For regex/case-insensitive search, we need to cast a wider net
             const searchQuery = regex_search ? '' : query;
 
-            if (type === 'all' || type === 'movie') {
+            // Use /search/multi for 'all' type to get movies, TV shows, and people in one request
+            if (type === 'all') {
+                const multiParams = {
+                    query: searchQuery || query,
+                    language: 'en-US',
+                    include_adult: filters.include_adult || false,
+                    page: safePage,
+                };
+
+                const multiRes = await axios.get(`${this.tmdbBaseUrl}/search/multi`, {
+                    params: multiParams,
+                    headers: { Authorization: `Bearer ${this.apiKey}` }
+                });
+
+                totalResults = Math.min(multiRes.data.total_results || 0, 500);
+
+                // Normalize all results based on their media_type
+                results = multiRes.data.results
+                    .filter((item: any) => item.media_type === 'movie' || item.media_type === 'tv' || item.media_type === 'person')
+                    .map((item: any) => this.normalizeResult(item));
+
+                if (regex_search && searchRegex) {
+                    results = results.filter((item: any) => {
+                        const text = item.title || item.name || '';
+                        const overview = item.overview || '';
+                        return this.matchesSearchPattern(text, searchRegex) ||
+                            this.matchesSearchPattern(overview, searchRegex);
+                    });
+                }
+            }
+            // Specific type searches
+            else if (type === 'movie') {
                 const movieParams = this.buildTMDBParams(filters, 'movie');
                 const movieEndpoint = filters.year_min || filters.year_max || filters.rating_min ||
                     filters.rating_max || filters.genres || filters.countries
                     ? '/discover/movie'
                     : '/search/movie';
 
-                // Use different params based on endpoint
                 const finalMovieParams = movieEndpoint === '/search/movie' ? {
                     query: searchQuery || query,
                     language: 'en-US',
                     include_adult: filters.include_adult || false,
-                    page,
+                    page: safePage,
                 } : movieParams;
 
                 const movieRes = await axios.get(`${this.tmdbBaseUrl}${movieEndpoint}`, {
-                    params: { ...finalMovieParams, page: safePage },
+                    params: finalMovieParams,
                     headers: { Authorization: `Bearer ${this.apiKey}` }
                 });
-                let movieTotalResults = Math.min(movieRes.data.total_results || 0, 500);
-                let movieTotalPages = Math.min(movieRes.data.total_pages || 0, 25);
-                let movies = movieRes.data.results.map((m: any) =>
-                    this.normalizeResult(m, 'movie')
-                );
 
-                // Apply regex/case-insensitive filtering if needed
+                totalResults = Math.min(movieRes.data.total_results || 0, 500);
+                results = movieRes.data.results.map((m: any) => this.normalizeResult(m, 'movie'));
+
                 if (regex_search && searchRegex) {
-                    movies = movies.filter((movie: any) =>
+                    results = results.filter((movie: any) =>
                         this.matchesSearchPattern(movie.title, searchRegex) ||
                         this.matchesSearchPattern(movie.overview, searchRegex)
                     );
                 }
-
-                results.push(...movies);
-                totalResults = Math.min(totalResults + movieTotalResults, 500);
-
             }
-
-            if (type === 'all' || type === 'tv') {
+            else if (type === 'tv') {
                 const tvParams = this.buildTMDBParams(filters, 'tv');
                 const tvEndpoint = filters.year_min || filters.year_max || filters.rating_min ||
                     filters.rating_max || filters.genres || filters.countries
@@ -388,52 +416,63 @@ export class SearchService implements OnModuleInit {
                     query: searchQuery || query,
                     language: 'en-US',
                     include_adult: filters.include_adult || false,
-                    page,
+                    page: safePage,
                 } : tvParams;
 
                 const tvRes = await axios.get(`${this.tmdbBaseUrl}${tvEndpoint}`, {
-                    params: { ...finalTvParams, page: safePage },
+                    params: finalTvParams,
                     headers: { Authorization: `Bearer ${this.apiKey}` }
                 });
-                let tvTotalResults = Math.min(tvRes.data.total_results || 0, 500);
-                let tvTotalPages = Math.min(tvRes.data.total_pages || 0, 25);
-                let tvShows = tvRes.data.results.map((m: any) =>
-                    this.normalizeResult(m, 'tv')
-                );
 
-                // Apply regex/case-insensitive filtering if needed
+                totalResults = Math.min(tvRes.data.total_results || 0, 500);
+                results = tvRes.data.results.map((t: any) => this.normalizeResult(t, 'tv'));
+
                 if (regex_search && searchRegex) {
-                    tvShows = tvShows.filter((show: any) =>
+                    results = results.filter((show: any) =>
                         this.matchesSearchPattern(show.title, searchRegex) ||
                         this.matchesSearchPattern(show.overview, searchRegex)
                     );
                 }
+            }
+            else if (type === 'person') {
+                const personParams = {
+                    query: searchQuery || query,
+                    language: 'en-US',
+                    include_adult: filters.include_adult || false,
+                    page: safePage,
+                };
 
-                results.push(...tvShows);
-                totalResults = Math.min(totalResults + tvTotalResults, 500);
+                const personRes = await axios.get(`${this.tmdbBaseUrl}/search/person`, {
+                    params: personParams,
+                    headers: { Authorization: `Bearer ${this.apiKey}` }
+                });
 
+                totalResults = Math.min(personRes.data.total_results || 0, 500);
+                results = personRes.data.results.map((p: any) => this.normalizeResult(p, 'person'));
+
+                if (regex_search && searchRegex) {
+                    results = results.filter((person: any) =>
+                        this.matchesSearchPattern(person.name, searchRegex)
+                    );
+                }
             }
 
-            // Apply additional client-side filtering for more precise results
             results = this.applyClientSideFilters(results, filters, searchRegex);
 
-            // Find best match before sorting
             let bestMatch = this.findBestMatch(results, query, searchRegex);
 
-            // If bestMatch exists, fetch trailer
-            if (bestMatch) {
+            if (bestMatch && bestMatch.type !== 'person' && bestMatch.media_type !== 'person') {
                 const trailerKey = await this.fetchTrailer(bestMatch.id, bestMatch.type);
-                bestMatch.trailer_key = trailerKey; // Add trailer_key property
+                bestMatch.trailer_key = trailerKey;
             }
 
-            // Sort results based on the sort parameter
             results = this.sortResults(results, filters.sort || 'relevance');
 
             return {
                 page,
                 total_results: totalResults,
                 total_pages: totalPages,
-                results: results.slice(0, 20), // Limit to 20 results per page
+                results: results.slice(0, 20),
                 best_match: bestMatch,
                 applied_filters: {
                     type: filters.type,
@@ -468,7 +507,6 @@ export class SearchService implements OnModuleInit {
             });
 
             if (res.data?.results?.length > 0) {
-                // Prefer YouTube trailers
                 const trailer = res.data.results.find(
                     (v: any) => v.type === 'Trailer' && v.site === 'YouTube'
                 );
@@ -483,14 +521,14 @@ export class SearchService implements OnModuleInit {
 
     private applyClientSideFilters(results: any[], filters: SearchFilters, searchRegex: RegExp | null) {
         return results.filter(item => {
-            // Enhanced text matching for regex/case-insensitive search
             if (filters.regex_search && searchRegex) {
-                const matchesTitle = this.matchesSearchPattern(item.title, searchRegex);
+                const matchesTitle = this.matchesSearchPattern(item.title || item.name, searchRegex);
                 const matchesOverview = this.matchesSearchPattern(item.overview, searchRegex);
                 if (!matchesTitle && !matchesOverview) return false;
             }
 
-            // Year filtering (client-side refinement)
+            if (item.type === 'person' || item.media_type === 'person') return true;
+
             if (filters.year_min || filters.year_max) {
                 const releaseDate = item.release_date || item.first_air_date;
                 if (releaseDate) {
@@ -500,11 +538,9 @@ export class SearchService implements OnModuleInit {
                 }
             }
 
-            // Rating filtering (client-side refinement)
             if (filters.rating_min !== undefined && item.vote_average < filters.rating_min) return false;
             if (filters.rating_max !== undefined && item.vote_average > filters.rating_max) return false;
 
-            // Genre filtering (client-side refinement)
             if (filters.genres) {
                 const requiredGenres = filters.genres.split(',').map(g => g.trim());
                 const itemGenres = item.genres || [];
@@ -514,7 +550,6 @@ export class SearchService implements OnModuleInit {
                 if (!hasRequiredGenre) return false;
             }
 
-            // Country filtering (client-side refinement)
             if (filters.countries) {
                 const requiredCountries = filters.countries.split(',').map(c => c.trim());
                 const itemCountries = item.origin_country || [];
@@ -530,14 +565,24 @@ export class SearchService implements OnModuleInit {
 
     private sortResults(results: any[], sortBy: string) {
         return results.sort((a, b) => {
+            const isAPerson = a.type === 'person' || a.media_type === 'person';
+            const isBPerson = b.type === 'person' || b.media_type === 'person';
+
             switch (sortBy) {
                 case 'rating':
+                    if (isAPerson || isBPerson) {
+                        return b.popularity - a.popularity;
+                    }
                     if (b.vote_average !== a.vote_average) {
                         return b.vote_average - a.vote_average;
                     }
                     return b.vote_count - a.vote_count;
 
                 case 'date':
+                    if (isAPerson && !isBPerson) return 1;
+                    if (isBPerson && !isAPerson) return -1;
+                    if (isAPerson && isBPerson) return b.popularity - a.popularity;
+
                     const dateA = new Date(a.release_date || a.first_air_date || 0);
                     const dateB = new Date(b.release_date || b.first_air_date || 0);
                     return dateB.getTime() - dateA.getTime();
@@ -547,92 +592,160 @@ export class SearchService implements OnModuleInit {
 
                 case 'relevance':
                 default:
-                    // Use search score if available, otherwise use popularity and vote count
                     if (a.searchScore !== undefined && b.searchScore !== undefined) {
                         return b.searchScore - a.searchScore;
                     }
-                    const scoreA = (a.popularity * 0.7) + (a.vote_count * 0.3);
-                    const scoreB = (b.popularity * 0.7) + (b.vote_count * 0.3);
+                    const scoreA = isAPerson
+                        ? a.popularity
+                        : (a.popularity * 0.7) + (a.vote_count * 0.3);
+                    const scoreB = isBPerson
+                        ? b.popularity
+                        : (b.popularity * 0.7) + (b.vote_count * 0.3);
                     return scoreB - scoreA;
             }
         });
     }
 
-    // Enhanced method for autocomplete/suggestions with regex support
-    async getSearchSuggestions(query: string, limit: number = 5, regexSearch: boolean = false) {
+    async getSearchSuggestions(
+        query: string,
+        limit: number = 5,
+        mode: 'content' | 'person' = 'content',
+        regexSearch: boolean = false
+    ) {
         if (!query?.trim()) return [];
 
         try {
+            this.logger.log(`========== SEARCH SUGGESTIONS DEBUG ==========`);
+            this.logger.log(`Query: "${query}", Limit: ${limit}, Mode: ${mode}, RegexSearch: ${regexSearch}`);
+
             const searchRegex = regexSearch ? this.createSearchRegex(query, true) : null;
 
-            const [movieRes, tvRes] = await Promise.all([
-                axios.get(`${this.tmdbBaseUrl}/search/movie`, {
-                    params: {
-                        query: regexSearch ? '' : query,
-                        language: 'en-US',
-                        include_adult: false,
-                        page: 1,
-                    },
-                    headers: { Authorization: `Bearer ${this.apiKey}` }
-                }),
-                axios.get(`${this.tmdbBaseUrl}/search/tv`, {
-                    params: {
-                        query: regexSearch ? '' : query,
-                        language: 'en-US',
-                        include_adult: false,
-                        page: 1,
-                    },
-                    headers: { Authorization: `Bearer ${this.apiKey}` }
-                }),
-            ]);
+            let endpoint: string;
+            let params: any = {
+                query: query,
+                language: 'en-US',
+                include_adult: false,
+            };
 
-            let movies = movieRes.data.results.slice(0, limit).map((m: any) => ({
-                id: m.id,
-                title: m.title,
-                type: 'movie',
-                year: m.release_date ? new Date(m.release_date).getFullYear() : null,
-                poster_path: m.poster_path,
-                vote_average: m.vote_average,
-                popularity: m.popularity,
-            }));
-
-            let tvShows = tvRes.data.results.slice(0, limit).map((m: any) => ({
-                id: m.id,
-                title: m.name,
-                type: 'tv',
-                year: m.first_air_date ? new Date(m.first_air_date).getFullYear() : null,
-                poster_path: m.poster_path,
-                vote_average: m.vote_average,
-                popularity: m.popularity,
-            }));
-
-            // Apply regex filtering if enabled
-            if (regexSearch && searchRegex) {
-                movies = movies.filter(m => this.matchesSearchPattern(m.title, searchRegex));
-                tvShows = tvShows.filter(m => this.matchesSearchPattern(m.title, searchRegex));
+            // Choose endpoint based on mode
+            if (mode === 'person') {
+                endpoint = `${this.tmdbBaseUrl}/search/person`;
+                this.logger.log(`Using PERSON search endpoint`);
+            } else {
+                // For content mode, use multi search but filter results
+                endpoint = `${this.tmdbBaseUrl}/search/multi`;
+                this.logger.log(`Using MULTI search endpoint (will filter for movies/TV)`);
             }
 
-            return [...movies, ...tvShows]
-                .sort((a, b) => {
-                    // Sort by relevance (popularity + rating)
-                    const scoreA = (a.popularity * 0.7) + (a.vote_average * 0.3);
-                    const scoreB = (b.popularity * 0.7) + (b.vote_average * 0.3);
-                    return scoreB - scoreA;
-                })
-                .slice(0, limit);
+            this.logger.log(`Making API call to: ${endpoint}`);
+            const response = await axios.get(endpoint, {
+                params,
+                headers: { Authorization: `Bearer ${this.apiKey}` }
+            });
+
+            this.logger.log(`API Response Status: ${response.status}`);
+            const results = response.data?.results ?? [];
+            this.logger.log(`Total results from TMDB: ${results.length}`);
+
+            // Filter results based on mode
+            let filteredResults: any[];
+            if (mode === 'person') {
+                filteredResults = results.filter((item: any) => item.media_type === 'person');
+                this.logger.log(`Filtered for PERSON only: ${filteredResults.length} results`);
+            } else {
+                // Content mode: only movies and TV shows
+                filteredResults = results.filter((item: any) =>
+                    item.media_type === 'movie' || item.media_type === 'tv'
+                );
+                this.logger.log(`Filtered for MOVIE/TV only: ${filteredResults.length} results`);
+            }
+
+            // Map results
+            let suggestions = filteredResults
+                .slice(0, limit * 2)
+                .map((item: any) => {
+                    if (item.media_type === 'person') {
+                        this.logger.log(`✓ Mapping PERSON: ${item.name} (ID: ${item.id})`);
+                        return {
+                            id: item.id,
+                            title: item.name,
+                            name: item.name,
+                            type: 'person',
+                            year: null,
+                            poster_path: item.profile_path || null,
+                            profile_path: item.profile_path || null,
+                            known_for_department: item.known_for_department,
+                            popularity: item.popularity,
+                        };
+                    } else if (item.media_type === 'tv') {
+                        this.logger.log(`✓ Mapping TV: ${item.name} (ID: ${item.id})`);
+                        return {
+                            id: item.id,
+                            title: item.name,
+                            type: 'tv',
+                            year: item.first_air_date ? new Date(item.first_air_date).getFullYear() : null,
+                            poster_path: item.poster_path || null,
+                            vote_average: item.vote_average,
+                            popularity: item.popularity,
+                        };
+                    } else {
+                        this.logger.log(`✓ Mapping MOVIE: ${item.title} (ID: ${item.id})`);
+                        return {
+                            id: item.id,
+                            title: item.title,
+                            type: 'movie',
+                            year: item.release_date ? new Date(item.release_date).getFullYear() : null,
+                            poster_path: item.poster_path || null,
+                            vote_average: item.vote_average,
+                            popularity: item.popularity,
+                        };
+                    }
+                });
+
+            this.logger.log(`Mapped suggestions: ${suggestions.length}`);
+
+            // Apply regex filter if needed
+            if (regexSearch && searchRegex) {
+                this.logger.log(`Applying regex filter with pattern: ${searchRegex}`);
+                const beforeRegex = suggestions.length;
+                suggestions = suggestions.filter((s: any) =>
+                    this.matchesSearchPattern(s.title || s.name, searchRegex)
+                );
+                this.logger.log(`After regex filter: ${suggestions.length} (removed ${beforeRegex - suggestions.length})`);
+            }
+
+            // Sort by relevance
+            const sorted = suggestions.sort((a: any, b: any) => {
+                const scoreA = a.type === 'person'
+                    ? (a.popularity || 0)
+                    : ((a.popularity || 0) * 0.7) + ((a.vote_average || 0) * 0.3);
+                const scoreB = b.type === 'person'
+                    ? (b.popularity || 0)
+                    : ((b.popularity || 0) * 0.7) + ((b.vote_average || 0) * 0.3);
+                return scoreB - scoreA;
+            });
+
+            const final = sorted.slice(0, limit);
+
+            this.logger.log(`Final results (limited to ${limit}):`);
+            final.forEach((item: any, index: number) => {
+                this.logger.log(`  ${index + 1}. ${item.title || item.name} - Type: ${item.type} - ID: ${item.id}`);
+            });
+
+            this.logger.log(`========== END DEBUG ==========`);
+
+            return final;
 
         } catch (error) {
-            this.logger.error('Failed to get search suggestions:', error);
+            this.logger.error('Failed to get search suggestions:', error?.response?.data || error?.message || error);
             return [];
         }
     }
 
-    // Get available genres
     getAvailableGenres() {
         return Object.values(this.genreMap).sort();
     }
 
-    // Get available countries
     getAvailableCountries() {
         return this.countryList.sort((a, b) => a.name.localeCompare(b.name));
     }
