@@ -606,138 +606,126 @@ export class SearchService implements OnModuleInit {
         });
     }
 
-    async getSearchSuggestions(
+    async getPersonSuggestions(
         query: string,
         limit: number = 5,
-        mode: 'content' | 'person' = 'content',
         regexSearch: boolean = false
     ) {
         if (!query?.trim()) return [];
 
         try {
-            this.logger.log(`========== SEARCH SUGGESTIONS DEBUG ==========`);
-            this.logger.log(`Query: "${query}", Limit: ${limit}, Mode: ${mode}, RegexSearch: ${regexSearch}`);
+            const searchRegex = regexSearch
+                ? this.createSearchRegex(query, true)
+                : null;
 
-            const searchRegex = regexSearch ? this.createSearchRegex(query, true) : null;
+            const response = await axios.get(
+                `${this.tmdbBaseUrl}/search/person`,
+                {
+                    params: {
+                        query,
+                        language: 'en-US',
+                        include_adult: false,
+                    },
+                    headers: {
+                        Authorization: `Bearer ${this.apiKey}`,
+                    },
+                }
+            );
 
-            let endpoint: string;
-            let params: any = {
-                query: query,
-                language: 'en-US',
-                include_adult: false,
-            };
-
-            // Choose endpoint based on mode
-            if (mode === 'person') {
-                endpoint = `${this.tmdbBaseUrl}/search/person`;
-                this.logger.log(`Using PERSON search endpoint`);
-            } else {
-                // For content mode, use multi search but filter results
-                endpoint = `${this.tmdbBaseUrl}/search/multi`;
-                this.logger.log(`Using MULTI search endpoint (will filter for movies/TV)`);
-            }
-
-            this.logger.log(`Making API call to: ${endpoint}`);
-            const response = await axios.get(endpoint, {
-                params,
-                headers: { Authorization: `Bearer ${this.apiKey}` }
-            });
-
-            this.logger.log(`API Response Status: ${response.status}`);
-            const results = response.data?.results ?? [];
-            this.logger.log(`Total results from TMDB: ${results.length}`);
-
-            // Filter results based on mode
-            let filteredResults: any[];
-            if (mode === 'person') {
-                filteredResults = results.filter((item: any) => item.media_type === 'person');
-                this.logger.log(`Filtered for PERSON only: ${filteredResults.length} results`);
-            } else {
-                // Content mode: only movies and TV shows
-                filteredResults = results.filter((item: any) =>
-                    item.media_type === 'movie' || item.media_type === 'tv'
-                );
-                this.logger.log(`Filtered for MOVIE/TV only: ${filteredResults.length} results`);
-            }
-
-            // Map results
-            let suggestions = filteredResults
+            let suggestions = (response.data?.results ?? [])
                 .slice(0, limit * 2)
-                .map((item: any) => {
-                    if (item.media_type === 'person') {
-                        this.logger.log(`✓ Mapping PERSON: ${item.name} (ID: ${item.id})`);
-                        return {
-                            id: item.id,
-                            title: item.name,
-                            name: item.name,
-                            type: 'person',
-                            year: null,
-                            poster_path: item.profile_path || null,
-                            profile_path: item.profile_path || null,
-                            known_for_department: item.known_for_department,
-                            popularity: item.popularity,
-                        };
-                    } else if (item.media_type === 'tv') {
-                        this.logger.log(`✓ Mapping TV: ${item.name} (ID: ${item.id})`);
-                        return {
-                            id: item.id,
-                            title: item.name,
-                            type: 'tv',
-                            year: item.first_air_date ? new Date(item.first_air_date).getFullYear() : null,
-                            poster_path: item.poster_path || null,
-                            vote_average: item.vote_average,
-                            popularity: item.popularity,
-                        };
-                    } else {
-                        this.logger.log(`✓ Mapping MOVIE: ${item.title} (ID: ${item.id})`);
-                        return {
-                            id: item.id,
-                            title: item.title,
-                            type: 'movie',
-                            year: item.release_date ? new Date(item.release_date).getFullYear() : null,
-                            poster_path: item.poster_path || null,
-                            vote_average: item.vote_average,
-                            popularity: item.popularity,
-                        };
-                    }
-                });
+                .map((item: any) => ({
+                    id: item.id,
+                    title: item.name,
+                    name: item.name,
+                    type: 'person',
+                    poster_path: item.profile_path || null,
+                    profile_path: item.profile_path || null,
+                    known_for_department: item.known_for_department,
+                    popularity: item.popularity,
+                }));
 
-            this.logger.log(`Mapped suggestions: ${suggestions.length}`);
-
-            // Apply regex filter if needed
             if (regexSearch && searchRegex) {
-                this.logger.log(`Applying regex filter with pattern: ${searchRegex}`);
-                const beforeRegex = suggestions.length;
-                suggestions = suggestions.filter((s: any) =>
-                    this.matchesSearchPattern(s.title || s.name, searchRegex)
+                suggestions = suggestions.filter(s =>
+                    this.matchesSearchPattern(s.name, searchRegex)
                 );
-                this.logger.log(`After regex filter: ${suggestions.length} (removed ${beforeRegex - suggestions.length})`);
             }
 
-            // Sort by relevance
-            const sorted = suggestions.sort((a: any, b: any) => {
-                const scoreA = a.type === 'person'
-                    ? (a.popularity || 0)
-                    : ((a.popularity || 0) * 0.7) + ((a.vote_average || 0) * 0.3);
-                const scoreB = b.type === 'person'
-                    ? (b.popularity || 0)
-                    : ((b.popularity || 0) * 0.7) + ((b.vote_average || 0) * 0.3);
-                return scoreB - scoreA;
-            });
-
-            const final = sorted.slice(0, limit);
-
-            this.logger.log(`Final results (limited to ${limit}):`);
-            final.forEach((item: any, index: number) => {
-                this.logger.log(`  ${index + 1}. ${item.title || item.name} - Type: ${item.type} - ID: ${item.id}`);
-            });
-
-            this.logger.log(`========== END DEBUG ==========`);
-
-            return final;
+            return suggestions
+                .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+                .slice(0, limit);
 
         } catch (error) {
-            this.logger.error('Failed to get search suggestions:', error?.response?.data || error?.message || error);
+            this.logger.error('Person suggestions failed', error);
+            return [];
+        }
+    }
+
+    async getContentSuggestions(
+        query: string,
+        limit: number = 5,
+        regexSearch: boolean = false
+    ) {
+        if (!query?.trim()) return [];
+
+        try {
+            const searchRegex = regexSearch
+                ? this.createSearchRegex(query, true)
+                : null;
+
+            const response = await axios.get(
+                `${this.tmdbBaseUrl}/search/multi`,
+                {
+                    params: {
+                        query,
+                        language: 'en-US',
+                        include_adult: false,
+                    },
+                    headers: {
+                        Authorization: `Bearer ${this.apiKey}`,
+                    },
+                }
+            );
+
+            let suggestions = (response.data?.results ?? [])
+                .filter(
+                    (item: any) =>
+                        item.media_type === 'movie' || item.media_type === 'tv'
+                )
+                .slice(0, limit * 2)
+                .map((item: any) => ({
+                    id: item.id,
+                    title: item.media_type === 'tv' ? item.name : item.title,
+                    type: item.media_type,
+                    year:
+                        item.media_type === 'tv'
+                            ? item.first_air_date
+                                ? new Date(item.first_air_date).getFullYear()
+                                : null
+                            : item.release_date
+                                ? new Date(item.release_date).getFullYear()
+                                : null,
+                    poster_path: item.poster_path || null,
+                    vote_average: item.vote_average,
+                    popularity: item.popularity,
+                }));
+
+            if (regexSearch && searchRegex) {
+                suggestions = suggestions.filter(s =>
+                    this.matchesSearchPattern(s.title, searchRegex)
+                );
+            }
+
+            return suggestions
+                .sort(
+                    (a, b) =>
+                        ((b.popularity || 0) * 0.7 + (b.vote_average || 0) * 0.3) -
+                        ((a.popularity || 0) * 0.7 + (a.vote_average || 0) * 0.3)
+                )
+                .slice(0, limit);
+
+        } catch (error) {
+            this.logger.error('Content suggestions failed', error);
             return [];
         }
     }

@@ -131,19 +131,26 @@ export default function SearchBarWithSuggestions({
   }, []);
 
   useEffect(() => {
-    if (debouncedValue.trim().length > 2 && open) {
+    if (debouncedValue.trim().length > 1 && open) {
       fetchSuggestions(debouncedValue, searchMode);
     } else {
       setSuggestions([]);
     }
   }, [debouncedValue, open, searchMode]);
 
-  const fetchSuggestions = async (query: string, mode: SearchMode) => {
+  const fetchSuggestions = async (
+    query: string,
+    type: 'content' | 'person'
+  ) => {
     setLoadingSuggestions(true);
+
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/all/search/suggestions?q=${encodeURIComponent(query)}&limit=8&mode=${mode}`
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/search/suggestions/${type}?q=${encodeURIComponent(
+          query
+        )}&limit=8`
       );
+
       if (response.ok) {
         const data = await response.json();
         setSuggestions(Array.isArray(data) ? data : []);
@@ -157,6 +164,7 @@ export default function SearchBarWithSuggestions({
       setLoadingSuggestions(false);
     }
   };
+
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -240,7 +248,7 @@ export default function SearchBarWithSuggestions({
     let path: string;
 
     if (suggestion.type === 'person') {
-      path = `/person/${suggestion.id}`;
+      path = `/celeb/${suggestion.id}`;
     } else {
       path = suggestion.type === 'tv' ? `/tv/${suggestion.id}` : `/movies/${suggestion.id}`;
     }
@@ -285,8 +293,8 @@ export default function SearchBarWithSuggestions({
                 <button
                   onClick={() => { setMobileMode('content'); setSearchMode('content'); }}
                   className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${mobileMode === 'content'
-                      ? 'bg-[#e94f37] text-white'
-                      : 'text-gray-300 hover:text-white'
+                    ? 'bg-[#e94f37] text-white'
+                    : 'text-gray-300 hover:text-white'
                     }`}
                 >
                   Movies & TV
@@ -294,8 +302,8 @@ export default function SearchBarWithSuggestions({
                 <button
                   onClick={() => { setMobileMode('person'); setSearchMode('person'); }}
                   className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${mobileMode === 'person'
-                      ? 'bg-[#e94f37] text-white'
-                      : 'text-gray-300 hover:text-white'
+                    ? 'bg-[#e94f37] text-white'
+                    : 'text-gray-300 hover:text-white'
                     }`}
                 >
                   People
@@ -566,8 +574,8 @@ export default function SearchBarWithSuggestions({
                   if (value.trim().length > 2) fetchSuggestions(value, 'content');
                 }}
                 className={`flex-1 py-1.5 px-3 rounded-full text-xs font-medium transition-all ${searchMode === 'content'
-                    ? 'bg-[#e94f37] text-white'
-                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  ? 'bg-[#e94f37] text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-white/5'
                   }`}
               >
                 Movies & TV
@@ -579,8 +587,8 @@ export default function SearchBarWithSuggestions({
                   if (value.trim().length > 2) fetchSuggestions(value, 'person');
                 }}
                 className={`flex-1 py-1.5 px-3 rounded-full text-xs font-medium transition-all ${searchMode === 'person'
-                    ? 'bg-[#e94f37] text-white'
-                    : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  ? 'bg-[#e94f37] text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-white/5'
                   }`}
               >
                 People

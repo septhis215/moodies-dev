@@ -112,12 +112,20 @@ export class SearchController {
         return this.searchService.search(filters);
     }
 
-    @Get('suggestions')
-    async getSearchSuggestions(@Query(ValidationPipe) query: SearchSuggestionsDto) {
-        return this.searchService.getSearchSuggestions(
+    @Get('suggestions/content')
+    getContentSuggestions(@Query(ValidationPipe) query: SearchSuggestionsDto) {
+        return this.searchService.getContentSuggestions(
             query.q,
             query.limit,
-            query.mode,
+            query.regex_search
+        );
+    }
+
+    @Get('suggestions/person')
+    getPersonSuggestions(@Query(ValidationPipe) query: SearchSuggestionsDto) {
+        return this.searchService.getPersonSuggestions(
+            query.q,
+            query.limit,
             query.regex_search
         );
     }

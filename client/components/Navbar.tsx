@@ -400,11 +400,10 @@ export function NavbarComponent() {
                           />
 
                           <span
-                            className={`font-semibold transition-colors ${
-                              isActive
-                                ? "text-[#e94f37]"
-                                : "text-gray-300 group-hover:text-white"
-                            }`}
+                            className={`font-semibold transition-colors ${isActive
+                              ? "text-[#e94f37]"
+                              : "text-gray-300 group-hover:text-white"
+                              }`}
                             style={{
                               fontSize: "clamp(1.1rem, 3.2vw, 2rem)",
                               letterSpacing: "-0.02em",
@@ -570,7 +569,7 @@ export function NavbarComponent() {
                           {user?.username ?? user?.name ?? "Guest"}
                         </h4>
                         <p className="text-gray-400 text-sm">
-                          {user?.email || "guest@example.com"}
+                          {user?.email || "Sign in for more features"}
                         </p>
                       </div>
 
@@ -773,7 +772,7 @@ export function NavbarComponent() {
                           {user?.username ?? user?.name ?? "Guest"}
                         </div>
                         <div className="text-xs text-gray-400 truncate">
-                          {user?.email || "guest@example.com"}
+                          {user?.email || "Sign in for more features"}
                         </div>
                       </div>
                     </div>
@@ -937,11 +936,10 @@ export function NavbarComponent() {
                     onMouseEnter={() => setActiveRoute(r.href)}
                     onFocus={() => setActiveRoute(r.href)}
                     onClick={() => setIsMobileOpen(false)}
-                    className={`relative font-semibold transition-all duration-200 ease-out leading-snug group flex items-center ${
-                      activeRoute === r.href
-                        ? "text-[#e94f37]"
-                        : "text-gray-100 hover:text-[#e94f37]"
-                    } pl-3 py-2 rounded-lg`}
+                    className={`relative font-semibold transition-all duration-200 ease-out leading-snug group flex items-center ${activeRoute === r.href
+                      ? "text-[#e94f37]"
+                      : "text-gray-100 hover:text-[#e94f37]"
+                      } pl-3 py-2 rounded-lg`}
                     style={{
                       fontSize: "clamp(0.95rem, 2.8vw, 1.5rem)",
                       paddingTop: "clamp(0.3rem, 0.8vh, 0.5rem)",
@@ -1013,7 +1011,7 @@ export function NavbarComponent() {
                     {user?.username ?? user?.name ?? "Guest"}
                   </div>
                   <div className="text-xs text-gray-400">
-                    {user?.email || "guest@example.com"}
+                    {user?.email || "Sign in for more features"}
                   </div>
                 </div>
               </div>
