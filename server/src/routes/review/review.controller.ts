@@ -16,18 +16,19 @@ import { ReviewBanGuard } from './guard/review-ban.guard';
 import { ReviewService } from './review.service';
 
 @Controller('reviews')
-@UseGuards(JwtAuthGuard)
 export class ReviewController {
   constructor(private readonly reviewsService: ReviewService) {}
 
   @Post()
-  @UseGuards(ReviewBanGuard) 
+  @UseGuards(JwtAuthGuard)
+  @UseGuards(ReviewBanGuard)
   createReview(@Req() req, @Body() dto: CreateReviewDto) {
     return this.reviewsService.createReview(req.user.id, dto);
   }
 
   @Post(':id/replies')
-  @UseGuards(ReviewBanGuard) !
+  @UseGuards(JwtAuthGuard)
+  @UseGuards(ReviewBanGuard)
   replyToReview(
     @Req() req,
     @Param('id') reviewId: string,
@@ -56,7 +57,24 @@ export class ReviewController {
     );
   }
 
+  @Get('media/:mediaType/:tmdbId/top-moods')
+  getTopMoods(
+    @Param('mediaType') mediaType: string,
+    @Param('tmdbId') tmdbId: string,
+  ) {
+    return this.reviewsService.getTopMoods(parseInt(tmdbId), mediaType);
+  }
+
+  @Get('media/:mediaType/:tmdbId/stats')
+  getReviewStats(
+    @Param('mediaType') mediaType: string,
+    @Param('tmdbId') tmdbId: string,
+  ) {
+    return this.reviewsService.getReviewStats(parseInt(tmdbId), mediaType);
+  }
+
   @Get('me/ban-status')
+  @UseGuards(JwtAuthGuard)
   getBanStatus(@Req() req) {
     return this.reviewsService.getReviewBanStatus(req.user);
   }

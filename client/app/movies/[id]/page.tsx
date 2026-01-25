@@ -55,6 +55,46 @@ async function fetchRecommendations(id: string) {
   }
 }
 
+async function fetchReviews(id: string) {
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(
+      `${base}/reviews/media/MOVIE/${id}?page=1&limit=10`,
+      {
+        next: { revalidate: 60 },
+        cache: "no-store", // Don't cache since reviews need auth
+      },
+    );
+    if (!res.ok)
+      return {
+        reviews: [],
+        topMoods: [],
+        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+      };
+    return res.json();
+  } catch (err) {
+    return {
+      reviews: [],
+      topMoods: [],
+      pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+    };
+  }
+}
+
+async function fetchReviewStats(id: string) {
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(`${base}/reviews/media/MOVIE/${id}/stats`, {
+      next: { revalidate: 60 },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -92,6 +132,8 @@ export default async function MoviePage({
   const data = await fetchDetails(id);
   const images = await fetchImages(id);
   const videos = await fetchVideos(id);
+  const reviews = await fetchReviews(id);
+  const reviewStats = await fetchReviewStats(id);
   const recommendations = await fetchRecommendations(id);
 
   if (!data) {
@@ -107,8 +149,11 @@ export default async function MoviePage({
 
   return (
     <main>
-      {/* Let the components handle presentation and any mapping/normalisation */}
-      <HeroContentCard data={data} />
+      <HeroContentCard
+        data={data}
+        topMoods={reviews.topMoods || []}
+        reviewStats={reviewStats}
+      />
 
       <div className="min-h-screen bg-black text-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-16 space-y-14">
@@ -120,10 +165,14 @@ export default async function MoviePage({
 
           <hr className="border-white/8 my-14" />
 
-          <MovieDetails data={data} contentId={id}/>
+          <MovieDetails data={data} contentId={id} />
 
           <hr className="border-white/8 my-14" />
-          <ReviewsSection reviews={data.reviews} contentId={id} />
+          <ReviewsSection
+            reviews={reviews.reviews}
+            contentId={id}
+            contentType="movie"
+          />
 
           <hr className="border-white/8 my-14" />
           <CommonCardCarousel

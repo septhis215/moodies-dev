@@ -37,7 +37,7 @@ export class ReviewService {
     });
 
     console.log('👤 User ban status:', user?.reviewBannedUntil);
-    
+
     const profanityResult = this.profanityFilter.check(dto.content);
 
     if (profanityResult.block) {
@@ -274,6 +274,68 @@ export class ReviewService {
         total,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  async getTopMoods(tmdbId: number, mediaType: string) {
+    const reviews = await this.prisma.review.findMany({
+      where: {
+        tmdbId,
+        mediaType: mediaType as any,
+        status: ReviewStatus.PUBLISHED,
+      },
+      select: {
+        moodEmojis: true,
+      },
+    });
+
+    const allMoodEmojis = reviews.flatMap((r) => r.moodEmojis);
+
+    const moodCounts = allMoodEmojis.reduce(
+      (acc, emoji) => {
+        acc[emoji] = (acc[emoji] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    const topMoods = Object.entries(moodCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 3)
+      .map(([emoji, count]) => ({ emoji, count }));
+
+    return {
+      tmdbId,
+      mediaType,
+      totalReviews: reviews.length,
+      topMoods,
+    };
+  }
+
+  async getReviewStats(tmdbId: number, mediaType: string) {
+    const reviews = await this.prisma.review.findMany({
+      where: {
+        tmdbId,
+        mediaType: mediaType as any,
+        status: ReviewStatus.PUBLISHED,
+        affectsRating: true, 
+      },
+      select: {
+        rating: true,
+      },
+    });
+
+    const totalRatings = reviews.length;
+    const averageRating =
+      totalRatings > 0
+        ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / totalRatings
+        : 0;
+
+    return {
+      tmdbId,
+      mediaType,
+      totalRatings,
+      averageRating: Math.round(averageRating * 10) / 10, // Round to 1 decimal place
     };
   }
 

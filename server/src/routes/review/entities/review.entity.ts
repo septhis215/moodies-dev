@@ -35,7 +35,6 @@ export class ReviewEntity implements PrismaReview {
 
   toPublic() {
     const {
-      id,
       userId,
       toxicityScore,
       profanityHit,

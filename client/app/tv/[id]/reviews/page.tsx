@@ -7,13 +7,50 @@ type Props = {
   searchParams: Promise<{ highlight?: string }>;
 };
 
+async function fetchReviews(id: string) {
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(`${base}/reviews/media/TV/${id}?page=1&limit=100`, {
+      next: { revalidate: 60 },
+      cache: "no-store",
+    });
+    if (!res.ok)
+      return {
+        reviews: [],
+        topMoods: [],
+        pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
+      };
+    return res.json();
+  } catch (err) {
+    return {
+      reviews: [],
+      topMoods: [],
+      pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
+    };
+  }
+}
+
+async function fetchReviewStats(id: string, mediaType: string) {
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(`${base}/reviews/media/${mediaType}/${id}/stats`, {
+      next: { revalidate: 60 },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  return { title: `Reviews for ${id}` }; // You could fetch tv title here too
+  return { title: `Reviews for ${id}` };
 }
 
 export default async function ReviewsPage({ params, searchParams }: Props) {
@@ -22,7 +59,6 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
 
   const base = process.env.NEST_API_URL ?? "http://localhost:4000";
 
-  // Fetch tv details (which includes reviews)
   const res = await fetch(`${base}/tv/details/${id}`, {
     next: { revalidate: 60 },
   });
@@ -33,7 +69,7 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
         <div className="text-center">
           <h2 className="text-2xl font-bold">Reviews not available</h2>
           <p className="mt-2 text-gray-400">
-            Could not fetch reviews for this tv.
+            Could not fetch reviews for this TV show.
           </p>
         </div>
       </main>
@@ -41,12 +77,45 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
   }
 
   const data = await res.json();
-  const reviews = data.reviews ?? [];
-  const tvInfo = data.info; // Get tv info from the response
+  const reviewsData = await fetchReviews(id);
+  const tvInfo = data.info;
+  const mediaType = tvInfo.content_type === "tv" ? "TV" : "MOVIE";
+  const reviewStats = await fetchReviewStats(id, mediaType);
+
+  const transformedReviews = reviewsData.reviews.map((r: any) => ({
+    id: r.id,
+    author: r.user?.username || "Anonymous",
+    author_details: {
+      username: r.user?.username,
+      name: r.user?.username,
+      avatar_path: r.user?.avatarUrl,
+      rating: r.rating,
+    },
+    content: r.content,
+    created_at: r.createdAt,
+    updated_at: r.updatedAt,
+    url: "",
+    moodEmojis: r.moodEmojis || [],
+    replies:
+      r.replies?.map((reply: any) => ({
+        content: reply.content,
+        created_at: reply.createdAt,
+        user: {
+          username: reply.user?.username || "Anonymous",
+          avatar_path: reply.user?.avatarUrl,
+        },
+      })) || [],
+  }));
 
   return (
     <main className="min-h-screen bg-black text-slate-100">
-      <AllReviews reviews={reviews} info={tvInfo} id={id} />
+      <AllReviews
+        reviews={transformedReviews}
+        info={tvInfo}
+        id={id}
+        topMoods={reviewsData.topMoods || []}
+        reviewStats={reviewStats}
+      />
     </main>
   );
 }
