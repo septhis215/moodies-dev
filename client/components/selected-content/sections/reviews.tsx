@@ -8,6 +8,7 @@ import { Users2, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/context/AuthProvider";
+import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
 
 type Review = {
   id: string;
@@ -22,13 +23,13 @@ type Review = {
   created_at: string;
   updated_at: string;
   url: string;
+  moodEmojis?: string[];
 };
 
 interface ReviewsSectionProps {
-  // accept either an array or TMDB-style object { results: Review[] }
   reviews: Review[] | { results?: Review[] } | undefined;
-  contentId?: string; // optional id used to build the "view all" link
-  contentType?: "movie" | "tv"; // default is movie; pass "tv" from your tv page
+  contentId?: string;
+  contentType?: "movie" | "tv";
 }
 
 export default function ReviewsSection({
@@ -36,24 +37,27 @@ export default function ReviewsSection({
   contentId,
   contentType,
 }: ReviewsSectionProps) {
-  // Normalize incoming reviews to an array
   const reviewsArray: Review[] = Array.isArray(reviews)
-    ? reviews
-    : (reviews && (reviews as any).results) || [];
+    ? reviews.map((r: any) => ({
+        id: r.id || `review-${r.createdAt}`,
+        author: r.user?.username || "Anonymous",
+        author_details: {
+          username: r.user?.username,
+          name: r.user?.username,
+          avatar_path: r.user?.avatarUrl,
+          rating: r.rating,
+        },
+        content: r.content,
+        created_at: r.createdAt,
+        updated_at: r.updatedAt,
+        url: "",
+        moodEmojis: r.moodEmojis || [],
+      }))
+    : [];
 
-  const [localReviews, setLocalReviews] = useState<Review[]>(
-    reviewsArray ? [...reviewsArray] : []
-  );
   const [sortBy, setSortBy] = useState<"latest" | "highest" | "popularity">(
-    "latest"
+    "latest",
   );
-
-  useEffect(() => {
-    const map: Record<string, number> = {};
-    localReviews.forEach((r) => {
-      map[r.id] = Math.max(0, Math.round(popularityProxy(r) / 2));
-    });
-  }, []);
 
   function popularityProxy(r: Review) {
     const rating = r.author_details?.rating ?? 0;
@@ -62,12 +66,12 @@ export default function ReviewsSection({
   }
 
   const sorted = useMemo(() => {
-    const arr = [...localReviews];
+    const arr = [...reviewsArray];
     switch (sortBy) {
       case "latest":
         arr.sort(
           (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         );
         break;
       case "highest":
@@ -88,38 +92,15 @@ export default function ReviewsSection({
         break;
     }
     return arr;
-  }, [localReviews, sortBy]);
+  }, [reviewsArray, sortBy]);
 
   const topThree = sorted.slice(0, 3);
-
-  function addLocalReview(payload: {
-    author: string;
-    content: string;
-    rating?: number;
-  }) {
-    const now = new Date().toISOString();
-    const newReview: Review = {
-      id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      author: "Guest User",
-      author_details: {
-        username: payload.author?.toLowerCase() || "anonymous",
-        name: payload.author || undefined,
-        avatar_path: undefined,
-        rating: payload.rating ?? undefined,
-      },
-      content: payload.content,
-      created_at: now,
-      updated_at: now,
-      url: "",
-    };
-    setLocalReviews((prev) => [newReview, ...prev]);
-  }
 
   // build base path depending on contentType (movie or tv)
   const basePath = contentType === "tv" ? "tv" : "movies";
   const viewAllHref = contentId ? `/${basePath}/${contentId}/reviews` : "#";
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const toggleExpand = (reviewId: string) => {
@@ -232,12 +213,21 @@ export default function ReviewsSection({
 
                       <div className="flex-shrink-0 flex items-center gap-3">
                         <RatingDisplay rating={r.author_details?.rating} />
+
+                        {/* Add mood emojis display */}
+                        {r.moodEmojis && r.moodEmojis.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            {r.moodEmojis.slice(0, 3).map((emoji, idx) => (
+                              <span key={idx} className="text-sm">
+                                {emoji}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
                         <div className="text-xs text-slate-400">
                           {(r.content?.length ?? 0) > 0
-                            ? `${Math.min(
-                                10,
-                                Math.round(r.content.length / 25)
-                              )} ch`
+                            ? `${Math.min(10, Math.round(r.content.length / 25))} ch`
                             : ""}
                         </div>
                       </div>
@@ -267,7 +257,7 @@ export default function ReviewsSection({
                         {contentId ? (
                           <Link
                             href={`/${basePath}/${contentId}/reviews?highlight=${encodeURIComponent(
-                              r.id
+                              r.id,
                             )}`}
                             className="text-xs text-indigo-400 hover:underline truncate"
                           >
@@ -328,7 +318,7 @@ export default function ReviewsSection({
 
       {/* Write a review form */}
       <div className="mt-8 rounded-3xl p-6 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl">
-        <ReviewForm onSubmit={addLocalReview} />
+        <ReviewForm contentId={contentId} contentType={contentType} />
       </div>
     </section>
   );
@@ -430,16 +420,14 @@ function RatingDisplay({ rating }: { rating?: number }) {
 }
 
 function ReviewForm({
-  onSubmit,
+  contentId,
+  contentType,
 }: {
-  onSubmit: (v: {
-    author: string;
-    content: string;
-    rating?: number;
-    mood?: string;
-  }) => void;
+  contentId?: string;
+  contentType?: "movie" | "tv";
 }) {
   const { isAuthenticated, user } = useAuth();
+  const { banStatus, loading: banLoading } = useReviewBanStatus();
   const [author, setAuthor] = useState("");
   const [content, setContent] = useState("");
   const [rating, setRating] = useState<number | null>(null);
@@ -447,6 +435,15 @@ function ReviewForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
+
+  const moodToEmoji: Record<string, string> = {
+    amazing: "🔥",
+    loved: "❤️",
+    enjoyed: "😊",
+    okay: "😐",
+    meh: "😕",
+    disliked: "😞",
+  };
 
   // Set author name from authenticated user on mount
   useEffect(() => {
@@ -460,11 +457,10 @@ function ReviewForm({
     setRating((prev) => (prev === newRating ? null : newRating));
   }
 
-  function handleSubmit(e?: React.FormEvent) {
+  async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
 
-    // Check if user is authenticated
     if (!isAuthenticated) {
       Swal.fire({
         icon: "warning",
@@ -477,6 +473,11 @@ function ReviewForm({
           window.location.href = "/auth/login";
         }
       });
+      return;
+    }
+
+    if (!contentId) {
+      setError("Unable to submit review: content ID is missing");
       return;
     }
 
@@ -496,31 +497,59 @@ function ReviewForm({
     }
 
     setSubmitting(true);
+
     try {
-      onSubmit({
-        author: user?.username ?? user?.name ?? "Anonymous",
-        content: content.trim(),
-        rating: rating,
-        mood: mood,
+      const token = localStorage.getItem("authToken");
+
+      const response = await fetch("http://localhost:4000/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rating: rating,
+          content: content.trim(),
+          moodEmojis: [moodToEmoji[mood]],
+          tmdbId: contentId ? parseInt(contentId) : 0,
+          mediaType: (contentType?.toUpperCase() || "MOVIE") as "MOVIE" | "TV",
+        }),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to submit review");
+      }
+
+      await response.json();
 
       // Show success message
       Swal.fire({
         icon: "success",
         title: "Review Submitted!",
-        text: "Thank you for sharing your thoughts!",
+        text: "Refreshing page...",
         confirmButtonColor: "#e94f37",
-        timer: 2000,
+        timer: 1500,
+        showConfirmButton: false,
       });
 
+      // Reset form
       setContent("");
       setRating(null);
       setMood(null);
+
+      // Reload the page to fetch updated reviews
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to submit review";
+
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Failed to submit review. Please try again.",
+        text: errorMessage,
         confirmButtonColor: "#e94f37",
       });
     } finally {
@@ -552,6 +581,112 @@ function ReviewForm({
     );
   }
 
+  // Show banned state if user is banned
+  if (banStatus.banned) {
+    return (
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-950/30 via-slate-900/80 to-slate-950/80 border border-red-500/20 shadow-xl">
+        {/* Subtle pattern overlay */}
+        <div className="absolute inset-0 opacity-5">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 10px,
+              rgba(239, 68, 68, 0.2) 10px,
+              rgba(239, 68, 68, 0.2) 20px
+            )`,
+            }}
+          />
+        </div>
+
+        <div className="relative p-5">
+          <div className="flex items-start gap-4">
+            {/* Icon */}
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500/15 to-red-600/15 border border-red-500/30 flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-red-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-bold mb-1 bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+                Review Privileges Suspended
+              </h3>
+              <p className="text-slate-400 text-xs mb-3">
+                Temporarily restricted due to policy violations
+              </p>
+
+              {/* Compact info grid */}
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                  <span className="text-red-300">
+                    Profanity & harmful content detected
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-red-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span className="text-slate-300 text-xs">
+                    Expires in:{" "}
+                    <span className="font-semibold text-red-400">
+                      {banStatus?.timeRemaining || "Unknown"}
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Small info note */}
+              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                <svg
+                  className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <p className="text-slate-400 text-xs leading-relaxed">
+                  Your privileges will be restored automatically after the ban
+                  expires.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       {/* Dynamic background based on mood */}
@@ -560,16 +695,16 @@ function ReviewForm({
           mood === "amazing"
             ? "bg-gradient-to-br from-orange-500/20 to-red-500/20"
             : mood === "loved"
-            ? "bg-gradient-to-br from-pink-500/20 to-rose-500/20"
-            : mood === "enjoyed"
-            ? "bg-gradient-to-br from-green-500/20 to-emerald-500/20"
-            : mood === "okay"
-            ? "bg-gradient-to-br from-slate-500/20 to-gray-500/20"
-            : mood === "meh"
-            ? "bg-gradient-to-br from-gray-600/20 to-slate-600/20"
-            : mood === "disliked"
-            ? "bg-gradient-to-br from-slate-700/20 to-gray-700/20"
-            : "bg-slate-900/50"
+              ? "bg-gradient-to-br from-pink-500/20 to-rose-500/20"
+              : mood === "enjoyed"
+                ? "bg-gradient-to-br from-green-500/20 to-emerald-500/20"
+                : mood === "okay"
+                  ? "bg-gradient-to-br from-slate-500/20 to-gray-500/20"
+                  : mood === "meh"
+                    ? "bg-gradient-to-br from-gray-600/20 to-slate-600/20"
+                    : mood === "disliked"
+                      ? "bg-gradient-to-br from-slate-700/20 to-gray-700/20"
+                      : "bg-slate-900/50"
         }`}
       />
 
@@ -581,16 +716,16 @@ function ReviewForm({
             mood === "amazing"
               ? "rgba(249, 115, 22, 0.3)"
               : mood === "loved"
-              ? "rgba(236, 72, 153, 0.3)"
-              : mood === "enjoyed"
-              ? "rgba(34, 197, 94, 0.3)"
-              : mood === "okay"
-              ? "rgba(100, 116, 139, 0.3)"
-              : mood === "meh"
-              ? "rgba(75, 85, 99, 0.3)"
-              : mood === "disliked"
-              ? "rgba(71, 85, 105, 0.3)"
-              : "rgba(255, 255, 255, 0.1)",
+                ? "rgba(236, 72, 153, 0.3)"
+                : mood === "enjoyed"
+                  ? "rgba(34, 197, 94, 0.3)"
+                  : mood === "okay"
+                    ? "rgba(100, 116, 139, 0.3)"
+                    : mood === "meh"
+                      ? "rgba(75, 85, 99, 0.3)"
+                      : mood === "disliked"
+                        ? "rgba(71, 85, 105, 0.3)"
+                        : "rgba(255, 255, 255, 0.1)",
         }}
       >
         {/* Header with dynamic accent */}
@@ -601,31 +736,31 @@ function ReviewForm({
               mood === "amazing"
                 ? "text-orange-300"
                 : mood === "loved"
-                ? "text-pink-300"
-                : mood === "enjoyed"
-                ? "text-green-300"
-                : mood === "okay"
-                ? "text-slate-400"
-                : mood === "meh"
-                ? "text-gray-400"
-                : mood === "disliked"
-                ? "text-slate-500"
-                : "text-slate-400"
+                  ? "text-pink-300"
+                  : mood === "enjoyed"
+                    ? "text-green-300"
+                    : mood === "okay"
+                      ? "text-slate-400"
+                      : mood === "meh"
+                        ? "text-gray-400"
+                        : mood === "disliked"
+                          ? "text-slate-500"
+                          : "text-slate-400"
             }`}
           >
             {mood === "amazing"
               ? "🔥 Amazing! Tell us what made it incredible"
               : mood === "loved"
-              ? "❤️ You loved it! Share what touched your heart"
-              : mood === "enjoyed"
-              ? "😊 Great! What did you enjoy most?"
-              : mood === "okay"
-              ? "😐 It was okay. What worked and what didn't?"
-              : mood === "meh"
-              ? "😕 Not impressed? Tell us why"
-              : mood === "disliked"
-              ? "😞 Sorry it disappointed. What went wrong?"
-              : "Share your experience with the community"}
+                ? "❤️ You loved it! Share what touched your heart"
+                : mood === "enjoyed"
+                  ? "😊 Great! What did you enjoy most?"
+                  : mood === "okay"
+                    ? "😐 It was okay. What worked and what didn't?"
+                    : mood === "meh"
+                      ? "😕 Not impressed? Tell us why"
+                      : mood === "disliked"
+                        ? "😞 Sorry it disappointed. What went wrong?"
+                        : "Share your experience with the community"}
           </p>
         </div>
 
@@ -723,16 +858,16 @@ function ReviewForm({
                 mood === "amazing"
                   ? "rgb(249, 115, 22)"
                   : mood === "loved"
-                  ? "rgb(236, 72, 153)"
-                  : mood === "enjoyed"
-                  ? "rgb(34, 197, 94)"
-                  : mood === "okay"
-                  ? "rgb(100, 116, 139)"
-                  : mood === "meh"
-                  ? "rgb(75, 85, 99)"
-                  : mood === "disliked"
-                  ? "rgb(71, 85, 105)"
-                  : "rgb(255, 255, 255)",
+                    ? "rgb(236, 72, 153)"
+                    : mood === "enjoyed"
+                      ? "rgb(34, 197, 94)"
+                      : mood === "okay"
+                        ? "rgb(100, 116, 139)"
+                        : mood === "meh"
+                          ? "rgb(75, 85, 99)"
+                          : mood === "disliked"
+                            ? "rgb(71, 85, 105)"
+                            : "rgb(255, 255, 255)",
             }}
           >
             <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
@@ -747,16 +882,16 @@ function ReviewForm({
                   mood === "amazing"
                     ? "rgb(249, 115, 22)"
                     : mood === "loved"
-                    ? "rgb(236, 72, 153)"
-                    : mood === "enjoyed"
-                    ? "rgb(34, 197, 94)"
-                    : mood === "okay"
-                    ? "rgb(100, 116, 139)"
-                    : mood === "meh"
-                    ? "rgb(75, 85, 99)"
-                    : mood === "disliked"
-                    ? "rgb(71, 85, 105)"
-                    : "rgba(255, 255, 255, 0.3)",
+                      ? "rgb(236, 72, 153)"
+                      : mood === "enjoyed"
+                        ? "rgb(34, 197, 94)"
+                        : mood === "okay"
+                          ? "rgb(100, 116, 139)"
+                          : mood === "meh"
+                            ? "rgb(75, 85, 99)"
+                            : mood === "disliked"
+                              ? "rgb(71, 85, 105)"
+                              : "rgba(255, 255, 255, 0.3)",
               }}
             >
               <span className="text-slate-400 text-xs font-semibold">
@@ -816,16 +951,16 @@ function ReviewForm({
                 mood === "amazing"
                   ? "rgb(249, 115, 22)"
                   : mood === "loved"
-                  ? "rgb(236, 72, 153)"
-                  : mood === "enjoyed"
-                  ? "rgb(34, 197, 94)"
-                  : mood === "okay"
-                  ? "rgb(100, 116, 139)"
-                  : mood === "meh"
-                  ? "rgb(75, 85, 99)"
-                  : mood === "disliked"
-                  ? "rgb(71, 85, 105)"
-                  : "rgb(255, 255, 255)",
+                    ? "rgb(236, 72, 153)"
+                    : mood === "enjoyed"
+                      ? "rgb(34, 197, 94)"
+                      : mood === "okay"
+                        ? "rgb(100, 116, 139)"
+                        : mood === "meh"
+                          ? "rgb(75, 85, 99)"
+                          : mood === "disliked"
+                            ? "rgb(71, 85, 105)"
+                            : "rgb(255, 255, 255)",
             }}
           >
             <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
@@ -842,16 +977,16 @@ function ReviewForm({
                     mood === "amazing"
                       ? "rgb(249, 115, 22)"
                       : mood === "loved"
-                      ? "rgb(236, 72, 153)"
-                      : mood === "enjoyed"
-                      ? "rgb(34, 197, 94)"
-                      : mood === "okay"
-                      ? "rgb(100, 116, 139)"
-                      : mood === "meh"
-                      ? "rgb(75, 85, 99)"
-                      : mood === "disliked"
-                      ? "rgb(71, 85, 105)"
-                      : "rgb(148, 163, 184)",
+                        ? "rgb(236, 72, 153)"
+                        : mood === "enjoyed"
+                          ? "rgb(34, 197, 94)"
+                          : mood === "okay"
+                            ? "rgb(100, 116, 139)"
+                            : mood === "meh"
+                              ? "rgb(75, 85, 99)"
+                              : mood === "disliked"
+                                ? "rgb(71, 85, 105)"
+                                : "rgb(148, 163, 184)",
                 }}
               >
                 {user?.username ?? user?.name ?? "User"}
@@ -894,22 +1029,22 @@ function ReviewForm({
           <button
             type="submit"
             disabled={submitting}
-            className="px-4 py-1.5 font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-xs"
+            className="px-4 py-1.5 font-semibold rounded-lg transition-all cursor-pointer text-xs disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               background:
                 mood === "amazing"
                   ? "linear-gradient(to right, rgb(249, 115, 22), rgb(239, 68, 68))"
                   : mood === "loved"
-                  ? "linear-gradient(to right, rgb(236, 72, 153), rgb(244, 63, 94))"
-                  : mood === "enjoyed"
-                  ? "linear-gradient(to right, rgb(34, 197, 94), rgb(16, 185, 129))"
-                  : mood === "okay"
-                  ? "linear-gradient(to right, rgb(100, 116, 139), rgb(107, 114, 128))"
-                  : mood === "meh"
-                  ? "linear-gradient(to right, rgb(75, 85, 99), rgb(100, 116, 139))"
-                  : mood === "disliked"
-                  ? "linear-gradient(to right, rgb(71, 85, 105), rgb(107, 114, 128))"
-                  : "white",
+                    ? "linear-gradient(to right, rgb(236, 72, 153), rgb(244, 63, 94))"
+                    : mood === "enjoyed"
+                      ? "linear-gradient(to right, rgb(34, 197, 94), rgb(16, 185, 129))"
+                      : mood === "okay"
+                        ? "linear-gradient(to right, rgb(100, 116, 139), rgb(107, 114, 128))"
+                        : mood === "meh"
+                          ? "linear-gradient(to right, rgb(75, 85, 99), rgb(100, 116, 139))"
+                          : mood === "disliked"
+                            ? "linear-gradient(to right, rgb(71, 85, 105), rgb(107, 114, 128))"
+                            : "white",
               color: mood ? "white" : "black",
             }}
           >

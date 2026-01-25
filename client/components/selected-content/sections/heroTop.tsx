@@ -234,56 +234,131 @@ function TrailerModal({
   );
 }
 
-function StarRating({ rating }: { rating: number }) {
-  // If rating is 0 or very low, show empty stars with "Not Rated Yet"
-  if (rating === 0 || rating < 0.5) {
+function StarRating({
+  rating,
+  tmdbRating,
+  showTmdb = false,
+}: {
+  rating: number;
+  tmdbRating?: number;
+  showTmdb?: boolean;
+}) {
+  if (
+    (rating === 0 || rating < 0.5) &&
+    tmdbRating &&
+    tmdbRating > 0 &&
+    !showTmdb
+  ) {
     return (
-      <div className="flex items-center gap-1 text-sm">
+      <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-2 rounded-lg">
+        <div className="bg-[#0d253f] rounded px-2 py-0.5 border border-[#01b4e4]/30">
+          <span className="text-[#01b4e4] font-bold text-xs tracking-wide">
+            TMDb
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {Array.from({ length: 5 }).map((_, i) => {
+            const fullStars = Math.round(tmdbRating / 2);
+            return (
+              <svg
+                key={i}
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                className={`w-4 h-4 ${
+                  i < fullStars
+                    ? "text-[#01b4e4] fill-[#01b4e4]"
+                    : "text-slate-600"
+                }`}
+                fill={i < fullStars ? "currentColor" : "none"}
+                stroke="currentColor"
+              >
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            );
+          })}
+          <span className="ml-1 text-base font-bold text-white">
+            {tmdbRating.toFixed(1)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if ((rating === 0 || rating < 0.5) && (!tmdbRating || tmdbRating === 0)) {
+    return (
+      <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-2 rounded-lg">
         {Array.from({ length: 5 }).map((_, i) => (
           <svg
             key={i}
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
-            className="w-4 h-4 text-white/30"
+            className="w-5 h-5 text-white/20"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth="2"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 .587l3.668 7.431L23.4 9.75l-5.7 5.56L19.336 24 12 20.202 4.663 24l1.636-8.69L.6 9.75l7.732-1.732L12 .587z"
-            />
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
           </svg>
         ))}
-        <span className="ml-2 text-xs text-white/85">Not Rated Yet</span>
+        <span className="ml-2 text-sm text-white/60 font-medium">
+          Not Rated
+        </span>
       </div>
     );
   }
 
-  const fullStars = Math.round(rating / 2); // convert 0-10 -> 0-5
+  const fullStars = Math.round(rating / 2);
+
   return (
-    <div className="flex items-center gap-1 text-sm">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <svg
-          key={i}
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          className={`w-4 h-4 ${
-            i < fullStars ? "text-yellow-400" : "text-white/85"
-          }`}
-          fill={i < fullStars ? "currentColor" : "none"}
-          stroke="currentColor"
-        >
-          <path
-            strokeWidth="0"
-            d="M12 .587l3.668 7.431L23.4 9.75l-5.7 5.56L19.336 24 12 20.202 4.663 24l1.636-8.69L.6 9.75l7.732-1.732L12 .587z"
-          />
-        </svg>
-      ))}
-      <span className="ml-2 text-sm font-semibold text-white/95 bg-white/10 px-2 py-0.5 rounded">
-        {rating.toFixed(1)}
-      </span>
+    <div className="flex items-center gap-4">
+      <div className="flex items-center gap-1.5 bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border border-yellow-500/20 px-3 py-2 rounded-lg shadow-lg">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <svg
+            key={i}
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            className={`w-5 h-5 transition-all ${
+              i < fullStars
+                ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]"
+                : "text-slate-600"
+            }`}
+            fill={i < fullStars ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth={i < fullStars ? "0" : "2"}
+          >
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+        ))}
+        <span className="ml-1 text-base font-bold text-white">
+          {rating.toFixed(1)}
+        </span>
+      </div>
+
+      {showTmdb && tmdbRating && tmdbRating > 0 && (
+        <>
+          <div className="h-8 w-px bg-white/20" />
+          <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-2 rounded-lg">
+            <div className="bg-[#0d253f] rounded px-2 py-0.5 border border-[#01b4e4]/30">
+              <span className="text-[#01b4e4] font-bold text-xs tracking-wide">
+                TMDb
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                className="w-4 h-4 text-[#01b4e4] fill-[#01b4e4]"
+                fill="currentColor"
+              >
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              <span className="text-base font-bold text-white">
+                {tmdbRating.toFixed(1)}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -314,7 +389,7 @@ function extractYear(dateString: string): string {
 // Helper function to find director/creator from crew or created_by
 function findDirectorOrCreator(
   crew: MovieDetailsData["credits"]["crew"] | TvDetailsData["credits"]["crew"],
-  createdBy?: Array<{ id: number; name: string }>
+  createdBy?: Array<{ id: number; name: string }>,
 ): string {
   const director = crew.find((person) => person.job === "Director");
   if (director) return director.name;
@@ -357,13 +432,19 @@ function ReadMore({ text, limit = 300 }: { text: string; limit?: number }) {
   );
 }
 
-// Component that accepts either Content, MovieDetailsData, or TvDetailsData
 interface HeroContentCardProps {
   content?: Content;
   data?: MovieDetailsData | TvDetailsData;
+  topMoods?: Array<{ emoji: string; count: number }>;
+  reviewStats?: { totalRatings: number; averageRating: number };
 }
 
-export function HeroContentCard({ content, data }: HeroContentCardProps) {
+export function HeroContentCard({
+  content,
+  data,
+  topMoods = [],
+  reviewStats,
+}: HeroContentCardProps) {
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
   const router = useRouter();
 
@@ -397,7 +478,11 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
         : "/placeholder-backdrop.jpg",
       genres: data.info.genres.map((g) => g.name),
       runtime: formatRuntime(data.info.runtime || 0),
-      rating: data.info.vote_average,
+      // Use custom stats if available, otherwise fall back to TMDB
+      rating:
+        reviewStats && reviewStats.totalRatings > 0
+          ? reviewStats.averageRating
+          : data.info.vote_average,
       overview: data.info.overview,
       director:
         data.info.director ||
@@ -408,7 +493,7 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
           ? data.info.content_rating
           : undefined,
     };
-  }, [content, data]);
+  }, [content, data, reviewStats]);
 
   const watchType = contentType === "tv" ? "series" : "movie";
   const inWatchlist = contentId
@@ -480,7 +565,7 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
           <div className="w-full max-w-7xl mx-auto">
             <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start lg:items-center">
               {/* Poster */}
-              <div className="flex-shrink-0 w-34 sm:w-42 lg:w-50 xl:w-58 mx-auto lg:mx-0">
+              <div className="flex-shrink-0 w-34 sm:w-42 lg:w-50 xl:w-58 mx-auto lg:mx-0 relative">
                 <div className="rounded-lg shadow-2xl overflow-hidden transform transition-transform hover:scale-105">
                   <Image
                     src={mappedContent.poster}
@@ -490,6 +575,43 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
                     className="w-full h-auto block"
                   />
                 </div>
+
+                {/* Top Moods Overlay - Positioned on poster */}
+                {topMoods && topMoods.length > 0 && (
+                  <div className="absolute -top-4 -right-3 z-10">
+                    <div className="relative flex items-center -space-x-6">
+                      {topMoods.map((mood, idx) => {
+                        const rotations = [
+                          "-rotate-18",
+                          "rotate-0",
+                          "rotate-18",
+                        ];
+                        const zIndexes = [1, 3, 2];
+
+                        return (
+                          <div
+                            key={idx}
+                            className={`group relative transition-all duration-300 hover:scale-125 hover:z-50 cursor-pointer ${rotations[idx]} origin-bottom`}
+                            style={{ zIndex: zIndexes[idx] }}
+                          >
+                            <span className="text-4xl block filter drop-shadow-2xl">
+                              {mood.emoji}
+                            </span>
+
+                            {/* Count tooltip on hover */}
+                            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-50">
+                              <div className="bg-slate-900 border border-white/20 rounded-lg px-2 py-1 shadow-xl">
+                                <p className="text-xs text-white font-medium">
+                                  {mood.count}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Info */}
@@ -586,7 +708,7 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
                         <span className="text-xs text-white/40">|</span>
                         <span className="text-xs text-white/70">
                           {new Date(
-                            tvInfo.next_episode_to_air.air_date
+                            tvInfo.next_episode_to_air.air_date,
                           ).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
@@ -607,7 +729,11 @@ export function HeroContentCard({ content, data }: HeroContentCardProps) {
                       {mappedContent.director ?? "Unknown"}
                     </span>
                   </div>
-                  <StarRating rating={mappedContent.rating} />
+                  <StarRating
+                    rating={mappedContent.rating}
+                    tmdbRating={data?.info?.vote_average}
+                    showTmdb={reviewStats && reviewStats.totalRatings > 0}
+                  />
                 </div>
 
                 {/* Network info for TV shows */}

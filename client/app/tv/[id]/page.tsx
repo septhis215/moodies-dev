@@ -28,7 +28,6 @@ async function fetchSeasonsWithEpisodes(id: string) {
     if (!res.ok) return null;
     return res.json();
   } catch (err) {
-    // swallow errors and fallback to info.seasons in the main payload
     return null;
   }
 }
@@ -64,6 +63,43 @@ async function fetchRecommendations(id: string) {
     const base = process.env.NEST_API_URL ?? "http://localhost:4000";
     const res = await fetch(`${base}/tv/recommendations/${id}`, {
       next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
+async function fetchReviews(id: string) {
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(`${base}/reviews/media/TV/${id}?page=1&limit=10`, {
+      next: { revalidate: 60 },
+      cache: "no-store",
+    });
+    if (!res.ok)
+      return {
+        reviews: [],
+        topMoods: [],
+        pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+      };
+    return res.json();
+  } catch (err) {
+    return {
+      reviews: [],
+      topMoods: [],
+      pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+    };
+  }
+}
+
+async function fetchReviewStats(id: string) {
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(`${base}/reviews/media/TV/${id}/stats`, {
+      next: { revalidate: 60 },
+      cache: "no-store",
     });
     if (!res.ok) return null;
     return res.json();
@@ -110,6 +146,8 @@ export default async function TvPage({
   const data = await fetchDetails(id);
   const images = await fetchImages(id);
   const videos = await fetchVideos(id);
+  const reviews = await fetchReviews(id);
+  const reviewStats = await fetchReviewStats(id);
   const recommendations = await fetchRecommendations(id);
 
   if (!data) {
@@ -143,7 +181,11 @@ export default async function TvPage({
   return (
     <main>
       {/* Let the components handle presentation and any mapping/normalisation */}
-      <HeroContentCard data={data} />
+      <HeroContentCard
+        data={data}
+        topMoods={reviews.topMoods || []}
+        reviewStats={reviewStats}
+      />
 
       <div className="min-h-screen bg-black text-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-10 space-y-14">
@@ -163,7 +205,7 @@ export default async function TvPage({
 
           <hr className="border-white/8 my-14" />
           <ReviewsSection
-            reviews={data.reviews}
+            reviews={reviews.reviews}
             contentId={id}
             contentType="tv"
           />

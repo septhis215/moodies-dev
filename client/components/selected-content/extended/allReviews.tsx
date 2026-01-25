@@ -14,6 +14,17 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/context/AuthProvider";
+import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
+
+type Reply = {
+  id?: string;
+  content: string;
+  created_at: string;
+  user: {
+    username: string;
+    avatar_path?: string | null;
+  };
+};
 
 type Review = {
   id: string;
@@ -28,6 +39,8 @@ type Review = {
   created_at: string;
   updated_at: string;
   url: string;
+  replies?: Reply[];
+  moodEmojis?: string[];
 };
 
 type Info = {
@@ -50,19 +63,45 @@ interface AllReviewsProps {
   reviews: Review[];
   info: Info;
   id?: string;
+  topMoods?: Array<{ emoji: string; count: number }>;
+  reviewStats?: { totalRatings: number; averageRating: number };
 }
 
-export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
-  const [localReviews, setLocalReviews] = useState<Review[]>(
-    reviews ? [...reviews] : []
-  );
+export default function AllReviews({
+  reviews,
+  info,
+  id,
+  topMoods = [],
+  reviewStats,
+}: AllReviewsProps) {
+  const { isAuthenticated } = useAuth();
+  const { banStatus, loading: banLoading } = useReviewBanStatus();
   const [sortBy, setSortBy] = useState<"latest" | "highest" | "popularity">(
-    "latest"
+    "latest",
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
+  const [showReplyForm, setShowReplyForm] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [submittingReply, setSubmittingReply] = useState(false);
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const toggleReplies = (reviewId: string) => {
+    setExpandedReplies((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(reviewId)) {
+        newSet.delete(reviewId);
+      } else {
+        newSet.add(reviewId);
+      }
+      return newSet;
+    });
+  };
+
   function popularityProxy(r: Review) {
     const rating = r.author_details?.rating ?? 0;
     const lenScore = Math.min(5, (r.content?.length ?? 0) / 200);
@@ -70,24 +109,22 @@ export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
   }
 
   const filteredAndSorted = useMemo(() => {
-    let arr = [...localReviews];
+    let arr = [...reviews];
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       arr = arr.filter(
         (r) =>
           r.author.toLowerCase().includes(query) ||
-          r.content.toLowerCase().includes(query)
+          r.content.toLowerCase().includes(query),
       );
     }
 
-    // Sort
     switch (sortBy) {
       case "latest":
         arr.sort(
           (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         );
         break;
       case "highest":
@@ -108,7 +145,7 @@ export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
         break;
     }
     return arr;
-  }, [localReviews, sortBy, searchQuery]);
+  }, [reviews, sortBy, searchQuery]);
 
   const toggleExpanded = (id: string) => {
     setExpandedReviews((prev) => {
@@ -141,13 +178,6 @@ export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
     else return "tv";
   };
 
-  useEffect(() => {
-    const map: Record<string, number> = {};
-    localReviews.forEach((r) => {
-      map[r.id] = Math.max(0, Math.round(popularityProxy(r) / 2));
-    });
-  }, [localReviews]);
-
   // Add this useEffect after your other useEffects in AllReviews component
   useEffect(() => {
     // Get highlight parameter from URL
@@ -175,28 +205,103 @@ export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
     }
   }, [filteredAndSorted]); // Re-run if reviews change
 
-  function addLocalReview(payload: {
-    author: string;
-    content: string;
-    rating?: number;
-  }) {
-    const now = new Date().toISOString();
-    const newReview: Review = {
-      id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      author: payload.author || "Anonymous",
-      author_details: {
-        username: payload.author?.toLowerCase() || "anonymous",
-        name: payload.author || undefined,
-        avatar_path: undefined,
-        rating: payload.rating ?? undefined,
-      },
-      content: payload.content,
-      created_at: now,
-      updated_at: now,
-      url: "",
-    };
-    setLocalReviews((prev) => [newReview, ...prev]);
-  }
+  const handleReplySubmit = async (reviewId: string) => {
+    if (!isAuthenticated) {
+      Swal.fire({
+        icon: "warning",
+        title: "Not Logged In",
+        text: "You need to be logged in to reply.",
+        confirmButtonText: "Go to Login",
+        confirmButtonColor: "#e94f37",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = "/auth/login";
+        }
+      });
+      return;
+    }
+
+    if (banStatus.banned) {
+      Swal.fire({
+        icon: "error",
+        title: "Reply Privileges Suspended",
+        html: `
+        <p>Your review and reply privileges have been suspended due to policy violations.</p>
+        <p style="margin-top: 1rem;">Ban expires in: <strong>${banStatus?.timeRemaining || "Unknown"}</strong></p>
+      `,
+        confirmButtonColor: "#e94f37",
+        confirmButtonText: "I Understand",
+      });
+      return;
+    }
+
+    if (!replyContent.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Empty Reply",
+        text: "Please write something before submitting.",
+        confirmButtonColor: "#e94f37",
+      });
+      return;
+    }
+
+    setSubmittingReply(true);
+    try {
+      const token = localStorage.getItem("authToken");
+
+      // Add check if token exists
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      const response = await fetch(
+        `http://localhost:4000/reviews/${reviewId}/replies`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            content: replyContent.trim(),
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to submit reply");
+      }
+
+      Swal.fire({
+        icon: "success",
+        title: "Reply Posted!",
+        text: "Refreshing...",
+        confirmButtonColor: "#e94f37",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      setReplyContent("");
+      setShowReplyForm(null);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Failed to post reply. Please try again.",
+        confirmButtonColor: "#e94f37",
+      });
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black">
@@ -272,13 +377,6 @@ export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
                   <span className="text-sm text-white/70">
                     {info.number_of_episodes} Episodes
                   </span>
-                  <div className="flex items-center gap-1">
-                    <Star
-                      size={16}
-                      className="text-yellow-400 fill-yellow-400"
-                    />
-                    <span>{info.vote_average.toFixed(1)}</span>
-                  </div>
                 </div>
               </div>
 
@@ -301,20 +399,107 @@ export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
                 </p>
               )}
 
-              {/* Review Stats */}
-              <div className="flex items-center gap-6 pt-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-white">
-                    {filteredAndSorted.length}
+              {/* Review Stats & Community Vibe */}
+              <div className="flex items-end gap-8 pt-4">
+                {/* Star Rating with Custom and TMDb */}
+                <div className="flex items-center gap-4">
+                  {/* Custom Rating (if available) */}
+                  {reviewStats && reviewStats.totalRatings > 0 && (
+                    <div className="flex items-center gap-2 bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border border-yellow-500/20 px-3 py-2 rounded-lg">
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: 5 }).map((_, i) => {
+                          const fullStars = Math.round(
+                            reviewStats.averageRating / 2,
+                          );
+                          return (
+                            <Star
+                              key={i}
+                              size={16}
+                              className={
+                                i < fullStars
+                                  ? "text-yellow-400 fill-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.4)]"
+                                  : "text-slate-600"
+                              }
+                            />
+                          );
+                        })}
+                      </div>
+                      <span className="text-base font-bold text-white">
+                        {reviewStats.averageRating.toFixed(1)}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        ({reviewStats.totalRatings})
+                      </span>
+                    </div>
+                  )}
+
+                  {/* TMDb Rating */}
+                  {reviewStats && reviewStats.totalRatings > 0 && (
+                    <div className="h-8 w-px bg-white/20" />
+                  )}
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-2 rounded-lg">
+                    <div className="bg-[#0d253f] rounded px-2 py-0.5 border border-[#01b4e4]/30">
+                      <span className="text-[#01b4e4] font-bold text-xs tracking-wide">
+                        TMDb
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Star
+                        size={14}
+                        className="text-[#01b4e4] fill-[#01b4e4]"
+                      />
+                      <span className="text-base font-bold text-white">
+                        {info.vote_average.toFixed(1)}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-400">
+                      ({info.vote_count.toLocaleString()})
+                    </span>
                   </div>
-                  <div className="text-sm text-slate-400">Reviews</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-white">
-                    {info.vote_count.toLocaleString()}
+
+                {/* Top Moods - Card Deck Spread */}
+                {topMoods && topMoods.length > 0 && (
+                  <div className="flex-1">
+                    <div className="text-xs text-slate-400 mb-2">
+                      Community Vibe
+                    </div>
+
+                    <div className="relative h-12 flex items-center">
+                      {/* Overlapping card spread */}
+                      <div className="relative flex items-center -space-x-4">
+                        {topMoods.map((mood, idx) => {
+                          const rotations = [
+                            "-rotate-6",
+                            "rotate-0",
+                            "rotate-6",
+                          ];
+                          const zIndexes = [1, 3, 2];
+
+                          return (
+                            <div
+                              key={idx}
+                              className={`group relative transition-all duration-300 hover:scale-125 hover:z-50 cursor-pointer ${rotations[idx]} origin-center`}
+                              style={{ zIndex: zIndexes[idx] }}
+                            >
+                              <span className="text-3xl block transition-all duration-300 filter drop-shadow-lg group-hover:drop-shadow-2xl">
+                                {mood.emoji}
+                              </span>
+
+                              <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-50">
+                                <div className="bg-slate-900 border border-white/20 rounded-lg px-2 py-1 shadow-xl">
+                                  <p className="text-xs text-white font-medium">
+                                    {mood.count}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-sm text-slate-400">Total Ratings</div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -322,7 +507,9 @@ export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <ReviewForm onSubmit={addLocalReview} />
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <ReviewForm id={id} contentType={info.content_type} />
+        </div>
       </div>
 
       {/* Reviews Section */}
@@ -395,7 +582,7 @@ export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
                 return (
                   <motion.div
                     key={review.id}
-                    id={`review-${review.id}`} // Add this line
+                    id={`review-${review.id}`}
                     layout
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -408,10 +595,22 @@ export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
 
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="text-slate-100 font-semibold text-lg">
-                              {review.author}
-                            </h3>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-slate-100 font-semibold text-lg">
+                                {review.author}
+                              </h3>
+                              {/* Mood emoji display */}
+                              {review.moodEmojis &&
+                                review.moodEmojis.length > 0 && (
+                                  <span
+                                    className="text-lg"
+                                    title={`Mood: ${review.moodEmojis.join(", ")}`}
+                                  >
+                                    {review.moodEmojis[0]}
+                                  </span>
+                                )}
+                            </div>
                             <div className="flex items-center gap-3 text-sm text-slate-400">
                               <div className="flex items-center gap-1">
                                 <Calendar size={14} />
@@ -457,6 +656,214 @@ export default function AllReviews({ reviews, info, id }: AllReviewsProps) {
                           </>
                         )}
                       </div>
+                    </div>
+
+                    {/* Replies Section */}
+                    {review.replies && review.replies.length > 0 && (
+                      <div className="mt-4 space-y-3 pl-4 border-l-2 border-indigo-500/30">
+                        {/* Show first 3 replies or all if expanded */}
+                        {(expandedReplies.has(review.id)
+                          ? review.replies
+                          : review.replies.slice(0, 3)
+                        ).map((reply, idx) => (
+                          <div
+                            key={idx}
+                            className="bg-slate-800/30 rounded-lg p-3 border border-white/5"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-semibold text-slate-200">
+                                {reply.user.username.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-sm font-medium text-slate-200">
+                                    {reply.user.username}
+                                  </span>
+                                  <span className="text-xs text-slate-500">
+                                    {formatDate(reply.created_at)}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-slate-300 leading-relaxed">
+                                  {reply.content}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Show More/Less button if more than 3 replies */}
+                        {review.replies.length > 3 && (
+                          <button
+                            onClick={() => toggleReplies(review.id)}
+                            className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1 mt-2 pb-3"
+                          >
+                            {expandedReplies.has(review.id) ? (
+                              <>
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 15l7-7 7 7"
+                                  />
+                                </svg>
+                                Show less replies
+                              </>
+                            ) : (
+                              <>
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 9l-7 7-7-7"
+                                  />
+                                </svg>
+                                Show {review.replies.length - 3} more{" "}
+                                {review.replies.length - 3 === 1
+                                  ? "reply"
+                                  : "replies"}
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Reply Section - Show ban message or reply form */}
+                    <div className="pt-4 border-t border-white/10">
+                      {banStatus.banned ? (
+                        <div className="bg-gradient-to-br from-red-950/20 via-slate-900/50 to-slate-950/50 border border-red-500/15 rounded-lg p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-red-500/10 to-red-600/10 border border-red-500/20 flex items-center justify-center">
+                              <svg
+                                className="w-4 h-4 text-red-400"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                />
+                              </svg>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-red-400 mb-0.5">
+                                Reply Privileges Suspended
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                Expires in:{" "}
+                                <span className="text-red-400 font-medium">
+                                  {banStatus?.timeRemaining || "Unknown"}
+                                </span>
+                              </p>
+                            </div>
+
+                            {review.replies && review.replies.length > 0 && (
+                              <span className="text-xs text-slate-500 flex-shrink-0">
+                                {review.replies.length}{" "}
+                                {review.replies.length === 1
+                                  ? "reply"
+                                  : "replies"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Reply Form Toggle */}
+                          <div className="flex items-center justify-between pb-3">
+                            <button
+                              onClick={() =>
+                                setShowReplyForm(
+                                  showReplyForm === review.id
+                                    ? null
+                                    : review.id,
+                                )
+                              }
+                              className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                                />
+                              </svg>
+                              {showReplyForm === review.id ? "Cancel" : "Reply"}
+                            </button>
+
+                            {review.replies && review.replies.length > 0 && (
+                              <span className="text-xs text-slate-500">
+                                {review.replies.length}{" "}
+                                {review.replies.length === 1
+                                  ? "reply"
+                                  : "replies"}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Reply Form */}
+                          {showReplyForm === review.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="mt-4 space-y-3"
+                            >
+                              <textarea
+                                value={replyContent}
+                                onChange={(e) =>
+                                  setReplyContent(e.target.value)
+                                }
+                                placeholder="Write your reply..."
+                                rows={3}
+                                className="w-full bg-slate-800/60 text-slate-200 placeholder-slate-400 rounded-lg border border-white/10 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 outline-none p-3 text-sm resize-none"
+                              />
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  onClick={() => {
+                                    setShowReplyForm(null);
+                                    setReplyContent("");
+                                  }}
+                                  className="px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => handleReplySubmit(review.id)}
+                                  disabled={submittingReply}
+                                  className="px-4 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {submittingReply
+                                    ? "Posting..."
+                                    : "Post Reply"}
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </>
+                      )}
                     </div>
 
                     {/* Review Actions */}
@@ -546,16 +953,14 @@ function RatingDisplay({ rating }: { rating?: number }) {
 }
 
 function ReviewForm({
-  onSubmit,
+  id,
+  contentType,
 }: {
-  onSubmit: (v: {
-    author: string;
-    content: string;
-    rating?: number;
-    mood?: string;
-  }) => void;
+  id?: string;
+  contentType?: string;
 }) {
   const { isAuthenticated, user } = useAuth();
+  const { banStatus, loading: banLoading } = useReviewBanStatus();
   const [author, setAuthor] = useState("");
   const [content, setContent] = useState("");
   const [rating, setRating] = useState<number | null>(null);
@@ -563,6 +968,9 @@ function ReviewForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
+  const [showReplyForm, setShowReplyForm] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [submittingReply, setSubmittingReply] = useState(false);
 
   // Set author name from authenticated user on mount
   useEffect(() => {
@@ -576,11 +984,19 @@ function ReviewForm({
     setRating((prev) => (prev === newRating ? null : newRating));
   }
 
-  function handleSubmit(e?: React.FormEvent) {
+  const moodToEmoji: Record<string, string> = {
+    amazing: "🔥",
+    loved: "❤️",
+    enjoyed: "😊",
+    okay: "😐",
+    meh: "😕",
+    disliked: "😞",
+  };
+
+  async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
 
-    // Check if user is authenticated
     if (!isAuthenticated) {
       Swal.fire({
         icon: "warning",
@@ -612,31 +1028,57 @@ function ReviewForm({
     }
 
     setSubmitting(true);
+
     try {
-      onSubmit({
-        author: user?.username ?? user?.name ?? "Anonymous",
-        content: content.trim(),
-        rating: rating,
-        mood: mood,
+      const token = localStorage.getItem("authToken");
+
+      const response = await fetch("http://localhost:4000/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rating: rating,
+          content: content.trim(),
+          moodEmojis: [moodToEmoji[mood]],
+          tmdbId: id ? parseInt(id) : 0,
+          mediaType: (contentType?.toUpperCase() || "MOVIE") as "MOVIE" | "TV",
+        }),
       });
 
-      // Show success message
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to submit review");
+      }
+
+      await response.json();
+
       Swal.fire({
         icon: "success",
         title: "Review Submitted!",
-        text: "Thank you for sharing your thoughts!",
+        text: "Refreshing reviews...",
         confirmButtonColor: "#e94f37",
-        timer: 2000,
+        timer: 1500,
+        showConfirmButton: false,
       });
 
       setContent("");
       setRating(null);
       setMood(null);
+
+      // Reload the page to fetch updated reviews
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to submit review";
+
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Failed to submit review. Please try again.",
+        text: errorMessage,
         confirmButtonColor: "#e94f37",
       });
     } finally {
@@ -668,6 +1110,111 @@ function ReviewForm({
     );
   }
 
+  if (banStatus.banned) {
+    return (
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-950/30 via-slate-900/80 to-slate-950/80 border border-red-500/20 shadow-xl">
+        {/* Subtle pattern overlay */}
+        <div className="absolute inset-0 opacity-5">
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+              45deg,
+              transparent,
+              transparent 10px,
+              rgba(239, 68, 68, 0.2) 10px,
+              rgba(239, 68, 68, 0.2) 20px
+            )`,
+            }}
+          />
+        </div>
+
+        <div className="relative p-5">
+          <div className="flex items-start gap-4">
+            {/* Icon */}
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500/15 to-red-600/15 border border-red-500/30 flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-red-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-bold mb-1 bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
+                Review Privileges Suspended
+              </h3>
+              <p className="text-slate-400 text-xs mb-3">
+                Temporarily restricted due to policy violations
+              </p>
+
+              {/* Compact info grid */}
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                  <span className="text-red-300">
+                    Profanity & harmful content detected
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-red-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span className="text-slate-300 text-xs">
+                    Expires in:{" "}
+                    <span className="font-semibold text-red-400">
+                      {banStatus?.timeRemaining || "Unknown"}
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Small info note */}
+              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                <svg
+                  className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <p className="text-slate-400 text-xs leading-relaxed">
+                  Your privileges will be restored automatically after the ban
+                  expires.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       {/* Dynamic background based on mood */}
@@ -676,16 +1223,16 @@ function ReviewForm({
           mood === "amazing"
             ? "bg-gradient-to-br from-orange-500/20 to-red-500/20"
             : mood === "loved"
-            ? "bg-gradient-to-br from-pink-500/20 to-rose-500/20"
-            : mood === "enjoyed"
-            ? "bg-gradient-to-br from-green-500/20 to-emerald-500/20"
-            : mood === "okay"
-            ? "bg-gradient-to-br from-slate-500/20 to-gray-500/20"
-            : mood === "meh"
-            ? "bg-gradient-to-br from-gray-600/20 to-slate-600/20"
-            : mood === "disliked"
-            ? "bg-gradient-to-br from-slate-700/20 to-gray-700/20"
-            : "bg-slate-900/50"
+              ? "bg-gradient-to-br from-pink-500/20 to-rose-500/20"
+              : mood === "enjoyed"
+                ? "bg-gradient-to-br from-green-500/20 to-emerald-500/20"
+                : mood === "okay"
+                  ? "bg-gradient-to-br from-slate-500/20 to-gray-500/20"
+                  : mood === "meh"
+                    ? "bg-gradient-to-br from-gray-600/20 to-slate-600/20"
+                    : mood === "disliked"
+                      ? "bg-gradient-to-br from-slate-700/20 to-gray-700/20"
+                      : "bg-slate-900/50"
         }`}
       />
 
@@ -697,16 +1244,16 @@ function ReviewForm({
             mood === "amazing"
               ? "rgba(249, 115, 22, 0.3)"
               : mood === "loved"
-              ? "rgba(236, 72, 153, 0.3)"
-              : mood === "enjoyed"
-              ? "rgba(34, 197, 94, 0.3)"
-              : mood === "okay"
-              ? "rgba(100, 116, 139, 0.3)"
-              : mood === "meh"
-              ? "rgba(75, 85, 99, 0.3)"
-              : mood === "disliked"
-              ? "rgba(71, 85, 105, 0.3)"
-              : "rgba(255, 255, 255, 0.1)",
+                ? "rgba(236, 72, 153, 0.3)"
+                : mood === "enjoyed"
+                  ? "rgba(34, 197, 94, 0.3)"
+                  : mood === "okay"
+                    ? "rgba(100, 116, 139, 0.3)"
+                    : mood === "meh"
+                      ? "rgba(75, 85, 99, 0.3)"
+                      : mood === "disliked"
+                        ? "rgba(71, 85, 105, 0.3)"
+                        : "rgba(255, 255, 255, 0.1)",
         }}
       >
         {/* Header with dynamic accent */}
@@ -717,31 +1264,31 @@ function ReviewForm({
               mood === "amazing"
                 ? "text-orange-300"
                 : mood === "loved"
-                ? "text-pink-300"
-                : mood === "enjoyed"
-                ? "text-green-300"
-                : mood === "okay"
-                ? "text-slate-400"
-                : mood === "meh"
-                ? "text-gray-400"
-                : mood === "disliked"
-                ? "text-slate-500"
-                : "text-slate-400"
+                  ? "text-pink-300"
+                  : mood === "enjoyed"
+                    ? "text-green-300"
+                    : mood === "okay"
+                      ? "text-slate-400"
+                      : mood === "meh"
+                        ? "text-gray-400"
+                        : mood === "disliked"
+                          ? "text-slate-500"
+                          : "text-slate-400"
             }`}
           >
             {mood === "amazing"
               ? "🔥 Amazing! Tell us what made it incredible"
               : mood === "loved"
-              ? "❤️ You loved it! Share what touched your heart"
-              : mood === "enjoyed"
-              ? "😊 Great! What did you enjoy most?"
-              : mood === "okay"
-              ? "😐 It was okay. What worked and what didn't?"
-              : mood === "meh"
-              ? "😕 Not impressed? Tell us why"
-              : mood === "disliked"
-              ? "😞 Sorry it disappointed. What went wrong?"
-              : "Share your experience with the community"}
+                ? "❤️ You loved it! Share what touched your heart"
+                : mood === "enjoyed"
+                  ? "😊 Great! What did you enjoy most?"
+                  : mood === "okay"
+                    ? "😐 It was okay. What worked and what didn't?"
+                    : mood === "meh"
+                      ? "😕 Not impressed? Tell us why"
+                      : mood === "disliked"
+                        ? "😞 Sorry it disappointed. What went wrong?"
+                        : "Share your experience with the community"}
           </p>
         </div>
 
@@ -839,16 +1386,16 @@ function ReviewForm({
                 mood === "amazing"
                   ? "rgb(249, 115, 22)"
                   : mood === "loved"
-                  ? "rgb(236, 72, 153)"
-                  : mood === "enjoyed"
-                  ? "rgb(34, 197, 94)"
-                  : mood === "okay"
-                  ? "rgb(100, 116, 139)"
-                  : mood === "meh"
-                  ? "rgb(75, 85, 99)"
-                  : mood === "disliked"
-                  ? "rgb(71, 85, 105)"
-                  : "rgb(255, 255, 255)",
+                    ? "rgb(236, 72, 153)"
+                    : mood === "enjoyed"
+                      ? "rgb(34, 197, 94)"
+                      : mood === "okay"
+                        ? "rgb(100, 116, 139)"
+                        : mood === "meh"
+                          ? "rgb(75, 85, 99)"
+                          : mood === "disliked"
+                            ? "rgb(71, 85, 105)"
+                            : "rgb(255, 255, 255)",
             }}
           >
             <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
@@ -863,16 +1410,16 @@ function ReviewForm({
                   mood === "amazing"
                     ? "rgb(249, 115, 22)"
                     : mood === "loved"
-                    ? "rgb(236, 72, 153)"
-                    : mood === "enjoyed"
-                    ? "rgb(34, 197, 94)"
-                    : mood === "okay"
-                    ? "rgb(100, 116, 139)"
-                    : mood === "meh"
-                    ? "rgb(75, 85, 99)"
-                    : mood === "disliked"
-                    ? "rgb(71, 85, 105)"
-                    : "rgba(255, 255, 255, 0.3)",
+                      ? "rgb(236, 72, 153)"
+                      : mood === "enjoyed"
+                        ? "rgb(34, 197, 94)"
+                        : mood === "okay"
+                          ? "rgb(100, 116, 139)"
+                          : mood === "meh"
+                            ? "rgb(75, 85, 99)"
+                            : mood === "disliked"
+                              ? "rgb(71, 85, 105)"
+                              : "rgba(255, 255, 255, 0.3)",
               }}
             >
               <span className="text-slate-400 text-xs font-semibold">
@@ -932,16 +1479,16 @@ function ReviewForm({
                 mood === "amazing"
                   ? "rgb(249, 115, 22)"
                   : mood === "loved"
-                  ? "rgb(236, 72, 153)"
-                  : mood === "enjoyed"
-                  ? "rgb(34, 197, 94)"
-                  : mood === "okay"
-                  ? "rgb(100, 116, 139)"
-                  : mood === "meh"
-                  ? "rgb(75, 85, 99)"
-                  : mood === "disliked"
-                  ? "rgb(71, 85, 105)"
-                  : "rgb(255, 255, 255)",
+                    ? "rgb(236, 72, 153)"
+                    : mood === "enjoyed"
+                      ? "rgb(34, 197, 94)"
+                      : mood === "okay"
+                        ? "rgb(100, 116, 139)"
+                        : mood === "meh"
+                          ? "rgb(75, 85, 99)"
+                          : mood === "disliked"
+                            ? "rgb(71, 85, 105)"
+                            : "rgb(255, 255, 255)",
             }}
           >
             <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
@@ -958,16 +1505,16 @@ function ReviewForm({
                     mood === "amazing"
                       ? "rgb(249, 115, 22)"
                       : mood === "loved"
-                      ? "rgb(236, 72, 153)"
-                      : mood === "enjoyed"
-                      ? "rgb(34, 197, 94)"
-                      : mood === "okay"
-                      ? "rgb(100, 116, 139)"
-                      : mood === "meh"
-                      ? "rgb(75, 85, 99)"
-                      : mood === "disliked"
-                      ? "rgb(71, 85, 105)"
-                      : "rgb(148, 163, 184)",
+                        ? "rgb(236, 72, 153)"
+                        : mood === "enjoyed"
+                          ? "rgb(34, 197, 94)"
+                          : mood === "okay"
+                            ? "rgb(100, 116, 139)"
+                            : mood === "meh"
+                              ? "rgb(75, 85, 99)"
+                              : mood === "disliked"
+                                ? "rgb(71, 85, 105)"
+                                : "rgb(148, 163, 184)",
                 }}
               >
                 {user?.username ?? user?.name ?? "User"}
@@ -1016,16 +1563,16 @@ function ReviewForm({
                 mood === "amazing"
                   ? "linear-gradient(to right, rgb(249, 115, 22), rgb(239, 68, 68))"
                   : mood === "loved"
-                  ? "linear-gradient(to right, rgb(236, 72, 153), rgb(244, 63, 94))"
-                  : mood === "enjoyed"
-                  ? "linear-gradient(to right, rgb(34, 197, 94), rgb(16, 185, 129))"
-                  : mood === "okay"
-                  ? "linear-gradient(to right, rgb(100, 116, 139), rgb(107, 114, 128))"
-                  : mood === "meh"
-                  ? "linear-gradient(to right, rgb(75, 85, 99), rgb(100, 116, 139))"
-                  : mood === "disliked"
-                  ? "linear-gradient(to right, rgb(71, 85, 105), rgb(107, 114, 128))"
-                  : "white",
+                    ? "linear-gradient(to right, rgb(236, 72, 153), rgb(244, 63, 94))"
+                    : mood === "enjoyed"
+                      ? "linear-gradient(to right, rgb(34, 197, 94), rgb(16, 185, 129))"
+                      : mood === "okay"
+                        ? "linear-gradient(to right, rgb(100, 116, 139), rgb(107, 114, 128))"
+                        : mood === "meh"
+                          ? "linear-gradient(to right, rgb(75, 85, 99), rgb(100, 116, 139))"
+                          : mood === "disliked"
+                            ? "linear-gradient(to right, rgb(71, 85, 105), rgb(107, 114, 128))"
+                            : "white",
               color: mood ? "white" : "black",
             }}
           >
