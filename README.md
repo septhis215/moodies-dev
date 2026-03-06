@@ -13,9 +13,9 @@ PORT=4000
 
 MONGO_URI="mongodb+srv://moodies:@moodies.ihdu91g.mongodb.net/?retryWrites=true&w=majority&appName=moodies"
 
-REDIS_HOST="redis-18863.c259.us-central1-2.gce.redns.redis-cloud.com"
-REDIS_PASS="0jDEcquvt9fqFOPGoJoY0iCgceYpKb1g"
-REDIS_PORT=18863
+REDIS_HOST="redis-15012.c253.us-central1-1.gce.cloud.redislabs.com"
+REDIS_PASS="DGWxWHDOcYXgLP9CNCLakRHNhTyEoXWs"
+REDIS_PORT=15012
 
 JWT_SECRET="super-secret"
 JWT_EXPIRES="1d"
