@@ -14,10 +14,9 @@ export class MoviesController {
   constructor(private readonly movieService: MoviesService) { }
 
   @Get('details/:id')
-  async details(@Param('id') id: string, @Query('type') type: 'movie') {
+  async details(@Param('id') id: string) {
     const payload = await this.movieService.movieDetails(
       Number(id),
-      type as any,
     );
     return payload;
   }

@@ -17,13 +17,13 @@ import { PassportModule } from '@nestjs/passport';
       imports: [ConfigModule],
       useFactory: (cfg: ConfigService) => ({
         secret: cfg.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: cfg.get<string>('JWT_EXPIRES') ?? '1d' },
+        signOptions: { expiresIn: cfg.get('JWT_EXPIRES') || '1d' },
       }),
       inject: [ConfigService],
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService,JwtStrategy, PrismaService,GoogleStrategy],
-  exports: [PassportModule,JwtModule,JwtStrategy,AuthService],
+  providers: [AuthService, JwtStrategy, PrismaService, GoogleStrategy],
+  exports: [PassportModule, JwtModule, JwtStrategy, AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

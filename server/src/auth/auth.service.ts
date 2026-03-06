@@ -26,12 +26,12 @@ export class AuthService {
     private prismaService: PrismaService,
     private readonly jwt: JwtService,
     private configService: ConfigService,
-  ) {}
+  ) { }
 
   signAccessToken(payload: { sub: number | string }) {
     return this.jwt.sign(
       { sub: String(payload.sub) },
-      { expiresIn: '1d' }              
+      { expiresIn: '1d' }
     );
   }
 
@@ -63,7 +63,7 @@ export class AuthService {
     return {
       message: 'User created successfully',
       user: result,
-      token:token
+      token: token
     };
   }
 
@@ -79,10 +79,10 @@ export class AuthService {
     }
 
     if (!user.password) {
-    throw new BadRequestException(
-      'This account uses Google sign-in. Use "Continue with Google" or set a password first.'
-    );
-  }
+      throw new BadRequestException(
+        'This account uses Google sign-in. Use "Continue with Google" or set a password first.'
+      );
+    }
 
     const pwMatches = await argon.verify(user.password, dto.password);
     if (!pwMatches) throw new UnauthorizedException('Invalid email or password');
@@ -94,17 +94,17 @@ export class AuthService {
     const token = await this.signToken(user.id, user.email);
 
     return {
-    message: 'Login successful',
-    user: {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-    },
-    token,
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+      },
+      token,
     };
   }
 
-  
+
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
     const user = await this.prismaService.user.findUnique({
@@ -117,8 +117,8 @@ export class AuthService {
     if (!user.password) {
       throw new BadRequestException('No local password set for this account. Use "Set password" first.');
     }
-    
-    
+
+
 
     const ok = await argon.verify(user.password, dto.oldPassword);
     if (!ok) throw new UnauthorizedException('Old password is incorrect');
@@ -156,7 +156,6 @@ export class AuthService {
     const payload = { sub: userId, email };
     return this.jwt.signAsync(payload, {
       secret: process.env.JWT_SECRET,
-      expiresIn: process.env.JWT_EXPIRES || '1d',
     });
   }
 
@@ -193,32 +192,32 @@ export class AuthService {
   }
 
   async upsertGoogleUser(profile: any) {
-  const { email, name, picture, googleId } = profile;
-  let user = await this.prismaService.user.findUnique({ where: { email } });
+    const { email, name, picture, googleId } = profile;
+    let user = await this.prismaService.user.findUnique({ where: { email } });
 
-  if (!user) {
-    user = await this.prismaService.user.create({
-      data: {
-        email,
-        username: name,
-        avatarUrl: picture,
-        provider: 'google',
-        googleId,
-      },
-    });
-  } else {
-    user = await this.prismaService.user.update({
-      where: { email },
-      data: {
-        username: name,
-        avatarUrl: picture,
-        provider: 'google',
-      },
-    });
+    if (!user) {
+      user = await this.prismaService.user.create({
+        data: {
+          email,
+          username: name,
+          avatarUrl: picture,
+          provider: 'google',
+          googleId,
+        },
+      });
+    } else {
+      user = await this.prismaService.user.update({
+        where: { email },
+        data: {
+          username: name,
+          avatarUrl: picture,
+          provider: 'google',
+        },
+      });
+    }
+
+    return user;
   }
-
-  return user;
-}
 
   signTempToken(payload: { uid: number; mode: 'set' | 'verify' }) {
     return this.jwt.sign(payload, { expiresIn: '5m', subject: String(payload.uid), jwtid: 'temp' });
