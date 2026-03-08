@@ -7,7 +7,6 @@ import { useWatchlist } from "@/hooks/useWatchlist";
 import { useRouter } from "next/navigation";
 import { Bookmark, BookmarkCheck } from "lucide-react";
 
-// Original Content type for internal use
 export type Content = {
   id: number;
   title: string;
@@ -16,13 +15,12 @@ export type Content = {
   backdrop: string;
   genres: string[];
   runtime: string;
-  rating: number; // 0 - 10
+  rating: number;
   overview: string;
   director?: string;
   ageRating?: string;
 };
 
-// Movie API data structure (matching your MovieDetailsData)
 export type MovieDetailsData = {
   info: {
     id: number;
@@ -185,25 +183,28 @@ function TrailerModal({
   title: string;
 }) {
   if (!isOpen) return null;
-
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-8"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.92)", backdropFilter: "blur(12px)" }}
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-5xl"
+        className="relative w-full max-w-4xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button - positioned outside/above the video container */}
         <button
           onClick={onClose}
-          className="absolute -top-10 sm:-top-12 right-0 sm:right-0 rounded-full bg-[#e94f37]/70 hover:bg-[#e94f37]/100 p-2 drop-shadow-lg focus:outline-none focus:ring-2 focus:ring-[#e94f37]/40 cursor-pointer"
+          className="absolute -top-12 right-0 w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white transition-colors"
+          style={{
+            background: "rgba(255,255,255,0.1)",
+            border: "1px solid rgba(255,255,255,0.2)",
+          }}
           aria-label="Close trailer"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="w-6 h-6"
+            className="w-4 h-4"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -216,12 +217,13 @@ function TrailerModal({
             />
           </svg>
         </button>
-
-        {/* Video container */}
-        <div className="relative bg-gray-900 rounded-lg overflow-hidden shadow-2xl">
-          <div className="relative" style={{ paddingBottom: "56.25%" }}>
+        <div
+          className="rounded-xl overflow-hidden shadow-2xl"
+          style={{ background: "#000" }}
+        >
+          <div style={{ paddingBottom: "56.25%", position: "relative" }}>
             <iframe
-              className="absolute top-0 left-0 w-full h-full"
+              className="absolute inset-0 w-full h-full"
               src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
               title={`${title} Trailer`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -234,202 +236,167 @@ function TrailerModal({
   );
 }
 
-function StarRating({
+function RatingDisplay({
   rating,
   tmdbRating,
-  showTmdb = false,
+  showTmdb,
 }: {
   rating: number;
   tmdbRating?: number;
   showTmdb?: boolean;
 }) {
-  if (
-    (rating === 0 || rating < 0.5) &&
-    tmdbRating &&
-    tmdbRating > 0 &&
-    !showTmdb
-  ) {
-    return (
-      <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-2 rounded-lg">
-        <div className="bg-[#0d253f] rounded px-2 py-0.5 border border-[#01b4e4]/30">
-          <span className="text-[#01b4e4] font-bold text-xs tracking-wide">
-            TMDb
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {Array.from({ length: 5 }).map((_, i) => {
-            const fullStars = Math.round(tmdbRating / 2);
-            return (
-              <svg
-                key={i}
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                className={`w-4 h-4 ${
-                  i < fullStars
-                    ? "text-[#01b4e4] fill-[#01b4e4]"
-                    : "text-slate-600"
-                }`}
-                fill={i < fullStars ? "currentColor" : "none"}
-                stroke="currentColor"
-              >
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
-            );
-          })}
-          <span className="ml-1 text-base font-bold text-white">
-            {tmdbRating.toFixed(1)}
-          </span>
-        </div>
-      </div>
-    );
-  }
+  const displayRating = rating > 0.5 ? rating : (tmdbRating ?? 0);
+  const isCustom = rating > 0.5;
+  const pct = Math.round((displayRating / 10) * 100);
 
-  if ((rating === 0 || rating < 0.5) && (!tmdbRating || tmdbRating === 0)) {
+  if (displayRating === 0)
     return (
-      <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-2 rounded-lg">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <svg
-            key={i}
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            className="w-5 h-5 text-white/20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-        ))}
-        <span className="ml-2 text-sm text-white/60 font-medium">
-          Not Rated
-        </span>
-      </div>
+      <span
+        style={{
+          color: "rgba(255,255,255,0.35)",
+          fontSize: "0.75rem",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+        }}
+      >
+        No rating yet
+      </span>
     );
-  }
-
-  const fullStars = Math.round(rating / 2);
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="flex items-center gap-1.5 bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border border-yellow-500/20 px-3 py-2 rounded-lg shadow-lg">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <svg
-            key={i}
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            className={`w-5 h-5 transition-all ${
-              i < fullStars
-                ? "text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]"
-                : "text-slate-600"
-            }`}
-            fill={i < fullStars ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth={i < fullStars ? "0" : "2"}
-          >
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-        ))}
-        <span className="ml-1 text-base font-bold text-white">
-          {rating.toFixed(1)}
+    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+      {/* Arc score */}
+      <div
+        style={{ position: "relative", width: 52, height: 52, flexShrink: 0 }}
+      >
+        <svg width="52" height="52" viewBox="0 0 52 52">
+          <circle
+            cx="26"
+            cy="26"
+            r="22"
+            fill="none"
+            stroke="rgba(255,255,255,0.08)"
+            strokeWidth="4"
+          />
+          <circle
+            cx="26"
+            cy="26"
+            r="22"
+            fill="none"
+            stroke={isCustom ? "#f5c518" : "#01b4e4"}
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 22}`}
+            strokeDashoffset={`${2 * Math.PI * 22 * (1 - pct / 100)}`}
+            style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
+          />
+        </svg>
+        <span
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 800,
+            fontSize: "0.8rem",
+            color: "#fff",
+          }}
+        >
+          {displayRating.toFixed(1)}
         </span>
       </div>
-
-      {showTmdb && tmdbRating && tmdbRating > 0 && (
-        <>
-          <div className="h-8 w-px bg-white/20" />
-          <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-2 rounded-lg">
-            <div className="bg-[#0d253f] rounded px-2 py-0.5 border border-[#01b4e4]/30">
-              <span className="text-[#01b4e4] font-bold text-xs tracking-wide">
-                TMDb
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                className="w-4 h-4 text-[#01b4e4] fill-[#01b4e4]"
-                fill="currentColor"
-              >
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
-              <span className="text-base font-bold text-white">
-                {tmdbRating.toFixed(1)}
-              </span>
-            </div>
-          </div>
-        </>
-      )}
+      <div>
+        <p
+          style={{
+            fontSize: "0.65rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.12em",
+            color: "rgba(255,255,255,0.4)",
+            marginBottom: 2,
+          }}
+        >
+          {isCustom ? "User Score" : "TMDb"}
+        </p>
+        {showTmdb && tmdbRating && tmdbRating > 0 && isCustom && (
+          <p style={{ fontSize: "0.7rem", color: "rgba(255,255,255,0.5)" }}>
+            TMDb {tmdbRating.toFixed(1)}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
-function GenreBadge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="text-[11px] bg-white/10 border border-white/20 px-2 py-1 rounded-md mr-2">
-      {children}
-    </span>
-  );
-}
-
-// Helper function to format runtime from minutes to hours and minutes
-function formatRuntime(minutes: number): string {
-  if (!minutes) return "Unknown";
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-}
-
-// Helper function to extract year from date string
-function extractYear(dateString: string): string {
-  if (!dateString) return "Unknown";
-  const year = new Date(dateString).getFullYear();
-  return isNaN(year) ? "Unknown" : year.toString();
-}
-
-// Helper function to find director/creator from crew or created_by
-function findDirectorOrCreator(
-  crew: MovieDetailsData["credits"]["crew"] | TvDetailsData["credits"]["crew"],
-  createdBy?: Array<{ id: number; name: string }>,
-): string {
-  const director = crew.find((person) => person.job === "Director");
-  if (director) return director.name;
-
-  // For TV shows, fall back to creator
-  if (createdBy && createdBy.length > 0) {
-    return createdBy[0].name;
-  }
-
-  return "Unknown";
-}
-
-function ReadMore({ text, limit = 300 }: { text: string; limit?: number }) {
+function ReadMore({ text, limit = 220 }: { text: string; limit?: number }) {
   const [expanded, setExpanded] = React.useState(false);
-
-  if (!text || text.trim() === "") {
+  if (!text?.trim())
     return (
-      <p className="max-w-3xl text-white/60 leading-relaxed text-xs sm:text-sm lg:text-sm xl:text-base italic">
-        No overview available
+      <p
+        style={{
+          color: "rgba(255,255,255,0.35)",
+          fontStyle: "italic",
+          fontSize: "0.875rem",
+        }}
+      >
+        No overview available.
       </p>
     );
-  }
-
   const shouldTruncate = text.length > limit;
-  const displayText =
+  const display =
     expanded || !shouldTruncate ? text : text.slice(0, limit).trim() + "…";
-
   return (
-    <p className="max-w-3xl text-white/90 leading-relaxed text-xs sm:text-sm lg:text-sm xl:text-base">
-      {displayText}
+    <p
+      style={{
+        color: "rgba(255,255,255,0.75)",
+        lineHeight: 1.7,
+        fontSize: "0.9rem",
+        margin: 0,
+      }}
+    >
+      {display}
       {shouldTruncate && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="ml-2 text-blue-400 hover:underline text-sm font-medium"
+          style={{
+            marginLeft: "0.4rem",
+            color: "#e94f37",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "0.85rem",
+            fontWeight: 600,
+            padding: 0,
+          }}
         >
-          {expanded ? "Read less" : "Read more"}
+          {expanded ? "Less" : "More"}
         </button>
       )}
     </p>
   );
+}
+
+function formatRuntime(minutes: number): string {
+  if (!minutes) return "—";
+  const h = Math.floor(minutes / 60),
+    m = minutes % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function extractYear(dateString: string): string {
+  if (!dateString) return "—";
+  const y = new Date(dateString).getFullYear();
+  return isNaN(y) ? "—" : y.toString();
+}
+
+function findDirectorOrCreator(
+  crew: MovieDetailsData["credits"]["crew"] | TvDetailsData["credits"]["crew"],
+  createdBy?: Array<{ id: number; name: string }>,
+): string {
+  const d = crew.find((p) => p.job === "Director");
+  if (d) return d.name;
+  if (createdBy?.length) return createdBy[0].name;
+  return "Unknown";
 }
 
 interface HeroContentCardProps {
@@ -447,7 +414,6 @@ export function HeroContentCard({
 }: HeroContentCardProps) {
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
   const router = useRouter();
-
   const { isInWatchlist, add, remove, ready } = useWatchlist();
 
   const contentType = data?.info?.content_type === "tv" ? "tv" : "movies";
@@ -458,17 +424,12 @@ export function HeroContentCard({
 
   const mappedContent: Content = React.useMemo(() => {
     if (content) return content;
-
-    if (!data) {
-      throw new Error("Either content or data prop must be provided");
-    }
-
+    if (!data) throw new Error("Either content or data prop must be provided");
     const isTV = data.info.content_type === "tv";
     const tvData = isTV ? (data as TvDetailsData) : null;
-
     return {
       id: data.info.id,
-      title: data.info.title || "Untitled (N/A)",
+      title: data.info.title || "Untitled",
       year: extractYear(data.info.release_date),
       poster: data.info.poster_path
         ? `https://image.tmdb.org/t/p/w500${data.info.poster_path}`
@@ -478,7 +439,6 @@ export function HeroContentCard({
         : "/placeholder-backdrop.jpg",
       genres: data.info.genres.map((g) => g.name),
       runtime: formatRuntime(data.info.runtime || 0),
-      // Use custom stats if available, otherwise fall back to TMDB
       rating:
         reviewStats && reviewStats.totalRatings > 0
           ? reviewStats.averageRating
@@ -487,11 +447,8 @@ export function HeroContentCard({
       director:
         data.info.director ||
         findDirectorOrCreator(data.credits.crew, tvData?.info.created_by) ||
-        "Unknown (N/A)",
-      ageRating:
-        data.info.content_rating && data.info.content_rating.trim() !== ""
-          ? data.info.content_rating
-          : undefined,
+        "Unknown",
+      ageRating: data.info.content_rating?.trim() || undefined,
     };
   }, [content, data, reviewStats]);
 
@@ -503,349 +460,572 @@ export function HeroContentCard({
 
   const handleWatchlistToggle = async () => {
     if (!contentId) return;
-
     if (!ready) {
       router.push("/auth/login");
       return;
     }
-
     setIsTogglingWatchlist(true);
-
     try {
-      const posterUrl = mappedContent.poster;
-      const title = mappedContent.title;
-
-      if (inWatchlist) {
-        await remove(String(contentId), watchType, {
-          title,
-          posterUrl,
-          variant: "info",
-          duration: 3500,
-        });
-      } else {
-        await add(String(contentId), watchType, {
-          title,
-          posterUrl,
-          variant: "info",
-          duration: 3500,
-        });
-      }
-    } catch (error) {
-      console.error("Error toggling watchlist:", error);
+      const opts = {
+        title: mappedContent.title,
+        posterUrl: mappedContent.poster,
+        variant: "info" as const,
+        duration: 3500,
+      };
+      if (inWatchlist) await remove(String(contentId), watchType, opts);
+      else await add(String(contentId), watchType, opts);
+    } catch (e) {
+      console.error(e);
     } finally {
       setIsTogglingWatchlist(false);
     }
   };
 
+  /* ─── styles ─── */
+  const s = {
+    root: {
+      position: "relative" as const,
+      width: "100%",
+      minHeight: "100svh",
+      color: "#fff",
+      fontFamily: "var(--font-inter, 'Inter', system-ui, sans-serif)",
+      overflow: "hidden",
+    } as React.CSSProperties,
+
+    bg: {
+      position: "fixed" as const,
+      inset: 0,
+      zIndex: -1,
+    } as React.CSSProperties,
+
+    /* Two-column grid that collapses naturally */
+    layout: {
+      display: "grid",
+      gridTemplateColumns: "min(38vw, 320px) 1fr",
+      gridTemplateRows: "auto",
+      gap: 0,
+      minHeight: "100svh",
+      maxWidth: 1200,
+      margin: "0 auto",
+      padding:
+        "clamp(7rem, 12vw, 9rem) clamp(1rem, 4vw, 3rem) clamp(2rem, 4vw, 3rem)",
+    } as React.CSSProperties,
+
+    posterCol: {
+      gridColumn: "1",
+      display: "flex",
+      flexDirection: "column" as const,
+      alignItems: "flex-start",
+      paddingRight: "clamp(1rem, 3vw, 2.5rem)",
+    } as React.CSSProperties,
+
+    posterWrap: {
+      width: "100%",
+      borderRadius: "clamp(8px, 1.5vw, 16px)",
+      overflow: "hidden",
+      boxShadow:
+        "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06)",
+      flexShrink: 0,
+    } as React.CSSProperties,
+
+    infoCol: {
+      gridColumn: "2",
+      display: "flex",
+      flexDirection: "column" as const,
+      justifyContent: "center",
+      gap: "clamp(0.75rem, 2vh, 1.25rem)",
+      paddingLeft: "clamp(0.5rem, 2vw, 1.5rem)",
+      borderLeft: "1px solid rgba(255,255,255,0.08)",
+    } as React.CSSProperties,
+
+    eyebrow: {
+      display: "flex",
+      alignItems: "center",
+      gap: "0.5rem",
+      flexWrap: "wrap" as const,
+    } as React.CSSProperties,
+
+    tag: {
+      fontSize: "clamp(0.6rem, 1.2vw, 0.7rem)",
+
+      letterSpacing: "0.12em",
+      textTransform: "uppercase" as const,
+      padding: "0.2rem 0.6rem",
+      borderRadius: 4,
+      background: "rgba(255,255,255,0.08)",
+      border: "1px solid rgba(255,255,255,0.12)",
+      color: "rgba(255,255,255,0.7)",
+      whiteSpace: "nowrap" as const,
+    } as React.CSSProperties,
+
+    ageTag: {
+      fontSize: "clamp(0.6rem, 1.2vw, 0.7rem)",
+
+      letterSpacing: "0.1em",
+      textTransform: "uppercase" as const,
+      padding: "0.2rem 0.6rem",
+      borderRadius: 4,
+      background: "rgba(234,179,8,0.15)",
+      border: "1px solid rgba(234,179,8,0.35)",
+      color: "rgb(234,179,8)",
+    } as React.CSSProperties,
+
+    title: {
+      margin: 0,
+      fontSize: "clamp(1.6rem, 4.5vw, 3.5rem)",
+      fontWeight: 700,
+      lineHeight: 1.05,
+      letterSpacing: "-0.02em",
+      color: "#fff",
+    } as React.CSSProperties,
+
+    divider: {
+      width: 40,
+      height: 2,
+      background: "#e94f37",
+      border: "none",
+      margin: 0,
+      borderRadius: 99,
+    } as React.CSSProperties,
+
+    metaRow: {
+      display: "flex",
+      alignItems: "center",
+      gap: "1.25rem",
+      flexWrap: "wrap" as const,
+    } as React.CSSProperties,
+
+    metaItem: {
+      fontSize: "clamp(0.7rem, 1.4vw, 0.8rem)",
+      color: "rgba(255,255,255,0.55)",
+      display: "flex",
+      alignItems: "center",
+      gap: "0.35rem",
+    } as React.CSSProperties,
+
+    metaLabel: {
+      fontSize: "clamp(0.6rem, 1.1vw, 0.68rem)",
+      textTransform: "uppercase" as const,
+      letterSpacing: "0.1em",
+      color: "rgba(255,255,255,0.3)",
+    } as React.CSSProperties,
+
+    metaValue: {
+      fontSize: "clamp(0.75rem, 1.4vw, 0.85rem)",
+      color: "rgba(255,255,255,0.75)",
+    } as React.CSSProperties,
+
+    genreList: {
+      display: "flex",
+      gap: "0.4rem",
+      flexWrap: "wrap" as const,
+    } as React.CSSProperties,
+
+    genre: {
+      fontSize: "clamp(0.6rem, 1.2vw, 0.68rem)",
+
+      letterSpacing: "0.06em",
+      padding: "0.25rem 0.65rem",
+      borderRadius: 99,
+      background: "rgba(233,79,55,0.12)",
+      border: "1px solid rgba(233,79,55,0.3)",
+      color: "#f87c6d",
+    } as React.CSSProperties,
+
+    actions: {
+      display: "flex",
+      gap: "0.6rem",
+      flexWrap: "wrap" as const,
+      paddingTop: "0.25rem",
+    } as React.CSSProperties,
+
+    btnPrimary: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "0.4rem",
+      padding: "0.6rem 1.4rem",
+      borderRadius: 8,
+      background: "#fff",
+      color: "#000",
+      fontWeight: 700,
+      fontSize: "clamp(0.75rem, 1.4vw, 0.85rem)",
+      border: "none",
+      cursor: "pointer",
+      letterSpacing: "0.03em",
+      transition: "opacity 0.15s",
+      flexShrink: 0,
+    } as React.CSSProperties,
+
+    btnSecondary: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "0.4rem",
+      padding: "0.6rem 1.2rem",
+      borderRadius: 8,
+      background: "rgba(255,255,255,0.07)",
+      color: "#fff",
+      fontWeight: 600,
+      fontSize: "clamp(0.75rem, 1.4vw, 0.85rem)",
+      border: "1px solid rgba(255,255,255,0.14)",
+      cursor: "pointer",
+      letterSpacing: "0.03em",
+      transition: "background 0.15s",
+      flexShrink: 0,
+    } as React.CSSProperties,
+
+    btnAccent: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "0.4rem",
+      padding: "0.6rem 1.2rem",
+      borderRadius: 8,
+      background: "#e94f37",
+      color: "#fff",
+      fontWeight: 700,
+      fontSize: "clamp(0.75rem, 1.4vw, 0.85rem)",
+      border: "none",
+      cursor: "pointer",
+      letterSpacing: "0.03em",
+      transition: "opacity 0.15s",
+      flexShrink: 0,
+    } as React.CSSProperties,
+
+    nextEp: {
+      background: "rgba(6,182,212,0.07)",
+      border: "1px solid rgba(6,182,212,0.2)",
+      borderRadius: 10,
+      padding: "0.75rem 1rem",
+    } as React.CSSProperties,
+  };
+
+  /* responsive: collapse to single column below ~520px using CSS custom property */
+  const responsiveStyle = `
+    @media (max-width: 520px) {
+      .hero-layout {
+        grid-template-columns: 1fr !important;
+        padding-top: 5rem !important;
+      }
+      .hero-poster-col {
+        padding-right: 0 !important;
+        align-items: center !important;
+        max-width: 200px;
+        margin: 0 auto;
+      }
+      .hero-info-col {
+        grid-column: 1 !important;
+        border-left: none !important;
+        padding-left: 0 !important;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        padding-top: 1.25rem;
+        align-items: center;
+        text-align: center;
+      }
+      .hero-eyebrow, .hero-genres, .hero-meta, .hero-actions, .hero-credits {
+        justify-content: center !important;
+      }
+    }
+  `;
+
   return (
     <>
-      <div className="w-full relative text-white font-inter overflow-hidden">
-        {/* Background image - full screen */}
-        <div className="fixed inset-0 -z-10">
+      <style>{responsiveStyle}</style>
+
+      <div style={s.root}>
+        {/* Background */}
+        <div style={s.bg}>
           <Image
             src={mappedContent.backdrop}
             alt=""
             fill
             priority
             aria-hidden
-            className="object-cover object-center"
             style={{
-              filter: "brightness(1.1) grayscale(100%)",
-              objectPosition: "center 50%",
+              objectFit: "cover",
+              objectPosition: "center 30%",
+              filter: "brightness(0.35) saturate(0.6)",
             }}
           />
-
-          {/* Grey to black gradient overlays */}
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-gray-800/20 to-black" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-gray-900/60 to-transparent" />
+          {/* Vignette */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(ellipse 120% 100% at 60% 50%, transparent 20%, rgba(0,0,0,0.7) 100%)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(to right, rgba(0,0,0,0.65) 0%, transparent 60%)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)",
+            }}
+          />
         </div>
 
-        {/* Content Container - Add top padding for navbar and adjust height */}
-        <div className="relative min-h-screen pt-20 sm:pt-24 md:pt-16 lg:pt-20 xl:pt-24 flex items-end justify-center px-4 sm:px-6 lg:px-8 pb-8 sm:pb-12 lg:pb-16">
-          <div className="w-full max-w-7xl mx-auto">
-            <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start lg:items-center">
-              {/* Poster */}
-              <div className="flex-shrink-0 w-34 sm:w-42 lg:w-50 xl:w-58 mx-auto lg:mx-0 relative">
-                <div className="rounded-lg shadow-2xl overflow-hidden transform transition-transform hover:scale-105">
-                  <Image
-                    src={mappedContent.poster}
-                    width={300}
-                    height={450}
-                    alt={`${mappedContent.title} poster`}
-                    className="w-full h-auto block"
-                  />
-                </div>
-
-                {/* Top Moods Overlay - Positioned on poster */}
-                {topMoods && topMoods.length > 0 && (
-                  <div className="absolute -top-4 -right-3 z-10">
-                    <div className="relative flex items-center -space-x-6">
-                      {topMoods.map((mood, idx) => {
-                        const rotations = [
-                          "-rotate-18",
-                          "rotate-0",
-                          "rotate-18",
-                        ];
-                        const zIndexes = [1, 3, 2];
-
-                        return (
-                          <div
-                            key={idx}
-                            className={`group relative transition-all duration-300 hover:scale-125 hover:z-50 cursor-pointer ${rotations[idx]} origin-bottom`}
-                            style={{ zIndex: zIndexes[idx] }}
-                          >
-                            <span className="text-4xl block filter drop-shadow-2xl">
-                              {mood.emoji}
-                            </span>
-
-                            {/* Count tooltip on hover */}
-                            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none whitespace-nowrap z-50">
-                              <div className="bg-slate-900 border border-white/20 rounded-lg px-2 py-1 shadow-xl">
-                                <p className="text-xs text-white font-medium">
-                                  {mood.count}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+        {/* Main layout */}
+        <div className="hero-layout" style={s.layout}>
+          {/* ── Poster Column ── */}
+          <div className="hero-poster-col" style={s.posterCol}>
+            <div style={{ position: "relative", width: "100%" }}>
+              <div style={s.posterWrap}>
+                <Image
+                  src={mappedContent.poster}
+                  width={320}
+                  height={480}
+                  alt={`${mappedContent.title} poster`}
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
               </div>
 
-              {/* Info */}
-              <div className="flex-1 text-center lg:text-left space-y-3 lg:space-y-4">
-                {/* Title and Year */}
-                <div>
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-extrabold tracking-tight leading-tight">
-                    {mappedContent.title}
-                  </h1>
-                  <div className="mt-3 flex items-center justify-center lg:justify-start gap-3 flex-wrap">
-                    <span className="text-xs sm:text-xs lg:text-xs xl:text-sm bg-white/10 border border-white/20 px-3 py-1 rounded-md">
-                      {mappedContent.year}
-                    </span>
-                    {mappedContent.ageRating && (
-                      <span className="text-xs sm:text-xs lg:text-xs xl:text-sm bg-green-600 text-black px-3 py-1 rounded-md font-medium">
-                        {mappedContent.ageRating}
-                      </span>
-                    )}
-                    <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/85 flex items-center gap-2">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="w-3 h-3"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                      >
-                        <path strokeWidth={2.5} d="M12 3v18m9-9H3" />
-                      </svg>
-                      {mappedContent.runtime}
-                    </span>
-                    {/* TV-specific info: seasons and episodes */}
-                    {contentType === "tv" && tvInfo && (
-                      <>
-                        {tvInfo.number_of_seasons &&
-                          tvInfo.number_of_seasons > 0 && (
-                            <span className="text-sm text-white/70 flex items-center gap-2">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="w-4 h-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                              >
-                                <rect
-                                  width="18"
-                                  height="18"
-                                  x="3"
-                                  y="3"
-                                  rx="2"
-                                  ry="2"
-                                />
-                                <line x1="9" x2="9" y1="9" y2="15" />
-                                <line x1="15" x2="15" y1="9" y2="15" />
-                              </svg>
-                              {tvInfo.number_of_seasons} Season
-                              {tvInfo.number_of_seasons !== 1 ? "s" : ""}
-                            </span>
-                          )}
-                        {tvInfo.number_of_episodes &&
-                          tvInfo.number_of_episodes > 0 && (
-                            <span className="text-sm text-white/70">
-                              {tvInfo.number_of_episodes} Episodes
-                            </span>
-                          )}
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Additional Next Airing Info */}
-                {contentType === "tv" && tvInfo?.next_episode_to_air && (
-                  <div className="relative pl-10">
-                    <div className="absolute left-1 top-0 bottom-0 w-1 bg-gradient-to-b from-cyan-500/20 to-cyan-500/0 rounded-full"></div>
+              {/* Mood badges */}
+              {topMoods.length > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: -10,
+                    right: -10,
+                    display: "flex",
+                    gap: "0.2rem",
+                  }}
+                >
+                  {topMoods.slice(0, 3).map((mood, i) => (
                     <div
-                      className="absolute left-1 top-0 w-1 h-full bg-gradient-to-b from-cyan-500 to-blue-500 rounded-full animate-pulse"
-                      style={{ animationDuration: "2s" }}
-                    ></div>
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-6">
-                      <div className="absolute inset-0 bg-cyan-500 rounded-full animate-ping opacity-20"></div>
-                      <div className="absolute inset-1 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full border-2 border-black"></div>
+                      key={i}
+                      title={`${mood.count} votes`}
+                      style={{
+                        fontSize: "clamp(1.5rem, 3.5vw, 2rem)",
+                        filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.6))",
+                        transform: `rotate(${[-12, 0, 12][i]}deg)`,
+                        cursor: "default",
+                      }}
+                    >
+                      {mood.emoji}
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-xs text-cyan-400 font-black uppercase">
-                        Coming Next
-                      </p>
-                      <p className="text-base font-bold text-white leading-tight">
-                        {tvInfo.next_episode_to_air.name}
-                      </p>
-                      <div className="inline-flex items-center gap-2 px-2 py-1 bg-cyan-500/10 rounded">
-                        <span className="text-xs text-cyan-400 font-mono">
-                          S{tvInfo.next_episode_to_air.season_number}:E
-                          {tvInfo.next_episode_to_air.episode_number}
-                        </span>
-                        <span className="text-xs text-white/40">|</span>
-                        <span className="text-xs text-white/70">
-                          {new Date(
-                            tvInfo.next_episode_to_air.air_date,
-                          ).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
-                      </div>
-                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Rating below poster */}
+            <div
+              style={{
+                marginTop: "1.25rem",
+                width: "100%",
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <RatingDisplay
+                rating={mappedContent.rating}
+                tmdbRating={data?.info?.vote_average}
+                showTmdb={!!(reviewStats && reviewStats.totalRatings > 0)}
+              />
+            </div>
+          </div>
+
+          {/* ── Info Column ── */}
+          <div className="hero-info-col" style={s.infoCol}>
+            {/* Eyebrow tags */}
+            <div className="hero-eyebrow" style={s.eyebrow}>
+              <span style={s.tag}>{mappedContent.year}</span>
+              {mappedContent.ageRating && (
+                <span style={s.ageTag}>{mappedContent.ageRating}</span>
+              )}
+              <span style={s.tag}>{mappedContent.runtime}</span>
+              {contentType === "tv" && tvInfo?.number_of_seasons && (
+                <span style={s.tag}>
+                  {tvInfo.number_of_seasons} season
+                  {tvInfo.number_of_seasons !== 1 ? "s" : ""}
+                </span>
+              )}
+              {contentType === "tv" && tvInfo?.number_of_episodes && (
+                <span style={s.tag}>{tvInfo.number_of_episodes} eps</span>
+              )}
+            </div>
+
+            {/* Title */}
+            <h1 style={s.title}>{mappedContent.title}</h1>
+
+            {/* Red rule */}
+            <hr style={s.divider} />
+
+            {/* Credits */}
+            <div className="hero-credits" style={s.metaRow}>
+              <div>
+                <p style={s.metaLabel}>
+                  {contentType === "tv" ? "Created by" : "Directed by"}
+                </p>
+                <p style={s.metaValue}>{mappedContent.director ?? "Unknown"}</p>
+              </div>
+              {contentType === "tv" &&
+                tvInfo?.networks &&
+                tvInfo.networks.length > 0 && (
+                  <div>
+                    <p style={s.metaLabel}>Network</p>
+                    <p style={s.metaValue}>
+                      {tvInfo.networks.map((n) => n.name).join(", ")}
+                    </p>
                   </div>
                 )}
+            </div>
 
-                {/* Director/Creator and Rating */}
-                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 sm:gap-6">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">
-                      {contentType ? "Created by" : "Directed by"}
-                    </span>
-                    <span className="text-xs sm:text-xs lg:text-xs xl:text-sm font-medium text-white">
-                      {mappedContent.director ?? "Unknown"}
-                    </span>
-                  </div>
-                  <StarRating
-                    rating={mappedContent.rating}
-                    tmdbRating={data?.info?.vote_average}
-                    showTmdb={reviewStats && reviewStats.totalRatings > 0}
-                  />
-                </div>
-
-                {/* Network info for TV shows */}
-                {contentType &&
-                  tvInfo?.networks &&
-                  tvInfo.networks.length > 0 && (
-                    <div className="flex items-center justify-center lg:justify-start gap-2">
-                      <span className="text-xs sm:text-xs lg:text-xs xl:text-sm text-white/70">
-                        Network:
-                      </span>
-                      <span className="text-xs sm:text-xs lg:text-xs xl:text-sm font-medium text-white">
-                        {tvInfo.networks.map((n) => n.name).join(", ")}
-                      </span>
-                    </div>
-                  )}
-
-                {/* Genres */}
-                <div className="flex items-center justify-center lg:justify-start gap-2 flex-wrap">
-                  {mappedContent.genres && mappedContent.genres.length > 0 && (
-                    <div className="flex items-center justify-center lg:justify-start gap-2 flex-wrap">
-                      {mappedContent.genres.map((g) => (
-                        <GenreBadge key={g}>{g}</GenreBadge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Overview */}
-                <ReadMore text={mappedContent.overview} limit={200} />
-
-                {/* Actions */}
-                <div className="flex items-center justify-center lg:justify-start gap-3 flex-wrap pt-2">
-                  <button
-                    onClick={() => trailerKey && setIsTrailerOpen(true)}
-                    disabled={!trailerKey}
-                    className="inline-flex items-center gap-2 bg-white text-black px-6 py-3 rounded-lg hover:bg-white/90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-5 h-5"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M5 3v18l15-9L5 3z" />
-                    </svg>
-                    <span>Trailer</span>
-                  </button>
-
-                  <button
-                    onClick={handleWatchlistToggle}
-                    disabled={isTogglingWatchlist}
-                    className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg transition-all font-medium ${
-                      inWatchlist
-                        ? "bg-green-500/90 border border-green-400/50 text-white hover:bg-green-600/90"
-                        : "bg-white/10 border border-white/20 hover:bg-white/20"
-                    } ${
-                      isTogglingWatchlist
-                        ? "opacity-70 cursor-not-allowed"
-                        : "cursor-pointer"
-                    }`}
-                  >
-                    {isTogglingWatchlist ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : inWatchlist ? (
-                      <BookmarkCheck className="w-5 h-5" />
-                    ) : (
-                      <Bookmark className="w-5 h-5" />
-                    )}
-                    <span>
-                      {inWatchlist ? "In Watchlist" : "Add to Watchlist"}
-                    </span>
-                  </button>
-
-                  <button className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-6 py-3 rounded-lg hover:bg-white/20 transition-colors">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-5 h-5"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                    </svg>
-                    <span>Like</span>
-                  </button>
-
-                  <Link href={viewAllRef} className="inline-block">
-                    <button className="inline-flex items-center gap-2 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] px-6 py-3 rounded-lg transition-colors cursor-pointer">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                        />
-                      </svg>
-                      <span>Review</span>
-                    </button>
-                  </Link>
-                </div>
+            {/* Genres */}
+            {mappedContent.genres.length > 0 && (
+              <div className="hero-genres" style={s.genreList}>
+                {mappedContent.genres.map((g) => (
+                  <span key={g} style={s.genre}>
+                    {g}
+                  </span>
+                ))}
               </div>
+            )}
+
+            {/* Overview */}
+            <ReadMore text={mappedContent.overview} limit={220} />
+
+            {/* Next episode banner */}
+            {contentType === "tv" && tvInfo?.next_episode_to_air && (
+              <div style={s.nextEp}>
+                <p
+                  style={{
+                    fontSize: "0.62rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    color: "rgba(6,182,212,0.8)",
+                    margin: "0 0 0.25rem",
+                  }}
+                >
+                  Next episode
+                </p>
+                <p
+                  style={{
+                    fontWeight: 600,
+                    margin: "0 0 0.3rem",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  {tvInfo.next_episode_to_air.name}
+                </p>
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    color: "rgba(255,255,255,0.5)",
+                    margin: 0,
+                  }}
+                >
+                  S{tvInfo.next_episode_to_air.season_number}:E
+                  {tvInfo.next_episode_to_air.episode_number} ·{" "}
+                  {new Date(
+                    tvInfo.next_episode_to_air.air_date,
+                  ).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </p>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="hero-actions" style={s.actions}>
+              <button
+                onClick={() => trailerKey && setIsTrailerOpen(true)}
+                disabled={!trailerKey}
+                style={{ ...s.btnPrimary, opacity: trailerKey ? 1 : 0.4 }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M5 3v18l15-9L5 3z" />
+                </svg>
+                Watch Trailer
+              </button>
+
+              <button
+                onClick={handleWatchlistToggle}
+                disabled={isTogglingWatchlist}
+                style={{
+                  ...s.btnSecondary,
+                  ...(inWatchlist
+                    ? {
+                        background: "rgba(34,197,94,0.12)",
+                        border: "1px solid rgba(34,197,94,0.3)",
+                        color: "#86efac",
+                      }
+                    : {}),
+                  opacity: isTogglingWatchlist ? 0.6 : 1,
+                }}
+              >
+                {isTogglingWatchlist ? (
+                  <div
+                    style={{
+                      width: 14,
+                      height: 14,
+                      border: "2px solid rgba(255,255,255,0.4)",
+                      borderTopColor: "#fff",
+                      borderRadius: "50%",
+                      animation: "spin 0.7s linear infinite",
+                    }}
+                  />
+                ) : inWatchlist ? (
+                  <BookmarkCheck size={14} />
+                ) : (
+                  <Bookmark size={14} />
+                )}
+                {inWatchlist ? "Saved" : "Watchlist"}
+              </button>
+
+              <Link href={viewAllRef}>
+                <button style={s.btnAccent}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
+                    />
+                  </svg>
+                  Write a Review
+                </button>
+              </Link>
+
+              <button style={s.btnSecondary}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </svg>
+                Like
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Trailer Modal */}
       {trailerKey && (
         <TrailerModal
           isOpen={isTrailerOpen}
@@ -854,6 +1034,8 @@ export function HeroContentCard({
           title={mappedContent.title}
         />
       )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </>
   );
 }

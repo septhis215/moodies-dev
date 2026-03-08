@@ -1,10 +1,9 @@
-// components/selected-movie/reviewsSection.tsx
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Users2, Star } from "lucide-react";
+import { Star, PenSquare, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import { useAuth } from "@/app/context/AuthProvider";
@@ -58,11 +57,13 @@ export default function ReviewsSection({
   const [sortBy, setSortBy] = useState<"latest" | "highest" | "popularity">(
     "latest",
   );
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   function popularityProxy(r: Review) {
-    const rating = r.author_details?.rating ?? 0;
-    const lenScore = Math.min(5, (r.content?.length ?? 0) / 200);
-    return rating + lenScore;
+    return (
+      (r.author_details?.rating ?? 0) +
+      Math.min(5, (r.content?.length ?? 0) / 200)
+    );
   }
 
   const sorted = useMemo(() => {
@@ -76,15 +77,12 @@ export default function ReviewsSection({
         break;
       case "highest":
         arr.sort((a, b) => {
-          const ra = a.author_details?.rating ?? -1;
-          const rb = b.author_details?.rating ?? -1;
-          if (ra === rb) {
-            return (
-              new Date(b.created_at).getTime() -
-              new Date(a.created_at).getTime()
-            );
-          }
-          return rb - ra;
+          const ra = a.author_details?.rating ?? -1,
+            rb = b.author_details?.rating ?? -1;
+          return ra === rb
+            ? new Date(b.created_at).getTime() -
+                new Date(a.created_at).getTime()
+            : rb - ra;
         });
         break;
       case "popularity":
@@ -95,519 +93,291 @@ export default function ReviewsSection({
   }, [reviewsArray, sortBy]);
 
   const topThree = sorted.slice(0, 3);
-
-  // build base path depending on contentType (movie or tv)
   const basePath = contentType === "tv" ? "tv" : "movies";
   const viewAllHref = contentId ? `/${basePath}/${contentId}/reviews` : "#";
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(
     new Set(),
   );
 
-  const toggleExpand = (reviewId: string) => {
+  const toggleExpand = (id: string) => {
     setExpandedReviews((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(reviewId)) {
-        newSet.delete(reviewId);
-      } else {
-        newSet.add(reviewId);
-      }
-      return newSet;
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
     });
   };
 
-  return (
-    <section className="space-y-6">
-      {/* Header + controls */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-            Audience Reviews
-          </h2>
-          <p className="text-slate-400 text-sm mt-1">
-            Top community picks & latest opinions
-          </p>
-        </div>
+  // close modal on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setReviewModalOpen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 text-xs">
-            <SortButton
-              active={sortBy === "latest"}
-              onClick={() => setSortBy("latest")}
-            >
-              Latest
-            </SortButton>
-            <SortButton
-              active={sortBy === "highest"}
-              onClick={() => setSortBy("highest")}
-            >
-              Highest
-            </SortButton>
-            <SortButton
-              active={sortBy === "popularity"}
-              onClick={() => setSortBy("popularity")}
-            >
-              Popularity
-            </SortButton>
+  // prevent body scroll when modal open
+  useEffect(() => {
+    document.body.style.overflow = reviewModalOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [reviewModalOpen]);
+
+  return (
+    <>
+      <section className="space-y-6">
+        {/* ── Header ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+              Audience Reviews
+            </h2>
+            <p className="text-slate-400 text-sm mt-1">
+              Top community picks & latest opinions
+            </p>
           </div>
 
-          <div className="md:hidden">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Sort pills — desktop */}
+            <div className="hidden md:flex items-center gap-1 p-1 rounded-lg bg-white/[0.04] border border-white/[0.07]">
+              {(["latest", "highest", "popularity"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSortBy(s)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer capitalize ${sortBy === s ? "bg-[#e94f37] text-white" : "text-slate-400 hover:text-white"}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            {/* Sort — mobile */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-slate-800/60 text-slate-200 rounded-lg px-3 py-2 text-sm border border-white/6 cursor-pointer"
+              className="md:hidden bg-white/[0.05] text-slate-200 rounded-lg px-3 py-2 text-sm border border-white/[0.07] outline-none cursor-pointer"
             >
               <option value="latest">Latest</option>
               <option value="highest">Highest</option>
               <option value="popularity">Popularity</option>
             </select>
+
+            {/* Divider */}
+            <div className="hidden sm:block h-5 w-px bg-white/[0.1]" />
+
+            {/* Write a Review — primary CTA */}
+            <button
+              onClick={() => setReviewModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#e94f37] hover:bg-[#d94432] active:scale-95 text-white text-xs font-semibold transition-all duration-150 cursor-pointer shadow-lg shadow-[#e94f37]/20"
+            >
+              <PenSquare size={13} strokeWidth={2.5} />
+              Write a Review
+            </button>
+
+            {/* View all — text link style */}
+            <Link
+              href={viewAllHref}
+              className="text-xs font-medium text-white/40 hover:text-white transition-colors underline underline-offset-2 decoration-white/20 hover:decoration-white/60 whitespace-nowrap"
+            >
+              View all
+            </Link>
           </div>
         </div>
-      </div>
 
-      {/* Top 3 grid - Dynamic layout based on expanded state */}
-      <div
-        className={`grid gap-6 transition-all duration-300 ease-in-out ${
-          expandedReviews.size > 0
-            ? "grid-cols-1"
-            : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-        }`}
-      >
-        <AnimatePresence mode="popLayout">
-          {topThree.map((r, idx) => {
-            const isExpanded = expandedReviews.has(r.id);
-            const contentPreview = r.content.slice(0, 150);
-            const needsTruncation = r.content.length > 150;
-
-            return (
-              <motion.div
-                key={r.id}
-                layout
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }}
-                transition={{
-                  layout: { duration: 0.3, ease: "easeInOut" },
-                  opacity: { duration: 0.2 },
-                }}
-                whileHover={{ scale: isExpanded ? 1 : 1.01 }}
-                className={`relative rounded-2xl p-5 border border-white/8 bg-gradient-to-br from-slate-900/70 to-slate-800/70 shadow-lg overflow-hidden ${
-                  isExpanded ? "col-span-1" : ""
-                }`}
-              >
-                <div className="flex items-start gap-4 min-w-0">
-                  <div className="flex-shrink-0">
-                    <AvatarBlock review={r} />
-                  </div>
-
-                  <div className="flex-1 min-w-0 space-y-3">
-                    {/* Header section with author and rating */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-xs text-slate-100 font-semibold truncate">
+        {/* ── Review cards ── */}
+        <div
+          className={`grid gap-4 transition-all duration-300 ${expandedReviews.size > 0 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`}
+        >
+          <AnimatePresence mode="popLayout">
+            {topThree.length === 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-16 gap-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                <div className="text-3xl opacity-30">💬</div>
+                <p className="text-sm text-white/30">
+                  No reviews yet. Be the first!
+                </p>
+              </div>
+            ) : (
+              topThree.map((r, idx) => {
+                const isExpanded = expandedReviews.has(r.id);
+                const preview = r.content.slice(0, 150);
+                const needsTruncation = r.content.length > 150;
+                return (
+                  <motion.div
+                    key={r.id}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 8 }}
+                    transition={{
+                      layout: { duration: 0.3, ease: "easeInOut" },
+                      opacity: { duration: 0.2 },
+                    }}
+                    className="relative flex flex-col gap-4 p-5 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:bg-white/[0.05] hover:border-white/[0.12] transition-all duration-200 overflow-hidden"
+                  >
+                    <svg
+                      className="absolute top-3 right-3 w-7 h-7 text-white/[0.04]"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      aria-hidden
+                    >
+                      <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+                    </svg>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <AvatarBlock review={r} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">
                           {r.author}
-                        </h3>
-                        <div className="text-xs text-slate-400">
-                          {new Date(r.created_at).toLocaleDateString()}
-                        </div>
-                      </div>
-
-                      <div className="flex-shrink-0 flex items-center gap-3">
-                        <RatingDisplay rating={r.author_details?.rating} />
-
-                        {/* Add mood emojis display */}
-                        {r.moodEmojis && r.moodEmojis.length > 0 && (
-                          <div className="flex items-center gap-1">
-                            {r.moodEmojis.slice(0, 3).map((emoji, idx) => (
-                              <span key={idx} className="text-sm">
-                                {emoji}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="text-xs text-slate-400">
-                          {(r.content?.length ?? 0) > 0
-                            ? `${Math.min(10, Math.round(r.content.length / 25))} ch`
-                            : ""}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Review content with expand/collapse */}
-                    <div className="text-slate-300 text-sm leading-relaxed">
-                      <div className="relative">
-                        <p className="break-words">
-                          {isExpanded ? r.content : contentPreview}
-                          {!isExpanded && needsTruncation && "..."}
                         </p>
-                        {needsTruncation && (
-                          <button
-                            onClick={() => toggleExpand(r.id)}
-                            className="mt-2 text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
-                          >
-                            {isExpanded ? "Show less" : "Read more"}
-                          </button>
-                        )}
+                        <p className="text-[11px] text-white/30">
+                          {new Date(r.created_at).toLocaleDateString()}
+                        </p>
                       </div>
+                      {typeof r.author_details?.rating === "number" && (
+                        <RatingArc rating={r.author_details.rating} />
+                      )}
                     </div>
-
-                    {/* Action buttons */}
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <div className="flex items-center gap-3 min-w-0">
-                        {contentId ? (
-                          <Link
-                            href={`/${basePath}/${contentId}/reviews?highlight=${encodeURIComponent(
-                              r.id,
-                            )}`}
-                            className="text-xs text-indigo-400 hover:underline truncate"
-                          >
-                            Read full review
-                          </Link>
-                        ) : (
-                          <Link
-                            href={r.url || "#"}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs text-indigo-400 hover:underline truncate"
-                          >
-                            Read full review
-                          </Link>
-                        )}
+                    {r.moodEmojis && r.moodEmojis.length > 0 && (
+                      <div className="flex gap-1">
+                        {r.moodEmojis.slice(0, 3).map((e, i) => (
+                          <span key={i} className="text-base">
+                            {e}
+                          </span>
+                        ))}
                       </div>
-
-                      <div className="text-xs text-slate-400 flex-shrink-0">
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm text-white/70 leading-relaxed break-words">
+                        {isExpanded ? r.content : preview}
+                        {!isExpanded && needsTruncation && "…"}
+                      </p>
+                      {needsTruncation && (
+                        <button
+                          onClick={() => toggleExpand(r.id)}
+                          className="mt-2 text-xs text-[#e94f37] hover:text-[#ff6b58] font-medium transition-colors cursor-pointer"
+                        >
+                          {isExpanded ? "Show less" : "Read more"}
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-white/[0.06]">
+                      <Link
+                        href={
+                          contentId
+                            ? `/${basePath}/${contentId}/reviews?highlight=${encodeURIComponent(r.id)}`
+                            : r.url || "#"
+                        }
+                        className="text-xs text-white/30 hover:text-[#e94f37] transition-colors"
+                      >
+                        Full review →
+                      </Link>
+                      <span className="text-[11px] text-white/20">
                         #{idx + 1} of {sorted.length}
-                      </div>
+                      </span>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </AnimatePresence>
+        </div>
+      </section>
 
-                <svg
-                  className="absolute top-3 right-3 opacity-8 w-8 h-8 text-slate-700"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden
-                >
-                  <path
-                    d="M7 7h4v6H5V9a2 2 0 0 1 2-2zM17 7h4v6h-6V9a2 2 0 0 1 2-2z"
-                    fill="currentColor"
-                  />
-                </svg>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
-
-      {/* 'View all' button that navigates to the dedicated page */}
-      <div className="pt-4">
-        {contentId ? (
-          <Link href={viewAllHref} className="inline-block">
-            <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white text-sm font-medium shadow cursor-pointer">
-              View all reviews
-            </button>
-          </Link>
-        ) : (
-          <a href={viewAllHref} className="inline-block">
-            <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white text-sm font-medium shadow cursor-pointer">
-              View all reviews
-            </button>
-          </a>
+      {/* ── Review Modal ── */}
+      <AnimatePresence>
+        {reviewModalOpen && (
+          <ReviewModal
+            contentId={contentId}
+            contentType={contentType}
+            onClose={() => setReviewModalOpen(false)}
+          />
         )}
-      </div>
-
-      {/* Write a review form */}
-      <div className="mt-8 rounded-3xl p-6 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl">
-        <ReviewForm contentId={contentId} contentType={contentType} />
-      </div>
-    </section>
+      </AnimatePresence>
+    </>
   );
 }
 
-/* ---------- small helpers (unchanged) ---------- */
-
-function SortButton({
-  children,
-  active,
-  onClick,
-}: {
-  children: React.ReactNode;
-  active?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
-        active
-          ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white shadow"
-          : "bg-white/5 text-slate-200 hover:bg-white/6"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function AvatarBlock({
-  review,
-  small = false,
-}: {
-  review: Review;
-  small?: boolean;
-}) {
-  const size = small ? 36 : 56;
-  const avatarSrc = (() => {
-    const av = review.author_details?.avatar_path;
-    if (!av) return null;
-    if (av.startsWith("/https") || av.startsWith("/http")) return av.slice(1);
-    return `https://image.tmdb.org/t/p/w185${av}`;
-  })();
-
-  const initials = (review.author || "A")
-    .split(" ")
-    .map((s) => s[0]?.toUpperCase() ?? "")
-    .slice(0, 2)
-    .join("");
-
-  return (
-    <div
-      style={{ width: size, height: size, minWidth: size, minHeight: size }}
-      className="rounded-full overflow-hidden bg-slate-700 flex items-center justify-center ring-1 ring-white/6"
-    >
-      {avatarSrc ? (
-        <Image
-          src={avatarSrc}
-          alt={review.author}
-          width={size}
-          height={size}
-          className="object-cover"
-        />
-      ) : (
-        <div className="text-slate-200 font-semibold">{initials}</div>
-      )}
-    </div>
-  );
-}
-
-function RatingDisplay({ rating }: { rating?: number }) {
-  if (typeof rating !== "number") {
-    return <div className="text-xs text-slate-400">—</div>;
-  }
-  const raw = Math.max(0, Math.min(10, rating));
-  const stars = Math.round((raw / 10) * 5 * 2) / 2;
-  const full = Math.floor(stars);
-  const half = stars % 1 >= 0.5;
-
-  return (
-    <div className="flex items-center gap-1">
-      <div className="flex items-center">
-        {Array.from({ length: 5 }).map((_, i) => {
-          if (i < full) {
-            return <Star key={i} size={14} className="text-yellow-300" />;
-          }
-          if (i === full && half) {
-            return (
-              <Star key={i} size={14} className="text-yellow-300 opacity-60" />
-            );
-          }
-          return <Star key={i} size={14} className="text-slate-600" />;
-        })}
-      </div>
-      <div className="text-xs text-slate-300 ml-2">{rating.toFixed(1)}/10</div>
-    </div>
-  );
-}
-
-function ReviewForm({
+/* ─── Review Modal ─── */
+function ReviewModal({
   contentId,
   contentType,
+  onClose,
 }: {
   contentId?: string;
   contentType?: "movie" | "tv";
+  onClose: () => void;
 }) {
   const { isAuthenticated, user } = useAuth();
-  const { banStatus, loading: banLoading } = useReviewBanStatus();
-  const [author, setAuthor] = useState("");
-  const [content, setContent] = useState("");
-  const [rating, setRating] = useState<number | null>(null);
-  const [mood, setMood] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [hoveredStar, setHoveredStar] = useState<number | null>(null);
+  const { banStatus } = useReviewBanStatus();
 
-  const moodToEmoji: Record<string, string> = {
-    amazing: "🔥",
-    loved: "❤️",
-    enjoyed: "😊",
-    okay: "😐",
-    meh: "😕",
-    disliked: "😞",
-  };
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(14px)" }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg rounded-2xl overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(20,20,24,0.98) 0%, rgba(14,14,18,0.99) 100%)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          boxShadow:
+            "0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)",
+        }}
+      >
+        {/* Red accent bar at top */}
+        <div className="h-0.5 w-full bg-gradient-to-r from-[#e94f37] via-[#ff6b58] to-transparent" />
 
-  // Set author name from authenticated user on mount
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      setAuthor(user.username ?? user.name ?? "");
-    }
-  }, [isAuthenticated, user]);
-
-  function toggleStar(index: number) {
-    const newRating = index * 2;
-    setRating((prev) => (prev === newRating ? null : newRating));
-  }
-
-  async function handleSubmit(e?: React.FormEvent) {
-    e?.preventDefault();
-    setError(null);
-
-    if (!isAuthenticated) {
-      Swal.fire({
-        icon: "warning",
-        title: "Not Logged In",
-        text: "You need to be logged in to write a review.",
-        confirmButtonText: "Go to Login",
-        confirmButtonColor: "#e94f37",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          window.location.href = "/auth/login";
-        }
-      });
-      return;
-    }
-
-    if (!contentId) {
-      setError("Unable to submit review: content ID is missing");
-      return;
-    }
-
-    if (!mood) {
-      setError("🎭 Pick a mood that matches your vibe");
-      return;
-    }
-
-    if (rating === null) {
-      setError("⭐ Don't forget to rate it");
-      return;
-    }
-
-    if (!content.trim() || content.trim().length < 10) {
-      setError("✍️ Tell us more! At least 10 characters");
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const token = localStorage.getItem("authToken");
-
-      const response = await fetch("http://localhost:4000/reviews", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          rating: rating,
-          content: content.trim(),
-          moodEmojis: [moodToEmoji[mood]],
-          tmdbId: contentId ? parseInt(contentId) : 0,
-          mediaType: (contentType?.toUpperCase() || "MOVIE") as "MOVIE" | "TV",
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to submit review");
-      }
-
-      await response.json();
-
-      // Show success message
-      Swal.fire({
-        icon: "success",
-        title: "Review Submitted!",
-        text: "Refreshing page...",
-        confirmButtonColor: "#e94f37",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-
-      // Reset form
-      setContent("");
-      setRating(null);
-      setMood(null);
-
-      // Reload the page to fetch updated reviews
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to submit review";
-
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: errorMessage,
-        confirmButtonColor: "#e94f37",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  const displayRating = hoveredStar !== null ? hoveredStar : rating;
-
-  // Show login prompt if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="relative rounded-3xl p-6 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 shadow-2xl">
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="text-4xl mb-4">🔐</div>
-          <h3 className="text-xl font-bold text-white mb-2">Write a Review</h3>
-          <p className="text-slate-300 mb-6">
-            You need to be logged in to write a review and share your thoughts
-            with the community.
-          </p>
-          <Link
-            href="/auth/login"
-            className="px-6 py-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white font-medium hover:shadow-lg transition-shadow"
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
+          <div>
+            <h2 className="text-base font-bold text-white">Write a Review</h2>
+            <p className="text-xs text-white/30 mt-0.5">
+              Share your experience with the community
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-white/50 hover:text-white transition-all cursor-pointer"
           >
-            Sign In to Write a Review
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  // Show banned state if user is banned
-  if (banStatus.banned) {
-    return (
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-950/30 via-slate-900/80 to-slate-950/80 border border-red-500/20 shadow-xl">
-        {/* Subtle pattern overlay */}
-        <div className="absolute inset-0 opacity-5">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `repeating-linear-gradient(
-              45deg,
-              transparent,
-              transparent 10px,
-              rgba(239, 68, 68, 0.2) 10px,
-              rgba(239, 68, 68, 0.2) 20px
-            )`,
-            }}
-          />
+            <X size={14} />
+          </button>
         </div>
 
-        <div className="relative p-5">
-          <div className="flex items-start gap-4">
-            {/* Icon */}
-            <div className="flex-shrink-0">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500/15 to-red-600/15 border border-red-500/30 flex items-center justify-center">
+        {/* Body */}
+        <div className="max-h-[80svh] overflow-y-auto scrollbar-none">
+          {!isAuthenticated ? (
+            <div className="flex flex-col items-center justify-center py-14 px-6 text-center gap-4">
+              <div className="text-5xl">🔐</div>
+              <div>
+                <h3 className="text-base font-bold text-white mb-1">
+                  Sign in to continue
+                </h3>
+                <p className="text-sm text-white/40">
+                  You need to be logged in to leave a review.
+                </p>
+              </div>
+              <Link
+                href="/auth/login"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#e94f37] text-white text-sm font-semibold hover:bg-[#d94432] transition-colors"
+              >
+                Sign in
+              </Link>
+            </div>
+          ) : banStatus.banned ? (
+            <div className="flex items-start gap-4 p-6">
+              <div className="w-10 h-10 flex-shrink-0 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-red-400"
+                  className="w-5 h-5 text-red-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -620,28 +390,16 @@ function ReviewForm({
                   />
                 </svg>
               </div>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold mb-1 bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent">
-                Review Privileges Suspended
-              </h3>
-              <p className="text-slate-400 text-xs mb-3">
-                Temporarily restricted due to policy violations
-              </p>
-
-              {/* Compact info grid */}
-              <div className="space-y-2 mb-3">
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                  <span className="text-red-300">
-                    Profanity & harmful content detected
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-red-400 mb-1">
+                  Review Privileges Suspended
+                </h3>
+                <p className="text-xs text-white/40 mb-3">
+                  Temporarily restricted due to policy violations.
+                </p>
+                <div className="flex items-center gap-2 text-xs text-white/50">
                   <svg
-                    className="w-4 h-4 text-red-400"
+                    className="w-3.5 h-3.5 text-red-400"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -653,364 +411,248 @@ function ReviewForm({
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <span className="text-slate-300 text-xs">
-                    Expires in:{" "}
-                    <span className="font-semibold text-red-400">
-                      {banStatus?.timeRemaining || "Unknown"}
-                    </span>
+                  Expires in{" "}
+                  <span className="text-red-400 font-semibold ml-1">
+                    {banStatus?.timeRemaining || "Unknown"}
                   </span>
                 </div>
               </div>
-
-              {/* Small info note */}
-              <div className="flex items-start gap-2 p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
-                <svg
-                  className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <p className="text-slate-400 text-xs leading-relaxed">
-                  Your privileges will be restored automatically after the ban
-                  expires.
-                </p>
-              </div>
             </div>
-          </div>
+          ) : (
+            <ReviewForm
+              contentId={contentId}
+              contentType={contentType}
+              onSuccess={onClose}
+              user={user}
+            />
+          )}
         </div>
-      </div>
-    );
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ─── ReviewForm (inside modal) ─── */
+function ReviewForm({
+  contentId,
+  contentType,
+  onSuccess,
+  user,
+}: {
+  contentId?: string;
+  contentType?: "movie" | "tv";
+  onSuccess?: () => void;
+  user?: any;
+}) {
+  const [content, setContent] = useState("");
+  const [rating, setRating] = useState<number | null>(null);
+  const [mood, setMood] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [hoveredStar, setHoveredStar] = useState<number | null>(null);
+
+  const moodOptions = [
+    { emoji: "🔥", label: "Amazing", value: "amazing" },
+    { emoji: "❤️", label: "Loved it", value: "loved" },
+    { emoji: "😊", label: "Enjoyed", value: "enjoyed" },
+    { emoji: "😐", label: "It's okay", value: "okay" },
+    { emoji: "😕", label: "Meh", value: "meh" },
+    { emoji: "😞", label: "Disliked", value: "disliked" },
+  ];
+
+  const moodToEmoji: Record<string, string> = {
+    amazing: "🔥",
+    loved: "❤️",
+    enjoyed: "😊",
+    okay: "😐",
+    meh: "😕",
+    disliked: "😞",
+  };
+
+  async function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault();
+    setError(null);
+    if (!contentId) {
+      setError("Content ID is missing.");
+      return;
+    }
+    if (!mood) {
+      setError("🎭 Pick a mood first");
+      return;
+    }
+    if (rating === null) {
+      setError("⭐ Add a rating");
+      return;
+    }
+    if (!content.trim() || content.trim().length < 10) {
+      setError("✍️ At least 10 characters needed");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem("authToken");
+      const res = await fetch("http://localhost:4000/reviews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          rating,
+          content: content.trim(),
+          moodEmojis: [moodToEmoji[mood]],
+          tmdbId: parseInt(contentId),
+          mediaType: (contentType?.toUpperCase() || "MOVIE") as "MOVIE" | "TV",
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed");
+      }
+      onSuccess?.();
+      Swal.fire({
+        icon: "success",
+        title: "Review Submitted!",
+        timer: 1500,
+        showConfirmButton: false,
+        confirmButtonColor: "#e94f37",
+      });
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err instanceof Error ? err.message : "Failed to submit",
+        confirmButtonColor: "#e94f37",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
+  const displayRating = hoveredStar !== null ? hoveredStar : rating;
+  const author = user?.username ?? user?.name ?? "User";
+
   return (
-    <div className="relative">
-      {/* Dynamic background based on mood */}
-      <div
-        className={`absolute inset-0 rounded-2xl transition-all duration-500 ${
-          mood === "amazing"
-            ? "bg-gradient-to-br from-orange-500/20 to-red-500/20"
-            : mood === "loved"
-              ? "bg-gradient-to-br from-pink-500/20 to-rose-500/20"
-              : mood === "enjoyed"
-                ? "bg-gradient-to-br from-green-500/20 to-emerald-500/20"
-                : mood === "okay"
-                  ? "bg-gradient-to-br from-slate-500/20 to-gray-500/20"
-                  : mood === "meh"
-                    ? "bg-gradient-to-br from-gray-600/20 to-slate-600/20"
-                    : mood === "disliked"
-                      ? "bg-gradient-to-br from-slate-700/20 to-gray-700/20"
-                      : "bg-slate-900/50"
-        }`}
-      />
-
-      <form
-        onSubmit={handleSubmit}
-        className="relative space-y-3 p-5 rounded-2xl transition-all duration-500"
-        style={{
-          borderColor:
-            mood === "amazing"
-              ? "rgba(249, 115, 22, 0.3)"
-              : mood === "loved"
-                ? "rgba(236, 72, 153, 0.3)"
-                : mood === "enjoyed"
-                  ? "rgba(34, 197, 94, 0.3)"
-                  : mood === "okay"
-                    ? "rgba(100, 116, 139, 0.3)"
-                    : mood === "meh"
-                      ? "rgba(75, 85, 99, 0.3)"
-                      : mood === "disliked"
-                        ? "rgba(71, 85, 105, 0.3)"
-                        : "rgba(255, 255, 255, 0.1)",
-        }}
-      >
-        {/* Header with dynamic accent */}
-        <div className="transition-colors duration-500">
-          <h3 className="text-lg font-bold text-white">Write a Review</h3>
-          <p
-            className={`text-xs mt-0.5 transition-colors duration-500 ${
-              mood === "amazing"
-                ? "text-orange-300"
-                : mood === "loved"
-                  ? "text-pink-300"
-                  : mood === "enjoyed"
-                    ? "text-green-300"
-                    : mood === "okay"
-                      ? "text-slate-400"
-                      : mood === "meh"
-                        ? "text-gray-400"
-                        : mood === "disliked"
-                          ? "text-slate-500"
-                          : "text-slate-400"
-            }`}
-          >
-            {mood === "amazing"
-              ? "🔥 Amazing! Tell us what made it incredible"
-              : mood === "loved"
-                ? "❤️ You loved it! Share what touched your heart"
-                : mood === "enjoyed"
-                  ? "😊 Great! What did you enjoy most?"
-                  : mood === "okay"
-                    ? "😐 It was okay. What worked and what didn't?"
-                    : mood === "meh"
-                      ? "😕 Not impressed? Tell us why"
-                      : mood === "disliked"
-                        ? "😞 Sorry it disappointed. What went wrong?"
-                        : "Share your experience with the community"}
-          </p>
-        </div>
-
-        {/* Mood Selection */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-2">
-            How did it make you feel?
-          </label>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-            {[
-              {
-                emoji: "🔥",
-                label: "Amazing",
-                value: "amazing",
-                color: "from-orange-500 to-red-500",
-              },
-              {
-                emoji: "❤️",
-                label: "Loved it",
-                value: "loved",
-                color: "from-pink-500 to-rose-500",
-              },
-              {
-                emoji: "😊",
-                label: "Enjoyed",
-                value: "enjoyed",
-                color: "from-green-500 to-emerald-500",
-              },
-              {
-                emoji: "😐",
-                label: "It's okay",
-                value: "okay",
-                color: "from-slate-500 to-gray-500",
-              },
-              {
-                emoji: "😕",
-                label: "Meh",
-                value: "meh",
-                color: "from-gray-600 to-slate-600",
-              },
-              {
-                emoji: "😞",
-                label: "Disliked",
-                value: "disliked",
-                color: "from-slate-700 to-gray-700",
-              },
-            ].map((m) => (
-              <button
-                key={m.value}
-                type="button"
-                onClick={() => setMood(m.value)}
-                className={`relative flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-300 cursor-pointer ${
-                  mood === m.value
-                    ? `bg-gradient-to-br ${m.color} shadow-lg scale-105 border-2 border-white/30`
-                    : "bg-slate-900/30 hover:bg-slate-800/50 border border-white/10"
-                }`}
-              >
-                <span className="text-xl">{m.emoji}</span>
-                <span
-                  className={`text-[9px] font-medium ${
-                    mood === m.value ? "text-white" : "text-slate-400"
-                  }`}
-                >
-                  {m.label}
-                </span>
-                {mood === m.value && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-lg">
-                    <svg
-                      className="w-1.5 h-1.5 text-green-600"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Combined Quote Card - Name, Rating, and Review */}
-        <div className="relative bg-slate-900/50 rounded-lg p-4 transition-all">
-          {/* Opening quote mark */}
-          <svg
-            className="absolute top-2 left-2 w-6 h-6 opacity-20 transition-colors"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            style={{
-              color:
-                mood === "amazing"
-                  ? "rgb(249, 115, 22)"
-                  : mood === "loved"
-                    ? "rgb(236, 72, 153)"
-                    : mood === "enjoyed"
-                      ? "rgb(34, 197, 94)"
-                      : mood === "okay"
-                        ? "rgb(100, 116, 139)"
-                        : mood === "meh"
-                          ? "rgb(75, 85, 99)"
-                          : mood === "disliked"
-                            ? "rgb(71, 85, 105)"
-                            : "rgb(255, 255, 255)",
-            }}
-          >
-            <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
-          </svg>
-
-          {/* Name input section - Display only, not editable */}
-          <div className="flex items-center gap-2 mb-2 pl-8">
-            <div
-              className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-800 border-2 transition-colors flex items-center justify-center"
-              style={{
-                borderColor:
-                  mood === "amazing"
-                    ? "rgb(249, 115, 22)"
-                    : mood === "loved"
-                      ? "rgb(236, 72, 153)"
-                      : mood === "enjoyed"
-                        ? "rgb(34, 197, 94)"
-                        : mood === "okay"
-                          ? "rgb(100, 116, 139)"
-                          : mood === "meh"
-                            ? "rgb(75, 85, 99)"
-                            : mood === "disliked"
-                              ? "rgb(71, 85, 105)"
-                              : "rgba(255, 255, 255, 0.3)",
-              }}
+    <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
+      {/* Mood selector */}
+      <div>
+        <p className="text-[11px] uppercase tracking-widest text-white/30 mb-2.5">
+          How did it make you feel?
+        </p>
+        <div className="grid grid-cols-6 gap-1.5">
+          {moodOptions.map((m) => (
+            <button
+              key={m.value}
+              type="button"
+              onClick={() => setMood(m.value)}
+              className={`relative flex flex-col items-center gap-1 py-2.5 px-1 rounded-lg border transition-all duration-200 cursor-pointer ${
+                mood === m.value
+                  ? "bg-white/[0.08] border-[#e94f37]/50 scale-[1.04]"
+                  : "bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] hover:border-white/20"
+              }`}
             >
-              <span className="text-slate-400 text-xs font-semibold">
-                {author ? author.charAt(0).toUpperCase() : "A"}
+              <span className="text-lg leading-none">{m.emoji}</span>
+              <span
+                className={`text-[9px] font-medium leading-none text-center ${mood === m.value ? "text-white" : "text-white/35"}`}
+              >
+                {m.label}
               </span>
-            </div>
+              {mood === m.value && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#e94f37] rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-2 h-2 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
 
-            <div className="flex-1 text-white text-xs font-medium">
-              {user?.username ?? user?.name ?? "User"}
-            </div>
+      {/* Review text + rating card */}
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+        {/* Author strip */}
+        <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/[0.06]">
+          <div className="w-6 h-6 rounded-full bg-white/[0.1] border border-white/10 flex items-center justify-center flex-shrink-0">
+            <span className="text-white/50 text-[10px] font-bold">
+              {author.charAt(0).toUpperCase()}
+            </span>
           </div>
+          <span className="text-xs font-medium text-white/50">{author}</span>
 
-          {/* Rating section */}
-          <div className="flex items-center justify-center gap-0.5 py-2 mb-3">
+          {/* Stars inline */}
+          <div className="ml-auto flex items-center gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => {
-              const starValue = (i + 1) * 2;
-              const active =
-                displayRating !== null && displayRating >= starValue;
+              const val = (i + 1) * 2;
+              const active = displayRating !== null && displayRating >= val;
               return (
                 <button
                   key={i}
                   type="button"
-                  onClick={() => toggleStar(i + 1)}
-                  onMouseEnter={() => setHoveredStar(starValue)}
+                  onClick={() => setRating((p) => (p === val ? null : val))}
+                  onMouseEnter={() => setHoveredStar(val)}
                   onMouseLeave={() => setHoveredStar(null)}
                   className="p-0.5 transition-transform hover:scale-110 cursor-pointer"
                 >
                   <Star
-                    size={18}
-                    className={`transition-colors ${
-                      active
-                        ? "text-yellow-400 fill-yellow-400"
-                        : "text-slate-700 hover:text-slate-600"
-                    }`}
+                    size={14}
+                    className={`transition-colors ${active ? "text-yellow-400 fill-yellow-400" : "text-white/15 hover:text-white/40"}`}
                   />
                 </button>
               );
             })}
-          </div>
-
-          {/* Review textarea */}
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Share your thoughts about this title. What did you like or dislike? Would you recommend it?"
-            rows={4}
-            className="w-full bg-transparent text-white placeholder-slate-500 resize-none text-xs focus:outline-none mb-3"
-          />
-
-          {/* Closing quote mark */}
-          <svg
-            className="absolute bottom-2 right-2 w-6 h-6 opacity-20 transition-colors rotate-180"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            style={{
-              color:
-                mood === "amazing"
-                  ? "rgb(249, 115, 22)"
-                  : mood === "loved"
-                    ? "rgb(236, 72, 153)"
-                    : mood === "enjoyed"
-                      ? "rgb(34, 197, 94)"
-                      : mood === "okay"
-                        ? "rgb(100, 116, 139)"
-                        : mood === "meh"
-                          ? "rgb(75, 85, 99)"
-                          : mood === "disliked"
-                            ? "rgb(71, 85, 105)"
-                            : "rgb(255, 255, 255)",
-            }}
-          >
-            <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
-          </svg>
-
-          {/* Bottom author attribution and character count */}
-          <div className="flex items-center justify-between pt-3 transition-colors">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">—</span>
-              <span
-                className="text-xs font-medium transition-colors"
-                style={{
-                  color:
-                    mood === "amazing"
-                      ? "rgb(249, 115, 22)"
-                      : mood === "loved"
-                        ? "rgb(236, 72, 153)"
-                        : mood === "enjoyed"
-                          ? "rgb(34, 197, 94)"
-                          : mood === "okay"
-                            ? "rgb(100, 116, 139)"
-                            : mood === "meh"
-                              ? "rgb(75, 85, 99)"
-                              : mood === "disliked"
-                                ? "rgb(71, 85, 105)"
-                                : "rgb(148, 163, 184)",
-                }}
-              >
-                {user?.username ?? user?.name ?? "User"}
+            {displayRating !== null && (
+              <span className="ml-1.5 text-[11px] text-white/35">
+                {displayRating}/10
               </span>
-            </div>
-            <span
-              className={`text-xs mr-6 ${
-                content.length < 10 ? "text-slate-500" : "text-slate-400"
-              }`}
-            >
-              {content.length < 10 ? `${10 - content.length} more needed` : "✓"}
-            </span>
+            )}
           </div>
         </div>
 
-        {/* Error Alert */}
+        {/* Textarea */}
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="What did you think? Share what you loved, hated, or found surprising…"
+          rows={5}
+          className="w-full bg-transparent px-4 py-3 text-sm text-white/80 placeholder-white/20 resize-none outline-none leading-relaxed"
+        />
+
+        {/* Char count footer */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-white/[0.06]">
+          <span className="text-[11px] text-white/20">
+            {content.length} chars
+          </span>
+          <span
+            className={`text-[11px] font-medium ${content.length < 10 ? "text-white/20" : "text-[#e94f37]"}`}
+          >
+            {content.length < 10
+              ? `${10 - content.length} more needed`
+              : "✓ Ready"}
+          </span>
+        </div>
+      </div>
+
+      {/* Error */}
+      <AnimatePresence>
         {error && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 p-2 bg-red-500/10 border border-red-500/30 rounded-lg"
+            exit={{ opacity: 0 }}
+            className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg"
           >
             <svg
-              className="w-3 h-3 text-red-400 flex-shrink-0"
+              className="w-3.5 h-3.5 text-red-400 flex-shrink-0"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -1020,38 +662,93 @@ function ReviewForm({
                 clipRule="evenodd"
               />
             </svg>
-            <span className="text-red-300 text-xs">{error}</span>
+            <span className="text-xs text-red-300">{error}</span>
           </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* Submit Button */}
-        <div className="flex justify-end pt-2">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-4 py-1.5 font-semibold rounded-lg transition-all cursor-pointer text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              background:
-                mood === "amazing"
-                  ? "linear-gradient(to right, rgb(249, 115, 22), rgb(239, 68, 68))"
-                  : mood === "loved"
-                    ? "linear-gradient(to right, rgb(236, 72, 153), rgb(244, 63, 94))"
-                    : mood === "enjoyed"
-                      ? "linear-gradient(to right, rgb(34, 197, 94), rgb(16, 185, 129))"
-                      : mood === "okay"
-                        ? "linear-gradient(to right, rgb(100, 116, 139), rgb(107, 114, 128))"
-                        : mood === "meh"
-                          ? "linear-gradient(to right, rgb(75, 85, 99), rgb(100, 116, 139))"
-                          : mood === "disliked"
-                            ? "linear-gradient(to right, rgb(71, 85, 105), rgb(107, 114, 128))"
-                            : "white",
-              color: mood ? "white" : "black",
-            }}
-          >
-            {submitting ? "Submitting..." : "Submit Review"}
-          </button>
-        </div>
-      </form>
+      {/* Submit */}
+      <div className="flex items-center justify-between pt-1">
+        <p className="text-[11px] text-white/20">
+          Your review may be featured publicly.
+        </p>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="px-6 py-2 rounded-lg bg-[#e94f37] hover:bg-[#d94432] text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {submitting ? "Submitting…" : "Submit"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* ─── Helpers ─── */
+function RatingArc({ rating }: { rating: number }) {
+  const clamped = Math.max(0, Math.min(10, rating));
+  const r = 10,
+    circ = 2 * Math.PI * r;
+  return (
+    <div className="relative flex-shrink-0 w-9 h-9">
+      <svg width="36" height="36" viewBox="0 0 36 36">
+        <circle
+          cx="18"
+          cy="18"
+          r={r}
+          fill="none"
+          stroke="rgba(255,255,255,0.06)"
+          strokeWidth="3"
+        />
+        <circle
+          cx="18"
+          cy="18"
+          r={r}
+          fill="none"
+          stroke="#e94f37"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={circ * (1 - clamped / 10)}
+          style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white">
+        {clamped.toFixed(1)}
+      </span>
+    </div>
+  );
+}
+
+function AvatarBlock({ review }: { review: Review }) {
+  const size = 40;
+  const avatarSrc = (() => {
+    const av = review.author_details?.avatar_path;
+    if (!av) return null;
+    if (av.startsWith("/https") || av.startsWith("/http")) return av.slice(1);
+    return `https://image.tmdb.org/t/p/w185${av}`;
+  })();
+  const initials = (review.author || "A")
+    .split(" ")
+    .map((s) => s[0]?.toUpperCase() ?? "")
+    .slice(0, 2)
+    .join("");
+  return (
+    <div
+      style={{ width: size, height: size, minWidth: size }}
+      className="rounded-full overflow-hidden bg-white/[0.08] flex items-center justify-center ring-1 ring-white/10 flex-shrink-0"
+    >
+      {avatarSrc ? (
+        <Image
+          src={avatarSrc}
+          alt={review.author}
+          width={size}
+          height={size}
+          className="object-cover"
+        />
+      ) : (
+        <span className="text-white/60 font-semibold text-xs">{initials}</span>
+      )}
     </div>
   );
 }

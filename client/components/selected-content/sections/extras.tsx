@@ -172,7 +172,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
     });
 
     return Array.from(map.values()).sort((a, b) =>
-      a.provider_name.localeCompare(b.provider_name)
+      a.provider_name.localeCompare(b.provider_name),
     );
   }, [providers]);
 
@@ -180,7 +180,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
     if (!providerSearch.trim()) return allProviders;
     const q = providerSearch.trim().toLowerCase();
     return allProviders.filter((p) =>
-      p.provider_name.toLowerCase().includes(q)
+      p.provider_name.toLowerCase().includes(q),
     );
   }, [allProviders, providerSearch]);
 
@@ -263,7 +263,8 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
       const containerWidth = el.clientWidth || 0;
       const computed = Math.max(
         140,
-        (containerWidth - Math.max(0, itemsPerView - 1) * GAP_PX) / itemsPerView
+        (containerWidth - Math.max(0, itemsPerView - 1) * GAP_PX) /
+          itemsPerView,
       );
       setItemWidthPx(Math.round(computed));
 
@@ -286,7 +287,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
       const sLeft = el.scrollLeft || 0;
       setCanScrollLeft(sLeft > 5);
       setCanScrollRight(
-        sLeft < Math.max(0, el.scrollWidth - el.clientWidth - 5)
+        sLeft < Math.max(0, el.scrollWidth - el.clientWidth - 5),
       );
     };
     el.addEventListener("scroll", onScroll, { passive: true });
@@ -456,7 +457,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
                         </span>
                       </div>
                     </div>
-                  ))
+                  )),
                 )}
             </div>
           </div>
@@ -519,39 +520,37 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
               </p>
             </div>
 
-            {/* Banner Strip */}
-            <div className="relative bg-gradient-to-r from-indigo-950 via-slate-800 to-indigo-900 py-8 px-4 rounded-2xl overflow-hidden">
-              {/* soft luminous center glow */}
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.15),transparent_70%)] pointer-events-none"></div>
-
-              <div className="flex flex-wrap items-center justify-center gap-12 relative z-10">
-                {info.production_companies.map((company) => (
-                  <div
-                    key={company.id}
-                    className="flex flex-col items-center group"
-                  >
-                    <div className="relative flex items-center justify-center w-auto h-auto">
-                      {company.logo_path ? (
-                        <Image
-                          src={`https://image.tmdb.org/t/p/w300${company.logo_path}`}
-                          alt={company.name}
-                          width={180}
-                          height={90}
-                          className="object-contain opacity-90 group-hover:opacity-100 transition-all duration-300 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
-                        />
-                      ) : (
-                        <Building2 size={40} className="text-slate-300" />
-                      )}
-
-                      {/* gradient accent line */}
-                      <div className="absolute -bottom-2 w-0 group-hover:w-full h-[2px] bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 transition-all duration-500"></div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {info.production_companies.map((company) => (
+                <div
+                  key={company.id}
+                  className="flex flex-col items-center justify-center gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:bg-white/[0.06] hover:border-[#e94f37]/25 transition-all duration-200 min-h-[100px]"
+                >
+                  {company.logo_path ? (
+                    <div className="relative w-full h-16 flex-shrink-0">
+                      <Image
+                        src={`https://image.tmdb.org/t/p/w300${company.logo_path}`}
+                        alt={company.name}
+                        fill
+                        style={{
+                          objectFit: "contain",
+                          filter: "brightness(0) invert(1)",
+                          opacity: 0.65,
+                        }}
+                        sizes="160px"
+                      />
                     </div>
-                    <p className="mt-4 text-xs text-slate-200 group-hover:text-white transition-colors text-center max-w-[140px]">
-                      {company.name}
-                    </p>
-                  </div>
-                ))}
-              </div>
+                  ) : (
+                    <Building2
+                      size={40}
+                      className="text-white/20 flex-shrink-0"
+                    />
+                  )}
+                  <p className="text-[11px] text-white/40 text-center leading-snug line-clamp-2">
+                    {company.name}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -570,86 +569,72 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Countries */}
-          <div className="rounded-2xl bg-gradient-to-br from-slate-900/80 to-slate-800/70 border border-white/10 shadow-lg p-6 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-[0.03] bg-cover bg-center"></div>
-
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-200 mb-6">
+          <div className="flex flex-col gap-4 p-5 rounded-xl bg-white/[0.03] border border-white/[0.07]">
+            <p className="text-[11px] uppercase tracking-widest text-white/30">
               Release Countries
-            </h3>
-            <div className="flex flex-wrap gap-3">
+            </p>
+            <div className="flex flex-wrap gap-2">
               {info.production_countries.map((country) => (
                 <span
                   key={country.iso_3166_1}
-                  className="px-3 py-1.5 rounded-full border border-indigo-400/40 text-xs font-medium text-slate-100 bg-indigo-500/10 backdrop-blur-sm hover:bg-indigo-500/20 transition"
+                  className="inline-flex items-center px-3 py-1 rounded-full text-[11px] text-white/60 bg-white/[0.05] border border-white/10 hover:bg-[#e94f37]/10 hover:border-[#e94f37]/30 hover:text-white transition-all duration-150"
                 >
                   {country.name}
                 </span>
               ))}
             </div>
-
-            <div className="mt-6 text-xs text-slate-400">
-              ✦ {info.production_countries.length} countries released
-            </div>
+            <p className="text-[11px] text-white/20 pt-3 border-t border-white/[0.06] mt-auto">
+              {info.production_countries.length} countr
+              {info.production_countries.length === 1 ? "y" : "ies"}
+            </p>
           </div>
 
           {/* Streaming Platforms */}
-          <div className="rounded-2xl bg-gradient-to-br from-indigo-900/60 to-slate-900/70 border border-white/10 shadow-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-200">
+          <div className="flex flex-col gap-4 p-5 rounded-xl bg-white/[0.03] border border-white/[0.07]">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] uppercase tracking-widest text-white/30">
                 Streaming Platforms
-              </h3>
-              <span className="text-xs text-slate-400">
+              </p>
+              <span className="text-[11px] text-white/20">
                 {allProviders.length} providers
               </span>
             </div>
 
-            {/* Search */}
-            <div className="mb-6">
-              <input
-                type="search"
-                value={providerSearch}
-                onChange={(e) => setProviderSearch(e.target.value)}
-                placeholder="Search Netflix, Prime, Disney+..."
-                className="w-full bg-slate-800/60 text-slate-100 placeholder-slate-400 rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
-              />
-            </div>
+            <input
+              type="search"
+              value={providerSearch}
+              onChange={(e) => setProviderSearch(e.target.value)}
+              placeholder="Search Netflix, Prime…"
+              className="w-full bg-white/[0.05] border border-white/10 focus:border-[#e94f37]/40 rounded-lg px-3 py-2 text-[13px] text-white placeholder-white/25 outline-none transition-colors duration-150"
+            />
 
-            {/* Providers */}
-            <div className="max-h-72 overflow-y-auto pr-1">
+            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto scrollbar-none">
               {filteredProviders.length === 0 ? (
-                <div className="text-slate-400 text-sm text-center py-6">
-                  No providers match your search.
-                </div>
+                <p className="text-xs text-white/25">No providers match.</p>
               ) : (
-                <div className="flex flex-wrap gap-4">
-                  {filteredProviders.map((provider, idx) => (
-                    <div
-                      key={`${provider.provider_name}-${idx}`}
-                      className="flex items-center gap-3 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:border-indigo-400/60 hover:shadow-md transition-all"
-                    >
-                      {provider.logo_path ? (
-                        <div className="w-14 h-8 relative">
-                          <Image
-                            src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`}
-                            alt={provider.provider_name}
-                            fill
-                            sizes=""
-                            style={{ objectFit: "contain" }}
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-14 h-8 flex items-center justify-center bg-white/10 rounded">
-                          <GlobeIconFallback />
-                        </div>
-                      )}
-                      <span className="text-xs font-medium text-slate-200">
-                        {provider.provider_name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                filteredProviders.map((provider, idx) => (
+                  <div
+                    key={`${provider.provider_name}-${idx}`}
+                    className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] text-white/60 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-all duration-150 whitespace-nowrap"
+                  >
+                    {provider.logo_path ? (
+                      <div className="relative w-5 h-5 rounded overflow-hidden flex-shrink-0">
+                        <Image
+                          src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`}
+                          alt={provider.provider_name}
+                          fill
+                          style={{ objectFit: "cover" }}
+                          sizes="20px"
+                        />
+                      </div>
+                    ) : (
+                      <GlobeIconFallback />
+                    )}
+                    {provider.provider_name}
+                  </div>
+                ))
               )}
             </div>
           </div>
