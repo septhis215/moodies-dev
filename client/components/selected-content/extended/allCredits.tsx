@@ -4,17 +4,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Users2, ChevronDown } from "lucide-react";
+import { ArrowLeft, Users2, Search } from "lucide-react";
 import CustomSelect from "@/components/ui/custom-select";
 
 type Person = {
   id: number | string;
   name: string;
   profile_path?: string;
-  character?: string; // for cast
-  job?: string; // for crew
+  character?: string;
+  job?: string;
   department?: string;
-  order?: number; // billing order
+  order?: number;
 };
 
 export default function AllCredits({
@@ -35,39 +35,34 @@ export default function AllCredits({
   const cast: Person[] = (credits?.cast ?? []).slice();
   const crew: Person[] = (credits?.crew ?? []).slice();
 
-  // normalize order for cast (if provided) - fallback to index
   const castWithOrder = useMemo(
     () =>
       cast.map((p, i) => ({
         ...p,
         order: typeof p.order === "number" ? p.order : i + 1,
-        // 🔧 Fix: Normalize TV "roles" array into character string
         character:
           p.character ??
           (Array.isArray((p as any).roles) && (p as any).roles.length > 0
             ? (p as any).roles.map((r: any) => r.character).join(", ")
             : undefined),
       })),
-    [cast]
+    [cast],
   );
 
-  // combined search helpers
   const castFiltered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let arr = castWithOrder;
-    if (q) {
+    if (q)
       arr = arr.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          (p.character ?? "").toLowerCase().includes(q)
+          (p.character ?? "").toLowerCase().includes(q),
       );
-    }
     if (sortBy === "order") arr = arr.sort((a, b) => a.order! - b.order!);
     else arr = arr.sort((a, b) => a.name.localeCompare(b.name));
     return arr;
   }, [castWithOrder, query, sortBy]);
 
-  // group crew by department and sort each group by name
   const crewByDepartment = useMemo(() => {
     const map = new Map<string, Person[]>();
     crew.forEach((p) => {
@@ -75,7 +70,6 @@ export default function AllCredits({
       if (!map.has(dept)) map.set(dept, []);
       map.get(dept)!.push(p);
     });
-    // sort groups by dept name
     const groups = Array.from(map.entries()).map(([dept, people]) => ({
       dept,
       people: people.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")),
@@ -84,10 +78,8 @@ export default function AllCredits({
     return groups;
   }, [crew]);
 
-  // allow quick-jump links for crew departments (useful on large pages)
   const departmentAnchors = crewByDepartment.map((g) => g.dept);
 
-  // scroll-to-highlight behavior (works for cast and crew IDs)
   useEffect(() => {
     if (!highlight) return;
     setTimeout(() => {
@@ -95,14 +87,12 @@ export default function AllCredits({
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         el.style.transition = "box-shadow 0.3s ease";
-        el.style.boxShadow = "0 0 0 4px rgba(99,102,241,0.35)";
+        el.style.boxShadow = "0 0 0 2px rgba(233,79,55,0.5)";
         setTimeout(() => (el.style.boxShadow = ""), 2200);
       }
     }, 120);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlight, castFiltered.length, crewByDepartment.length]);
 
-  // util to get image src handling TMDB / gravatar style leading '/http'
   function imageSrc(path?: string) {
     if (!path) return null;
     if (path.startsWith("/http") || path.startsWith("/https"))
@@ -110,208 +100,226 @@ export default function AllCredits({
     return `https://image.tmdb.org/t/p/w185${path}`;
   }
 
-  const contentType = (type: string) => {
-    if (type === "movie") return "movies";
-    else return "tv";
-  };
+  function contentType(type: string) {
+    return type === "movie" ? "movies" : "tv";
+  }
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 max-w-6xl mx-auto px-6 py-12">
-      {/* Back Navigation */}
-      <Link
-        href={`/${contentType(info.content_type)}/${id}`}
-        className="inline-flex items-center gap-2 text-slate-300 hover:text-white transition-colors mb-8"
-      >
-        <ArrowLeft size={20} />
-        Back to {info.title}
-      </Link>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Full Cast & Crew</h1>
-        </div>
+    <div className="min-h-screen bg-black text-slate-100">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+        {/* ── Back nav ── */}
+        <Link
+          href={`/${contentType(info.content_type)}/${id}`}
+          className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors group"
+        >
+          <ArrowLeft
+            size={16}
+            className="group-hover:-translate-x-0.5 transition-transform"
+          />
+          Back to {info.title}
+        </Link>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          {/* Tabs */}
-          <div className="flex items-center bg-white/5 rounded p-1">
-            <button
-              onClick={() => setTab("cast")}
-              className={`px-3 py-1 rounded text-sm font-medium cursor-pointer ${
-                tab === "cast"
-                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow"
-                  : "text-slate-200"
-              }`}
-            >
-              Cast
-            </button>
-            <button
-              onClick={() => setTab("crew")}
-              className={`px-3 py-1 rounded text-sm font-medium cursor-pointer ${
-                tab === "crew"
-                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow"
-                  : "text-slate-200"
-              }`}
-            >
-              Crew
-            </button>
+        {/* ── Page header ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+              Full Cast & Crew
+            </h1>
+            <p className="text-sm text-white/40 mt-1">{info.title}</p>
           </div>
 
-          {/* Search */}
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search people or role..."
-            className="ml-2 bg-slate-800/60 text-slate-100 placeholder-slate-400 rounded px-3 py-2 border border-white/8 w-full sm:w-64"
-          />
-        </div>
-      </div>
+          {/* Controls cluster */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Tab toggle */}
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-white/[0.04] border border-white/[0.07]">
+              {(["cast", "crew"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`px-4 py-1.5 rounded-md text-xs font-semibold capitalize transition-all duration-200 cursor-pointer ${
+                    tab === t
+                      ? "bg-[#e94f37] text-white"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
 
-      {/* Controls (sort only shows for cast tab) */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="text-xs text-slate-400">
-          {tab === "cast"
-            ? `${castFiltered.length} cast member(s)`
-            : `${
-                crew.reduce((acc, g) => acc + 1 * (g ? 1 : 0), 0) + crew.length
-              } crew entries`}
+            {/* Divider */}
+            <div className="hidden sm:block h-5 w-px bg-white/[0.1]" />
+
+            {/* Search */}
+            <div className="relative">
+              <Search
+                size={12}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none"
+              />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search name or role…"
+                className="pl-8 pr-3 py-2 text-xs rounded-lg bg-white/[0.05] border border-white/[0.07] text-white placeholder-white/25 outline-none focus:border-[#e94f37]/40 transition-colors w-48 sm:w-56"
+              />
+            </div>
+
+            {/* Sort (cast only) */}
+            {tab === "cast" && (
+              <CustomSelect
+                value={sortBy}
+                onChange={(v: any) => setSortBy(v)}
+                options={[
+                  { label: "Billing order", value: "order" },
+                  { label: "Name A–Z", value: "name" },
+                ]}
+                widthClass="w-36"
+              />
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {tab === "cast" && (
-            <CustomSelect
-              value={sortBy}
-              onChange={(v: any) => setSortBy(v)}
-              options={[
-                { label: "Sort: Billing order", value: "order" },
-                { label: "Sort: Name", value: "name" },
-              ]}
-              widthClass="w-52"
-            />
-          )}
+        {/* ── Count + dept jump ── */}
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-[11px] text-white/25">
+            {tab === "cast"
+              ? `${castFiltered.length} member${castFiltered.length !== 1 ? "s" : ""}`
+              : `${crew.length} crew entr${crew.length !== 1 ? "ies" : "y"}`}
+          </p>
 
           {tab === "crew" && departmentAnchors.length > 0 && (
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="text-xs text-slate-400">Jump to:</span>
-              <div className="flex gap-2 overflow-x-auto scrollbar-none">
-                {departmentAnchors.map((d) => (
-                  <a
-                    key={d}
-                    href={`#dept-${encodeURIComponent(d)}`}
-                    className="text-xs px-2 py-1 rounded bg-white/5 hover:bg-white/6"
-                  >
-                    {d.length > 12 ? d.slice(0, 12) + "…" : d}
-                  </a>
-                ))}
-              </div>
+            <div className="hidden sm:flex items-center gap-2 overflow-x-auto scrollbar-none">
+              <span className="text-[11px] text-white/25 flex-shrink-0">
+                Jump:
+              </span>
+              {departmentAnchors.map((d) => (
+                <a
+                  key={d}
+                  href={`#dept-${encodeURIComponent(d)}`}
+                  className="text-[11px] px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.08] hover:text-white text-white/40 transition-all whitespace-nowrap flex-shrink-0"
+                >
+                  {d.length > 14 ? d.slice(0, 14) + "…" : d}
+                </a>
+              ))}
             </div>
           )}
         </div>
-      </div>
 
-      {/* Content */}
-      <div>
-        {/* CAST TAB */}
+        {/* ── Red rule ── */}
+        <div className="h-px bg-white/[0.06]" />
+
+        {/* ── CAST TAB ── */}
         {tab === "cast" && (
           <section>
-            {/* IMDB-like top: big grid with images and role */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {castFiltered.length === 0 ? (
-                <div className="text-slate-400">No cast found.</div>
-              ) : (
-                castFiltered.map((p) => (
+            {castFiltered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                <Users2 size={28} className="text-white/20" />
+                <p className="text-sm text-white/30">No cast found.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {castFiltered.map((p) => (
                   <article
                     id={`credit-${p.id}`}
                     key={`cast-${p.id}`}
-                    className="flex gap-4 p-3 rounded-lg bg-gradient-to-br from-slate-900/70 to-slate-800/60 border border-white/8"
+                    className="group flex gap-4 p-3 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:bg-white/[0.05] hover:border-white/[0.12] transition-all duration-200"
                   >
-                    {/* Image only for cast (IMDB style) */}
-                    <div className="w-28 h-36 rounded overflow-hidden bg-slate-700/30 flex-shrink-0">
+                    {/* Photo */}
+                    <div className="w-16 h-20 sm:w-20 sm:h-28 rounded-lg overflow-hidden bg-white/[0.06] flex-shrink-0">
                       {imageSrc(p.profile_path) ? (
                         <Image
                           src={imageSrc(p.profile_path)!}
                           alt={p.name}
-                          width={112}
-                          height={144}
-                          style={{ objectFit: "cover" }}
+                          width={80}
+                          height={112}
+                          style={{
+                            objectFit: "cover",
+                            width: "100%",
+                            height: "100%",
+                          }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-300">
-                          <Users2 size={28} />
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Users2 size={20} className="text-white/20" />
                         </div>
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 max-w-[160px] sm:max-w-full whitespace-normal break-words">
-                          <h3 className="text-sm font-semibold text-slate-100 leading-snug">
-                            {p.name}
-                          </h3>
-                          <div className="text-xs text-slate-400 mt-1 italic leading-tight">
-                            {p.character ?? "—"}
-                          </div>
-                        </div>
-
-                        <div className="text-xs text-slate-400 text-right">
-                          <div>#{p.order + 1}</div>
-                        </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                      <div>
+                        <p className="text-sm font-semibold text-white leading-snug truncate">
+                          {p.name}
+                        </p>
+                        <p className="text-[11px] text-white/35 mt-0.5 leading-snug line-clamp-2 italic">
+                          {p.character ?? "—"}
+                        </p>
                       </div>
-
-                      <div className="mt-3 flex items-center gap-3">
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-[11px] text-white/20">
+                          #{p.order! + 1}
+                        </span>
                         <Link
                           href={`/celeb/${p.id}`}
-                          className="text-xs text-indigo-400 hover:underline"
+                          className="text-[11px] text-[#e94f37] hover:text-[#ff6b58] font-medium transition-colors"
                         >
-                          View profile
+                          Profile →
                         </Link>
                       </div>
                     </div>
                   </article>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
-        {/* CREW TAB */}
+        {/* ── CREW TAB ── */}
         {tab === "crew" && (
-          <section className="space-y-8">
+          <section className="space-y-10">
             {crewByDepartment.length === 0 ? (
-              <div className="text-slate-400">No crew found.</div>
+              <div className="flex flex-col items-center justify-center py-20 gap-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                <Users2 size={28} className="text-white/20" />
+                <p className="text-sm text-white/30">No crew found.</p>
+              </div>
             ) : (
               crewByDepartment.map((group) => (
                 <div
                   key={group.dept}
                   id={`dept-${encodeURIComponent(group.dept)}`}
                 >
-                  <h3 className="text-sm font-semibold text-slate-100 mb-3">
-                    {group.dept}
-                  </h3>
+                  {/* Department heading */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <p className="text-[11px] uppercase tracking-widest text-white/30 font-semibold">
+                      {group.dept}
+                    </p>
+                    <div className="flex-1 h-px bg-white/[0.06]" />
+                    <span className="text-[11px] text-white/20">
+                      {group.people.length}
+                    </span>
+                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     {group.people.map((person) => (
                       <div
                         id={`credit-${person.id}`}
                         key={`${group.dept}-${person.id}`}
-                        className="flex items-center justify-between gap-4 p-3 rounded bg-gradient-to-br from-slate-900/70 to-slate-800/55 border border-white/6"
+                        className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-150"
                       >
                         <div className="min-w-0">
-                          <div className="text-sm font-medium text-slate-100 truncate">
+                          <p className="text-sm font-semibold text-white truncate">
                             {person.name}
-                          </div>
-                          <div className="text-xs text-slate-400 truncate">
+                          </p>
+                          <p className="text-[11px] text-white/35 truncate">
                             {person.job ?? ""}
-                          </div>
+                          </p>
                         </div>
-
-                        <div className="flex-shrink-0 ml-2">
-                          <Link
-                            href={`/celeb/${person.id}`}
-                            className="text-xs text-indigo-400 hover:underline"
-                          >
-                            Profile
-                          </Link>
-                        </div>
+                        <Link
+                          href={`/celeb/${person.id}`}
+                          className="text-[11px] text-[#e94f37] hover:text-[#ff6b58] font-medium transition-colors flex-shrink-0"
+                        >
+                          Profile →
+                        </Link>
                       </div>
                     ))}
                   </div>
