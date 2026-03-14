@@ -93,8 +93,6 @@ export default function ImageVideoCarousel({
 
   const thumbsContainerRef = useRef<HTMLDivElement>(null);
   const thumbRefs = useRef<Array<HTMLButtonElement | null>>([]);
-  const startTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const repeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setSelectedIndex((prev) =>
@@ -142,18 +140,7 @@ export default function ImageVideoCarousel({
           : prev + 1;
     });
   };
-
-  const handlePressStart = (dir: "prev" | "next") => {
-    navigate(dir);
-    startTimeoutRef.current = setTimeout(() => {
-      repeatIntervalRef.current = setInterval(() => navigate(dir), 150);
-    }, 450);
-  };
-  const handlePressEnd = () => {
-    if (startTimeoutRef.current) clearTimeout(startTimeoutRef.current);
-    if (repeatIntervalRef.current) clearInterval(repeatIntervalRef.current);
-  };
-
+  
   if (!posters.length && !backdrops.length && !normalizedVideos.length)
     return null;
 
@@ -486,22 +473,14 @@ export default function ImageVideoCarousel({
           <>
             <button
               className="ivc-nav-btn left"
-              onMouseDown={() => handlePressStart("prev")}
-              onMouseUp={handlePressEnd}
-              onMouseLeave={handlePressEnd}
-              onTouchStart={() => handlePressStart("prev")}
-              onTouchEnd={handlePressEnd}
+              onClick={() => navigate("prev")}
               aria-label="Previous"
             >
               <ChevronIcon direction="left" />
             </button>
             <button
               className="ivc-nav-btn right"
-              onMouseDown={() => handlePressStart("next")}
-              onMouseUp={handlePressEnd}
-              onMouseLeave={handlePressEnd}
-              onTouchStart={() => handlePressStart("next")}
-              onTouchEnd={handlePressEnd}
+              onClick={() => navigate("next")}
               aria-label="Next"
             >
               <ChevronIcon direction="right" />

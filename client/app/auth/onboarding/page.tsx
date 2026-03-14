@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useToast } from "@/app/context/ToastContext";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -35,7 +35,7 @@ const GENRE_OPTIONS = [
   "Soap",
   "Talk",
   "War & Politics",
-];
+] as const;
 
 const LANGUAGE_OPTIONS = [
   "English",
@@ -51,32 +51,106 @@ const LANGUAGE_OPTIONS = [
   "Czech",
   "Arabic",
   "Dutch",
-];
+] as const;
 
-const Chip: React.FC<{
-  active?: boolean;
-  onClick?: () => void;
+const STEPS = ["age", "genres", "languages"] as const;
+type Step = (typeof STEPS)[number];
+
+// ── Shared chip ──────────────────────────────────────────────
+interface ChipProps {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}
+
+function Chip({ label, active, onClick }: ChipProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 whitespace-nowrap select-none cursor-pointer",
+        active
+          ? "bg-[rgb(233,79,55)] text-white border-[rgb(233,79,55)] shadow-[0_2px_10px_rgba(233,79,55,0.3)]"
+          : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.08] hover:text-white/85 hover:border-white/20",
+      ].join(" ")}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ── Section label ─────────────────────────────────────────────
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[0.62rem] font-bold tracking-[0.14em] uppercase text-white/30 mb-3">
+      {children}
+    </p>
+  );
+}
+
+// ── Submit button ─────────────────────────────────────────────
+interface SubmitButtonProps {
+  disabled: boolean;
+  onClick: () => void;
   children: React.ReactNode;
-}> = ({ active, onClick, children }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={[
-      "px-4 py-2 rounded-lg text-sm transition-all font-medium border relative overflow-hidden group",
-      active
-        ? "bg-gradient-to-r from-amber-500 to-pink-500 text-white border-transparent shadow-lg shadow-amber-500/20"
-        : "bg-white/5 text-white/70 hover:bg-white/10 border-white/10 hover:border-white/20",
-    ].join(" ")}
-  >
-    {active && (
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-    )}
-    <span className="relative">{children}</span>
-  </button>
-);
+  className?: string;
+}
 
+function SubmitButton({
+  disabled,
+  onClick,
+  children,
+  className = "",
+}: SubmitButtonProps) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={[
+        "px-6 py-2.5 rounded-lg font-bold text-sm text-white transition-all duration-200",
+        "font-['Bebas_Neue'] tracking-widest",
+        disabled
+          ? "bg-white/[0.07] text-white/20 cursor-not-allowed shadow-none"
+          : "bg-[rgb(233,79,55)] hover:bg-[rgb(215,65,42)] shadow-[0_4px_20px_rgba(233,79,55,0.35)] hover:shadow-[0_8px_24px_rgba(233,79,55,0.4)] hover:scale-[1.01] active:scale-[0.99] cursor-pointer",
+        className,
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ── Age range slider ──────────────────────────────────────────
+interface AgeSliderProps {
+  value: number;
+  onChange: (v: number) => void;
+}
+
+function AgeSlider({ value, onChange }: AgeSliderProps) {
+  return (
+    <div className="w-full">
+      <input
+        type="range"
+        min={1}
+        max={100}
+        step={1}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="ob-range w-full"
+      />
+      <div className="flex justify-between mt-1.5 text-[0.6rem] text-white/20">
+        {["1", "25", "50", "75", "100"].map((v) => (
+          <span key={v}>{v}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────
 export default function OnboardingPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { signIn, isLoading: authLoading } = useAuth();
@@ -85,26 +159,20 @@ export default function OnboardingPage() {
   const [genres, setGenres] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mobileStep, setMobileStep] = useState<Step>("age");
 
-  // 🔥 NEW: Handle token from URL (Google OAuth)
   useEffect(() => {
     const urlToken = searchParams.get("token");
-
     if (urlToken) {
-      // Store the token from Google OAuth
       localStorage.setItem("authToken", urlToken);
-      const expiryMs = Date.now() + 1 * 24 * 60 * 60 * 1000;
-      localStorage.setItem("authTokenExpiry", String(expiryMs));
-
-      // Clean up URL without the token
+      localStorage.setItem("authTokenExpiry", String(Date.now() + 86400000));
       window.history.replaceState({}, document.title, window.location.pathname);
-
       toast(
         "Connected with Google! Now set your preferences.",
         "success",
         3000,
         "Almost there",
-        null
+        null,
       );
     }
   }, [searchParams, toast]);
@@ -114,80 +182,90 @@ export default function OnboardingPage() {
 
   const canSubmit = useMemo(
     () => age >= 1 && age <= 100 && genres.length > 0 && languages.length > 0,
-    [age, genres.length, languages.length]
+    [age, genres.length, languages.length],
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (isSubmitting || authLoading) return;
-
-    const token = localStorage.getItem("authToken");
-    if (!token) {
-      toast("Not logged in!", "error", 3000, "Authentication Error", null);
-      return;
-    }
-
     setIsSubmitting(true);
-
     try {
-      // Save preferences
-      toast(
-        "Saving your preferences...",
-        "info",
-        3000,
-        "Setting Up Your Profile",
-        null
-      );
-
-      const res = await fetch(`${API_BASE}/auth/me/preferences`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          age,
-          preferredGenres: genres,
-          preferredLanguages: languages,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.message || "Failed to save preferences");
-
-      // Success toast for preferences
-      toast(
-        "Preferences saved successfully!",
-        "success",
-        2000,
-        "Profile Updated",
-        null
-      );
-
-      // Small delay to let user see the success message
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      // 🔥 UPDATED: Check if this is a Google OAuth user or regular signup
-      const storedEmail = localStorage.getItem("signupEmail");
-      const storedPassword = localStorage.getItem("signupPassword");
-
-      if (storedEmail && storedPassword) {
-        // Regular signup - auto sign in with stored credentials
-        await signIn(storedEmail, storedPassword);
+      const pendingSignup = sessionStorage.getItem("pendingSignup");
+      if (pendingSignup) {
+        const { username, email, password } = JSON.parse(pendingSignup);
+        toast("Creating your account...", "info", 3000, "Almost there!", null);
+        const signupRes = await fetch(`${API_BASE}/auth/signup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, email, password }),
+        });
+        const signupData = await signupRes.json();
+        if (!signupRes.ok)
+          throw new Error(signupData.message || "Sign up failed");
+        const token = signupData.token;
+        localStorage.setItem("authToken", token);
+        localStorage.setItem("authTokenExpiry", String(Date.now() + 86400000));
+        const prefsRes = await fetch(`${API_BASE}/auth/me/preferences`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            age,
+            preferredGenres: genres,
+            preferredLanguages: languages,
+          }),
+        });
+        const prefsData = await prefsRes.json();
+        if (!prefsRes.ok)
+          throw new Error(prefsData.message || "Failed to save preferences");
+        sessionStorage.removeItem("pendingSignup");
+        toast(
+          "Account created! Welcome to Moodies!",
+          "success",
+          2000,
+          "All done!",
+          null,
+        );
+        await new Promise((r) => setTimeout(r, 800));
+        await signIn(email, password);
       } else {
-        // Google OAuth user - already has token, just redirect to home
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          toast("Not logged in!", "error", 3000, "Authentication Error", null);
+          return;
+        }
+        toast(
+          "Saving your preferences...",
+          "info",
+          3000,
+          "Setting Up Your Profile",
+          null,
+        );
+        const res = await fetch(`${API_BASE}/auth/me/preferences`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            age,
+            preferredGenres: genres,
+            preferredLanguages: languages,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok)
+          throw new Error(data.message || "Failed to save preferences");
         toast(
           "Setup complete! Welcome to Moodies!",
           "success",
           2000,
           "You're all set",
-          null
+          null,
         );
-
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 500);
+        await new Promise((r) => setTimeout(r, 800));
+        window.location.href = "/";
       }
     } catch (err: any) {
       toast(err.message || "An error occurred", "error", 4000, "Error", null);
@@ -196,199 +274,371 @@ export default function OnboardingPage() {
     }
   };
 
+  const mobileStepIndex = STEPS.indexOf(mobileStep);
+  const canAdvanceMobile =
+    mobileStep === "age"
+      ? age >= 1 && age <= 100
+      : mobileStep === "genres"
+        ? genres.length > 0
+        : languages.length > 0;
+
+  const processingLabel = isSubmitting || authLoading;
+
   return (
-    <div className="w-full max-w-md mx-auto px-6 py-4 overflow-y-hidden">
-      <div className="space-y-6 max-h-[70vh] overflow-auto pr-1">
+    <>
+      {/* Range slider global style — minimal, can't do pseudo-elements in Tailwind */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
+        .ob-range {
+          appearance: none; -webkit-appearance: none;
+          height: 6px; border-radius: 9999px;
+          background: rgba(233,79,55,0.18);
+          outline: none; cursor: pointer;
+        }
+        .ob-range::-webkit-slider-thumb {
+          appearance: none; width: 20px; height: 20px;
+          border-radius: 50%; background: rgb(233,79,55);
+          box-shadow: 0 0 0 3px rgba(233,79,55,0.22);
+          transition: transform 0.15s;
+        }
+        .ob-range::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        .ob-range::-moz-range-thumb {
+          width: 20px; height: 20px; border-radius: 50%;
+          background: rgb(233,79,55); border: none;
+          box-shadow: 0 0 0 3px rgba(233,79,55,0.22);
+        }
+        .ob-scroll::-webkit-scrollbar { width: 3px; }
+        .ob-scroll::-webkit-scrollbar-track { background: transparent; }
+        .ob-scroll::-webkit-scrollbar-thumb { background: rgba(233,79,55,0.35); border-radius: 99px; }
+        .ob-fadein { animation: obFadeUp 0.45s cubic-bezier(0.16,1,0.3,1) both; }
+        @keyframes obFadeUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .ob-stepin { animation: obStepIn 0.27s cubic-bezier(0.16,1,0.3,1) both; }
+        @keyframes obStepIn {
+          from { opacity: 0; transform: translateX(18px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
+
+      {/* ═══════════════════════════════════════════════
+          DESKTOP (≥ 768px) — horizontal 3-column card
+      ═══════════════════════════════════════════════ */}
+      <div className="ob-fadein hidden md:flex flex-col w-full max-w-[860px] mx-auto py-8 font-['DM_Sans']">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">
-            <span className="bg-gradient-to-r from-amber-400 via-pink-500 to-purple-500 bg-clip-text text-transparent">
-              Set up your preferences
-            </span>
+        <div className="mb-7">
+          <h1 className="font-['Bebas_Neue'] text-[2.4rem] tracking-[0.03em] leading-none text-[rgb(233,79,55)]">
+            Set up your profile
           </h1>
-          <p className="mt-2 text-sm text-white/50">
-            Personalize your experience • Change anytime in Settings
+          <div className="w-8 h-0.5 bg-[rgb(233,79,55)] mt-2.5 mb-1.5" />
+          <p className="text-[0.8rem] text-white/40 font-light">
+            Personalize your experience · Change anytime in Settings
           </p>
         </div>
 
-        {/* Age */}
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-pink-500/20 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="relative bg-white/5 rounded-xl p-5 border border-white/10 hover:border-white/20 transition-all backdrop-blur-sm">
-            <label
-              htmlFor="age"
-              className="block text-sm font-semibold text-white mb-3"
-            >
-              Your Age
-            </label>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-white/60 text-sm">
-                Select your age range
-              </span>
-              <div className="px-4 py-1.5 bg-gradient-to-r from-amber-500/20 to-pink-500/20 rounded-lg border border-amber-500/30">
-                <span className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-pink-400 bg-clip-text text-transparent">
+        {/* 3-column card */}
+        <div
+          className="rounded-2xl border border-white/[0.07] border-t-white/[0.12] overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.5)]"
+          style={{
+            backgroundImage:
+              "radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(rgba(14,14,14,0.92), rgba(14,14,14,0.92))",
+            backgroundSize: "20px 20px, 100% 100%",
+          }}
+        >
+          <div className="grid grid-cols-3">
+            {/* Col 1 — Age */}
+            <div className="flex flex-col p-6 border-r border-white/[0.06]">
+              <SectionLabel>Your Age</SectionLabel>
+              <div className="mb-4">
+                <div className="font-['Bebas_Neue'] text-[4rem] leading-none text-[rgb(233,79,55)] tracking-[0.04em]">
                   {age}
-                </span>
+                </div>
+                <div className="text-[0.63rem] text-white/25 tracking-[0.14em] uppercase mt-0.5">
+                  years old
+                </div>
+              </div>
+              <div className="mt-auto">
+                <AgeSlider value={age} onChange={setAge} />
               </div>
             </div>
-            <input
-              id="age"
-              type="range"
-              min={1}
-              max={100}
-              step={1}
-              value={age}
-              onChange={(e) => setAge(Number(e.target.value))}
-              className="range w-full"
-            />
-            <div className="mt-3 flex justify-between text-xs text-white/40">
-              <span>1</span>
-              <span>25</span>
-              <span>50</span>
-              <span>75</span>
-              <span>100</span>
-            </div>
-          </div>
-        </div>
 
-        {/* Genres */}
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="relative bg-white/5 rounded-xl p-5 border border-white/10 hover:border-white/20 transition-all backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-semibold text-white">
-                Preferred Genres
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 bg-white/5 rounded-full text-xs text-white/50 border border-white/10">
-                  {genres.length} / {GENRE_OPTIONS.length}
-                </span>
+            {/* Col 2 — Genres */}
+            <div className="flex flex-col p-6 border-r border-white/[0.06]">
+              <div className="flex items-center justify-between mb-3">
+                <SectionLabel>Preferred Genres</SectionLabel>
                 {genres.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setGenres([])}
-                    className="text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                    className="text-[0.68rem] text-blue-400 hover:text-blue-300 transition-colors cursor-pointer bg-transparent border-none p-0"
                   >
-                    Clear all
+                    Clear
                   </button>
                 )}
               </div>
-            </div>
-            <div className="max-h-48 overflow-y-auto">
-              <div className="flex flex-wrap gap-2">
+              <div className="ob-scroll flex flex-wrap gap-1.5 overflow-y-auto flex-1 pr-0.5">
                 {GENRE_OPTIONS.map((g) => (
                   <Chip
                     key={g}
+                    label={g}
                     active={genres.includes(g)}
                     onClick={() => toggle(genres, setGenres, g)}
-                  >
-                    {g}
-                  </Chip>
+                  />
                 ))}
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Languages */}
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-blue-500/20 rounded-xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="relative bg-white/5 rounded-xl p-5 border border-white/10 hover:border-white/20 transition-all backdrop-blur-sm">
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-semibold text-white">
-                Preferred Languages
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 bg-white/5 rounded-full text-xs text-white/50 border border-white/10">
-                  {languages.length} / {LANGUAGE_OPTIONS.length}
-                </span>
+            {/* Col 3 — Languages */}
+            <div className="flex flex-col p-6">
+              <div className="flex items-center justify-between mb-3">
+                <SectionLabel>Preferred Languages</SectionLabel>
                 {languages.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setLanguages([])}
-                    className="text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                    className="text-[0.68rem] text-blue-400 hover:text-blue-300 transition-colors cursor-pointer bg-transparent border-none p-0"
                   >
-                    Clear all
+                    Clear
                   </button>
                 )}
               </div>
-            </div>
-            <div className="max-h-40 overflow-y-auto">
-              <div className="flex flex-wrap gap-2">
+              <div className="ob-scroll flex flex-wrap gap-1.5 overflow-y-auto flex-1 pr-0.5">
                 {LANGUAGE_OPTIONS.map((l) => (
                   <Chip
                     key={l}
+                    label={l}
                     active={languages.includes(l)}
                     onClick={() => toggle(languages, setLanguages, l)}
-                  >
-                    {l}
-                  </Chip>
+                  />
                 ))}
               </div>
             </div>
           </div>
-        </div>
 
-        <button
-          type="submit"
-          onClick={handleSubmit}
-          disabled={!canSubmit || isSubmitting || authLoading}
-          className={[
-            "w-full rounded-xl px-5 py-3.5 font-semibold text-white transition-all relative overflow-hidden group",
-            canSubmit && !isSubmitting && !authLoading
-              ? "bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 hover:shadow-xl hover:shadow-pink-500/30"
-              : "bg-white/5 text-white/30 cursor-not-allowed",
-          ].join(" ")}
-        >
-          {canSubmit && !isSubmitting && !authLoading && (
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-          )}
-          <span className="relative">
-            {isSubmitting || authLoading ? "Processing..." : "Save Preferences"}
-          </span>
-        </button>
+          {/* Card footer */}
+          <div className="border-t border-white/[0.07] px-6 py-4 flex items-center justify-between gap-4">
+            <div className="flex gap-6 text-[0.72rem] text-white/30">
+              <span>
+                <strong className="text-[rgb(233,79,55)] font-bold">
+                  {genres.length}
+                </strong>{" "}
+                genre{genres.length !== 1 ? "s" : ""} selected
+              </span>
+              <span>
+                <strong className="text-[rgb(233,79,55)] font-bold">
+                  {languages.length}
+                </strong>{" "}
+                language{languages.length !== 1 ? "s" : ""} selected
+              </span>
+            </div>
+            <SubmitButton
+              disabled={!canSubmit || isSubmitting || authLoading}
+              onClick={handleSubmit}
+              className="min-w-[180px] text-center"
+            >
+              {processingLabel ? "Processing…" : "Save & Enter Moodies"}
+            </SubmitButton>
+          </div>
+        </div>
       </div>
 
-      {/* slider styling */}
-      <style jsx>{`
-        .range {
-          appearance: none;
-          height: 8px;
-          border-radius: 9999px;
-          background: linear-gradient(
-            to right,
-            rgba(245, 158, 11, 0.3) 0%,
-            rgba(236, 72, 153, 0.3) 100%
-          );
-          outline: none;
-        }
-        .range::-webkit-slider-thumb {
-          appearance: none;
-          width: 24px;
-          height: 24px;
-          border-radius: 9999px;
-          background: linear-gradient(to right, #f59e0b, #ec4899);
-          cursor: pointer;
-          box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
-          transition: transform 0.2s;
-        }
-        .range::-webkit-slider-thumb:hover {
-          transform: scale(1.1);
-        }
-        .range::-moz-range-thumb {
-          width: 24px;
-          height: 24px;
-          border-radius: 9999px;
-          background: linear-gradient(to right, #f59e0b, #ec4899);
-          cursor: pointer;
-          border: none;
-          box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
-          transition: transform 0.2s;
-        }
-        .range::-moz-range-thumb:hover {
-          transform: scale(1.1);
-        }
-      `}</style>
-    </div>
+      {/* ═══════════════════════════════════════════════
+          MOBILE (< 768px) — 3-step vertical wizard
+      ═══════════════════════════════════════════════ */}
+      <div
+        className="ob-fadein flex md:hidden flex-col min-h-dvh bg-[#0a0a0a] relative font-['DM_Sans']"
+        style={{
+          backgroundImage:
+            "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
+          backgroundSize: "24px 24px",
+        }}
+      >
+        {/* Top red accent line */}
+        <div className="fixed top-0 left-0 right-0 h-0.5 bg-[rgb(233,79,55)] opacity-70 z-50" />
+
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-5 pt-5 flex-shrink-0">
+          <div className="flex items-center gap-2 font-['Bebas_Neue'] text-xl tracking-widest text-white">
+            <div className="w-2 h-2 rounded-full bg-[rgb(233,79,55)]" />
+            Moodies
+          </div>
+          <div className="flex gap-1.5">
+            {STEPS.map((s, i) => (
+              <div
+                key={s}
+                className={[
+                  "h-[3px] rounded-full transition-all duration-300",
+                  i < mobileStepIndex
+                    ? "w-[26px] bg-[rgba(233,79,55,0.4)]"
+                    : i === mobileStepIndex
+                      ? "w-[38px] bg-[rgb(233,79,55)]"
+                      : "w-[26px] bg-white/10",
+                ].join(" ")}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Step content */}
+        <div className="flex-1 flex flex-col px-5 pt-8 pb-4 overflow-y-auto min-h-0">
+          {/* Step 1 — Age */}
+          {mobileStep === "age" && (
+            <div className="ob-stepin flex flex-col flex-1">
+              <p className="text-[0.58rem] font-bold tracking-[0.2em] uppercase text-[rgb(233,79,55)] mb-1.5">
+                Step 1 of 3
+              </p>
+              <h2 className="font-['Bebas_Neue'] text-[2.2rem] leading-none text-white mb-1.5">
+                How old
+                <br />
+                are you?
+              </h2>
+              <p className="text-[0.72rem] text-white/38 font-light mb-7">
+                Helps us match content ratings to you.
+              </p>
+              <div className="text-center py-6">
+                <div className="font-['Bebas_Neue'] text-[7rem] leading-none text-[rgb(233,79,55)] tracking-[0.04em]">
+                  {age}
+                </div>
+                <div className="text-[0.65rem] text-white/25 tracking-[0.16em] uppercase mt-1">
+                  years old
+                </div>
+              </div>
+              <div className="mt-auto">
+                <AgeSlider value={age} onChange={setAge} />
+              </div>
+            </div>
+          )}
+
+          {/* Step 2 — Genres */}
+          {mobileStep === "genres" && (
+            <div className="ob-stepin flex flex-col flex-1">
+              <p className="text-[0.58rem] font-bold tracking-[0.2em] uppercase text-[rgb(233,79,55)] mb-1.5">
+                Step 2 of 3
+              </p>
+              <h2 className="font-['Bebas_Neue'] text-[2.2rem] leading-none text-white mb-1.5">
+                What do
+                <br />
+                you watch?
+              </h2>
+              <p className="text-[0.72rem] text-white/38 font-light mb-4">
+                Pick as many genres as you like.
+              </p>
+              <div className="flex items-center gap-2 text-[0.7rem] text-white/30 mb-3">
+                <strong className="text-[rgb(233,79,55)] font-bold">
+                  {genres.length}
+                </strong>{" "}
+                selected
+                {genres.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setGenres([])}
+                    className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer bg-transparent border-none p-0 text-[0.68rem]"
+                  >
+                    · Clear
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {GENRE_OPTIONS.map((g) => (
+                  <Chip
+                    key={g}
+                    label={g}
+                    active={genres.includes(g)}
+                    onClick={() => toggle(genres, setGenres, g)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 3 — Languages */}
+          {mobileStep === "languages" && (
+            <div className="ob-stepin flex flex-col flex-1">
+              <p className="text-[0.58rem] font-bold tracking-[0.2em] uppercase text-[rgb(233,79,55)] mb-1.5">
+                Step 3 of 3
+              </p>
+              <h2 className="font-['Bebas_Neue'] text-[2.2rem] leading-none text-white mb-1.5">
+                Preferred
+                <br />
+                languages?
+              </h2>
+              <p className="text-[0.72rem] text-white/38 font-light mb-4">
+                We'll prioritize content in these languages.
+              </p>
+              <div className="flex items-center gap-2 text-[0.7rem] text-white/30 mb-3">
+                <strong className="text-[rgb(233,79,55)] font-bold">
+                  {languages.length}
+                </strong>{" "}
+                selected
+                {languages.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setLanguages([])}
+                    className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer bg-transparent border-none p-0 text-[0.68rem]"
+                  >
+                    · Clear
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {LANGUAGE_OPTIONS.map((l) => (
+                  <Chip
+                    key={l}
+                    label={l}
+                    active={languages.includes(l)}
+                    onClick={() => toggle(languages, setLanguages, l)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer nav */}
+        <div className="px-5 pb-8 pt-3 flex-shrink-0">
+          <div className="flex gap-2.5">
+            {mobileStepIndex > 0 && (
+              <button
+                type="button"
+                onClick={() => setMobileStep(STEPS[mobileStepIndex - 1])}
+                className="px-4 py-3 rounded-lg border border-white/10 bg-transparent text-white/40 text-sm font-medium hover:border-white/22 hover:text-white/70 transition-all cursor-pointer"
+              >
+                ← Back
+              </button>
+            )}
+            {mobileStep !== "languages" ? (
+              <button
+                type="button"
+                disabled={!canAdvanceMobile}
+                onClick={() => setMobileStep(STEPS[mobileStepIndex + 1])}
+                className={[
+                  "flex-1 py-3 rounded-lg font-['Bebas_Neue'] text-[0.95rem] tracking-widest transition-all",
+                  canAdvanceMobile
+                    ? "bg-[rgb(233,79,55)] text-white shadow-[0_4px_16px_rgba(233,79,55,0.28)] hover:bg-[rgb(215,65,42)] active:scale-[0.98] cursor-pointer"
+                    : "bg-white/[0.07] text-white/20 cursor-not-allowed",
+                ].join(" ")}
+              >
+                Continue →
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={!canSubmit || isSubmitting || authLoading}
+                onClick={handleSubmit}
+                className={[
+                  "flex-1 py-3 rounded-lg font-['Bebas_Neue'] text-[0.95rem] tracking-widest transition-all",
+                  canSubmit && !isSubmitting && !authLoading
+                    ? "bg-[rgb(233,79,55)] text-white shadow-[0_4px_16px_rgba(233,79,55,0.28)] hover:bg-[rgb(215,65,42)] active:scale-[0.98] cursor-pointer"
+                    : "bg-white/[0.07] text-white/20 cursor-not-allowed",
+                ].join(" ")}
+              >
+                {processingLabel ? "Processing…" : "Finish Setup"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
