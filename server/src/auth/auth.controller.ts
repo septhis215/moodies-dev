@@ -12,7 +12,7 @@ import {
   Res,
   Put,
   UnauthorizedException,
-  NotFoundException
+  NotFoundException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GetUser } from 'src/auth/decorator';

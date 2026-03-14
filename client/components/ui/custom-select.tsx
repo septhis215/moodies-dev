@@ -12,7 +12,7 @@ interface CustomSelectProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   options: Option<T>[];
-  widthClass?: string; // e.g. "w-48" or "w-full"
+  widthClass?: string;
 }
 
 export default function CustomSelect<T extends string>({
@@ -29,39 +29,58 @@ export default function CustomSelect<T extends string>({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-full gap-2 bg-slate-800/70 backdrop-blur-sm text-slate-200 font-medium rounded-lg px-4 py-2 border border-white/10 hover:border-white/20 focus:border-white/30 focus:ring-1 focus:ring-white/20 text-sm transition-all cursor-pointer"
+        className="flex items-center justify-between w-full gap-2
+                   bg-white/[0.05] text-white/70 text-xs font-medium
+                   rounded-lg px-3 py-2
+                   border border-white/[0.07]
+                   hover:bg-white/[0.08] hover:border-white/[0.12] hover:text-white
+                   focus:outline-none focus:border-[#e94f37]/40
+                   transition-all duration-150 cursor-pointer"
       >
         {options.find((o) => o.value === value)?.label}
         <ChevronDown
-          size={16}
-          className={`text-slate-400 transition-transform ${
+          size={12}
+          className={`text-white/30 transition-transform duration-150 flex-shrink-0 ${
             open ? "rotate-180" : ""
           }`}
         />
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Dropdown */}
       {open && (
-        <div className="absolute mt-2 w-full bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-lg shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-          {options.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => {
-                onChange(option.value);
-                setOpen(false);
-              }}
-              className={`flex items-center justify-between w-full text-left px-4 py-2 text-sm transition-colors cursor-pointer
-                ${
-                  value === option.value
-                    ? "bg-white/10 text-white"
-                    : "text-slate-300 hover:bg-white/5 hover:text-white"
-                }`}
-            >
-              {option.label}
-              {value === option.value && <Check size={14} />}
-            </button>
-          ))}
-        </div>
+        <>
+          {/* Click-away overlay */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="absolute mt-1.5 w-full z-50
+                          bg-zinc-900 border border-white/[0.08]
+                          rounded-lg overflow-hidden
+                          shadow-[0_8px_24px_rgba(0,0,0,0.5)]
+                          animate-in fade-in slide-in-from-top-1 duration-150"
+          >
+            {options.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className={`flex items-center justify-between w-full text-left
+                            px-3 py-2 text-xs transition-colors duration-100 cursor-pointer
+                            ${
+                              value === option.value
+                                ? "bg-white/[0.07] text-white"
+                                : "text-white/50 hover:bg-white/[0.05] hover:text-white"
+                            }`}
+              >
+                {option.label}
+                {value === option.value && (
+                  <Check size={11} className="text-[#e94f37] flex-shrink-0" />
+                )}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
