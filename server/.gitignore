@@ -43,6 +43,8 @@ lerna-debug.log*
 .env.production.local
 # Production secrets — never commit, configure via CI/CD or secrets manager
 .env.production
+# Doppler encrypted offline cache — auto-generated, never commit
+.env.fallback
 
 # temp directory
 .temp

@@ -36,6 +36,8 @@ yarn-error.log*
 .env*.local
 # Production secrets — never commit, configure via CI/CD or secrets manager
 .env.production
+# Doppler encrypted offline cache — auto-generated, never commit
+.env.fallback
 
 # vercel
 .vercel
