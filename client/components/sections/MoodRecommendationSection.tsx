@@ -139,12 +139,12 @@ export default function MoodRecommendationsSection({
     setDisplayedMoods(shuffled);
   };
 
-  const fetchRecommendations = async (mood: Mood) => {
+  const fetchRecommendations = async (mood: Mood, forceRefresh: boolean = false) => {
     setLoading(true);
     setError(null);
 
     try {
-      const data = await getMoodRecommendations(mood.id, 12, mediaType);
+      const data = await getMoodRecommendations(mood.id, 12, mediaType, forceRefresh);
       setRecommendations(data.recommendations || []);
     } catch (err) {
       setError("Failed to load recommendations. Please try again.");
@@ -156,12 +156,12 @@ export default function MoodRecommendationsSection({
 
   const handleMoodClick = (mood: Mood) => {
     setSelectedMood(mood);
-    fetchRecommendations(mood);
+    fetchRecommendations(mood, false);
   };
 
   const handleRefresh = () => {
     if (selectedMood) {
-      fetchRecommendations(selectedMood);
+      fetchRecommendations(selectedMood, true); // Force refresh
     }
   };
 

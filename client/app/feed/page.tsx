@@ -5,12 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Volume2, VolumeX, Heart, Bookmark, Star, ExternalLink,
   Sparkles, Search, Info, X, Pause, Play,
-  Calendar
+  Calendar, User
 } from 'lucide-react';
 import { All } from '@/types/all';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ActionButtons from '@/components/ui/actionButtons';
 import Image from "next/image";
+import { useWatchlist } from '@/hooks/useWatchlist';
 
 interface VideoItem {
   id: number;
@@ -37,6 +39,7 @@ interface VideoItem {
 type Category = 'all' | 'upcoming';
 
 export default function VideoFeedPage() {
+  const router = useRouter();
   // Configuration constants
   const PREFETCH_THRESHOLD = 5;
   const WINDOW_SIZE = 20;
@@ -69,8 +72,10 @@ export default function VideoFeedPage() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [titleBarVisible, setTitleBarVisible] = useState(true);
   const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
+
+  const { isInWatchlist, add: addToWatchlist, remove: removeFromWatchlist, ready: watchlistReady } = useWatchlist();
 
   const panelRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -80,6 +85,36 @@ export default function VideoFeedPage() {
 
   const currentVideo = videos[currentIndex];
   const [showScrollHint, setShowScrollHint] = useState(true);
+
+  const watchType = currentVideo?.media_type === 'tv' ? 'series' : 'movie';
+  const inWatchlist = currentVideo ? isInWatchlist(String(currentVideo.id), watchType) : false;
+
+  const handleWatchlistToggle = useCallback(async () => {
+    if (!currentVideo || isTogglingWatchlist) return;
+
+    setIsTogglingWatchlist(true);
+    try {
+      if (inWatchlist) {
+        await removeFromWatchlist(String(currentVideo.id), watchType, {
+          title: currentVideo.title || currentVideo.name,
+          posterUrl: currentVideo.poster_path ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}` : null,
+          variant: 'info',
+          duration: 3500,
+        });
+      } else {
+        await addToWatchlist(String(currentVideo.id), watchType, {
+          title: currentVideo.title || currentVideo.name,
+          posterUrl: currentVideo.poster_path ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}` : null,
+          variant: 'success',
+          duration: 3500,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to toggle watchlist:', error);
+    } finally {
+      setIsTogglingWatchlist(false);
+    }
+  }, [currentVideo, inWatchlist, watchType, isTogglingWatchlist, addToWatchlist, removeFromWatchlist]);
 
   const getContentType = (item: any): "movie" | "tv" => {
     if (item.media_type) return item.media_type;
@@ -295,7 +330,6 @@ export default function VideoFeedPage() {
     setHasMore(true);
     setPanelOpen(false);
     setLiked(false);
-    setSaved(false);
     isFetchingRef.current = false;
 
     // Delay initial fetch slightly to ensure state is clean
@@ -369,12 +403,10 @@ export default function VideoFeedPage() {
       setCurrentIndex(i => i + 1);
       setPanelOpen(false);
       setLiked(false);
-      setSaved(false);
     } else if (e.deltaY < 0 && currentIndex > 0) {
       setCurrentIndex(i => i - 1);
       setPanelOpen(false);
       setLiked(false);
-      setSaved(false);
     }
   }, [currentIndex, videos.length]);
 
@@ -393,12 +425,10 @@ export default function VideoFeedPage() {
       setCurrentIndex(prev => prev + 1);
       setPanelOpen(false);
       setLiked(false);
-      setSaved(false);
     } else if (diff < 0 && currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
       setPanelOpen(false);
       setLiked(false);
-      setSaved(false);
     }
   };
 
@@ -535,12 +565,15 @@ export default function VideoFeedPage() {
                 <Search className="w-5 h-5 text-white/80" />
               </motion.button>
             </Link>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center cursor-pointer"
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => router.push('/profile')}
+              className="p-2 rounded-lg hover:bg-white/10 transition-all"
+              title="Go to profile"
             >
-              <span className="text-white text-xs font-bold">U</span>
-            </motion.div>
+              <User className="w-5 h-5 text-white/80" />
+            </motion.button>
           </div>
         </div>
       </motion.nav>
@@ -711,7 +744,7 @@ export default function VideoFeedPage() {
                   )}
                 </AnimatePresence>
 
-                <ActionButtons isPlaying={isPlaying} liked={liked} saved={saved} muted={muted} togglePlayPause={togglePlayPause} setLiked={setLiked} setSaved={setSaved} toggleMute={toggleMute} />
+                <ActionButtons isPlaying={isPlaying} liked={liked} saved={inWatchlist} muted={muted} togglePlayPause={togglePlayPause} setLiked={setLiked} setSaved={handleWatchlistToggle} toggleMute={toggleMute} />
               </div>
 
               {/* Info Panel */}

@@ -117,13 +117,13 @@ export class MoodsService {
     }
 
     private async getCachedRecommendations(dto: GetRecommendationsDto): Promise<Recommendation[]> {
-        // Reduce cache time to 30 minutes for more variety
-        const thirtyMinutesAgo = new Date();
-        thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30);
+        // Reduce cache time to 5 minutes for better variety and freshness
+        const fiveMinutesAgo = new Date();
+        fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
 
         const whereCondition: Prisma.RecommendationWhereInput = {
             moodId: dto.moodId,
-            createdAt: { gte: thirtyMinutesAgo },
+            createdAt: { gte: fiveMinutesAgo },
         };
 
         if (dto.userId) {
@@ -134,14 +134,16 @@ export class MoodsService {
             whereCondition.mediaType = dto.mediaType.toUpperCase() as MediaType;
         }
 
-        return this.prisma.recommendation.findMany({
+        const cached = await this.prisma.recommendation.findMany({
             where: whereCondition,
             orderBy: [
-                { score: 'desc' },
                 { createdAt: 'desc' },
             ],
-            take: dto.limit || 12,
+            take: (dto.limit || 12) * 3, // Get more to allow better selection
         });
+
+        // Always shuffle cache results to provide variety
+        return this.shuffleArray(cached).slice(0, dto.limit || 12);
     }
 
     private async generateRecommendations(
@@ -161,35 +163,50 @@ export class MoodsService {
             ? await this.prisma.userPreference.findUnique({ where: { userId: dto.userId } })
             : null;
 
-        // Collect all content until we reach targetLimit (or max pages)
+        // Randomized page selection for better variety
         const allMovies: any[] = [];
         const allTVShows: any[] = [];
-        let page = 1;
-        const maxPages = 50; // safeguard
+        const maxPages = 50;
+        const pagesToFetch = Math.min(10, maxPages); // Fetch up to 10 random pages
+        const pages = this.generateRandomPages(1, maxPages, pagesToFetch);
 
-        while ((allMovies.length + allTVShows.length) < targetLimit * 2 && page <= maxPages) {
+        this.logger.debug(`Fetching recommendations from random pages [${pages.slice(0, 5).join(',')}...] for mood: ${mood.name}`);
+
+        for (const page of pages) {
             try {
                 if (dto.mediaType === 'both' || dto.mediaType === 'movie') {
-                    const movies = await this.tmdbService.getMoviesByGenres(
-                        mood.tmdbGenres,
-                        page,
-                        dto.minRating,
-                    );
-                    allMovies.push(...movies);
+                    try {
+                        const movies = await this.tmdbService.getMoviesByGenres(
+                            mood.tmdbGenres,
+                            page,
+                            dto.minRating,
+                        );
+                        allMovies.push(...movies);
+                    } catch (e) {
+                        this.logger.debug(`Movie fetch failed for page ${page}`);
+                    }
                 }
 
                 if (dto.mediaType === 'both' || dto.mediaType === 'tv') {
-                    const tvShows = await this.tmdbService.getTVShowsByGenres(
-                        mood.tmdbGenres,
-                        page,
-                        dto.minRating,
-                    );
-                    allTVShows.push(...tvShows);
+                    try {
+                        const tvShows = await this.tmdbService.getTVShowsByGenres(
+                            mood.tmdbGenres,
+                            page,
+                            dto.minRating,
+                        );
+                        allTVShows.push(...tvShows);
+                    } catch (e) {
+                        this.logger.debug(`TV fetch failed for page ${page}`);
+                    }
+                }
+
+                // Stop early if we have enough content
+                if ((allMovies.length + allTVShows.length) >= targetLimit * 3) {
+                    break;
                 }
             } catch (error) {
                 this.logger.warn(`Failed to fetch page ${page} for mood ${mood.name}:`, error.message);
             }
-            page++;
         }
 
         // Deduplicate
@@ -200,11 +217,13 @@ export class MoodsService {
             `Fetched ${uniqueMovies.length} unique movies and ${uniqueTVShows.length} unique TV shows`,
         );
 
-        // Multiple shuffles to introduce unpredictability
-        for (let i = 0; i < 3; i++) {
+        // Multiple aggressive shuffles to introduce unpredictability
+        for (let i = 0; i < 4; i++) {
             this.shuffleArray(uniqueMovies);
             this.shuffleArray(uniqueTVShows);
         }
+
+        this.logger.debug(`Shuffled ${uniqueMovies.length} movies and ${uniqueTVShows.length} TV shows`);
 
         // Process recommendations
         if (uniqueMovies.length > 0) {
@@ -229,9 +248,15 @@ export class MoodsService {
             recommendations.push(...tvRecommendations);
         }
 
-        // Final shuffle before selection
-        for (let i = 0; i < 2; i++) {
+        // Final aggressive shuffle and diversification
+        for (let i = 0; i < 3; i++) {
             this.shuffleArray(recommendations);
+        }
+
+        if (recommendations.length === 0) {
+            this.logger.warn(`No recommendations generated for mood: ${mood.name}. Trying fallback approach...`);
+            // Fallback: try with lower quality threshold
+            return this.generateRecommendationsFallback(mood, dto, targetLimit);
         }
 
         // Diversify and limit
@@ -338,8 +363,8 @@ export class MoodsService {
         const keywordMatch = this.calculateEnhancedKeywordMatch(content.contentKeywords || [], mood.keywords || []);
         const sentimentMatch = this.calculateEnhancedSentimentMatch(content.sentiment, mood);
         const qualityScore = this.calculateQualityScore(content.vote_average ?? 0, content.vote_count ?? 0);
-        const popularityScore = this.calculatePopularityScore(content.popularity ?? 0); 
-        const recencyScore = this.calculateRecencyScore(content.release_date || content.first_air_date); 
+        const popularityScore = this.calculatePopularityScore(content.popularity ?? 0);
+        const recencyScore = this.calculateRecencyScore(content.release_date || content.first_air_date);
 
         const userMoodPreference = this.calculateUserMoodPreference(mood.id, userHistory);
         const userGenrePreference = userPreferences ? this.calculateUserPreferenceMatch(content.genre_ids || [], userPreferences) : 0.5;
@@ -1034,46 +1059,167 @@ export class MoodsService {
     }
 
     private diversifyRecommendations(recommendations: any[], limit: number): any[] {
-        // Shuffle first to ensure randomness
-        this.shuffleArray(recommendations);
+        if (recommendations.length === 0) return [];
 
-        // Sort by score but maintain some randomness within score bands
-        recommendations.sort((a, b) => {
-            const scoreA = Number(a.score);
-            const scoreB = Number(b.score);
-
-            // If scores are very close (within 0.1), maintain random order
-            if (Math.abs(scoreA - scoreB) < 0.1) {
-                return Math.random() - 0.5;
-            }
-
-            return scoreB - scoreA;
-        });
-
-        // Ensure mix of movies and TV shows
-        const movies = recommendations.filter(r => r.mediaType === MediaType.MOVIE);
-        const tvShows = recommendations.filter(r => r.mediaType === MediaType.TV);
-
+        // Group by score tiers for better diversity
+        const scoreTiers = this.groupByScoreTiers(recommendations);
         const result: any[] = [];
-        const targetMovies = Math.floor(limit * 0.6); // 60% movies
-        const targetTV = limit - targetMovies;
 
-        // Add movies and TV shows alternately for variety
-        let movieIndex = 0;
-        let tvIndex = 0;
+        // Strategy: round-robin across tiers for maximum variety
+        const tierNames = Object.keys(scoreTiers);
+        const tierQueues = tierNames.map(name => this.shuffleArray([...scoreTiers[name]]));
+        let tierIndex = 0;
+        let useMovies = true;
 
-        for (let i = 0; i < limit && (movieIndex < movies.length || tvIndex < tvShows.length); i++) {
-            if (result.length < targetMovies && movieIndex < movies.length &&
-                (tvIndex >= tvShows.length || i % 2 === 0)) {
-                result.push(movies[movieIndex++]);
-            } else if (result.length < limit && tvIndex < tvShows.length) {
-                result.push(tvShows[tvIndex++]);
-            } else if (movieIndex < movies.length) {
-                result.push(movies[movieIndex++]);
+        while (result.length < limit && tierQueues.some(queue => queue.length > 0)) {
+            if (tierQueues[tierIndex].length > 0) {
+                const queue = tierQueues[tierIndex];
+                let selected: any = null;
+
+                // Alternate between movies and TV
+                if (useMovies) {
+                    for (let i = 0; i < queue.length; i++) {
+                        if (queue[i].mediaType === MediaType.MOVIE) {
+                            selected = queue.splice(i, 1)[0];
+                            break;
+                        }
+                    }
+                } else {
+                    for (let i = 0; i < queue.length; i++) {
+                        if (queue[i].mediaType === MediaType.TV) {
+                            selected = queue.splice(i, 1)[0];
+                            break;
+                        }
+                    }
+                }
+
+                // If preferred media type not found, take anything
+                if (!selected && queue.length > 0) {
+                    selected = queue.shift();
+                }
+
+                if (selected) {
+                    result.push(selected);
+                    useMovies = !useMovies;
+                }
             }
+
+            // Move to next tier, cycle back if needed
+            tierIndex = (tierIndex + 1) % tierQueues.length;
         }
 
-        return result.slice(0, limit);
+        // Final shuffle to break any remaining patterns
+        return this.shuffleArray(result).slice(0, limit);
+    }
+
+    /**
+     * Group recommendations by score tiers for better diversity
+     */
+    private groupByScoreTiers(recommendations: any[]): Record<string, any[]> {
+        const tiers: Record<string, any[]> = {
+            'tier-0': [], // 0.9-1.0
+            'tier-1': [], // 0.8-0.89
+            'tier-2': [], // 0.7-0.79
+            'tier-3': [], // 0.6-0.69
+            'tier-4': [], // < 0.6
+        };
+
+        recommendations.forEach((rec: any) => {
+            const score = Number(rec.score);
+            if (score >= 0.9) tiers['tier-0'].push(rec);
+            else if (score >= 0.8) tiers['tier-1'].push(rec);
+            else if (score >= 0.7) tiers['tier-2'].push(rec);
+            else if (score >= 0.6) tiers['tier-3'].push(rec);
+            else tiers['tier-4'].push(rec);
+        });
+
+        return tiers;
+    }
+
+    /**
+     * Generate random page numbers without replacement
+     */
+    private generateRandomPages(min: number, max: number, count: number): number[] {
+        const pages = new Set<number>();
+        const target = Math.min(count, max - min + 1);
+
+        while (pages.size < target) {
+            pages.add(Math.floor(Math.random() * (max - min + 1)) + min);
+        }
+
+        return Array.from(pages).sort(() => Math.random() - 0.5);
+    }
+
+    /**
+     * Fallback recommendation generation with relaxed constraints
+     */
+    private async generateRecommendationsFallback(
+        mood: Mood,
+        dto: GetRecommendationsDto,
+        targetLimit: number,
+    ): Promise<any[]> {
+        const recommendations: any[] = [];
+        const userId = dto.userId || 'anonymous';
+        const userHistory: (MoodLog & { mood: Mood })[] = [];
+        const userPreferences = null;
+
+        try {
+            // Try broader search with lower rating threshold
+            const allMovies: any[] = [];
+            const allTVShows: any[] = [];
+
+            for (let i = 1; i <= 3; i++) {
+                try {
+                    if (dto.mediaType === 'both' || dto.mediaType === 'movie') {
+                        const movies = await this.tmdbService.getMoviesByGenres(
+                            mood.tmdbGenres,
+                            i,
+                            0, // No minimum rating for fallback
+                        );
+                        allMovies.push(...movies);
+                    }
+                    if (dto.mediaType === 'both' || dto.mediaType === 'tv') {
+                        const tvShows = await this.tmdbService.getTVShowsByGenres(
+                            mood.tmdbGenres,
+                            i,
+                            0, // No minimum rating for fallback
+                        );
+                        allTVShows.push(...tvShows);
+                    }
+                } catch (e) {
+                    this.logger.debug(`Fallback fetch from page ${i} failed`);
+                }
+            }
+
+            if (allMovies.length > 0) {
+                const movieRecommendations = await this.processMovieRecommendations(
+                    allMovies,
+                    mood,
+                    userId,
+                    userHistory,
+                    userPreferences,
+                );
+                recommendations.push(...movieRecommendations);
+            }
+
+            if (allTVShows.length > 0) {
+                const tvRecommendations = await this.processTVRecommendations(
+                    allTVShows,
+                    mood,
+                    userId,
+                    userHistory,
+                    userPreferences,
+                );
+                recommendations.push(...tvRecommendations);
+            }
+
+            // Shuffle and diversify
+            this.shuffleArray(recommendations);
+            return this.diversifyRecommendations(recommendations, targetLimit);
+        } catch (error) {
+            this.logger.error(`Fallback recommendation generation failed for mood ${mood.name}:`, error.message);
+            return [];
+        }
     }
 
     private shuffleArray<T>(array: T[]): T[] {
@@ -1173,21 +1319,23 @@ export class MoodsService {
         page: number;
         totalPages: number;
     }> {
-        // Clear recent cache for this mood to ensure fresh results
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-
+        // Clear ALL cache for this mood to ensure completely fresh results
         const whereCondition: any = {
             moodId: dto.moodId,
-            createdAt: { gte: oneHourAgo },
         };
 
         if (dto.userId) {
             whereCondition.userId = dto.userId;
         }
 
-        await this.prisma.recommendation.deleteMany({ where: whereCondition });
+        const deleted = await this.prisma.recommendation.deleteMany({ where: whereCondition });
+        this.logger.debug(`Deleted ${deleted.count} cached recommendations for mood: ${dto.moodId}`);
 
-        // Force fresh recommendations
+        // Clear internal caches to ensure fresh data
+        this.keywordCache.clear();
+        this.sentimentCache.clear();
+
+        // Force completely fresh recommendations
         return this.getRecommendations({
             ...dto,
             forceRefresh: true,

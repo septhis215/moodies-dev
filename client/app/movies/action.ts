@@ -1,14 +1,15 @@
-// app/tv/action.ts
+// app/movies/action.ts
 'use server';
 
 const NEST_API_URL = process.env.NEST_API_URL || 'http://localhost:4000';
 
-export async function getMoodRecommendations(moodId: string, limit: number = 12, mediaType: string = 'movie') {
+export async function getMoodRecommendations(moodId: string, limit: number = 12, mediaType: string = 'movie', forceRefresh: boolean = false) {
     try {
         const params = new URLSearchParams({
             moodId,
             limit: limit.toString(),
             mediaType,
+            forceRefresh: forceRefresh.toString(),
         });
 
         const url = `${NEST_API_URL}/moods/recommendations?${params}`;
@@ -17,7 +18,6 @@ export async function getMoodRecommendations(moodId: string, limit: number = 12,
             headers: { 'Content-Type': 'application/json' },
             cache: 'no-store',
         });
-
 
         if (!response.ok) {
             const errorText = await response.text();
