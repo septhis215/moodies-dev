@@ -3,9 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
+    "dev": "doppler run --config stg --fallback .env.staging -- next dev --turbopack",
+    "build:staging": "doppler run --config stg --fallback .env.staging -- next build --turbopack",
+    "build:production": "doppler run --config prd --fallback .env.production -- next build --turbopack",
+    "build": "npm run build:staging",
+    "start:staging": "doppler run --config stg --fallback .env.staging -- next start",
+    "start:production": "doppler run --config prd --fallback .env.production -- next start",
+    "start": "npm run start:staging",
     "lint": "eslint"
   },
   "dependencies": {
@@ -38,6 +42,7 @@
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
     "@types/youtube": "^0.1.2",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "tailwindcss": "^4.1.12",

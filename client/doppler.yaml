@@ -1,0 +1,3 @@
+setup:
+  project: moodies-client-env
+  config: stg

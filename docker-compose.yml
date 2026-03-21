@@ -25,8 +25,14 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
+    # For local: set DOPPLER_TOKEN in your shell or a local .env at repo root (gitignored).
+    # For CI/CD: inject DOPPLER_TOKEN as a pipeline secret.
+    # Fallback: if DOPPLER_TOKEN is unset, env_file is used instead.
     env_file:
-      - ./server/.env
+      - ./server/.env.staging
+    environment:
+      NODE_ENV: staging
+      DOPPLER_TOKEN: ${DOPPLER_TOKEN:-}
     depends_on:
       - postgres-dev
       - mongo
@@ -37,8 +43,12 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
+      args:
+        APP_ENV: staging
     env_file:
-      - ./client/.env
+      - ./client/.env.staging
+    environment:
+      DOPPLER_TOKEN: ${DOPPLER_TOKEN:-}
     depends_on:
       - server
     ports:
