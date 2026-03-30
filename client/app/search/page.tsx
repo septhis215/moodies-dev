@@ -1369,7 +1369,7 @@ export default function SearchResultsPage() {
                               <div className="flex items-center gap-3 ml-2">
                                 <div className="flex items-center gap-1 text-orange-400">
                                   <Star size={14} fill="currentColor" />
-                                  <span className="text-sm font-medium text-white">{item.vote_average.toFixed(1)}</span>
+                                  <span className="text-sm font-medium text-white">{item.vote_average}</span>
                                 </div>
                                 <Badge className={`${item.type === "tv" ? "bg-blue-500" : "bg-purple-500"} text-white`}>
                                   {item.type === "tv" ? <><Tv size={12} className="mr-1" />Series</> : <><Film size={12} className="mr-1" />Movie</>}
@@ -1386,7 +1386,7 @@ export default function SearchResultsPage() {
                               )}
                               <div className="flex items-center gap-1">
                                 <Users size={14} />
-                                <span className="text-gray-300">{(item.vote_count / 1000).toFixed(1)}K votes</span>
+                                <span className="text-gray-300">{(item.vote_count / 1000)}K votes</span>
                               </div>
                               {item.origin_country?.length > 0 && (
                                 <div className="flex items-center gap-1">

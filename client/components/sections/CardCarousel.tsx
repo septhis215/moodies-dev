@@ -511,8 +511,8 @@ export default function CardCarousel<T extends MovieLike>({
                                 {isLoading
                                   ? "Updating..."
                                   : inWatchlist
-                                    ? "Remove from Watchlist"
-                                    : "Add to Watchlist"}
+                                    ? "Remove from My List"
+                                    : "Add to My List"}
                               </div>
                             </TooltipContent>
                           </Tooltip>
@@ -644,7 +644,7 @@ export default function CardCarousel<T extends MovieLike>({
                                 <div className="flex items-center gap-1 text-green-400 text-[10px] sm:text-xs">
                                   <Check size={10} className="sm:w-3 sm:h-3" />
                                   <span className="font-medium">
-                                    In Watchlist
+                                    In My List
                                   </span>
                                 </div>
                               )}

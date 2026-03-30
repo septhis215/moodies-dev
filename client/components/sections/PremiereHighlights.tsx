@@ -129,10 +129,10 @@ export default function PremiereHighlights({
   const canScrollLeft = startIndex > 0;
   const canScrollRight = startIndex < uniqueTrailers.length - itemsPerView;
 
-  const scrollLeft = () => setStartIndex((prev) => Math.max(0, prev - 3));
+  const scrollLeft = () => setStartIndex((prev) => Math.max(0, prev - itemsPerView));
   const scrollRight = () =>
     setStartIndex((prev) =>
-      Math.min(uniqueTrailers.length - itemsPerView, prev + 3)
+      Math.min(uniqueTrailers.length - itemsPerView, prev + itemsPerView)
     );
 
   const visibleItems = uniqueTrailers.slice(
@@ -283,11 +283,10 @@ export default function PremiereHighlights({
                     <div
                       className={`
                                              flex items-center gap-1 px-2 py-1 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border group-hover:opacity-0 transition-opacity duration-300
-                                             ${
-                                               item.type === "tv"
-                                                 ? "bg-blue-500/90 text-white border-blue-400/50"
-                                                 : "bg-purple-500/90 text-white border-purple-400/50"
-                                             }
+                                             ${item.type === "tv"
+                          ? "bg-blue-500/90 text-white border-blue-400/50"
+                          : "bg-purple-500/90 text-white border-purple-400/50"
+                        }
                                            `}
                     >
                       {item.type === "tv" ? (

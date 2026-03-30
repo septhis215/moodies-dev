@@ -122,15 +122,15 @@ export default function CommonCardCarousel({
                     }}
                     disabled={loadingStates[show.id]}
                     className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${hookIsIn(String(show.id), toWatchType(show))
-                        ? "bg-green-500 text-white"
-                        : "bg-white text-black"
+                      ? "bg-green-500 text-white"
+                      : "bg-white text-black"
                       }`}
                     title={
                       loadingStates[show.id]
                         ? "Loading..."
                         : hookIsIn(String(show.id), toWatchType(show))
-                          ? "Remove from Watchlist"
-                          : "Add to Watchlist"
+                          ? "Remove from My List"
+                          : "Add to My List"
                     }
                   >
                     {loadingStates[show.id] ? (

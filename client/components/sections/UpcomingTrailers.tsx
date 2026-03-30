@@ -155,12 +155,12 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
     startIndex < Math.max(0, uniqueTrailers.length - itemsPerView);
 
   const scrollLeft = () => {
-    setStartIndex((prev) => Math.max(0, prev - 3));
+    setStartIndex((prev) => Math.max(0, prev - itemsPerView));
   };
 
   const scrollRight = () => {
     setStartIndex((prev) =>
-      Math.min(Math.max(0, uniqueTrailers.length - itemsPerView), prev + 3)
+      Math.min(Math.max(0, uniqueTrailers.length - itemsPerView), prev + itemsPerView)
     );
   };
 

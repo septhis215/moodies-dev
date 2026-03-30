@@ -435,8 +435,8 @@ export function ComingSoonSection({
                                                 {isLoading
                                                   ? "Updating..."
                                                   : inWatchlist
-                                                    ? "Remove from Watchlist"
-                                                    : "Add to Watchlist"}
+                                                    ? "Remove from My List"
+                                                    : "Add to My List"}
                                               </div>
                                             </TooltipContent>
                                           </Tooltip>

@@ -552,8 +552,8 @@ export default function MoodRecommendationsSection({
                                       }`}
                                     title={
                                       inList
-                                        ? "Remove from Watchlist"
-                                        : "Add to Watchlist"
+                                        ? "Remove from My List"
+                                        : "Add to My List"
                                     }
                                   >
                                     {isBusy ? (

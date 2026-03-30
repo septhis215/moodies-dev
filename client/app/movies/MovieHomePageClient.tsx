@@ -222,7 +222,7 @@ export default function MoviesHomePageClient({
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        router.push(`/tv/${show.id}`);
+                                        router.push(`/movies/${show.id}`);
                                     }}
                                     className="w-11 h-11 bg-white rounded-full sm:flex items-center justify-center shadow-lg hidden  active:scale-95 hover:bg-[#e94f37] cursor-pointer"
                                 >
@@ -438,8 +438,8 @@ s                                                    ${featuredInWatchlist
                                                     }`}
                                                 title={
                                                     featuredInWatchlist
-                                                        ? "Remove from Watchlist"
-                                                        : "Add to Watchlist"
+                                                        ? "Remove from My List"
+                                                        : "Add to My List"
                                                 }
                                             >
                                                 {wlLoading ? (
@@ -523,7 +523,7 @@ s                                                    ${featuredInWatchlist
                                         )}
 
                                         <div className="absolute inset-0 p-8 flex flex-col justify-end">
-                                            <div className="text-8xl font-black text-white/5 absolute top-6 right-6">
+                                            <div className="text-8xl font-black text-white/80 absolute top-6 right-6">
                                                 #{idx + 1}
                                             </div>
 
@@ -806,10 +806,10 @@ s                                                    ${featuredInWatchlist
                                         <div className="flex items-center gap-3">
                                             <div
                                                 className={`w-11 h-11 rounded-lg flex items-center justify-center ${sec.color === "emerald"
-                                                        ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-white/10"
-                                                        : sec.color === "blue"
-                                                            ? "bg-blue-500/20 text-blue-400 ring-1 ring-white/10"
-                                                            : "bg-amber-500/20 text-amber-400 ring-1 ring-white/10"
+                                                    ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-white/10"
+                                                    : sec.color === "blue"
+                                                        ? "bg-blue-500/20 text-blue-400 ring-1 ring-white/10"
+                                                        : "bg-amber-500/20 text-amber-400 ring-1 ring-white/10"
                                                     }`}
                                             >
                                                 {sec.icon}
@@ -930,10 +930,10 @@ s                                                    ${featuredInWatchlist
                                         </div>
                                         <div
                                             className={`text-sm font-bold ${sec.color === "emerald"
-                                                    ? "text-emerald-400"
-                                                    : sec.color === "blue"
-                                                        ? "text-blue-400"
-                                                        : "text-amber-400"
+                                                ? "text-emerald-400"
+                                                : sec.color === "blue"
+                                                    ? "text-blue-400"
+                                                    : "text-amber-400"
                                                 }`}
                                         >
                                             {/* simple summarized metric */}

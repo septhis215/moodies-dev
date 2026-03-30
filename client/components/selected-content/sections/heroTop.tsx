@@ -961,10 +961,10 @@ export function HeroContentCard({
                   ...s.btnSecondary,
                   ...(inWatchlist
                     ? {
-                        background: "rgba(34,197,94,0.12)",
-                        border: "1px solid rgba(34,197,94,0.3)",
-                        color: "#86efac",
-                      }
+                      background: "rgba(34,197,94,0.12)",
+                      border: "1px solid rgba(34,197,94,0.3)",
+                      color: "#86efac",
+                    }
                     : {}),
                   opacity: isTogglingWatchlist ? 0.6 : 1,
                 }}
@@ -985,7 +985,7 @@ export function HeroContentCard({
                 ) : (
                   <Bookmark size={14} />
                 )}
-                {inWatchlist ? "Saved" : "Watchlist"}
+                {inWatchlist ? "Saved" : "My List"}
               </button>
 
               <Link href={viewAllRef}>

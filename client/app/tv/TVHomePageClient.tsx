@@ -273,8 +273,8 @@ export default function TVHomePageClient({
       const posterUrl = featured?.poster_path
         ? getPosterUrl(featured.poster_path)
         : featured?.backdrop_path
-        ? getImageUrl(featured.backdrop_path)
-        : null;
+          ? getImageUrl(featured.backdrop_path)
+          : null;
 
       if (featuredInWatchlist) {
         await remove(String(featured.id), "series", { title, posterUrl });
@@ -340,11 +340,10 @@ export default function TVHomePageClient({
                         }
                         className={`rounded-xl overflow-hidden border-2 transform transition-all duration-300
                                                 hover:scale-105 hover:z-10 focus:outline-none
-                                                ${
-                                                  isActive
-                                                    ? "border-[#e94f37]  scale-105 shadow-2xl shadow-[#e94f37]/30"
-                                                    : "border-white/10 hover:border-[#e94f37]/50"
-                                                }`}
+                                                ${isActive
+                            ? "border-[#e94f37]  scale-105 shadow-2xl shadow-[#e94f37]/30"
+                            : "border-white/10 hover:border-[#e94f37]/50"
+                          }`}
                       >
                         {s.poster_path ? (
                           <Image
@@ -432,16 +431,15 @@ export default function TVHomePageClient({
                         }}
                         disabled={loadingStates["featured"]}
                         className={`ml-auto px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg
-        ${
-          featuredInWatchlist
-            ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-            : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
-        }
+        ${featuredInWatchlist
+                            ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
+                            : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
+                          }
         ${loadingStates["featured"] ? "opacity-70 cursor-not-allowed" : ""}`}
                         title={
                           featuredInWatchlist
-                            ? "Remove from Watchlist"
-                            : "Add to Watchlist"
+                            ? "Remove from My List"
+                            : "Add to My List"
                         }
                       >
                         {loadingStates["featured"] ? (
@@ -602,7 +600,7 @@ export default function TVHomePageClient({
                           <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
                           <span className="font-bold text-white">
                             {newReleaseTV[0].vote_average &&
-                            newReleaseTV[0].vote_average > 0
+                              newReleaseTV[0].vote_average > 0
                               ? newReleaseTV[0].vote_average.toFixed(1)
                               : "New"}
                           </span>
@@ -801,13 +799,12 @@ export default function TVHomePageClient({
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-11 h-11 rounded-lg flex items-center justify-center ${
-                          sec.color === "emerald"
+                        className={`w-11 h-11 rounded-lg flex items-center justify-center ${sec.color === "emerald"
                             ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-white/10"
                             : sec.color === "blue"
-                            ? "bg-blue-500/20 text-blue-400 ring-1 ring-white/10"
-                            : "bg-amber-500/20 text-amber-400 ring-1 ring-white/10"
-                        }`}
+                              ? "bg-blue-500/20 text-blue-400 ring-1 ring-white/10"
+                              : "bg-amber-500/20 text-amber-400 ring-1 ring-white/10"
+                          }`}
                       >
                         {sec.icon}
                       </div>
@@ -826,8 +823,8 @@ export default function TVHomePageClient({
                         sec.key === "most-liked"
                           ? "/discover/most-liked"
                           : sec.key === "most-reviewed"
-                          ? "/discover/most-reviewed"
-                          : "/discover/most-saved"
+                            ? "/discover/most-reviewed"
+                            : "/discover/most-saved"
                       }
                       className="text-xs font-semibold text-gray-300 hover:text-white"
                     >
@@ -926,13 +923,12 @@ export default function TVHomePageClient({
                       Total engagement
                     </div>
                     <div
-                      className={`text-sm font-bold ${
-                        sec.color === "emerald"
+                      className={`text-sm font-bold ${sec.color === "emerald"
                           ? "text-emerald-400"
                           : sec.color === "blue"
-                          ? "text-blue-400"
-                          : "text-amber-400"
-                      }`}
+                            ? "text-blue-400"
+                            : "text-amber-400"
+                        }`}
                     >
                       {/* simple summarized metric */}
                       {sec.key === "most-liked" &&

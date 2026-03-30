@@ -171,9 +171,8 @@ export function CategoryContent({
         )}
         {/* Content with opacity when loading */}
         <div
-          className={`transition-opacity duration-300 ${
-            isPending ? "opacity-50 pointer-events-none" : "opacity-100"
-          }`}
+          className={`transition-opacity duration-300 ${isPending ? "opacity-50 pointer-events-none" : "opacity-100"
+            }`}
         >
           {/* Top 3 Featured Section */}
           {topThree.length > 0 && (
@@ -213,7 +212,6 @@ export function CategoryContent({
                           rounded-md 
                           bg-gradient-to-br from-neutral-900/80 to-neutral-800/60 
                           border border-neutral-700/50 
-                          shadow-lg backdrop-blur-md
                         "
                       >
                         <span className="text-sm font-bold text-white tracking-wide">
@@ -228,9 +226,8 @@ export function CategoryContent({
                         src={getImageUrl(item.backdrop_path)}
                         alt={getTitle(item)}
                         onError={() => handleImageError(item.id)}
-                        className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ${
-                          imageErrors.has(item.id) ? "opacity-50" : ""
-                        }`}
+                        className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ${imageErrors.has(item.id) ? "opacity-50" : ""
+                          }`}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
 
@@ -239,10 +236,9 @@ export function CategoryContent({
                         <div
                           className={`
                             flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-medium text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
-                            ${
-                              item.type === "tv"
-                                ? "bg-blue-500/90 text-white border-blue-400/50"
-                                : "bg-purple-500/90 text-white border-purple-400/50"
+                            ${item.type === "tv"
+                              ? "bg-blue-500/90 text-white border-blue-400/50"
+                              : "bg-purple-500/90 text-white border-purple-400/50"
                             }
                           `}
                         >
@@ -345,9 +341,8 @@ export function CategoryContent({
                         src={getPosterUrl(item.poster_path)}
                         alt={getTitle(item)}
                         onError={() => handleImageError(item.id)}
-                        className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ${
-                          imageErrors.has(item.id) ? "opacity-50" : ""
-                        }`}
+                        className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ${imageErrors.has(item.id) ? "opacity-50" : ""
+                          }`}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -366,10 +361,9 @@ export function CategoryContent({
                         <div
                           className={`
                             flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-medium text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
-                            ${
-                              item.type === "tv"
-                                ? "bg-blue-500/90 text-white border-blue-400/50"
-                                : "bg-purple-500/90 text-white border-purple-400/50"
+                            ${item.type === "tv"
+                              ? "bg-blue-500/90 text-white border-blue-400/50"
+                              : "bg-purple-500/90 text-white border-purple-400/50"
                             }
                           `}
                         >
@@ -453,11 +447,10 @@ export function CategoryContent({
                     key={pageNum}
                     onClick={() => handlePageChange(pageNum)}
                     disabled={isPending}
-                    className={`w-10 h-10 rounded-lg font-bold transition-all disabled:cursor-not-allowed ${
-                      pageNum === currentPage
+                    className={`w-10 h-10 rounded-lg font-bold transition-all disabled:cursor-not-allowed ${pageNum === currentPage
                         ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white"
                         : "bg-white/10 hover:bg-white/20"
-                    } ${isPending ? "opacity-50" : ""}`}
+                      } ${isPending ? "opacity-50" : ""}`}
                   >
                     {pageNum}
                   </button>

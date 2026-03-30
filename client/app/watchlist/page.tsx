@@ -292,7 +292,7 @@ export default function WatchlistPage() {
         <div className="mt-10 mb-12 relative overflow-hidden">
           {/* Ghost watermark */}
           <span className="absolute -top-4 left-0 text-[5rem] sm:text-[8rem] font-black text-white/[0.03] leading-none select-none pointer-events-none tracking-tight whitespace-nowrap">
-            WATCHLIST
+            MY LIST
           </span>
 
           <div className="relative flex flex-col sm:flex-row sm:items-end justify-between gap-6">
@@ -305,7 +305,7 @@ export default function WatchlistPage() {
                 </span>
               </div>
               <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white leading-none">
-                Watchlist
+                My List
               </h1>
               <div className="flex items-center gap-2 mt-4">
                 {movieIds.length > 0 && (
@@ -395,7 +395,7 @@ export default function WatchlistPage() {
           tvIds.length === 0 && (
             <EmptyState
               title="Your watchlist is empty"
-              note="Go add a movie or series using the Watchlist button."
+              note="Go add a movie or series using the My List button."
             />
           )}
 
@@ -452,11 +452,10 @@ export default function WatchlistPage() {
 function Badge({ label, ok = true }: { label: string; ok?: boolean }) {
   return (
     <span
-      className={`rounded-full px-3 py-1 ${
-        ok
-          ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/30"
-          : "bg-red-500/15 text-red-300 border-red-400/30"
-      } border text-xs font-medium`}
+      className={`rounded-full px-3 py-1 ${ok
+        ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/30"
+        : "bg-red-500/15 text-red-300 border-red-400/30"
+        } border text-xs font-medium`}
     >
       {label}
     </span>
@@ -572,11 +571,10 @@ function Card({
                     e.preventDefault();
                     onRemove?.();
                   }}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${
-                    busy
-                      ? "bg-red-500/40 cursor-not-allowed"
-                      : "bg-red-500/90 hover:bg-red-600"
-                  }`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${busy
+                    ? "bg-red-500/40 cursor-not-allowed"
+                    : "bg-red-500/90 hover:bg-red-600"
+                    }`}
                   title="Remove from watchlist"
                 >
                   <Trash2 className="w-5 h-5 text-white" />
