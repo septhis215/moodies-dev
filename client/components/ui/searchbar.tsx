@@ -11,7 +11,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 
 interface SearchSuggestion {
   id: number;
-  title?: string;
+  title: string;
   name?: string;
   type: 'movie' | 'tv' | 'person';
   year?: number | null;
@@ -137,6 +137,16 @@ export default function SearchBarWithSuggestions({
       setSuggestions([]);
     }
   }, [debouncedValue, open, searchMode]);
+
+  const debouncedMobileValue = useDebounce(mobileValue, 300);
+
+  useEffect(() => {
+    if (debouncedMobileValue.trim().length > 1 && mobileOpen) {
+      fetchSuggestions(debouncedMobileValue, mobileMode);
+    } else if (!debouncedMobileValue.trim()) {
+      setSuggestions([]);
+    }
+  }, [debouncedMobileValue, mobileOpen, mobileMode]);
 
   const fetchSuggestions = async (
     query: string,
@@ -265,94 +275,6 @@ export default function SearchBarWithSuggestions({
     (value.trim().length === 0)
   );
 
-  const MobileModal = () => {
-    if (typeof document === "undefined") return null;
-
-    return createPortal(
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            key="search-mobile"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.14 }}
-            className="fixed inset-0 z-[9999] flex items-start justify-center pt-20 bg-[rgba(0,0,0,0.75)]"
-            onClick={() => setMobileOpen(false)}
-          >
-            <motion.div
-              onClick={(e) => e.stopPropagation()}
-              initial={prefersReduced ? {} : { y: -12, opacity: 0 }}
-              animate={prefersReduced ? {} : { y: 0, opacity: 1 }}
-              exit={prefersReduced ? {} : { y: -12, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 220, damping: 28 }}
-              className="w-full max-w-lg px-6"
-            >
-              {/* Mode Tabs */}
-              <div className="mb-3 flex gap-2 bg-white/10 backdrop-blur-md rounded-full p-1">
-                <button
-                  onClick={() => { setMobileMode('content'); setSearchMode('content'); }}
-                  className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${mobileMode === 'content'
-                    ? 'bg-[#e94f37] text-white'
-                    : 'text-gray-300 hover:text-white'
-                    }`}
-                >
-                  Movies & TV
-                </button>
-                <button
-                  onClick={() => { setMobileMode('person'); setSearchMode('person'); }}
-                  className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${mobileMode === 'person'
-                    ? 'bg-[#e94f37] text-white'
-                    : 'text-gray-300 hover:text-white'
-                    }`}
-                >
-                  People
-                </button>
-              </div>
-
-              <div className="relative mb-4">
-                <input
-                  value={mobileValue}
-                  onChange={(e) => setMobileValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch(mobileValue, mobileMode);
-                    }
-                  }}
-                  placeholder={mobileMode === 'person' ? 'Search for actors, directors...' : 'Search movies & TV series...'}
-                  className="w-full rounded-full px-4 py-3 bg-white/10 backdrop-blur-md text-white placeholder:text-gray-300 outline-none "
-                  autoFocus
-                />
-                <button
-                  onClick={() => setMobileOpen(false)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 bg-white/10 hover:bg-white/20 transition-colors"
-                >
-                  <IconX className="text-white" size={18} />
-                </button>
-              </div>
-
-              <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 max-h-96 overflow-y-auto">
-                {trendingTerms.slice(0, 6).map((term, index) => (
-                  <div
-                    key={index}
-                    onClick={() => {
-                      setMobileValue(term.title);
-                      handleSearch(term.title, mobileMode);
-                    }}
-                    className="flex items-center gap-3 p-2 hover:bg-white/10 rounded cursor-pointer text-white"
-                  >
-                    <IconTrendingUp size={16} className="text-gray-400" />
-                    <span>{term.title}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>,
-      document.body
-    );
-  };
 
   const resolvedIsMobile = isMobile === null ? false : isMobile;
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
@@ -838,7 +760,7 @@ export default function SearchBarWithSuggestions({
                 }
               }}
               onFocus={() => setOpen(true)}
-              placeholder={placeholder}
+              placeholder={searchMode === 'person' ? 'Search for actors, directors...' : 'Search movies & TV series...'}
               className="w-full bg-white/10 backdrop-blur-md placeholder:text-gray-300 text-white rounded-full px-4 py-2 text-sm outline-none transition-all"
               style={{ height: 36 }}
             />
@@ -847,7 +769,128 @@ export default function SearchBarWithSuggestions({
 
         {portalRender}
       </div>
-      <MobileModal />
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div
+              key="search-mobile"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.14 }}
+              className="fixed inset-0 z-[9999] flex items-start justify-center pt-20 bg-[rgba(0,0,0,0.75)]"
+              onClick={() => setMobileOpen(false)}
+            >
+              <motion.div
+                onClick={(e) => e.stopPropagation()}
+                initial={prefersReduced ? {} : { y: -12, opacity: 0 }}
+                animate={prefersReduced ? {} : { y: 0, opacity: 1 }}
+                exit={prefersReduced ? {} : { y: -12, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 220, damping: 28 }}
+                className="w-full max-w-lg px-6"
+              >
+                {/* Mode Tabs */}
+                <div className="mb-3 flex gap-2 bg-white/10 backdrop-blur-md rounded-full p-1">
+                  <button
+                    onClick={() => { setMobileMode('content'); setSearchMode('content'); }}
+                    className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${mobileMode === 'content' ? 'bg-[#e94f37] text-white' : 'text-gray-300 hover:text-white'
+                      }`}
+                  >
+                    Movies & TV
+                  </button>
+                  <button
+                    onClick={() => { setMobileMode('person'); setSearchMode('person'); }}
+                    className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${mobileMode === 'person' ? 'bg-[#e94f37] text-white' : 'text-gray-300 hover:text-white'
+                      }`}
+                  >
+                    People
+                  </button>
+                </div>
+
+                {/* Input */}
+                <div className="relative mb-4">
+                  <input
+                    value={mobileValue}
+                    onChange={(e) => setMobileValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSearch(mobileValue, mobileMode);
+                    }}
+                    placeholder={mobileMode === 'person' ? 'Search for actors, directors...' : 'Search movies & TV series...'}
+                    className="w-full rounded-full px-4 py-3 bg-white/10 backdrop-blur-md text-white placeholder:text-gray-300 outline-none"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => setMobileOpen(false)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 bg-white/10 hover:bg-white/20 transition-colors"
+                  >
+                    <IconX className="text-white" size={18} />
+                  </button>
+                </div>
+
+                {/* Results / Trending */}
+                <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 max-h-96 overflow-y-auto">
+                  {loadingSuggestions && (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    </div>
+                  )}
+
+                  {!loadingSuggestions && suggestions.length > 0 && (
+                    suggestions.map((suggestion, index) => (
+                      <div
+                        key={`${suggestion.id}-${index}`}
+                        onClick={() => { handleSuggestionClick(suggestion); setMobileOpen(false); }}
+                        className="flex items-center gap-3 p-2 hover:bg-white/10 rounded cursor-pointer text-white"
+                      >
+                        {suggestion.poster_path ? (
+                          <img
+                            src={`https://image.tmdb.org/t/p/w92${suggestion.poster_path}`}
+                            alt=""
+                            className="w-8 h-10 rounded object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-8 h-10 rounded bg-white/10 flex items-center justify-center flex-shrink-0">
+                            {getTypeIcon(suggestion.type)}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm truncate">
+                            {highlightMatch(suggestion.title, mobileValue)}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">{getTypeLabel(suggestion.type)}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+
+                  {!loadingSuggestions && suggestions.length === 0 && debouncedMobileValue.trim().length > 1 && (
+                    <p className="text-sm text-gray-400 text-center py-3">No results found</p>
+                  )}
+
+                  {!loadingSuggestions && suggestions.length === 0 && debouncedMobileValue.trim().length <= 1 && (
+                    <>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-2 px-2">Trending</p>
+                      {trendingTerms.slice(0, 6).map((term, index) => (
+                        <div
+                          key={index}
+                          onClick={() => { setMobileValue(term.title); handleSearch(term.title, mobileMode); }}
+                          className="flex items-center gap-3 p-2 hover:bg-white/10 rounded cursor-pointer text-white"
+                        >
+                          <IconTrendingUp size={16} className="text-gray-400" />
+                          <span className="text-sm">{term.title}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
     </>
+
   );
 }
