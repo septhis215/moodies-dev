@@ -17,6 +17,7 @@ import { CategoryModule } from './media/category/category.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
 import { ReviewModule } from './routes/review/review.module';
 import { ModerationModule } from './routes/moderation/moderation.module';
+import { LikedModule } from './liked/liked.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ModerationModule } from './routes/moderation/moderation.module';
     UserModule,
     PrismaModule,
     WatchlistModule,
+    LikedModule,
     RedisModule,
     MoviesModule,
     TvModule,

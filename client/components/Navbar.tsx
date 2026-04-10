@@ -30,6 +30,7 @@ import SearchBar from "./ui/searchbar";
 import Link from "next/link";
 import {
   Bookmark,
+  Heart,
   Infinity,
   List,
   Loader,
@@ -48,7 +49,8 @@ const routes = [
   { name: "Series", href: "/tv" },
   // { name: "Community", href: "/community" },
   { name: "Your Moods", href: "/moods" },
-  { name: "Your List", href: "/watchlist" },
+  { name: "My List", href: "/watchlist" },
+  { name: "My Likes", href: "/liked" },
 ];
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -634,6 +636,15 @@ export function NavbarComponent() {
           >
             <Bookmark size={20} className="!w-5 !h-5" />
             <span className="text-sm font-medium">My List</span>
+          </Link>
+
+          <Link
+            href="/liked"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+            title="My Likes"
+          >
+            <Heart size={20} className="!w-5 !h-5" />
+            <span className="text-sm font-medium">My Likes</span>
           </Link>
 
           <Link

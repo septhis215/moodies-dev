@@ -30,6 +30,7 @@ model User {
   Quiz               Quiz[]
   Badge              Badge[]
   Watchlist          Watchlist[]
+  LikedList          LikedList?
   reviews            Review[]
   reviewReplies      ReviewReply[]
 }
@@ -63,6 +64,15 @@ model Badge {
 model Watchlist {
   id       String   @id @default(uuid())
   userId   String
+  user     User     @relation(fields: [userId], references: [id])
+  movieId  String[] @default([])
+  seriesId String[] @default([])
+  addedAt  DateTime @default(now())
+}
+
+model LikedList {
+  id       String   @id @default(uuid())
+  userId   String   @unique
   user     User     @relation(fields: [userId], references: [id])
   movieId  String[] @default([])
   seriesId String[] @default([])
