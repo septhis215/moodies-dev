@@ -3,9 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MediaType, Prisma } from '@prisma/client';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom, lastValueFrom } from 'rxjs';
-
+import { firstValueFrom } from 'rxjs';
 import { RedisService } from 'src/redis/redis.service';
+
 export interface TMDBMovie {
     id: number;
     title: string;
@@ -47,23 +47,17 @@ export class TMDBService {
     private readonly baseUrl: string;
     private readonly token: string;
     private readonly keywordCache = new Map<number, { keywords: string[]; expires: number }>();
-    private readonly cacheTTL = 1000 * 60 * 60; // 1 hour default
+    private readonly cacheTTL = 1000 * 60 * 60; // 1 hour
+
     constructor(
         private readonly httpService: HttpService,
-        private configService: ConfigService,
-        private prisma: PrismaService,
+        private readonly configService: ConfigService,
+        private readonly prisma: PrismaService,
     ) {
         this.baseUrl = this.configService.get<string>('TMDB_BASE') ?? 'https://api.themoviedb.org/3';
         this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
     }
-    // Build absolute URL (safe about leading slashes)
-    private buildUrl(endpoint: string) {
-        if (!endpoint) throw new Error('tmdb endpoint required');
-        if (endpoint.startsWith('http')) return endpoint;
-        return `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
-    }
 
-    // generic helper — now accepts optional params object
     private async tmdb(endpoint: string, opts?: { params?: Record<string, any> }) {
         const normalizedEndpoint = endpoint.startsWith('http')
             ? endpoint
@@ -73,143 +67,106 @@ export class TMDBService {
             const response = await firstValueFrom(
                 this.httpService.get(normalizedEndpoint, {
                     headers: {
-                        // correct bearer formatting (no extra braces)
                         Authorization: `Bearer ${this.token}`,
                         Accept: 'application/json',
                     },
                     params: opts?.params ?? {},
                 }),
             );
-
             return response.data;
         } catch (err: any) {
-            // surface helpful logs for debugging (do not log token)
             this.logger.error(
-                `TMDB request failed: ${normalizedEndpoint} — ${err?.response?.status} ${err?.response?.data?.status_message ?? err.message
-                }`,
+                `TMDB request failed: ${normalizedEndpoint} — ${err?.response?.status} ${err?.response?.data?.status_message ?? err.message}`,
             );
             throw err;
         }
     }
 
     /**
-  * Get movies by a set of genre IDs using /discover/movie
-  * - genreIds: number[] (TMDB genre ids)
-  * - page: number (defaults to 1)
-  * - minRating: optional number -> maps to vote_average.gte
-  */
-    async getMoviesByGenres(genreIds: number[], page = 1, minRating?: number) {
-        if (!Array.isArray(genreIds) || genreIds.length === 0) {
-            return [];
-        }
+     * Get movies by genre IDs using /discover/movie.
+     * Sends all genre IDs as a comma-separated list (TMDB OR logic).
+     */
+    async getMoviesByGenres(genreIds: number[], page = 1, minRating?: number): Promise<TMDBMovie[]> {
+        if (!Array.isArray(genreIds) || genreIds.length === 0) return [];
 
-        // Build params, add minRating only if provided
         const params: Record<string, any> = {
             with_genres: genreIds.join(','),
             page,
-            sort_by: 'popularity.desc',
+            sort_by: 'vote_count.desc',
             include_adult: false,
-            'vote_count.gte': 100, // keep if you want a minimum votes threshold
+            'vote_count.gte': 100,
             language: 'en-US',
         };
 
-        if (typeof minRating === 'number') {
-            params['vote_average.gte'] = minRating;
-        }
+        if (typeof minRating === 'number') params['vote_average.gte'] = minRating;
 
         try {
             const data = await this.tmdb('/discover/movie', { params });
-            // data will be the full response object — return results array (or empty)
             return Array.isArray(data?.results) ? data.results : [];
-        } catch (err) {
-            this.logger.error(`Failed to fetch movies by genres ${genreIds.join(',')}: ${err?.message ?? err}`);
-            // rethrow so callers can convert to 503 or fallback
+        } catch (err: any) {
+            this.logger.error(`Failed to fetch movies by genres [${genreIds.join(',')}]: ${err?.message ?? err}`);
             throw err;
         }
     }
 
-    async getTVShowsByGenres(
-        genreIds: number[],
-        page = 1,
-        minRating?: number,
-        limit = 20, // total shows to return
-    ) {
+    /**
+     * Get TV shows by genre IDs using /discover/tv.
+     *
+     * FIX: The old implementation fired one API call *per genre ID* in parallel,
+     * then manually weighted and quota-distributed the results. This had three
+     * problems:
+     *   1. It made N×pages API calls instead of 1, hammering TMDB rate limits.
+     *   2. The per-genre quota system fought the scoring engine — items were
+     *      pre-filtered by genre balance before scoring had a chance to rank
+     *      them, so the best cross-genre items were under-represented.
+     *   3. The `sort(() => Math.random() - 0.5)` shuffle inside the quota loop
+     *      meant popular/quality shows were randomly dropped in favour of
+     *      obscure ones.
+     *
+     * The fix sends all genre IDs as a single `with_genres` (OR) query so TMDB
+     * does the filtering server-side. The caller (MoodsService.scoreItem) then
+     * applies genre weights as part of the Jaccard score, which is the correct
+     * place for that logic.
+     *
+     * A fallback to /trending/tv/week is preserved for when discover returns
+     * nothing (e.g. very niche genre combination).
+     */
+    async getTVShowsByGenres(genreIds: number[], page = 1, minRating?: number): Promise<TMDBTVShow[]> {
         if (!Array.isArray(genreIds) || genreIds.length === 0) return [];
-        console.log(genreIds);
-        const baseParams: Record<string, any> = {
+
+        const params: Record<string, any> = {
+            with_genres: genreIds.join('|'), // | = OR in TMDB discover
             page,
-            sort_by: 'popularity.desc',
+            sort_by: 'vote_count.desc',
             include_adult: false,
+            'vote_count.gte': 20,
             language: 'en-US',
         };
 
+        if (typeof minRating === 'number') params['vote_average.gte'] = minRating;
+
         try {
-            // --- Fetch all genres in parallel
-            const perGenrePromises = genreIds.map(id =>
-                this.tmdb('/discover/tv', { params: { ...baseParams, with_genres: id } })
-                    .then(res => (Array.isArray(res?.results) ? res.results : []))
-                    .catch(err => {
-                        this.logger.warn(`Failed to fetch TV for genre ${id}: ${err?.message ?? err}`);
-                        return [];
-                    })
-            );
+            const data = await this.tmdb('/discover/tv', { params });
+            const results: TMDBTVShow[] = Array.isArray(data?.results) ? data.results : [];
 
-            const perGenreResults = await Promise.all(perGenrePromises);
-
-            // --- Apply optional rating filter + shuffle
-            const genreBuckets = perGenreResults.map(results =>
-                (minRating
-                    ? results.filter(item => (item.vote_average ?? 0) >= minRating)
-                    : results
-                ).sort(() => Math.random() - 0.5)
-            );
-
-            // --- Calculate weights based on bucket sizes
-            const totalShows = genreBuckets.reduce((sum, bucket) => sum + bucket.length, 0);
-            const genreWeights = genreBuckets.map(bucket =>
-                bucket.length / (totalShows || 1)
-            );
-
-            // --- Distribute quota per genre based on weight
-            const quotas = genreWeights.map(w => Math.max(1, Math.round(w * limit)));
-
-            // --- Pick items per genre respecting quotas
-            const final: any[] = [];
-            for (let g = 0; g < genreBuckets.length; g++) {
-                const picks = genreBuckets[g].slice(0, quotas[g]);
-                for (const pick of picks) {
-                    if (!final.some(f => f.id === pick.id)) {
-                        final.push(pick);
-                        if (final.length >= limit) break;
-                    }
-                }
-                if (final.length >= limit) break;
-            }
-
-            // --- Trim in case we exceeded due to rounding
-            const result = final.slice(0, limit);
-
-            // --- Fallback if no results
-            if (result.length === 0) {
+            if (results.length === 0) {
                 this.logger.warn(
-                    `No TV shows found for genres [${genreIds.join(',')}]. Falling back to trending.`
+                    `No TV shows found for genres [${genreIds.join(',')}]. Falling back to trending.`,
                 );
-                const fallback = await this.tmdb('/trending/tv/week', { params: baseParams });
-                return Array.isArray(fallback?.results)
-                    ? fallback.results.slice(0, limit)
-                    : [];
+                const fallback = await this.tmdb('/trending/tv/week', {
+                    params: { page, language: 'en-US' },
+                });
+                return Array.isArray(fallback?.results) ? fallback.results : [];
             }
 
-            return result;
-        } catch (err) {
+            return results;
+        } catch (err: any) {
             this.logger.error(
-                `Failed to fetch TV shows by genres ${genreIds.join(',')}: ${err?.message ?? err}`
+                `Failed to fetch TV shows by genres [${genreIds.join(',')}]: ${err?.message ?? err}`,
             );
             throw err;
         }
     }
-
-
 
     private async getCachedContent(genreIds: number[], mediaType: MediaType, minRating: number) {
         const oneHourAgo = new Date();
@@ -220,14 +177,9 @@ export class TMDBService {
                 mediaType,
                 voteAverage: { gte: minRating },
                 lastFetched: { gte: oneHourAgo },
-                genreIds: {
-                    hasSome: genreIds,
-                },
+                genreIds: { hasSome: genreIds },
             },
-            orderBy: [
-                { popularity: 'desc' },
-                { voteAverage: 'desc' },
-            ],
+            orderBy: [{ popularity: 'desc' }, { voteAverage: 'desc' }],
             take: 40,
         });
     }
@@ -250,20 +202,11 @@ export class TMDBService {
             lastFetched: new Date(),
         }));
 
-        // Use upsert to avoid duplicates
         for (const data of cacheData) {
             await this.prisma.contentCache.upsert({
-                where: {
-                    tmdbId_mediaType: {
-                        tmdbId: data.tmdbId,
-                        mediaType: data.mediaType,
-                    },
-                },
+                where: { tmdbId_mediaType: { tmdbId: data.tmdbId, mediaType: data.mediaType } },
                 create: data,
-                update: {
-                    ...data,
-                    updatedAt: new Date(),
-                },
+                update: { ...data, updatedAt: new Date() },
             });
         }
     }
@@ -301,74 +244,77 @@ export class TMDBService {
         }));
     }
 
-
-    // Get movie genres
     async getMovieGenres(language = 'en-US'): Promise<TMDBGenre[]> {
         try {
-            // tmdb helper returns the full response data
             const data = await this.tmdb('/genre/movie/list', { params: { language } });
             return Array.isArray(data?.genres) ? data.genres : [];
-        } catch (err) {
+        } catch (err: any) {
             this.logger.error('Failed to fetch movie genres from TMDB', err?.response?.data ?? err?.message ?? err);
             throw new HttpException('Failed to fetch movie genres from TMDB', HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
 
-    // Get TV genres
     async getTVGenres(language = 'en-US'): Promise<TMDBGenre[]> {
         try {
             const data = await this.tmdb('/genre/tv/list', { params: { language } });
             return Array.isArray(data?.genres) ? data.genres : [];
-        } catch (err) {
+        } catch (err: any) {
             this.logger.error('Failed to fetch TV genres from TMDB', err?.response?.data ?? err?.message ?? err);
             throw new HttpException('Failed to fetch TV genres from TMDB', HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
 
-    // Search content (movie | tv)
-    async searchContent(query: string, mediaType: 'movie' | 'tv' = 'movie', page = 1, language = 'en-US', includeAdult = false): Promise<any[]> {
+    async searchContent(
+        query: string,
+        mediaType: 'movie' | 'tv' = 'movie',
+        page = 1,
+        language = 'en-US',
+        includeAdult = false,
+    ): Promise<any[]> {
         if (!query?.trim()) return [];
 
         try {
             const data = await this.tmdb(`/search/${mediaType}`, {
-                params: {
-                    query,
-                    page,
-                    language,
-                    include_adult: includeAdult,
-                },
+                params: { query, page, language, include_adult: includeAdult },
             });
 
             const results = Array.isArray(data?.results) ? data.results : [];
-
-            // Normalize image URLs
             return results.map((item: any) => ({
                 ...item,
                 poster_path: item.poster_path ? this.baseImageUrl + item.poster_path : null,
                 backdrop_path: item.backdrop_path ? this.baseImageUrl + item.backdrop_path : null,
             }));
-        } catch (err) {
-            this.logger.error(`Failed to search ${mediaType} for "${query}"`, err?.response?.data ?? err?.message ?? err);
+        } catch (err: any) {
+            this.logger.error(
+                `Failed to search ${mediaType} for "${query}"`,
+                err?.response?.data ?? err?.message ?? err,
+            );
             throw new HttpException('Failed to search content from TMDB', HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
 
-    // Get trending content
-    async getTrendingContent(mediaType: 'movie' | 'tv' = 'movie', timeWindow: 'day' | 'week' = 'week', language = 'en-US', page = 1): Promise<any[]> {
+    async getTrendingContent(
+        mediaType: 'movie' | 'tv' = 'movie',
+        timeWindow: 'day' | 'week' = 'week',
+        language = 'en-US',
+        page = 1,
+    ): Promise<any[]> {
         try {
             const data = await this.tmdb(`/trending/${mediaType}/${timeWindow}`, {
                 params: { language, page },
             });
 
             const results = Array.isArray(data?.results) ? data.results : [];
-
             return results.map((item: any) => ({
                 ...item,
                 poster_path: item.poster_path ? this.baseImageUrl + item.poster_path : null,
                 backdrop_path: item.backdrop_path ? this.baseImageUrl + item.backdrop_path : null,
             }));
-        } catch (err) {
-            this.logger.error(`Failed to fetch trending ${mediaType}/${timeWindow}`, err?.response?.data ?? err?.message ?? err);
+        } catch (err: any) {
+            this.logger.error(
+                `Failed to fetch trending ${mediaType}/${timeWindow}`,
+                err?.response?.data ?? err?.message ?? err,
+            );
             throw new HttpException('Failed to fetch trending content from TMDB', HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
@@ -378,50 +324,27 @@ export class TMDBService {
         twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
 
         await this.prisma.contentCache.deleteMany({
-            where: {
-                lastFetched: {
-                    lt: twentyFourHoursAgo,
-                },
-            },
+            where: { lastFetched: { lt: twentyFourHoursAgo } },
         });
     }
-    /**
-   * Fetch keywords for a movie.
-   * Returns an object with keywords array (lowercased).
-   */
+
     async getMovieKeywords(movieId: number, language?: string): Promise<{ keywords: string[] }> {
         return this.getKeywordsFor('movie', movieId, language);
     }
 
-    /**
-     * Fetch keywords for a TV show.
-     * Returns an object with keywords array (lowercased).
-     */
     async getTVKeywords(tvId: number, language?: string): Promise<{ keywords: string[] }> {
         return this.getKeywordsFor('tv', tvId, language);
     }
 
-    // ---------------------------------------------------------------------------
-    // Internal generic keyword fetcher + caching + retry
-    // ---------------------------------------------------------------------------
     private async getKeywordsFor(
         type: 'movie' | 'tv',
         tmdbId: number,
-        language?: string
+        language?: string,
     ): Promise<{ keywords: string[] }> {
-        // Cache check
-        const cacheKey = `${type}-${tmdbId}`;
         const cached = this.keywordCache.get(tmdbId);
-        if (cached && cached.expires > Date.now()) {
-            return { keywords: cached.keywords };
-        }
+        if (cached && cached.expires > Date.now()) return { keywords: cached.keywords };
 
-        // Build endpoint
-        const endpoint = type === 'movie'
-            ? `/movie/${tmdbId}/keywords`
-            : `/tv/${tmdbId}/keywords`;
-
-        // Try with retries
+        const endpoint = type === 'movie' ? `/movie/${tmdbId}/keywords` : `/tv/${tmdbId}/keywords`;
         const maxAttempts = 3;
         let attempt = 0;
         let lastErr: any = null;
@@ -429,30 +352,19 @@ export class TMDBService {
         while (attempt < maxAttempts) {
             attempt++;
             try {
-                // Use the consistent tmdb() helper with Bearer auth
                 const params: Record<string, any> = {};
                 if (language) params.language = language;
 
                 const data = await this.tmdb(endpoint, { params });
 
-                // TMDB returns different shapes for movie vs TV:
-                // Movie: { keywords: [...] } or { results: [...] }
-                // TV: { results: [...] }
                 let rawKeywords: any[] = [];
-
-                if (Array.isArray(data?.keywords)) {
-                    rawKeywords = data.keywords;
-                } else if (Array.isArray(data?.results)) {
-                    rawKeywords = data.results;
-                } else if (data?.keywords && Array.isArray(data.keywords.keywords)) {
-                    rawKeywords = data.keywords.keywords;
-                } else if (data?.keywords && Array.isArray(data.keywords.results)) {
-                    rawKeywords = data.keywords.results;
-                } else {
-                    // Fallback: inspect object for arrays containing 'name' fields
+                if (Array.isArray(data?.keywords)) rawKeywords = data.keywords;
+                else if (Array.isArray(data?.results)) rawKeywords = data.results;
+                else if (data?.keywords && Array.isArray(data.keywords.keywords)) rawKeywords = data.keywords.keywords;
+                else if (data?.keywords && Array.isArray(data.keywords.results)) rawKeywords = data.keywords.results;
+                else {
                     const found = Object.values(data || {}).find(
-                        v => Array.isArray(v) && v.length > 0 &&
-                            typeof v[0] === 'object' && 'name' in v[0]
+                        v => Array.isArray(v) && v.length > 0 && typeof v[0] === 'object' && 'name' in v[0],
                     );
                     if (Array.isArray(found)) rawKeywords = found as any[];
                 }
@@ -460,69 +372,45 @@ export class TMDBService {
                 const keywords = Array.from(
                     new Set(
                         rawKeywords
-                            .map((k: any) => {
-                                if (typeof k === 'string') return k;
-                                return k?.name || k?.keyword || '';
-                            })
+                            .map((k: any) => (typeof k === 'string' ? k : k?.name || k?.keyword || ''))
                             .filter(Boolean)
-                            .map((s: string) => s.toLowerCase().trim())
-                    )
+                            .map((s: string) => s.toLowerCase().trim()),
+                    ),
                 );
 
-                // Cache result
-                this.keywordCache.set(tmdbId, {
-                    keywords,
-                    expires: Date.now() + this.cacheTTL
-                });
-
-                this.logger.debug(
-                    `Fetched ${keywords.length} keywords for ${type} ${tmdbId}`
-                );
-
+                this.keywordCache.set(tmdbId, { keywords, expires: Date.now() + this.cacheTTL });
+                this.logger.debug(`Fetched ${keywords.length} keywords for ${type} ${tmdbId}`);
                 return { keywords };
-
             } catch (err: any) {
                 lastErr = err;
                 const status = err?.response?.status;
 
-                // If 4xx except 429 -> don't retry
                 if (status && status >= 400 && status < 500 && status !== 429) {
                     this.logger.debug(
-                        `TMDB ${type} keywords fetch failed (status ${status}) for id ${tmdbId}: ${err?.message ?? err}`
+                        `TMDB ${type} keywords fetch failed (status ${status}) for id ${tmdbId}: ${err?.message ?? err}`,
                     );
                     break;
                 }
 
-                // For 429 or 5xx, exponential backoff and retry
                 const backoffMs = Math.pow(2, attempt) * 250;
                 this.logger.warn(
-                    `TMDB request attempt ${attempt} for ${type} ${tmdbId} failed. ` +
-                    `Retrying in ${backoffMs}ms... (${err?.message ?? err})`
+                    `TMDB request attempt ${attempt} for ${type} ${tmdbId} failed. Retrying in ${backoffMs}ms...`,
                 );
                 await this.delay(backoffMs);
             }
         }
 
-        // All attempts failed - log and return empty
         this.logger.error(
-            `Failed to fetch TMDB ${type} keywords for id ${tmdbId} after ${maxAttempts} attempts: ${lastErr?.message ?? lastErr}`
+            `Failed to fetch TMDB ${type} keywords for id ${tmdbId} after ${maxAttempts} attempts: ${lastErr?.message ?? lastErr}`,
         );
-
-        // Cache empty for 5 min to avoid hammering
-        this.keywordCache.set(tmdbId, {
-            keywords: [],
-            expires: Date.now() + 1000 * 60 * 5
-        });
-
+        this.keywordCache.set(tmdbId, { keywords: [], expires: Date.now() + 1000 * 60 * 5 });
         return { keywords: [] };
     }
 
-    // small util
     private delay(ms: number) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    // Optionally: a method to clear the in-memory cache (useful for tests or debug)
     clearKeywordCache() {
         this.keywordCache.clear();
     }

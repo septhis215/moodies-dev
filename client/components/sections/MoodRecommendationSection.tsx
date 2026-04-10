@@ -16,9 +16,10 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getMoodRecommendations } from "@/app/tv/action";
+import { getMoodRecommendations, getAllMoods } from "@/app/tv/action";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { RatingBadge } from "@/components/ui/rating-badge";
 
 interface Mood {
   id: string;
@@ -44,32 +45,28 @@ interface Recommendation {
 }
 
 interface MoodRecommendationsSectionProps {
-  moods: Mood[];
   mediaType: string;
 }
 
-const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
-
 export default function MoodRecommendationsSection({
-  moods,
-  mediaType,
+  mediaType = "both",
 }: MoodRecommendationsSectionProps) {
+  const [moods, setMoods] = useState<Mood[]>([]);
+  const [displayedMoods, setDisplayedMoods] = useState<Mood[]>([]);
+  const [moodsLoading, setMoodsLoading] = useState(true);
+  const [moodsError, setMoodsError] = useState<string | null>(null);
+
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [displayedMoods, setDisplayedMoods] = useState<Mood[]>([]);
-  const [moodCount, setMoodCount] = useState(12); // Default to 12 moods
+  const [moodCount, setMoodCount] = useState(12);
 
   const router = useRouter();
   const { add, remove, isInWatchlist, ready } = useWatchlist();
 
-  const [watchlistStates, setWatchlistStates] = useState<
-    Record<string, boolean>
-  >({});
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [watchlistStates, setWatchlistStates] = useState<Record<string, boolean>>({});
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
 
   const toHookType = (t: "MOVIE" | "TV") =>
     (t === "TV" ? "series" : "movie") as "movie" | "series";
@@ -109,7 +106,6 @@ export default function MoodRecommendationsSection({
     return iconMap[iconName] || "🎬";
   };
 
-  // Shuffle function
   const shuffleArray = <T,>(array: T[]): T[] => {
     const shuffled = [...array];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -119,24 +115,51 @@ export default function MoodRecommendationsSection({
     return shuffled;
   };
 
-  // Initialize and shuffle moods on mount
+  // Fetch moods on mount
   useEffect(() => {
-    const shuffled = shuffleArray(moods).slice(0, moodCount);
-    setDisplayedMoods(shuffled);
-  }, [moods, moodCount]);
+    const fetchMoods = async () => {
+      try {
+        setMoodsLoading(true);
+        setMoodsError(null);
+        const moodsList = await getAllMoods();
 
-  // Handle shuffle button
+        if (!moodsList || (Array.isArray(moodsList) && moodsList.length === 0)) {
+          throw new Error("No moods available");
+        }
+
+        setMoods(moodsList);
+        const shuffled = shuffleArray(moodsList).slice(0, moodCount);
+        setDisplayedMoods(shuffled);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to load moods";
+        setMoodsError(message);
+        console.error("Error fetching moods:", err);
+      } finally {
+        setMoodsLoading(false);
+      }
+    };
+
+    fetchMoods();
+  }, []);
+
+  // Update displayed moods when moodCount changes
+  useEffect(() => {
+    if (moods.length > 0) {
+      const shuffled = shuffleArray(moods).slice(0, moodCount);
+      setDisplayedMoods(shuffled);
+    }
+  }, [moodCount, moods]);
+
   const handleShuffleMoods = () => {
-    const shuffled = shuffleArray(moods).slice(0, moodCount);
-    setDisplayedMoods(shuffled);
+    if (moods.length > 0) {
+      const shuffled = shuffleArray(moods).slice(0, moodCount);
+      setDisplayedMoods(shuffled);
+    }
   };
 
-  // Toggle between 12 and 18 moods
   const toggleMoodCount = () => {
     const newCount = moodCount === 12 ? 18 : 12;
     setMoodCount(newCount);
-    const shuffled = shuffleArray(moods).slice(0, newCount);
-    setDisplayedMoods(shuffled);
   };
 
   const fetchRecommendations = async (mood: Mood, forceRefresh: boolean = false) => {
@@ -145,9 +168,17 @@ export default function MoodRecommendationsSection({
 
     try {
       const data = await getMoodRecommendations(mood.id, 12, mediaType, forceRefresh);
-      setRecommendations(data.recommendations || []);
+
+      // Handle different response formats
+      const recs = data.recommendations || data || [];
+      if (!Array.isArray(recs) || recs.length === 0) {
+        throw new Error("No recommendations received from server");
+      }
+
+      setRecommendations(recs);
     } catch (err) {
-      setError("Failed to load recommendations. Please try again.");
+      const message = err instanceof Error ? err.message : "Failed to load recommendations";
+      setError(message);
       console.error("Error fetching recommendations:", err);
     } finally {
       setLoading(false);
@@ -161,7 +192,7 @@ export default function MoodRecommendationsSection({
 
   const handleRefresh = () => {
     if (selectedMood) {
-      fetchRecommendations(selectedMood, true); // Force refresh
+      fetchRecommendations(selectedMood, true);
     }
   };
 
@@ -198,7 +229,6 @@ export default function MoodRecommendationsSection({
       }
     } catch (error) {
       console.error("Watchlist toggle failed:", error);
-      // Rollback on error
       const inListNow = isInWatchlist(id, kind) ?? watchlistStates[id];
       setWatchlistStates((prev) => ({ ...prev, [id]: inListNow }));
     } finally {
@@ -218,10 +248,36 @@ export default function MoodRecommendationsSection({
     }
   }, [recommendations, isInWatchlist, ready]);
 
+  // Show error if moods failed to load
+  if (moodsError && !moodsLoading) {
+    return (
+      <section
+        id="moods"
+        className="relative w-full max-w-7xl mx-auto overflow-hidden"
+      >
+        <div className="flex items-center justify-center py-32">
+          <div className="text-center max-w-md">
+            <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+              <span className="text-4xl">⚠️</span>
+            </div>
+            <h3 className="text-2xl font-black text-white mb-2">Error Loading Moods</h3>
+            <p className="text-gray-400 mb-6 text-lg">{moodsError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-full font-bold text-white hover:shadow-lg hover:shadow-violet-500/50 transition-all hover:scale-105"
+            >
+              Reload
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section
       id="moods"
-      className="relative  w-full max-w-7xl mx-auto overflow-hidden"
+      className="relative w-full max-w-7xl mx-auto overflow-hidden"
     >
       {/* Enhanced Animated Background */}
       <div className="absolute inset-0 -z-10">
@@ -521,14 +577,11 @@ export default function MoodRecommendationsSection({
                             </div>
 
                             {/* Rating Badge - Enhanced */}
-                            <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/80 backdrop-blur-md font-bold text-xs flex items-center gap-1 shadow-lg ring-1 ring-white/10">
-                              <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                              <span className="text-white">
-                                {Number(rec.voteAverage) && Number(rec.voteAverage) > 0
-                                  ? Number(rec.voteAverage).toFixed(1)
-                                  : "New"}
-                              </span>
-                            </div>
+                            <RatingBadge
+                              rating={rec.voteAverage}
+                              variant="minimal"
+                              size="md"
+                            />
 
                             {/* Hover Actions - Enhanced */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300">
