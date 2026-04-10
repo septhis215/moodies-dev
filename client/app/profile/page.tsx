@@ -192,7 +192,7 @@ export default function ProfilePage() {
 
     return (
         <main className="min-h-screen bg-black text-white pb-8">
-            <div className="mx-auto w-full max-w-7xl px-8 sm:px-14 py-6 sm:py-26">
+            <div className="mx-auto w-full max-w-7xl px-8 sm:px-14 py-24">
                 {/* Hero Section */}
                 <div className="mb-8 sm:mb-12">
                     <div className="flex flex-col gap-4 sm:gap-6">
@@ -523,114 +523,131 @@ export default function ProfilePage() {
                             </div>
 
                             {/* Watchlist Grid/List */}
-                            {viewMode === "grid" ? (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-                                    {loading && Array.from({ length: 12 }).map((_, i) => (
-                                        <div key={i} className="aspect-[2/3] rounded-xl sm:rounded-2xl bg-zinc-900 animate-pulse" />
-                                    ))}
+                            <AnimatePresence mode="wait">
+                                {viewMode === "grid" ? (
+                                    <motion.div
+                                        key="grid"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                                        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4"
+                                    >
+                                        {loading && Array.from({ length: 12 }).map((_, i) => (
+                                            <div key={i} className="aspect-[2/3] rounded-xl sm:rounded-2xl bg-zinc-900 animate-pulse" />
+                                        ))}
 
-                                    {!loading && filteredAndSortedItems.map((item) => {
-                                        const title = item.kind === "movie" ? item.title : item.name;
-                                        const href = item.kind === "movie" ? `/movies/${item.id}` : `/tv/${item.id}`;
-                                        const poster = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "/coming-soon.png";
+                                        {!loading && filteredAndSortedItems.map((item) => {
+                                            const title = item.kind === "movie" ? item.title : item.name;
+                                            const href = item.kind === "movie" ? `/movies/${item.id}` : `/tv/${item.id}`;
+                                            const poster = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "/coming-soon.png";
 
-                                        return (
-                                            <motion.div
-                                                key={`${item.kind}-${item.id}`}
-                                                layout
-                                                initial={{ opacity: 0, scale: 0.9 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.9 }}
-                                                whileHover={{ scale: 1.05, y: -5 }}
-                                                className="relative group cursor-pointer rounded-xl sm:rounded-2xl overflow-hidden aspect-[2/3] bg-zinc-900 shadow-lg hover:shadow-2xl hover:shadow-[#e94f37]/20 transition-shadow"
-                                            >
-                                                <Link href={href} className="block h-full w-full">
-                                                    <Image
-                                                        src={poster}
-                                                        alt={title || "Poster"}
-                                                        fill
-                                                        className="object-cover transition-transform duration-700 group-hover:scale-110"
-                                                    />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                                                    {item.vote_average && (
-                                                        <div className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-black/90 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs flex items-center gap-1 sm:gap-1.5 text-yellow-400 font-semibold">
-                                                            <Star className="w-3 h-3 fill-yellow-400" />
-                                                            {item.vote_average.toFixed(1)}
-                                                        </div>
-                                                    )}
-
-                                                    <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-black/90 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs font-semibold">
-                                                        {item.kind === "movie" ? <Film className="w-3 h-3" /> : <Tv className="w-3 h-3" />}
-                                                    </div>
-
-                                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2 sm:p-4">
-                                                        <p className="text-xs sm:text-sm font-bold line-clamp-2 mb-0.5 sm:mb-1">{title}</p>
-                                                        <p className="text-xs text-gray-400">
-                                                            {item.kind === "movie" ? item.release_date?.split("-")[0] : item.first_air_date?.split("-")[0]}
-                                                        </p>
-                                                    </div>
-                                                </Link>
-                                            </motion.div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="space-y-2 sm:space-y-3">
-                                    {loading && Array.from({ length: 6 }).map((_, i) => (
-                                        <div key={i} className="h-20 sm:h-24 rounded-xl bg-zinc-900 animate-pulse" />
-                                    ))}
-
-                                    {!loading && filteredAndSortedItems.map((item) => {
-                                        const title = item.kind === "movie" ? item.title : item.name;
-                                        const href = item.kind === "movie" ? `/movies/${item.id}` : `/tv/${item.id}`;
-                                        const poster = item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : "/coming-soon.png";
-
-                                        return (
-                                            <motion.div
-                                                key={`${item.kind}-${item.id}`}
-                                                layout
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                exit={{ opacity: 0, x: 20 }}
-                                                className="bg-white/5 border border-white/10 rounded-xl p-3 sm:p-4 hover:bg-white/10 transition-all group"
-                                            >
-                                                <Link href={href} className="flex items-center gap-3 sm:gap-4">
-                                                    <div className="relative w-12 h-18 sm:w-16 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 bg-zinc-900">
+                                            return (
+                                                <motion.div
+                                                    key={`${item.kind}-${item.id}`}
+                                                    layout
+                                                    initial={{ opacity: 0, scale: 0.9 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.9 }}
+                                                    whileHover={{ scale: 1.05, y: -5 }}
+                                                    className="relative group cursor-pointer rounded-xl sm:rounded-2xl overflow-hidden aspect-[2/3] bg-zinc-900 shadow-lg hover:shadow-2xl hover:shadow-[#e94f37]/20 transition-shadow"
+                                                >
+                                                    <Link href={href} className="block h-full w-full">
                                                         <Image
                                                             src={poster}
                                                             alt={title || "Poster"}
                                                             fill
-                                                            className="object-cover"
+                                                            className="object-cover transition-transform duration-700 group-hover:scale-110"
                                                         />
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h3 className="font-semibold text-sm sm:text-lg mb-1 truncate group-hover:text-[#e94f37] transition">{title}</h3>
-                                                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400">
-                                                            <span className="flex items-center gap-1">
-                                                                {item.kind === "movie" ? <Film className="w-3 h-3 sm:w-4 sm:h-4" /> : <Tv className="w-3 h-3 sm:w-4 sm:h-4" />}
-                                                                <span className="hidden sm:inline">{item.kind === "movie" ? "Movie" : "TV Series"}</span>
-                                                            </span>
-                                                            {(item.release_date || item.first_air_date) && (
-                                                                <span className="flex items-center gap-1">
-                                                                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                                                                    {item.kind === "movie" ? item.release_date?.split("-")[0] : item.first_air_date?.split("-")[0]}
-                                                                </span>
-                                                            )}
-                                                            {item.vote_average && (
-                                                                <span className="flex items-center gap-1 text-yellow-400 font-semibold">
-                                                                    <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-yellow-400" />
-                                                                    {item.vote_average.toFixed(1)}
-                                                                </span>
-                                                            )}
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                                        {item.vote_average && (
+                                                            <div className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-black/90 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs flex items-center gap-1 sm:gap-1.5 text-yellow-400 font-semibold">
+                                                                <Star className="w-3 h-3 fill-yellow-400" />
+                                                                {item.vote_average.toFixed(1)}
+                                                            </div>
+                                                        )}
+
+                                                        <div className="absolute top-2 sm:top-3 left-2 sm:left-3 bg-black/90 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs font-semibold">
+                                                            {item.kind === "movie" ? <Film className="w-3 h-3" /> : <Tv className="w-3 h-3" />}
                                                         </div>
-                                                    </div>
-                                                </Link>
-                                            </motion.div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+
+                                                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2 sm:p-4">
+                                                            <p className="text-xs sm:text-sm font-bold line-clamp-2 mb-0.5 sm:mb-1">{title}</p>
+                                                            <p className="text-xs text-gray-400">
+                                                                {item.kind === "movie" ? item.release_date?.split("-")[0] : item.first_air_date?.split("-")[0]}
+                                                            </p>
+                                                        </div>
+                                                    </Link>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </motion.div>
+                                ) : (
+                                    <motion.div
+                                        key="list"
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 20 }}
+                                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                                        className="space-y-2 sm:space-y-3"
+                                    >
+                                        {loading && Array.from({ length: 6 }).map((_, i) => (
+                                            <div key={i} className="h-20 sm:h-24 rounded-xl bg-zinc-900 animate-pulse" />
+                                        ))}
+
+                                        {!loading && filteredAndSortedItems.map((item) => {
+                                            const title = item.kind === "movie" ? item.title : item.name;
+                                            const href = item.kind === "movie" ? `/movies/${item.id}` : `/tv/${item.id}`;
+                                            const poster = item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : "/coming-soon.png";
+
+                                            return (
+                                                <motion.div
+                                                    key={`${item.kind}-${item.id}`}
+                                                    layout
+                                                    initial={{ opacity: 0, x: -20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: 20 }}
+                                                    transition={{ duration: 0.15, ease: "easeOut" }}
+                                                    className="bg-white/5 border border-white/10 rounded-xl p-3 sm:p-4 hover:bg-white/10 transition-all group"
+                                                >
+                                                    <Link href={href} className="flex items-center gap-3 sm:gap-4">
+                                                        <div className="relative w-12 h-18 sm:w-16 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 bg-zinc-900">
+                                                            <Image
+                                                                src={poster}
+                                                                alt={title || "Poster"}
+                                                                fill
+                                                                className="object-cover"
+                                                            />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <h3 className="font-semibold text-sm sm:text-lg mb-1 truncate group-hover:text-[#e94f37] transition">{title}</h3>
+                                                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400">
+                                                                <span className="flex items-center gap-1">
+                                                                    {item.kind === "movie" ? <Film className="w-3 h-3 sm:w-4 sm:h-4" /> : <Tv className="w-3 h-3 sm:w-4 sm:h-4" />}
+                                                                    <span className="hidden sm:inline">{item.kind === "movie" ? "Movie" : "TV Series"}</span>
+                                                                </span>
+                                                                {(item.release_date || item.first_air_date) && (
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                                                                        {item.kind === "movie" ? item.release_date?.split("-")[0] : item.first_air_date?.split("-")[0]}
+                                                                    </span>
+                                                                )}
+                                                                {item.vote_average && (
+                                                                    <span className="flex items-center gap-1 text-yellow-400 font-semibold">
+                                                                        <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-yellow-400" />
+                                                                        {item.vote_average.toFixed(1)}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </Link>
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             {!loading && filteredAndSortedItems.length === 0 && (
                                 <div className="text-center py-12 sm:py-16">
