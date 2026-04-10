@@ -29,7 +29,8 @@ services:
     # For CI/CD: inject DOPPLER_TOKEN as a pipeline secret.
     # Fallback: if DOPPLER_TOKEN is unset, env_file is used instead.
     env_file:
-      - ./server/.env.staging
+      - path: ./server/.env.staging
+        required: false
     environment:
       NODE_ENV: staging
       DOPPLER_TOKEN: ${DOPPLER_TOKEN:-}
@@ -46,7 +47,8 @@ services:
       args:
         APP_ENV: staging
     env_file:
-      - ./client/.env.staging
+      - path: ./client/.env.staging
+        required: false
     environment:
       DOPPLER_TOKEN: ${DOPPLER_TOKEN:-}
     depends_on:
