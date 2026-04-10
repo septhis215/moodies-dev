@@ -32,6 +32,7 @@ import {
   RotateCcw,
   ArrowRight,
   Check,
+  User,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -218,7 +219,7 @@ export default function SearchResultsPage() {
     { label: "2020s", start: 2020, end: 2025 },
   ];
 
-  const setDecade = (start, end) => {
+  const setDecade = (start: number, end: number) => {
     setYearRange([start, end]);
   };
 
@@ -699,8 +700,8 @@ export default function SearchResultsPage() {
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
-              className={`w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-all duration-300 ${hasActiveFilters
-                ? "bg-gradient-to-r from-orange-500 to-red-500 border-orange-500/50 text-white-300 shadow-lg"
+              className={`w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-all duration-300 cursor-pointer ${hasActiveFilters
+                ? " bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white border-orange-500/50 shadow-lg"
                 : "border-gray-600 text-white"
                 }`}
               aria-expanded={showFilters}
@@ -724,7 +725,7 @@ export default function SearchResultsPage() {
                   key={type}
                   variant={filterType === type ? "default" : "outline"}
                   className={`cursor-pointer transition-all duration-200 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 ${filterType === type
-                    ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg"
+                    ? " bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white shadow-lg"
                     : "border-gray-600 text-gray-300 hover:text-white hover:border-orange-400"
                     }`}
                   onClick={() => setFilterType(type)}
@@ -1039,7 +1040,7 @@ export default function SearchResultsPage() {
     text-slate-300
     hover:bg-slate-400/10 hover:border-slate-400/60
     active:scale-95 transition
-    disabled:opacity-40
+    disabled:opacity-40 cursor-pointer
   "
                   >
                     <RotateCcw size={14} />
@@ -1054,9 +1055,9 @@ export default function SearchResultsPage() {
                     onClick={() => setShowFilters(false)}
                     className="
         flex-1 sm:flex-none
-        bg-gradient-to-r from-orange-400 to-red-500 
-        text-white shadow-sm
-        py-2.5 rounded-xl
+       bg-gradient-to-r from-[#e94f37] to-[#ff6b58]
+    text-white shadow-sm
+        py-2.5 rounded-xl cursor-pointer
       "
                   >
                     Apply
@@ -1160,8 +1161,8 @@ export default function SearchResultsPage() {
 
                           <div className="flex items-center gap-2">
                             <Star size={14} className="text-yellow-400" fill="currentColor" />
-                            <span className="text-white font-semibold">{bestMatch.vote_average.toFixed(1)}</span>
-                            <span className="text-gray-400 text-xs">({(bestMatch.vote_count / 1000).toFixed(1)}K votes)</span>
+                            <span className="text-white font-semibold">{bestMatch.vote_average?.toFixed(1) ?? "N/A"}</span>
+                            <span className="text-gray-400 text-xs">( {bestMatch.vote_count ? (bestMatch.vote_count / 1000).toFixed(1) : "0.0"}K votes)</span>
                           </div>
                         </div>
 
@@ -1174,7 +1175,7 @@ export default function SearchResultsPage() {
                               <span>{getReleaseYear(bestMatch)}</span>
                             </div>
                           )}
-                          {bestMatch.origin_country?.length > 0 && (
+                          {bestMatch.origin_country && bestMatch.origin_country?.length > 0 && (
                             <div className="flex items-center gap-1">
                               <Globe size={14} />
                               <span>{getCountryName(bestMatch.origin_country[0])}</span>
@@ -1200,13 +1201,13 @@ export default function SearchResultsPage() {
                           <Button
                             onClick={() => handlePlayTrailer(bestMatch)}
                             className="
-      flex-1 sm:flex-none
-      bg-gradient-to-r from-orange-400 to-rose-500
-      text-white font-medium
-      hover:opacity-90 active:scale-95
-      transition rounded-xl
-      flex items-center justify-center
-    "
+    flex-1 sm:flex-none
+    bg-gradient-to-r from-[#e94f37] to-[#ff6b58]
+    text-white font-medium
+    hover:opacity-90 active:scale-95
+    transition rounded-xl
+    flex items-center justify-center cursor-pointer
+  "
                           >
                             <Play size={18} className="mr-0 sm:mr-2" />
                             <span className="hidden sm:inline">Play Trailer</span>
@@ -1221,10 +1222,10 @@ export default function SearchResultsPage() {
     border border-slate-400/30
     text-slate-300
     bg-primary
-    hover:bg-slate-400/10 hover:border-slate-400/60
+    hover:bg-slate-400/10 hover:border-slate-400/60 hover:text-slate-300
     active:scale-95 transition
     disabled:opacity-40 rounded-xl
-      flex items-center justify-center
+      flex items-center justify-center cursor-pointer
     "
                           >
                             <Info size={18} className="mr-0 sm:mr-2 " />
@@ -1270,7 +1271,7 @@ export default function SearchResultsPage() {
 
                                 <div className="flex items-center gap-1 text-orange-400">
                                   <Star size={14} fill="currentColor" />
-                                  <span className="text-sm font-semibold text-white">{item.vote_average.toFixed(1)}</span>
+                                  <span className="text-sm font-semibold text-white">{item.vote_average}</span>
                                 </div>
                               </div>
 
@@ -1296,14 +1297,14 @@ export default function SearchResultsPage() {
                       <div className="bg-gray-800/60 rounded-xl p-1 flex border border-gray-600/50">
                         <button
                           onClick={() => setViewMode("grid")}
-                          className={`p-2 rounded-lg transition-all duration-200 ${viewMode === "grid" ? "bg-gradient-to-r from-orange-500 to-red-500 text-white" : "text-gray-400 hover:text-white"}`}
+                          className={`p-2 rounded-lg transition-all duration-200 ${viewMode === "grid" ? " bg-gradient-to-r from-[#e94f37] to-[#ff6b58]" : "text-gray-400 hover:text-white"}`}
                           aria-label="Grid view"
                         >
                           <Grid3X3 size={18} />
                         </button>
                         <button
                           onClick={() => setViewMode("list")}
-                          className={`p-2 rounded-lg transition-all duration-200 ${viewMode === "list" ? "bg-gradient-to-r from-orange-500 to-red-500 text-white" : "text-gray-400 hover:text-white"}`}
+                          className={`p-2 rounded-lg transition-all duration-200 ${viewMode === "list" ? " bg-gradient-to-r from-[#e94f37] to-[#ff6b58]" : "text-gray-400 hover:text-white"}`}
                           aria-label="List view"
                         >
                           <List size={18} />
@@ -1313,7 +1314,7 @@ export default function SearchResultsPage() {
                   </div>
 
                   {viewMode === "grid" ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
                       {results.map((item, index) => (
                         <motion.div
                           key={item.id}
@@ -1323,15 +1324,40 @@ export default function SearchResultsPage() {
                           className="group cursor-pointer"
                           onClick={() => handleCardClick(item)}
                         >
-                          <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-800/50 border border-gray-700 group-hover:border-orange-500/50 transition-all">
+                          <div className="relative aspect-[2/3] mt-2.5 rounded-lg overflow-hidden bg-gray-800/50 border border-gray-700 group-hover:border-orange-500/50 transition-all">
                             <Image src={getPosterUrl(item)} alt={getTitle(item)} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
                             <div className="absolute top-2 right-2">
                               <RatingBadge rating={item.vote_average} variant="minimal" size="sm" />
                             </div>
                             <div className="absolute bottom-2 left-2">
-                              <Badge className={`${item.type === "tv" ? "bg-blue-500" : "bg-purple-500"} text-white`}>
-                                {item.type === "tv" ? <><Tv size={12} className="mr-1" />Series</> : <><Film size={12} className="mr-1" />Movie</>}
+                              <Badge
+                                className={`
+    ${item.type === "tv"
+                                    ? "bg-blue-500"
+                                    : item.type === "movie"
+                                      ? "bg-purple-500"
+                                      : "bg-pink-500"
+                                  } 
+    text-white flex items-center
+  `}
+                              >
+                                {item.type === "tv" ? (
+                                  <>
+                                    <Tv size={12} className="mr-1" />
+                                    Series
+                                  </>
+                                ) : item.type === "movie" ? (
+                                  <>
+                                    <Film size={12} className="mr-1" />
+                                    Movie
+                                  </>
+                                ) : (
+                                  <>
+                                    <User size={12} className="mr-1" />
+                                    Person
+                                  </>
+                                )}
                               </Badge>
                             </div>
                           </div>
@@ -1367,10 +1393,35 @@ export default function SearchResultsPage() {
                               <div className="flex items-center gap-3 ml-2">
                                 <div className="flex items-center gap-1 text-orange-400">
                                   <Star size={14} fill="currentColor" />
-                                  <span className="text-sm font-medium text-white">{item.vote_average}</span>
+                                  <span className="text-sm font-medium text-white">{item.vote_average?.toFixed(1) ?? "N/A"}</span>
                                 </div>
-                                <Badge className={`${item.type === "tv" ? "bg-blue-500" : "bg-purple-500"} text-white`}>
-                                  {item.type === "tv" ? <><Tv size={12} className="mr-1" />Series</> : <><Film size={12} className="mr-1" />Movie</>}
+                                <Badge
+                                  className={`
+    ${item.type === "tv"
+                                      ? "bg-blue-500"
+                                      : item.type === "movie"
+                                        ? "bg-purple-500"
+                                        : "bg-pink-500"
+                                    } 
+    text-white flex items-center
+  `}
+                                >
+                                  {item.type === "tv" ? (
+                                    <>
+                                      <Tv size={12} className="mr-1" />
+                                      Series
+                                    </>
+                                  ) : item.type === "movie" ? (
+                                    <>
+                                      <Film size={12} className="mr-1" />
+                                      Movie
+                                    </>
+                                  ) : (
+                                    <>
+                                      <User size={12} className="mr-1" />
+                                      Person
+                                    </>
+                                  )}
                                 </Badge>
                               </div>
                             </div>
@@ -1384,9 +1435,9 @@ export default function SearchResultsPage() {
                               )}
                               <div className="flex items-center gap-1">
                                 <Users size={14} />
-                                <span className="text-gray-300">{(item.vote_count / 1000)}K votes</span>
+                                <span className="text-gray-300">{item.vote_count ? (item.vote_count / 1000).toFixed(1) : "0.0"}K votes</span>
                               </div>
-                              {item.origin_country?.length > 0 && (
+                              {item.origin_country && item.origin_country?.length > 0 && (
                                 <div className="flex items-center gap-1">
                                   <Globe size={14} />
                                   <span className="text-gray-300">{getCountryName(item.origin_country[0])}</span>
@@ -1444,7 +1495,7 @@ export default function SearchResultsPage() {
           />
         )}
       </div>
-    </div>
+    </div >
   );
 
 }
