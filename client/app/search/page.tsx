@@ -36,6 +36,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RatingBadge } from "@/components/ui/rating-badge";
 import type { All } from "@/types/all";
 import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
@@ -1326,10 +1327,7 @@ export default function SearchResultsPage() {
                             <Image src={getPosterUrl(item)} alt={getTitle(item)} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
                             <div className="absolute top-2 right-2">
-                              <div className="flex items-center gap-1 bg-black/80 rounded-lg px-2 py-1 text-xs border border-gray-600">
-                                <Star size={10} className="text-orange-400" fill="currentColor" />
-                                <span className="text-white text-xs font-medium">{item.vote_average > 0 ? item.vote_average.toFixed(1) : "New"}</span>
-                              </div>
+                              <RatingBadge rating={item.vote_average} variant="minimal" size="sm" />
                             </div>
                             <div className="absolute bottom-2 left-2">
                               <Badge className={`${item.type === "tv" ? "bg-blue-500" : "bg-purple-500"} text-white`}>

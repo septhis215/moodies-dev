@@ -800,10 +800,10 @@ export default function TVHomePageClient({
                     <div className="flex items-center gap-3">
                       <div
                         className={`w-11 h-11 rounded-lg flex items-center justify-center ${sec.color === "emerald"
-                            ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-white/10"
-                            : sec.color === "blue"
-                              ? "bg-blue-500/20 text-blue-400 ring-1 ring-white/10"
-                              : "bg-amber-500/20 text-amber-400 ring-1 ring-white/10"
+                          ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-white/10"
+                          : sec.color === "blue"
+                            ? "bg-blue-500/20 text-blue-400 ring-1 ring-white/10"
+                            : "bg-amber-500/20 text-amber-400 ring-1 ring-white/10"
                           }`}
                       >
                         {sec.icon}
@@ -924,10 +924,10 @@ export default function TVHomePageClient({
                     </div>
                     <div
                       className={`text-sm font-bold ${sec.color === "emerald"
-                          ? "text-emerald-400"
-                          : sec.color === "blue"
-                            ? "text-blue-400"
-                            : "text-amber-400"
+                        ? "text-emerald-400"
+                        : sec.color === "blue"
+                          ? "text-blue-400"
+                          : "text-amber-400"
                         }`}
                     >
                       {/* simple summarized metric */}
@@ -1178,7 +1178,7 @@ export default function TVHomePageClient({
         )}
         {moods && moods.length > 0 && (
           <div className="max-w-7xl mx-auto">
-            <MoodRecommendationsSection moods={moods} mediaType="tv" />
+            <MoodRecommendationsSection mediaType="tv" />
           </div>
         )}
       </div>

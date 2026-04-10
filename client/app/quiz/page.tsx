@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, ChevronRight, Film, Tv, Heart, Star, Zap, Coffee, Trophy, X, Info, ArrowLeft, Award, TrendingUp, Clock, Flame, ExternalLink, Bookmark, Play } from 'lucide-react';
 import questionsData from '@/data/questions.json';
+import { RatingBadge } from '@/components/ui/rating-badge';
 
 interface QuizOption {
     text: string;
@@ -624,12 +625,7 @@ export default function MovieQuizPage() {
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <div className="absolute bottom-0 left-0 right-0 p-3">
                                                         <div className="flex items-center gap-2 mb-2">
-                                                            <div className="flex items-center gap-1 bg-yellow-500 px-2 py-1 rounded-lg shadow-lg">
-                                                                <Star className="w-3 h-3 text-white" fill="currentColor" />
-                                                                <span className="text-white text-xs font-bold">
-                                                                    {item.vote_average?.toFixed(1)}
-                                                                </span>
-                                                            </div>
+                                                            <RatingBadge rating={item.vote_average} variant="colored" size="sm" />
                                                             {item.media_type && (
                                                                 <span className="px-2 py-1 bg-zinc-900/90 backdrop-blur-sm text-zinc-200 text-xs rounded-lg font-medium">
                                                                     {item.media_type === 'tv' ? 'TV' : 'Movie'}
@@ -748,12 +744,7 @@ export default function MovieQuizPage() {
                                                 </a>
 
                                                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                                                    <div className="flex items-center gap-2 bg-white/6 px-3 py-1 rounded-lg">
-                                                        <Star className="w-4 h-4 text-yellow-400" />
-                                                        <span className="text-white text-sm font-semibold">
-                                                            {selectedMovie.vote_average ? selectedMovie.vote_average.toFixed(1) : "—"}
-                                                        </span>
-                                                    </div>
+                                                    <RatingBadge rating={selectedMovie.vote_average} variant="minimal" size="sm" />
 
                                                     {(selectedMovie.release_date || selectedMovie.first_air_date) && (
                                                         <span className="text-zinc-300 text-sm font-medium px-3 py-1 bg-zinc-800/50 rounded-lg">

@@ -1501,7 +1501,7 @@ s                                                    ${featuredInWatchlist
 
                 {moods && moods.length > 0 && (
                     <div className="max-w-7xl mx-auto w-full">
-                        <MoodRecommendationsSection moods={moods} mediaType="movie" />
+                        <MoodRecommendationsSection mediaType="movie" />
                     </div>
                 )}
             </div>

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Star, Trash2 } from "lucide-react";
 import { useToast } from "@/app/context/ToastContext";
+import { RatingBadge } from "@/components/ui/rating-badge";
 
 /* -------------------- Types -------------------- */
 type Watchlist = { movieId: string[]; seriesId: string[] };
@@ -552,14 +553,9 @@ function Card({
           </div>
 
           {/* Rating — bottom left, part of the natural gradient */}
-          {item.vote_average && (
-            <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5">
-              <Star className="w-3 h-3 text-yellow-400 fill-yellow-400 flex-shrink-0" />
-              <span className="text-white text-xs font-semibold leading-none">
-                {item.vote_average.toFixed(1)}
-              </span>
-            </div>
-          )}
+          <div className="absolute top-2.5 right-2.5">
+            <RatingBadge rating={item.vote_average} variant="minimal" size="sm" />
+          </div>
 
           {/* Hover overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">

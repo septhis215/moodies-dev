@@ -162,9 +162,9 @@ export default function CelebrityDetailPage({
   const [loadingStates, setLoadingStates] = useState<
     Record<string | number, boolean>
   >({});
-  const getImageUrl = (path?: string) =>
+  const getImageUrl = (path?: string | null) =>
     path ? `https://image.tmdb.org/t/p/original${path}` : "/coming-soon.png";
-  const getPosterUrl = (path?: string) =>
+  const getPosterUrl = (path?: string | null) =>
     path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
   const [galleryPage, setGalleryPage] = useState(0);
   const [showGalleryGrid, setShowGalleryGrid] = useState(false);
@@ -590,7 +590,7 @@ export default function CelebrityDetailPage({
 
   const totalGenreWorks = Object.values(genreStats).reduce((a, b) => a + b, 0);
 
-  const SectionHeader = ({ icon: Icon, title }) => (
+  const SectionHeader = ({ icon: Icon, title }: { icon: any; title: string }) => (
     <div className="flex items-center gap-3 mb-4">
       <div className="w-10 h-10 rounded-xl bg-[#e94f37]/20 flex items-center justify-center">
         <Icon className="w-5 h-5 text-[#e94f37]" />
@@ -729,7 +729,7 @@ export default function CelebrityDetailPage({
                             </p>
                             <div className="text-[9px] text-zinc-400">
                               {work.release_date || work.first_air_date
-                                ? new Date(work.release_date || work.first_air_date).getFullYear()
+                                ? new Date((work.release_date || work.first_air_date)!).getFullYear()
                                 : 'TBA'}
                             </div>
                           </div>
@@ -829,7 +829,7 @@ export default function CelebrityDetailPage({
                 const latestWork = sortedCredits.filter(c =>
                   c.poster_path &&
                   (c.release_date || c.first_air_date) &&
-                  new Date(c.release_date || c.first_air_date) <= new Date()
+                  new Date((c.release_date || c.first_air_date)!) <= new Date()
                 )[0];
 
                 return latestWork ? (

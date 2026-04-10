@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/tooltip";
 import { style } from "framer-motion/client";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { RatingBadge } from "@/components/ui/rating-badge";
 
 type MovieLike = {
   id: string | number;
@@ -518,31 +519,11 @@ export default function CardCarousel<T extends MovieLike>({
                         </TooltipProvider>
 
                         {/* Rating Badge */}
-                        {movie.vote_average !== undefined &&
-                          movie.vote_average !== null && (
-                            <div
-                              className={`
-      flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-bold text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
-      ${movie.vote_average === 0
-                                  ? "bg-sky-500/90 text-white border-sky-400/50"
-                                  : movie.vote_average >= 7.5
-                                    ? "bg-green-500/90 text-white border-green-400/50"
-                                    : movie.vote_average >= 6
-                                      ? "bg-yellow-500/90 text-black border-yellow-400/50"
-                                      : "bg-red-500/90 text-white border-red-400/50"
-                                }
-    `}
-                            >
-                              <Star
-                                size={10}
-                                className="sm:w-3 sm:h-3"
-                                fill="currentColor"
-                              />
-                              {movie.vote_average === 0
-                                ? "New"
-                                : movie.vote_average.toFixed(1)}
-                            </div>
-                          )}
+                        <RatingBadge
+                          rating={movie.vote_average}
+                          variant="colored"
+                          size="md"
+                        />
                       </div>
 
                       {/* Content Type Badge - Bottom Left (hidden on hover) */}
