@@ -12,6 +12,7 @@
     "db:dev:up": "docker compose --env-file ./.env.staging -f ../docker-compose.yml up postgres-dev -d",
     "db:dev:restart:dev": "npm run db:dev:rm && npm run db:dev:up && sleep 1 && npm run prisma:staging:deploy",
     "db:dev:restart:prod": "npm run db:dev:rm && npm run db:dev:up && sleep 1 && npm run prisma:production:deploy",
+    "generate": "doppler run --config stg --fallback .env.fallback -- npx prisma generate",
     "seed": "doppler run --config stg --fallback .env.fallback -- npx prisma db seed",
     "studio": "doppler run --config stg --fallback .env.fallback -- npx prisma studio",
     "build": "nest build",
