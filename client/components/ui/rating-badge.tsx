@@ -3,91 +3,77 @@ import { Star } from "lucide-react";
 
 interface RatingBadgeProps {
     rating: number | null | undefined;
-    /**
-     * "colored" - Uses color-coded backgrounds based on rating thresholds
-     * "minimal" - Simple dark backdrop with yellow star
-     * @default "minimal"
-     */
     variant?: "colored" | "minimal";
-    /**
-     * Size variant for responsive design
-     * @default "md"
-     */
     size?: "sm" | "md";
     className?: string;
 }
 
-/**
- * Shared RatingBadge component for consistent rating display across the app
- * 
- * @example
- * // Colored variant (for cards/carousels)
- * <RatingBadge rating={7.5} variant="colored" />
- * 
- * @example
- * // Minimal variant (for details/watchlist)
- * <RatingBadge rating={7.5} variant="minimal" size="sm" />
- */
+function getRatingColor(rating: number, variant: "colored" | "minimal") {
+    if (rating <= 4.5) {
+        return variant === "colored"
+            ? "bg-red-600 text-white"
+            : "bg-red-500/20 text-red-400 ring-1 ring-red-400/40";
+    }
+
+    if (rating <= 7) {
+        return variant === "colored"
+            ? "bg-yellow-500 text-black"
+            : "bg-yellow-400/20 text-yellow-400 ring-1 ring-yellow-400/40";
+    }
+
+    return variant === "colored"
+        ? "bg-green-600 text-white"
+        : "bg-green-500/20 text-green-400 ring-1 ring-green-400/40";
+}
+
 export function RatingBadge({
     rating,
     variant = "minimal",
-    size = "md",
+    size = "sm", // default smaller now
     className = "",
 }: RatingBadgeProps) {
-    // Don't render if no rating
-    if (rating === null || rating === undefined) {
-        return null;
-    }
+    if (rating === null || rating === undefined) return null;
 
-    const displayRating = rating === 0 ? null : rating?.toFixed(1);
     const isNew = rating === 0;
+    const displayRating = rating === 0 ? null : rating.toFixed(1);
 
-    // Colored variant — New state
-    if (isNew && variant === "colored") {
+    // ===== NEW STATE =====
+    if (isNew) {
         const sizeClasses =
             size === "sm"
-                ? "px-1.5 py-0.5 text-[10px] gap-1"
-                : "px-2 py-1 text-xs gap-1.5";
+                ? "px-2 py-0.5 text-[10px]"
+                : "px-2.5 py-1 text-xs";
 
         return (
             <div
-                className={`
-        relative flex items-center ${sizeClasses} rounded-lg font-bold shadow-lg overflow-hidden
-        bg-gradient-to-br from-indigo-500 to-violet-500
-        border border-violet-400/50 text-white
-        ${className}
-      `}
+                className={`flex items-center ${sizeClasses} gap-1.5 rounded-full font-semibold
+    bg-indigo-600 text-white ${className}`}
             >
-                <span className={`
-        flex items-center justify-center rounded
-        bg-white/20 font-bold
-        ${size === "sm" ? "w-3 h-3 text-[8px]" : "w-3.5 h-3.5 text-[9px]"}
-      `}>
-                    ✦
-                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                 New
             </div>
         );
     }
 
-    // Minimal variant — New state
-    if (isNew && variant === "minimal") {
-        const sizeClasses =
-            size === "sm" ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-xs";
+    // ===== NORMAL STATE =====
+    const sizeClasses =
+        size === "sm"
+            ? "px-2 py-0.5 text-[11px] gap-1"
+            : "px-2.5 py-1 text-xs gap-1.5";
 
-        return (
-            <div
-                className={`
-        flex items-center ${sizeClasses} gap-1.5 rounded-full font-bold
-        bg-indigo-500/15 ring-1 ring-indigo-400/35 text-indigo-400
-        ${className}
-      `}
-            >
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                New
-            </div>
-        );
-    }
+    const colorClasses = getRatingColor(rating, variant);
+
+    return (
+        <div
+            className={`flex items-center ${sizeClasses} rounded-full font-medium ${colorClasses} ${className}`}
+        >
+            <Star
+                className={size === "sm" ? "w-3 h-3" : "w-3.5 h-3.5"}
+                fill="currentColor"
+            />
+            {displayRating}
+        </div>
+    );
 }
 
 export default RatingBadge;

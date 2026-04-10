@@ -169,16 +169,23 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
     startIndex + itemsPerView
   );
 
-  const getDaysUntilRelease = (releaseDate: string) => {
+  function getDaysUntilRelease(releaseDate: string) {
     const days = Math.ceil(
-      (new Date(releaseDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      (new Date(releaseDate).getTime() - Date.now()) /
+      (1000 * 60 * 60 * 24)
     );
-    if (days < 0) return "Released";
+
+    if (days < 0) return "Now Showing";
     if (days === 0) return "Today";
     if (days === 1) return "Tomorrow";
-    return `${days} days`;
-  };
+    if (days <= 7) return `${days} Days`;
+    if (days <= 30) return `In ${days} Days`;
 
+    return new Date(releaseDate).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  }
   if (loading) {
     return (
       <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
@@ -283,7 +290,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
               else if (swipe < 0 && canScrollRight) scrollRight();
             }
           }}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6 touch-pan-y"
+          className="flex gap-5 overflow-hidden"
         >
           <AnimatePresence mode="popLayout">
             {visibleItems.map(
@@ -294,13 +301,14 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="relative group cursor-pointer"
+                    transition={{ duration: 0.3, delay: index * 0.08 }}
+                    className="relative group cursor-pointer flex-shrink-0 w-full sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)]"
                     onMouseEnter={() => setHoveredId(item.id)}
                     onMouseLeave={() => setHoveredId(null)}
                     onClick={() => handleSelectTrailer(item)}
                   >
-                    <div className="relative aspect-[16/11] rounded-2xl overflow-hidden bg-gray-900 shadow-2xl">
+                    <div className="relative aspect-[16/11] rounded-3xl overflow-hidden bg-gray-900 shadow-2xl border border-white/10 group">
+
                       {/* Image */}
                       <Image
                         src={
@@ -311,85 +319,65 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                         alt={item.title}
                         fill
                         sizes="(max-width: 1024px) 100vw, 33vw"
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                        className="object-cover transition-transform duration-700 group-hover:scale-110"
                         priority={index === 0}
                       />
 
-                      {/* Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                      {/* Cinematic overlay */}
+                      <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(0,0,0,0.95),rgba(0,0,0,0.55),rgba(0,0,0,0.1))]" />
 
-                      {/* Type - Top Left */}
-                      <div className="absolute top-4 left-4 z-20">
+                      <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between">
+
+                        {/* LEFT: Countdown (old style restored) */}
+                        {item.release_date && (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-white text-xs font-medium">
+                            <Clock size={12} />
+                            <span>{getDaysUntilRelease(item.release_date)}</span>
+                          </div>
+                        )}
+
+                        {/* RIGHT: Type Badge */}
                         <div
                           className={`
-                          flex items-center gap-1 px-2 py-1 rounded-lg font-medium text-xs shadow-lg backdrop-blur-md border group-hover:opacity-0 transition-opacity duration-300
-                          ${item.type === "tv"
-                              ? "bg-blue-500/90 text-white border-blue-400/50"
-                              : "bg-purple-500/90 text-white border-purple-400/50"
-                            }
-                        `}
+      flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium shadow-lg
+      ${item.type === "tv"
+                              ? "bg-blue-500/90 text-white border border-blue-300/40"
+                              : "bg-purple-500/90 text-white border border-purple-300/40"}
+    `}
                         >
-                          {item.type === "tv" ? (
-                            <Tv size={12} />
-                          ) : (
-                            <Film size={12} />
-                          )}
+                          {item.type === "tv" ? <Tv size={12} /> : <Film size={12} />}
                           {item.type === "tv" ? "Series" : "Movie"}
                         </div>
+
                       </div>
-
-                      {/* Countdown Badge - Top Right */}
-                      {item.release_date && (
-                        <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-                          <div className="flex items-center gap-1 px-2 py-1 text-white text-xs font-medium rounded-lg bg-black/60 backdrop-blur-md border border-white/10">
-                            <Clock size={12} />
-                            <span>
-                              {getDaysUntilRelease(item.release_date)}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Play Button - Center */}
                       <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
+                        initial={{ scale: 0.6, opacity: 0 }}
                         animate={{
-                          scale: hoveredId === item.id ? 1 : 0,
+                          scale: hoveredId === item.id ? 1 : 0.6,
                           opacity: hoveredId === item.id ? 1 : 0,
                         }}
-                        transition={{
-                          duration: 0.2,
-                          type: "spring",
-                          stiffness: 200,
-                        }}
+                        transition={{ duration: 0.25 }}
                         className="absolute inset-0 flex items-center justify-center z-10"
                       >
-                        <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-2xl backdrop-blur-sm">
-                          <Play
-                            size={24}
-                            className="text-black ml-1"
-                            fill="black"
-                          />
+                        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-2xl">
+                          <Play size={24} className="text-black ml-1" fill="black" />
                         </div>
                       </motion.div>
 
-                      {/* Bottom Content */}
                       <div className="absolute bottom-0 left-0 right-0 p-5 z-10">
-                        <h3 className="text-white font-bold text-lg sm:text-xl mb-2 line-clamp-2">
+
+                        <h3 className="text-white font-black text-lg sm:text-xl mb-2 line-clamp-2">
                           {item.title}
                         </h3>
 
                         <div className="flex items-center gap-3 text-sm text-gray-300">
                           {item.release_date && (
                             <span className="font-medium">
-                              {new Date(item.release_date).toLocaleDateString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                }
-                              )}
+                              {new Date(item.release_date).toLocaleDateString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
                             </span>
                           )}
                           {item.genres && item.genres.length > 0 && (
@@ -401,13 +389,10 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                         </div>
                       </div>
 
-                      {/* Hover Border */}
                       <motion.div
                         initial={false}
-                        animate={{
-                          opacity: hoveredId === item.id ? 1 : 0,
-                        }}
-                        className="absolute inset-0 rounded-2xl ring-2 ring-white/30 pointer-events-none"
+                        animate={{ opacity: hoveredId === item.id ? 1 : 0 }}
+                        className="absolute inset-0 rounded-3xl ring-2 ring-[#ff6b58]/60 pointer-events-none"
                       />
                     </div>
                   </motion.div>

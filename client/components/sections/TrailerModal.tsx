@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
+import RatingBadge from "../ui/rating-badge";
 
 type All = {
   id: number;
@@ -140,7 +141,7 @@ export default function TrailerModal({
                 )}
 
                 {/* Title + Pills */}
-                <div className="flex flex-col flex-1 min-w-0 relative z-10 ">
+                <div className="flex flex-col flex-1 min-w-0 mt-6 relative z-10 ">
                   <h2
                     // clamp ensures title never gets too big on narrow screens or too small on huge screens
                     style={{ fontSize: 'clamp(1.125rem, 3.2vw, 2rem)' }}
@@ -241,25 +242,47 @@ export default function TrailerModal({
                   {trailer.recommendations.slice(0, 20).map((rec) => (
                     <div
                       key={rec.id}
-                      className="group relative cursor-pointer rounded-2xl overflow-hidden border border-gray-700/40 bg-gray-900/40 backdrop-blur-sm transition-all duration-500 hover:scale-105 hover:border-blue-500/40 hover:shadow-[0_8px_30px_rgb(0,0,0,0.3)]"
                       onClick={() => onSelectTrailer(rec)}
                       title={rec.title}
+                      className="group relative cursor-pointer rounded-[10px] overflow-hidden bg-white/5 border border-white/8 transition-[border-color] duration-300 hover:border-white/50"
                     >
-                      <div className="aspect-[2/3] w-auto h-auto relative overflow-hidden cursor-pointer">
+                      {/* Poster */}
+                      <div className="aspect-[2/3] relative overflow-hidden">
                         <img
                           src={`https://image.tmdb.org/t/p/w300${rec.poster_path}`}
                           alt={rec.title}
-                          className="object-cover w-full h-full transform transition-transform duration-500 group-hover:scale-110"
+                          className="w-full h-full object-cover block transition-transform duration-500 group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-70 group-hover:opacity-80 transition-opacity duration-500" />
-                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-blue-500/80 text-white text-[10px] font-semibold shadow-md">
-                          {rec.vote_average?.toFixed(1) ?? "N/A"}
-                        </span>
+
+                        {/* Cinematic bottom fade */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+
+                        {/* Hover dim */}
+                        <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                        {/* Play button */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/18 border border-white/50 flex items-center justify-center opacity-0 scale-85 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300">
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="white" className="ml-0.5">
+                            <path d="M3 1.5l8 4.5-8 4.5z" />
+                          </svg>
+                        </div>
+
+                        {/* Rating badge */}
+                        <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md">
+                          <RatingBadge rating={rec.vote_average} variant="colored" />
+                        </div>
                       </div>
-                      <div className="p-2 text-center">
-                        <p className="text-white text-sm font-semibold line-clamp-2 leading-snug group-hover:text-blue-400 transition-colors duration-300">
+
+                      {/* Footer */}
+                      <div className="px-2.5 pt-2 pb-2.5">
+                        <p className="text-[14px] font-medium text-white/60 group-hover:text-white/90 transition-colors duration-250 line-clamp-2 leading-snug m-0">
                           {rec.title}
                         </p>
+                        {rec.release_date && (
+                          <p className="text-[11px] text-white/35 mt-0.5">
+                            {new Date(rec.release_date).getFullYear()}
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
