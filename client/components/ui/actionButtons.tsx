@@ -8,9 +8,18 @@ export default function ActionButtons({
   saved,
   muted,
   togglePlayPause,
-  setLiked,
+  onLike,
   setSaved,
   toggleMute,
+}: {
+  isPlaying: boolean;
+  liked: boolean;
+  saved: boolean;
+  muted: boolean;
+  togglePlayPause: () => void;
+  onLike: () => void;
+  setSaved: () => void;
+  toggleMute: () => void;
 }) {
   const [visible, setVisible] = useState(false);
   const [idleTimer, setIdleTimer] = useState<NodeJS.Timeout | null>(null);
@@ -52,13 +61,13 @@ export default function ActionButtons({
       active: isPlaying,
     },
     {
-      onClick: () => setLiked((l) => !l),
+      onClick: onLike,
       icon: <Heart />,
       label: liked ? "Liked" : "Like",
       active: liked,
     },
     {
-      onClick: () => setSaved((s) => !s),
+      onClick: () => setSaved(),
       icon: <Bookmark />,
       label: saved ? "Saved" : "Save",
       active: saved,
