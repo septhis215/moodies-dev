@@ -4,7 +4,10 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors(); // allow cross-origin calls from your Next dev server
+  app.enableCors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+  }); // allow cross-origin calls from your Next dev server
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true, // for automatic data type conversion, do not remove

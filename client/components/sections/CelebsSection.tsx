@@ -222,7 +222,7 @@ export default function CelebSection() {
             Your Moodies Icons
           </h2>
 
-          <p className="text-gray-400 text-xs sm:text-sm mt-2">
+          <p className="text-gray-400 text-xs sm:text-sm mt-1">
             Discover the most popular stars and rising talents in entertainment
           </p>
         </motion.div>

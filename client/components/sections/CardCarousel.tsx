@@ -358,10 +358,9 @@ export default function CardCarousel<T extends MovieLike>({
             // link to trending page
             <Link href={titleLink} className="inline-block group">
               <h2
-                className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text group-hover:opacity-80 transition-opacity cursor-pointer"
+                className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
                 style={{
-                  backgroundImage:
-                    "linear-gradient(to right, #e94f37, #ff6b58)",
+                  backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                 }}
@@ -383,7 +382,7 @@ export default function CardCarousel<T extends MovieLike>({
           )}
 
           {subtitle && (
-            <p className="text-gray-400 text-xs sm:text-sm mt-2">{subtitle}</p>
+            <p className="text-gray-400 text-xs sm:text-sm mt-1">{subtitle}</p>
           )}
         </div>
 

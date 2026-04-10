@@ -95,11 +95,8 @@ export default function CommunityPicks({
                 >
                     {title}
                 </h2>
-
                 {subtitle && (
-                    <p className="text-gray-400 text-xs sm:text-sm mt-2">
-                        {subtitle}
-                    </p>
+                    <p className="text-gray-400 text-xs sm:text-sm mt-1">{subtitle}</p>
                 )}
             </div>
             <InfiniteMovingCards items={reviews} direction="left" speed="very-slow" />

@@ -16,6 +16,7 @@ export type All = {
     number_of_seasons?: number | 0;
     origin_country?: string[];
     first_air_date?: string | null; // for tv
+    year?: string | null;
     name?: string | 'N/A'; // for person
     profile_path?: string | null; // for person
 };
