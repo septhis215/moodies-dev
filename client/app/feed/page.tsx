@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import ActionButtons from '@/components/ui/actionButtons';
 import Image from "next/image";
 import { useWatchlist } from '@/hooks/useWatchlist';
+import { useLiked } from '@/hooks/useLiked';
 
 interface VideoItem {
   id: number;
@@ -71,7 +72,7 @@ export default function VideoFeedPage() {
 
   const [panelOpen, setPanelOpen] = useState(false);
   const [titleBarVisible, setTitleBarVisible] = useState(true);
-  const [liked, setLiked] = useState(false);
+  const { isLiked, like: addToLiked, unlike: removeFromLiked, ready: likedReady } = useLiked();
   const [isPlaying, setIsPlaying] = useState(true);
   const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
 
@@ -88,6 +89,20 @@ export default function VideoFeedPage() {
 
   const watchType = currentVideo?.media_type === 'tv' ? 'series' : 'movie';
   const inWatchlist = currentVideo ? isInWatchlist(String(currentVideo.id), watchType) : false;
+
+  const likeType = currentVideo?.media_type === 'tv' ? 'series' : 'movie';
+  const liked = currentVideo ? isLiked(String(currentVideo.id), likeType) : false;
+
+  const handleLikeToggle = useCallback(async () => {
+    if (!currentVideo || !likedReady) return;
+    const meta = {
+      title: currentVideo.title || currentVideo.name,
+      posterUrl: currentVideo.poster_path ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}` : null,
+      duration: 3000,
+    };
+    if (liked) await removeFromLiked(String(currentVideo.id), likeType, meta);
+    else await addToLiked(String(currentVideo.id), likeType, meta);
+  }, [currentVideo, liked, likeType, likedReady, addToLiked, removeFromLiked]);
 
   const handleWatchlistToggle = useCallback(async () => {
     if (!currentVideo || isTogglingWatchlist) return;
@@ -329,7 +344,6 @@ export default function VideoFeedPage() {
     retryCountRef.current = 0;
     setHasMore(true);
     setPanelOpen(false);
-    setLiked(false);
     isFetchingRef.current = false;
 
     // Delay initial fetch slightly to ensure state is clean
@@ -402,11 +416,9 @@ export default function VideoFeedPage() {
     if (e.deltaY > 0 && currentIndex < videos.length - 1) {
       setCurrentIndex(i => i + 1);
       setPanelOpen(false);
-      setLiked(false);
     } else if (e.deltaY < 0 && currentIndex > 0) {
       setCurrentIndex(i => i - 1);
       setPanelOpen(false);
-      setLiked(false);
     }
   }, [currentIndex, videos.length]);
 
@@ -424,11 +436,9 @@ export default function VideoFeedPage() {
     if (diff > 0 && currentIndex < videos.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setPanelOpen(false);
-      setLiked(false);
     } else if (diff < 0 && currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
       setPanelOpen(false);
-      setLiked(false);
     }
   };
 
@@ -744,7 +754,7 @@ export default function VideoFeedPage() {
                   )}
                 </AnimatePresence>
 
-                <ActionButtons isPlaying={isPlaying} liked={liked} saved={inWatchlist} muted={muted} togglePlayPause={togglePlayPause} setLiked={setLiked} setSaved={handleWatchlistToggle} toggleMute={toggleMute} />
+                <ActionButtons isPlaying={isPlaying} liked={liked} saved={inWatchlist} muted={muted} togglePlayPause={togglePlayPause} onLike={handleLikeToggle} setSaved={handleWatchlistToggle} toggleMute={toggleMute} />
               </div>
 
               {/* Info Panel */}
