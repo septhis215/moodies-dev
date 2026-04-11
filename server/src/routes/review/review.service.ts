@@ -206,7 +206,7 @@ export class ReviewService {
         where: {
           tmdbId,
           mediaType: mediaType as any,
-          status: ReviewStatus.PUBLISHED,
+          status: { in: [ReviewStatus.PUBLISHED, ReviewStatus.FLAGGED] },
         },
         skip,
         take: limit,
@@ -241,7 +241,7 @@ export class ReviewService {
         where: {
           tmdbId,
           mediaType: mediaType as any,
-          status: ReviewStatus.PUBLISHED,
+          status: { in: [ReviewStatus.PUBLISHED, ReviewStatus.FLAGGED] },
         },
       }),
     ]);

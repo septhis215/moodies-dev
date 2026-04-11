@@ -20,6 +20,7 @@ export class ReviewReplyEntity implements PrismaReviewReply {
 
   toPublic() {
     return {
+      id: this.id,
       content: this.content,
       createdAt: this.createdAt,
       user: this.user

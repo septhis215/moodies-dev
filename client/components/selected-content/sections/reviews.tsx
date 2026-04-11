@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { Star, PenSquare, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import Swal from "sweetalert2";
 import { useAuth } from "@/app/context/AuthProvider";
 import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
+import { useToast } from "@/app/context/ToastContext";
+import { useRouter } from "next/navigation";
 
 type Review = {
   id: string;
@@ -36,6 +38,8 @@ export default function ReviewsSection({
   contentId,
   contentType,
 }: ReviewsSectionProps) {
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const reviewsArray: Review[] = Array.isArray(reviews)
     ? reviews.map((r: any) => ({
         id: r.id || `review-${r.createdAt}`,
@@ -167,7 +171,13 @@ export default function ReviewsSection({
 
             {/* Write a Review — primary CTA */}
             <button
-              onClick={() => setReviewModalOpen(true)}
+              onClick={() => {
+                if (!isAuthenticated) {
+                  toast("Sign in to write a review.", "warning", 3000, "Not Logged In", null);
+                  return;
+                }
+                setReviewModalOpen(true);
+              }}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#e94f37] hover:bg-[#d94432] active:scale-95 text-white text-xs font-semibold transition-all duration-150 cursor-pointer shadow-lg shadow-[#e94f37]/20"
             >
               <PenSquare size={13} strokeWidth={2.5} />
@@ -233,7 +243,12 @@ export default function ReviewsSection({
                         </p>
                       </div>
                       {typeof r.author_details?.rating === "number" && (
-                        <RatingArc rating={r.author_details.rating} />
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] flex-shrink-0">
+                          <Star size={11} className="text-yellow-400 fill-yellow-400 flex-shrink-0" />
+                          <span className="text-xs font-semibold text-white/80 leading-none">
+                            {(r.author_details.rating / 2).toFixed(1)}
+                          </span>
+                        </div>
                       )}
                     </div>
                     {r.moodEmojis && r.moodEmojis.length > 0 && (
@@ -308,8 +323,11 @@ function ReviewModal({
 }) {
   const { isAuthenticated, user } = useAuth();
   const { banStatus } = useReviewBanStatus();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -428,7 +446,8 @@ function ReviewModal({
           )}
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 
@@ -450,6 +469,8 @@ function ReviewForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
+  const { toast } = useToast();
+  const router = useRouter();
 
   const moodOptions = [
     { emoji: "🔥", label: "Amazing", value: "amazing" },
@@ -510,21 +531,9 @@ function ReviewForm({
         throw new Error(err.message || "Failed");
       }
       onSuccess?.();
-      Swal.fire({
-        icon: "success",
-        title: "Review Submitted!",
-        timer: 1500,
-        showConfirmButton: false,
-        confirmButtonColor: "#e94f37",
-      });
-      setTimeout(() => window.location.reload(), 1500);
+      router.refresh();
     } catch (err) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: err instanceof Error ? err.message : "Failed to submit",
-        confirmButtonColor: "#e94f37",
-      });
+      toast(err instanceof Error ? err.message : "Failed to submit review.", "error", 4000, "Error", null);
     } finally {
       setSubmitting(false);
     }
@@ -610,11 +619,6 @@ function ReviewForm({
                 </button>
               );
             })}
-            {displayRating !== null && (
-              <span className="ml-1.5 text-[11px] text-white/35">
-                {displayRating}/10
-              </span>
-            )}
           </div>
         </div>
 

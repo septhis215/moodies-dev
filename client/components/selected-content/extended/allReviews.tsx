@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Users2,
@@ -13,9 +15,9 @@ import {
   X,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import Swal from "sweetalert2";
 import { useAuth } from "@/app/context/AuthProvider";
 import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
+import { useToast } from "@/app/context/ToastContext";
 
 type Reply = {
   id?: string;
@@ -23,6 +25,9 @@ type Reply = {
   created_at: string;
   user: { username: string; avatar_path?: string | null };
 };
+
+// Tracks which review's reply form is open, and an optional @mention prefill
+type ReplyFormState = { reviewId: string; prefill: string } | null;
 
 type Review = {
   id: string;
@@ -72,8 +77,10 @@ export default function AllReviews({
   topMoods = [],
   reviewStats,
 }: AllReviewsProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { banStatus } = useReviewBanStatus();
+  const { toast } = useToast();
+  const router = useRouter();
   const [sortBy, setSortBy] = useState<"latest" | "highest" | "popularity">(
     "latest",
   );
@@ -81,13 +88,19 @@ export default function AllReviews({
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(
     new Set(),
   );
-  const [showReplyForm, setShowReplyForm] = useState<string | null>(null);
+  const [showReplyForm, setShowReplyForm] = useState<ReplyFormState>(null);
   const [replyContent, setReplyContent] = useState("");
   const [submittingReply, setSubmittingReply] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(
     new Set(),
   );
   const [writeModalOpen, setWriteModalOpen] = useState(false);
+  const [localReviews, setLocalReviews] = useState<Review[]>(reviews);
+  const [mounted, setMounted] = useState(false);
+
+  // Sync if server component re-renders with fresh data (e.g. after router.refresh())
+  useEffect(() => { setLocalReviews(reviews); }, [reviews]);
+  useEffect(() => setMounted(true), []);
 
   const basePath = info.content_type === "movie" ? "movies" : "tv";
 
@@ -99,7 +112,7 @@ export default function AllReviews({
   }
 
   const filteredAndSorted = useMemo(() => {
-    let arr = [...reviews];
+    let arr = [...localReviews];
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       arr = arr.filter(
@@ -130,7 +143,7 @@ export default function AllReviews({
         break;
     }
     return arr;
-  }, [reviews, sortBy, searchQuery]);
+  }, [localReviews, sortBy, searchQuery]);
 
   const toggleExpanded = (id: string) =>
     setExpandedReviews((p) => {
@@ -185,29 +198,27 @@ export default function AllReviews({
     };
   }, [writeModalOpen]);
 
+  const openReplyForm = (reviewId: string, prefill = "") => {
+    setShowReplyForm({ reviewId, prefill });
+    setReplyContent("");
+  };
+  const closeReplyForm = () => {
+    setShowReplyForm(null);
+    setReplyContent("");
+  };
+
   const handleReplySubmit = async (reviewId: string) => {
     if (!isAuthenticated) {
-      Swal.fire({
-        icon: "warning",
-        title: "Not Logged In",
-        confirmButtonText: "Go to Login",
-        confirmButtonColor: "#e94f37",
-      }).then((r) => {
-        if (r.isConfirmed) window.location.href = "/auth/login";
-      });
+      toast("Sign in to post a reply.", "warning", 3000, "Not Logged In", null);
       return;
     }
     if (!replyContent.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Empty Reply",
-        confirmButtonColor: "#e94f37",
-      });
       return;
     }
     setSubmittingReply(true);
     try {
       const token = localStorage.getItem("authToken");
+      const submittedContent = ((showReplyForm?.prefill ?? "") + replyContent).trim();
       const res = await fetch(
         `http://localhost:4000/reviews/${reviewId}/replies`,
         {
@@ -216,30 +227,37 @@ export default function AllReviews({
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ content: replyContent.trim() }),
+          body: JSON.stringify({ content: submittedContent }),
         },
       );
-      if (!res.ok) {
-        const e = await res.json();
-        throw new Error(e.message || "Failed");
-      }
-      Swal.fire({
-        icon: "success",
-        title: "Reply Posted!",
-        timer: 1500,
-        showConfirmButton: false,
-        confirmButtonColor: "#e94f37",
-      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.message || "Failed");
+      // Optimistically append the reply — no reload needed
+      setLocalReviews((prev) =>
+        prev.map((r) =>
+          r.id !== reviewId
+            ? r
+            : {
+                ...r,
+                replies: [
+                  ...(r.replies || []),
+                  {
+                    id: resData.id,
+                    content: submittedContent,
+                    created_at: resData.createdAt || new Date().toISOString(),
+                    user: {
+                      username: user?.username || "You",
+                      avatar_path: user?.avatarUrl || null,
+                    },
+                  },
+                ],
+              }
+        )
+      );
       setReplyContent("");
       setShowReplyForm(null);
-      setTimeout(() => window.location.reload(), 1500);
     } catch (e) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: e instanceof Error ? e.message : "Failed",
-        confirmButtonColor: "#e94f37",
-      });
+      toast(e instanceof Error ? e.message : "Failed to post reply.", "error", 4000, "Error", null);
     } finally {
       setSubmittingReply(false);
     }
@@ -446,7 +464,13 @@ export default function AllReviews({
 
           {/* Write CTA */}
           <button
-            onClick={() => setWriteModalOpen(true)}
+            onClick={() => {
+              if (!isAuthenticated) {
+                toast("Sign in to write a review.", "warning", 3000, "Not Logged In", null);
+                return;
+              }
+              setWriteModalOpen(true);
+            }}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#e94f37] hover:bg-[#d94432] text-white text-xs font-semibold transition-colors cursor-pointer shadow-lg shadow-[#e94f37]/20 active:scale-95"
           >
             <PenSquare size={12} strokeWidth={2.5} />
@@ -521,11 +545,12 @@ export default function AllReviews({
                             </div>
                             {typeof review.author_details?.rating ===
                               "number" && (
-                              <RatingArc
-                                rating={review.author_details.rating}
-                                color="#e94f37"
-                                size={40}
-                              />
+                              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] flex-shrink-0">
+                                <Star size={11} className="text-yellow-400 fill-yellow-400 flex-shrink-0" />
+                                <span className="text-xs font-semibold text-white/80 leading-none">
+                                  {(review.author_details.rating / 2).toFixed(1)}
+                                </span>
+                              </div>
                             )}
                           </div>
                         </div>
@@ -577,9 +602,41 @@ export default function AllReviews({
                                   <span className="text-[10px] text-white/25">
                                     {formatDate(reply.created_at)}
                                   </span>
+                                  {/* Reply-to-reply button */}
+                                  {!banStatus.banned && (
+                                    <button
+                                      onClick={() =>
+                                        showReplyForm?.reviewId === review.id &&
+                                        showReplyForm?.prefill === `@${reply.user.username} — `
+                                          ? closeReplyForm()
+                                          : openReplyForm(review.id, `@${reply.user.username} — `)
+                                      }
+                                      className="text-[10px] text-white/20 hover:text-[#e94f37] transition-colors cursor-pointer ml-auto"
+                                    >
+                                      Reply
+                                    </button>
+                                  )}
                                 </div>
                                 <p className="text-xs text-white/55 leading-relaxed">
-                                  {reply.content}
+                                  {(() => {
+                                    const sep = " \u2014 ";
+                                    const idx = reply.content.indexOf(sep);
+                                    if (reply.content.startsWith("@") && idx !== -1) {
+                                      return (
+                                        <>
+                                          <span style={{ color: "#e94f37" }}>{reply.content.slice(0, idx)}</span>
+                                          <span className="text-white/20"> — </span>
+                                          {reply.content.slice(idx + sep.length)}
+                                        </>
+                                      );
+                                    }
+                                    // fallback for older content without separator
+                                    return reply.content.split(/(@\S+)/).map((part, i) =>
+                                      /^@\S+/.test(part)
+                                        ? <span key={i} style={{ color: "#e94f37" }}>{part}</span>
+                                        : part
+                                    );
+                                  })()}
                                 </p>
                               </div>
                             </div>
@@ -607,11 +664,9 @@ export default function AllReviews({
                           ) : (
                             <button
                               onClick={() =>
-                                setShowReplyForm(
-                                  showReplyForm === review.id
-                                    ? null
-                                    : review.id,
-                                )
+                                showReplyForm?.reviewId === review.id
+                                  ? closeReplyForm()
+                                  : openReplyForm(review.id)
                               }
                               className="text-xs text-white/30 hover:text-[#e94f37] transition-colors cursor-pointer flex items-center gap-1"
                             >
@@ -628,7 +683,7 @@ export default function AllReviews({
                                   d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
                                 />
                               </svg>
-                              {showReplyForm === review.id ? "Cancel" : "Reply"}
+                              {showReplyForm?.reviewId === review.id ? "Cancel" : "Reply"}
                             </button>
                           )}
                           {review.replies && review.replies.length > 0 && (
@@ -654,26 +709,32 @@ export default function AllReviews({
 
                       {/* Reply form */}
                       <AnimatePresence>
-                        {showReplyForm === review.id && (
+                        {showReplyForm?.reviewId === review.id && (
                           <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0 }}
                             className="mt-3 space-y-2"
                           >
+                            {showReplyForm?.prefill && (
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.03] border border-white/[0.06] rounded-lg">
+                                <span className="text-xs font-semibold" style={{ color: "#e94f37" }}>
+                                  {showReplyForm.prefill.trim()}
+                                </span>
+                                <span className="text-xs text-white/30"> replying to</span>
+                              </div>
+                            )}
                             <textarea
                               value={replyContent}
                               onChange={(e) => setReplyContent(e.target.value)}
                               placeholder="Write your reply…"
                               rows={3}
+                              autoFocus
                               className="w-full bg-white/[0.04] border border-white/[0.08] focus:border-[#e94f37]/40 rounded-lg px-3 py-2.5 text-xs text-white/80 placeholder-white/20 resize-none outline-none transition-colors"
                             />
                             <div className="flex justify-end gap-2">
                               <button
-                                onClick={() => {
-                                  setShowReplyForm(null);
-                                  setReplyContent("");
-                                }}
+                                onClick={() => closeReplyForm()}
                                 className="px-3 py-1.5 text-xs text-white/30 hover:text-white/60 transition-colors cursor-pointer"
                               >
                                 Cancel
@@ -699,7 +760,8 @@ export default function AllReviews({
       </div>
 
       {/* ── Write Review Modal ── */}
-      <AnimatePresence>
+      {mounted && createPortal(
+        <AnimatePresence>
         {writeModalOpen && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -811,7 +873,9 @@ export default function AllReviews({
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
@@ -827,6 +891,8 @@ function ReviewFormInModal({
   onSuccess?: () => void;
 }) {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
   const [content, setContent] = useState("");
   const [rating, setRating] = useState<number | null>(null);
   const [mood, setMood] = useState<string | null>(null);
@@ -888,21 +954,9 @@ function ReviewFormInModal({
         throw new Error(e.message || "Failed");
       }
       onSuccess?.();
-      Swal.fire({
-        icon: "success",
-        title: "Review Submitted!",
-        timer: 1500,
-        showConfirmButton: false,
-        confirmButtonColor: "#e94f37",
-      });
-      setTimeout(() => window.location.reload(), 1500);
+      router.refresh();
     } catch (err) {
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: err instanceof Error ? err.message : "Failed",
-        confirmButtonColor: "#e94f37",
-      });
+      toast(err instanceof Error ? err.message : "Failed to submit review.", "error", 4000, "Error", null);
     } finally {
       setSubmitting(false);
     }
@@ -983,11 +1037,6 @@ function ReviewFormInModal({
                 </button>
               );
             })}
-            {displayRating !== null && (
-              <span className="ml-1.5 text-[11px] text-white/35">
-                {displayRating}/10
-              </span>
-            )}
           </div>
         </div>
         <textarea
