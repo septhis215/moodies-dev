@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Star, Trash2 } from "lucide-react";
 import { useToast } from "@/app/context/ToastContext";
+import { sGet } from "@/utils/secureStorage";
 
 /* -------------------- Types -------------------- */
 type LikedList = { movieId: string[]; seriesId: string[] };
@@ -107,7 +108,7 @@ export default function LikedPage() {
 
   const token =
     typeof window !== "undefined"
-      ? localStorage.getItem("authToken") || ""
+      ? sGet("authToken") || ""
       : "";
 
   const movieIds = useMemo(() => data?.movieId ?? [], [data]);

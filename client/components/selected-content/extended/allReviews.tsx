@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { sGet } from "@/utils/secureStorage";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -217,7 +218,7 @@ export default function AllReviews({
     }
     setSubmittingReply(true);
     try {
-      const token = localStorage.getItem("authToken");
+      const token = sGet("authToken");
       const submittedContent = ((showReplyForm?.prefill ?? "") + replyContent).trim();
       const res = await fetch(
         `http://localhost:4000/reviews/${reviewId}/replies`,
@@ -934,7 +935,7 @@ function ReviewFormInModal({
     }
     setSubmitting(true);
     try {
-      const token = localStorage.getItem("authToken");
+      const token = sGet("authToken");
       const res = await fetch("http://localhost:4000/reviews", {
         method: "POST",
         headers: {

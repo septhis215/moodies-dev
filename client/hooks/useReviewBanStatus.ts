@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/app/context/AuthProvider";
+import { sGet } from "@/utils/secureStorage";
 
 interface BanStatus {
   banned: boolean;
@@ -24,7 +25,7 @@ export function useReviewBanStatus() {
 
     const checkBanStatus = async () => {
       try {
-        const token = localStorage.getItem("authToken");
+        const token = sGet("authToken");
         const response = await fetch(
           "http://localhost:4000/reviews/me/ban-status",
           {

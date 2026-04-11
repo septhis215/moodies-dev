@@ -8,17 +8,15 @@ export class LikedService {
   constructor(private prisma: PrismaService) {}
 
   private async ensureLikedList(userId: string) {
-    let list = await this.prisma.likedList.findUnique({ where: { userId } });
-    if (!list) {
-      list = await this.prisma.likedList.create({
-        data: {
-          user: { connect: { id: userId } },
-          movieId: [],
-          seriesId: [],
-        },
-      });
-    }
-    return list;
+    return this.prisma.likedList.upsert({
+      where: { userId },
+      update: {},
+      create: {
+        user: { connect: { id: userId } },
+        movieId: [],
+        seriesId: [],
+      },
+    });
   }
 
   async getAll(userId: string) {

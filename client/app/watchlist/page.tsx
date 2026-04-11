@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Star, Trash2 } from "lucide-react";
 import { useToast } from "@/app/context/ToastContext";
 import { RatingBadge } from "@/components/ui/rating-badge";
+import { sGet } from "@/utils/secureStorage";
 
 /* -------------------- Types -------------------- */
 type Watchlist = { movieId: string[]; seriesId: string[] };
@@ -110,7 +111,7 @@ export default function WatchlistPage() {
 
   const token =
     typeof window !== "undefined"
-      ? localStorage.getItem("authToken") || ""
+      ? sGet("authToken") || ""
       : "";
 
   const movieIds = useMemo(() => data?.movieId ?? [], [data]);

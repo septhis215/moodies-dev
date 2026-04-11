@@ -1,13 +1,14 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+import { sGet } from "@/utils/secureStorage";
 
 export type LikeType = "movie" | "series";
 
 function getToken(): string | undefined {
   if (typeof window === "undefined") return;
   const raw =
-    localStorage.getItem("authToken") ||
-    localStorage.getItem("token") ||
-    localStorage.getItem("access_token") ||
+    sGet("authToken") ||
+    sGet("token") ||
+    sGet("access_token") ||
     undefined;
   if (!raw) return;
   return raw.startsWith("Bearer ") ? raw : `Bearer ${raw}`;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { sSet } from "@/utils/secureStorage";
 
 const MOODIES_LOGO = "/images/moodies.png";
 
@@ -22,9 +23,9 @@ export default function GoogleSuccessPage() {
     }
 
     // Store the token
-    localStorage.setItem("authToken", token);
+    sSet("authToken", token);
     const expiryMs = Date.now() + 1 * 24 * 60 * 60 * 1000;
-    localStorage.setItem("authTokenExpiry", String(expiryMs));
+    sSet("authTokenExpiry", String(expiryMs));
 
     // Fetch user data
     const fetchUser = async () => {
@@ -37,8 +38,8 @@ export default function GoogleSuccessPage() {
 
         if (res.ok) {
           const userData = await res.json();
-          localStorage.setItem("authUser", JSON.stringify(userData));
-          localStorage.setItem("user", JSON.stringify(userData));
+          sSet("authUser", JSON.stringify(userData));
+          sSet("user", JSON.stringify(userData));
           setStatus("success");
         } else {
           throw new Error("Failed to fetch user data");

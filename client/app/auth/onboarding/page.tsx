@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useToast } from "@/app/context/ToastContext";
 import { useAuth } from "@/hooks/useAuth";
+import { sGet, sSet } from "@/utils/secureStorage";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -164,8 +165,8 @@ export default function OnboardingPage() {
   useEffect(() => {
     const urlToken = searchParams.get("token");
     if (urlToken) {
-      localStorage.setItem("authToken", urlToken);
-      localStorage.setItem("authTokenExpiry", String(Date.now() + 86400000));
+      sSet("authToken", urlToken);
+      sSet("authTokenExpiry", String(Date.now() + 86400000));
       window.history.replaceState({}, document.title, window.location.pathname);
       toast(
         "Connected with Google! Now set your preferences.",
@@ -202,8 +203,8 @@ export default function OnboardingPage() {
         if (!signupRes.ok)
           throw new Error(signupData.message || "Sign up failed");
         const token = signupData.token;
-        localStorage.setItem("authToken", token);
-        localStorage.setItem("authTokenExpiry", String(Date.now() + 86400000));
+        sSet("authToken", token);
+        sSet("authTokenExpiry", String(Date.now() + 86400000));
         const prefsRes = await fetch(`${API_BASE}/auth/me/preferences`, {
           method: "PUT",
           headers: {
@@ -230,7 +231,7 @@ export default function OnboardingPage() {
         await new Promise((r) => setTimeout(r, 800));
         await signIn(email, password);
       } else {
-        const token = localStorage.getItem("authToken");
+        const token = sGet("authToken");
         if (!token) {
           toast("Not logged in!", "error", 3000, "Authentication Error", null);
           return;
