@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "./client-layout";
-import { LoadingProvider } from "./context/LoadingContext";
 import { AuthProvider } from "./context/AuthProvider";
 import { ToastProvider } from "./context/ToastContext";
 
@@ -31,15 +30,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ background: "#000" }}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        style={{ background: "#000" }}
       >
         <ToastProvider>
           <AuthProvider>
-            <LoadingProvider>
-              <ClientLayout>{children}</ClientLayout>
-            </LoadingProvider>
+            <ClientLayout>{children}</ClientLayout>
           </AuthProvider>
         </ToastProvider>
       </body>

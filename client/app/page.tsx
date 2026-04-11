@@ -22,7 +22,6 @@ async function fetchFeatured() {
 
 export default async function LandingPage() {
   const all = await fetchFeatured();
-  await new Promise((resolve) => setTimeout(resolve, 4000)); // ⏳ fake delay
   return (
     <main className="bg-black min-h-screen overflow-x-hidden">
       <HeroCarousel all={all} />

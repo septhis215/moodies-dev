@@ -40,6 +40,7 @@ import {
   Car,
 } from "lucide-react";
 import Link from "next/link";
+import AppLoading from "@/components/ui/AppLoading";
 import { All } from "@/types/all";
 
 interface Person {
@@ -206,16 +207,7 @@ export default function CelebrityDetailPage({
   }, [resolvedParams.id]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#0a0a0a] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-20 h-20 border-4 border-[#e94f37] border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-white text-lg font-medium">
-            Loading celebrity profile...
-          </p>
-        </div>
-      </div>
-    );
+    return <AppLoading />;
   }
 
   if (!person) {
