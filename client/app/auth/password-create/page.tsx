@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { sSet } from "@/utils/secureStorage";
 
 export default function PasswordCreate() {
   const router = useRouter();
@@ -21,11 +22,11 @@ export default function PasswordCreate() {
     const data = await res.json();
     if (!res.ok) return setError(data.message || "Failed to set password");
 
-    localStorage.setItem("authToken", data.token);
+    sSet("authToken", data.token);
 
     if (data.user?.email) {
-      localStorage.setItem("signupEmail", data.user.email);
-      localStorage.setItem("signupPassword", password);
+      sSet("signupEmail", data.user.email);
+      sSet("signupPassword", password);
     }
 
     router.push("/auth/onboarding");

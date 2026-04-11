@@ -1,9 +1,11 @@
+import { sGet } from "@/utils/secureStorage";
+
 export function getAuthToken(): string | null {
-  if (typeof window === "undefined") return null; 
+  if (typeof window === "undefined") return null;
   return (
-    localStorage.getItem("authToken") ||
-    localStorage.getItem("token") ||           
-    localStorage.getItem("access_token") ||
+    sGet("authToken") ||
+    sGet("token") ||
+    sGet("access_token") ||
     null
   );
 }

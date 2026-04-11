@@ -10,27 +10,15 @@ export class WatchlistService {
 
   /** Ensure the user has one watchlist row */
   private async ensureWatchlist(userId: string) {
-    let wl = await this.prisma.watchlist.findFirst({ where: { userId } });
-    if (!wl) {
-      wl = await this.prisma.watchlist.create({
-        data: {
-          user: { connect: { id: userId } }, // ✅ connect existing user
-          movieId: [],
-          seriesId: [],
-        },
-      });
-    }
-    return wl; 
-  }
-
-    private async getOrCreateWatchlist(userId: string) {
-    let wl = await this.prisma.watchlist.findFirst({ where: { userId } });
-    if (!wl) {
-      wl = await this.prisma.watchlist.create({
-        data: { userId, movieId: [], seriesId: [] },
-      });
-    }
-    return wl;
+    return this.prisma.watchlist.upsert({
+      where: { userId },
+      update: {},
+      create: {
+        user: { connect: { id: userId } },
+        movieId: [],
+        seriesId: [],
+      },
+    });
   }
 
 
@@ -79,7 +67,7 @@ export class WatchlistService {
     type: 'movie' | 'tv',
     tmdbId: number,
   ) {
-    const wl = await this.getOrCreateWatchlist(userId);
+    const wl = await this.ensureWatchlist(userId);
 
     const idStr = String(tmdbId);
 

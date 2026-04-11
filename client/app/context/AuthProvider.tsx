@@ -9,6 +9,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { sGet, sSet, sRemove } from "@/utils/secureStorage";
 
 /* ---------- Types ---------- */
 type User = {
@@ -88,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logoutSilent = useCallback(() => {
     clearTimer();
-    localStorage.removeItem("authToken");
+    sRemove("authToken");
     setToken(null);
     setUser(null); // guest
   }, []);
@@ -109,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     (tkn: string, usr?: User) => {
-      localStorage.setItem("authToken", tkn);
+      sSet("authToken", tkn);
       setToken(tkn);
 
       // show identity immediately (no waiting on /me)
@@ -175,9 +176,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (urlToken && isGoogleLogin) {
         // Store token
-        localStorage.setItem("authToken", urlToken);
+        sSet("authToken", urlToken);
         const expiryMs = Date.now() + 1 * 24 * 60 * 60 * 1000;
-        localStorage.setItem("authTokenExpiry", String(expiryMs));
+        sSet("authTokenExpiry", String(expiryMs));
 
         // Clean URL
         window.history.replaceState(
@@ -199,8 +200,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (res.ok) {
               const userData = await res.json();
-              localStorage.setItem("authUser", JSON.stringify(userData));
-              localStorage.setItem("user", JSON.stringify(userData));
+              sSet("authUser", JSON.stringify(userData));
+              sSet("user", JSON.stringify(userData));
               setUser(extractUser(userData));
 
               // Show success toast
@@ -237,7 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Regular token loading from localStorage
-    const t = localStorage.getItem("authToken");
+    const t = sGet("authToken");
     if (t) {
       const p = decodeJwt<any>(t);
       if (p) setUser(extractUser(p));
@@ -251,14 +252,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const onStorage = (e: StorageEvent) => {
       if (e.key === "authToken") {
-        const nv = e.newValue;
-        if (!nv) logoutSilent();
-        else {
-          const p2 = decodeJwt<any>(nv);
-          if (p2) setUser(extractUser(p2));
-          setToken(nv);
-          scheduleAutoLogout(nv);
-        }
+        if (!e.newValue) { logoutSilent(); return; }
+        const plainToken = sGet("authToken");
+        if (!plainToken) { logoutSilent(); return; }
+        const p2 = decodeJwt<any>(plainToken);
+        if (p2) setUser(extractUser(p2));
+        setToken(plainToken);
+        scheduleAutoLogout(plainToken);
       }
     };
     window.addEventListener("storage", onStorage);

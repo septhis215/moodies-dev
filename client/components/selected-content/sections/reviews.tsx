@@ -10,6 +10,7 @@ import { useAuth } from "@/app/context/AuthProvider";
 import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
 import { useToast } from "@/app/context/ToastContext";
 import { useRouter } from "next/navigation";
+import { sGet } from "@/utils/secureStorage";
 
 type Review = {
   id: string;
@@ -511,7 +512,7 @@ function ReviewForm({
     }
     setSubmitting(true);
     try {
-      const token = localStorage.getItem("authToken");
+      const token = sGet("authToken");
       const res = await fetch("http://localhost:4000/reviews", {
         method: "POST",
         headers: {

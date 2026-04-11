@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/app/context/ToastContext";
+import { sGet, sSet, sRemove } from "@/utils/secureStorage";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -47,18 +48,18 @@ export function useAuth() {
                 if (!token) throw new Error("No token returned from server");
 
                 // Store auth data
-                localStorage.setItem("authToken", token);
+                sSet("authToken", token);
                 const expiryMs = Date.now() + 1 * 24 * 60 * 60 * 1000;
-                localStorage.setItem("authTokenExpiry", String(expiryMs));
-                localStorage.setItem("user", JSON.stringify(data.user || {}));
+                sSet("authTokenExpiry", String(expiryMs));
+                sSet("user", JSON.stringify(data.user || {}));
 
                 if (data?.user) {
-                    localStorage.setItem("authUser", JSON.stringify(data.user));
+                    sSet("authUser", JSON.stringify(data.user));
                 }
 
                 // Clean up temporary credentials
-                localStorage.removeItem("signupEmail");
-                localStorage.removeItem("signupPassword");
+                sRemove("signupEmail");
+                sRemove("signupPassword");
 
                 // Success toast - use user avatar if available, otherwise moodies logo
                 toast(

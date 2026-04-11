@@ -63,7 +63,7 @@ model Badge {
 
 model Watchlist {
   id       String   @id @default(uuid())
-  userId   String
+  userId   String   @unique
   user     User     @relation(fields: [userId], references: [id])
   movieId  String[] @default([])
   seriesId String[] @default([])

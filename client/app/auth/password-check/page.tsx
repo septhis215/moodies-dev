@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { sSet } from "@/utils/secureStorage";
 
 export default function PasswordCheck() {
   const router = useRouter();
@@ -21,7 +22,7 @@ export default function PasswordCheck() {
     const data = await res.json();
     if (!res.ok) return setError(data.message || "Wrong password");
 
-    localStorage.setItem("authToken", data.token);
+    sSet("authToken", data.token);
     router.push("/auth/onboarding");
   }
 
