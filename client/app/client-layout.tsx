@@ -2,44 +2,27 @@
 
 import { usePathname } from "next/navigation";
 import { NavbarComponent } from "@/components/Navbar";
-import { Suspense, useEffect, useState } from "react";
-import { useLoading } from "./context/LoadingContext";
+import { Suspense, useEffect } from "react";
 import { useScrollToHash } from "@/hooks/useScrollToHash";
+
+// Routes where the navbar should not appear.
+// startsWith is used for prefixes (e.g. /auth/login), includes for segments (e.g. /movies/123/reviews).
+const NAVBAR_HIDDEN_PREFIXES = ["/auth", "/feed", "/discover"];
+const NAVBAR_HIDDEN_SEGMENTS = ["/reviews", "/credits"];
+
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { isLoading } = useLoading();
-  const [isMounted, setIsMounted] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
 
   useScrollToHash(100);
 
+  // Scroll to top on every route change.
   useEffect(() => {
-    setIsMounted(false);
-    const timer = setTimeout(() => setIsMounted(true), 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    setIsNavigating(true);
     window.scrollTo({ top: 0, behavior: "instant" });
-    const timer = setTimeout(() => setIsNavigating(false), 500);
-    return () => clearTimeout(timer);
   }, [pathname]);
 
-  // Add this: Hide navbar on feed pages
-  const isFeedRoute = pathname.includes('/feed') || pathname === '/discover';
-  const isAuthRoute = pathname.startsWith("/auth");
-  const isReviewsRoute = pathname.includes("/reviews");
-  const isCreditsRoute = pathname.includes("/credits");
-
   const shouldShowNavbar =
-    isMounted &&
-    !isNavigating &&
-    !isAuthRoute &&
-    !isReviewsRoute &&
-    !isCreditsRoute &&
-    !isFeedRoute &&  // Add this line
-    !isLoading;
+    !NAVBAR_HIDDEN_PREFIXES.some((p) => pathname.startsWith(p)) &&
+    !NAVBAR_HIDDEN_SEGMENTS.some((s) => pathname.includes(s));
 
   return (
     <>

@@ -51,6 +51,11 @@
     }
   }
 }
+html,
+body {
+  background: #000 !important;
+}
+
 .text-anti-flicker {
   transform: translateZ(0);
   backface-visibility: hidden;
@@ -142,7 +147,8 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: #000;
   }
 }
 .navbar-transparent {
