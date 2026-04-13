@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Star, Trash2 } from "lucide-react";
+import { Star } from "lucide-react";
 import { useToast } from "@/app/context/ToastContext";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { sGet } from "@/utils/secureStorage";
@@ -11,6 +11,7 @@ import { sGet } from "@/utils/secureStorage";
 /* -------------------- Types -------------------- */
 type Watchlist = { movieId: string[]; seriesId: string[] };
 type Kind = "movie" | "tv";
+type SortKey = "date_desc" | "date_asc" | "rating_desc" | "rating_asc";
 
 type TmdbMovie = {
   id: number;
@@ -97,6 +98,26 @@ const yearOf = (d?: string) => (d && d.length >= 4 ? d.slice(0, 4) : "—");
 const imgUrl = (path?: string | null, size = "w500") =>
   path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
 
+/* -------------------- Responsive page size -------------------- */
+
+function usePageSize(): number {
+  const [size, setSize] = useState(10);
+  useEffect(() => {
+    function update() {
+      const w = window.innerWidth;
+      if (w >= 1280) setSize(12);      // 6 cols × 2 rows
+      else if (w >= 1024) setSize(10); // 5 cols × 2 rows
+      else if (w >= 768) setSize(12);  // 4 cols × 3 rows
+      else if (w >= 640) setSize(12);  // 3 cols × 4 rows
+      else setSize(10);                // 2 cols × 5 rows
+    }
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return size;
+}
+
 /* -------------------- Page -------------------- */
 
 export default function WatchlistPage() {
@@ -118,21 +139,105 @@ export default function WatchlistPage() {
   const tvIds = useMemo(() => data?.seriesId ?? [], [data]);
   const [search, setSearch] = useState("");
 
+  const pageSize = usePageSize();
+  const [moviePage, setMoviePage] = useState(1);
+  const [tvPage, setTvPage] = useState(1);
+
+  const [sortKey, setSortKey] = useState<SortKey>("date_desc");
+  const [yearMin, setYearMin] = useState("");
+  const [yearMax, setYearMax] = useState("");
+  const [ratingMin, setRatingMin] = useState("");
+  const [ratingMax, setRatingMax] = useState("");
+
+  // Reset pagination when any filter/sort/search changes
+  useEffect(() => {
+    setMoviePage(1);
+    setTvPage(1);
+  }, [search, sortKey, yearMin, yearMax, ratingMin, ratingMax]);
+
   const filteredMovies = useMemo(() => {
-    if (!search.trim()) return movieItems;
-    const q = search.toLowerCase();
-    return movieItems.filter((m) =>
-      (m.kind === "movie" ? m.title : m.name).toLowerCase().includes(q),
-    );
-  }, [movieItems, search]);
+    let list: Item[] = movieItems;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((m) => (m.kind === "movie" ? m.title : m.name).toLowerCase().includes(q));
+    }
+    if (yearMin) {
+      const yMin = parseInt(yearMin);
+      list = list.filter((m) => {
+        const d = m.kind === "movie" ? m.release_date : m.first_air_date;
+        const y = d ? parseInt(d.slice(0, 4)) : null;
+        return y === null || y >= yMin;
+      });
+    }
+    if (yearMax) {
+      const yMax = parseInt(yearMax);
+      list = list.filter((m) => {
+        const d = m.kind === "movie" ? m.release_date : m.first_air_date;
+        const y = d ? parseInt(d.slice(0, 4)) : null;
+        return y === null || y <= yMax;
+      });
+    }
+    if (ratingMin) {
+      const rMin = parseFloat(ratingMin);
+      list = list.filter((m) => (m.vote_average ?? 0) >= rMin);
+    }
+    if (ratingMax) {
+      const rMax = parseFloat(ratingMax);
+      list = list.filter((m) => (m.vote_average ?? 0) <= rMax);
+    }
+    return [...list].sort((a, b) => {
+      if (sortKey === "date_asc" || sortKey === "date_desc") {
+        const aD = (a.kind === "movie" ? a.release_date : a.first_air_date) ?? "";
+        const bD = (b.kind === "movie" ? b.release_date : b.first_air_date) ?? "";
+        return sortKey === "date_asc" ? aD.localeCompare(bD) : bD.localeCompare(aD);
+      }
+      const aR = a.vote_average ?? 0;
+      const bR = b.vote_average ?? 0;
+      return sortKey === "rating_asc" ? aR - bR : bR - aR;
+    });
+  }, [movieItems, search, sortKey, yearMin, yearMax, ratingMin, ratingMax]);
 
   const filteredTv = useMemo(() => {
-    if (!search.trim()) return tvItems;
-    const q = search.toLowerCase();
-    return tvItems.filter((t) =>
-      (t.kind === "movie" ? t.title : t.name).toLowerCase().includes(q),
-    );
-  }, [tvItems, search]);
+    let list: Item[] = tvItems;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((t) => (t.kind === "movie" ? t.title : t.name).toLowerCase().includes(q));
+    }
+    if (yearMin) {
+      const yMin = parseInt(yearMin);
+      list = list.filter((t) => {
+        const d = t.kind === "movie" ? t.release_date : t.first_air_date;
+        const y = d ? parseInt(d.slice(0, 4)) : null;
+        return y === null || y >= yMin;
+      });
+    }
+    if (yearMax) {
+      const yMax = parseInt(yearMax);
+      list = list.filter((t) => {
+        const d = t.kind === "movie" ? t.release_date : t.first_air_date;
+        const y = d ? parseInt(d.slice(0, 4)) : null;
+        return y === null || y <= yMax;
+      });
+    }
+    if (ratingMin) {
+      const rMin = parseFloat(ratingMin);
+      list = list.filter((t) => (t.vote_average ?? 0) >= rMin);
+    }
+    if (ratingMax) {
+      const rMax = parseFloat(ratingMax);
+      list = list.filter((t) => (t.vote_average ?? 0) <= rMax);
+    }
+    return [...list].sort((a, b) => {
+      if (sortKey === "date_asc" || sortKey === "date_desc") {
+        const aD = (a.kind === "movie" ? a.release_date : a.first_air_date) ?? "";
+        const bD = (b.kind === "movie" ? b.release_date : b.first_air_date) ?? "";
+        return sortKey === "date_asc" ? aD.localeCompare(bD) : bD.localeCompare(aD);
+      }
+      const aR = a.vote_average ?? 0;
+      const bR = b.vote_average ?? 0;
+      return sortKey === "rating_asc" ? aR - bR : bR - aR;
+    });
+  }, [tvItems, search, sortKey, yearMin, yearMax, ratingMin, ratingMax]);
 
   /* 1) Load raw watchlist (IDs) from your server */
   useEffect(() => {
@@ -403,8 +508,20 @@ export default function WatchlistPage() {
 
         {!loading && !err && (movieItems.length > 0 || tvItems.length > 0) && (
           <div className="space-y-14">
+            <FilterBar
+              sortKey={sortKey}
+              onSort={setSortKey}
+              yearMin={yearMin}
+              yearMax={yearMax}
+              ratingMin={ratingMin}
+              ratingMax={ratingMax}
+              onYearMin={setYearMin}
+              onYearMax={setYearMax}
+              onRatingMin={setRatingMin}
+              onRatingMax={setRatingMax}
+            />
             {/* No results */}
-            {search.trim() &&
+            {(search.trim() || yearMin || yearMax || ratingMin || ratingMax) &&
               filteredMovies.length === 0 &&
               filteredTv.length === 0 && (
                 <div className="py-16 text-center text-white/30 text-sm">
@@ -416,7 +533,7 @@ export default function WatchlistPage() {
             {filteredMovies.length > 0 && (
               <Section title={`Movies (${filteredMovies.length})`}>
                 <Grid>
-                  {filteredMovies.map((m) => (
+                  {filteredMovies.slice(0, pageSize * moviePage).map((m) => (
                     <Card
                       key={`m-${m.id}`}
                       item={m}
@@ -425,13 +542,19 @@ export default function WatchlistPage() {
                     />
                   ))}
                 </Grid>
+                {filteredMovies.length > pageSize * moviePage && (
+                  <ViewMore
+                    count={Math.min(pageSize, filteredMovies.length - pageSize * moviePage)}
+                    onClick={() => setMoviePage((p) => p + 1)}
+                  />
+                )}
               </Section>
             )}
 
             {filteredTv.length > 0 && (
               <Section title={`Series (${filteredTv.length})`}>
                 <Grid>
-                  {filteredTv.map((t) => (
+                  {filteredTv.slice(0, pageSize * tvPage).map((t) => (
                     <Card
                       key={`t-${t.id}`}
                       item={t}
@@ -440,6 +563,12 @@ export default function WatchlistPage() {
                     />
                   ))}
                 </Grid>
+                {filteredTv.length > pageSize * tvPage && (
+                  <ViewMore
+                    count={Math.min(pageSize, filteredTv.length - pageSize * tvPage)}
+                    onClick={() => setTvPage((p) => p + 1)}
+                  />
+                )}
               </Section>
             )}
           </div>
@@ -450,6 +579,227 @@ export default function WatchlistPage() {
 }
 
 /* -------------------- Small UI helpers -------------------- */
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "date_desc", label: "Newest" },
+  { key: "date_asc", label: "Oldest" },
+  { key: "rating_desc", label: "Top Rated" },
+  { key: "rating_asc", label: "Lowest Rated" },
+];
+
+function FilterBar({
+  sortKey,
+  onSort,
+  yearMin,
+  yearMax,
+  ratingMin,
+  ratingMax,
+  onYearMin,
+  onYearMax,
+  onRatingMin,
+  onRatingMax,
+}: {
+  sortKey: SortKey;
+  onSort: (k: SortKey) => void;
+  yearMin: string;
+  yearMax: string;
+  ratingMin: string;
+  ratingMax: string;
+  onYearMin: (v: string) => void;
+  onYearMax: (v: string) => void;
+  onRatingMin: (v: string) => void;
+  onRatingMax: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasActiveFilters = !!(yearMin || yearMax || ratingMin || ratingMax);
+
+  return (
+    <div className="space-y-2">
+      {/* Row 1: sort label + horizontally scrollable pills + Filter button (sm+) */}
+      <div className="flex items-center gap-2">
+        <span className="text-[0.65rem] font-bold tracking-[0.18em] uppercase text-white/25 shrink-0">
+          Sort
+        </span>
+        {/* Scrollable pill strip — hides scrollbar visually */}
+        <div className="flex-1 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <div className="flex items-center gap-2 w-max">
+            {SORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => onSort(opt.key)}
+                className={`whitespace-nowrap text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
+                  sortKey === opt.key
+                    ? "bg-[rgb(233,79,55)]/15 border-[rgb(233,79,55)]/40 text-[rgb(233,79,55)]"
+                    : "bg-transparent border-white/[0.08] text-white/40 hover:text-white/70 hover:border-white/[0.15]"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Filter button — only shown inline on sm+ */}
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className={`hidden sm:flex shrink-0 items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
+            hasActiveFilters
+              ? "bg-[rgb(233,79,55)]/15 border-[rgb(233,79,55)]/40 text-[rgb(233,79,55)]"
+              : open
+              ? "bg-white/[0.06] border-white/[0.15] text-white/60"
+              : "bg-transparent border-white/[0.08] text-white/40 hover:text-white/70 hover:border-white/[0.15]"
+          }`}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="8" y1="12" x2="16" y2="12" />
+            <line x1="11" y1="18" x2="13" y2="18" />
+          </svg>
+          Filter
+          {hasActiveFilters && (
+            <span className="w-1.5 h-1.5 rounded-full bg-[rgb(233,79,55)]" />
+          )}
+        </button>
+      </div>
+
+      {/* Row 2 (mobile only): full-width Filter button */}
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`sm:hidden w-full flex items-center justify-center gap-2 text-xs px-3 py-2 rounded-lg border transition-all font-medium ${
+          hasActiveFilters
+            ? "bg-[rgb(233,79,55)]/15 border-[rgb(233,79,55)]/40 text-[rgb(233,79,55)]"
+            : open
+            ? "bg-white/[0.06] border-white/[0.15] text-white/60"
+            : "bg-transparent border-white/[0.08] text-white/40"
+        }`}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6" />
+          <line x1="8" y1="12" x2="16" y2="12" />
+          <line x1="11" y1="18" x2="13" y2="18" />
+        </svg>
+        {hasActiveFilters ? "Filters active" : "Filter"}
+        {hasActiveFilters && (
+          <span className="w-1.5 h-1.5 rounded-full bg-[rgb(233,79,55)]" />
+        )}
+      </button>
+
+      {open && (
+        <div className="mt-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.07] grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <FilterInput
+            label="Year from"
+            value={yearMin}
+            onChange={onYearMin}
+            min="1900"
+            max="2030"
+            placeholder="e.g. 2000"
+          />
+          <FilterInput
+            label="Year to"
+            value={yearMax}
+            onChange={onYearMax}
+            min="1900"
+            max="2030"
+            placeholder="e.g. 2025"
+          />
+          <FilterInput
+            label="Min rating"
+            value={ratingMin}
+            onChange={onRatingMin}
+            min="0"
+            max="10"
+            step="0.5"
+            placeholder="0 – 10"
+          />
+          <FilterInput
+            label="Max rating"
+            value={ratingMax}
+            onChange={onRatingMax}
+            min="0"
+            max="10"
+            step="0.5"
+            placeholder="0 – 10"
+          />
+          {hasActiveFilters && (
+            <div className="col-span-2 sm:col-span-4 flex justify-end pt-1">
+              <button
+                onClick={() => {
+                  onYearMin("");
+                  onYearMax("");
+                  onRatingMin("");
+                  onRatingMax("");
+                }}
+                className="text-xs text-white/30 hover:text-white/60 underline underline-offset-2 transition-colors"
+              >
+                Clear filters
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FilterInput({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  step = "1",
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  min?: string;
+  max?: string;
+  step?: string;
+  placeholder?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-[0.65rem] font-bold tracking-wider uppercase text-white/25">
+        {label}
+      </label>
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 text-sm rounded-lg bg-white/[0.04] border border-white/[0.08] text-white placeholder-white/20 outline-none focus:border-white/25 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      />
+    </div>
+  );
+}
+
+function ViewMore({ onClick, count }: { onClick: () => void; count: number }) {
+  return (
+    <div className="mt-8 flex justify-center">
+      <button
+        onClick={onClick}
+        className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.1] text-white/60 text-sm font-medium hover:bg-white/[0.08] hover:text-white/90 hover:border-white/[0.2] transition-all"
+      >
+        <span>View {count} more</span>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+    </div>
+  );
+}
 
 function Badge({ label, ok = true }: { label: string; ok?: boolean }) {
   return (
@@ -559,24 +909,29 @@ function Card({
           </div>
 
           {/* Hover overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div className="absolute bottom-0 left-0 right-0 p-4">
-              <div className="flex justify-center">
-                <button
-                  disabled={busy}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onRemove?.();
-                  }}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${busy
-                    ? "bg-red-500/40 cursor-not-allowed"
-                    : "bg-red-500/90 hover:bg-red-600"
-                    }`}
-                  title="Remove from watchlist"
-                >
-                  <Trash2 className="w-5 h-5 text-white" />
-                </button>
-              </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="absolute bottom-0 left-0 right-0 p-3">
+              <button
+                disabled={busy}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onRemove?.();
+                }}
+                className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+                  busy
+                    ? "bg-white/10 text-white/30 cursor-not-allowed"
+                    : "bg-white/[0.08] backdrop-blur-sm border border-white/[0.12] text-white/70 hover:bg-[rgb(233,79,55)]/20 hover:border-[rgb(233,79,55)]/40 hover:text-[rgb(233,79,55)]"
+                }`}
+                title="Remove from watchlist"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14H6L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                  <path d="M9 6V4h6v2" />
+                </svg>
+                {busy ? "Removing…" : "Remove"}
+              </button>
             </div>
           </div>
         </div>
