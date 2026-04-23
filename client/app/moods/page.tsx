@@ -11,7 +11,6 @@ import {
     Smile,
     Wind,
     Skull,
-    Play,
     Star,
     Film,
     Tv,
@@ -639,20 +638,12 @@ export default function MoodDiscoveryWheel() {
                                                             )}
 
                                                             <div className="relative w-18 aspect-[2/3] bg-gray-600 rounded overflow-hidden flex-shrink-0">
-                                                                {rec.posterPath ? (
-                                                                    <Image
-                                                                        src={`https://image.tmdb.org/t/p/w154${rec.posterPath}`}
-                                                                        alt={rec.title}
+                                                                <Image
+                                                                    src={rec.posterPath ? `https://image.tmdb.org/t/p/w154${rec.posterPath}` : "/placeholder-poster.svg"}
+                                                                    alt={rec.title}
                                                                         fill
                                                                         className="object-cover group-hover:scale-110 transition-transform duration-300"
-                                                                    />
-                                                                ) : (
-                                                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                                                        <Play size={12} />
-                                                                    </div>
-                                                                )}
-
-                                                                {/* Type badge */}
+                                                                />
                                                                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1">
                                                                     {rec.type === "tv" ?
                                                                         <Tv size={8} className="text-white/80" /> :

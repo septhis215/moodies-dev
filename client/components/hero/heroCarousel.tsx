@@ -173,7 +173,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
           const src =
             tmdbImage(m.backdrop_path || m.poster_path, getImageSize()) ??
-            "/images/placeholder-backdrop.jpg";
+            "/placeholder-backdrop.svg";
 
           return (
             <div

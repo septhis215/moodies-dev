@@ -42,9 +42,13 @@ export default function HeroThumbnail({
                     sizes={`${width}px`}
                 />
             ) : (
-                <div className="w-full h-full bg-gray-800 flex items-center justify-center text-sm text-gray-400">
-                    No image
-                </div>
+                <Image
+                    src="/placeholder-poster.svg"
+                    alt="No image"
+                    fill
+                    style={{ objectFit: 'cover' }}
+                    sizes={`${width}px`}
+                />
             )}
 
             {/* dark overlay when not active */}

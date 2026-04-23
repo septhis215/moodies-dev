@@ -8,7 +8,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Users2,
   Star,
   Calendar,
   Search,
@@ -268,22 +267,20 @@ export default function AllReviews({
     <div className="min-h-screen bg-black text-white">
       {/* ── Hero banner ── */}
       <div className="relative overflow-hidden">
-        {info.backdrop_path && (
-          <div className="absolute inset-0">
-            <Image
-              src={`https://image.tmdb.org/t/p/w1280${info.backdrop_path}`}
-              alt={info.title}
-              fill
-              style={{
-                objectFit: "cover",
-                filter: "brightness(0.3) saturate(0.5)",
-              }}
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-transparent" />
-          </div>
-        )}
+        <div className="absolute inset-0">
+          <Image
+            src={info.backdrop_path ? `https://image.tmdb.org/t/p/w1280${info.backdrop_path}` : "/placeholder-backdrop.svg"}
+            alt={info.title}
+            fill
+            style={{
+              objectFit: "cover",
+              filter: "brightness(0.3) saturate(0.5)",
+            }}
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-transparent" />
+        </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10">
           {/* Back nav */}
@@ -299,19 +296,13 @@ export default function AllReviews({
           <div className="flex gap-5 sm:gap-8 items-start">
             {/* Poster */}
             <div className="flex-shrink-0 w-20 sm:w-28 md:w-36 rounded-xl overflow-hidden shadow-2xl border border-white/[0.08]">
-              {info.poster_path ? (
-                <Image
-                  src={`https://image.tmdb.org/t/p/w500${info.poster_path}`}
-                  alt={info.title}
-                  width={144}
-                  height={216}
-                  style={{ width: "100%", height: "auto", display: "block" }}
-                />
-              ) : (
-                <div className="w-full aspect-[2/3] bg-white/[0.05] flex items-center justify-center">
-                  <Users2 size={32} className="text-white/20" />
-                </div>
-              )}
+              <Image
+                src={info.poster_path ? `https://image.tmdb.org/t/p/w500${info.poster_path}` : "/placeholder-poster.svg"}
+                alt={info.title}
+                width={144}
+                height={216}
+                style={{ width: "100%", height: "auto", display: "block" }}
+              />
             </div>
 
             {/* Info */}

@@ -75,9 +75,9 @@ export default function MoviesHomePageClient({
     >({});
     useScrollToHash(100);
     const getImageUrl = (path?: string) =>
-        path ? `https://image.tmdb.org/t/p/original${path}` : "/coming-soon.png";
+        path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder-backdrop.svg";
     const getPosterUrl = (path?: string) =>
-        path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
+        path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
 
     // Keep `featured` derived from heroShows so it's always in sync
     const featured = heroMovies[heroIndex] || heroMovies[0] || null;

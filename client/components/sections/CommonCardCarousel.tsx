@@ -31,7 +31,7 @@ export default function CommonCardCarousel({
   >({});
 
   const getPosterUrl = (path?: string) =>
-    path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
+    path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
 
   const toWatchType = (show: All): "movie" | "series" =>
     type === "tv" ? "series" : "movie";

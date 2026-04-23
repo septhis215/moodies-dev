@@ -78,7 +78,7 @@ export default function MoodiesMix({
     ? `https://image.tmdb.org/t/p/w1280${primary.backdrop_path}`
     : primary.poster_path
       ? `https://image.tmdb.org/t/p/w780${primary.poster_path}`
-      : null;
+      : "/placeholder-backdrop.svg";
 
   const currentKind = getContentType(primary);
   const toHookType = (k: "movie" | "tv"): "movie" | "series" =>
@@ -99,7 +99,7 @@ export default function MoodiesMix({
         ? `https://image.tmdb.org/t/p/w154${primary.poster_path}`
         : primary.backdrop_path
           ? `https://image.tmdb.org/t/p/w154${primary.backdrop_path}`
-          : null;
+          : "/placeholder-poster.svg";
 
       if (currentInWatchlist) {
         await remove(String(primary.id), toHookType(currentKind), { title, posterUrl });
@@ -166,17 +166,13 @@ aspect-[16/7] sm:aspect-[16/8]
 max-h-[240px] sm:max-h-[260px] lg:max-h-[300px]" onClick={() => handleClick(primary)}
         >
           {/* Backdrop image */}
-          {backdropUrl ? (
-            <Image
-              src={backdropUrl}
-              alt={primary.title}
-              fill
-              className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
-              priority
-            />
-          ) : (
-            <div className="absolute inset-0 bg-zinc-900" />
-          )}
+          <Image
+            src={backdropUrl}
+            alt={primary.title}
+            fill
+            className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
+            priority
+          />
 
           {/* Scrims */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
@@ -260,7 +256,7 @@ max-h-[240px] sm:max-h-[260px] lg:max-h-[300px]" onClick={() => handleClick(prim
           const isActive = i === 0;
           const thumb = item.backdrop_path
             ? `https://image.tmdb.org/t/p/w185${item.backdrop_path}`
-            : "/coming-soon.png";
+            : "/placeholder-backdrop.svg";
 
           return (
             <motion.div

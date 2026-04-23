@@ -136,19 +136,13 @@ export default function TvSeasonsEpisodes({ seasons, className = "" }: Props) {
               <div className="flex items-start gap-4 p-4">
                 {/* Poster */}
                 <div className="relative w-16 h-24 sm:w-20 sm:h-28 rounded-lg overflow-hidden flex-shrink-0 bg-white/[0.06]">
-                  {season.poster_path ? (
-                    <Image
-                      src={`https://image.tmdb.org/t/p/w400${season.poster_path}`}
-                      alt={season.name ?? `Season ${season.season_number}`}
-                      fill
-                      sizes="80px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-[11px] text-white/20">
-                      No Image
-                    </div>
-                  )}
+                  <Image
+                    src={season.poster_path ? `https://image.tmdb.org/t/p/w400${season.poster_path}` : "/placeholder-poster.svg"}
+                    alt={season.name ?? `Season ${season.season_number}`}
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
                 </div>
 
                 {/* Info */}
@@ -235,19 +229,13 @@ export default function TvSeasonsEpisodes({ seasons, className = "" }: Props) {
                           >
                             {/* Still */}
                             <div className="relative w-24 h-14 rounded-md overflow-hidden flex-shrink-0 bg-white/[0.06]">
-                              {ep.still_path ? (
-                                <Image
-                                  src={`https://image.tmdb.org/t/p/w300${ep.still_path}`}
-                                  alt={ep.name}
-                                  fill
-                                  sizes="96px"
-                                  className="object-cover"
-                                />
-                              ) : (
-                                <div className="flex items-center justify-center h-full text-[10px] text-white/20">
-                                  No Image
-                                </div>
-                              )}
+                              <Image
+                                src={ep.still_path ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : "/placeholder-backdrop.svg"}
+                                alt={ep.name}
+                                fill
+                                sizes="96px"
+                                className="object-cover"
+                              />
                               {/* Episode number badge */}
                               <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-[10px] font-semibold text-white/70 leading-none">
                                 E{ep.episode_number}

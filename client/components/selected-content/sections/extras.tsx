@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
-  Users2,
   Building2,
   Globe2,
   TrendingUp,
@@ -367,20 +366,14 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
               >
                 {/* Glow behind */}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent w-auto h-auto" />
-                {actor.profile_path ? (
-                  <Image
-                    src={`https://image.tmdb.org/t/p/w500${actor.profile_path}`}
-                    alt={actor.name}
-                    fill
-                    style={{ objectFit: "cover" }}
-                    sizes="176px"
-                    className="group-hover:scale-110 transition-transform duration-500"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-slate-700/40">
-                    <Users2 size={40} className="text-slate-400" />
-                  </div>
-                )}
+                <Image
+                  src={actor.profile_path ? `https://image.tmdb.org/t/p/w500${actor.profile_path}` : "/placeholder-person.svg"}
+                  alt={actor.name}
+                  fill
+                  style={{ objectFit: "cover" }}
+                  sizes="176px"
+                  className="group-hover:scale-110 transition-transform duration-500"
+                />
 
                 {/* Overlay for name & role */}
                 <div className="absolute bottom-0 left-0 right-0 p-3 text-left bg-gradient-to-t from-black/70 via-black/40 to-transparent">
@@ -433,19 +426,13 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
                       className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
                     >
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
-                        {person.profile_path ? (
-                          <Image
-                            src={`https://image.tmdb.org/t/p/w92${person.profile_path}`}
-                            alt={person.name}
-                            width={40}
-                            height={40}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Users2 size={18} className="text-slate-500" />
-                          </div>
-                        )}
+                        <Image
+                          src={person.profile_path ? `https://image.tmdb.org/t/p/w92${person.profile_path}` : "/placeholder-person.svg"}
+                          alt={person.name}
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
 
                       <div className="flex flex-col">
