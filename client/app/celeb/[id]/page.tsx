@@ -29,7 +29,6 @@ import {
   Clock,
   Zap,
   TrendingUp,
-  Users2,
   Clapperboard,
   Layers,
   PieChart,
@@ -164,9 +163,9 @@ export default function CelebrityDetailPage({
     Record<string | number, boolean>
   >({});
   const getImageUrl = (path?: string | null) =>
-    path ? `https://image.tmdb.org/t/p/original${path}` : "/coming-soon.png";
+    path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder-backdrop.svg";
   const getPosterUrl = (path?: string | null) =>
-    path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
+    path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
   const [galleryPage, setGalleryPage] = useState(0);
   const [showGalleryGrid, setShowGalleryGrid] = useState(false);
   useEffect(() => {
@@ -461,18 +460,12 @@ export default function CelebrityDetailPage({
             >
               <Link href={`/celeb/${person.id}`}>
                 <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-[#111] mb-3 group-hover:ring-2 group-hover:ring-[#e94f37] transition-all">
-                  {person.profile_path ? (
-                    <Image
-                      src={`https://image.tmdb.org/t/p/w342${person.profile_path}`}
-                      alt={person.name}
-                      fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-700/30">
-                      <Users2 size={28} />
-                    </div>
-                  )}
+                  <Image
+                    src={person.profile_path ? `https://image.tmdb.org/t/p/w342${person.profile_path}` : "/placeholder-person.svg"}
+                    alt={person.name}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
                 </div>
 
                 <h3 className="text-white font-semibold text-sm text-center line-clamp-2 mb-1">
@@ -617,17 +610,11 @@ export default function CelebrityDetailPage({
             <div className="lg:col-span-3 space-y-3">
               {/* Main Profile Image */}
               <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 shadow-xl group">
-                {person?.profile_path ? (
-                  <img
-                    src={`https://image.tmdb.org/t/p/w500${person.profile_path}`}
-                    alt={person?.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-500">
-                    <Users className="w-16 h-16" />
-                  </div>
-                )}
+                <img
+                  src={person?.profile_path ? `https://image.tmdb.org/t/p/w500${person.profile_path}` : "/placeholder-person.svg"}
+                  alt={person?.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
 
                 {/* Badge overlay */}
                 {person?.known_for_department && (
@@ -649,7 +636,7 @@ export default function CelebrityDetailPage({
                       className="relative aspect-[3/4] rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-[#e94f37] transition-all group"
                     >
                       <img
-                        src={`https://image.tmdb.org/t/p/w342${img.file_path}`}
+                        src={img.file_path ? `https://image.tmdb.org/t/p/w342${img.file_path}` : '/placeholder-person.svg'}
                         alt={`${person.name} photo ${idx + 2}`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
@@ -963,17 +950,11 @@ export default function CelebrityDetailPage({
                   <div className="flex items-center gap-3 mb-3 pb-3 border-b border-zinc-800">
                     <Link href={`/celeb/${c.id}`}>
                       <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-800 hover:ring-2 hover:ring-[#e94f37] transition">
-                        {c.profile_path ? (
-                          <img
-                            src={`https://image.tmdb.org/t/p/w185${c.profile_path}`}
-                            alt={c.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Users2 className="w-6 h-6 text-zinc-500" />
-                          </div>
-                        )}
+                        <img
+                          src={c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : '/placeholder-person.svg'}
+                          alt={c.name}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                     </Link>
 
@@ -1129,7 +1110,7 @@ export default function CelebrityDetailPage({
                   className="group relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-[#e94f37] transition"
                 >
                   <img
-                    src={`https://image.tmdb.org/t/p/w500${img.file_path}`}
+                    src={img.file_path ? `https://image.tmdb.org/t/p/w500${img.file_path}` : '/placeholder-person.svg'}
                     alt={`${person.name} photo ${galleryPage * 6 + idx + 1}`}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />

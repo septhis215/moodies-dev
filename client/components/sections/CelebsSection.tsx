@@ -267,7 +267,7 @@ export default function CelebSection() {
                         src={
                           celeb.profile_path
                             ? `https://image.tmdb.org/t/p/w400${celeb.profile_path}`
-                            : "/placeholder-person.png"
+                            : "/placeholder-person.svg"
                         }
                         alt={celeb.name}
                         fill
@@ -307,7 +307,7 @@ export default function CelebSection() {
                                 {work.poster_path ? (
                                   <Image src={`https://image.tmdb.org/t/p/w154${work.poster_path}`} alt={work.title || work.name} width={40} height={56} className="object-cover" />
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-300">N/A</div>
+                                  <Image src="/placeholder-poster.svg" alt={work.title || work.name} width={40} height={56} className="object-cover" />
                                 )}
                               </div>
 

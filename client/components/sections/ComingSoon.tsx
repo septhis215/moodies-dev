@@ -1,7 +1,6 @@
 import {
   Calendar,
   ChevronDown,
-  Film,
   Info,
   Plus,
   Share2,
@@ -109,7 +108,7 @@ export function ComingSoonSection({
   const posterGetter = (item: MovieLike): string => {
     return item.poster_path
       ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-      : "/coming-soon.png";
+      : "/placeholder-poster.svg";
   };
 
   const toWatchType = (item: MovieLike): "movie" | "series" => {
@@ -305,18 +304,12 @@ export function ComingSoonSection({
                             <Link key={item.id} href={`/${type}/${item.id}`}>
                               <div className="group relative rounded-xl sm:rounded-2xl border border-slate-800 bg-slate-900 hover:border-slate-600 hover:shadow-xl hover:shadow-slate-900/50 transition-all duration-300 overflow-hidden">
                                 <div className="relative w-full aspect-[2/3]">
-                                  {item.poster_path ? (
-                                    <Image
-                                      src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
-                                      alt={item.title || item.name || ""}
-                                      fill
-                                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                                      <Film className="w-12 h-12 text-slate-600" />
-                                    </div>
-                                  )}
+                                  <Image
+                                    src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "/placeholder-poster.svg"}
+                                    alt={item.title || item.name || ""}
+                                    fill
+                                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                  />
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
                                   <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-slate-800/90 backdrop-blur-sm px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg shadow-lg ring-1 ring-slate-700/50 z-10 transition-opacity duration-300 group-hover:opacity-0">

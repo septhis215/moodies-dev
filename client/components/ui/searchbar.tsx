@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import { IconSearch, IconX, IconClock, IconArrowRight, IconTrendingUp, IconUser } from "@tabler/icons-react";
+import { IconSearch, IconX, IconClock, IconArrowRight, IconTrendingUp } from "@tabler/icons-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { useRouter } from 'next/navigation';
@@ -557,20 +557,14 @@ export default function SearchBarWithSuggestions({
                       <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-10 ${accent} rounded-r-full bg-[#e94f37] transition-all`} />
 
                       <div className="relative w-12 h-16 rounded-md overflow-hidden flex-shrink-0 bg-gray-800">
-                        {imagePath ? (
-                          <>
-                            <Image
-                              src={`https://image.tmdb.org/t/p/w154${imagePath}`}
-                              alt={displayTitle}
-                              fill
-                              className="object-cover"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent pointer-events-none" />
-                          </>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-500">
-                            {s.type === 'person' ? <IconUser size={24} /> : <Film size={24} />}
-                          </div>
+                        <Image
+                          src={imagePath ? `https://image.tmdb.org/t/p/w154${imagePath}` : (s.type === 'person' ? '/placeholder-person.svg' : '/placeholder-poster.svg')}
+                          alt={displayTitle}
+                          fill
+                          className="object-cover"
+                        />
+                        {imagePath && (
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent pointer-events-none" />
                         )}
                       </div>
 
@@ -842,17 +836,11 @@ export default function SearchBarWithSuggestions({
                         onClick={() => { handleSuggestionClick(suggestion); setMobileOpen(false); }}
                         className="flex items-center gap-3 p-2 hover:bg-white/10 rounded cursor-pointer text-white"
                       >
-                        {suggestion.poster_path ? (
-                          <img
-                            src={`https://image.tmdb.org/t/p/w92${suggestion.poster_path}`}
-                            alt=""
-                            className="w-8 h-10 rounded object-cover flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="w-8 h-10 rounded bg-white/10 flex items-center justify-center flex-shrink-0">
-                            {getTypeIcon(suggestion.type)}
-                          </div>
-                        )}
+                        <img
+                          src={suggestion.poster_path ? `https://image.tmdb.org/t/p/w92${suggestion.poster_path}` : '/placeholder-poster.svg'}
+                          alt=""
+                          className="w-8 h-10 rounded object-cover flex-shrink-0"
+                        />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm truncate">
                             {highlightMatch(suggestion.title, mobileValue)}

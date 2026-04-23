@@ -465,13 +465,13 @@ export default function SearchResultsPage() {
   const getPosterUrl = (item: SearchResult) => {
     return item.poster_path
       ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-      : "/coming-soon.png";
+      : "/placeholder-poster.svg";
   };
 
   const getBackdropUrl = (item: SearchResult) => {
     return item.backdrop_path
       ? `https://image.tmdb.org/t/p/w780${item.backdrop_path}`
-      : "/placeholder-backdrop.jpg";
+      : "/placeholder-backdrop.svg";
   };
 
   const getGenres = (item: SearchResult) => {

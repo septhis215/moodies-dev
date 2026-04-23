@@ -324,7 +324,7 @@ export default function WatchlistPage() {
 
     const posterUrl = item?.poster_path
       ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
-      : null;
+      : "/placeholder-poster.svg";
 
     // optimistic update
     const prev = { data, movieItems, tvItems } as const;
@@ -866,7 +866,7 @@ function Card({
       <Link href={href} className="block h-full">
         <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 aspect-[2/3]">
           <Image
-            src={imgUrl(posterPath) || "/coming-soon.png"}
+            src={imgUrl(posterPath) || "/placeholder-poster.svg"}
             alt={title}
             fill
             className="group-hover:scale-110 transition-transform duration-700 object-cover"

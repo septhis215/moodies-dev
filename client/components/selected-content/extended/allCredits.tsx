@@ -226,23 +226,17 @@ export default function AllCredits({
                   >
                     {/* Photo */}
                     <div className="w-16 h-20 sm:w-20 sm:h-28 rounded-lg overflow-hidden bg-white/[0.06] flex-shrink-0">
-                      {imageSrc(p.profile_path) ? (
-                        <Image
-                          src={imageSrc(p.profile_path)!}
-                          alt={p.name}
-                          width={80}
-                          height={112}
-                          style={{
-                            objectFit: "cover",
-                            width: "100%",
-                            height: "100%",
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Users2 size={20} className="text-white/20" />
-                        </div>
-                      )}
+                      <Image
+                        src={imageSrc(p.profile_path) ?? "/placeholder-person.svg"}
+                        alt={p.name}
+                        width={80}
+                        height={112}
+                        style={{
+                          objectFit: "cover",
+                          width: "100%",
+                          height: "100%",
+                        }}
+                      />
                     </div>
 
                     {/* Info */}

@@ -314,7 +314,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                         src={
                           item.backdrop_path
                             ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
-                            : "/coming-soon.png"
+                            : "/placeholder-backdrop.svg"
                         }
                         alt={item.title}
                         fill

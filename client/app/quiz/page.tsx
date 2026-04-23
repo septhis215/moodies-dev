@@ -618,7 +618,7 @@ export default function MovieQuizPage() {
                                         >
                                             <div className="relative rounded-xl overflow-hidden shadow-xl border border-zinc-800/50 group-hover:border-[#e94f37]/60 transition-all group-hover:shadow-2xl group-hover:shadow-[#e94f37]/20">
                                                 <img
-                                                    src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '/placeholder.png'}
+                                                    src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '/placeholder-poster.svg'}
                                                     alt={item.title || item.name}
                                                     className="w-full aspect-[2/3] object-cover"
                                                 />
@@ -711,23 +711,21 @@ export default function MovieQuizPage() {
                             <div className="p-6 sm:p-8 pb-28 overflow-y-auto flex-1">
                                 <div className="flex gap-6 items-start">
                                     {/* Poster */}
-                                    {selectedMovie.poster_path && (
-                                        <a
-                                            href={getDetailUrl(selectedMovie)}
-                                            onClick={(e) => e.stopPropagation()}
-                                            title="Open details"
-                                            className="block w-28 sm:w-36 rounded-xl overflow-hidden shadow-2xl flex-shrink-0 transform hover:scale-105 transition"
-                                        >
-                                            <motion.img
-                                                initial={{ opacity: 0, scale: 0.98 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                src={`https://image.tmdb.org/t/p/w342${selectedMovie.poster_path}`}
-                                                alt={selectedMovie.title || selectedMovie.name}
-                                                className="w-full h-full object-cover"
-                                                draggable={false}
-                                            />
-                                        </a>
-                                    )}
+                                    <a
+                                        href={getDetailUrl(selectedMovie)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        title="Open details"
+                                        className="block w-28 sm:w-36 rounded-xl overflow-hidden shadow-2xl flex-shrink-0 transform hover:scale-105 transition"
+                                    >
+                                        <motion.img
+                                            initial={{ opacity: 0, scale: 0.98 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            src={selectedMovie.poster_path ? `https://image.tmdb.org/t/p/w342${selectedMovie.poster_path}` : '/placeholder-poster.svg'}
+                                            alt={selectedMovie.title || selectedMovie.name}
+                                            className="w-full h-full object-cover"
+                                            draggable={false}
+                                        />
+                                    </a>
 
                                     {/* Meta */}
                                     <div className="flex-1 min-w-0">

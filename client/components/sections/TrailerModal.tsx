@@ -127,18 +127,16 @@ export default function TrailerModal({
             {/* Header */}
             <div className="flex-shrink-0 p-3 sm:p-4 md:p-5 lg:p-6 pt-12 sm:pt-14 border-b border-gray-700/50 relative mt-6.5">
               <div className="flex gap-2 sm:gap-3 md:gap-4 lg:gap-6 items-start">
-                {trailer.poster_path && (
-                  <div
-                    className="w-16 sm:w-20 md:w-28 lg:w-36 xl:w-44 flex-shrink-0 cursor-pointer transition-all"
-                    onClick={() => handleClick(trailer)}
-                  >
-                    <img
-                      src={`https://image.tmdb.org/t/p/w500${trailer.poster_path}`}
-                      alt={trailer.title}
-                      className="rounded-lg shadow-xl object-cover w-full aspect-[2/3]"
-                    />
-                  </div>
-                )}
+                <div
+                  className="w-16 sm:w-20 md:w-28 lg:w-36 xl:w-44 flex-shrink-0 cursor-pointer transition-all"
+                  onClick={() => handleClick(trailer)}
+                >
+                  <img
+                    src={trailer.poster_path ? `https://image.tmdb.org/t/p/w500${trailer.poster_path}` : "/placeholder-poster.svg"}
+                    alt={trailer.title}
+                    className="rounded-lg shadow-xl object-cover w-full aspect-[2/3]"
+                  />
+                </div>
 
                 {/* Title + Pills */}
                 <div className="flex flex-col flex-1 min-w-0 mt-6 relative z-10 ">
@@ -249,7 +247,7 @@ export default function TrailerModal({
                       {/* Poster */}
                       <div className="aspect-[2/3] relative overflow-hidden">
                         <img
-                          src={`https://image.tmdb.org/t/p/w300${rec.poster_path}`}
+                          src={rec.poster_path ? `https://image.tmdb.org/t/p/w300${rec.poster_path}` : "/placeholder-poster.svg"}
                           alt={rec.title}
                           className="w-full h-full object-cover block transition-transform duration-500 group-hover:scale-105"
                         />

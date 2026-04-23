@@ -70,9 +70,9 @@ export default function TVHomePageClient({
   const heroShows = popularTV.slice(0, 18);
   const heroShow = heroShows[heroIndex];
   const getImageUrl = (path?: string) =>
-    path ? `https://image.tmdb.org/t/p/original${path}` : "/coming-soon.png";
+    path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder-backdrop.svg";
   const getPosterUrl = (path?: string) =>
-    path ? `https://image.tmdb.org/t/p/w500${path}` : "/coming-soon.png";
+    path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
   useScrollToHash(100);
 
   // Keep `featured` derived from heroShows so it's always in sync

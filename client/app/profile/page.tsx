@@ -540,7 +540,7 @@ export default function ProfilePage() {
                                         {!loading && filteredAndSortedItems.map((item) => {
                                             const title = item.kind === "movie" ? item.title : item.name;
                                             const href = item.kind === "movie" ? `/movies/${item.id}` : `/tv/${item.id}`;
-                                            const poster = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "/coming-soon.png";
+                                            const poster = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "/placeholder-poster.svg";
 
                                             return (
                                                 <motion.div
@@ -599,7 +599,7 @@ export default function ProfilePage() {
                                         {!loading && filteredAndSortedItems.map((item) => {
                                             const title = item.kind === "movie" ? item.title : item.name;
                                             const href = item.kind === "movie" ? `/movies/${item.id}` : `/tv/${item.id}`;
-                                            const poster = item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : "/coming-soon.png";
+                                            const poster = item.poster_path ? `https://image.tmdb.org/t/p/w200${item.poster_path}` : "/placeholder-poster.svg";
 
                                             return (
                                                 <motion.div

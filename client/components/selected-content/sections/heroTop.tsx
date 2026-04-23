@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -183,54 +183,115 @@ function TrailerModal({
   trailerKey: string;
   title: string;
 }) {
-  if (!isOpen) return null;
+  const [isMounted, setIsMounted] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsMounted(true);
+      const raf = requestAnimationFrame(() =>
+        requestAnimationFrame(() => setIsVisible(true)),
+      );
+      return () => cancelAnimationFrame(raf);
+    } else {
+      setIsVisible(false);
+      const t = setTimeout(() => setIsMounted(false), 260);
+      return () => clearTimeout(t);
+    }
+  }, [isOpen]);
+
+  if (!isMounted) return null;
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.92)", backdropFilter: "blur(12px)" }}
+      style={{
+        background: "rgba(0,0,0,0.92)",
+        backdropFilter: "blur(12px)",
+        opacity: isVisible ? 1 : 0,
+        transition: "opacity 0.25s ease",
+      }}
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-4xl"
+        className="w-full max-w-4xl"
         onClick={(e) => e.stopPropagation()}
+        style={{
+          borderRadius: 14,
+          overflow: "hidden",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.8)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          background: "#0a0a0a",
+          opacity: isVisible ? 1 : 0,
+          transform: isVisible ? "scale(1) translateY(0)" : "scale(0.95) translateY(20px)",
+          transition: "opacity 0.25s ease, transform 0.25s ease",
+        }}
       >
-        <button
-          onClick={onClose}
-          className="absolute -top-12 right-0 w-9 h-9 rounded-full flex items-center justify-center text-white/70 hover:text-white transition-colors"
-          style={{
-            background: "rgba(255,255,255,0.1)",
-            border: "1px solid rgba(255,255,255,0.2)",
-          }}
-          aria-label="Close trailer"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-4 h-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+        {/* Header bar */}
         <div
-          className="rounded-xl overflow-hidden shadow-2xl"
-          style={{ background: "#000" }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0.65rem 1rem",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+          }}
         >
-          <div style={{ paddingBottom: "56.25%", position: "relative" }}>
-            <iframe
-              className="absolute inset-0 w-full h-full"
-              src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
-              title={`${title} Trailer`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
+          <span
+            style={{
+              fontSize: "0.78rem",
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.6)",
+              letterSpacing: "0.04em",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {title}
+          </span>
+          <button
+            onClick={onClose}
+            aria-label="Close trailer"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              background: "rgba(255,255,255,0.07)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              color: "rgba(255,255,255,0.55)",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+        {/* Video */}
+        <div style={{ paddingBottom: "56.25%", position: "relative" }}>
+          <iframe
+            className="absolute inset-0 w-full h-full"
+            src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
+            title={`${title} Trailer`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         </div>
       </div>
     </div>
@@ -435,10 +496,10 @@ export function HeroContentCard({
       year: extractYear(data.info.release_date),
       poster: data.info.poster_path
         ? `https://image.tmdb.org/t/p/w500${data.info.poster_path}`
-        : "/placeholder-poster.jpg",
+        : "/placeholder-poster.svg",
       backdrop: data.info.backdrop_path
         ? `https://image.tmdb.org/t/p/original${data.info.backdrop_path}`
-        : "/placeholder-backdrop.jpg",
+        : "/placeholder-backdrop.svg",
       genres: data.info.genres.map((g) => g.name),
       runtime: formatRuntime(data.info.runtime || 0),
       rating:
