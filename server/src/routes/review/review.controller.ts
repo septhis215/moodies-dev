@@ -73,6 +73,16 @@ export class ReviewController {
     return this.reviewsService.getReviewStats(parseInt(tmdbId), mediaType);
   }
 
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  getMyReviews(
+    @Req() req,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.reviewsService.getMyReviews(req.user.id, page, limit);
+  }
+
   @Get('me/ban-status')
   @UseGuards(JwtAuthGuard)
   getBanStatus(@Req() req) {

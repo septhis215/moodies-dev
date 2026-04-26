@@ -203,7 +203,7 @@ function TrailerModal({
   if (!isMounted) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
       style={{
         background: "rgba(0,0,0,0.92)",
         backdropFilter: "blur(12px)",
@@ -224,6 +224,10 @@ function TrailerModal({
           opacity: isVisible ? 1 : 0,
           transform: isVisible ? "scale(1) translateY(0)" : "scale(0.95) translateY(20px)",
           transition: "opacity 0.25s ease, transform 0.25s ease",
+          /* Prevent the card from exceeding the viewport at any zoom level */
+          maxHeight: "calc(100svh - 2rem)",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {/* Header bar */}
@@ -234,6 +238,7 @@ function TrailerModal({
             justifyContent: "space-between",
             padding: "0.65rem 1rem",
             borderBottom: "1px solid rgba(255,255,255,0.06)",
+            flexShrink: 0,
           }}
         >
           <span
@@ -283,8 +288,8 @@ function TrailerModal({
             </svg>
           </button>
         </div>
-        {/* Video */}
-        <div style={{ paddingBottom: "56.25%", position: "relative" }}>
+        {/* Video — aspect-ratio driven, shrinks to fit remaining height */}
+        <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", minHeight: 0, flex: "1 1 auto" }}>
           <iframe
             className="absolute inset-0 w-full h-full"
             src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}

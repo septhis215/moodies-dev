@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   Star,
   Calendar,
@@ -140,25 +141,15 @@ export function CategoryContent({
     setImageErrors((prev) => new Set([...prev, id]));
   };
 
+  const getDetailUrl = (item: MediaItem) =>
+    item.type === "movie" ? `/movies/${item.id}` : `/tv/${item.id}`;
+
   const topThree = data.slice(0, 3);
   const restItems = data.slice(3);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-black text-white p-4 sm:p-6 lg:p-8">
-      <div
-        className="
-          mx-auto
-          w-full
-          max-w-[92%]
-          sm:max-w-[88%]
-          md:max-w-[820px]
-          lg:max-w-[980px]
-          xl:max-w-[1100px]
-          2xl:max-w-[1200px]
-          space-y-12
-          mt-18
-        "
-      >
+    <main className="min-h-screen bg-black text-white">
+      <div className="mx-auto w-full max-w-7xl px-6 sm:px-12 py-16">
         {isPending && (
           <div
             className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md overflow-hidden"
@@ -178,30 +169,40 @@ export function CategoryContent({
           {topThree.length > 0 && (
             <section className="space-y-6">
               <section className="space-y-6">
-                <div className="flex flex-col gap-1 mb-8">
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">
-                    FEATURED COLLECTION
+                {/* Header — matches watchlist/liked style */}
+                <div className="mt-10 mb-12 relative overflow-hidden">
+                  {/* Ghost watermark */}
+                  <span className="absolute -top-4 left-0 text-[5rem] sm:text-[8rem] font-black text-white/[0.03] leading-none select-none pointer-events-none tracking-tight whitespace-nowrap">
+                    {title.toUpperCase()}
                   </span>
 
-                  <h2
-                    className="
-                      text-xl sm:text-2xl lg:text-3xl font-black tracking-tight
-                      bg-gradient-to-r from-[#e94f37] to-[#ff6b58] bg-clip-text text-transparent
-                    "
-                  >
-                    {title}
-                  </h2>
+                  <div className="relative">
+                    <div className="mb-2">
+                      <div className="w-8 h-0.5 bg-[rgb(233,79,55)] mb-2" />
+                      <span className="text-[0.62rem] font-bold tracking-[0.2em] uppercase text-white/30">
+                        Featured Collection
+                      </span>
+                    </div>
+                    <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white leading-none">
+                      {title}
+                    </h1>
+                    {subtitle && (
+                      <p className="mt-3 text-sm text-white/40 font-medium tracking-wide">
+                        {subtitle}
+                      </p>
+                    )}
+                  </div>
 
-                  <p className="text-sm sm:text-base text-[#ff6b58]/80 font-medium tracking-wide italic">
-                    {subtitle}
-                  </p>
+                  {/* Gradient rule */}
+                  <div className="mt-8 h-px bg-gradient-to-r from-[rgb(233,79,55)]/30 via-white/[0.06] to-transparent" />
                 </div>
               </section>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {topThree.map((item, idx) => (
-                  <div
+                  <Link
                     key={item.id}
+                    href={getDetailUrl(item)}
                     className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 ring-1 ring-white/10 shadow-2xl hover:ring-[#e94f37]/50 transition-all duration-500 flex flex-col"
                   >
                     {/* Rank Badge */}
@@ -310,17 +311,25 @@ export function CategoryContent({
 
                         {/* Action Buttons */}
                         <div className="flex gap-3 pt-1">
-                          <button className="flex-1 px-4 py-3 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d44530] hover:to-[#ff5a47] rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105">
+                          <Link
+                            href={getDetailUrl(item)}
+                            className="flex-1 px-4 py-3 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d44530] hover:to-[#ff5a47] rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Play className="w-4 h-4" />
                             Watch Now
-                          </button>
-                          <button className="px-4 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl font-bold transition-all flex items-center justify-center gap-2 hover:scale-105">
+                          </Link>
+                          <Link
+                            href={getDetailUrl(item)}
+                            className="px-4 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl font-bold transition-all flex items-center justify-center gap-2 hover:scale-105"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Info className="w-4 h-4" />
-                          </button>
+                          </Link>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </section>
@@ -331,8 +340,9 @@ export function CategoryContent({
             <section className="space-y-6 mt-10">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
                 {restItems.map((item) => (
-                  <div
+                  <Link
                     key={item.id}
+                    href={getDetailUrl(item)}
                     className="group relative rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 hover:ring-[#ff6b58]/50 transition-all duration-300 cursor-pointer"
                   >
                     {/* Poster */}
@@ -407,7 +417,7 @@ export function CategoryContent({
                         </div>
                       )}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </section>
@@ -489,6 +499,6 @@ export function CategoryContent({
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

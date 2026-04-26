@@ -48,9 +48,8 @@ const routes = [
   { name: "Movies", href: "/movies" },
   { name: "Series", href: "/tv" },
   // { name: "Community", href: "/community" },
-  { name: "Your Moods", href: "/moods" },
-  { name: "My List", href: "/watchlist" },
-  { name: "My Likes", href: "/liked" },
+  { name: "Your Moods", href: "/moods", noLink: true },
+  { name: "My Collection", href: "/collection", noLink: true },
 ];
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -74,9 +73,8 @@ export function NavbarComponent() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [activeRoute, setActiveRoute] = useState<string>(routes[0].href);
-  const [activeMobileRoute, setActiveMobileRoute] = useState<string | null>(
-    null
-  );
+  const [activeMobileRoute, setActiveMobileRoute] = useState<string | null>(null);
+  const [mobileExpandedRoute, setMobileExpandedRoute] = useState<string | null>(routes[0].href);
   const { user, isAuthenticated, logoutSilent } = useAuth();
   const { toast } = useToast();
 
@@ -113,8 +111,13 @@ export function NavbarComponent() {
 
     "/moods": [
       { label: "Moodies Feed", path: "/feed" },
-      { label: "Mood Wheels", path: "/moods/mood-wheels" },
+      { label: "Mood Wheels", path: "/moods" },
       { label: "Categories", path: "/moods/categories" },
+    ],
+
+    "/collection": [
+      { label: "My List", path: "/watchlist" },
+      { label: "My Likes", path: "/liked" },
     ],
   };
   const dropdownTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -260,13 +263,14 @@ export function NavbarComponent() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4"
           style={{
             backdropFilter: "blur(24px)",
             background:
               "linear-gradient(135deg, rgba(0,0,0,0.88) 0%, rgba(15,15,25,0.92) 100%)",
             willChange: "opacity",
           }}
+          onClick={() => setIsMenuOpen(false)}
         >
           {/* Animated background particles */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -308,9 +312,11 @@ export function NavbarComponent() {
               opacity: { duration: 0.25 },
             }}
             className="relative flex flex-col lg:flex-row w-full mx-auto rounded-3xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
             style={{
-              maxWidth: "min(1300px, calc(100vw - 2rem))",
-              maxHeight: "min(85vh, 820px)",
+              maxWidth: "min(960px, calc(100vw - 1.5rem))",
+              height: "min(82svh, 560px)",
+              minHeight: 0,
               background:
                 "linear-gradient(135deg, rgba(20,20,30,0.98) 0%, rgba(10,10,15,0.96) 100%)",
               boxShadow:
@@ -326,10 +332,10 @@ export function NavbarComponent() {
 
             {/* LEFT SECTION - Navigation */}
             <div
-              className="flex-1 lg:basis-[45%] flex flex-col justify-between relative"
+              className="flex-1 lg:basis-[45%] flex flex-col justify-start relative"
               style={{
-                padding: "clamp(2rem, 4vw, 3.5rem) clamp(2rem, 4vw, 3rem)",
-                gap: "clamp(1.5rem, 3vh, 2.5rem)",
+                padding: "clamp(1rem, 2.5vw, 1.75rem) clamp(1rem, 2.5vw, 1.6rem)",
+                gap: "clamp(0.5rem, 1.5vh, 1.1rem)",
                 background:
                   "radial-gradient(circle at top left, rgba(233,79,55,0.12), transparent 70%)",
               }}
@@ -346,9 +352,9 @@ export function NavbarComponent() {
                 className="relative z-10"
               >
                 <h2
-                  className="font-bold leading-tight mb-3"
+                  className="font-bold leading-tight mb-1"
                   style={{
-                    fontSize: "clamp(2rem, 5vw, 3.5rem)",
+                    fontSize: "clamp(1.25rem, 2.5vw, 2rem)",
                     background:
                       "linear-gradient(135deg, #ffffff 0%, #e0e0e0 50%, #888 100%)",
                     WebkitBackgroundClip: "text",
@@ -360,7 +366,7 @@ export function NavbarComponent() {
                 </h2>
                 <p
                   className="text-gray-400 font-light"
-                  style={{ fontSize: "clamp(0.9rem, 2vw, 1.1rem)" }}
+                  style={{ fontSize: "clamp(0.7rem, 1.2vw, 0.82rem)" }}
                 >
                   Discover what moves you
                 </p>
@@ -369,8 +375,8 @@ export function NavbarComponent() {
               {/* Navigation Links */}
 
               <nav
-                className="flex-1 flex flex-col justify-center relative z-10"
-                style={{ gap: "clamp(0.6rem, 2vh, 1.6rem)" }}
+                className="flex flex-col relative z-10 mt-4"
+                style={{ gap: "clamp(0.2rem, 0.8vh, 0.6rem)" }}
               >
                 {routes.map((r, idx) => {
                   const isActive = activeRoute === r.href;
@@ -407,7 +413,7 @@ export function NavbarComponent() {
                               : "text-gray-300 group-hover:text-white"
                               }`}
                             style={{
-                              fontSize: "clamp(1.1rem, 3.2vw, 2rem)",
+                              fontSize: "clamp(0.8rem, 1.6vw, 1.15rem)",
                               letterSpacing: "-0.02em",
                             }}
                           >
@@ -416,21 +422,23 @@ export function NavbarComponent() {
                         </button>
 
                         {/* GO TO ROOT BUTTON */}
-                        <Link
-                          href={r.href}
-                          onClick={() => setIsMenuOpen(false)}
-                          className="
-                            ml-3 px-3 py-1 rounded-full text-sm font-medium
-                            text-[#e94f37]
-                            bg-[#e94f37]/10
-                            border border-[#e94f37]/30
-                            hover:bg-[#e94f37]/20
-                            hover:border-[#e94f37]/50
-                            transition
-                          "
-                        >
-                          Go to {r.name}
-                        </Link>
+                        {!r.noLink && (
+                          <Link
+                            href={r.href}
+                            onClick={() => setIsMenuOpen(false)}
+                            className="
+                              ml-3 px-3 py-1 rounded-full text-sm font-medium
+                              text-[#e94f37]
+                              bg-[#e94f37]/10
+                              border border-[#e94f37]/30
+                              hover:bg-[#e94f37]/20
+                              hover:border-[#e94f37]/50
+                              transition
+                            "
+                          >
+                            Go to {r.name}
+                          </Link>
+                        )}
                       </div>
                     </motion.div>
                   );
@@ -441,7 +449,7 @@ export function NavbarComponent() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="text-gray-500 text-sm font-light relative z-10"
+                className="mt-auto text-gray-500 text-sm font-light relative z-10"
               >
                 © {new Date().getFullYear()} Moodies • All rights reserved
               </motion.div>
@@ -452,11 +460,12 @@ export function NavbarComponent() {
 
             {/* RIGHT SECTION - Dynamic Content */}
             <div
-              className="flex-1 lg:basis-[55%] flex flex-col relative overflow-hidden"
+              className="lg:basis-[55%] flex flex-col relative overflow-hidden min-h-0"
               style={{
-                padding: "clamp(2rem, 4vw, 3.5rem) clamp(2rem, 4vw, 3rem)",
+                padding: "clamp(1rem, 2.5vw, 1.75rem) clamp(1rem, 2.5vw, 1.6rem)",
                 background:
                   "radial-gradient(circle at bottom right, rgba(233,79,55,0.08), transparent 60%)",
+                flex: "0 0 55%",
               }}
             >
               {/* Decorative corner element */}
@@ -470,17 +479,17 @@ export function NavbarComponent() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
-                className="flex-1 flex flex-col relative z-10 h-full overflow-y-auto pr-12 hide-scrollbar"
+                className="flex-1 flex flex-col relative z-10 min-h-0 overflow-y-auto hide-scrollbar"
                 style={{
-                  scrollbarGutter: "stable both-edges",
                   scrollbarWidth: "none",
                   msOverflowStyle: "none",
+                  overflowY: "auto",
                 }}
               >
                 {/* Section Title */}
-                <div className="mb-8">
+                <div className="mb-3">
                   <motion.div
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#e94f37]/10 border border-[#e94f37]/30 mb-4"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#e94f37]/10 border border-[#e94f37]/30 mb-2"
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ delay: 0.2 }}
@@ -493,129 +502,114 @@ export function NavbarComponent() {
 
                   <h3
                     className="font-bold text-white leading-tight"
-                    style={{ fontSize: "clamp(1.5rem, 3vw, 2.2rem)" }}
+                    style={{ fontSize: "clamp(0.95rem, 1.6vw, 1.3rem)" }}
                   >
                     Quick Actions
                   </h3>
                 </div>
 
                 {/* Options Grid */}
-                <div className="pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                  {/* Options Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
-                    {(routeOptions[activeRoute] || []).map((opt, idx) => (
-                      <motion.div
-                        key={opt.path}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 + idx * 0.05 }}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2">
+                  {(routeOptions[activeRoute] || []).map((opt, idx) => (
+                    <motion.div
+                      key={opt.path}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 + idx * 0.05 }}
+                    >
+                      <Link
+                        href={opt.path}
+                        onClick={() => setIsMenuOpen(false)}
+                        className="group relative block p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-[#e94f37]/50 transition-all duration-300 overflow-hidden"
                       >
-                        <Link
-                          href={opt.path}
-                          onClick={() => setIsMenuOpen(false)}
-                          className="group relative block p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-[#e94f37]/50 transition-all duration-300 overflow-hidden"
-                        >
-                          <motion.div
-                            className="absolute inset-0 bg-gradient-to-br from-[#e94f37]/10 via-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                            initial={false}
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-br from-[#e94f37]/10 via-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                          initial={false}
+                        />
+                        <div className="relative z-10">
+                          <span className="text-white font-medium block mb-1 group-hover:text-[#e94f37] transition-colors">
+                            {opt.label}
+                          </span>
+                          <span className="text-gray-500 text-sm">
+                            Explore →
+                          </span>
+                        </div>
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-[#e94f37]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      </Link>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* Profile Section - pinned to bottom */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="relative z-10 flex-shrink-0 pt-4 mt-2 border-t border-white/[0.08]"
+              >
+                <div className="flex items-center gap-3">
+                  {/* Avatar with gradient ring */}
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 blur-md opacity-50" />
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 p-[2px]">
+                      <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center overflow-hidden">
+                        {user?.avatarUrl ? (
+                          <img
+                            src={user.avatarUrl}
+                            alt={user.username || "User"}
+                            className="w-full h-full object-cover"
                           />
-                          <div className="relative z-10">
-                            <span className="text-white font-medium block mb-1 group-hover:text-[#e94f37] transition-colors">
-                              {opt.label}
-                            </span>
-                            <span className="text-gray-500 text-sm">
-                              Explore →
-                            </span>
-                          </div>
-                          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-[#e94f37]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        </Link>
-                      </motion.div>
-                    ))}
+                        ) : (
+                          <span className="text-xl font-bold text-gray-300">
+                            {(
+                              user?.username?.[0] ||
+                              user?.name?.[0] ||
+                              "G"
+                            ).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Profile Section */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="pt-6 border-t border-white/[0.08]"
-                  >
-                    <div className="flex items-center gap-4">
-                      {/* Avatar with gradient ring */}
-                      <div className="relative">
-                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 blur-md opacity-50" />
-                        <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 p-[2px]">
-                          <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center overflow-hidden">
-                            {user?.avatarUrl ? (
-                              <img
-                                src={user.avatarUrl}
-                                alt={user.username || "User"}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-xl font-bold text-gray-300">
-                                {(
-                                  user?.username?.[0] ||
-                                  user?.name?.[0] ||
-                                  "G"
-                                ).toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                  {/* User info */}
+                  <div className="flex-1">
+                    <h4 className="text-white font-semibold text-base">
+                      {user?.username ?? user?.name ?? "Guest"}
+                    </h4>
+                    <p className="text-gray-400 text-sm">
+                      {user?.email || "Sign in for more features"}
+                    </p>
+                  </div>
 
-                      {/* User info */}
-                      <div className="flex-1">
-                        <h4 className="text-white font-semibold text-lg">
-                          {user?.username ?? user?.name ?? "Guest"}
-                        </h4>
-                        <p className="text-gray-400 text-sm">
-                          {user?.email || "Sign in for more features"}
-                        </p>
-                      </div>
-
-                      {/* Action button */}
-                      {isAuthenticated ? (
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => {
-                            setIsMenuOpen(false);
-                            logout();
-                          }}
-                          className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-medium transition-all"
-                        >
-                          Logout
-                        </motion.button>
-                      ) : (
-                        <Link
-                          href="/auth/login"
-                          onClick={() => setIsMenuOpen(false)}
-                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#e94f37] to-orange-500 hover:from-[#e94f37]/90 hover:to-orange-500/90 text-white font-medium transition-all"
-                        >
-                          Sign In
-                        </Link>
-                      )}
-                    </div>
-                  </motion.div>
+                  {/* Action button */}
+                  {isAuthenticated ? (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        logout();
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-medium transition-all"
+                    >
+                      Logout
+                    </motion.button>
+                  ) : (
+                    <Link
+                      href="/auth/login"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#e94f37] to-orange-500 hover:from-[#e94f37]/90 hover:to-orange-500/90 text-white font-medium transition-all"
+                    >
+                      Sign In
+                    </Link>
+                  )}
                 </div>
               </motion.div>
             </div>
 
-            {/* Close Button */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8, rotate: -90 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              exit={{ opacity: 0, scale: 0.8, rotate: 90 }}
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setIsMenuOpen(false)}
-              aria-label="Close menu"
-              className="absolute top-6 right-10 p-3 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 backdrop-blur-xl focus:outline-none transition-all group"
-            >
-              <IconX className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
-            </motion.button>
+
           </motion.div>
         </motion.div>
       )}
@@ -869,186 +863,167 @@ export function NavbarComponent() {
         isOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
       >
-        <div className="w-full px-4">
-          {/* Animated particles background inside menu */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
-            {[...Array(15)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute w-1 h-1 bg-[#e94f37] rounded-full"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                }}
-                animate={{
-                  y: [0, -100, 0],
-                  x: [0, Math.random() * 50 - 25, 0],
-                  opacity: [0, 0.6, 0],
-                }}
-                transition={{
-                  duration: 3 + Math.random() * 2,
-                  repeat: Number.POSITIVE_INFINITY,
-                  delay: Math.random() * 2,
-                }}
-              />
-            ))}
-          </div>
-
+        <div className="w-full px-4 pb-6">
           <motion.div
             initial="hidden"
             animate="visible"
-            variants={{
-              visible: { transition: { staggerChildren: 0.07 } },
-            }}
-            className="relative flex flex-col gap-6 py-2"
+            variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
+            className="relative flex flex-col gap-1 py-2"
           >
-            <motion.h3
-              variants={{
-                hidden: { opacity: 0, y: -10 },
-                visible: { opacity: 1, y: 0 },
-              }}
-              className="text-3xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent"
+            {/* Header */}
+            <motion.div
+              variants={{ hidden: { opacity: 0, y: -10 }, visible: { opacity: 1, y: 0 } }}
+              className="mb-3"
             >
-              Explore
-            </motion.h3>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
+                Explore
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">Tap a section to expand</p>
+            </motion.div>
 
-            <motion.p
-              variants={{
-                hidden: { opacity: 0, y: -10 },
-                visible: { opacity: 1, y: 0 },
-              }}
-              className="text-sm text-gray-400"
-            >
-              Quick links
-            </motion.p>
+            {/* Accordion nav */}
+            {routes.map((r) => {
+              const subOptions = routeOptions[r.href] || [];
+              const isExpanded = mobileExpandedRoute === r.href;
+              const hasOptions = subOptions.length > 0;
 
-            <nav
-              className="flex-1 flex flex-col justify-center"
-              style={{ gap: "clamp(0.25rem, 1.5vh, 1rem)" }}
-            >
-              {routes.map((r, idx) => (
+              return (
                 <motion.div
                   key={r.href}
-                  variants={{
-                    hidden: { opacity: 0, x: -20 },
-                    visible: { opacity: 1, x: 0 },
-                  }}
+                  variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}
+                  className="rounded-xl overflow-hidden border border-white/[0.06]"
                 >
-                  <Link
-                    href={r.href}
-                    onMouseEnter={() => setActiveRoute(r.href)}
-                    onFocus={() => setActiveRoute(r.href)}
-                    onClick={() => setIsMobileOpen(false)}
-                    className={`relative font-semibold transition-all duration-200 ease-out leading-snug group flex items-center ${activeRoute === r.href
-                      ? "text-[#e94f37]"
-                      : "text-gray-100 hover:text-[#e94f37]"
-                      } pl-3 py-2 rounded-lg`}
-                    style={{
-                      fontSize: "clamp(0.95rem, 2.8vw, 1.5rem)",
-                      paddingTop: "clamp(0.3rem, 0.8vh, 0.5rem)",
-                      paddingBottom: "clamp(0.3rem, 0.8vh, 0.5rem)",
-                    }}
+                  {/* Row header */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMobileExpandedRoute(isExpanded ? null : r.href)
+                    }
+                    className={`w-full flex items-center justify-between px-4 py-3 transition-all ${
+                      isExpanded
+                        ? "bg-white/[0.07]"
+                        : "bg-white/[0.03] hover:bg-white/[0.06]"
+                    }`}
                   >
-                    {/* Gradient background on hover */}
-                    <motion.div
-                      className="absolute inset-0 rounded-lg bg-gradient-to-r from-[#e94f37]/10 to-transparent"
-                      initial={{ opacity: 0, x: -10 }}
-                      whileHover={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.2 }}
-                    />
+                    <div className="flex items-center gap-2">
+                      {isExpanded && (
+                        <span className="w-1 h-4 rounded-full bg-gradient-to-b from-[#e94f37] to-orange-500 inline-block" />
+                      )}
+                      <span
+                        className={`font-semibold text-base transition-colors ${
+                          isExpanded ? "text-[#e94f37]" : "text-gray-200"
+                        }`}
+                      >
+                        {r.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!r.noLink && (
+                        <Link
+                          href={r.href}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMobileOpen(false);
+                          }}
+                          className="text-xs px-2.5 py-1 rounded-full text-[#e94f37] bg-[#e94f37]/10 border border-[#e94f37]/30 hover:bg-[#e94f37]/20 transition"
+                        >
+                          Go →
+                        </Link>
+                      )}
+                      {hasOptions && (
+                        <motion.div
+                          animate={{ rotate: isExpanded ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <IconChevronDown size={16} className="text-gray-400" />
+                        </motion.div>
+                      )}
+                    </div>
+                  </button>
 
-                    {/* Active/hover indicator line */}
-                    <motion.span
-                      className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-gradient-to-b from-[#e94f37] to-orange-500"
-                      animate={{
-                        width: activeRoute === r.href ? "4px" : "0px",
-                        height:
-                          activeRoute === r.href
-                            ? "clamp(1rem, 3vh, 1.5rem)"
-                            : "0",
-                        opacity: activeRoute === r.href ? 1 : 0,
-                      }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
-                    />
-
-                    <span className="relative z-10">{r.name}</span>
-                  </Link>
+                  {/* Sub-options */}
+                  <AnimatePresence initial={false}>
+                    {isExpanded && hasOptions && (
+                      <motion.div
+                        key="sub"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="grid grid-cols-2 gap-2 p-3 bg-black/20">
+                          {subOptions.map((opt) => (
+                            <Link
+                              key={opt.path}
+                              href={opt.path}
+                              onClick={() => setIsMobileOpen(false)}
+                              className="group flex flex-col p-3 rounded-xl bg-white/[0.04] border border-white/[0.07] hover:border-[#e94f37]/40 hover:bg-white/[0.07] transition-all"
+                            >
+                              <span className="text-sm font-medium text-white group-hover:text-[#e94f37] transition-colors">
+                                {opt.label}
+                              </span>
+                              <span className="text-xs text-gray-500 mt-0.5">Explore →</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
-              ))}
-            </nav>
+              );
+            })}
 
+            {/* Profile section */}
             <motion.div
-              variants={{
-                hidden: { opacity: 0 },
-                visible: { opacity: 1 },
-              }}
-              className="mt-6 pt-6 border-t border-white/[0.08]"
+              variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+              className="mt-4 pt-4 border-t border-white/[0.08]"
             >
               <div className="flex items-center gap-3">
-                {/* Avatar with gradient ring */}
                 <div className="relative">
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 blur-md opacity-50" />
-                  <div className="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 p-[2px]">
-                    <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center overflow-hidden">
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#e94f37] to-orange-500 blur-md opacity-40" />
+                  <div className="relative h-11 w-11 rounded-xl bg-gradient-to-br from-[#e94f37] to-orange-500 p-[2px]">
+                    <div className="w-full h-full rounded-xl bg-slate-900 flex items-center justify-center overflow-hidden">
                       {user?.avatarUrl ? (
-                        <img
-                          src={user.avatarUrl}
-                          alt={user.username || "User"}
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={user.avatarUrl} alt={user.username || "User"} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-sm font-bold text-gray-300">
-                          {(
-                            user?.username?.[0] ||
-                            user?.name?.[0] ||
-                            "G"
-                          ).toUpperCase()}
+                          {(user?.username?.[0] || user?.name?.[0] || "G").toUpperCase()}
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
-
-                <div>
-                  <div className="text-sm font-semibold text-white">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">
                     {user?.username ?? user?.name ?? "Guest"}
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-gray-400 truncate">
                     {user?.email || "Sign in for more features"}
                   </div>
                 </div>
-              </div>
-
-              <div className="mt-4">
                 {isAuthenticated ? (
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      setIsMobileOpen(false);
-                      logout();
-                    }}
-                    className="inline-flex items-center justify-center rounded-xl border border-white/20 px-4 py-2.5 text-sm text-white hover:bg-white/5 backdrop-blur-sm transition-all w-full"
+                  <button
+                    onClick={() => { setIsMobileOpen(false); logout(); }}
+                    className="text-sm px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition"
                   >
                     Logout
-                  </motion.button>
+                  </button>
                 ) : (
                   <Link
                     href="/auth/login"
                     onClick={() => setIsMobileOpen(false)}
-                    className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#e94f37] to-orange-500 hover:from-[#e94f37]/90 hover:to-orange-500/90 px-4 py-2.5 text-sm text-white transition-all w-full"
+                    className="text-sm px-3 py-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-orange-500 text-white font-medium transition"
                   >
-                    Get Started
+                    Sign In
                   </Link>
                 )}
               </div>
             </motion.div>
 
             <motion.div
-              variants={{
-                hidden: { opacity: 0 },
-                visible: { opacity: 1 },
-              }}
-              className="mt-6 text-xs text-gray-500 text-center"
+              variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+              className="mt-4 text-xs text-gray-600 text-center"
             >
               © {new Date().getFullYear()} Moodies
             </motion.div>
