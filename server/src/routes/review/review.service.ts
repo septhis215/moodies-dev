@@ -339,6 +339,31 @@ export class ReviewService {
     };
   }
 
+  async getMyReviews(userId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+
+    const [reviews, total] = await Promise.all([
+      this.prisma.review.findMany({
+        where: { userId },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.review.count({ where: { userId } }),
+    ]);
+
+    const reviewEntities = reviews.map((r) => new ReviewEntity(r));
+    return {
+      reviews: reviewEntities.map((r) => r.toPublic()),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async getReviewBanStatus(user: { reviewBannedUntil?: Date }) {
     const now = new Date();
     const bannedDate = user.reviewBannedUntil;

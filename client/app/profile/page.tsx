@@ -37,6 +37,21 @@ type TmdbItem = {
     genre_ids?: number[];
 };
 
+type UserReview = {
+    id: string;
+    tmdbId: number;
+    mediaType: "MOVIE" | "TV";
+    rating: number;
+    content: string;
+    moodEmojis: string[];
+    status: string;
+    createdAt: string;
+    // enriched from TMDB
+    tmdbTitle?: string;
+    tmdbPoster?: string | null;
+    tmdbYear?: string;
+};
+
 export default function ProfilePage() {
     const { user: decodedUser, token, logoutSilent } = useAuth();
 
@@ -51,8 +66,67 @@ export default function ProfilePage() {
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [sortBy, setSortBy] = useState<"dateAdded" | "rating" | "title">("dateAdded");
     const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+    const [reviews, setReviews] = useState<UserReview[]>([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
+    const [reviewsVisible, setReviewsVisible] = useState(3);
+    const [cardReviewsVisible, setCardReviewsVisible] = useState<Record<string, number>>({});
 
     const user = profile ?? (decodedUser as ServerUser | null);
+
+    // Group reviews by media (tmdbId + mediaType)
+    const mediaGroups = useMemo(() => {
+        const map = new Map<string, { key: string; reviews: UserReview[] }>();
+        for (const r of reviews) {
+            const key = `${r.mediaType}-${r.tmdbId}`;
+            if (!map.has(key)) map.set(key, { key, reviews: [] });
+            map.get(key)!.reviews.push(r);
+        }
+        return Array.from(map.values());
+    }, [reviews]);
+
+    /* ---------------- Fetch reviews when tab active ---------------- */
+    useEffect(() => {
+        if (tab !== "reviews" || !token) return;
+        let alive = true;
+        setReviewsLoading(true);
+
+        (async () => {
+            try {
+                const res = await fetch(`${API_BASE}/reviews/me`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                    cache: "no-store",
+                });
+                if (!alive) return;
+                if (!res.ok) return;
+                const data = await res.json();
+                const raw: UserReview[] = data.reviews ?? [];
+
+                // Enrich each review with TMDB metadata
+                const enriched = await Promise.all(
+                    raw.map(async (r) => {
+                        const kind = r.mediaType === "MOVIE" ? "movie" : "tv";
+                        const url = `https://api.themoviedb.org/3/${kind}/${r.tmdbId}?api_key=${TMDB_API_KEY}&language=en-US`;
+                        try {
+                            const tmdb = await fetch(url).then((x) => x.json());
+                            return {
+                                ...r,
+                                tmdbTitle: kind === "movie" ? tmdb.title : tmdb.name,
+                                tmdbPoster: tmdb.poster_path ?? null,
+                                tmdbYear: (kind === "movie" ? tmdb.release_date : tmdb.first_air_date)?.split("-")[0],
+                            };
+                        } catch {
+                            return r;
+                        }
+                    })
+                );
+                if (alive) setReviews(enriched);
+            } finally {
+                if (alive) setReviewsLoading(false);
+            }
+        })();
+
+        return () => { alive = false; };
+    }, [tab, token]);
 
     /* ---------------- Fetch profile + watchlist ---------------- */
     useEffect(() => {
@@ -671,15 +745,270 @@ export default function ProfilePage() {
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.3 }}
                         >
-                            <div className="text-center py-12 sm:py-16">
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#e94f37]/20 flex items-center justify-center mx-auto mb-4">
-                                    <Star className="w-8 h-8 sm:w-10 sm:h-10 text-[#e94f37]" />
+                            {/* Header row */}
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="w-6 h-0.5 bg-[#e94f37]" />
+                                        <span className="text-[0.62rem] font-bold tracking-[0.2em] uppercase text-white/30">Your Activity</span>
+                                    </div>
+                                    <h2 className="text-2xl sm:text-3xl font-black text-white">My Reviews</h2>
                                 </div>
-                                <h3 className="text-xl sm:text-2xl font-bold mb-2">Reviews Coming Soon</h3>
-                                <p className="text-sm sm:text-base text-gray-400 max-w-md mx-auto px-4">
-                                    This feature is currently in development. Soon you'll be able to write and manage your movie and TV show reviews here.
-                                </p>
+                                {mediaGroups.length > 0 && (
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.07]">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-[#e94f37]" />
+                                            <span className="text-[0.7rem] text-white/40 font-medium">{reviews.length} review{reviews.length !== 1 ? "s" : ""}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.07]">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                            <span className="text-[0.7rem] text-white/40 font-medium">{mediaGroups.length} title{mediaGroups.length !== 1 ? "s" : ""}</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+
+                            {/* Gradient rule */}
+                            <div className="mb-8 h-px bg-gradient-to-r from-[rgb(233,79,55)]/30 via-white/[0.06] to-transparent" />
+
+                            {/* Loading skeletons */}
+                            {reviewsLoading && (
+                                <div className="space-y-5">
+                                    {Array.from({ length: 3 }).map((_, i) => (
+                                        <div key={i} className="h-48 rounded-2xl bg-white/[0.03] animate-pulse border border-white/[0.05]" />
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Empty state */}
+                            {!reviewsLoading && reviews.length === 0 && (
+                                <div className="flex flex-col items-center justify-center py-20 gap-5">
+                                    <div className="relative">
+                                        <div className="w-20 h-20 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
+                                            <Star className="w-9 h-9 text-white/20" />
+                                        </div>
+                                        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#e94f37]/20 border border-[#e94f37]/30 flex items-center justify-center">
+                                            <span className="text-[10px] text-[#e94f37] font-bold">0</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-base font-semibold text-white/60 mb-1">No reviews yet</p>
+                                        <p className="text-sm text-white/30 max-w-xs">Start reviewing movies and TV shows to see them collected here.</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Media group cards — one card per title */}
+                            {!reviewsLoading && mediaGroups.length > 0 && (
+                                <div className="space-y-5">
+                                    {mediaGroups.slice(0, reviewsVisible).map((group, gIdx) => {
+                                        const rep = group.reviews[0];
+                                        const isMovie = rep.mediaType === "MOVIE";
+                                        const href = isMovie ? `/movies/${rep.tmdbId}` : `/tv/${rep.tmdbId}`;
+                                        const poster = rep.tmdbPoster
+                                            ? `https://image.tmdb.org/t/p/w342${rep.tmdbPoster}`
+                                            : null;
+                                        const avgRating = Math.round(
+                                            group.reviews.reduce((s, r) => s + r.rating, 0) / group.reviews.length
+                                        );
+
+                                        return (
+                                            <motion.div
+                                                key={group.key}
+                                                initial={{ opacity: 0, y: 14 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.25, delay: gIdx * 0.06 }}
+                                                className="rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden"
+                                            >
+                                                {/* ── Media header ── */}
+                                                <div className="flex gap-4 p-4 sm:p-5 pb-3 sm:pb-4">
+                                                    {/* Poster */}
+                                                    <Link href={href} className="flex-shrink-0 group/poster">
+                                                        <div className="relative w-16 sm:w-20 aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 ring-1 ring-white/[0.07] group-hover/poster:ring-[#e94f37]/40 transition-all">
+                                                            {poster ? (
+                                                                <Image
+                                                                    src={poster}
+                                                                    alt={rep.tmdbTitle || "Poster"}
+                                                                    fill
+                                                                    className="object-cover transition-transform duration-500 group-hover/poster:scale-105"
+                                                                />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-white/20">
+                                                                    {isMovie ? <Film className="w-6 h-6" /> : <Tv className="w-6 h-6" />}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </Link>
+
+                                                    {/* Title + meta */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="min-w-0">
+                                                                <Link href={href}>
+                                                                    <h3 className="font-black text-lg sm:text-xl leading-tight text-white hover:text-[#e94f37] transition-colors line-clamp-2">
+                                                                        {rep.tmdbTitle || `Title #${rep.tmdbId}`}
+                                                                    </h3>
+                                                                </Link>
+                                                                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                                                    <span className={`inline-flex items-center gap-1 text-[0.62rem] font-bold px-2 py-0.5 rounded-md ${
+                                                                        isMovie
+                                                                            ? "bg-[#e94f37]/10 text-[#e94f37]/80 border border-[#e94f37]/20"
+                                                                            : "bg-blue-500/10 text-blue-400/80 border border-blue-500/20"
+                                                                    }`}>
+                                                                        {isMovie ? <Film className="w-2.5 h-2.5" /> : <Tv className="w-2.5 h-2.5" />}
+                                                                        {isMovie ? "Movie" : "TV Series"}
+                                                                    </span>
+                                                                    {rep.tmdbYear && (
+                                                                        <span className="text-[0.65rem] text-white/30 font-medium">{rep.tmdbYear}</span>
+                                                                    )}
+                                                                    <span className="text-[0.65rem] text-white/25 font-medium">
+                                                                        {group.reviews.length} review{group.reviews.length !== 1 ? "s" : ""}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Avg rating pill */}
+                                                            <div className="flex-shrink-0 flex items-center gap-1 bg-black/40 px-2.5 py-1.5 rounded-xl border border-white/[0.07]">
+                                                                <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                                                                <span className="text-sm font-black text-yellow-400">{avgRating}</span>
+                                                                <span className="text-[0.6rem] text-white/25">/10</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* ── Divider ── */}
+                                                <div className="mx-4 sm:mx-5 h-px bg-white/[0.06]" />
+
+                                                {/* ── Review entries ── */}
+                                                {(() => {
+                                                    const visibleCount = cardReviewsVisible[group.key] ?? 3;
+                                                    const visibleReviews = group.reviews.slice(0, visibleCount);
+                                                    const hasMore = visibleCount < group.reviews.length;
+                                                    const hasLess = visibleCount > 3;
+                                                    return (
+                                                        <>
+                                                            <div className="divide-y divide-white/[0.05]">
+                                                                {visibleReviews.map((review, rIdx) => {
+                                                                    const stars = Math.max(0, Math.min(10, review.rating));
+                                                                    return (
+                                                                        <div key={review.id} className="px-4 sm:px-5 py-3 sm:py-4">
+                                                                            <div className="flex items-start justify-between gap-3 mb-2">
+                                                                                {/* Review number + date */}
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="w-5 h-5 rounded-full bg-[#e94f37]/15 border border-[#e94f37]/25 flex items-center justify-center text-[0.6rem] font-black text-[#e94f37]/70">
+                                                                                        {rIdx + 1}
+                                                                                    </span>
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        <Clock className="w-2.5 h-2.5 text-white/20" />
+                                                                                        <span className="text-[0.62rem] text-white/25">
+                                                                                            {new Date(review.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    {review.status === "FLAGGED" && (
+                                                                                        <span className="text-[0.6rem] font-semibold px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400/80 border border-yellow-500/20">
+                                                                                            Under Review
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+
+                                                                                {/* Per-review rating */}
+                                                                                <div className="flex items-center gap-0.5">
+                                                                                    {Array.from({ length: 10 }).map((_, i) => (
+                                                                                        <div
+                                                                                            key={i}
+                                                                                            className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                                                                                                i < stars ? "bg-yellow-400" : "bg-white/10"
+                                                                                            }`}
+                                                                                        />
+                                                                                    ))}
+                                                                                    <span className="ml-1.5 text-xs font-bold text-yellow-400">{stars}</span>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* Mood emojis */}
+                                                                            {review.moodEmojis?.length > 0 && (
+                                                                                <div className="flex items-center gap-1.5 mb-1.5">
+                                                                                    <span className="text-[0.58rem] uppercase tracking-wider text-white/20 font-semibold">Mood</span>
+                                                                                    {review.moodEmojis.map((emoji, i) => (
+                                                                                        <span key={i} className="text-sm leading-none">{emoji}</span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+
+                                                                            {/* Review text */}
+                                                                            <p className="text-sm text-white/50 leading-relaxed">
+                                                                                {review.content}
+                                                                            </p>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+
+                                                            {/* Per-card expand/collapse */}
+                                                            {(hasMore || hasLess) && (
+                                                                <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-t border-white/[0.05]">
+                                                                    {hasMore && (
+                                                                        <button
+                                                                            onClick={() => setCardReviewsVisible((prev) => ({ ...prev, [group.key]: visibleCount + 3 }))}
+                                                                            className="flex items-center gap-1.5 text-xs text-white/40 font-medium hover:text-white/70 transition-colors"
+                                                                        >
+                                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                                                                            Show {Math.min(3, group.reviews.length - visibleCount)} more review{Math.min(3, group.reviews.length - visibleCount) !== 1 ? "s" : ""}
+                                                                        </button>
+                                                                    )}
+                                                                    {hasMore && hasLess && <span className="text-white/10">·</span>}
+                                                                    {hasLess && (
+                                                                        <button
+                                                                            onClick={() => setCardReviewsVisible((prev) => ({ ...prev, [group.key]: 3 }))}
+                                                                            className="flex items-center gap-1.5 text-xs text-white/25 font-medium hover:text-white/50 transition-colors"
+                                                                        >
+                                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
+                                                                            Collapse
+                                                                        </button>
+                                                                    )}
+                                                                    <span className="ml-auto text-[0.6rem] text-white/20">{Math.min(visibleCount, group.reviews.length)} of {group.reviews.length}</span>
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
+                                            </motion.div>
+                                        );
+                                    })}
+
+                                    {/* Show more / show less controls */}
+                                    {mediaGroups.length > 3 && (
+                                        <div className="flex items-center gap-3 pt-2">
+                                            {reviewsVisible < mediaGroups.length && (
+                                                <button
+                                                    onClick={() => setReviewsVisible((v) => v + 3)}
+                                                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 text-sm font-medium hover:bg-white/[0.07] hover:text-white/80 hover:border-white/[0.15] transition-all"
+                                                >
+                                                    <span>Show {Math.min(3, mediaGroups.length - reviewsVisible)} more</span>
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M6 9l6 6 6-6" />
+                                                    </svg>
+                                                </button>
+                                            )}
+                                            {reviewsVisible > 3 && (
+                                                <button
+                                                    onClick={() => setReviewsVisible(3)}
+                                                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white/30 text-sm font-medium hover:bg-white/[0.05] hover:text-white/60 transition-all"
+                                                >
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M18 15l-6-6-6 6" />
+                                                    </svg>
+                                                    <span>Collapse</span>
+                                                </button>
+                                            )}
+                                            <span className="text-[0.65rem] text-white/20 font-medium">
+                                                {Math.min(reviewsVisible, mediaGroups.length)} of {mediaGroups.length} titles
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>

@@ -3,13 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Building2,
-  Globe2,
-  TrendingUp,
-} from "lucide-react";
+import { Building2, Globe2, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 
 export type MovieDetailsData = {
@@ -215,28 +209,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
   // Carousel helpers
   const [itemsPerView, setItemsPerView] = useState(4.5);
   const [itemWidthPx, setItemWidthPx] = useState<number>(220);
-  const [maxScrollLeft, setMaxScrollLeft] = useState<number>(0);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
   const GAP_PX = 32; // gap-8 = 32px
-  const stepCount = Math.max(1, Math.floor(itemsPerView - 1));
-  const stepPx = Math.round(stepCount * (itemWidthPx + GAP_PX));
-
-  const scrollNext = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const desired = el.scrollLeft + stepPx;
-    const next = Math.min(maxScrollLeft, desired);
-    el.scrollTo({ left: next, behavior: "smooth" });
-  };
-
-  const scrollPrev = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const next = Math.max(0, el.scrollLeft - stepPx);
-    el.scrollTo({ left: next, behavior: "smooth" });
-  };
 
   // Responsive itemsPerView
   useEffect(() => {
@@ -267,12 +240,6 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
       );
       setItemWidthPx(Math.round(computed));
 
-      const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
-      setMaxScrollLeft(maxScroll);
-
-      const sLeft = el.scrollLeft || 0;
-      setCanScrollLeft(sLeft > 5);
-      setCanScrollRight(sLeft < Math.max(0, maxScroll - 5));
     };
 
     compute();
@@ -282,19 +249,9 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
 
     const t = setTimeout(() => compute(), 120);
 
-    const onScroll = () => {
-      const sLeft = el.scrollLeft || 0;
-      setCanScrollLeft(sLeft > 5);
-      setCanScrollRight(
-        sLeft < Math.max(0, el.scrollWidth - el.clientWidth - 5),
-      );
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-
     return () => {
       ro.disconnect();
       clearTimeout(t);
-      el.removeEventListener("scroll", onScroll);
     };
   }, [credits.cast.length, itemsPerView]);
 
@@ -316,38 +273,12 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
             <p className="text-slate-400 text-sm">The faces behind the story</p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href={viewAllHref}
-              className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
-            >
-              View all casts →
-            </Link>
-            {canScrollLeft && (
-              <button
-                onClick={scrollPrev}
-                className="w-10 h-10 rounded-full  bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
-                backdrop-blur-md border border-white/10
-                text-white shadow-lg shadow-black/40
-                hover:scale-110 hover:bg-gradient-to-br hover:from-zinc-800/80 hover:via-neutral-700/60 hover:to-zinc-600/50
-                transition-all duration-300 cursor-pointer flex items-center justify-center shadow-md transition"
-              >
-                <ChevronLeft size={16} />
-              </button>
-            )}
-            {canScrollRight && (
-              <button
-                onClick={scrollNext}
-                className="w-10 h-10 rounded-full  bg-gradient-to-br from-zinc-900/70 via-neutral-800/50 to-zinc-700/40
-                backdrop-blur-md border border-white/10
-                text-white shadow-lg shadow-black/40
-                hover:scale-110 hover:bg-gradient-to-br hover:from-zinc-800/80 hover:via-neutral-700/60 hover:to-zinc-600/50
-                transition-all duration-300 cursor-pointer flex items-center justify-center shadow-md transition"
-              >
-                <ChevronRight size={16} />
-              </button>
-            )}
-          </div>
+          <Link
+            href={viewAllHref}
+            className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
+          >
+            View all casts →
+          </Link>
         </div>
 
         <div
