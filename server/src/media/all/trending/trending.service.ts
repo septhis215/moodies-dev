@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { RedisService } from 'src/redis/redis.service';
 import { TmdbClientService } from '../client/tmdb-client.service';
 import { ContentFilterService } from '../filters/content-filter.service';
 import { RecommendationsService } from '../recommendations/recommendations.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { TmdbAll } from '../types/tmdb.types';
 import { CACHE_TTL, shuffleArray, getRecentDate } from '../utils/helpers';
 
@@ -15,6 +16,7 @@ export class TrendingService {
         private readonly redisService: RedisService,
         private readonly filterService: ContentFilterService,
         private readonly recommendationsService: RecommendationsService,
+        private readonly prismaService: PrismaService,
     ) { }
 
     async getFeatured(limit = 30): Promise<TmdbAll[]> {
@@ -243,59 +245,193 @@ export class TrendingService {
         }
     }
 
-    async getFavorites(limit = 30): Promise<TmdbAll[]> {
+    async getFavorites(userId: string, limit = 30): Promise<TmdbAll[]> {
         if (!this.client.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty favorites');
             return [];
         }
 
+        // Check cache first
+        const cacheKey = `personalized-favorites-${userId}-${limit}`;
+        const cached = await this.redisService.get(cacheKey);
+        if (cached) {
+            try {
+                return (JSON.parse(cached) as TmdbAll[]).slice(0, limit);
+            } catch { }
+        }
+
         try {
-            const MIN_RESULTS = 25;
-            const MAX_PAGES = 5;
-            let collected: TmdbAll[] = [];
+            // Fetch user preferences
+            const user = await this.prismaService.user.findUnique({
+                where: { id: userId },
+                select: {
+                    preferredGenres: true,
+                    preferredLanguages: true,
+                    age: true,
+                },
+            });
 
-            for (let page = 1; page <= MAX_PAGES && collected.length < limit; page++) {
-                const data = await this.client.tmdb(`/trending/all/day?page=${page}`);
-                const results = data?.results ?? [];
-
-                const filtered = results.filter(
-                    (item: any) => item.media_type === 'movie' || item.media_type === 'tv'
-                );
-
-                const clean = this.filterService.filterAdultishContent(filtered);
-                const uniqueItems = Array.from(
-                    new Map(clean.map((item) => [item.id, item])).values()
-                );
-
-                const mapped: TmdbAll[] = uniqueItems.map((m: any) => ({
-                    id: m.id,
-                    title: m.title ?? m.name ?? 'Untitled',
-                    overview: m.overview ?? '',
-                    genres: m.genre_ids
-                        ? m.genre_ids.map((id: number) => this.client.genreMap[id] || 'Unknown')
-                        : [],
-                    poster_path: m.poster_path ?? null,
-                    backdrop_path: m.backdrop_path ?? null,
-                    release_date: m.release_date ?? m.first_air_date ?? null,
-                    vote_average: m.vote_average,
-                    type: m.media_type,
-                }));
-
-                collected.push(...mapped);
+            if (!user) {
+                throw new Error('User not found');
             }
 
-            if (collected.length < MIN_RESULTS) {
-                this.logger.warn(
-                    `Only ${collected.length} favorites collected, less than the minimum ${MIN_RESULTS}`
+            // Validate that user has set preferences
+            if (!user.preferredGenres || user.preferredGenres.length === 0 ||
+                !user.preferredLanguages || user.preferredLanguages.length === 0) {
+                throw new BadRequestException(
+                    'Please complete your profile preferences (genres and languages) to get personalized recommendations.'
                 );
+            }
+
+            // Convert genre names to TMDB genre IDs
+            const genreNameToId = this.createGenreNameToIdMap();
+            const genreIds = user.preferredGenres
+                .slice(0, 3)
+                .map(name => genreNameToId[name])
+                .filter(id => id !== undefined);
+
+            if (genreIds.length === 0) {
+                this.logger.warn(`No valid genres found for user ${userId}`);
+                return [];
+            }
+
+            // Convert language names to TMDB language codes
+            const languageNameToCode = {
+                'English': 'en',
+                'Korean': 'ko',
+                'Spanish': 'es',
+                'French': 'fr',
+                'German': 'de',
+                'Japanese': 'ja',
+                'Chinese': 'zh',
+                'Russian': 'ru',
+                'Italian': 'it',
+                'Portuguese': 'pt',
+                'Hindi': 'hi',
+                'Thai': 'th',
+                'Vietnamese': 'vi',
+                'Turkish': 'tr',
+                'Polish': 'pl',
+            };
+
+            const primaryLanguage = languageNameToCode[user.preferredLanguages[0]] || 'en';
+
+            const collected: TmdbAll[] = [];
+            const seenIds = new Set<number>();
+            const MAX_PAGES = 5;
+
+            // Phase 1: Discover by genres + languages
+            const genreQueryStr = genreIds.join(',');
+
+            const fetchDiscoverPages = async (urlBase: string, mediaType: 'movie' | 'tv') => {
+                for (let page = 1; page <= MAX_PAGES && collected.length < limit * 2; page++) {
+                    try {
+                        const data = await this.client.tmdb(urlBase + `&page=${page}`);
+                        const results = data?.results ?? [];
+                        if (!results.length) break;
+
+                        const filtered = results.filter(
+                            (item: any) => item.media_type === mediaType || (mediaType === 'movie' ? !item.first_air_date : !item.release_date)
+                        );
+
+                        const clean = this.filterService.filterAdultishContent(filtered);
+
+                        for (const item of clean) {
+                            if (!seenIds.has(item.id)) {
+                                const mapped: TmdbAll = {
+                                    id: item.id,
+                                    title: item.title ?? item.name ?? 'Untitled',
+                                    overview: item.overview ?? '',
+                                    genres: item.genre_ids
+                                        ? item.genre_ids.map((id: number) => this.client.genreMap[id] || 'Unknown')
+                                        : [],
+                                    poster_path: item.poster_path ?? null,
+                                    backdrop_path: item.backdrop_path ?? null,
+                                    release_date: item.release_date ?? item.first_air_date ?? null,
+                                    vote_average: item.vote_average,
+                                    vote_count: item.vote_count,
+                                    popularity: item.popularity,
+                                    type: mediaType,
+                                };
+                                collected.push(mapped);
+                                seenIds.add(item.id);
+                            }
+                        }
+
+                        if (data.total_pages && page >= data.total_pages) break;
+                    } catch (e) {
+                        this.logger.debug(`Failed fetching page ${page}`, e);
+                        break;
+                    }
+                }
+            };
+
+            // Discover TV with preferences (genre IDs + language code)
+            const tvUrl = `${this.client.baseUrl}/discover/tv?with_genres=${genreQueryStr}&with_original_language=${primaryLanguage}&sort_by=popularity.desc&include_adult=false`;
+            // Discover Movies with preferences (genre IDs + language code)
+            const movieUrl = `${this.client.baseUrl}/discover/movie?with_genres=${genreQueryStr}&with_original_language=${primaryLanguage}&sort_by=popularity.desc&include_adult=false`;
+
+            await Promise.all([
+                fetchDiscoverPages(tvUrl, 'tv'),
+                fetchDiscoverPages(movieUrl, 'movie'),
+            ]);
+
+            // Phase 2: Fetch smart recommendations for top items to fill gaps
+            if (collected.length < limit) {
+                const topItems = collected.slice(0, Math.ceil(limit / 3));
+                const recTasks = topItems.map(item => async () => {
+                    try {
+                        const recs = await this.recommendationsService.getSmartRecommendations(
+                            item.type as 'movie' | 'tv',
+                            item.id,
+                            3
+                        );
+                        return recs;
+                    } catch {
+                        return [];
+                    }
+                });
+
+                const recResults = await this.client.withConcurrencyLimit(recTasks, 2);
+                for (const recList of recResults) {
+                    for (const rec of recList) {
+                        if (!seenIds.has(rec.id) && collected.length < limit * 1.5) {
+                            collected.push(rec);
+                            seenIds.add(rec.id);
+                        }
+                    }
+                }
+            }
+
+            if (collected.length === 0) {
+                this.logger.warn(`No favorites found for user ${userId} with preferences`);
+                return [];
             }
 
             const shuffled = shuffleArray(collected);
-            return shuffled.slice(0, Math.max(MIN_RESULTS, limit));
+            const sliced = shuffled.slice(0, Math.max(limit, 25));
+
+            await this.redisService.set(cacheKey, JSON.stringify(sliced), CACHE_TTL.BASIC_DATA);
+            return sliced;
         } catch (err) {
-            this.logger.error('Failed to fetch favorites', err as any);
+            if (err instanceof BadRequestException) {
+                throw err;
+            }
+            this.logger.error(`Failed to fetch personalized favorites for user ${userId}`, err as any);
             return [];
         }
+    }
+
+    /**
+     * Creates a reverse mapping from genre names to TMDB genre IDs
+     * Uses the existing genreMap (ID -> Name) to build Name -> ID
+     */
+    private createGenreNameToIdMap(): Record<string, number> {
+        const map: Record<string, number> = {};
+        for (const [id, name] of Object.entries(this.client.genreMap)) {
+            map[name] = Number(id);
+        }
+        return map;
     }
 
     async trending(type: string) {
