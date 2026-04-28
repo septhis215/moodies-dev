@@ -26,7 +26,7 @@ export class AllService implements OnModuleInit {
         private readonly searchService: SearchService,
         private readonly reviewsService: ReviewsService,
         private readonly imagesService: ImagesService,
-    ) {}
+    ) { }
 
     async onModuleInit() {
         await this.tmdbClient.loadGenres();
@@ -36,7 +36,7 @@ export class AllService implements OnModuleInit {
     getFeatured(limit = 30) { return this.trendingService.getFeatured(limit); }
     getTrending(limit = 30) { return this.trendingService.getTrending(limit); }
     getKoreaTrending(limit = 30) { return this.trendingService.getKoreaTrending(limit); }
-    getFavorites(limit = 30) { return this.trendingService.getFavorites(limit); }
+    getFavorites(userId: string, limit = 30) { return this.trendingService.getFavorites(userId, limit); }
     trending(type: string) { return this.trendingService.trending(type); }
 
     // --- Trailers ---

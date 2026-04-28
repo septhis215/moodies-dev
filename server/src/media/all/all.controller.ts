@@ -1,5 +1,6 @@
-import { Controller, Get, Param, ParseIntPipe, Query, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query, Post, Body, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
 import { AllService } from './all.service';
+import { JwtGuard } from 'src/auth/guard';
 
 @Controller('all')
 export class AllController {
@@ -33,10 +34,15 @@ export class AllController {
     return this.allService.getTrailers(parsedLimit);
   }
 
+  @UseGuards(JwtGuard)
   @Get('favorites')
-  async favorites(@Query('limit') limit?: string) {
+  async favorites(@Req() req: any, @Query('limit') limit?: string) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
+    if (!userId) {
+      throw new UnauthorizedException('Invalid token (no user id).');
+    }
     const parsedLimit = limit ? parseInt(limit, 20) : 25;
-    return this.allService.getFavorites(parsedLimit);
+    return this.allService.getFavorites(userId, parsedLimit);
   }
 
   @Get('koreaTrending')
