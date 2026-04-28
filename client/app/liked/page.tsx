@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 import { useToast } from "@/app/context/ToastContext";
 import { sGet } from "@/utils/secureStorage";
+import { RatingBadge } from "@/components/ui/rating-badge";
 
 /* -------------------- Types -------------------- */
 type LikedList = { movieId: string[]; seriesId: string[] };
@@ -609,11 +610,10 @@ function FilterBar({
               <button
                 key={opt.key}
                 onClick={() => onSort(opt.key)}
-                className={`whitespace-nowrap text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
-                  sortKey === opt.key
-                    ? activeClass
-                    : "bg-transparent border-white/[0.08] text-white/40 hover:text-white/70 hover:border-white/[0.15]"
-                }`}
+                className={`whitespace-nowrap text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${sortKey === opt.key
+                  ? activeClass
+                  : "bg-transparent border-white/[0.08] text-white/40 hover:text-white/70 hover:border-white/[0.15]"
+                  }`}
               >
                 {opt.label}
               </button>
@@ -622,13 +622,12 @@ function FilterBar({
         </div>
         <button
           onClick={() => setOpen((o) => !o)}
-          className={`hidden sm:flex shrink-0 items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
-            hasActiveFilters
-              ? activeClass
-              : open
+          className={`hidden sm:flex shrink-0 items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${hasActiveFilters
+            ? activeClass
+            : open
               ? "bg-white/[0.06] border-white/[0.15] text-white/60"
               : "bg-transparent border-white/[0.08] text-white/40 hover:text-white/70 hover:border-white/[0.15]"
-          }`}
+            }`}
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="4" y1="6" x2="20" y2="6" />
@@ -645,13 +644,12 @@ function FilterBar({
       {/* Row 2 (mobile only): full-width Filter button */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className={`sm:hidden w-full flex items-center justify-center gap-2 text-xs px-3 py-2 rounded-lg border transition-all font-medium ${
-          hasActiveFilters
-            ? activeClass
-            : open
+        className={`sm:hidden w-full flex items-center justify-center gap-2 text-xs px-3 py-2 rounded-lg border transition-all font-medium ${hasActiveFilters
+          ? activeClass
+          : open
             ? "bg-white/[0.06] border-white/[0.15] text-white/60"
             : "bg-transparent border-white/[0.08] text-white/40"
-        }`}
+          }`}
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="4" y1="6" x2="20" y2="6" />
@@ -868,11 +866,8 @@ function Card({
 
           {/* Rating */}
           {item.vote_average && (
-            <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-sm rounded-md px-2 py-1 flex items-center gap-1.5">
-              <Star className="w-3 h-3 text-yellow-400 fill-yellow-400 flex-shrink-0" />
-              <span className="text-white text-xs font-semibold leading-none">
-                {item.vote_average.toFixed(1)}
-              </span>
+            <div className="absolute top-2.5 right-2.5">
+              <RatingBadge rating={item.vote_average} variant="colored" size="sm" />
             </div>
           )}
 
@@ -885,11 +880,10 @@ function Card({
                   e.preventDefault();
                   onRemove?.();
                 }}
-                className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-                  busy
-                    ? "bg-white/10 text-white/30 cursor-not-allowed"
-                    : "bg-white/[0.08] backdrop-blur-sm border border-white/[0.12] text-white/70 hover:bg-pink-500/20 hover:border-pink-500/40 hover:text-pink-400"
-                }`}
+                className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${busy
+                  ? "bg-white/10 text-white/30 cursor-not-allowed"
+                  : "bg-white/[0.08] backdrop-blur-sm border border-white/[0.12] text-white/70 hover:bg-pink-500/20 hover:border-pink-500/40 hover:text-pink-400"
+                  }`}
                 title="Unlike"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

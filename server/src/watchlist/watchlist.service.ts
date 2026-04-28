@@ -6,19 +6,25 @@ type Field = 'movieId' | 'seriesId';
 
 @Injectable()
 export class WatchlistService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /** Ensure the user has one watchlist row */
   private async ensureWatchlist(userId: string) {
-    return this.prisma.watchlist.upsert({
+    let watchlist = await this.prisma.watchlist.findFirst({
       where: { userId },
-      update: {},
-      create: {
-        user: { connect: { id: userId } },
-        movieId: [],
-        seriesId: [],
-      },
     });
+
+    if (!watchlist) {
+      watchlist = await this.prisma.watchlist.create({
+        data: {
+          user: { connect: { id: userId } },
+          movieId: [],
+          seriesId: [],
+        },
+      });
+    }
+
+    return watchlist;
   }
 
 

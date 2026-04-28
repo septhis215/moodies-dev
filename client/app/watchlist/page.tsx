@@ -627,11 +627,10 @@ function FilterBar({
               <button
                 key={opt.key}
                 onClick={() => onSort(opt.key)}
-                className={`whitespace-nowrap text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
-                  sortKey === opt.key
+                className={`whitespace-nowrap text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${sortKey === opt.key
                     ? "bg-[rgb(233,79,55)]/15 border-[rgb(233,79,55)]/40 text-[rgb(233,79,55)]"
                     : "bg-transparent border-white/[0.08] text-white/40 hover:text-white/70 hover:border-white/[0.15]"
-                }`}
+                  }`}
               >
                 {opt.label}
               </button>
@@ -641,13 +640,12 @@ function FilterBar({
         {/* Filter button — only shown inline on sm+ */}
         <button
           onClick={() => setOpen((o) => !o)}
-          className={`hidden sm:flex shrink-0 items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${
-            hasActiveFilters
+          className={`hidden sm:flex shrink-0 items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all font-medium ${hasActiveFilters
               ? "bg-[rgb(233,79,55)]/15 border-[rgb(233,79,55)]/40 text-[rgb(233,79,55)]"
               : open
-              ? "bg-white/[0.06] border-white/[0.15] text-white/60"
-              : "bg-transparent border-white/[0.08] text-white/40 hover:text-white/70 hover:border-white/[0.15]"
-          }`}
+                ? "bg-white/[0.06] border-white/[0.15] text-white/60"
+                : "bg-transparent border-white/[0.08] text-white/40 hover:text-white/70 hover:border-white/[0.15]"
+            }`}
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="4" y1="6" x2="20" y2="6" />
@@ -664,13 +662,12 @@ function FilterBar({
       {/* Row 2 (mobile only): full-width Filter button */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className={`sm:hidden w-full flex items-center justify-center gap-2 text-xs px-3 py-2 rounded-lg border transition-all font-medium ${
-          hasActiveFilters
+        className={`sm:hidden w-full flex items-center justify-center gap-2 text-xs px-3 py-2 rounded-lg border transition-all font-medium ${hasActiveFilters
             ? "bg-[rgb(233,79,55)]/15 border-[rgb(233,79,55)]/40 text-[rgb(233,79,55)]"
             : open
-            ? "bg-white/[0.06] border-white/[0.15] text-white/60"
-            : "bg-transparent border-white/[0.08] text-white/40"
-        }`}
+              ? "bg-white/[0.06] border-white/[0.15] text-white/60"
+              : "bg-transparent border-white/[0.08] text-white/40"
+          }`}
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="4" y1="6" x2="20" y2="6" />
@@ -905,7 +902,7 @@ function Card({
 
           {/* Rating — bottom left, part of the natural gradient */}
           <div className="absolute top-2.5 right-2.5">
-            <RatingBadge rating={item.vote_average} variant="minimal" size="sm" />
+            <RatingBadge rating={item.vote_average} variant="colored" size="sm" />
           </div>
 
           {/* Hover overlay */}
@@ -917,11 +914,10 @@ function Card({
                   e.preventDefault();
                   onRemove?.();
                 }}
-                className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-                  busy
+                className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${busy
                     ? "bg-white/10 text-white/30 cursor-not-allowed"
                     : "bg-white/[0.08] backdrop-blur-sm border border-white/[0.12] text-white/70 hover:bg-[rgb(233,79,55)]/20 hover:border-[rgb(233,79,55)]/40 hover:text-[rgb(233,79,55)]"
-                }`}
+                  }`}
                 title="Remove from watchlist"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
