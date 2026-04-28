@@ -31,6 +31,9 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
     intervalMs: cycleMs,
   });
 
+  const [mounted, setMounted] = useState(false);
+  const [thumbnailWindowSize, setThumbnailWindowSize] = useState(5); // default to desktop size
+
   const router = useRouter();
 
   const getContentType = (item: Partial<All>): "movie" | "tv" => {
@@ -120,6 +123,25 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
     });
   }, [index, all]);
 
+  // Handle window-dependent sizing after mount to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+
+    const updateThumbnailSize = () => {
+      if (window.innerWidth <= 640) {
+        setThumbnailWindowSize(3);
+      } else if (window.innerWidth <= 1024) {
+        setThumbnailWindowSize(4);
+      } else {
+        setThumbnailWindowSize(5);
+      }
+    };
+
+    updateThumbnailSize();
+    window.addEventListener("resize", updateThumbnailSize);
+    return () => window.removeEventListener("resize", updateThumbnailSize);
+  }, []);
+
   if (!all || all.length === 0) {
     return (
       <section className="h-[60vh] flex items-center justify-center bg-gray-900 text-white">
@@ -128,20 +150,11 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
     );
   }
 
-  // Get dynamic thumbnail window size based on screen size
-  const getThumbnailWindowSize = () => {
-    if (typeof window !== "undefined") {
-      if (window.innerWidth <= 640) return 3; // mobile: 3 thumbnails
-      if (window.innerWidth <= 1024) return 4; // tablet: 4 thumbnails
-      return 5; // desktop: 5 thumbnails
-    }
-    return 5;
-  };
-
+  // Use state-based thumbnail window size (set in useEffect after mount)
   const thumbnailWindow = getThumbnailWindow(
     all,
     index,
-    getThumbnailWindowSize()
+    thumbnailWindowSize
   );
 
   const goToList = () => {
@@ -161,33 +174,24 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
       <div className="absolute center inset-0">
         {all.map((m, i) => {
           const active = i === index;
-          // Responsive image sizing
-          const getImageSize = () => {
-            if (typeof window !== "undefined") {
-              if (window.innerWidth < 640) return "w780"; // mobile
-              if (window.innerWidth < 1024) return "w1280";
-              return active ? "original" : "w780"; // desktop
-            }
-            return "original";
-          };
-
+          // Use consistent image size to avoid hydration mismatch
+          // w1280 is a good balance for all screen sizes
           const src =
-            tmdbImage(m.backdrop_path || m.poster_path, getImageSize()) ??
+            tmdbImage(m.backdrop_path || m.poster_path, "w1280") ??
             "/placeholder-backdrop.svg";
 
           return (
             <div
               key={m.id}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                active ? "opacity-100" : "opacity-0 pointer-events-none"
-              }`}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${active ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
               aria-hidden={!active}
             >
               <Image
                 src={src}
                 alt=""
                 fill
-                priority
+                priority={active}
                 aria-hidden
                 className="w-full h-full object-cover object-center"
                 style={{
@@ -269,7 +273,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                       <IconClock size={12} />
                       <span>
                         {new Date(all[index].release_date).toLocaleDateString(
-                          undefined,
+                          "en-US",
                           {
                             month: "short",
                             year: "numeric",
@@ -310,10 +314,9 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                     onClick={toggleWatchlist}
                     disabled={wlLoading}
                     className={`px-6 py-3 text-sm font-medium rounded-lg backdrop-blur-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer border
-                      ${
-                        currentInWatchlist
-                          ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-                          : "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      ${currentInWatchlist
+                        ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
+                        : "bg-white/10 border-white/20 text-white hover:bg-white/20"
                       }`}
                     title={
                       currentInWatchlist
@@ -372,7 +375,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                     >
                       <IconClock size={14} />
                       {new Date(all[index].release_date).toLocaleDateString(
-                        undefined,
+                        "en-US",
                         {
                           month: "short",
                           day: "numeric",
@@ -426,10 +429,9 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                     onClick={toggleWatchlist}
                     disabled={wlLoading}
                     className={`px-6 xl:px-8 py-3 xl:py-4 text-base xl:text-lg font-medium rounded-lg backdrop-blur-md transition-all duration-200 flex items-center gap-2 cursor-pointer border
-                      ${
-                        currentInWatchlist
-                          ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-                          : "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                      ${currentInWatchlist
+                        ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
+                        : "bg-white/10 border-white/20 text-white hover:bg-white/20"
                       }`}
                     title={
                       currentInWatchlist
@@ -457,7 +459,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
               {/* Right: Thumbnails */}
               <div className="flex-shrink-0">
                 <div className="flex gap-3 xl:gap-4">
-                  {thumbnailWindow.map((m) => {
+                  {mounted && thumbnailWindow.map((m) => {
                     const i = all.findIndex((g) => g.id === m.id);
                     return (
                       <HeroThumbnail
