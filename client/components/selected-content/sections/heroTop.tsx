@@ -587,17 +587,24 @@ export function HeroContentCard({
     } as React.CSSProperties,
 
     bg: {
-      position: "fixed" as const,
+      position: "absolute" as const,
       inset: 0,
-      zIndex: -1,
+      zIndex: 1,
+      width: "100%",
+      height: "100%",
+      display: "block",
+      alignItems: "stretch",
+      justifyContent: "stretch",
     } as React.CSSProperties,
 
     /* Two-column grid that collapses naturally */
     layout: {
+      position: "relative" as const,
       display: "grid",
       gridTemplateColumns: "min(38vw, 320px) 1fr",
       gridTemplateRows: "auto",
       gap: 0,
+      zIndex: 5,
       minHeight: "100svh",
       maxWidth: 1200,
       margin: "0 auto",
@@ -836,7 +843,7 @@ export function HeroContentCard({
             style={{
               objectFit: "cover",
               objectPosition: "center 30%",
-              filter: "brightness(0.35) saturate(0.6)",
+              filter: "brightness(0.35) saturate(0.7)",
             }}
           />
           {/* Vignette */}
