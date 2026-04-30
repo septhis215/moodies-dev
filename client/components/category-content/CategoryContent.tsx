@@ -16,7 +16,9 @@ import {
   Loader2,
   Tv,
   Film,
+  Rat,
 } from "lucide-react";
+import RatingBadge from "../ui/rating-badge";
 
 // Unified interface for both movies and TV series
 interface MediaItem {
@@ -203,7 +205,7 @@ export function CategoryContent({
                   <Link
                     key={item.id}
                     href={getDetailUrl(item)}
-                    className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 ring-1 ring-white/10 shadow-2xl hover:ring-[#e94f37]/50 transition-all duration-500 flex flex-col"
+                    className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 ring-1 ring-white/10 shadow-2xl hover:ring-[#e94f37]/60 transition-all duration-500 flex flex-col"
                   >
                     {/* Rank Badge */}
                     <div className="absolute top-3 left-3 z-20">
@@ -269,13 +271,8 @@ export function CategoryContent({
                       <div className="space-y-3 mt-4">
                         {/* Rating and Date */}
                         <div className="flex flex-wrap items-center gap-3">
-                          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 backdrop-blur-sm rounded-full ring-1 ring-amber-500/30">
-                            <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                            <span className="text-sm font-bold">
-                              {item.vote_average > 0
-                                ? item.vote_average.toFixed(1)
-                                : "New"}
-                            </span>
+                          <div className="flex items-center gap-1.5 ">
+                            <RatingBadge rating={item.vote_average} variant="colored" size="md" />
                           </div>
 
                           <div className="flex items-center gap-1.5 text-sm text-gray-400">
@@ -310,23 +307,17 @@ export function CategoryContent({
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex gap-3 pt-1">
+                        {/* <div className="flex gap-3 pt-1">
                           <Link
                             href={getDetailUrl(item)}
-                            className="flex-1 px-4 py-3 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d44530] hover:to-[#ff5a47] rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Play className="w-4 h-4" />
-                            Watch Now
-                          </Link>
-                          <Link
-                            href={getDetailUrl(item)}
-                            className="px-4 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl font-bold transition-all flex items-center justify-center gap-2 hover:scale-105"
+                            className="flex-1 px-4 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <Info className="w-4 h-4" />
+                            More Info
                           </Link>
-                        </div>
+
+                        </div> */}
                       </div>
                     </div>
                   </Link>
@@ -357,13 +348,8 @@ export function CategoryContent({
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
                       {/* Rating Badge */}
-                      <div className="absolute top-2 right-2 bg-black/90 backdrop-blur-md px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg ring-1 ring-white/10">
-                        <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                        <span className="text-xs font-bold">
-                          {item.vote_average > 0
-                            ? item.vote_average.toFixed(1)
-                            : "New"}
-                        </span>
+                      <div className="absolute top-2 right-2 ">
+                        <RatingBadge rating={item.vote_average} variant="colored" />
                       </div>
 
                       {/* Content Type Badge - Bottom Left (hidden on hover) */}
@@ -458,8 +444,8 @@ export function CategoryContent({
                     onClick={() => handlePageChange(pageNum)}
                     disabled={isPending}
                     className={`w-10 h-10 rounded-lg font-bold transition-all disabled:cursor-not-allowed ${pageNum === currentPage
-                        ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white"
-                        : "bg-white/10 hover:bg-white/20"
+                      ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white"
+                      : "bg-white/10 hover:bg-white/20"
                       } ${isPending ? "opacity-50" : ""}`}
                   >
                     {pageNum}

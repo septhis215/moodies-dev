@@ -26,6 +26,7 @@ import {
     Zap,
     BookmarkCheck,
     ThumbsUp,
+    Rat,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -36,6 +37,7 @@ import { useScrollToHash } from "@/hooks/useScrollToHash";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { Carousel } from "@/components/ui/Carousel";
+import RatingBadge from "@/components/ui/rating-badge";
 export default function MoviesHomePageClient({
     trendingMovies,
     popularMovies,
@@ -144,11 +146,8 @@ export default function MoviesHomePageClient({
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
 
                         {/* Rating */}
-                        <div className="absolute top-3 right-3 bg-black/80 backdrop-blur text-white px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ring-1 ring-white/10">
-                            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                            {show.vote_average && show.vote_average > 0
-                                ? show.vote_average.toFixed(1)
-                                : "New"}
+                        <div className="absolute top-3 right-3 ">
+                            <RatingBadge rating={show.vote_average} variant="colored" size="sm" />
                         </div>
 
                         {/* ACTIONS */}
@@ -415,13 +414,8 @@ export default function MoviesHomePageClient({
                                                 </span>
                                             )}
                                             {featured?.vote_average !== undefined && (
-                                                <div className="flex items-center gap-1.5 px-4 py-2 bg-amber-500/20 backdrop-blur-sm rounded-full ring-1 ring-amber-500/30">
-                                                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                                                    <span className="text-xs font-bold text-white">
-                                                        {featured.vote_average > 0
-                                                            ? featured.vote_average.toFixed(1)
-                                                            : "New"}
-                                                    </span>
+                                                <div className="flex items-center gap-1.5 ">
+                                                    <RatingBadge rating={featured.vote_average} variant="colored" size="md" />
                                                 </div>
                                             )}
 
@@ -532,13 +526,8 @@ s                                                    ${featuredInWatchlist
                                             </h3>
 
                                             <div className="flex items-center gap-4 text-sm">
-                                                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 backdrop-blur-sm rounded-full">
-                                                    <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                                                    <span className="font-bold text-white">
-                                                        {movie.vote_average && movie.vote_average > 0
-                                                            ? movie.vote_average.toFixed(1)
-                                                            : "New"}
-                                                    </span>
+                                                <div className="flex items-center gap-1.5 ">
+                                                    <RatingBadge rating={movie.vote_average} variant="minimal" size="md" />
                                                 </div>
 
                                                 <span className="text-gray-300 font-semibold">
@@ -613,13 +602,7 @@ s                                                    ${featuredInWatchlist
 
                                             <div className="flex items-center gap-6">
                                                 <div className="flex items-center gap-2">
-                                                    <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-                                                    <span className="font-bold text-lg text-white">
-                                                        {newReleaseMovies[0].vote_average &&
-                                                            newReleaseMovies[0].vote_average > 0
-                                                            ? newReleaseMovies[0].vote_average.toFixed(1)
-                                                            : "New"}
-                                                    </span>
+                                                    <RatingBadge rating={newReleaseMovies[0].vote_average} variant="colored" size="md" />
                                                 </div>
                                                 <span className="text-gray-300 font-semibold">
                                                     {newReleaseMovies[0].release_date}
@@ -657,12 +640,7 @@ s                                                    ${featuredInWatchlist
 
                                                 <div className="flex items-center gap-3 text-sm">
                                                     <div className="flex items-center gap-1">
-                                                        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                                                        <span className="font-bold text-white">
-                                                            {movie.vote_average && movie.vote_average > 0
-                                                                ? movie.vote_average.toFixed(1)
-                                                                : "New"}
-                                                        </span>
+                                                        <RatingBadge rating={movie.vote_average} variant="colored" size="sm" />
                                                     </div>
                                                     <span className="text-gray-400 font-semibold">
                                                         {movie.release_date?.split("-")[0]}
