@@ -251,17 +251,15 @@ export class TrendingService {
             return [];
         }
 
-        // Check cache first
-        const cacheKey = `personalized-favorites-${userId}-${limit}`;
-        const cached = await this.redisService.get(cacheKey);
-        if (cached) {
-            try {
-                return (JSON.parse(cached) as TmdbAll[]).slice(0, limit);
-            } catch { }
-        }
+        // const cacheKey = `personalized-favorites-v2-${userId}-${limit}`;
+        // const cached = await this.redisService.get(cacheKey);
+        // if (cached) {
+        //     try {
+        //         return (JSON.parse(cached) as TmdbAll[]).slice(0, limit);
+        //     } catch { }
+        // }
 
         try {
-            // Fetch user preferences
             const user = await this.prismaService.user.findUnique({
                 where: { id: userId },
                 select: {
@@ -271,152 +269,361 @@ export class TrendingService {
                 },
             });
 
-            if (!user) {
-                throw new Error('User not found');
-            }
+            if (!user) throw new Error('User not found');
 
-            // Validate that user has set preferences
-            if (!user.preferredGenres || user.preferredGenres.length === 0 ||
-                !user.preferredLanguages || user.preferredLanguages.length === 0) {
+            if (
+                !user.preferredGenres || user.preferredGenres.length === 0 ||
+                !user.preferredLanguages || user.preferredLanguages.length === 0
+            ) {
                 throw new BadRequestException(
                     'Please complete your profile preferences (genres and languages) to get personalized recommendations.'
                 );
             }
 
-            // Convert genre names to TMDB genre IDs
+            // ─── Genre + Language Resolution ───
             const genreNameToId = this.createGenreNameToIdMap();
             const genreIds = user.preferredGenres
                 .slice(0, 3)
                 .map(name => genreNameToId[name])
-                .filter(id => id !== undefined);
+                .filter((id): id is number => id !== undefined);
 
             if (genreIds.length === 0) {
                 this.logger.warn(`No valid genres found for user ${userId}`);
                 return [];
             }
 
-            // Convert language names to TMDB language codes
-            const languageNameToCode = {
-                'English': 'en',
-                'Korean': 'ko',
-                'Spanish': 'es',
-                'French': 'fr',
-                'German': 'de',
-                'Japanese': 'ja',
-                'Chinese': 'zh',
-                'Russian': 'ru',
-                'Italian': 'it',
-                'Portuguese': 'pt',
-                'Hindi': 'hi',
-                'Thai': 'th',
-                'Vietnamese': 'vi',
-                'Turkish': 'tr',
-                'Polish': 'pl',
+            const languageNameToCode: Record<string, string> = {
+                English: 'en', Korean: 'ko', Spanish: 'es', French: 'fr',
+                German: 'de', Japanese: 'ja', Chinese: 'zh', Russian: 'ru',
+                Italian: 'it', Portuguese: 'pt', Hindi: 'hi', Thai: 'th',
+                Vietnamese: 'vi', Turkish: 'tr', Polish: 'pl',
             };
 
-            const primaryLanguage = languageNameToCode[user.preferredLanguages[0]] || 'en';
+            // Support up to 2 preferred languages for wider discovery
+            const preferredLangCodes = user.preferredLanguages
+                .slice(0, 2)
+                .map(l => languageNameToCode[l])
+                .filter(Boolean);
+            const primaryLang = preferredLangCodes[0] ?? 'en';
+            const secondaryLang = preferredLangCodes[1] ?? null;
 
-            const collected: TmdbAll[] = [];
+            // ─── Scoring Helpers ────
+            const currentYear = new Date().getFullYear();
+
+            /**
+             * Composite relevance score combining:
+             *  - Vote average (quality signal, normalised 0–1)
+             *  - TMDB popularity (editorial trending signal)
+             *  - Recency      (favour content released in last 3 years)
+             *  - Genre overlap (how many preferred genres match)
+             *  - Language match (whether item's language matches preferred languages)
+             *
+             * Weights are tuned to prioritize genre and language equally.
+             * Note: Vote count confidence is removed to avoid filtering out titles
+             * without many votes but high quality content.
+             */
+            const scoreItem = (item: TmdbAll, itemGenreIds: number[], itemOriginalLanguage: string): number => {
+                const qualityScore = (item.vote_average ?? 0) / 10;          // 0–1
+                const popularityScore = Math.min((item.popularity ?? 0) / 500, 1);               // 0–1
+
+                const releaseYear = item.release_date
+                    ? new Date(item.release_date).getFullYear()
+                    : currentYear - 5;
+                const age = Math.max(currentYear - releaseYear, 0);
+                const recencyScore = age <= 1 ? 1 : age <= 3 ? 0.8 : age <= 6 ? 0.5 : 0.2;
+
+                const genreOverlap = itemGenreIds.filter(id => genreIds.includes(id)).length;
+                const genreScore = Math.min(genreOverlap / genreIds.length, 1);
+
+                // Language score: prioritize items matching preferred languages
+                const languageScore = preferredLangCodes.includes(itemOriginalLanguage) ? 1 : 0;
+
+                return (
+                    qualityScore * 0.15 +
+                    popularityScore * 0.10 +
+                    recencyScore * 0.10 +
+                    genreScore * 0.30 +
+                    languageScore * 0.35
+                );
+            };
+
+            // ─── Fetch Strategy ───
+            // We fetch from 4 independent pools per media type to maximise signal diversity:
+            //   1. Genre + primary language discover (most personalised)
+            //   2. Genre-only discover (catches popular titles in other languages)
+            //   3. Top-rated endpoint (quality floor)
+            //   4. Trending weekly (freshness signal)
+            // Each pool targets `limit` items so we have enough to rank against.
+
+            interface RawItem {
+                id: number;
+                title?: string;
+                name?: string;
+                overview?: string;
+                genre_ids?: number[];
+                poster_path?: string | null;
+                backdrop_path?: string | null;
+                release_date?: string;
+                first_air_date?: string;
+                vote_average?: number;
+                vote_count?: number;
+                popularity?: number;
+                media_type?: string;
+                original_language?: string;
+            }
+
+            const MAX_PAGES = 4; // per endpoint — keeps latency reasonable
             const seenIds = new Set<number>();
-            const MAX_PAGES = 5;
 
-            // Phase 1: Discover by genres + languages
-            const genreQueryStr = genreIds.join(',');
+            // Scored intermediate store before splitting by type
+            const scoredMovies: Array<TmdbAll & { _score: number }> = [];
+            const scoredTv: Array<TmdbAll & { _score: number }> = [];
 
-            const fetchDiscoverPages = async (urlBase: string, mediaType: 'movie' | 'tv') => {
-                for (let page = 1; page <= MAX_PAGES && collected.length < limit * 2; page++) {
+            const pushItem = (raw: RawItem, mediaType: 'movie' | 'tv') => {
+                if (seenIds.has(raw.id)) return;
+                seenIds.add(raw.id);
+
+                const mapped: TmdbAll = {
+                    id: raw.id,
+                    title: raw.title ?? raw.name ?? 'Untitled',
+                    overview: raw.overview ?? '',
+                    genres: (raw.genre_ids ?? []).map((id: number) => this.client.genreMap[id] ?? 'Unknown'),
+                    poster_path: raw.poster_path ?? null,
+                    backdrop_path: raw.backdrop_path ?? null,
+                    release_date: raw.release_date ?? raw.first_air_date ?? null,
+                    vote_average: raw.vote_average ?? 0,
+                    vote_count: raw.vote_count ?? 0,
+                    popularity: raw.popularity ?? 0,
+                    type: mediaType,
+                    original_language: raw.original_language ?? 'en',
+                };
+
+                const scored = { ...mapped, _score: scoreItem(mapped, raw.genre_ids ?? [], raw.original_language ?? 'en') };
+                if (mediaType === 'movie') scoredMovies.push(scored);
+                else scoredTv.push(scored);
+            };
+
+            // Helper: fetch paginated discover/list endpoint
+            const fetchPages = async (
+                baseUrl: string,
+                mediaType: 'movie' | 'tv',
+                maxPages = MAX_PAGES,
+                targetCount = limit,
+            ) => {
+                for (let page = 1; page <= maxPages; page++) {
+                    const pool = mediaType === 'movie' ? scoredMovies : scoredTv;
+                    if (pool.length >= targetCount * 2) break;
                     try {
-                        const data = await this.client.tmdb(urlBase + `&page=${page}`);
-                        const results = data?.results ?? [];
+                        const data = await this.client.tmdb(`${baseUrl}&page=${page}`);
+                        const results: RawItem[] = data?.results ?? [];
                         if (!results.length) break;
 
-                        const filtered = results.filter(
-                            (item: any) => item.media_type === mediaType || (mediaType === 'movie' ? !item.first_air_date : !item.release_date)
+                        // Minimum quality gate: skip very low-rated items (< 5.0) with enough votes
+                        const qualified = results.filter(
+                            r => !(r.vote_count && r.vote_count > 50 && (r.vote_average ?? 0) < 5.0)
                         );
-
-                        const clean = this.filterService.filterAdultishContent(filtered);
-
-                        for (const item of clean) {
-                            if (!seenIds.has(item.id)) {
-                                const mapped: TmdbAll = {
-                                    id: item.id,
-                                    title: item.title ?? item.name ?? 'Untitled',
-                                    overview: item.overview ?? '',
-                                    genres: item.genre_ids
-                                        ? item.genre_ids.map((id: number) => this.client.genreMap[id] || 'Unknown')
-                                        : [],
-                                    poster_path: item.poster_path ?? null,
-                                    backdrop_path: item.backdrop_path ?? null,
-                                    release_date: item.release_date ?? item.first_air_date ?? null,
-                                    vote_average: item.vote_average,
-                                    vote_count: item.vote_count,
-                                    popularity: item.popularity,
-                                    type: mediaType,
-                                };
-                                collected.push(mapped);
-                                seenIds.add(item.id);
-                            }
-                        }
+                        const clean = this.filterService.filterAdultishContent(qualified);
+                        clean.forEach(r => pushItem(r, mediaType));
 
                         if (data.total_pages && page >= data.total_pages) break;
                     } catch (e) {
-                        this.logger.debug(`Failed fetching page ${page}`, e);
+                        this.logger.debug(`Failed fetching page ${page} of ${baseUrl}`, e);
                         break;
                     }
                 }
             };
 
-            // Discover TV with preferences (genre IDs + language code)
-            const tvUrl = `${this.client.baseUrl}/discover/tv?with_genres=${genreQueryStr}&with_original_language=${primaryLanguage}&sort_by=popularity.desc&include_adult=false`;
-            // Discover Movies with preferences (genre IDs + language code)
-            const movieUrl = `${this.client.baseUrl}/discover/movie?with_genres=${genreQueryStr}&with_original_language=${primaryLanguage}&sort_by=popularity.desc&include_adult=false`;
+            const genreStr = genreIds.join(',');
+            const base = this.client.baseUrl;
+            const adultParam = 'include_adult=false';
 
-            await Promise.all([
-                fetchDiscoverPages(tvUrl, 'tv'),
-                fetchDiscoverPages(movieUrl, 'movie'),
-            ]);
+            // Build URL sets for both languages (primary is always included)
+            const langUrls = (type: 'movie' | 'tv', extraParams = '') => {
+                const endpoint = type === 'movie' ? 'movie' : 'tv';
+                const langKey = type === 'movie' ? 'with_original_language' : 'with_original_language';
+                const urls: string[] = [
+                    // Pool 1 – genre + primary language, sorted by popularity
+                    `${base}/discover/${endpoint}?with_genres=${genreStr}&${langKey}=${primaryLang}&sort_by=popularity.desc&${adultParam}${extraParams}`,
+                    // Pool 2 – genre only, sorted by popularity (catches non-primary-lang hits)
+                    `${base}/discover/${endpoint}?with_genres=${genreStr}&sort_by=popularity.desc&${adultParam}${extraParams}`,
+                    // Pool 3 – genre + primary language, sorted by vote average (quality focus)
+                    `${base}/discover/${endpoint}?with_genres=${genreStr}&${langKey}=${primaryLang}&sort_by=vote_average.desc&vote_count.gte=200&${adultParam}${extraParams}`,
+                    // Pool 4 – genre only, sorted by release date (freshness focus)
+                    `${base}/discover/${endpoint}?with_genres=${genreStr}&sort_by=primary_release_date.desc&vote_count.gte=50&${adultParam}${extraParams}`,
+                ];
+                if (secondaryLang) {
+                    urls.push(
+                        `${base}/discover/${endpoint}?with_genres=${genreStr}&${langKey}=${secondaryLang}&sort_by=popularity.desc&${adultParam}${extraParams}`
+                    );
+                }
+                return urls;
+            };
 
-            // Phase 2: Fetch smart recommendations for top items to fill gaps
-            if (collected.length < limit) {
-                const topItems = collected.slice(0, Math.ceil(limit / 3));
-                const recTasks = topItems.map(item => async () => {
+            // Pool 5 – trending weekly (real-time freshness, not genre-filtered)
+            const trendingMovieUrl = `${base}/trending/movie/week?${adultParam}`;
+            const trendingTvUrl = `${base}/trending/tv/week?${adultParam}`;
+            // Pool 6 – top-rated (all-time quality floor)
+            const topRatedMovieUrl = `${base}/movie/top_rated?language=${primaryLang}&${adultParam}`;
+            const topRatedTvUrl = `${base}/tv/top_rated?language=${primaryLang}&${adultParam}`;
+
+            // Run all pools concurrently (6 movie + 6 TV streams)
+            const movieFetches = [
+                ...langUrls('movie').map(url => fetchPages(url, 'movie')),
+                fetchPages(trendingMovieUrl, 'movie', 2),
+                fetchPages(topRatedMovieUrl, 'movie', 2),
+            ];
+            const tvFetches = [
+                ...langUrls('tv').map(url => fetchPages(url, 'tv')),
+                fetchPages(trendingTvUrl, 'tv', 2),
+                fetchPages(topRatedTvUrl, 'tv', 2),
+            ];
+
+            await Promise.all([...movieFetches, ...tvFetches]);
+
+            // ─── Phase 2: Smart Recommendations Gap-fill ─────────────────────────────
+            // Only triggered when either bucket is thin; uses top-scored seeds.
+            const HALF = Math.ceil(limit / 2);
+
+            const maybeGapFill = async (
+                pool: Array<TmdbAll & { _score: number }>,
+                mediaType: 'movie' | 'tv',
+            ) => {
+                if (pool.length >= HALF) return;
+                const seeds = pool.slice(0, 5); // top-5 by insertion order (already quality-gated)
+                const tasks = seeds.map(seed => async () => {
                     try {
-                        const recs = await this.recommendationsService.getSmartRecommendations(
-                            item.type as 'movie' | 'tv',
-                            item.id,
-                            3
+                        return await this.recommendationsService.getSmartRecommendations(
+                            mediaType, seed.id, 5
                         );
-                        return recs;
                     } catch {
                         return [];
                     }
                 });
-
-                const recResults = await this.client.withConcurrencyLimit(recTasks, 2);
-                for (const recList of recResults) {
-                    for (const rec of recList) {
-                        if (!seenIds.has(rec.id) && collected.length < limit * 1.5) {
-                            collected.push(rec);
-                            seenIds.add(rec.id);
-                        }
+                const results = await this.client.withConcurrencyLimit(tasks, 2);
+                for (const list of results) {
+                    for (const rec of list) {
+                        pushItem(rec as RawItem, mediaType);
                     }
                 }
+            };
+
+            await Promise.all([
+                maybeGapFill(scoredMovies, 'movie'),
+                maybeGapFill(scoredTv, 'tv'),
+            ]);
+
+            // ─── Ranking & Balanced Merge ───
+            // Sort each bucket by composite score descending
+            scoredMovies.sort((a, b) => b._score - a._score);
+            scoredTv.sort((a, b) => b._score - a._score);
+
+            // ─── Phase 3a: Dynamic Movie/TV Balancing ─────────────────────────────
+            // Ensure proportional representation: aim for 45-55% split per type
+            // This guarantees users see a healthy mix of both movies and series
+
+            const MIN_TYPE_PERCENTAGE = 0.40;  // Minimum 40% of one type
+            const MAX_TYPE_PERCENTAGE = 0.60;  // Maximum 60% of one type
+
+            // Calculate available items from each type
+            const totalAvailable = scoredMovies.length + scoredTv.length;
+
+            let finalMovies: Array<TmdbAll & { _score: number }>;
+            let finalTv: Array<TmdbAll & { _score: number }>;
+
+            if (scoredMovies.length === 0) {
+                // Only TV available
+                finalMovies = [];
+                finalTv = scoredTv.slice(0, limit);
+            } else if (scoredTv.length === 0) {
+                // Only movies available
+                finalMovies = scoredMovies.slice(0, limit);
+                finalTv = [];
+            } else {
+                // Both types available: ensure balanced split
+                const minMovies = Math.floor(limit * MIN_TYPE_PERCENTAGE);
+                const maxMovies = Math.ceil(limit * MAX_TYPE_PERCENTAGE);
+                const minTv = Math.floor(limit * MIN_TYPE_PERCENTAGE);
+                const maxTv = Math.ceil(limit * MAX_TYPE_PERCENTAGE);
+
+                let movieCount = Math.ceil(limit / 2);
+                let tvCount = Math.floor(limit / 2);
+
+                // Adjust if one type has insufficient content
+                if (scoredMovies.length < movieCount) {
+                    movieCount = Math.min(scoredMovies.length, maxMovies);
+                    tvCount = Math.min(limit - movieCount, scoredTv.length);
+                } else if (scoredTv.length < tvCount) {
+                    tvCount = Math.min(scoredTv.length, maxTv);
+                    movieCount = Math.min(limit - tvCount, scoredMovies.length);
+                }
+
+                // Enforce minimum representation from each type
+                if (movieCount < minMovies && scoredMovies.length >= minMovies) {
+                    movieCount = minMovies;
+                    tvCount = Math.min(limit - movieCount, scoredTv.length);
+                }
+                if (tvCount < minTv && scoredTv.length >= minTv) {
+                    tvCount = minTv;
+                    movieCount = Math.min(limit - tvCount, scoredMovies.length);
+                }
+
+                finalMovies = scoredMovies.slice(0, movieCount);
+                finalTv = scoredTv.slice(0, tvCount);
             }
 
-            if (collected.length === 0) {
+            if (finalMovies.length === 0 && finalTv.length === 0) {
                 this.logger.warn(`No favorites found for user ${userId} with preferences`);
                 return [];
             }
 
-            const shuffled = shuffleArray(collected);
-            const sliced = shuffled.slice(0, Math.max(limit, 25));
-
-            await this.redisService.set(cacheKey, JSON.stringify(sliced), CACHE_TTL.BASIC_DATA);
-            return sliced;
-        } catch (err) {
-            if (err instanceof BadRequestException) {
-                throw err;
+            // Interleave movies and TV so the feed feels varied (not all movies then all TV)
+            const interleaved: TmdbAll[] = [];
+            const mLen = finalMovies.length;
+            const tLen = finalTv.length;
+            const maxLen = Math.max(mLen, tLen);
+            for (let i = 0; i < maxLen; i++) {
+                if (i < mLen) interleaved.push(finalMovies[i]);
+                if (i < tLen) interleaved.push(finalTv[i]);
             }
+
+            let result = interleaved.slice(0, limit);
+
+            // ─── Phase 3b: Language Diversity Assurance ─────────────────────────────
+            // Ensure representation from secondary languages if available
+            if (secondaryLang && preferredLangCodes.length > 1) {
+                const secondaryLangCode = preferredLangCodes[1];
+                const secondaryItems = interleaved.filter(
+                    item => (item as any).original_language === secondaryLangCode
+                );
+
+                // Guarantee 1-3 items from secondary language if available
+                const minSecondaryItems = Math.min(3, Math.max(1, Math.floor(limit * 0.15)));
+                const currentSecondaryCount = result.filter(
+                    item => (item as any).original_language === secondaryLangCode
+                ).length;
+
+                if (currentSecondaryCount < minSecondaryItems && secondaryItems.length > currentSecondaryCount) {
+                    // Replace lowest-scored items with secondary language items
+                    const neededCount = Math.min(minSecondaryItems - currentSecondaryCount, secondaryItems.length);
+                    const availableSecondary = secondaryItems.filter(
+                        s => !result.includes(s)
+                    ).slice(0, neededCount);
+
+                    if (availableSecondary.length > 0) {
+                        // Remove items with lowest scores to make room
+                        result = result
+                            .slice(0, result.length - availableSecondary.length)
+                            .concat(availableSecondary)
+                            .slice(0, limit);
+                    }
+                }
+            }
+
+            // await this.redisService.set(cacheKey, JSON.stringify(result), CACHE_TTL.BASIC_DATA);
+            return result;
+
+        } catch (err) {
+            if (err instanceof BadRequestException) throw err;
             this.logger.error(`Failed to fetch personalized favorites for user ${userId}`, err as any);
             return [];
         }
