@@ -236,7 +236,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
       const computed = Math.max(
         140,
         (containerWidth - Math.max(0, itemsPerView - 1) * GAP_PX) /
-          itemsPerView,
+        itemsPerView,
       );
       setItemWidthPx(Math.round(computed));
 
@@ -305,12 +305,11 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
                   sizes="176px"
                   className="group-hover:scale-110 transition-transform duration-500"
                 />
-
+                <div className="absolute inset-0 bg-black/15" />
                 {/* Overlay for name & role */}
-                <div className="absolute bottom-0 left-0 right-0 p-3 text-left bg-gradient-to-t from-black/70 via-black/40 to-transparent">
-                  <h3 className="font-semibold text-slate-100 truncate">
-                    {actor.name}
-                  </h3>
+                <div className="absolute bottom-0 left-0 right-0 p-3 text-left bg-gradient-to-t from-black/90 via-black/60 to-transparent">                  <h3 className="font-semibold text-slate-100 truncate">
+                  {actor.name}
+                </h3>
                   <p className="text-slate-300 text-xs truncate italic">
                     {actor.character}
                   </p>
@@ -328,103 +327,103 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
         {(getKeyCrewMembers() || [])
           .filter((item) => item.job)
           .some((item) => item.people?.length) && (
-          <div>
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-                  Key Personnel
-                </h2>
-                <p className="text-slate-400 text-sm">
-                  The creative visionaries behind the film
-                </p>
+            <div>
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+                    Key Personnel
+                  </h2>
+                  <p className="text-slate-400 text-sm">
+                    The creative visionaries behind the film
+                  </p>
+                </div>
+
+                <Link
+                  href={viewAllHref}
+                  className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
+                >
+                  View all personnel →
+                </Link>
               </div>
 
-              <Link
-                href={viewAllHref}
-                className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
-              >
-                View all personnel →
-              </Link>
-            </div>
+              <div className="flex flex-wrap gap-4">
+                {getKeyCrewMembers()
+                  .filter((item) => item.job)
+                  .map((item) =>
+                    item.people.map((person) => (
+                      <div
+                        key={person.id}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
+                          <Image
+                            src={person.profile_path ? `https://image.tmdb.org/t/p/w92${person.profile_path}` : "/placeholder-person.svg"}
+                            alt={person.name}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
 
-            <div className="flex flex-wrap gap-4">
-              {getKeyCrewMembers()
-                .filter((item) => item.job)
-                .map((item) =>
-                  item.people.map((person) => (
-                    <div
-                      key={person.id}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-                    >
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
-                        <Image
-                          src={person.profile_path ? `https://image.tmdb.org/t/p/w92${person.profile_path}` : "/placeholder-person.svg"}
-                          alt={person.name}
-                          width={40}
-                          height={40}
-                          className="w-full h-full object-cover"
-                        />
+                        <div className="flex flex-col">
+                          <span className="text-slate-100 text-sm font-medium leading-tight">
+                            {person.name}
+                          </span>
+                          <span className="text-[10px] uppercase text-slate-400 tracking-wide">
+                            {item.job}
+                          </span>
+                        </div>
                       </div>
-
-                      <div className="flex flex-col">
-                        <span className="text-slate-100 text-sm font-medium leading-tight">
-                          {person.name}
-                        </span>
-                        <span className="text-[10px] uppercase text-slate-400 tracking-wide">
-                          {item.job}
-                        </span>
-                      </div>
-                    </div>
-                  )),
-                )}
+                    )),
+                  )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Timeline Style Crew List */}
         {(getKeyCrewMembers() || [])
           .filter((item) => item.job)
           .some((item) => item.people?.length) && (
-          <div>
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-                  Creative Team
-                </h2>
-                <p className="text-slate-400 text-sm">
-                  "Also" creative visionaries behind the film
-                </p>
-              </div>
+            <div>
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+                    Creative Team
+                  </h2>
+                  <p className="text-slate-400 text-sm">
+                    "Also" creative visionaries behind the film
+                  </p>
+                </div>
 
-              <Link
-                href={viewAllHref}
-                className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
-              >
-                View the team →
-              </Link>
-            </div>
-            <div className="divide-y divide-white/10">
-              {getKeyCrewMembers()
-                .filter((item) => item.job)
-                .map((item) => (
-                  <div
-                    key={item.job}
-                    className="flex justify-between py-3 text-sm"
-                  >
-                    <span className="text-slate-400 uppercase tracking-wide font-medium">
-                      {item.job}
-                    </span>
-                    <div className="text-slate-100 font-medium">
-                      {item.people
-                        .map((person) => person.name)
-                        .slice(0, 3)
-                        .join(", ")}
+                <Link
+                  href={viewAllHref}
+                  className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
+                >
+                  View the team →
+                </Link>
+              </div>
+              <div className="divide-y divide-white/10">
+                {getKeyCrewMembers()
+                  .filter((item) => item.job)
+                  .map((item) => (
+                    <div
+                      key={item.job}
+                      className="flex justify-between py-3 text-sm"
+                    >
+                      <span className="text-slate-400 uppercase tracking-wide font-medium">
+                        {item.job}
+                      </span>
+                      <div className="text-slate-100 font-medium">
+                        {item.people
+                          .map((person) => person.name)
+                          .slice(0, 3)
+                          .join(", ")}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Studio Partners */}
         {info.production_companies?.length > 0 && (

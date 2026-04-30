@@ -43,20 +43,20 @@ export default function ReviewsSection({
   const { toast } = useToast();
   const reviewsArray: Review[] = Array.isArray(reviews)
     ? reviews.map((r: any) => ({
-        id: r.id || `review-${r.createdAt}`,
-        author: r.user?.username || "Anonymous",
-        author_details: {
-          username: r.user?.username,
-          name: r.user?.username,
-          avatar_path: r.user?.avatarUrl,
-          rating: r.rating,
-        },
-        content: r.content,
-        created_at: r.createdAt,
-        updated_at: r.updatedAt,
-        url: "",
-        moodEmojis: r.moodEmojis || [],
-      }))
+      id: r.id || `review-${r.createdAt}`,
+      author: r.user?.username || "Anonymous",
+      author_details: {
+        username: r.user?.username,
+        name: r.user?.username,
+        avatar_path: r.user?.avatarUrl,
+        rating: r.rating,
+      },
+      content: r.content,
+      created_at: r.createdAt,
+      updated_at: r.updatedAt,
+      url: "",
+      moodEmojis: r.moodEmojis || [],
+    }))
     : [];
 
   const [sortBy, setSortBy] = useState<"latest" | "highest" | "popularity">(
@@ -86,7 +86,7 @@ export default function ReviewsSection({
             rb = b.author_details?.rating ?? -1;
           return ra === rb
             ? new Date(b.created_at).getTime() -
-                new Date(a.created_at).getTime()
+            new Date(a.created_at).getTime()
             : rb - ra;
         });
         break;
@@ -335,7 +335,7 @@ function ReviewModal({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(14px)" }}
+      style={{ background: "rgba(15, 23, 42, 0.85)", backdropFilter: "blur(14px)" }}
       onClick={onClose}
     >
       <motion.div
@@ -347,10 +347,10 @@ function ReviewModal({
         className="relative w-full max-w-lg rounded-2xl overflow-hidden"
         style={{
           background:
-            "linear-gradient(135deg, rgba(20,20,24,0.98) 0%, rgba(14,14,18,0.99) 100%)",
-          border: "1px solid rgba(255,255,255,0.08)",
+            "linear-gradient(135deg, rgba(17,24,39,0.98) 0%, rgba(15,23,42,0.99) 100%)",
+          border: "1px solid rgba(255,255,255,0.10)",
           boxShadow:
-            "0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)",
+            "0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)",
         }}
       >
         {/* Red accent bar at top */}
@@ -547,7 +547,7 @@ function ReviewForm({
     <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
       {/* Mood selector */}
       <div>
-        <p className="text-[11px] uppercase tracking-widest text-white/30 mb-2.5">
+        <p className="text-[11px] uppercase tracking-widest text-white/50 mb-2.5">
           How did it make you feel?
         </p>
         <div className="grid grid-cols-6 gap-1.5">
@@ -556,11 +556,10 @@ function ReviewForm({
               key={m.value}
               type="button"
               onClick={() => setMood(m.value)}
-              className={`relative flex flex-col items-center gap-1 py-2.5 px-1 rounded-lg border transition-all duration-200 cursor-pointer ${
-                mood === m.value
-                  ? "bg-white/[0.08] border-[#e94f37]/50 scale-[1.04]"
-                  : "bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] hover:border-white/20"
-              }`}
+              className={`relative flex flex-col items-center gap-1 py-2.5 px-1 rounded-lg border transition-all duration-200 cursor-pointer ${mood === m.value
+                ? "bg-white/[0.08] border-[#e94f37]/50 scale-[1.04]"
+                : "bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] hover:border-white/20"
+                }`}
             >
               <span className="text-lg leading-none">{m.emoji}</span>
               <span
@@ -593,11 +592,11 @@ function ReviewForm({
         {/* Author strip */}
         <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/[0.06]">
           <div className="w-6 h-6 rounded-full bg-white/[0.1] border border-white/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-white/50 text-[10px] font-bold">
+            <span className="text-white/70 text-[10px] font-bold">
               {author.charAt(0).toUpperCase()}
             </span>
           </div>
-          <span className="text-xs font-medium text-white/50">{author}</span>
+          <span className="text-xs font-medium text-white/70">{author}</span>
 
           {/* Stars inline */}
           <div className="ml-auto flex items-center gap-0.5">
@@ -615,7 +614,7 @@ function ReviewForm({
                 >
                   <Star
                     size={14}
-                    className={`transition-colors ${active ? "text-yellow-400 fill-yellow-400" : "text-white/15 hover:text-white/40"}`}
+                    className={`transition-colors ${active ? "text-yellow-400 fill-yellow-400" : "text-white/35 hover:text-white/40"}`}
                   />
                 </button>
               );
@@ -629,16 +628,16 @@ function ReviewForm({
           onChange={(e) => setContent(e.target.value)}
           placeholder="What did you think? Share what you loved, hated, or found surprising…"
           rows={5}
-          className="w-full bg-transparent px-4 py-3 text-sm text-white/80 placeholder-white/20 resize-none outline-none leading-relaxed"
+          className="w-full bg-transparent px-4 py-3 text-sm text-white/90 placeholder-white/20 resize-none outline-none leading-relaxed"
         />
 
         {/* Char count footer */}
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-white/[0.06]">
-          <span className="text-[11px] text-white/20">
+          <span className="text-[11px] text-white/40">
             {content.length} chars
           </span>
           <span
-            className={`text-[11px] font-medium ${content.length < 10 ? "text-white/20" : "text-[#e94f37]"}`}
+            className={`text-[11px] font-medium ${content.length < 10 ? "text-white/40" : "text-[#e94f37]"}`}
           >
             {content.length < 10
               ? `${10 - content.length} more needed`
@@ -674,7 +673,7 @@ function ReviewForm({
 
       {/* Submit */}
       <div className="flex items-center justify-between pt-1">
-        <p className="text-[11px] text-white/20">
+        <p className="text-[11px] text-white/40">
           Your review may be featured publicly.
         </p>
         <button
