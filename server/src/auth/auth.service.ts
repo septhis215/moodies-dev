@@ -163,8 +163,9 @@ export class AuthService {
     email: string;
     name?: string;
     googleId: string;
+    picture?: string;
   }) {
-    const { email, name, googleId } = params;
+    const { email, name, googleId, picture } = params;
 
     let user = await this.prismaService.user.findUnique({ where: { email } });
 
@@ -175,16 +176,20 @@ export class AuthService {
           username: name || email.split('@')[0],
           provider: 'google',
           googleId,
+          avatarUrl: picture ?? null,
           password: await argon.hash(`google:${uuid()}`),
         },
       });
     } else {
-      if (!user.googleId || user.provider !== 'google') {
-        await this.prismaService.user.update({
-          where: { id: user.id },
-          data: { googleId, provider: 'google' },
-        });
-      }
+      user = await this.prismaService.user.update({
+        where: { id: user.id },
+        data: {
+          googleId,
+          provider: 'google',
+          // Always sync the latest Google profile picture
+          ...(picture ? { avatarUrl: picture } : {}),
+        },
+      });
     }
 
     const token = await this.signToken(user.id, user.email);

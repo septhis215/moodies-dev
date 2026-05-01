@@ -90,7 +90,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full pl-10 pr-3 py-2.5 rounded-none sm:rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
+                className="w-full pl-10 pr-3 py-2.5 rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
                          border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
                          focus:border-amber-400/50 focus:bg-white/10 transition-all"
               />
@@ -124,7 +124,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full pl-10 pr-10 py-2.5 rounded-none sm:rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
+                className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
                          border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
                          focus:border-amber-400/50 focus:bg-white/10 transition-all"
               />
@@ -188,7 +188,7 @@ export default function LoginPage() {
 
           {/* Error Message */}
           {err && (
-            <div className="p-2.5 rounded-none sm:rounded-lg bg-red-500/10 border border-red-500/30">
+            <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30">
               <p className="text-red-400 text-xs flex items-center gap-2">
                 <svg
                   className="w-4 h-4 flex-shrink-0"
@@ -210,7 +210,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={authLoading}
-            className="w-full py-2.5 rounded-none sm:rounded-lg font-bold text-sm text-white
+            className="w-full py-2.5 rounded-lg font-bold text-sm text-white
                     bg-[rgb(233,79,55)]
                     hover:bg-[rgb(215,65,42)]
                     shadow-[0_4px_20px_rgba(233,79,55,0.35)]
@@ -258,7 +258,7 @@ export default function LoginPage() {
           disabled={googleLoading}
           aria-label="Continue with Google"
           className="w-full relative flex items-center justify-center gap-2.5
-                   rounded-none sm:rounded-lg px-3 py-2.5
+                   rounded-lg px-3 py-2.5
                    bg-zinc-900/70 text-white text-sm
                    border border-white/10
                    backdrop-blur
@@ -295,7 +295,7 @@ export default function LoginPage() {
 
           {/* subtle inner sheen */}
           <span
-            className="pointer-events-none absolute inset-0 rounded-none sm:rounded-lg"
+            className="pointer-events-none absolute inset-0 rounded-lg"
             style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)" }}
           />
         </button>

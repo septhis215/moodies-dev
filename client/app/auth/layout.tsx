@@ -41,7 +41,7 @@ export default async function AuthLayout({
   const slides = await fetchAuthFeatured();
 
   return (
-    <main className="relative min-h-screen bg-black text-white overflow-hidden flex items-center justify-center">
+    <main className="relative min-h-screen bg-black text-white overflow-hidden flex items-center justify-center px-4 py-8 sm:px-6">
       <AuthBackground slides={slides} rotationMs={10000} />
       <AuthLayoutClient slides={slides}>{children}</AuthLayoutClient>
     </main>

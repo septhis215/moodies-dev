@@ -5,25 +5,26 @@ import {
 } from '@prisma/client';
 
 export class ReviewEntity implements PrismaReview {
-  id: string;
-  userId: string;
-  tmdbId: number;
-  mediaType: MediaType;
-  rating: number;
-  content: string;
-  moodEmojis: string[];
-  status: ReviewStatus;
-  flaggedReason: string | null;
-  toxicityScore: number | null;
-  profanityHit: boolean;
-  affectsRating: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  id!: string;
+  userId!: string;
+  tmdbId!: number;
+  mediaType!: MediaType;
+  rating!: number;
+  content!: string;
+  moodEmojis!: string[];
+  status!: ReviewStatus;
+  flaggedReason!: string | null;
+  toxicityScore!: number | null;
+  profanityHit!: boolean;
+  affectsRating!: boolean;
+  createdAt!: Date;
+  updatedAt!: Date;
 
   // user may include these fields but it is optional
   user?: {
     id: string;
     username: string;
+    name?: string | null;
     avatarUrl: string | null;
   };
 
@@ -48,6 +49,7 @@ export class ReviewEntity implements PrismaReview {
       user: user
         ? {
             username: user.username,
+            name: user.name,
             avatarUrl: user.avatarUrl,
           }
         : undefined,

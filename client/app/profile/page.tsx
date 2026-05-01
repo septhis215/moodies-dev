@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Film, Tv, Bookmark, Settings, LogOut, Star, TrendingUp, Award, Target, Calendar, Search, Filter, Grid, List, Heart, Clock, Eye, X } from "lucide-react";
+import { Film, Tv, Bookmark, Settings, LogOut, Star, TrendingUp, Award, Target, Calendar, Search, Filter, Grid, List, Heart, Eye, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
 import { FilterDropdown } from "@/components/ui/filterdropdown";
@@ -15,7 +15,7 @@ const TMDB_READ_TOKEN = process.env.NEXT_PUBLIC_TMDB_READ_TOKEN || "";
 type Watchlist = { movieId: string[]; seriesId: string[] };
 type ServerUser = {
     id?: string;
-    name?: string;
+    name?: string | null;
     username?: string;
     email?: string;
     role?: string;
@@ -70,6 +70,108 @@ export default function ProfilePage() {
     const [reviewsLoading, setReviewsLoading] = useState(false);
     const [reviewsVisible, setReviewsVisible] = useState(3);
     const [cardReviewsVisible, setCardReviewsVisible] = useState<Record<string, number>>({});
+    const [reviewTypeFilter, setReviewTypeFilter] = useState<"all" | "MOVIE" | "TV">("all");
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [avatarUploading, setAvatarUploading] = useState(false);
+    const [avatarLightbox, setAvatarLightbox] = useState(false);
+    const [profileName, setProfileName] = useState("");
+    const [profileUsername, setProfileUsername] = useState("");
+    const [profileSaving, setProfileSaving] = useState(false);
+    const [profileError, setProfileError] = useState<string | null>(null);
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+
+    const handleAvatarFile = useCallback((file: File) => {
+        if (!file.type.startsWith("image/")) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const src = e.target?.result as string;
+            const img = new window.Image();
+            img.onload = () => {
+                const MAX = 800;
+                const scale = Math.min(MAX / img.width, MAX / img.height, 1);
+                const canvas = document.createElement("canvas");
+                canvas.width = Math.round(img.width * scale);
+                canvas.height = Math.round(img.height * scale);
+                canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL("image/jpeg", 0.82);
+                setAvatarPreview(dataUrl);
+            };
+            img.src = src;
+        };
+        reader.readAsDataURL(file);
+    }, []);
+
+    const saveAvatar = useCallback(async () => {
+        if (!avatarPreview || !token) return;
+        setAvatarUploading(true);
+        try {
+            const res = await fetch(`${API_BASE}/auth/me/avatar`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ avatarUrl: avatarPreview }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setProfile((prev) => prev ? { ...prev, avatarUrl: data.avatarUrl } : prev);
+                setAvatarPreview(null);
+            }
+        } finally {
+            setAvatarUploading(false);
+        }
+    }, [avatarPreview, token]);
+
+    const saveProfile = useCallback(async () => {
+        if (!token) return;
+        setProfileSaving(true);
+        setProfileError(null);
+        try {
+            const body: { name?: string; username?: string } = {};
+            if (profileName.trim()) body.name = profileName.trim();
+            if (profileUsername.trim()) body.username = profileUsername.trim();
+
+            const [profileRes, avatarRes] = await Promise.all([
+                Object.keys(body).length > 0
+                    ? fetch(`${API_BASE}/auth/me/profile`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify(body),
+                    })
+                    : Promise.resolve(null),
+                avatarPreview
+                    ? fetch(`${API_BASE}/auth/me/avatar`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ avatarUrl: avatarPreview }),
+                    })
+                    : Promise.resolve(null),
+            ]);
+
+            if (profileRes && !profileRes.ok) {
+                const err = await profileRes.json().catch(() => ({}));
+                setProfileError(err?.message ?? "Failed to update profile");
+                return;
+            }
+
+            const updates: Partial<typeof profile> = {};
+            if (profileRes?.ok) {
+                const d = await profileRes.json();
+                if (d.name !== undefined) updates.name = d.name;
+                if (d.username !== undefined) updates.username = d.username;
+            }
+            if (avatarRes?.ok) {
+                const d = await avatarRes.json();
+                updates.avatarUrl = d.avatarUrl;
+            }
+
+            if (Object.keys(updates).length > 0) {
+                setProfile((prev) => prev ? { ...prev, ...updates } : prev);
+            }
+            setAvatarPreview(null);
+            setEditOpen(false);
+        } finally {
+            setProfileSaving(false);
+        }
+    }, [token, profileName, profileUsername, avatarPreview, profile]);
 
     const user = profile ?? (decodedUser as ServerUser | null);
 
@@ -84,6 +186,11 @@ export default function ProfilePage() {
         return Array.from(map.values());
     }, [reviews]);
 
+    const filteredMediaGroups = useMemo(() => {
+        if (reviewTypeFilter === "all") return mediaGroups;
+        return mediaGroups.filter(g => g.reviews[0].mediaType === reviewTypeFilter);
+    }, [mediaGroups, reviewTypeFilter]);
+
     /* ---------------- Fetch reviews when tab active ---------------- */
     useEffect(() => {
         if (tab !== "reviews" || !token) return;
@@ -92,7 +199,7 @@ export default function ProfilePage() {
 
         (async () => {
             try {
-                const res = await fetch(`${API_BASE}/reviews/me`, {
+                const res = await fetch(`${API_BASE}/reviews/me?limit=200`, {
                     headers: { Authorization: `Bearer ${token}` },
                     cache: "no-store",
                 });
@@ -277,10 +384,11 @@ export default function ProfilePage() {
                                 <motion.div
                                     initial={{ scale: 0.8, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
-                                    className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl overflow-hidden ring-2 ring-[#e94f37]/60 bg-zinc-900 flex-shrink-0"
+                                    onClick={() => user?.avatarUrl && setAvatarLightbox(true)}
+                                    className={`relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl overflow-hidden ring-2 ring-[#e94f37]/60 bg-zinc-900 flex-shrink-0${user?.avatarUrl ? " cursor-pointer hover:ring-[#e94f37] transition-shadow" : ""}`}
                                 >
                                     {user?.avatarUrl ? (
-                                        <Image src={user.avatarUrl} alt="avatar" fill className="object-cover" />
+                                        <Image src={user.avatarUrl} alt="avatar" fill className="object-cover" referrerPolicy="no-referrer" />
                                     ) : (
                                         <div className="flex items-center justify-center w-full h-full text-3xl sm:text-5xl font-bold bg-[#e94f37] text-white">
                                             {(user?.name || "U")[0]}
@@ -289,7 +397,7 @@ export default function ProfilePage() {
                                 </motion.div>
 
                                 <div className="flex-1 min-w-0">
-                                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black truncate">{user?.name ?? "Your Profile"}</h1>
+                                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black truncate">{user?.name || user?.username || "Your Profile"}</h1>
                                     <p className="text-gray-400 text-sm sm:text-base mt-1">@{user?.username ?? "user"}</p>
                                     <div className="mt-2 sm:mt-3 flex flex-wrap gap-2 items-center">
                                         <span className="px-2 sm:px-3 py-1 rounded-lg bg-[#e94f37]/20 text-[#e94f37] text-xs font-bold uppercase">
@@ -308,7 +416,12 @@ export default function ProfilePage() {
                             <div className="mt-2 sm:mt-0 sm:ml-4 flex items-center gap-2 sm:gap-3">
                                 <button
                                     className="px-3 sm:px-4 py-2 rounded-xl bg-[#e94f37] hover:bg-[#ff5746] transition font-semibold text-sm"
-                                    onClick={() => setEditOpen(true)}
+                                    onClick={() => {
+                                        setProfileName(user?.name ?? user?.username ?? "");
+                                        setProfileUsername(user?.username ?? "");
+                                        setProfileError(null);
+                                        setEditOpen(true);
+                                    }}
                                 >
                                     Edit
                                 </button>
@@ -746,7 +859,7 @@ export default function ProfilePage() {
                             transition={{ duration: 0.3 }}
                         >
                             {/* Header row */}
-                            <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-start sm:items-center justify-between gap-4 mb-5">
                                 <div>
                                     <div className="flex items-center gap-2 mb-1">
                                         <div className="w-6 h-0.5 bg-[#e94f37]" />
@@ -754,18 +867,27 @@ export default function ProfilePage() {
                                     </div>
                                     <h2 className="text-2xl sm:text-3xl font-black text-white">My Reviews</h2>
                                 </div>
-                                {mediaGroups.length > 0 && (
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.07]">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-[#e94f37]" />
-                                            <span className="text-[0.7rem] text-white/40 font-medium">{reviews.length} review{reviews.length !== 1 ? "s" : ""}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.07]">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                                            <span className="text-[0.7rem] text-white/40 font-medium">{mediaGroups.length} title{mediaGroups.length !== 1 ? "s" : ""}</span>
-                                        </div>
-                                    </div>
-                                )}
+                                {/* Movie / TV filter tabs */}
+                                <div className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.07] rounded-xl p-1 flex-shrink-0">
+                                    {(["all", "MOVIE", "TV"] as const).map((f) => {
+                                        const label = f === "all" ? "All" : f === "MOVIE" ? "Movies" : "TV Series";
+                                        const count = f === "all" ? reviews.length : reviews.filter(r => r.mediaType === f).length;
+                                        return (
+                                            <button
+                                                key={f}
+                                                onClick={() => { setReviewTypeFilter(f); setReviewsVisible(3); }}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                                                    reviewTypeFilter === f
+                                                        ? "bg-white/[0.08] text-white"
+                                                        : "text-white/30 hover:text-white/60"
+                                                }`}
+                                            >
+                                                {label}
+                                                <span className={`ml-1.5 text-[0.55rem] ${ reviewTypeFilter === f ? "text-white/40" : "text-white/15"}`}>{count}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
                             {/* Gradient rule */}
@@ -798,194 +920,163 @@ export default function ProfilePage() {
                                 </div>
                             )}
 
-                            {/* Media group cards — one card per title */}
-                            {!reviewsLoading && mediaGroups.length > 0 && (
-                                <div className="space-y-5">
-                                    {mediaGroups.slice(0, reviewsVisible).map((group, gIdx) => {
+                            {/* Review groups — score-stripe card design */}
+                            {!reviewsLoading && filteredMediaGroups.length > 0 && (
+                                <div className="space-y-1.5">
+                                    {filteredMediaGroups.slice(0, reviewsVisible).map((group, gIdx) => {
                                         const rep = group.reviews[0];
                                         const isMovie = rep.mediaType === "MOVIE";
                                         const href = isMovie ? `/movies/${rep.tmdbId}` : `/tv/${rep.tmdbId}`;
                                         const poster = rep.tmdbPoster
-                                            ? `https://image.tmdb.org/t/p/w342${rep.tmdbPoster}`
+                                            ? `https://image.tmdb.org/t/p/w92${rep.tmdbPoster}`
                                             : null;
-                                        const avgRating = Math.round(
-                                            group.reviews.reduce((s, r) => s + r.rating, 0) / group.reviews.length
-                                        );
+                                        const visibleCount = cardReviewsVisible[group.key] ?? 1;
+                                        const visibleReviews = group.reviews.slice(0, visibleCount);
+                                        const hasMore = visibleCount < group.reviews.length;
+                                        const hasLess = visibleCount > 1;
 
                                         return (
                                             <motion.div
                                                 key={group.key}
-                                                initial={{ opacity: 0, y: 14 }}
+                                                initial={{ opacity: 0, y: 10 }}
                                                 animate={{ opacity: 1, y: 0 }}
-                                                transition={{ duration: 0.25, delay: gIdx * 0.06 }}
-                                                className="rounded-2xl border border-white/[0.08] bg-white/[0.02] overflow-hidden"
+                                                transition={{ duration: 0.22, delay: gIdx * 0.05 }}
                                             >
-                                                {/* ── Media header ── */}
-                                                <div className="flex gap-4 p-4 sm:p-5 pb-3 sm:pb-4">
-                                                    {/* Poster */}
-                                                    <Link href={href} className="flex-shrink-0 group/poster">
-                                                        <div className="relative w-16 sm:w-20 aspect-[2/3] rounded-xl overflow-hidden bg-zinc-900 ring-1 ring-white/[0.07] group-hover/poster:ring-[#e94f37]/40 transition-all">
-                                                            {poster ? (
-                                                                <Image
-                                                                    src={poster}
-                                                                    alt={rep.tmdbTitle || "Poster"}
-                                                                    fill
-                                                                    className="object-cover transition-transform duration-500 group-hover/poster:scale-105"
-                                                                />
-                                                            ) : (
-                                                                <div className="w-full h-full flex items-center justify-center text-white/20">
-                                                                    {isMovie ? <Film className="w-6 h-6" /> : <Tv className="w-6 h-6" />}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </Link>
-
-                                                    {/* Title + meta */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <div className="min-w-0">
-                                                                <Link href={href}>
-                                                                    <h3 className="font-black text-lg sm:text-xl leading-tight text-white hover:text-[#e94f37] transition-colors line-clamp-2">
-                                                                        {rep.tmdbTitle || `Title #${rep.tmdbId}`}
-                                                                    </h3>
-                                                                </Link>
-                                                                <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                                                    <span className={`inline-flex items-center gap-1 text-[0.62rem] font-bold px-2 py-0.5 rounded-md ${
-                                                                        isMovie
-                                                                            ? "bg-[#e94f37]/10 text-[#e94f37]/80 border border-[#e94f37]/20"
-                                                                            : "bg-blue-500/10 text-blue-400/80 border border-blue-500/20"
-                                                                    }`}>
-                                                                        {isMovie ? <Film className="w-2.5 h-2.5" /> : <Tv className="w-2.5 h-2.5" />}
-                                                                        {isMovie ? "Movie" : "TV Series"}
-                                                                    </span>
-                                                                    {rep.tmdbYear && (
-                                                                        <span className="text-[0.65rem] text-white/30 font-medium">{rep.tmdbYear}</span>
-                                                                    )}
-                                                                    <span className="text-[0.65rem] text-white/25 font-medium">
-                                                                        {group.reviews.length} review{group.reviews.length !== 1 ? "s" : ""}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Avg rating pill */}
-                                                            <div className="flex-shrink-0 flex items-center gap-1 bg-black/40 px-2.5 py-1.5 rounded-xl border border-white/[0.07]">
-                                                                <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                                                                <span className="text-sm font-black text-yellow-400">{avgRating}</span>
-                                                                <span className="text-[0.6rem] text-white/25">/10</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* ── Divider ── */}
-                                                <div className="mx-4 sm:mx-5 h-px bg-white/[0.06]" />
-
-                                                {/* ── Review entries ── */}
-                                                {(() => {
-                                                    const visibleCount = cardReviewsVisible[group.key] ?? 3;
-                                                    const visibleReviews = group.reviews.slice(0, visibleCount);
-                                                    const hasMore = visibleCount < group.reviews.length;
-                                                    const hasLess = visibleCount > 3;
+                                                {visibleReviews.map((review, rIdx) => {
+                                                    const stars = Math.max(0, Math.min(10, review.rating));
+                                                    const accentHex = stars >= 8 ? "#22c55e" : stars >= 6 ? "#e94f37" : stars >= 4 ? "#f59e0b" : "#ef4444";
                                                     return (
-                                                        <>
-                                                            <div className="divide-y divide-white/[0.05]">
-                                                                {visibleReviews.map((review, rIdx) => {
-                                                                    const stars = Math.max(0, Math.min(10, review.rating));
-                                                                    return (
-                                                                        <div key={review.id} className="px-4 sm:px-5 py-3 sm:py-4">
-                                                                            <div className="flex items-start justify-between gap-3 mb-2">
-                                                                                {/* Review number + date */}
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <span className="w-5 h-5 rounded-full bg-[#e94f37]/15 border border-[#e94f37]/25 flex items-center justify-center text-[0.6rem] font-black text-[#e94f37]/70">
-                                                                                        {rIdx + 1}
-                                                                                    </span>
-                                                                                    <div className="flex items-center gap-1">
-                                                                                        <Clock className="w-2.5 h-2.5 text-white/20" />
-                                                                                        <span className="text-[0.62rem] text-white/25">
-                                                                                            {new Date(review.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                    {review.status === "FLAGGED" && (
-                                                                                        <span className="text-[0.6rem] font-semibold px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400/80 border border-yellow-500/20">
-                                                                                            Under Review
-                                                                                        </span>
-                                                                                    )}
-                                                                                </div>
-
-                                                                                {/* Per-review rating */}
-                                                                                <div className="flex items-center gap-0.5">
-                                                                                    {Array.from({ length: 10 }).map((_, i) => (
-                                                                                        <div
-                                                                                            key={i}
-                                                                                            className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                                                                                                i < stars ? "bg-yellow-400" : "bg-white/10"
-                                                                                            }`}
-                                                                                        />
-                                                                                    ))}
-                                                                                    <span className="ml-1.5 text-xs font-bold text-yellow-400">{stars}</span>
-                                                                                </div>
-                                                                            </div>
-
-                                                                            {/* Mood emojis */}
-                                                                            {review.moodEmojis?.length > 0 && (
-                                                                                <div className="flex items-center gap-1.5 mb-1.5">
-                                                                                    <span className="text-[0.58rem] uppercase tracking-wider text-white/20 font-semibold">Mood</span>
-                                                                                    {review.moodEmojis.map((emoji, i) => (
-                                                                                        <span key={i} className="text-sm leading-none">{emoji}</span>
-                                                                                    ))}
-                                                                                </div>
-                                                                            )}
-
-                                                                            {/* Review text */}
-                                                                            <p className="text-sm text-white/50 leading-relaxed">
-                                                                                {review.content}
-                                                                            </p>
-                                                                        </div>
-                                                                    );
-                                                                })}
+                                                        <div
+                                                            key={review.id}
+                                                            className="flex rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.015] hover:border-white/[0.11] hover:bg-white/[0.03] transition-all duration-300 mb-1.5"
+                                                        >
+                                                            {/* Score stripe */}
+                                                            <div
+                                                                className="w-[58px] sm:w-[64px] flex-shrink-0 flex flex-col items-center justify-center gap-1 py-7"
+                                                                style={{ background: `${accentHex}12` }}
+                                                            >
+                                                                <span className="text-2xl font-black leading-none" style={{ color: accentHex }}>{stars}</span>
+                                                                <span className="text-[0.44rem] text-white/20 font-semibold tracking-widest uppercase">/ 10</span>
+                                                                {review.moodEmojis?.length > 0 && (
+                                                                    <div className="flex flex-wrap justify-center gap-0.5 mt-0.5 max-w-[44px]">
+                                                                        {review.moodEmojis.slice(0, 2).map((e, i) => (
+                                                                            <span key={i} className="text-[0.7rem] leading-none">{e}</span>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
 
-                                                            {/* Per-card expand/collapse */}
-                                                            {(hasMore || hasLess) && (
-                                                                <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-t border-white/[0.05]">
-                                                                    {hasMore && (
-                                                                        <button
-                                                                            onClick={() => setCardReviewsVisible((prev) => ({ ...prev, [group.key]: visibleCount + 3 }))}
-                                                                            className="flex items-center gap-1.5 text-xs text-white/40 font-medium hover:text-white/70 transition-colors"
-                                                                        >
-                                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
-                                                                            Show {Math.min(3, group.reviews.length - visibleCount)} more review{Math.min(3, group.reviews.length - visibleCount) !== 1 ? "s" : ""}
-                                                                        </button>
-                                                                    )}
-                                                                    {hasMore && hasLess && <span className="text-white/10">·</span>}
-                                                                    {hasLess && (
-                                                                        <button
-                                                                            onClick={() => setCardReviewsVisible((prev) => ({ ...prev, [group.key]: 3 }))}
-                                                                            className="flex items-center gap-1.5 text-xs text-white/25 font-medium hover:text-white/50 transition-colors"
-                                                                        >
-                                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
-                                                                            Collapse
-                                                                        </button>
-                                                                    )}
-                                                                    <span className="ml-auto text-[0.6rem] text-white/20">{Math.min(visibleCount, group.reviews.length)} of {group.reviews.length}</span>
+                                                            {/* Poster column */}
+                                                            <Link href={href} className="relative w-[56px] sm:w-[72px] flex-shrink-0 border-l border-white/[0.05] overflow-hidden block">
+                                                                {poster ? (
+                                                                    <Image src={poster} alt="" fill className="object-cover" />
+                                                                ) : (
+                                                                    <div className="w-full h-full flex items-center justify-center bg-white/[0.02]">
+                                                                        {isMovie ? <Film className="w-3 h-3 text-white/15" /> : <Tv className="w-3 h-3 text-white/15" />}
+                                                                    </div>
+                                                                )}
+                                                            </Link>
+
+                                                            {/* Content */}
+                                                            <div className="flex-1 min-w-0 px-3 sm:px-5 py-4 sm:py-5 border-l border-white/[0.05] flex flex-col justify-between">
+                                                                {/* Review text */}
+                                                                <div className="mb-3 relative">
+                                                                    {/* Opening quote mark */}
+                                                                    <span
+                                                                        className="absolute -top-1 -left-1 text-[1.4rem] font-black leading-none select-none pointer-events-none"
+                                                                        style={{ color: accentHex, opacity: 0.35 }}
+                                                                    >"</span>
+                                                                    <p className="text-[0.82rem] sm:text-[0.95rem] text-white/80 leading-relaxed line-clamp-4 sm:line-clamp-5 pl-4 font-medium tracking-wide">
+                                                                        {review.content}
+                                                                    </p>
                                                                 </div>
-                                                            )}
-                                                        </>
+
+                                                                {/* Attribution row — stacks on mobile */}
+                                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 pt-2 border-t border-white/[0.04]">
+                                                                    <Link href={href} className="flex items-center gap-1.5 group/attr min-w-0">
+                                                                        <span
+                                                                            className="text-[0.58rem] font-bold uppercase tracking-[0.12em] flex-shrink-0"
+                                                                            style={{ color: `${accentHex}70` }}
+                                                                        >
+                                                                            {isMovie ? "Movie" : "TV"}
+                                                                        </span>
+                                                                        <span className="text-white/15 text-[0.5rem]">·</span>
+                                                                        <span className="text-[0.68rem] font-semibold text-white/35 group-hover/attr:text-white/65 transition-colors truncate">
+                                                                            {rep.tmdbTitle || `#${rep.tmdbId}`}
+                                                                        </span>
+                                                                        {rep.tmdbYear && (
+                                                                            <span className="text-[0.52rem] text-white/18 flex-shrink-0">{rep.tmdbYear}</span>
+                                                                        )}
+                                                                    </Link>
+
+                                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                                        {review.status === "FLAGGED" && (
+                                                                            <span className="text-[0.48rem] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400/70 border border-yellow-500/15">flagged</span>
+                                                                        )}
+                                                                        {group.reviews.length > 1 && rIdx === 0 && !hasLess && (
+                                                                            <span className="text-[0.55rem] text-white/18 font-medium">+{group.reviews.length - 1}</span>
+                                                                        )}
+                                                                        <span className="text-[0.62rem] text-white/20 font-medium tabular-nums">
+                                                                            {new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                                                            <span className="text-white/12 mx-0.5">·</span>
+                                                                            {new Date(review.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     );
-                                                })()}
+                                                })}
+
+                                                {/* Per-title expand / collapse */}
+                                                {(hasMore || hasLess) && (
+                                                    <div className="flex items-center gap-3 px-2 mb-1">
+                                                        {hasMore && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => setCardReviewsVisible((prev) => ({ ...prev, [group.key]: Math.min(visibleCount + 5, group.reviews.length) }))}
+                                                                    className="flex items-center gap-1.5 text-[0.70rem] text-white/25 hover:text-white/55 font-medium transition-colors"
+                                                                >
+                                                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                                                                    {group.reviews.length - visibleCount <= 5
+                                                                        ? `${group.reviews.length - visibleCount} more`
+                                                                        : "5 more"
+                                                                    }
+                                                                </button>
+                                                                {group.reviews.length - visibleCount > 5 && (
+                                                                    <button
+                                                                        onClick={() => setCardReviewsVisible((prev) => ({ ...prev, [group.key]: group.reviews.length }))}
+                                                                        className="flex items-center gap-1.5 text-[0.70rem] text-white/18 hover:text-white/45 font-medium transition-colors"
+                                                                    >
+                                                                        Show all {group.reviews.length}
+                                                                    </button>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                        {hasLess && (
+                                                            <button
+                                                                onClick={() => setCardReviewsVisible((prev) => ({ ...prev, [group.key]: 1 }))}
+                                                                className="ml-auto flex items-center gap-1.5 text-[0.65rem] text-white/18 hover:text-white/45 font-medium transition-colors"
+                                                            >
+                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
+                                                                Collapse
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </motion.div>
                                         );
                                     })}
 
-                                    {/* Show more / show less controls */}
-                                    {mediaGroups.length > 3 && (
+                                    {/* Global show more / collapse */}
+                                    {filteredMediaGroups.length > 3 && (
                                         <div className="flex items-center gap-3 pt-2">
-                                            {reviewsVisible < mediaGroups.length && (
+                                            {reviewsVisible < filteredMediaGroups.length && (
                                                 <button
                                                     onClick={() => setReviewsVisible((v) => v + 3)}
                                                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 text-sm font-medium hover:bg-white/[0.07] hover:text-white/80 hover:border-white/[0.15] transition-all"
                                                 >
-                                                    <span>Show {Math.min(3, mediaGroups.length - reviewsVisible)} more</span>
+                                                    <span>Load more</span>
                                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                                         <path d="M6 9l6 6 6-6" />
                                                     </svg>
@@ -1002,8 +1093,8 @@ export default function ProfilePage() {
                                                     <span>Collapse</span>
                                                 </button>
                                             )}
-                                            <span className="text-[0.65rem] text-white/20 font-medium">
-                                                {Math.min(reviewsVisible, mediaGroups.length)} of {mediaGroups.length} titles
+                                            <span className="text-[0.70rem] text-white/20 font-medium ml-auto">
+                                                {Math.min(reviewsVisible, filteredMediaGroups.length)} of {filteredMediaGroups.length} titles
                                             </span>
                                         </div>
                                     )}
@@ -1148,50 +1239,104 @@ export default function ProfilePage() {
                                     <div>
                                         <label className="block text-sm font-semibold mb-2 text-gray-300">Profile Picture</label>
                                         <div className="flex items-center gap-4">
-                                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-zinc-800 flex-shrink-0">
-                                                {user?.avatarUrl ? (
-                                                    <Image src={user.avatarUrl} alt="avatar" width={64} height={64} className="object-cover" />
+                                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-zinc-800 flex-shrink-0 ring-2 ring-white/10">
+                                                {avatarPreview ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={avatarPreview} alt="preview" className="w-full h-full object-cover" />
+                                                ) : user?.avatarUrl ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={user.avatarUrl} alt="avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-white/60">
                                                         {(user?.name || "U")[0]}
                                                     </div>
                                                 )}
                                             </div>
-                                            <button className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm font-semibold">
-                                                Upload New
-                                            </button>
+                                            <div className="flex flex-col gap-2">
+                                                <input
+                                                    ref={avatarInputRef}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const f = e.target.files?.[0];
+                                                        if (f) handleAvatarFile(f);
+                                                        e.target.value = "";
+                                                    }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => avatarInputRef.current?.click()}
+                                                    className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm font-semibold"
+                                                >
+                                                    {avatarPreview ? "Change" : "Upload New"}
+                                                </button>
+                                                {avatarPreview && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAvatarPreview(null)}
+                                                        className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm font-semibold text-red-400"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-semibold mb-2 text-gray-300">Display Name</label>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-semibold text-gray-300">Display Name</label>
+                                            <span className={`text-xs tabular-nums ${profileName.length > 48 ? "text-red-400" : "text-gray-500"}`}>
+                                                {profileName.length}/50
+                                            </span>
+                                        </div>
                                         <input
                                             type="text"
-                                            defaultValue={user?.name}
+                                            value={profileName}
+                                            onChange={(e) => setProfileName(e.target.value.slice(0, 50))}
+                                            maxLength={50}
                                             className="w-full px-4 py-3 text-sm sm:text-base bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e94f37]/50 transition"
                                             placeholder="Enter your name"
                                         />
+                                        <p className="text-xs text-gray-600 mt-1">2–50 characters</p>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-semibold mb-2 text-gray-300">Username</label>
-                                        <input
-                                            type="text"
-                                            defaultValue={user?.username}
-                                            className="w-full px-4 py-3 text-sm sm:text-base bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e94f37]/50 transition"
-                                            placeholder="@username"
-                                        />
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-semibold text-gray-300">Username</label>
+                                            <span className={`text-xs tabular-nums ${profileUsername.length > 18 ? "text-red-400" : "text-gray-500"}`}>
+                                                {profileUsername.length}/20
+                                            </span>
+                                        </div>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">@</span>
+                                            <input
+                                                type="text"
+                                                value={profileUsername}
+                                                onChange={(e) => setProfileUsername(e.target.value.replace(/^@/, "").slice(0, 20))}
+                                                maxLength={20}
+                                                className="w-full pl-8 pr-4 py-3 text-sm sm:text-base bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e94f37]/50 transition"
+                                                placeholder="username"
+                                            />
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">3–20 characters, letters, numbers, underscores only</p>
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-semibold mb-2 text-gray-300">Email</label>
                                         <input
                                             type="email"
-                                            defaultValue={user?.email}
-                                            className="w-full px-4 py-3 text-sm sm:text-base bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e94f37]/50 transition"
-                                            placeholder="your@email.com"
+                                            value={user?.email ?? ""}
+                                            readOnly
+                                            className="w-full px-4 py-3 text-sm sm:text-base bg-white/[0.03] border border-white/5 rounded-xl text-gray-500 cursor-not-allowed"
                                         />
+                                        <p className="text-xs text-gray-600 mt-1">Email cannot be changed</p>
                                     </div>
+
+                                    {profileError && (
+                                        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">{profileError}</p>
+                                    )}
                                 </div>
 
                                 <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 sm:mt-8">
@@ -1201,8 +1346,12 @@ export default function ProfilePage() {
                                     >
                                         Cancel
                                     </button>
-                                    <button className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#e94f37] hover:bg-[#ff5746] transition font-semibold order-1 sm:order-2">
-                                        Save Changes
+                                    <button
+                                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#e94f37] hover:bg-[#ff5746] transition font-semibold order-1 sm:order-2 disabled:opacity-50"
+                                        onClick={saveProfile}
+                                        disabled={profileSaving || avatarUploading}
+                                    >
+                                        {profileSaving ? "Saving…" : "Save Changes"}
                                     </button>
                                 </div>
                             </motion.div>
@@ -1210,6 +1359,43 @@ export default function ProfilePage() {
                     )}
                 </AnimatePresence>
             </div>
+        {/* Avatar Lightbox — full-screen */}
+            <AnimatePresence>
+                {avatarLightbox && user?.avatarUrl && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[300] flex items-center justify-center p-4 sm:p-8"
+                        onClick={() => setAvatarLightbox(false)}
+                    >
+                        {/* Backdrop */}
+                        <div className="absolute inset-0 bg-black/90" />
+
+                        {/* Close button */}
+                        <button
+                            onClick={() => setAvatarLightbox(false)}
+                            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 transition flex items-center justify-center text-white"
+                            aria-label="Close"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        {/* Image — fills as much screen as possible */}
+                        <motion.img
+                            initial={{ scale: 0.92, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.92, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            src={user.avatarUrl}
+                            alt="Profile picture"
+                            referrerPolicy="no-referrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative z-10 max-h-[90vh] max-w-[90vw] w-auto h-auto rounded-2xl object-contain shadow-2xl"
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </main>
     );
 }

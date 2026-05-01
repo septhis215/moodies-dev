@@ -44,10 +44,10 @@ export default function ReviewsSection({
   const reviewsArray: Review[] = Array.isArray(reviews)
     ? reviews.map((r: any) => ({
       id: r.id || `review-${r.createdAt}`,
-      author: r.user?.username || "Anonymous",
+      author: r.user?.name || r.user?.username || "Anonymous",
       author_details: {
         username: r.user?.username,
-        name: r.user?.username,
+        name: r.user?.name || r.user?.username,
         avatar_path: r.user?.avatarUrl,
         rating: r.rating,
       },
@@ -729,7 +729,13 @@ function AvatarBlock({ review }: { review: Review }) {
   const avatarSrc = (() => {
     const av = review.author_details?.avatar_path;
     if (!av) return null;
+    // base64 data URL
+    if (av.startsWith("data:")) return av;
+    // full https URL (Google CDN, uploaded avatar, etc.)
+    if (av.startsWith("https://") || av.startsWith("http://")) return av;
+    // TMDB stores Gravatar as "/https://..."
     if (av.startsWith("/https") || av.startsWith("/http")) return av.slice(1);
+    // relative TMDB path
     return `https://image.tmdb.org/t/p/w185${av}`;
   })();
   const initials = (review.author || "A")
@@ -743,12 +749,14 @@ function AvatarBlock({ review }: { review: Review }) {
       className="rounded-full overflow-hidden bg-white/[0.08] flex items-center justify-center ring-1 ring-white/10 flex-shrink-0"
     >
       {avatarSrc ? (
-        <Image
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
           src={avatarSrc}
           alt={review.author}
           width={size}
           height={size}
-          className="object-cover"
+          referrerPolicy="no-referrer"
+          className="object-cover w-full h-full"
         />
       ) : (
         <span className="text-white/60 font-semibold text-xs">{initials}</span>

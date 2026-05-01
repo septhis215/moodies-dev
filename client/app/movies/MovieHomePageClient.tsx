@@ -183,12 +183,12 @@ export default function MoviesHomePageClient({
                                                 : null;
 
                                             if (inWL) {
-                                                await remove(String(show.id), "series", {
+                                                await remove(String(show.id), "movie", {
                                                     title,
                                                     posterUrl,
                                                 });
                                             } else {
-                                                await add(String(show.id), "series", {
+                                                await add(String(show.id), "movie", {
                                                     title,
                                                     posterUrl,
                                                 });
