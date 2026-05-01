@@ -112,7 +112,7 @@ export function NavbarComponent() {
     "/moods": [
       { label: "Moodies Feed", path: "/feed" },
       { label: "Mood Wheels", path: "/moods" },
-      { label: "Categories", path: "/moods/categories" },
+      { label: "Personality Quiz", path: "/quiz" },
     ],
 
     "/collection": [
@@ -554,11 +554,12 @@ export function NavbarComponent() {
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 blur-md opacity-50" />
                     <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 p-[2px]">
                       <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center overflow-hidden">
-                        {user?.avatarUrl ? (
+                        {user?.provider === 'google' && user?.avatarUrl ? (
                           <img
                             src={user.avatarUrl}
                             alt={user.username || "User"}
                             className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
                           />
                         ) : (
                           <span className="text-xl font-bold text-gray-300">
@@ -699,11 +700,12 @@ export function NavbarComponent() {
             >
               {/* Avatar */}
               <div className="h-9 w-9 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden ring-2 ring-slate-800 group-hover:ring-slate-600 transition-all">
-                {user?.avatarUrl ? (
+                {user?.provider === 'google' && user?.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
                     alt={user.username || "User"}
                     className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
                   />
                 ) : (
                   <span className="text-sm font-bold text-slate-300">
@@ -756,11 +758,12 @@ export function NavbarComponent() {
                   <div className="p-4 border-b border-slate-800">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
-                        {user?.avatarUrl ? (
+                        {user?.provider === 'google' && user?.avatarUrl ? (
                           <img
                             src={user.avatarUrl}
                             alt={user.username || "User"}
                             className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
                           />
                         ) : (
                           <span className="text-sm font-bold text-slate-300">

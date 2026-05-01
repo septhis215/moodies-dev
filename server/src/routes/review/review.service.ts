@@ -73,6 +73,7 @@ export class ReviewService {
           select: {
             id: true,
             username: true,
+            name: true,
             avatarUrl: true,
           },
         },
@@ -119,6 +120,7 @@ export class ReviewService {
           select: {
             id: true,
             username: true,
+            name: true,
             avatarUrl: true,
           },
         },
@@ -155,6 +157,7 @@ export class ReviewService {
             select: {
               id: true,
               username: true,
+              name: true,
               avatarUrl: true,
             },
           },
@@ -164,6 +167,7 @@ export class ReviewService {
                 select: {
                   id: true,
                   username: true,
+                  name: true,
                   avatarUrl: true,
                 },
               },
@@ -218,6 +222,7 @@ export class ReviewService {
             select: {
               id: true,
               username: true,
+              name: true,
               avatarUrl: true,
             },
           },
@@ -227,6 +232,7 @@ export class ReviewService {
                 select: {
                   id: true,
                   username: true,
+                  name: true,
                   avatarUrl: true,
                 },
               },
@@ -339,7 +345,7 @@ export class ReviewService {
     };
   }
 
-  async getMyReviews(userId: string, page = 1, limit = 20) {
+  async getMyReviews(userId: string, page = 1, limit = 200) {
     const skip = (page - 1) * limit;
 
     const [reviews, total] = await Promise.all([

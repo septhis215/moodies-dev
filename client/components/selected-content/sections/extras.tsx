@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Building2, Globe2, TrendingUp } from "lucide-react";
@@ -128,9 +128,10 @@ interface DetailsProp {
 }
 
 export default function ExtraDetails({ data, contentId }: DetailsProp) {
-  // carousel uses a ref-driven single-row scroll
-  const scrollRef = useRef<HTMLDivElement | null>(null);
   const [providerSearch, setProviderSearch] = useState("");
+  const INITIAL_CAST = 12;
+  const CAST_STEP = 12;
+  const [castLimit, setCastLimit] = useState(INITIAL_CAST);
 
   const { info, credits, providers } = data;
 
@@ -206,55 +207,6 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
       .filter((item) => item.people.length > 0);
   };
 
-  // Carousel helpers
-  const [itemsPerView, setItemsPerView] = useState(4.5);
-  const [itemWidthPx, setItemWidthPx] = useState<number>(220);
-  const GAP_PX = 32; // gap-8 = 32px
-
-  // Responsive itemsPerView
-  useEffect(() => {
-    const updateLayout = () => {
-      const w = window.innerWidth;
-      if (w < 640) setItemsPerView(1.5);
-      else if (w < 768) setItemsPerView(2.5);
-      else if (w < 1024) setItemsPerView(3.5);
-      else setItemsPerView(4.5);
-    };
-
-    updateLayout();
-    window.addEventListener("resize", updateLayout);
-    return () => window.removeEventListener("resize", updateLayout);
-  }, []);
-
-  // Compute sizes & scroll limits using DOM measurements
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const compute = () => {
-      const containerWidth = el.clientWidth || 0;
-      const computed = Math.max(
-        140,
-        (containerWidth - Math.max(0, itemsPerView - 1) * GAP_PX) /
-        itemsPerView,
-      );
-      setItemWidthPx(Math.round(computed));
-
-    };
-
-    compute();
-
-    const ro = new ResizeObserver(() => compute());
-    ro.observe(el);
-
-    const t = setTimeout(() => compute(), 120);
-
-    return () => {
-      ro.disconnect();
-      clearTimeout(t);
-    };
-  }, [credits.cast.length, itemsPerView]);
-
   const resolvedContentType: "movie" | "tv" =
     (info as any)?.content_type === "tv" ? "tv" : "movie";
 
@@ -263,7 +215,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
 
   return (
     <>
-      {/* Cast carousel: single-row horizontal scroll */}
+      {/* Featured Cast */}
       <section>
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -272,167 +224,175 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
             </h2>
             <p className="text-slate-400 text-sm">The faces behind the story</p>
           </div>
-
           <Link
             href={viewAllHref}
-            className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
+            className="inline-block text-xs px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.08] text-slate-200 transition-colors duration-150"
           >
-            View all casts →
+            View all →
           </Link>
         </div>
 
-        <div
-          ref={scrollRef}
-          className="flex gap-8 overflow-x-auto snap-x snap-mandatory pb-8 scrollbar-none"
-        >
-          {credits.cast.map((actor) => (
-            <Link
-              href={`/celeb/${actor.id}`}
-              key={actor.id}
-              className="snap-start flex-shrink-0 min-w-[180px] text-center group"
-            >
-              <div
-                className="relative w-44 h-64 mx-auto rounded-xl overflow-hidden shadow-xl border border-white/10 bg-gradient-to-b from-slate-800/80 to-slate-900/90 
-                        group-hover:scale-105 group-hover:rotate-1 transition-all duration-500"
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
+          {credits.cast
+            .slice(0, castLimit)
+            .map((actor, i) => (
+              <Link
+                key={actor.id}
+                href={`/celeb/${actor.id}`}
+                className="group block relative aspect-[3/4] rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.07] hover:border-[#e94f37]/40 transition-all duration-300"
               >
-                {/* Glow behind */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent w-auto h-auto" />
                 <Image
-                  src={actor.profile_path ? `https://image.tmdb.org/t/p/w500${actor.profile_path}` : "/placeholder-person.svg"}
+                  src={
+                    actor.profile_path
+                      ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
+                      : "/placeholder-person.svg"
+                  }
                   alt={actor.name}
                   fill
-                  style={{ objectFit: "cover" }}
-                  sizes="176px"
-                  className="group-hover:scale-110 transition-transform duration-500"
+                  sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 17vw"
+                  className="object-cover grayscale-[40%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
                 />
-                <div className="absolute inset-0 bg-black/15" />
-                {/* Overlay for name & role */}
-                <div className="absolute bottom-0 left-0 right-0 p-3 text-left bg-gradient-to-t from-black/90 via-black/60 to-transparent">                  <h3 className="font-semibold text-slate-100 truncate">
-                  {actor.name}
-                </h3>
-                  <p className="text-slate-300 text-xs truncate italic">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#e94f37]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <span className="absolute top-2 right-2 text-[9px] font-mono text-white/20 group-hover:text-white/50 transition-colors duration-300 leading-none select-none">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div className="absolute bottom-0 left-0 right-0 p-2">
+                  <p className="text-white text-[11px] font-semibold leading-tight truncate">
+                    {actor.name}
+                  </p>
+                  <p className="text-white/40 text-[10px] truncate italic mt-0.5 group-hover:text-white/60 transition-colors duration-300">
                     {actor.character}
                   </p>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
         </div>
+
+        {credits.cast.length > INITIAL_CAST && (
+          <div className="mt-4 flex items-center gap-3">
+            <div className="flex-1 h-px bg-white/[0.06]" />
+            {castLimit < credits.cast.length && (
+              <button
+                onClick={() =>
+                  setCastLimit((v) =>
+                    Math.min(v + CAST_STEP, credits.cast.length),
+                  )
+                }
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors duration-200 px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-[#e94f37]/30"
+              >
+                {`Show ${Math.min(CAST_STEP, credits.cast.length - castLimit)} more`}
+                <span className="text-white/20">
+                  · {credits.cast.length - castLimit} remaining
+                </span>
+              </button>
+            )}
+            {castLimit > INITIAL_CAST && (
+              <button
+                onClick={() => setCastLimit(INITIAL_CAST)}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors duration-200 px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-[#e94f37]/30"
+              >
+                Collapse
+              </button>
+            )}
+            <div className="flex-1 h-px bg-white/[0.06]" />
+          </div>
+        )}
       </section>
 
       <hr className="border-white/8" />
 
       <section className="space-y-12">
-        {/* Director / Producer Spotlight */}
-        {(getKeyCrewMembers() || [])
-          .filter((item) => item.job)
-          .some((item) => item.people?.length) && (
-            <div>
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-                    Key Personnel
-                  </h2>
-                  <p className="text-slate-400 text-sm">
-                    The creative visionaries behind the film
-                  </p>
-                </div>
-
-                <Link
-                  href={viewAllHref}
-                  className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
-                >
-                  View all personnel →
-                </Link>
+        {/* Key Personnel — dossier style */}
+        {getKeyCrewMembers().some((item) => item.people?.length) && (
+          <div>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+                  Key Personnel
+                </h2>
+                <p className="text-slate-400 text-sm">
+                  The creative visionaries behind the film
+                </p>
               </div>
-
-              <div className="flex flex-wrap gap-4">
-                {getKeyCrewMembers()
-                  .filter((item) => item.job)
-                  .map((item) =>
-                    item.people.map((person) => (
-                      <div
-                        key={person.id}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-                      >
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
-                          <Image
-                            src={person.profile_path ? `https://image.tmdb.org/t/p/w92${person.profile_path}` : "/placeholder-person.svg"}
-                            alt={person.name}
-                            width={40}
-                            height={40}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-
-                        <div className="flex flex-col">
-                          <span className="text-slate-100 text-sm font-medium leading-tight">
-                            {person.name}
-                          </span>
-                          <span className="text-[10px] uppercase text-slate-400 tracking-wide">
-                            {item.job}
-                          </span>
-                        </div>
-                      </div>
-                    )),
-                  )}
-              </div>
+              <Link
+                href={viewAllHref}
+                className="inline-block text-xs px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.08] text-slate-200 transition-colors duration-150"
+              >
+                View all →
+              </Link>
             </div>
-          )}
 
-        {/* Timeline Style Crew List */}
-        {(getKeyCrewMembers() || [])
-          .filter((item) => item.job)
-          .some((item) => item.people?.length) && (
-            <div>
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-                    Creative Team
-                  </h2>
-                  <p className="text-slate-400 text-sm">
-                    "Also" creative visionaries behind the film
-                  </p>
-                </div>
+            <div className="relative rounded-xl overflow-hidden border border-white/[0.07]">
+              {/* Left gradient accent bar */}
+              <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-transparent via-[#e94f37]/50 to-transparent" />
 
-                <Link
-                  href={viewAllHref}
-                  className="inline-block text-xs px-3 py-2 rounded bg-white/6 hover:bg-white/8 text-slate-200"
-                >
-                  View the team →
-                </Link>
-              </div>
-              <div className="divide-y divide-white/10">
-                {getKeyCrewMembers()
-                  .filter((item) => item.job)
-                  .map((item) => (
+              <div className="divide-y divide-white/[0.04]">
+                {getKeyCrewMembers().map((item, idx) => {
+                  const shown = item.people.slice(0, 5);
+                  const extra = item.people.length - 5;
+                  return (
                     <div
                       key={item.job}
-                      className="flex justify-between py-3 text-sm"
+                      className="group relative flex items-start gap-4 sm:gap-6 pl-5 sm:pl-7 pr-5 py-3.5 transition-colors duration-200 hover:bg-white/[0.025]"
                     >
-                      <span className="text-slate-400 uppercase tracking-wide font-medium">
+                      {/* Red scan-line sweep on hover */}
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#e94f37]/[0.04] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                      {/* Index */}
+                      <span className="mt-0.5 w-5 shrink-0 text-right text-[10px] font-mono text-white/10 transition-colors duration-200 group-hover:text-[#e94f37]/60">
+                        {String(idx + 1).padStart(2, "0")}
+                      </span>
+
+                      {/* Role label */}
+                      <span className="mt-0.5 w-28 sm:w-36 shrink-0 text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.14em] text-white/20 transition-colors duration-200 group-hover:text-white/35 leading-relaxed">
                         {item.job}
                       </span>
-                      <div className="text-slate-100 font-medium">
-                        {item.people
-                          .map((person) => person.name)
-                          .slice(0, 3)
-                          .join(", ")}
+
+                      {/* People */}
+                      <div className="flex-1 flex flex-wrap gap-x-4 gap-y-2 min-w-0">
+                        {shown.map((person) => (
+                          <div key={person.id} className="inline-flex items-center gap-2">
+                            <div className="w-[22px] h-[22px] shrink-0 rounded-full overflow-hidden ring-1 ring-white/[0.08] bg-white/[0.05]">
+                              <Image
+                                src={
+                                  person.profile_path
+                                    ? `https://image.tmdb.org/t/p/w45${person.profile_path}`
+                                    : "/placeholder-person.svg"
+                                }
+                                alt={person.name}
+                                width={22}
+                                height={22}
+                                className="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-all duration-300"
+                              />
+                            </div>
+                            <span className="text-xs text-white/45 whitespace-nowrap transition-colors duration-200 group-hover:text-white/75">
+                              {person.name}
+                            </span>
+                          </div>
+                        ))}
+                        {extra > 0 && (
+                          <span className="self-center text-[10px] font-mono text-white/20">
+                            +{extra}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
               </div>
             </div>
-          )}
+          </div>
+        )}
 
         {/* Studio Partners */}
         {info.production_companies?.length > 0 && (
-          <div className="relative mt-20">
-            <div className="mb-8">
+          <div className="relative">
+            <div className="mb-6">
               <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
                 Studio Partners
               </h2>
-              <p className="text-slate-400 text-sm mb-8">
+              <p className="text-slate-400 text-sm">
                 In collaboration with industry leaders
               </p>
             </div>
@@ -477,7 +437,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
 
       {/* Global Distribution: Passport stamp style */}
       <section>
-        <div className="mb-10">
+        <div className="mb-6">
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
             Global Distribution
           </h2>

@@ -1,16 +1,17 @@
 import { ReviewReply as PrismaReviewReply } from '@prisma/client';
 
 export class ReviewReplyEntity implements PrismaReviewReply {
-  id: string;
-  reviewId: string;
-  userId: string;
-  content: string;
-  createdAt: Date;
+  id!: string;
+  reviewId!: string;
+  userId!: string;
+  content!: string;
+  createdAt!: Date;
 
   // user may include these fields but it is optional
   user?: {
     id: string;
     username: string;
+    name?: string | null;
     avatarUrl: string | null;
   };
 
@@ -26,6 +27,7 @@ export class ReviewReplyEntity implements PrismaReviewReply {
       user: this.user
         ? {
             username: this.user.username,
+            name: this.user.name,
             avatarUrl: this.user.avatarUrl,
           }
         : undefined,

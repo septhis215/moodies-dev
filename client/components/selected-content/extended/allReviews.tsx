@@ -1148,7 +1148,13 @@ function AvatarBlock({ review }: { review: Review }) {
   const avatarSrc = (() => {
     const av = review.author_details?.avatar_path;
     if (!av) return null;
+    // base64 data URL
+    if (av.startsWith("data:")) return av;
+    // full https URL (Google CDN, uploaded avatar, etc.)
+    if (av.startsWith("https://") || av.startsWith("http://")) return av;
+    // TMDB stores Gravatar as "/https://..."
     if (av.startsWith("/https") || av.startsWith("/http")) return av.slice(1);
+    // relative TMDB path
     return `https://image.tmdb.org/t/p/w185${av}`;
   })();
   const initials = (review.author || "A")
@@ -1162,12 +1168,14 @@ function AvatarBlock({ review }: { review: Review }) {
       className="rounded-full overflow-hidden bg-white/[0.08] border border-white/[0.1] flex items-center justify-center flex-shrink-0"
     >
       {avatarSrc ? (
-        <Image
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
           src={avatarSrc}
           alt={review.author}
           width={size}
           height={size}
-          className="object-cover"
+          referrerPolicy="no-referrer"
+          className="object-cover w-full h-full"
         />
       ) : (
         <span className="text-white/50 font-semibold text-sm">{initials}</span>

@@ -13,6 +13,7 @@ import {
   Put,
   UnauthorizedException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GetUser } from 'src/auth/decorator';
@@ -98,6 +99,7 @@ export class AuthController {
       email: profile.email,
       name: profile.name,
       googleId: profile.googleId,
+      picture: profile.picture,
     });
 
     const base = process.env.CLIENT_URL ?? 'http://localhost:3000';
@@ -252,6 +254,88 @@ export class AuthController {
   }
 
   @UseGuards(JwtGuard)
+  @Patch('me/profile')
+  async updateProfile(
+    @Req() req: any,
+    @Body() body: { name?: string; username?: string },
+  ) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.uid;
+    if (!userId) throw new UnauthorizedException('Invalid token');
+
+    const { name, username } = body;
+    if (!name?.trim() && !username?.trim()) {
+      throw new BadRequestException('At least one field (name or username) is required');
+    }
+
+    const data: { name?: string; username?: string } = {};
+    if (name?.trim()) {
+      if (name.trim().length < 2 || name.trim().length > 50) {
+        throw new BadRequestException('Display name must be between 2 and 50 characters');
+      }
+      data.name = name.trim();
+    }
+    if (username?.trim()) {
+      // basic username validation
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(username.trim())) {
+        throw new BadRequestException('Username must be 3-20 characters and contain only letters, numbers, or underscores');
+      }
+      // explicit duplicate check — catch it before hitting the DB constraint
+      const existing = await this.PrismaService.user.findUnique({
+        where: { username: username.trim() },
+        select: { id: true },
+      });
+      if (existing && existing.id !== String(userId)) {
+        throw new BadRequestException('Username is already taken');
+      }
+      data.username = username.trim();
+    }
+
+    try {
+      const updated = await this.PrismaService.user.update({
+        where: { id: String(userId) },
+        data,
+        select: { id: true, name: true, username: true },
+      });
+      return updated;
+    } catch (e: any) {
+      if (e?.code === 'P2002') {
+        throw new BadRequestException('Username is already taken');
+      }
+      throw e;
+    }
+  }
+
+  @UseGuards(JwtGuard)
+  @Patch('me/avatar')
+  async updateAvatar(@Req() req: any, @Body() body: { avatarUrl: string }) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.uid;
+    if (!userId) throw new UnauthorizedException('Invalid token');
+
+    const { avatarUrl } = body;
+    if (!avatarUrl) throw new BadRequestException('avatarUrl is required');
+
+    // Accept base64 data URLs (image/*) or https URLs
+    const isBase64 = avatarUrl.startsWith('data:image/');
+    const isHttps = avatarUrl.startsWith('https://');
+    if (!isBase64 && !isHttps) {
+      throw new BadRequestException('avatarUrl must be a base64 data URL or https URL');
+    }
+
+    // Enforce a ~200KB limit on base64 payloads (~150KB image after encoding overhead)
+    if (isBase64 && avatarUrl.length > 200_000) {
+      throw new BadRequestException('Image too large. Please upload a smaller image.');
+    }
+
+    const updated = await this.PrismaService.user.update({
+      where: { id: String(userId) },
+      data: { avatarUrl },
+      select: { id: true, avatarUrl: true },
+    });
+
+    return updated;
+  }
+
+  @UseGuards(JwtGuard)
   @Get('me')
   async me(@Req() req: any) {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.uid;
@@ -260,9 +344,13 @@ export class AuthController {
       where: { id: String(userId) },
       select: {
         id: true,
+        name: true,
         username: true,
         email: true,
         avatarUrl: true,
+        provider: true,
+        reviewBannedUntil: true,
+        reviewWarningScore: true,
         age: true,
         preferredGenres: true,
         preferredLanguages: true,

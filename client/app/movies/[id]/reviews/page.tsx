@@ -87,10 +87,10 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
 
   const transformedReviews = reviewsData.reviews.map((r: any) => ({
     id: r.id,
-    author: r.user?.username || "Anonymous",
+    author: r.user?.name || r.user?.username || "Anonymous",
     author_details: {
       username: r.user?.username,
-      name: r.user?.username,
+      name: r.user?.name || r.user?.username,
       avatar_path: r.user?.avatarUrl,
       rating: r.rating,
     },

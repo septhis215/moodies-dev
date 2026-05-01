@@ -19,6 +19,7 @@ type User = {
   email?: string;
   role?: string;
   avatarUrl?: string;
+  provider?: string;
 };
 
 type AuthContextValue = {
@@ -71,7 +72,8 @@ function extractUser(payload: any): User {
   const name = p.name ?? p.fullname ?? p.full_name ?? username ?? "User";
   const email = p.email ?? p.mail ?? p.user?.email;
   const avatarUrl = p.avatarUrl ?? p.avatar_url ?? p.picture;
-  return { id, name, username, email, avatarUrl };
+  const provider = p.provider;
+  return { id, name, username, email, avatarUrl, provider };
 }
 
 /* ---------- Provider ---------- */
