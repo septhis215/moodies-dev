@@ -59,9 +59,7 @@ export default function ReviewsSection({
     }))
     : [];
 
-  const [sortBy, setSortBy] = useState<"latest" | "highest" | "popularity">(
-    "latest",
-  );
+  const [sortBy, setSortBy] = useState<"latest" | "highest" | "popularity">("latest");
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   function popularityProxy(r: Review) {
@@ -77,7 +75,7 @@ export default function ReviewsSection({
       case "latest":
         arr.sort(
           (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
         break;
       case "highest":
@@ -85,8 +83,7 @@ export default function ReviewsSection({
           const ra = a.author_details?.rating ?? -1,
             rb = b.author_details?.rating ?? -1;
           return ra === rb
-            ? new Date(b.created_at).getTime() -
-            new Date(a.created_at).getTime()
+            ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             : rb - ra;
         });
         break;
@@ -100,9 +97,7 @@ export default function ReviewsSection({
   const topThree = sorted.slice(0, 3);
   const basePath = contentType === "tv" ? "tv" : "movies";
   const viewAllHref = contentId ? `/${basePath}/${contentId}/reviews` : "#";
-  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(
-    new Set(),
-  );
+  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
 
   const toggleExpand = (id: string) => {
     setExpandedReviews((prev) => {
@@ -112,7 +107,6 @@ export default function ReviewsSection({
     });
   };
 
-  // close modal on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") setReviewModalOpen(false);
@@ -121,7 +115,6 @@ export default function ReviewsSection({
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // prevent body scroll when modal open
   useEffect(() => {
     document.body.style.overflow = reviewModalOpen ? "hidden" : "";
     return () => {
@@ -138,39 +131,39 @@ export default function ReviewsSection({
             <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
               Audience Reviews
             </h2>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-white/50 text-sm mt-1">
               Top community picks & latest opinions
             </p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Sort pills — desktop */}
-            <div className="hidden md:flex items-center gap-1 p-1 rounded-lg bg-white/[0.04] border border-white/[0.07]">
+            <div className="hidden md:flex items-center gap-1 p-1 rounded-lg bg-white/[0.06] border border-white/[0.10]">
               {(["latest", "highest", "popularity"] as const).map((s) => (
                 <button
                   key={s}
                   onClick={() => setSortBy(s)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer capitalize ${sortBy === s ? "bg-[#e94f37] text-white" : "text-slate-400 hover:text-white"}`}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer capitalize ${sortBy === s
+                    ? "bg-[#e94f37] text-white"
+                    : "text-white/60 hover:text-white"
+                    }`}
                 >
                   {s}
                 </button>
               ))}
             </div>
-            {/* Sort — mobile */}
+
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="md:hidden bg-white/[0.05] text-slate-200 rounded-lg px-3 py-2 text-sm border border-white/[0.07] outline-none cursor-pointer"
+              className="md:hidden bg-white/[0.07] text-white rounded-lg px-3 py-2 text-sm border border-white/[0.10] outline-none cursor-pointer"
             >
               <option value="latest">Latest</option>
               <option value="highest">Highest</option>
               <option value="popularity">Popularity</option>
             </select>
 
-            {/* Divider */}
-            <div className="hidden sm:block h-5 w-px bg-white/[0.1]" />
+            <div className="hidden sm:block h-5 w-px bg-white/[0.15]" />
 
-            {/* Write a Review — primary CTA */}
             <button
               onClick={() => {
                 if (!isAuthenticated) {
@@ -185,10 +178,9 @@ export default function ReviewsSection({
               Write a Review
             </button>
 
-            {/* View all — text link style */}
             <Link
               href={viewAllHref}
-              className="text-xs font-medium text-white/40 hover:text-white transition-colors underline underline-offset-2 decoration-white/20 hover:decoration-white/60 whitespace-nowrap"
+              className="text-xs font-medium text-white/50 hover:text-white transition-colors underline underline-offset-2 decoration-white/25 hover:decoration-white/70 whitespace-nowrap"
             >
               View all
             </Link>
@@ -197,13 +189,16 @@ export default function ReviewsSection({
 
         {/* ── Review cards ── */}
         <div
-          className={`grid gap-4 transition-all duration-300 ${expandedReviews.size > 0 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`}
+          className={`grid gap-4 transition-all duration-300 ${expandedReviews.size > 0
+            ? "grid-cols-1"
+            : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            }`}
         >
           <AnimatePresence mode="popLayout">
             {topThree.length === 0 ? (
-              <div className="col-span-full flex flex-col items-center justify-center py-16 gap-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                <div className="text-3xl opacity-30">💬</div>
-                <p className="text-sm text-white/30">
+              <div className="col-span-full flex flex-col items-center justify-center py-16 gap-3 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+                <div className="text-3xl opacity-40">💬</div>
+                <p className="text-sm text-white/40">
                   No reviews yet. Be the first!
                 </p>
               </div>
@@ -223,35 +218,40 @@ export default function ReviewsSection({
                       layout: { duration: 0.3, ease: "easeInOut" },
                       opacity: { duration: 0.2 },
                     }}
-                    className="relative flex flex-col gap-4 p-5 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:bg-white/[0.05] hover:border-white/[0.12] transition-all duration-200 overflow-hidden"
+                    className="relative flex flex-col gap-4 p-5 rounded-xl bg-white/[0.05] border border-white/[0.10] hover:bg-white/[0.08] hover:border-white/[0.16] transition-all duration-200 overflow-hidden"
                   >
                     <svg
-                      className="absolute top-3 right-3 w-7 h-7 text-white/[0.04]"
+                      className="absolute top-3 right-3 w-7 h-7 text-white/[0.06]"
                       viewBox="0 0 24 24"
                       fill="currentColor"
                       aria-hidden
                     >
                       <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
                     </svg>
+
                     <div className="flex items-center gap-3 min-w-0">
                       <AvatarBlock review={r} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-white truncate">
                           {r.author}
                         </p>
-                        <p className="text-[11px] text-white/30">
+                        <p className="text-[11px] text-white/40">
                           {new Date(r.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       {typeof r.author_details?.rating === "number" && (
-                        <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.05] border border-white/[0.08] flex-shrink-0">
-                          <Star size={11} className="text-yellow-400 fill-yellow-400 flex-shrink-0" />
-                          <span className="text-xs font-semibold text-white/80 leading-none">
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.07] border border-white/[0.12] flex-shrink-0">
+                          <Star
+                            size={11}
+                            className="text-yellow-400 fill-yellow-400 flex-shrink-0"
+                          />
+                          <span className="text-xs font-semibold text-white leading-none">
                             {(r.author_details.rating / 2).toFixed(1)}
                           </span>
                         </div>
                       )}
                     </div>
+
                     {r.moodEmojis && r.moodEmojis.length > 0 && (
                       <div className="flex gap-1">
                         {r.moodEmojis.slice(0, 3).map((e, i) => (
@@ -261,8 +261,9 @@ export default function ReviewsSection({
                         ))}
                       </div>
                     )}
+
                     <div className="flex-1">
-                      <p className="text-sm text-white/70 leading-relaxed break-words">
+                      <p className="text-sm text-white/80 leading-relaxed break-words">
                         {isExpanded ? r.content : preview}
                         {!isExpanded && needsTruncation && "…"}
                       </p>
@@ -275,18 +276,19 @@ export default function ReviewsSection({
                         </button>
                       )}
                     </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-white/[0.06]">
+
+                    <div className="flex items-center justify-between pt-3 border-t border-white/[0.08]">
                       <Link
                         href={
                           contentId
                             ? `/${basePath}/${contentId}/reviews?highlight=${encodeURIComponent(r.id)}`
                             : r.url || "#"
                         }
-                        className="text-xs text-white/30 hover:text-[#e94f37] transition-colors"
+                        className="text-xs text-white/40 hover:text-[#e94f37] transition-colors"
                       >
                         Full review →
                       </Link>
-                      <span className="text-[11px] text-white/20">
+                      <span className="text-[11px] text-white/30">
                         #{idx + 1} of {sorted.length}
                       </span>
                     </div>
@@ -298,7 +300,6 @@ export default function ReviewsSection({
         </div>
       </section>
 
-      {/* ── Review Modal ── */}
       <AnimatePresence>
         {reviewModalOpen && (
           <ReviewModal
@@ -335,7 +336,10 @@ function ReviewModal({
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(15, 23, 42, 0.85)", backdropFilter: "blur(14px)" }}
+      style={{
+        background: "rgba(10, 14, 30, 0.88)",
+        backdropFilter: "blur(14px)",
+      }}
       onClick={onClose}
     >
       <motion.div
@@ -346,27 +350,25 @@ function ReviewModal({
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-lg rounded-2xl overflow-hidden"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(17,24,39,0.98) 0%, rgba(15,23,42,0.99) 100%)",
-          border: "1px solid rgba(255,255,255,0.10)",
-          boxShadow:
-            "0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)",
+          background: "#1e1b2e",
+          border: "1px solid rgba(255,255,255,0.12)",
+          boxShadow: "0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06)",
         }}
       >
-        {/* Red accent bar at top */}
+        {/* Red accent bar */}
         <div className="h-0.5 w-full bg-gradient-to-r from-[#e94f37] via-[#ff6b58] to-transparent" />
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.08]">
           <div>
             <h2 className="text-base font-bold text-white">Write a Review</h2>
-            <p className="text-xs text-white/30 mt-0.5">
+            <p className="text-xs text-white/40 mt-0.5">
               Share your experience with the community
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-white/50 hover:text-white transition-all cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-white/[0.07] hover:bg-white/[0.13] border border-white/[0.10] text-white/60 hover:text-white transition-all cursor-pointer"
           >
             <X size={14} />
           </button>
@@ -381,7 +383,7 @@ function ReviewModal({
                 <h3 className="text-base font-bold text-white mb-1">
                   Sign in to continue
                 </h3>
-                <p className="text-sm text-white/40">
+                <p className="text-sm text-white/50">
                   You need to be logged in to leave a review.
                 </p>
               </div>
@@ -413,7 +415,7 @@ function ReviewModal({
                 <h3 className="text-sm font-bold text-red-400 mb-1">
                   Review Privileges Suspended
                 </h3>
-                <p className="text-xs text-white/40 mb-3">
+                <p className="text-xs text-white/50 mb-3">
                   Temporarily restricted due to policy violations.
                 </p>
                 <div className="flex items-center gap-2 text-xs text-white/50">
@@ -452,7 +454,7 @@ function ReviewModal({
   );
 }
 
-/* ─── ReviewForm (inside modal) ─── */
+/* ─── ReviewForm ─── */
 function ReviewForm({
   contentId,
   contentType,
@@ -494,18 +496,9 @@ function ReviewForm({
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
-    if (!contentId) {
-      setError("Content ID is missing.");
-      return;
-    }
-    if (!mood) {
-      setError("🎭 Pick a mood first");
-      return;
-    }
-    if (rating === null) {
-      setError("⭐ Add a rating");
-      return;
-    }
+    if (!contentId) { setError("Content ID is missing."); return; }
+    if (!mood) { setError("🎭 Pick a mood first"); return; }
+    if (rating === null) { setError("⭐ Add a rating"); return; }
     if (!content.trim() || content.trim().length < 10) {
       setError("✍️ At least 10 characters needed");
       return;
@@ -534,7 +527,13 @@ function ReviewForm({
       onSuccess?.();
       router.refresh();
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to submit review.", "error", 4000, "Error", null);
+      toast(
+        err instanceof Error ? err.message : "Failed to submit review.",
+        "error",
+        4000,
+        "Error",
+        null
+      );
     } finally {
       setSubmitting(false);
     }
@@ -557,23 +556,20 @@ function ReviewForm({
               type="button"
               onClick={() => setMood(m.value)}
               className={`relative flex flex-col items-center gap-1 py-2.5 px-1 rounded-lg border transition-all duration-200 cursor-pointer ${mood === m.value
-                ? "bg-white/[0.08] border-[#e94f37]/50 scale-[1.04]"
-                : "bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06] hover:border-white/20"
+                ? "bg-white/[0.10] border-[#e94f37]/60 scale-[1.04]"
+                : "bg-white/[0.05] border-white/[0.09] hover:bg-white/[0.09] hover:border-white/25"
                 }`}
             >
               <span className="text-lg leading-none">{m.emoji}</span>
               <span
-                className={`text-[9px] font-medium leading-none text-center ${mood === m.value ? "text-white" : "text-white/35"}`}
+                className={`text-[9px] font-medium leading-none text-center ${mood === m.value ? "text-white" : "text-white/50"
+                  }`}
               >
                 {m.label}
               </span>
               {mood === m.value && (
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#e94f37] rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-2 h-2 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
+                  <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
                       d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -588,17 +584,17 @@ function ReviewForm({
       </div>
 
       {/* Review text + rating card */}
-      <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+      <div className="rounded-xl border border-white/[0.10] bg-white/[0.04] overflow-hidden">
         {/* Author strip */}
-        <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/[0.06]">
-          <div className="w-6 h-6 rounded-full bg-white/[0.1] border border-white/10 flex items-center justify-center flex-shrink-0">
-            <span className="text-white/70 text-[10px] font-bold">
+        <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/[0.08] bg-white/[0.03]">
+          <div className="w-6 h-6 rounded-full bg-white/[0.12] border border-white/[0.15] flex items-center justify-center flex-shrink-0">
+            <span className="text-white/80 text-[10px] font-bold">
               {author.charAt(0).toUpperCase()}
             </span>
           </div>
           <span className="text-xs font-medium text-white/70">{author}</span>
 
-          {/* Stars inline */}
+          {/* Stars */}
           <div className="ml-auto flex items-center gap-0.5">
             {Array.from({ length: 5 }).map((_, i) => {
               const val = (i + 1) * 2;
@@ -614,7 +610,10 @@ function ReviewForm({
                 >
                   <Star
                     size={14}
-                    className={`transition-colors ${active ? "text-yellow-400 fill-yellow-400" : "text-white/35 hover:text-white/40"}`}
+                    className={`transition-colors ${active
+                      ? "text-yellow-400 fill-yellow-400"
+                      : "text-white/30 hover:text-white/50"
+                      }`}
                   />
                 </button>
               );
@@ -628,16 +627,17 @@ function ReviewForm({
           onChange={(e) => setContent(e.target.value)}
           placeholder="What did you think? Share what you loved, hated, or found surprising…"
           rows={5}
-          className="w-full bg-transparent px-4 py-3 text-sm text-white/90 placeholder-white/20 resize-none outline-none leading-relaxed"
+          className="w-full bg-transparent px-4 py-3 text-sm text-white placeholder-white/25 resize-none outline-none leading-relaxed"
         />
 
         {/* Char count footer */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-t border-white/[0.06]">
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-white/[0.08] bg-white/[0.03]">
           <span className="text-[11px] text-white/40">
             {content.length} chars
           </span>
           <span
-            className={`text-[11px] font-medium ${content.length < 10 ? "text-white/40" : "text-[#e94f37]"}`}
+            className={`text-[11px] font-medium ${content.length < 10 ? "text-white/40" : "text-[#e94f37]"
+              }`}
           >
             {content.length < 10
               ? `${10 - content.length} more needed`
@@ -691,27 +691,14 @@ function ReviewForm({
 /* ─── Helpers ─── */
 function RatingArc({ rating }: { rating: number }) {
   const clamped = Math.max(0, Math.min(10, rating));
-  const r = 10,
-    circ = 2 * Math.PI * r;
+  const r = 10, circ = 2 * Math.PI * r;
   return (
     <div className="relative flex-shrink-0 w-9 h-9">
       <svg width="36" height="36" viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
         <circle
-          cx="18"
-          cy="18"
-          r={r}
-          fill="none"
-          stroke="rgba(255,255,255,0.06)"
-          strokeWidth="3"
-        />
-        <circle
-          cx="18"
-          cy="18"
-          r={r}
-          fill="none"
-          stroke="#e94f37"
-          strokeWidth="3"
-          strokeLinecap="round"
+          cx="18" cy="18" r={r} fill="none"
+          stroke="#e94f37" strokeWidth="3" strokeLinecap="round"
           strokeDasharray={circ}
           strokeDashoffset={circ * (1 - clamped / 10)}
           style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
@@ -729,13 +716,9 @@ function AvatarBlock({ review }: { review: Review }) {
   const avatarSrc = (() => {
     const av = review.author_details?.avatar_path;
     if (!av) return null;
-    // base64 data URL
     if (av.startsWith("data:")) return av;
-    // full https URL (Google CDN, uploaded avatar, etc.)
     if (av.startsWith("https://") || av.startsWith("http://")) return av;
-    // TMDB stores Gravatar as "/https://..."
     if (av.startsWith("/https") || av.startsWith("/http")) return av.slice(1);
-    // relative TMDB path
     return `https://image.tmdb.org/t/p/w185${av}`;
   })();
   const initials = (review.author || "A")
@@ -746,10 +729,9 @@ function AvatarBlock({ review }: { review: Review }) {
   return (
     <div
       style={{ width: size, height: size, minWidth: size }}
-      className="rounded-full overflow-hidden bg-white/[0.08] flex items-center justify-center ring-1 ring-white/10 flex-shrink-0"
+      className="rounded-full overflow-hidden bg-white/[0.10] flex items-center justify-center ring-1 ring-white/[0.15] flex-shrink-0"
     >
       {avatarSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={avatarSrc}
           alt={review.author}
@@ -759,7 +741,7 @@ function AvatarBlock({ review }: { review: Review }) {
           className="object-cover w-full h-full"
         />
       ) : (
-        <span className="text-white/60 font-semibold text-xs">{initials}</span>
+        <span className="text-white/70 font-semibold text-xs">{initials}</span>
       )}
     </div>
   );
