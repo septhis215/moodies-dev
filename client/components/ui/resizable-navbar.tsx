@@ -4,8 +4,6 @@ import { IconMenu2, IconX } from "@tabler/icons-react";
 import {
   motion,
   AnimatePresence,
-  useScroll,
-  useMotionValueEvent,
 } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -49,33 +47,14 @@ interface MobileNavMenuProps {
 
 export const Navbar = ({ children, className }: NavbarProps) => {
   const ref = useRef<HTMLDivElement>(null);
-  const { scrollY } = useScroll();
-  const [hidden, setHidden] = useState(false);
-
-  useMotionValueEvent(scrollY, "change", (latest) => {
-    const previous = scrollY.getPrevious();
-    if (previous === undefined) return;
-
-    if (latest > previous && latest > 80) {
-      // scrolling down
-      setHidden(true);
-    } else {
-      // scrolling up
-      setHidden(false);
-    }
-  });
 
   return (
-    <motion.div
+    <div
       ref={ref}
-      initial={false}
-      animate={{ y: hidden ? "-100%" : "0%" }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
       className={cn(
-        "fixed inset-x-0 top-0 z-100 w-full flex items-center px-4",
+        "absolute inset-x-0 top-0 z-[999] w-full flex items-center px-4",
         "backdrop-blur-[4px] bg-gradient-to-b from-black/40 via-black/20 to-transparent",
-        "h-32 md:h-24",
-        "transition-all duration-300 ease-in-out",
+        "h-16 md:h-24",
         className
       )}
       style={{
@@ -84,7 +63,7 @@ export const Navbar = ({ children, className }: NavbarProps) => {
       }}
     >
       {children}
-    </motion.div>
+    </div>
   );
 };
 

@@ -16,7 +16,11 @@ import {
   IconLogin,
   IconUserPlus,
   IconChevronDown,
+  IconMovie,
 } from "@tabler/icons-react";
+import {
+  Tv
+} from "lucide-react";
 import {
   Navbar,
   NavBody,
@@ -618,28 +622,28 @@ export function NavbarComponent() {
   );
 
   return (
-    <Navbar className="fixed top-0 left-0 right-0 z-999">
+    <Navbar className="">
       <NavBody className="hidden lg:flex">
         <NavbarLogo />
 
         {/* Navigation Links */}
         <div className="flex items-center gap-1">
           <Link
-            href="/watchlist"
+            href="/movies"
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-            title="My List (Watchlist)"
+            title="Movies"
           >
-            <Bookmark size={20} className="!w-5 !h-5" />
-            <span className="text-sm font-medium">My List</span>
+            <IconMovie size={20} className="!w-5 !h-5" />
+            <span className="text-sm font-medium">Movies</span>
           </Link>
 
           <Link
-            href="/liked"
+            href="/tv"
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-            title="My Likes"
+            title="Series"
           >
-            <Heart size={20} className="!w-5 !h-5" />
-            <span className="text-sm font-medium">My Likes</span>
+            <Tv size={20} className="!w-5 !h-5" />
+            <span className="text-sm font-medium">Series</span>
           </Link>
 
           <Link
@@ -798,6 +802,22 @@ export function NavbarComponent() {
                           <span>My Profile</span>
                         </Link>
 
+                        <Link
+                          href="/watchlist"
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                        >
+                          <Bookmark size={18} />
+                          <span>My List</span>
+                        </Link>
+
+                        <Link
+                          href="/liked"
+                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                        >
+                          <Heart size={18} />
+                          <span>My Likes</span>
+                        </Link>
+
                         <div className="my-2 h-px bg-slate-800" />
 
                         <button
@@ -902,20 +922,18 @@ export function NavbarComponent() {
                     onClick={() =>
                       setMobileExpandedRoute(isExpanded ? null : r.href)
                     }
-                    className={`w-full flex items-center justify-between px-4 py-3 transition-all ${
-                      isExpanded
-                        ? "bg-white/[0.07]"
-                        : "bg-white/[0.03] hover:bg-white/[0.06]"
-                    }`}
+                    className={`w-full flex items-center justify-between px-4 py-3 transition-all ${isExpanded
+                      ? "bg-white/[0.07]"
+                      : "bg-white/[0.03] hover:bg-white/[0.06]"
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       {isExpanded && (
                         <span className="w-1 h-4 rounded-full bg-gradient-to-b from-[#e94f37] to-orange-500 inline-block" />
                       )}
                       <span
-                        className={`font-semibold text-base transition-colors ${
-                          isExpanded ? "text-[#e94f37]" : "text-gray-200"
-                        }`}
+                        className={`font-semibold text-base transition-colors ${isExpanded ? "text-[#e94f37]" : "text-gray-200"
+                          }`}
                       >
                         {r.name}
                       </span>
