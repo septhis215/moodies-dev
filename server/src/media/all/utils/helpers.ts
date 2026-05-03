@@ -30,13 +30,24 @@ export function getItemYear(item: any): number | null {
     return isNaN(year) ? null : year;
 }
 
-export function isRecentOrUpcoming(item: any): boolean {
+export function isRecentRelease(item: any): boolean {
     const dateStr = item.release_date || item.first_air_date;
     if (!dateStr) return false;
     const releaseDate = new Date(dateStr);
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-    return releaseDate >= threeMonthsAgo;
+    return releaseDate >= threeMonthsAgo && releaseDate <= new Date();
+}
+
+export function isUpcoming(item: any): boolean {
+    const dateStr = item.release_date || item.first_air_date;
+    if (!dateStr) return false;
+    return new Date(dateStr) > new Date();
+}
+
+// Keep backward-compat shim so nothing else breaks
+export function isRecentOrUpcoming(item: any): boolean {
+    return isRecentRelease(item) || isUpcoming(item);
 }
 
 export function seededShuffleArray(array: any[], seed: number): any[] {

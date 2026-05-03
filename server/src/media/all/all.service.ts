@@ -63,8 +63,8 @@ export class AllService implements OnModuleInit {
     }
 
     // --- Video Feed ---
-    getVideoFeed(page = 1, mediaType?: 'movie' | 'tv') {
-        return this.videoFeedService.getVideoFeed(page, mediaType);
+    getVideoFeed(salt = 0, page = 1, mediaType?: 'movie' | 'tv') {
+        return this.videoFeedService.getVideoFeed(salt, page, mediaType);
     }
 
     // --- People ---

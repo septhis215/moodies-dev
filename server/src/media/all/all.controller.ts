@@ -271,11 +271,13 @@ export class AllController {
   // Optimize the existing getVideoFeed with caching
   @Get('video-feed')
   async getVideoFeed(
+    @Query('salt') salt: string,
     @Query('page') page?: string,
     @Query('mediaType') mediaType?: 'movie' | 'tv',
+
   ) {
     const pageNum = page ? parseInt(page, 10) : 1;
-    return await this.allService.getVideoFeed(pageNum, mediaType);
+    return await this.allService.getVideoFeed(Number(salt) || 0, pageNum, mediaType);
   }
 
   @Get('movie/:id/videos')
