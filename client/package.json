@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "doppler run --config stg --fallback .env.fallback -- next dev --turbopack",
-    "build:staging": "doppler run --config stg --fallback .env.fallback -- next build --turbopack",
-    "build:production": "doppler run --config prd --fallback .env.fallback -- next build --turbopack",
+    "dev": "next dev --turbopack",
+    "build:staging": "next build --turbopack",
+    "build:production": "next build --turbopack",
     "build": "npm run build:staging",
-    "start:staging": "doppler run --config stg --fallback .env.fallback -- next start",
-    "start:production": "doppler run --config prd --fallback .env.fallback -- next start",
+    "start:staging": "next start",
+    "start:production": "next start",
     "start": "npm run start:staging",
     "lint": "eslint"
   },

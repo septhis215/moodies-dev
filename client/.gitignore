@@ -30,14 +30,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files — all secrets managed via Doppler
+# env files — contains secrets, never commit
 .env
 .env.local
 .env*.local
 .env.staging
 .env.production
-# Doppler encrypted offline cache — auto-generated, never commit
-.env.fallback
 
 # vercel
 .vercel
