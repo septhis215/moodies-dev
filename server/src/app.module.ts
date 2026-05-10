@@ -23,7 +23,7 @@ import { LikedModule } from './liked/liked.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: `.env.${process.env.NODE_ENV || 'staging'}`,
+      envFilePath: '.env',
     }),
     AuthModule,
     UserModule,
