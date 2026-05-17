@@ -251,8 +251,8 @@ export const NavbarLogo = ({ className }: { className?: string }) => {
       <Image
         src="/images/moodies.png"
         alt="logo"
-        width={30}
-        height={30}
+        width={60}
+        height={60}
       />{" "}
       <span className="font-medium text-white">Moodies</span>{" "}
     </Link>
