@@ -74,36 +74,57 @@ export default function MoodRecommendationsSection({
   const getPosterUrl = (path?: string) =>
     path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
 
-  const getIconEmoji = (iconName: string) => {
-    const iconMap: Record<string, string> = {
-      smile: "😊",
-      zap: "⚡",
-      skull: "💀",
-      heart: "❤️",
-      wind: "🌊",
-      moon: "🌙",
-      crown: "👑",
-      star: "⭐",
-      clock: "⏰",
-      "cloud-rain": "🌧️",
-      laugh: "😂",
-      book: "📚",
-      cloud: "☁️",
-      flag: "🇺🇸",
-      music: "🎵",
-      compass: "🧭",
-      sun: "☀️",
-      brain: "🧠",
-      shield: "🛡️",
-      rocket: "🚀",
-      cowboy: "🤠",
-      crosshair: "🎯",
-      "mug-hot": "☕",
-      beaker: "🧪",
-      fist: "✊",
-      "book-open": "📖",
+  const getMoodImageSrc = (mood: Mood) => {
+    const moodImageMap: Record<string, string> = {
+      happy: "happy",
+      funny: "funny",
+      cozy: "cozy",
+      whimsy: "whimsy",
+      romantic: "romantic",
+      serenity: "serenity",
+      chill: "chill",
+      inspirational: "inspirational",
+      nostalgic: "nostalgic",
+      bittersweet: "bittersweet",
+      sad: "sad",
+      thrilling: "thrilling",
+      epic: "epic",
+      chaos: "chaos",
+      horror: "horror",
+      dark: "dark",
+      gritty: "gritty",
+      "mind-bending": "mind-bending",
+      "sci-fi": "sci-fi",
+      western: "western",
+      documentary: "documentary",
     };
-    return iconMap[iconName] || "🎬";
+
+    const iconFallbackMap: Record<string, string> = {
+      smile: "happy",
+      laugh: "funny",
+      "mug-hot": "cozy",
+      magic: "whimsy",
+      heart: "romantic",
+      wind: "serenity",
+      cloud: "chill",
+      star: "inspirational",
+      clock: "nostalgic",
+      zap: "thrilling",
+      crown: "epic",
+      fire: "chaos",
+      skull: "horror",
+      moon: "dark",
+      shield: "gritty",
+      brain: "mind-bending",
+      rocket: "sci-fi",
+      cowboy: "western",
+      book: "documentary",
+    };
+
+    const moodKey = mood.name.toLowerCase();
+    const imageName = moodImageMap[moodKey] || iconFallbackMap[mood.icon];
+
+    return imageName ? `/images/moods/${imageName}.png` : "/images/moodies1.png";
   };
 
   const shuffleArray = <T,>(array: T[]): T[] => {
@@ -415,8 +436,14 @@ export default function MoodRecommendationsSection({
                 </div>
 
                 <div className="relative flex flex-col items-center text-center gap-3">
-                  <div className="text-3xl mb-1 transform group-hover:scale-125 group-hover:rotate-12 transition-all duration-300">
-                    {getIconEmoji(mood.icon)}
+                  <div className="relative w-24 h-24 mb-1 transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+                    <Image
+                      src={getMoodImageSrc(mood)}
+                      alt={`${mood.name} mood mascot`}
+                      fill
+                      sizes="96px"
+                      className="object-contain"
+                    />
                   </div>
                   <div>
                     <h3
@@ -467,8 +494,14 @@ export default function MoodRecommendationsSection({
               </div>
 
               <div className="relative flex items-center gap-4">
-                <div className="text-4xl animate-bounce">
-                  {getIconEmoji(selectedMood.icon)}
+                <div className="relative w-20 h-20 shrink-0 animate-bounce">
+                  <Image
+                    src={getMoodImageSrc(selectedMood)}
+                    alt={`${selectedMood.name} mood mascot`}
+                    fill
+                    sizes="80px"
+                    className="object-contain"
+                  />
                 </div>
                 <div>
                   <h3 className="font-black text-white text-xl mb-1">
