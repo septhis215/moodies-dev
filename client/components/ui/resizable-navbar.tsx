@@ -249,12 +249,12 @@ export const NavbarLogo = ({ className }: { className?: string }) => {
     >
       {" "}
       <Image
-        src="/images/moodies.png"
+        src="/images/moodies-transparent.png"
         alt="logo"
-        width={60}
-        height={60}
+        width={100}
+        height={100}
       />{" "}
-      <span className="font-medium text-white">Moodies</span>{" "}
+      {/* <span className="font-medium text-white">Moodies</span>{" "} */}
     </Link>
   );
 };

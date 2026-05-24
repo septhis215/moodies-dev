@@ -64,7 +64,7 @@ type User = {
   avatarUrl?: string;
 };
 
-const MOODIES_LOGO = "/images/moodies.png";
+const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };
 
 export function NavbarComponent() {
