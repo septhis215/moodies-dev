@@ -35,7 +35,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 /** Try these in order; keep/adjust to match your server */
 const ME_PATHS = ["/auth/me", "/users/me", "/auth/profile"];
 
-const MOODIES_LOGO = "/images/moodies.png";
+const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };
 
 /* ---------- Utils ---------- */

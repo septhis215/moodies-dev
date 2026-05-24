@@ -5,7 +5,7 @@ import { sGet, sSet, sRemove } from "@/utils/secureStorage";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-const MOODIES_LOGO = "/images/moodies.png";
+const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };
 
 export function useAuth() {

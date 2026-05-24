@@ -380,12 +380,12 @@ export default function VideoFeedPage() {
         initial={{ y: -56, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.45, ease: 'easeOut' }}
-        className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center px-4 md:px-6
+        className="fixed top-0 left-0 right-0 z-50 h-22 flex items-center px-4 md:px-6
                    bg-gradient-to-b from-black/80 via-black/40 to-transparent"
       >
         <Link href="/" className="flex items-center gap-2 mr-4 shrink-0 select-none">
-          <Image src="/images/moodies.png" alt="logo" width={28} height={28} className="rounded-md" />
-          <span className="text-white font-semibold text-sm tracking-wide">Moodies</span>
+          <Image src="/images/moodies-transparent.png" alt="logo" width={80} height={80} className="rounded-md" />
+          {/* <span className="text-white font-semibold text-sm tracking-wide">Moodies</span> */}
         </Link>
 
         <div className="flex-1 flex justify-center">

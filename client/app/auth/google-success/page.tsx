@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { sSet } from "@/utils/secureStorage";
 
-const MOODIES_LOGO = "/images/moodies.png";
+const MOODIES_LOGO = "/images/moodies-transparent.png";
 
 export default function GoogleSuccessPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">(

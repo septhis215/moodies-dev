@@ -137,7 +137,7 @@ export default function AppLoading() {
           />
           {/* Logo */}
           <motion.img
-            src="/images/moodies.png"
+            src="/images/moodies-mascot.png"
             alt="Moodies"
             animate={{ scale: [1, 1.04, 1] }}
             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
