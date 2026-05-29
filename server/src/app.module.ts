@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './routes/user/user.module';
@@ -18,6 +19,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
 import { ReviewModule } from './routes/review/review.module';
 import { ModerationModule } from './routes/moderation/moderation.module';
 import { LikedModule } from './liked/liked.module';
+import { RateLimitGuard } from './common/guards/rate-limit.guard';
 
 @Module({
   imports: [
@@ -42,7 +44,12 @@ import { LikedModule } from './liked/liked.module';
     ReviewModule,
     ModerationModule,
   ],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: RateLimitGuard,
+    },
+  ],
   controllers: [SearchController, MoodsController],
 })
 export class AppModule {}

@@ -84,17 +84,18 @@ export class TMDBService {
 
     /**
      * Get movies by genre IDs using /discover/movie.
-     * Sends all genre IDs as a comma-separated list (TMDB OR logic).
+     * Sends genre IDs with TMDB OR logic so broad moods collect enough
+     * candidates and the mood scorer can rank the best overlaps.
      */
     async getMoviesByGenres(genreIds: number[], page = 1, minRating?: number): Promise<TMDBMovie[]> {
         if (!Array.isArray(genreIds) || genreIds.length === 0) return [];
 
         const params: Record<string, any> = {
-            with_genres: genreIds.join(','),
+            with_genres: genreIds.join('|'),
             page,
-            sort_by: 'vote_count.desc',
+            sort_by: 'popularity.desc',
             include_adult: false,
-            'vote_count.gte': 100,
+            'vote_count.gte': 150,
             language: 'en-US',
         };
 
@@ -137,9 +138,9 @@ export class TMDBService {
         const params: Record<string, any> = {
             with_genres: genreIds.join('|'), // | = OR in TMDB discover
             page,
-            sort_by: 'vote_count.desc',
+            sort_by: 'popularity.desc',
             include_adult: false,
-            'vote_count.gte': 20,
+            'vote_count.gte': 75,
             language: 'en-US',
         };
 
@@ -279,11 +280,7 @@ export class TMDBService {
             });
 
             const results = Array.isArray(data?.results) ? data.results : [];
-            return results.map((item: any) => ({
-                ...item,
-                poster_path: item.poster_path ? this.baseImageUrl + item.poster_path : null,
-                backdrop_path: item.backdrop_path ? this.baseImageUrl + item.backdrop_path : null,
-            }));
+            return results;
         } catch (err: any) {
             this.logger.error(
                 `Failed to search ${mediaType} for "${query}"`,
@@ -305,11 +302,7 @@ export class TMDBService {
             });
 
             const results = Array.isArray(data?.results) ? data.results : [];
-            return results.map((item: any) => ({
-                ...item,
-                poster_path: item.poster_path ? this.baseImageUrl + item.poster_path : null,
-                backdrop_path: item.backdrop_path ? this.baseImageUrl + item.backdrop_path : null,
-            }));
+            return results;
         } catch (err: any) {
             this.logger.error(
                 `Failed to fetch trending ${mediaType}/${timeWindow}`,

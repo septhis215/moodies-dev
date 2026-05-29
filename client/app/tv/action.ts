@@ -26,13 +26,20 @@ export async function getAllMoods() {
     }
 }
 
-export async function getMoodRecommendations(moodId: string, limit: number = 12, mediaType: string = 'both', forceRefresh: boolean = false) {
+export async function getMoodRecommendations(
+    moodId: string,
+    limit: number = 12,
+    mediaType: string = 'both',
+    forceRefresh: boolean = false,
+    shuffle: boolean = true,
+) {
     try {
         const params = new URLSearchParams({
             moodId,
             limit: limit.toString(),
             mediaType,
             forceRefresh: forceRefresh.toString(),
+            shuffle: shuffle.toString(),
         });
 
         const url = `${NEST_API_URL}/moods/recommendations?${params}`;

@@ -124,4 +124,13 @@ export class GetRecommendationsDto {
   @BooleanTransform()
   @IsBoolean()
   excludeViewed?: boolean = false;
+
+  @ApiPropertyOptional({
+    description: 'Shuffle high-quality matches within the cached recommendation pool',
+    default: true,
+  })
+  @IsOptional()
+  @BooleanTransform()
+  @IsBoolean()
+  shuffle?: boolean = true;
 }
