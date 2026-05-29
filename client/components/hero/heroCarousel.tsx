@@ -164,8 +164,8 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
   return (
     <section
       className="relative w-full overflow-hidden 
-        h-[70vh] sm:h-[80vh] lg:h-screen
-        min-h-[500px] max-h-[1200px]"
+        h-[68svh] sm:h-[80vh] lg:h-screen
+        min-h-[540px] max-h-[1200px]"
       onMouseEnter={pause}
       onMouseLeave={resume}
       aria-roledescription="carousel"
@@ -238,12 +238,10 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
             {/* Mobile/Tablet Layout - Stack content vertically */}
             <div className="lg:hidden">
               {/* Content */}
-              <div className="text-white mb-6">
+              <div className="mb-6 text-white">
                 {/* Title */}
                 <h1
-                  className="font-bold leading-tight drop-shadow-2xl  line-clamp-2
-                  text-2xl sm:text-3xl md:text-4xl
-                  tracking-tight mb-3"
+                  className="mb-3 line-clamp-2 text-3xl font-black leading-tight tracking-tight drop-shadow-2xl sm:text-3xl md:text-4xl"
                 >
                   {all[index].title}
                 </h1>
@@ -300,20 +298,24 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                 </div>
 
                 {/* Overview - shorter on mobile */}
-                <p
-                  className="text-sm sm:text-base text-gray-200/90 drop-shadow-lg 
-                  line-clamp-2 sm:line-clamp-2 mb-4"
-                >
+                <p className="mb-4 line-clamp-3 text-sm leading-6 text-gray-200/90 drop-shadow-lg sm:line-clamp-2 sm:text-base">
                   {all[index].overview.slice(0, 120) +
                     (all[index].overview.length > 120 ? "..." : "")}
                 </p>
 
                 {/* Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <div className="mb-6 grid grid-cols-2 gap-3 sm:flex sm:flex-row">
+                  <button
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-pink-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-red-950/30 transition-all duration-200 hover:from-red-700 hover:to-pink-700"
+                    onClick={() => handleClick(all[index])}
+                  >
+                    <IconInfoCircle className="h-4 w-4" />
+                    More Info
+                  </button>
                   <button
                     onClick={toggleWatchlist}
                     disabled={wlLoading}
-                    className={`px-6 py-3 text-sm font-medium rounded-lg backdrop-blur-md transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer border
+                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-bold backdrop-blur-md transition-all duration-200
                       ${currentInWatchlist
                         ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
                         : "bg-white/10 border-white/20 text-white hover:bg-white/20"

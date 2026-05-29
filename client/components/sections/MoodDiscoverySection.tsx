@@ -5,11 +5,11 @@ import { Sparkles, Heart, Compass, Brain, Film, Tv, ArrowRight, Zap, Stars } fro
 import Link from 'next/link';
 
 export default function MoodDiscoverySection() {
-  const [hoveredCard, setHoveredCard] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    const handleMouseMove = (e) => {
+    const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({
         x: (e.clientX / window.innerWidth) * 100,
         y: (e.clientY / window.innerHeight) * 100
@@ -73,10 +73,10 @@ export default function MoodDiscoverySection() {
   return (
     <section
       id="your-moods"
-      className="relative bg-black py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
+      className="relative mx-auto max-w-7xl bg-black px-4 py-10 sm:px-6 sm:py-16 lg:px-8"
     >
       {/* Header */}
-      <div className="text-center mb-10">
+      <div className="mb-6 text-left sm:mb-10 sm:text-center">
         <div
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium"
           style={{
@@ -90,19 +90,19 @@ export default function MoodDiscoverySection() {
           <Zap className="w-4 h-4" />
         </div>
 
-        <h2 className="mt-6 text-3xl sm:text-4xl lg:text-4xl font-extrabold text-white tracking-tight">
+        <h2 className="mt-5 text-2xl font-extrabold tracking-tight text-white sm:mt-6 sm:text-4xl lg:text-4xl">
           Find your perfect{" "}
           <span >Mood Match</span>
         </h2>
 
-        <p className="mt-3 text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto">
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400 sm:mx-auto sm:text-base">
           Personalized content and recommendations based on your mood — simple,
           fast and unobtrusive.
         </p>
       </div>
 
       {/* Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
         {cards.map((card) => {
           const Icon = card.icon;
           const isHovered = hoveredCard === card.id;
@@ -117,17 +117,17 @@ export default function MoodDiscoverySection() {
             >
               {/* outer glow */}
               <div
-                className={`absolute inset-0 rounded-3xl blur-2xl transition-opacity duration-300 
+                className={`absolute inset-0 rounded-xl blur-xl transition-opacity duration-300 sm:rounded-3xl sm:blur-2xl 
           ${isHovered ? "opacity-50" : "opacity-30"}`}
               >
                 <div className={`w-full h-full bg-gradient-to-br ${card.gradient}`} />
               </div>
 
               <div
-                className={`relative h-full rounded-3xl overflow-hidden
+                className={`relative h-full overflow-hidden rounded-xl sm:rounded-3xl
           bg-gradient-to-br ${card.gradient}
           transition-all duration-300
-          ${isHovered ? "scale-[1.05] -translate-y-2" : "scale-100"}
+                  ${isHovered ? "sm:scale-[1.05] sm:-translate-y-2" : "scale-100"}
           `}
               >
                 {/* dark overlay for readability */}
@@ -142,11 +142,11 @@ export default function MoodDiscoverySection() {
                 </div>
 
                 {/* content */}
-                <div className="relative p-6 flex flex-col min-h-[260px] text-white">
+                <div className="relative flex min-h-[150px] flex-col p-4 text-white sm:min-h-[260px] sm:p-6">
                   {/* top row */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-white/20 backdrop-blur border border-white/30 shadow-lg">
-                      <Icon className="w-6 h-6 text-white" />
+                  <div className="mb-3 flex items-start justify-between sm:mb-4">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/30 bg-white/20 shadow-lg backdrop-blur sm:h-12 sm:w-12 sm:rounded-xl">
+                      <Icon className="h-5 w-5 text-white sm:h-6 sm:w-6" />
                     </div>
 
                     <span className="text-xs font-semibold text-white/80">
@@ -156,7 +156,7 @@ export default function MoodDiscoverySection() {
 
                   {/* emoji accent */}
                   <div
-                    className={`absolute right-4 top-4 text-7xl transition-all duration-500
+                    className={`absolute right-4 top-4 text-5xl transition-all duration-500 sm:text-7xl
               ${isHovered ? "opacity-40 scale-125 rotate-6" : "opacity-25"}`}
                   >
                     {card.emoji}
@@ -167,7 +167,7 @@ export default function MoodDiscoverySection() {
                     <p className="text-xs uppercase tracking-wide text-white/80 mb-1">
                       {card.subtitle}
                     </p>
-                    <h3 className="text-2xl font-black leading-tight">
+                    <h3 className="text-xl font-black leading-tight sm:text-2xl">
                       {card.title}
                     </h3>
                     <p className="mt-2 text-sm text-white/85">
@@ -176,7 +176,7 @@ export default function MoodDiscoverySection() {
                   </div>
 
                   {/* CTA */}
-                  <div className="mt-6">
+                  <div className="mt-4 sm:mt-6">
                     <div
                       className={`flex items-center justify-between px-4 py-3 rounded-xl
                 bg-gradient-to-r from-black/30 to-black/10

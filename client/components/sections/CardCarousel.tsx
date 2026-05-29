@@ -352,14 +352,14 @@ export default function CardCarousel<T extends MovieLike>({
       <style jsx>{scrollbarStyles}</style>
       <section
         id={sectionId}
-        className="relative w-full py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
+        className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:px-8"
       >
-        <div className="mb-8">
+        <div className="mb-5 sm:mb-8">
           {titleLink ? (
             // link to trending page
             <Link href={titleLink} className="inline-block group">
               <h2
-                className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
+                className="text-2xl font-bold tracking-tight text-transparent bg-clip-text sm:text-2xl lg:text-3xl"
                 style={{
                   backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
                   WebkitBackgroundClip: "text",
@@ -371,7 +371,7 @@ export default function CardCarousel<T extends MovieLike>({
             </Link>
           ) : (
             <h2
-              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
+              className="text-2xl font-bold tracking-tight text-transparent bg-clip-text sm:text-2xl lg:text-3xl"
               style={{
                 backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
                 WebkitBackgroundClip: "text",
@@ -383,7 +383,7 @@ export default function CardCarousel<T extends MovieLike>({
           )}
 
           {subtitle && (
-            <p className="text-gray-400 text-xs sm:text-sm mt-1">{subtitle}</p>
+            <p className="mt-2 max-w-[34ch] text-sm leading-5 text-gray-400 sm:max-w-none">{subtitle}</p>
           )}
         </div>
 

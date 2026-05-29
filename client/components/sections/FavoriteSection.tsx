@@ -124,14 +124,14 @@ export default function MoodiesMix({
   // ─── State: guest ───────────────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
-      <section className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-6xl xl:max-w-7xl mx-auto">
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-10 lg:px-8 xl:max-w-7xl">
         {/* Header */}
-        <div className="mb-4">
-          <p className="text-xs font-bold tracking-widest text-[#e94f37] uppercase mb-1">
+        <div className="mb-5">
+          <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#e94f37]">
             Recommended for you
           </p>
           <h2
-            className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
+            className="bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-2xl lg:text-3xl"
             style={{
               backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
               WebkitBackgroundClip: "text",
@@ -147,7 +147,7 @@ export default function MoodiesMix({
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="relative w-full rounded-2xl overflow-hidden bg-[#0e0e0e] min-h-[220px] sm:min-h-[260px] flex items-stretch"
+          className="relative flex w-full items-stretch overflow-hidden rounded-xl border border-white/10 bg-[#0e0e0e] sm:min-h-[260px] sm:rounded-2xl"
         >
           {/* Tiled mood-grid background */}
           <div className="absolute inset-0 grid grid-cols-5 gap-[3px] opacity-20 pointer-events-none">
@@ -161,39 +161,39 @@ export default function MoodiesMix({
           </div>
 
           {/* Left-to-right scrim */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/95 via-[#0a0a0a]/75 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a]/95 via-[#0a0a0a]/85 to-[#0a0a0a]/45 pointer-events-none sm:bg-gradient-to-r sm:from-[#0a0a0a]/95 sm:via-[#0a0a0a]/75 sm:to-transparent" />
           {/* Bottom scrim */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/50 via-transparent to-transparent pointer-events-none" />
 
           {/* ── Left: copy + CTA ── */}
-          <div className="relative z-10 flex flex-col justify-center px-6 sm:px-10 py-8 w-full sm:max-w-[58%]">
+          <div className="relative z-10 flex w-full flex-col justify-center px-4 py-6 sm:max-w-[58%] sm:px-10 sm:py-8">
             {/* Eyebrow pill */}
-            <div className="inline-flex items-center gap-1.5 bg-[#e94f37]/15 border border-[#e94f37]/30 text-[#e94f37] text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full w-fit mb-4">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#e94f37]" />
+            <div className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full border border-[#e94f37]/30 bg-[#e94f37]/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#e94f37]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#e94f37]" />
               Members only
             </div>
 
             {/* Headline */}
-            <h3 className="text-2xl sm:text-3xl lg:text-[2rem] font-extrabold text-white leading-tight mb-2">
+            <h3 className="mb-2 text-2xl font-extrabold leading-tight text-white sm:text-3xl lg:text-[2rem]">
               Movies picked{" "}
               <span className="text-[#e94f37]">just for you</span>
             </h3>
 
             {/* Subline */}
-            <p className="text-xs sm:text-sm text-white/50 leading-relaxed mb-5 max-w-sm">
+            <p className="mb-5 max-w-sm text-sm leading-6 text-white/55">
               Sign in to unlock recommendations built around your taste — your genres, your vibe, your watchlist.
             </p>
 
             {/* Perks */}
-            <ul className="flex flex-col gap-2 mb-6">
+            <ul className="mb-6 flex flex-col gap-2">
               {[
                 "Personalised picks refreshed daily",
                 "Save titles to your watchlist",
                 "Sync across all your devices",
               ].map((perk) => (
-                <li key={perk} className="flex items-center gap-2.5 text-[11px] sm:text-xs text-white/55">
-                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-[#e94f37]/15 flex items-center justify-center">
-                    <span className="w-[5px] h-[5px] rounded-full bg-[#e94f37]" />
+                <li key={perk} className="flex items-center gap-2.5 text-xs text-white/60">
+                  <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[#e94f37]/15">
+                    <span className="h-[5px] w-[5px] rounded-full bg-[#e94f37]" />
                   </span>
                   {perk}
                 </li>
@@ -201,17 +201,17 @@ export default function MoodiesMix({
             </ul>
 
             {/* CTAs */}
-            <div className="flex gap-2.5 flex-wrap">
+            <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
               <button
                 onClick={() => router.push("/auth/login")}
-                className="flex cursor-pointer items-center gap-2 bg-[#e94f37] hover:bg-[#ff5a42] active:scale-[0.98] transition-all text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl"
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#e94f37] px-4 py-3 text-xs font-bold text-white transition-all hover:bg-[#ff5a42] active:scale-[0.98] sm:rounded-xl sm:px-5 sm:py-2.5 sm:text-sm"
               >
                 <Play size={13} className="fill-white" />
                 Sign in free
               </button>
               <button
                 onClick={() => router.push("/auth/signup")}
-                className="flex cursor-pointer items-center gap-2 bg-white/8 hover:bg-white/14 active:scale-[0.98] transition-all border border-white/15 text-white/80 text-xs sm:text-sm font-semibold px-5 py-2.5 rounded-xl"
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.08] px-4 py-3 text-xs font-semibold text-white/80 transition-all hover:bg-white/[0.14] active:scale-[0.98] sm:rounded-xl sm:px-5 sm:py-2.5 sm:text-sm"
               >
                 <Plus size={13} />
                 Create account
@@ -266,17 +266,17 @@ export default function MoodiesMix({
   // ─── State: authenticated, loading ──────────────────────────────────────────
   if (loading) {
     return (
-      <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-4">
           <p className="text-xs font-bold tracking-widest text-[#e94f37] uppercase mb-1">
             Recommended for you
           </p>
           <div className="h-7 w-48 bg-zinc-800 rounded animate-pulse" />
         </div>
-        <div className="w-full h-[340px] rounded-2xl bg-zinc-900 animate-pulse mb-3" />
-        <div className="flex gap-3">
+        <div className="mb-3 h-[360px] w-full animate-pulse rounded-xl bg-zinc-900 sm:h-[340px] sm:rounded-2xl" />
+        <div className="flex gap-3 overflow-hidden">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-[130px] h-[110px] rounded-xl bg-zinc-900 animate-pulse" />
+            <div key={i} className="h-[96px] w-[116px] flex-shrink-0 animate-pulse rounded-xl bg-zinc-900 sm:h-[110px] sm:w-[130px]" />
           ))}
         </div>
       </section>
@@ -324,14 +324,14 @@ export default function MoodiesMix({
   };
 
   return (
-    <section className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-6xl xl:max-w-7xl mx-auto">
+    <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-10 lg:px-8 xl:max-w-7xl">
       {/* Header */}
-      <div className="mb-4">
-        <p className="text-xs font-bold tracking-widest text-[#e94f37] uppercase mb-1">
+      <div className="mb-5">
+        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#e94f37]">
           Recommended for you
         </p>
         <h2
-          className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
+          className="bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-2xl lg:text-3xl"
           style={{
             backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
             WebkitBackgroundClip: "text",
@@ -340,7 +340,7 @@ export default function MoodiesMix({
         >
           {title}
         </h2>
-        {subtitle && <p className="text-gray-500 text-xs sm:text-sm mt-1">{subtitle}</p>}
+        {subtitle && <p className="mt-2 max-w-[34ch] text-sm leading-5 text-gray-500 sm:max-w-none">{subtitle}</p>}
       </div>
 
       {/* Hero banner */}
@@ -351,7 +351,7 @@ export default function MoodiesMix({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4 }}
-          className="relative w-full rounded-2xl overflow-hidden cursor-pointer group aspect-[16/7] sm:aspect-[16/8] max-h-[240px] sm:max-h-[260px] lg:max-h-[300px]"
+          className="group relative min-h-[430px] w-full cursor-pointer overflow-hidden rounded-xl border border-white/10 sm:aspect-[16/8] sm:min-h-0 sm:max-h-[260px] sm:rounded-2xl lg:max-h-[300px]"
           onClick={() => handleClick(primary)}
         >
           <Image
@@ -361,11 +361,11 @@ export default function MoodiesMix({
             className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-transparent sm:bg-gradient-to-r sm:from-black/70 sm:via-black/30 sm:to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
           <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 lg:p-8">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="mb-3 flex items-center gap-2">
               <span className="flex items-center gap-1 bg-[#e94f37]/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">
                 {getContentType(primary) === "tv" ? <Tv size={10} /> : <Film size={10} />}
                 {getContentType(primary) === "tv" ? "Series" : "Movie"}
@@ -378,11 +378,11 @@ export default function MoodiesMix({
               )}
             </div>
 
-            <h3 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white leading-tight mb-2 max-w-lg">
+            <h3 className="mb-2 max-w-lg text-2xl font-extrabold leading-tight text-white sm:text-2xl lg:text-3xl">
               {primary.title}
             </h3>
 
-            <div className="flex flex-wrap gap-2 mb-3">
+            <div className="mb-3 flex flex-wrap gap-2">
               {(primary.release_date || primary.first_air_date) && (
                 <span className="text-[11px] bg-[#e94f37]/20 text-[#e94f37] font-semibold px-2 py-0.5 rounded-full">
                   {(primary.release_date || primary.first_air_date || "").split("-")[0]}
@@ -396,14 +396,14 @@ export default function MoodiesMix({
             </div>
 
             {primary.overview && (
-              <p className="text-xs sm:text-sm text-gray-400 leading-relaxed line-clamp-2 max-w-md sm:max-w-lg mb-4">
+              <p className="mb-4 line-clamp-3 max-w-md text-sm leading-6 text-gray-300 sm:line-clamp-2 sm:max-w-lg">
                 {primary.overview}
               </p>
             )}
 
-            <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               <button
-                className="flex items-center gap-1 bg-[#e94f37] hover:bg-[#ff5a42] transition-colors text-white text-[11px] sm:text-xs font-bold px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg"
+                className="flex items-center justify-center gap-1 rounded-lg bg-[#e94f37] px-3 py-3 text-[11px] font-bold text-white transition-colors hover:bg-[#ff5a42] sm:px-4 sm:py-2.5 sm:text-xs"
                 onClick={(e) => { e.stopPropagation(); handleClick(primary); }}
               >
                 <Info size={12} />
@@ -412,7 +412,7 @@ export default function MoodiesMix({
               <button
                 onClick={(e) => { e.stopPropagation(); toggleWatchlist(); }}
                 disabled={wlLoading}
-                className={`flex items-center gap-1 text-[11px] sm:text-xs font-bold px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border transition-colors ${currentInWatchlist
+                className={`flex items-center justify-center gap-1 rounded-lg border px-3 py-3 text-[11px] font-bold transition-colors sm:px-4 sm:py-2.5 sm:text-xs ${currentInWatchlist
                   ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
                   : "bg-white/10 border-white/20 text-white hover:bg-white/20"
                   }`}
@@ -431,7 +431,7 @@ export default function MoodiesMix({
       </AnimatePresence>
 
       {/* Queue strip */}
-      <div className="flex gap-3.5 mt-3 overflow-x-auto scrollbar-hide pb-1">
+      <div className="scrollbar-hide mt-3 flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3.5 [&::-webkit-scrollbar]:hidden">
         {ordered.map((item, i) => {
           const isActive = i === 0;
           const thumb = item.backdrop_path
@@ -444,9 +444,9 @@ export default function MoodiesMix({
               layout
               whileTap={{ scale: 0.97 }}
               onClick={() => setOffset((offset + i) % items.length)}
-              className={`flex-shrink-0 w-[130px] rounded-xl overflow-hidden cursor-pointer transition-all border-2 ${isActive ? "border-[#e94f37]" : "border-transparent hover:border-white/20"}`}
+              className={`w-[116px] flex-shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-all sm:w-[130px] sm:rounded-xl ${isActive ? "border-[#e94f37]" : "border-transparent hover:border-white/20"}`}
             >
-              <div className="relative w-full h-[76px]">
+              <div className="relative h-[68px] w-full sm:h-[76px]">
                 <Image src={thumb} alt={item.title} fill className="object-cover" />
                 {isActive && <div className="absolute inset-0 bg-[#e94f37]/20" />}
               </div>
@@ -469,7 +469,7 @@ export default function MoodiesMix({
       </div>
 
       {/* Footer row */}
-      <div className="flex items-center justify-between mt-3">
+      <div className="mt-3 flex items-center justify-between">
         <div className="flex gap-1">
           {items.map((_, i) => (
             <div
@@ -481,7 +481,7 @@ export default function MoodiesMix({
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={() => setOffset((prev) => (prev + 1) % items.length)}
-          className="flex items-center gap-1.5 bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-xs font-semibold text-white px-3 py-2 rounded-lg"
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-white/10"
         >
           Up next
           <ChevronRight size={14} className="text-[#e94f37]" />

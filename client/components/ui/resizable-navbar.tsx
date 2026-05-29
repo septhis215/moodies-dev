@@ -55,12 +55,9 @@ export const Navbar = ({ children, className }: NavbarProps) => {
         "absolute inset-x-0 top-0 z-[999] w-full flex items-center px-4",
         "backdrop-blur-[4px] bg-gradient-to-b from-black/40 via-black/20 to-transparent",
         "h-16 md:h-24",
+        "lg:[mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]",
         className
       )}
-      style={{
-        maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
-        WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
-      }}
     >
       {children}
     </div>
@@ -123,7 +120,7 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         paddingRight: visible ? "12px" : "0px",
         paddingLeft: visible ? "12px" : "0px",
         borderRadius: visible ? "4px" : "2rem",
-        y: visible ? -10 : 0,
+        y: 0,
       }}
       transition={{
         type: "spring",
@@ -131,14 +128,10 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         damping: 50,
       }}
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-3 py-6 lg:hidden",
+        "fixed top-3 left-0 right-0 z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-3 py-3 lg:hidden",
         visible && "bg-transparent dark:bg-transparent",
         className
       )}
-      style={{
-        maskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
-        WebkitMaskImage: "linear-gradient(to bottom, black 80%, transparent 100%)",
-      }}
     >
       {children}
     </motion.div>

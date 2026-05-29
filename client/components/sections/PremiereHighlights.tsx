@@ -189,13 +189,13 @@ export default function PremiereHighlights({
   return (
     <section
       id="premiere"
-      className="py-22 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto  relative"
+      className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:px-8"
     >
-      <div className="flex items-end justify-between mb-8">
+      <div className="mb-5 flex items-end justify-between sm:mb-8">
         <div>
           <Link href="/fresh-off-the-screen" className="group">
             <h2
-              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text transition-opacity hover:opacity-80"
+              className="text-2xl font-bold tracking-tight text-transparent bg-clip-text transition-opacity hover:opacity-80 sm:text-2xl lg:text-3xl"
               style={{
                 backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
                 WebkitBackgroundClip: "text",
@@ -207,7 +207,7 @@ export default function PremiereHighlights({
           </Link>
 
           {subtitle && (
-            <p className="text-gray-400 text-xs sm:text-sm mt-2">{subtitle}</p>
+            <p className="mt-2 max-w-[34ch] text-sm leading-5 text-gray-400 sm:max-w-none">{subtitle}</p>
           )}
         </div>
       </div>
@@ -244,7 +244,7 @@ export default function PremiereHighlights({
               else if (swipe < 0 && canScrollRight) scrollRight();
             }
           }}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6 touch-pan-y"
+          className="grid grid-cols-1 gap-4 touch-pan-y lg:grid-cols-3 lg:gap-6"
         >
           {" "}
           <AnimatePresence mode="popLayout">
@@ -260,7 +260,7 @@ export default function PremiereHighlights({
                 onMouseLeave={() => setHoveredId(null)}
                 onClick={() => handleSelectTrailer(item)}
               >
-                <div className="relative aspect-[16/11] rounded-2xl overflow-hidden bg-gray-900 shadow-2xl">
+                <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-gray-900 shadow-2xl sm:rounded-2xl lg:aspect-[16/11]">
                   {/* Image */}
                   <Image
                     src={
@@ -331,8 +331,8 @@ export default function PremiereHighlights({
                   )}
 
                   {/* Bottom Content */}
-                  <div className="absolute bottom-0 left-0 right-0 p-5 z-10">
-                    <h3 className="text-white font-bold text-lg sm:text-xl mb-2 line-clamp-2">
+                  <div className="absolute bottom-0 left-0 right-0 z-10 p-4 sm:p-5">
+                    <h3 className="mb-2 line-clamp-2 text-base font-bold text-white sm:text-xl">
                       {item.title}
                     </h3>
 
