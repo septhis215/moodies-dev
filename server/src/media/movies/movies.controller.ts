@@ -71,7 +71,7 @@ export class MoviesController {
 
   @Get('upcoming-trailers')
   async upcomingTrailers(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 30;
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
     return this.movieService.getUpcomingTrailers(parsedLimit);
   }
 

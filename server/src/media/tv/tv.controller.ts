@@ -103,7 +103,7 @@ export class TvController {
 
   @Get('upcoming-trailers')
   async upcomingTrailers(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 10) : 60;
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
     return this.tvService.getUpcomingTrailers(parsedLimit);
   }
 

@@ -81,7 +81,7 @@ export class TvService implements OnModuleInit {
     return this.trailersService.getTrailers(limit);
   }
 
-  getUpcomingTrailers(limit = 60) {
+  getUpcomingTrailers(limit?: number) {
     return this.trailersService.getUpcomingTrailers(limit);
   }
 

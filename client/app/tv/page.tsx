@@ -62,7 +62,7 @@ async function fetchTVTrailers() {
 }
 
 async function fetchNewTVTrailers() {
-    return fetchWithFallback<All[]>('/tv/upcoming-trailers?limit=60', []);
+    return fetchWithFallback<All[]>('/tv/upcoming-trailers', []);
 }
 
 async function fetchKoreanTV() {

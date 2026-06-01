@@ -114,8 +114,11 @@ export class MovieTrailersService {
         }
     }
 
-    async getUpcomingTrailers(limit = 30): Promise<TmdbMovie[]> {
-        const min = Math.max(MIN_REQUIRED_ITEMS, limit);
+    async getUpcomingTrailers(limit?: number): Promise<TmdbMovie[]> {
+        const requestedLimit =
+            typeof limit === 'number' && Number.isFinite(limit)
+                ? Math.max(MIN_REQUIRED_ITEMS, limit)
+                : null;
 
         if (!this.client.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty trailers');
@@ -125,28 +128,39 @@ export class MovieTrailersService {
         try {
             const items: TmdbMovie[] = [];
             const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
+            today.setHours(0, 0, 0, 0);
+            const currentYear = today.getFullYear();
+            const todayStr = `${currentYear}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const yearEndStr = `${currentYear}-12-31`;
+            let totalPages = 1;
 
-            for (let page = 1; page <= 20 && items.length < min; page++) {
+            for (let page = 1; page <= totalPages; page++) {
                 const data = await this.client.tmdb(
-                    `discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${todayStr}&page=${page}`,
+                    `discover/movie?language=en-US&sort_by=popularity.desc&include_adult=false&primary_release_date.gte=${todayStr}&primary_release_date.lte=${yearEndStr}&page=${page}`,
                 );
+                totalPages = data?.total_pages ?? page;
                 const results = data?.results ?? [];
 
                 const trailerTasks = results.map((m: any) => async () => {
                     const rd = m.release_date;
-                    if (!rd || new Date(rd) < today) return null;
+                    if (!rd || rd < todayStr || rd > yearEndStr) return null;
 
                     try {
-                        const [videosData, details] = await Promise.all([
+                        const [videosResult, detailsResult] = await Promise.allSettled([
                             this.client.tmdb(`movie/${m.id}/videos?language=en-US`),
                             this.client.tmdb(`movie/${m.id}?language=en-US`),
                         ]);
+                        const videosData = videosResult.status === 'fulfilled' ? videosResult.value : null;
+                        const details = detailsResult.status === 'fulfilled' ? detailsResult.value : null;
 
-                        const trailer = (videosData?.results ?? []).find(
-                            (v: any) => v.type === 'Trailer' && v.site === 'YouTube',
-                        );
-                        if (!trailer) return null;
+                        const trailerTypes = ['Trailer', 'Teaser', 'Clip'];
+                        const trailer = trailerTypes
+                            .map((trailerType) =>
+                                (videosData?.results ?? []).find(
+                                    (v: any) => v.type === trailerType && v.site === 'YouTube',
+                                ),
+                            )
+                            .find(Boolean);
 
                         return {
                             id: m.id,
@@ -156,11 +170,16 @@ export class MovieTrailersService {
                             backdrop_path: m.backdrop_path ?? null,
                             release_date: rd,
                             vote_average: m.vote_average,
-                            trailer_key: trailer.key,
+                            vote_count: m.vote_count,
+                            popularity: m.popularity,
+                            trailer_key: trailer?.key ?? null,
                             type: 'movie' as const,
                             recommendations: [],
-                            runtime: details.runtime ?? null,
-                            genres: details.genres ? details.genres.map((g: any) => g.name) : [],
+                            runtime: details?.runtime ?? null,
+                            genres: details?.genres ? details.genres.map((g: any) => g.name) : [],
+                            genre_ids: details?.genres
+                                ? details.genres.map((g: any) => g.id)
+                                : (m.genre_ids ?? []),
                         } as TmdbMovie;
                     } catch {
                         return null;
@@ -171,12 +190,15 @@ export class MovieTrailersService {
                     .filter((item): item is TmdbMovie => item !== null);
 
                 items.push(...pageResults);
-                if (items.length >= min) break;
+                const uniqueWithPosters = new Map(
+                    items
+                        .filter((item) => item.poster_path !== null)
+                        .map((item) => [item.id, item]),
+                );
+                if (requestedLimit && uniqueWithPosters.size >= requestedLimit) break;
             }
 
-            const withImages = items.filter(
-                (item) => item.backdrop_path !== null && item.poster_path !== null,
-            );
+            const withImages = items.filter((item) => item.poster_path !== null);
 
             const uniqueItems = Array.from(
                 new Map(withImages.map((item) => [item.id, item])).values(),
@@ -187,12 +209,13 @@ export class MovieTrailersService {
                     (a, b) =>
                         (a.release_date ? new Date(a.release_date).getTime() : Infinity) -
                         (b.release_date ? new Date(b.release_date).getTime() : Infinity),
-                )
-                .slice(0, min);
+                );
+
+            const result = requestedLimit ? sorted.slice(0, requestedLimit) : sorted;
 
             setTimeout(() => {
                 void runWithTmdbPriority(TMDB_PRIORITY.BACKGROUND, async () => {
-                    const tasks = sorted.map((item) => async () => {
+                    const tasks = result.map((item) => async () => {
                         try {
                             item.recommendations = await this.recommendationsService.getSmartRecommendationsMovie(item.id, 3);
                             return item;
@@ -205,7 +228,7 @@ export class MovieTrailersService {
                 });
             }, 100);
 
-            return sorted;
+            return result;
         } catch (err) {
             this.logger.error('Failed to fetch upcoming trailers', err as any);
             return [];

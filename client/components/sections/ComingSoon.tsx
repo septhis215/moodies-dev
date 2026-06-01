@@ -81,14 +81,19 @@ export function ComingSoonSection({
     Record<string | number, boolean>
   >({});
   const [openMonth, setOpenMonth] = useState<string | null>(null);
+  const [releaseMode, setReleaseMode] = useState<ReleaseMode>("spotlight");
+  const [releaseSort, setReleaseSort] = useState<ReleaseSort>("date");
+  const [expandedWeeks, setExpandedWeeks] = useState<Record<string, number>>(
+    {}
+  );
 
   type GroupedMovieLike = MovieLike & { _parsedDate: Date };
 
-  function groupByMonthAndWeek(items: MovieLike[]) {
+  const groupByMonthAndWeek = useCallback((items: MovieLike[]) => {
     const grouped: Record<string, GroupedMovieLike[]> = {};
 
     items.forEach((item) => {
-      const rawDate = item.release_date || item.first_air_date;
+      const rawDate = getReleaseDate(item);
       if (!rawDate) return;
 
       const date = new Date(rawDate);
@@ -102,9 +107,9 @@ export function ComingSoonSection({
     });
 
     return grouped;
-  }
+  }, []);
 
-  function groupByWeek(movies: GroupedMovieLike[]) {
+  const groupByWeek = useCallback((movies: GroupedMovieLike[]) => {
     const weeks: Record<string, GroupedMovieLike[]> = {};
     movies.forEach((movie) => {
       const date = movie._parsedDate;
@@ -125,7 +130,23 @@ export function ComingSoonSection({
       weeks[range].push(movie);
     });
     return weeks;
-  }
+  }, []);
+
+  const sortReleases = useCallback(
+    (releaseItems: GroupedMovieLike[]) => {
+      return [...releaseItems].sort((a, b) => {
+        if (releaseSort === "interest") {
+          const scoreDiff = getInterestScore(b) - getInterestScore(a);
+          if (scoreDiff !== 0) return scoreDiff;
+        }
+
+        const dateDiff = a._parsedDate.getTime() - b._parsedDate.getTime();
+        if (dateDiff !== 0) return dateDiff;
+        return getInterestScore(b) - getInterestScore(a);
+      });
+    },
+    [releaseSort]
+  );
 
   const getTitle = (item: MovieLike): string => {
     return item.name || item.title || "";
@@ -219,45 +240,129 @@ export function ComingSoonSection({
     }
   };
 
-  const grouped = groupByMonthAndWeek(items);
+  const validItems = useMemo(
+    () => items.filter((item) => Boolean(getReleaseDate(item))),
+    [items]
+  );
+
+  const visibleItems = useMemo(
+    () =>
+      releaseMode === "spotlight"
+        ? validItems.filter(isSpotlightRelease)
+        : validItems,
+    [releaseMode, validItems]
+  );
+
+  const grouped = useMemo(
+    () => groupByMonthAndWeek(visibleItems),
+    [groupByMonthAndWeek, visibleItems]
+  );
+  const allGrouped = useMemo(
+    () => groupByMonthAndWeek(validItems),
+    [groupByMonthAndWeek, validItems]
+  );
+  const totalVisible = Object.values(grouped).flat().length;
+  const totalReleases = validItems.length;
 
   return (
     <section id="upcoming" className="relative max-w-7xl w-full mx-auto py-16">
       <div className="rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
-      <div className="flex items-center justify-between gap-3 sm:gap-4 mb-8">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-white/[0.04] text-[#ff7a66] ring-1 ring-white/10 shadow-lg">
-            <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
+        <div className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-[#ff7a66] ring-1 ring-white/10 shadow-lg">
+              <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
+                Release radar
+              </p>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">
+                {title}
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">
+                Curated by date and audience signal so busy months stay easy to scan.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
-              Release radar
-            </p>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">
-              {title}
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">
-              Save the titles you want before they arrive.
-            </p>
+
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+              <div className="text-xl font-bold leading-none text-white">
+                {totalVisible}
+              </div>
+              <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500">
+                Showing
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+              <div className="text-xl font-bold leading-none text-white">
+                {totalReleases}
+              </div>
+              <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500">
+                Total
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/[0.04] rounded-xl border border-white/10">
-          <span className="text-2xl font-bold text-white">
-            {Object.values(grouped).flat().length}
-          </span>
-          <span className="text-sm text-gray-400">
-            {type === "movies" ? "movies" : "shows"}
-          </span>
-        </div>
-      </div>
+        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/30 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
+            <SlidersHorizontal className="h-4 w-4 text-[#ff7a66]" />
+            Browse controls
+          </div>
 
+          <div className="flex flex-wrap gap-2">
+            {(["spotlight", "all"] as ReleaseMode[]).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setReleaseMode(mode)}
+                className={`cursor-pointer rounded-lg px-3 py-2 text-xs font-bold transition ${
+                  releaseMode === mode
+                    ? "bg-[#e94f37] text-white shadow-lg shadow-[#e94f37]/20"
+                    : "bg-white/[0.06] text-gray-300 hover:bg-white/[0.1]"
+                }`}
+              >
+                {mode === "spotlight" ? "Spotlight" : "All releases"}
+              </button>
+            ))}
+
+            {(["date", "interest"] as ReleaseSort[]).map((sort) => (
+              <button
+                key={sort}
+                onClick={() => setReleaseSort(sort)}
+                className={`cursor-pointer rounded-lg px-3 py-2 text-xs font-bold transition ${
+                  releaseSort === sort
+                    ? "bg-white text-black"
+                    : "bg-white/[0.06] text-gray-300 hover:bg-white/[0.1]"
+                }`}
+              >
+                {sort === "date" ? "Date order" : "Most anticipated"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {totalVisible === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-6 text-center">
+            <p className="text-sm font-semibold text-white">
+              No spotlight releases matched this view.
+            </p>
+            <button
+              onClick={() => setReleaseMode("all")}
+              className="mt-4 cursor-pointer rounded-lg bg-white px-4 py-2 text-xs font-bold text-black transition hover:bg-gray-200"
+            >
+              Show all releases
+            </button>
+          </div>
+        ) : (
       <div className="space-y-5">
         {Object.entries(grouped).map(([monthYear, groupedItems]) => {
-          const sorted = groupedItems.sort(
-            (a, b) => a._parsedDate.getTime() - b._parsedDate.getTime()
-          );
+          const sorted = sortReleases(groupedItems);
           const weeks = groupByWeek(sorted);
+          const allMonthCount = allGrouped[monthYear]?.length ?? groupedItems.length;
+          const topPicks = [...groupedItems]
+            .sort((a, b) => getInterestScore(b) - getInterestScore(a))
+            .slice(0, 6);
 
           return (
             <div
@@ -268,19 +373,24 @@ export function ComingSoonSection({
                 onClick={() =>
                   setOpenMonth(openMonth === monthYear ? null : monthYear)
                 }
-                className="w-full flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5
+                className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-4 sm:py-5
                          bg-white/[0.035] hover:bg-white/[0.06] transition-all duration-300
                          border-b border-white/10 group cursor-pointer"
               >
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-2 h-2 rounded-full bg-[#e94f37] transition-colors" />
+                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                  <div className="w-2 h-2 shrink-0 rounded-full bg-[#e94f37] transition-colors" />
                   <h3 className="text-lg sm:text-xl font-bold text-white">
                     {monthYear}
                   </h3>
                   <div className="flex items-center gap-3 text-sm">
                     <span className="px-2 py-1 bg-white/[0.06] rounded text-slate-300 font-medium">
-                      {groupedItems.length} releases
+                      {groupedItems.length} showing
                     </span>
+                    {allMonthCount !== groupedItems.length && (
+                      <span className="px-2 py-1 bg-white/[0.04] rounded text-gray-500 font-medium">
+                        {allMonthCount} total
+                      </span>
+                    )}
                     <span className="text-gray-500 hidden sm:inline">
                       • {Object.keys(weeks).length}{" "}
                       {Object.keys(weeks).length === 1 ? "week" : "weeks"}
@@ -295,7 +405,61 @@ export function ComingSoonSection({
 
               {openMonth === monthYear && (
                 <div className="p-5 sm:p-6 lg:p-8 space-y-8 sm:space-y-10">
-                  {Object.entries(weeks).map(([range, weekItems], index) => (
+                  {topPicks.length > 0 && (
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                      <div className="mb-4 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-[#ff7a66]" />
+                        <h4 className="text-sm font-bold text-white">
+                          Most anticipated this month
+                        </h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                        {topPicks.map((item) => {
+                          const releaseDate = new Date(
+                            getReleaseDate(item) ?? ""
+                          );
+
+                          return (
+                            <Link
+                              key={`top-${item.id}`}
+                              href={`/${type}/${item.id}`}
+                              className="group flex gap-3 rounded-xl bg-black/35 p-2 ring-1 ring-white/10 transition hover:bg-white/[0.06]"
+                            >
+                              <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-md bg-white/[0.06]">
+                                <Image
+                                  src={posterGetter(item)}
+                                  alt={getTitle(item)}
+                                  fill
+                                  sizes="44px"
+                                  className="object-cover"
+                                />
+                              </div>
+                              <div className="min-w-0 py-0.5">
+                                <div className="line-clamp-2 text-xs font-bold leading-snug text-white group-hover:text-[#ff8b78]">
+                                  {getTitle(item)}
+                                </div>
+                                <div className="mt-1 text-[10px] font-medium text-gray-500">
+                                  {releaseDate.toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {Object.entries(weeks).map(([range, weekItems], index) => {
+                    const weekKey = `${monthYear}-${range}`;
+                    const visibleCount =
+                      expandedWeeks[weekKey] ?? INITIAL_WEEK_ITEMS;
+                    const visibleWeekItems = weekItems.slice(0, visibleCount);
+                    const hiddenCount = weekItems.length - visibleWeekItems.length;
+
+                    return (
                     <div key={range} className="space-y-5">
                       <div className="flex flex-wrap items-center gap-3 mb-5 sm:mb-6">
                         <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/[0.05] border border-white/10 rounded-lg">
@@ -314,7 +478,7 @@ export function ComingSoonSection({
                       </div>
 
                       <div className="grid gap-4 sm:gap-5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                        {weekItems.map((item) => {
+                        {visibleWeekItems.map((item) => {
                           const releaseDate = new Date(
                             item.release_date || item.first_air_date
                           );
@@ -495,14 +659,31 @@ export function ComingSoonSection({
                           );
                         })}
                       </div>
+                      {hiddenCount > 0 && (
+                        <div className="flex justify-center">
+                          <button
+                            onClick={() =>
+                              setExpandedWeeks((prev) => ({
+                                ...prev,
+                                [weekKey]: visibleCount + INITIAL_WEEK_ITEMS,
+                              }))
+                            }
+                            className="cursor-pointer rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-bold text-gray-200 transition hover:bg-white/[0.1]"
+                          >
+                            Show {Math.min(hiddenCount, INITIAL_WEEK_ITEMS)} more
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+        )}
       </div>
     </section>
   );
