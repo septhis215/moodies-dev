@@ -129,12 +129,15 @@ export default async function MoviePage({
   params: { id: string } | Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const data = await fetchDetails(id);
-  const images = await fetchImages(id);
-  const videos = await fetchVideos(id);
-  const reviews = await fetchReviews(id);
-  const reviewStats = await fetchReviewStats(id);
-  const recommendations = await fetchRecommendations(id);
+  const [data, images, videos, reviews, reviewStats, recommendations] =
+    await Promise.all([
+      fetchDetails(id),
+      fetchImages(id),
+      fetchVideos(id),
+      fetchReviews(id),
+      fetchReviewStats(id),
+      fetchRecommendations(id),
+    ]);
 
   if (!data) {
     return (

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TvTmdbClientService } from '../client/tv-tmdb-client.service';
 import { TmdbTv } from '../types/tv.types';
+import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
 
 @Injectable()
 export class TvRecommendationsService {
@@ -50,27 +51,6 @@ export class TvRecommendationsService {
 
         scored.sort((a, b) => b.score - a.score);
         return scored;
-    }
-
-    private async fetchTrailersForCandidates(candidates: any[]) {
-        const tasks = candidates.map((cand) => async (): Promise<any> => {
-            try {
-                const videosData = await this.client.tmdb(`tv/${cand.id}/videos?language=en-US`);
-                const trailerTypes = ['Trailer', 'Teaser', 'Clip'];
-                let trailer: any = null;
-                for (const t of trailerTypes) {
-                    trailer = (videosData?.results ?? []).find(
-                        (v: any) => v.type === t && v.site === 'YouTube',
-                    );
-                    if (trailer) break;
-                }
-                return { ...cand, trailer_key: trailer?.key || null, hasTrailer: !!trailer };
-            } catch {
-                return { ...cand, trailer_key: null, hasTrailer: false };
-            }
-        });
-
-        return this.client.withConcurrencyLimit(tasks, 6);
     }
 
     async getSmartRecommendationsTv(id: number, limit = 10, minRequired = 3): Promise<TmdbTv[]> {
@@ -163,18 +143,13 @@ export class TvRecommendationsService {
             }
 
             const scored = this.scoreCandidates(allCandidates, baseLang, baseGenreIds, baseCountries);
-            const topCandidates = scored.slice(0, Math.max(limit * 3, minRequired * 5));
-            const withTrailerInfo = await this.fetchTrailersForCandidates(topCandidates);
-
-            const withTrailers = withTrailerInfo.filter((i) => i.hasTrailer);
-            const withoutTrailers = withTrailerInfo.filter((i) => !i.hasTrailer);
-            const finalCandidates = [...withTrailers, ...withoutTrailers];
+            const finalCandidates = scored.slice(0, limit);
 
             if (finalCandidates.length < minRequired) {
                 this.logger.warn(`Only found ${finalCandidates.length} tv recommendations for ${id}`);
             }
 
-            return finalCandidates.slice(0, limit).map((item: any) => ({
+            return finalCandidates.map((item: any) => ({
                 id: item.id,
                 title: item.title || item.name || 'Untitled',
                 overview: item.overview || '',
@@ -186,7 +161,7 @@ export class TvRecommendationsService {
                 popularity: item.popularity,
                 origin_country: item.origin_country || [],
                 genres: (item.genre_ids || []).map((gid: number) => this.client.genreMap[gid] || 'Unknown'),
-                trailer_key: item.trailer_key,
+                trailer_key: item.trailer_key ?? null,
                 type: 'tv' as const,
             }));
         } catch (err) {
@@ -196,18 +171,20 @@ export class TvRecommendationsService {
     }
 
     async populateRecommendationsBackground(items: TmdbTv[]) {
-        setTimeout(async () => {
-            const tasks = items.map((item) => async () => {
-                try {
-                    const recs = await this.getSmartRecommendationsTv(item.id, 3);
-                    item.recommendations = recs;
-                    return item;
-                } catch (err) {
-                    this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
-                    return item;
-                }
+        setTimeout(() => {
+            void runWithTmdbPriority(TMDB_PRIORITY.BACKGROUND, async () => {
+                const tasks = items.map((item) => async () => {
+                    try {
+                        const recs = await this.getSmartRecommendationsTv(item.id, 3);
+                        item.recommendations = recs;
+                        return item;
+                    } catch (err) {
+                        this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
+                        return item;
+                    }
+                });
+                await this.client.withConcurrencyLimit(tasks, 3);
             });
-            await this.client.withConcurrencyLimit(tasks, 3);
         }, 100);
     }
 }

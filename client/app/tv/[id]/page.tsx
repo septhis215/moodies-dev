@@ -143,12 +143,23 @@ export default async function TvPage({
   params: { id: string } | Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const data = await fetchDetails(id);
-  const images = await fetchImages(id);
-  const videos = await fetchVideos(id);
-  const reviews = await fetchReviews(id);
-  const reviewStats = await fetchReviewStats(id);
-  const recommendations = await fetchRecommendations(id);
+  const [
+    data,
+    images,
+    videos,
+    reviews,
+    reviewStats,
+    recommendations,
+    seasonsFromEndpoint,
+  ] = await Promise.all([
+    fetchDetails(id),
+    fetchImages(id),
+    fetchVideos(id),
+    fetchReviews(id),
+    fetchReviewStats(id),
+    fetchRecommendations(id),
+    fetchSeasonsWithEpisodes(id),
+  ]);
 
   if (!data) {
     return (
@@ -160,10 +171,6 @@ export default async function TvPage({
       </main>
     );
   }
-
-  // Try to fetch rich season+episode info from dedicated endpoint.
-  // If not available, fallback to the seasons array in the details payload (no episode details).
-  const seasonsFromEndpoint = await fetchSeasonsWithEpisodes(id);
   const seasonsProp =
     seasonsFromEndpoint && Array.isArray(seasonsFromEndpoint)
       ? seasonsFromEndpoint

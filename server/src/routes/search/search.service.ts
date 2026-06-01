@@ -1,9 +1,7 @@
 // search/search.service.ts
 import { HttpException, HttpStatus, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
-import axios from 'axios';
+import { TMDBService } from 'src/external-apis/services/tmdb.service';
 
 export interface SearchFilters {
     query: string;
@@ -23,13 +21,10 @@ export interface SearchFilters {
 @Injectable()
 export class SearchService implements OnModuleInit {
     private readonly logger = new Logger(SearchService.name);
-    private readonly baseUrl: string;
     private readonly token: string;
     private genreMap: Record<number, string> = {};
     private genreIdMap: Record<string, number> = {};
     private countryMap: Record<string, string> = {};
-    private readonly tmdbBaseUrl = 'https://api.themoviedb.org/3';
-    private readonly apiKey = process.env.TMDB_API_KEY;
 
     private readonly countryList = [
         { code: 'US', name: 'United States' },
@@ -84,31 +79,15 @@ export class SearchService implements OnModuleInit {
     ];
 
     constructor(
-        private readonly httpService: HttpService,
+        private readonly tmdbService: TMDBService,
         private readonly configService: ConfigService,
     ) {
-        this.baseUrl =
-            this.configService.get<string>('TMDB_BASE') ??
-            'https://api.themoviedb.org/3';
+        // Kept only as a "is TMDB configured?" guard for internal checks.
         this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
     }
 
     private async tmdb(endpoint: string, params?: any) {
-        const normalizedEndpoint = endpoint.startsWith('http')
-            ? endpoint
-            : `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
-
-        const response = await firstValueFrom(
-            this.httpService.get(normalizedEndpoint, {
-                headers: {
-                    Authorization: `Bearer ${this.token}`,
-                    Accept: 'application/json',
-                },
-                params,
-            }),
-        );
-
-        return response.data;
+        return this.tmdbService.request(endpoint, { params });
     }
 
     private normalizeResult(m: any, type?: 'movie' | 'tv' | 'person') {
@@ -354,15 +333,12 @@ export class SearchService implements OnModuleInit {
                     page: safePage,
                 };
 
-                const multiRes = await axios.get(`${this.tmdbBaseUrl}/search/multi`, {
-                    params: multiParams,
-                    headers: { Authorization: `Bearer ${this.apiKey}` }
-                });
+                const multiRes = await this.tmdb('/search/multi', multiParams);
 
-                totalResults = Math.min(multiRes.data.total_results || 0, 500);
+                totalResults = Math.min(multiRes.total_results || 0, 500);
 
                 // Normalize all results based on their media_type
-                results = multiRes.data.results
+                results = multiRes.results
                     .filter((item: any) => item.media_type === 'movie' || item.media_type === 'tv' || item.media_type === 'person')
                     .map((item: any) => this.normalizeResult(item));
 
@@ -390,13 +366,10 @@ export class SearchService implements OnModuleInit {
                     page: safePage,
                 } : movieParams;
 
-                const movieRes = await axios.get(`${this.tmdbBaseUrl}${movieEndpoint}`, {
-                    params: finalMovieParams,
-                    headers: { Authorization: `Bearer ${this.apiKey}` }
-                });
+                const movieRes = await this.tmdb(movieEndpoint, finalMovieParams);
 
-                totalResults = Math.min(movieRes.data.total_results || 0, 500);
-                results = movieRes.data.results.map((m: any) => this.normalizeResult(m, 'movie'));
+                totalResults = Math.min(movieRes.total_results || 0, 500);
+                results = movieRes.results.map((m: any) => this.normalizeResult(m, 'movie'));
 
                 if (regex_search && searchRegex) {
                     results = results.filter((movie: any) =>
@@ -419,13 +392,10 @@ export class SearchService implements OnModuleInit {
                     page: safePage,
                 } : tvParams;
 
-                const tvRes = await axios.get(`${this.tmdbBaseUrl}${tvEndpoint}`, {
-                    params: finalTvParams,
-                    headers: { Authorization: `Bearer ${this.apiKey}` }
-                });
+                const tvRes = await this.tmdb(tvEndpoint, finalTvParams);
 
-                totalResults = Math.min(tvRes.data.total_results || 0, 500);
-                results = tvRes.data.results.map((t: any) => this.normalizeResult(t, 'tv'));
+                totalResults = Math.min(tvRes.total_results || 0, 500);
+                results = tvRes.results.map((t: any) => this.normalizeResult(t, 'tv'));
 
                 if (regex_search && searchRegex) {
                     results = results.filter((show: any) =>
@@ -442,13 +412,10 @@ export class SearchService implements OnModuleInit {
                     page: safePage,
                 };
 
-                const personRes = await axios.get(`${this.tmdbBaseUrl}/search/person`, {
-                    params: personParams,
-                    headers: { Authorization: `Bearer ${this.apiKey}` }
-                });
+                const personRes = await this.tmdb('/search/person', personParams);
 
-                totalResults = Math.min(personRes.data.total_results || 0, 500);
-                results = personRes.data.results.map((p: any) => this.normalizeResult(p, 'person'));
+                totalResults = Math.min(personRes.total_results || 0, 500);
+                results = personRes.results.map((p: any) => this.normalizeResult(p, 'person'));
 
                 if (regex_search && searchRegex) {
                     results = results.filter((person: any) =>
@@ -501,13 +468,10 @@ export class SearchService implements OnModuleInit {
 
     private async fetchTrailer(id: number, type: 'movie' | 'tv'): Promise<string | null> {
         try {
-            const res = await axios.get(`${this.tmdbBaseUrl}/${type}/${id}/videos`, {
-                params: { language: 'en-US' },
-                headers: { Authorization: `Bearer ${this.apiKey}` }
-            });
+            const res = await this.tmdb(`/${type}/${id}/videos`, { language: 'en-US' });
 
-            if (res.data?.results?.length > 0) {
-                const trailer = res.data.results.find(
+            if (res?.results?.length > 0) {
+                const trailer = res.results.find(
                     (v: any) => v.type === 'Trailer' && v.site === 'YouTube'
                 );
                 return trailer ? trailer.key : null;
@@ -618,21 +582,13 @@ export class SearchService implements OnModuleInit {
                 ? this.createSearchRegex(query, true)
                 : null;
 
-            const response = await axios.get(
-                `${this.tmdbBaseUrl}/search/person`,
-                {
-                    params: {
-                        query,
-                        language: 'en-US',
-                        include_adult: false,
-                    },
-                    headers: {
-                        Authorization: `Bearer ${this.apiKey}`,
-                    },
-                }
-            );
+            const response = await this.tmdb('/search/person', {
+                query,
+                language: 'en-US',
+                include_adult: false,
+            });
 
-            let suggestions = (response.data?.results ?? [])
+            let suggestions = (response?.results ?? [])
                 .slice(0, limit * 2)
                 .map((item: any) => ({
                     id: item.id,
@@ -673,21 +629,13 @@ export class SearchService implements OnModuleInit {
                 ? this.createSearchRegex(query, true)
                 : null;
 
-            const response = await axios.get(
-                `${this.tmdbBaseUrl}/search/multi`,
-                {
-                    params: {
-                        query,
-                        language: 'en-US',
-                        include_adult: false,
-                    },
-                    headers: {
-                        Authorization: `Bearer ${this.apiKey}`,
-                    },
-                }
-            );
+            const response = await this.tmdb('/search/multi', {
+                query,
+                language: 'en-US',
+                include_adult: false,
+            });
 
-            let suggestions = (response.data?.results ?? [])
+            let suggestions = (response?.results ?? [])
                 .filter(
                     (item: any) =>
                         item.media_type === 'movie' || item.media_type === 'tv'

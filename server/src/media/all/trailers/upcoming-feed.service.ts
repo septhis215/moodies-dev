@@ -5,6 +5,7 @@ import { RecommendationsService } from '../recommendations/recommendations.servi
 import { VideoScoringService } from '../videos/video-scoring.service';
 import { TmdbAll } from '../types/tmdb.types';
 import { CACHE_TTL, getSeededRandom, seededShuffleArray } from '../utils/helpers';
+import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
 
 @Injectable()
 export class UpcomingFeedService {
@@ -136,17 +137,19 @@ export class UpcomingFeedService {
             const response = { results: paginatedResults, page, total_pages: 100, hasMore };
 
             if (paginatedResults.length > 0) {
-                setTimeout(async () => {
-                    const tasks = paginatedResults.map(item => async () => {
-                        try {
-                            item.recommendations = await this.recommendationsService.getSmartRecommendations(item.type!, item.id, 3);
-                            return item;
-                        } catch (err) {
-                            this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
-                            return item;
-                        }
+                setTimeout(() => {
+                    void runWithTmdbPriority(TMDB_PRIORITY.BACKGROUND, async () => {
+                        const tasks = paginatedResults.map(item => async () => {
+                            try {
+                                item.recommendations = await this.recommendationsService.getSmartRecommendations(item.type!, item.id, 3);
+                                return item;
+                            } catch (err) {
+                                this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
+                                return item;
+                            }
+                        });
+                        await this.client.withConcurrencyLimit(tasks, 3);
                     });
-                    await this.client.withConcurrencyLimit(tasks, 3);
                 }, 100);
             }
 

@@ -1,8 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
-import { RedisService } from 'src/redis/redis.service';
+import { TMDBService } from 'src/external-apis/services/tmdb.service';
 
 export type TmdbAll = {
   id: number;
@@ -38,7 +36,6 @@ function shuffleArray<T>(arr: T[]): T[] {
 @Injectable()
 export class CategoryService {
   private readonly logger = new Logger(CategoryService.name);
-  private readonly baseUrl: string;
   private readonly token: string;
   private genreMap: Record<number, string> = {};
   private readonly maxConcurrentRequests = 5; // TMDB rate limit consideration
@@ -52,12 +49,10 @@ export class CategoryService {
   };
 
   constructor(
-    private readonly httpService: HttpService,
+    private readonly tmdbService: TMDBService,
     private readonly configService: ConfigService,
   ) {
-    this.baseUrl =
-      this.configService.get<string>('TMDB_BASE') ??
-      'https://api.themoviedb.org/3';
+    // Kept only as a "is TMDB configured?" guard for internal checks.
     this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
   }
 
@@ -83,36 +78,21 @@ export class CategoryService {
     return results;
   }
 
-  // tmdb helper function
+  // tmdb helper function — delegates to central TMDBService for Redis +
+  // rate limiting, but preserves legacy 404/429 → null swallow.
   private async tmdb(endpoint: string) {
-    const base = this.baseUrl.replace(/\/+$/, ''); // remove trailing slashes
-    const path = endpoint.startsWith('http')
-      ? endpoint
-      : `${base}/${endpoint.replace(/^\/+/, '')}`; // remove leading slashes from endpoint
-
     try {
-      const response = await firstValueFrom(
-        this.httpService.get(path, {
-          headers: {
-            Authorization: `Bearer ${this.token}`,
-            Accept: 'application/json',
-          },
-        }),
-      );
-
-      return response.data;
+      return await this.tmdbService.request(endpoint);
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 404) {
-        this.logger.warn(`TMDB 404: ${path}`);
+        this.logger.warn(`TMDB 404: ${endpoint}`);
         return null;
       }
       if (status === 429) {
-        this.logger.warn(`TMDB rate limited (429) on ${path}`);
-        // optionally implement a short retry/backoff here
+        this.logger.warn(`TMDB rate limited (429) on ${endpoint}`);
         return null;
       }
-      this.logger.error(`TMDB request failed: ${path}`, err);
       throw err;
     }
   }

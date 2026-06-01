@@ -1,48 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { TMDBService } from 'src/external-apis/services/tmdb.service';
 
 @Injectable()
 export class TvTmdbClientService {
     readonly logger = new Logger(TvTmdbClientService.name);
-    readonly baseUrl: string;
     readonly token: string;
     genreMap: Record<number, string> = {};
 
     private readonly maxConcurrentRequests = 5;
 
     constructor(
-        private readonly httpService: HttpService,
+        private readonly tmdbService: TMDBService,
         private readonly configService: ConfigService,
     ) {
-        this.baseUrl =
-            this.configService.get<string>('TMDB_BASE') ??
-            'https://api.themoviedb.org/3';
+        // Kept only as a "is TMDB configured?" guard for consumer services.
         this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
     }
 
     async tmdb(endpoint: string) {
-        let normalizedEndpoint: string;
-
-        if (endpoint.startsWith('http')) {
-            normalizedEndpoint = endpoint;
-        } else {
-            const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
-            const cleanBase = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
-            normalizedEndpoint = `${cleanBase}/${cleanEndpoint}`;
-        }
-
-        const response = await firstValueFrom(
-            this.httpService.get(normalizedEndpoint, {
-                headers: {
-                    Authorization: `Bearer ${this.token}`,
-                    Accept: 'application/json',
-                },
-            }),
-        );
-
-        return response.data;
+        return this.tmdbService.request(endpoint);
     }
 
     async withConcurrencyLimit<T>(

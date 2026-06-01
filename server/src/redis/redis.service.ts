@@ -39,4 +39,23 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async get(key: string) {
     return await this.client.get(key);
   }
+
+  async del(key: string) {
+    await this.client.del(key);
+  }
+
+  async getOrSet<T>(key: string, ttlSeconds: number, fetchFn: () => Promise<T>): Promise<T> {
+    const cached = await this.client.get(key);
+    if (cached !== null && cached !== undefined) {
+      try {
+        return JSON.parse(cached) as T;
+      } catch {
+        // Corrupted entry — fall through and refetch.
+      }
+    }
+
+    const fresh = await fetchFn();
+    await this.client.set(key, JSON.stringify(fresh), { EX: ttlSeconds });
+    return fresh;
+  }
 }

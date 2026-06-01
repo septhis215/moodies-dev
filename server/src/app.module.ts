@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ExternalApisModule } from './external-apis/external-apis.module';
+import { JobsModule } from './jobs/jobs.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './routes/user/user.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -27,6 +30,9 @@ import { RateLimitGuard } from './common/guards/rate-limit.guard';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(),
+    ExternalApisModule,
+    JobsModule,
     AuthModule,
     UserModule,
     PrismaModule,

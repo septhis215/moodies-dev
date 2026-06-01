@@ -1,10 +1,9 @@
 import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { MediaType, Prisma } from '@prisma/client';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { RedisService } from 'src/redis/redis.service';
+import { TmdbRateLimiterService } from './tmdb-rate-limiter.service';
 
 export interface TMDBMovie {
     id: number;
@@ -52,10 +51,45 @@ export class TMDBService {
     constructor(
         private readonly httpService: HttpService,
         private readonly configService: ConfigService,
-        private readonly prisma: PrismaService,
+        private readonly rateLimiter: TmdbRateLimiterService,
+        private readonly redis: RedisService,
     ) {
         this.baseUrl = this.configService.get<string>('TMDB_BASE') ?? 'https://api.themoviedb.org/3';
         this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
+    }
+
+    /**
+     * Public TMDB call — every consumer outside TMDBService should funnel
+     * through here so they inherit Redis caching, request dedup, and rate
+     * limiting. Tolerates legacy patterns:
+     *   - leading slash optional (`person/123` or `/person/123`)
+     *   - inline query strings (`search/movie?query=foo`) get split into params
+     */
+    async request<T = any>(
+        endpoint: string,
+        opts?: { params?: Record<string, any> },
+    ): Promise<T> {
+        const params: Record<string, any> = { ...(opts?.params ?? {}) };
+        let path = endpoint;
+
+        const queryIdx = path.indexOf('?');
+        if (queryIdx >= 0) {
+            const queryString = path.slice(queryIdx + 1);
+            path = path.slice(0, queryIdx);
+            for (const pair of queryString.split('&')) {
+                if (!pair) continue;
+                const eq = pair.indexOf('=');
+                const rawKey = eq >= 0 ? pair.slice(0, eq) : pair;
+                const rawVal = eq >= 0 ? pair.slice(eq + 1) : '';
+                params[decodeURIComponent(rawKey)] = decodeURIComponent(rawVal);
+            }
+        }
+
+        if (!path.startsWith('/') && !path.startsWith('http')) {
+            path = `/${path}`;
+        }
+
+        return this.tmdb(path, { params }) as Promise<T>;
     }
 
     private async tmdb(endpoint: string, opts?: { params?: Record<string, any> }) {
@@ -63,23 +97,81 @@ export class TMDBService {
             ? endpoint
             : `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
-        try {
-            const response = await firstValueFrom(
-                this.httpService.get(normalizedEndpoint, {
-                    headers: {
-                        Authorization: `Bearer ${this.token}`,
-                        Accept: 'application/json',
-                    },
-                    params: opts?.params ?? {},
-                }),
-            );
-            return response.data;
-        } catch (err: any) {
-            this.logger.error(
-                `TMDB request failed: ${normalizedEndpoint} — ${err?.response?.status} ${err?.response?.data?.status_message ?? err.message}`,
-            );
-            throw err;
+        const params = opts?.params ?? {};
+        const dedupKey = `${normalizedEndpoint}?${this.stableQuery(params)}`;
+        const ttl = this.resolveTtl(endpoint);
+
+        const fetcher = () =>
+            this.rateLimiter.schedule(dedupKey, async () => {
+                try {
+                    const response = await firstValueFrom(
+                        this.httpService.get(normalizedEndpoint, {
+                            headers: {
+                                Authorization: `Bearer ${this.token}`,
+                                Accept: 'application/json',
+                            },
+                            params,
+                        }),
+                    );
+                    return response.data;
+                } catch (err: any) {
+                    this.logger.error(
+                        `TMDB request failed: ${normalizedEndpoint} — ${err?.response?.status} ${err?.response?.data?.status_message ?? err.message}`,
+                    );
+                    throw err;
+                }
+            });
+
+        if (ttl > 0) {
+            return this.redis.getOrSet(`tmdb:${dedupKey}`, ttl, fetcher);
         }
+        return fetcher();
+    }
+
+    private stableQuery(params: Record<string, any>): string {
+        return Object.keys(params)
+            .sort()
+            .map(k => `${k}=${params[k]}`)
+            .join('&');
+    }
+
+    private resolveTtl(endpoint: string): number {
+        let path = endpoint.startsWith('http') ? new URL(endpoint).pathname : endpoint;
+        // Callers pass either relative paths ("movie/123") or full absolute URLs
+        // ("https://api.themoviedb.org/3//movie/123"). Strip the TMDB version
+        // base (/3) and collapse double slashes so prefix matching works for
+        // both — otherwise absolute-URL callers (the /all/* services) silently
+        // bypass the cache.
+        path = path.replace(/^\/3(?=\/)/, '').replace(/\/{2,}/g, '/');
+        if (!path.startsWith('/')) path = `/${path}`;
+
+        // Image lists are the largest single payloads (every backdrop/poster/
+        // logo with metadata) and are low value to persist — skip the cache so
+        // they don't crowd out far more useful detail entries in Redis.
+        if (path.endsWith('/images') || path.endsWith('/tagged_images')) return 0;
+
+        if (path.startsWith('/trending/')) {
+            return path.endsWith('/day') ? 4 * 60 * 60 : 12 * 60 * 60;
+        }
+        if (path.startsWith('/search/')) return 2 * 60 * 60;
+        if (path.startsWith('/discover/')) return 60 * 60;
+        if (path.startsWith('/genre/')) return 24 * 60 * 60;
+
+        // Collections almost never change; cache aggressively. They recur heavily
+        // during recommendation enrichment.
+        if (path.startsWith('/collection/')) return 24 * 60 * 60;
+
+        // Detail pages and their sub-resources change slowly. Cache 6 hours so
+        // a TV detail page (and its videos/credits/etc.) is near-instant on revisit.
+        if (
+            path.startsWith('/movie/') ||
+            path.startsWith('/tv/') ||
+            path.startsWith('/person/')
+        ) {
+            return 6 * 60 * 60;
+        }
+
+        return 0;
     }
 
     /**
@@ -169,82 +261,6 @@ export class TMDBService {
         }
     }
 
-    private async getCachedContent(genreIds: number[], mediaType: MediaType, minRating: number) {
-        const oneHourAgo = new Date();
-        oneHourAgo.setHours(oneHourAgo.getHours() - 1);
-
-        return this.prisma.contentCache.findMany({
-            where: {
-                mediaType,
-                voteAverage: { gte: minRating },
-                lastFetched: { gte: oneHourAgo },
-                genreIds: { hasSome: genreIds },
-            },
-            orderBy: [{ popularity: 'desc' }, { voteAverage: 'desc' }],
-            take: 40,
-        });
-    }
-
-    private async cacheContent(content: any[], mediaType: MediaType) {
-        const cacheData = content.map(item => ({
-            tmdbId: item.id,
-            mediaType,
-            title: mediaType === MediaType.MOVIE ? item.title : item.name,
-            overview: item.overview,
-            genreIds: item.genre_ids,
-            voteAverage: new Prisma.Decimal(item.vote_average),
-            voteCount: item.vote_count,
-            releaseDate: mediaType === MediaType.MOVIE ? item.release_date : item.first_air_date,
-            posterPath: item.poster_path,
-            backdropPath: item.backdrop_path,
-            popularity: new Prisma.Decimal(item.popularity),
-            adult: item.adult || false,
-            originalLanguage: item.original_language,
-            lastFetched: new Date(),
-        }));
-
-        for (const data of cacheData) {
-            await this.prisma.contentCache.upsert({
-                where: { tmdbId_mediaType: { tmdbId: data.tmdbId, mediaType: data.mediaType } },
-                create: data,
-                update: { ...data, updatedAt: new Date() },
-            });
-        }
-    }
-
-    private formatCachedMovies(cachedContent: any[]): TMDBMovie[] {
-        return cachedContent.map(item => ({
-            id: item.tmdbId,
-            title: item.title,
-            overview: item.overview,
-            genre_ids: item.genreIds,
-            vote_average: Number(item.voteAverage),
-            vote_count: item.voteCount,
-            release_date: item.releaseDate || '',
-            poster_path: item.posterPath,
-            backdrop_path: item.backdropPath,
-            adult: item.adult,
-            popularity: Number(item.popularity),
-            original_language: item.originalLanguage,
-        }));
-    }
-
-    private formatCachedTVShows(cachedContent: any[]): TMDBTVShow[] {
-        return cachedContent.map(item => ({
-            id: item.tmdbId,
-            name: item.title,
-            overview: item.overview,
-            genre_ids: item.genreIds,
-            vote_average: Number(item.voteAverage),
-            vote_count: item.voteCount,
-            first_air_date: item.releaseDate || '',
-            poster_path: item.posterPath,
-            backdrop_path: item.backdropPath,
-            popularity: Number(item.popularity),
-            original_language: item.originalLanguage,
-        }));
-    }
-
     async getMovieGenres(language = 'en-US'): Promise<TMDBGenre[]> {
         try {
             const data = await this.tmdb('/genre/movie/list', { params: { language } });
@@ -310,15 +326,6 @@ export class TMDBService {
             );
             throw new HttpException('Failed to fetch trending content from TMDB', HttpStatus.SERVICE_UNAVAILABLE);
         }
-    }
-
-    async cleanOldCache(): Promise<void> {
-        const twentyFourHoursAgo = new Date();
-        twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
-
-        await this.prisma.contentCache.deleteMany({
-            where: { lastFetched: { lt: twentyFourHoursAgo } },
-        });
     }
 
     async getMovieKeywords(movieId: number, language?: string): Promise<{ keywords: string[] }> {

@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 
 import { TvService } from './tv.service';
@@ -15,7 +14,7 @@ import { TvController } from './tv.controller';
 import { MoodsModule } from 'src/routes/moods/moods.module';
 
 @Module({
-  imports: [HttpModule, ConfigModule, MoodsModule],
+  imports: [ConfigModule, MoodsModule],
   providers: [
     TvService,
     TvTmdbClientService,

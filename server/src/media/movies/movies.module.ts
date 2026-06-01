@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 
 import { MoviesService } from './movies.service';
@@ -13,7 +12,7 @@ import { MovieMediaService } from './media/movie-media.service';
 import { MoviesController } from './movies.controller';
 
 @Module({
-    imports: [HttpModule, ConfigModule],
+    imports: [ConfigModule],
     providers: [
         MoviesService,
         MovieTmdbClientService,
