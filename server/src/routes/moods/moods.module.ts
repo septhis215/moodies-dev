@@ -1,17 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { MoodsController } from './moods.controller';
 import { MoodsService } from './moods.service';
-import { TMDBService } from 'src/external-apis/services/tmdb.service';
-import { HttpModule } from '@nestjs/axios';
 
 @Module({
-  imports: [ HttpModule,
-    ConfigModule,
-  ],
+  imports: [ConfigModule],
   controllers: [MoodsController],
-  providers: [MoodsService, TMDBService],
-  exports: [MoodsService, TMDBService],
+  providers: [MoodsService],
+  exports: [MoodsService],
 })
 export class MoodsModule { }

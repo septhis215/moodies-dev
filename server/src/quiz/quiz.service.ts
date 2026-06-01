@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { TMDBService } from 'src/external-apis/services/tmdb.service';
 
 export interface QuizAnswer {
     genres: string[];
@@ -43,10 +42,9 @@ export interface RecommendationResult {
 @Injectable()
 export class QuizRecommendationService {
     private readonly token = process.env.TMDB_API_KEY;
-    private readonly baseUrl = 'https://api.themoviedb.org/3';
     private readonly MIN_RESULTS = 25;
 
-    constructor(private readonly httpService: HttpService) { }
+    constructor(private readonly tmdbService: TMDBService) { }
 
     // Enhanced genre mapping with TV genre IDs included
     private readonly GENRE_MAPPINGS: { [key: string]: { movie: number[]; tv: number[] } } = {
@@ -69,26 +67,7 @@ export class QuizRecommendationService {
     };
 
     private async tmdb(endpoint: string) {
-        let normalizedEndpoint: string;
-
-        if (endpoint.startsWith('http')) {
-            normalizedEndpoint = endpoint;
-        } else {
-            const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
-            const cleanBase = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
-            normalizedEndpoint = `${cleanBase}/${cleanEndpoint}`;
-        }
-
-        const response = await firstValueFrom(
-            this.httpService.get(normalizedEndpoint, {
-                headers: {
-                    Authorization: `Bearer ${this.token}`,
-                    Accept: 'application/json',
-                },
-            }),
-        );
-
-        return response.data;
+        return this.tmdbService.request(endpoint);
     }
 
     async getRecommendations(answers: QuizAnswer[]): Promise<RecommendationResult> {

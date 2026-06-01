@@ -7,32 +7,20 @@ export class TvDetailsService {
 
     constructor(private readonly client: TvTmdbClientService) { }
 
+    // Bundles aggregate_credits, videos and content_ratings into the single
+    // /tv/{id} request via append_to_response. similar + reviews are
+    // intentionally NOT appended: the detail page sources "Something Similar"
+    // from the recommendations endpoint and reviews from the DB, so caching
+    // TMDB's copies just bloats Redis. watch/providers stays separate (its slash
+    // would be percent-encoded inside append_to_response).
     private async fetchInfo(id: number) {
-        return this.client.tmdb(`tv/${id}?language=en-US`);
-    }
-
-    private async fetchCredits(id: number) {
-        return this.client.tmdb(`tv/${id}/aggregate_credits?language=en-US`);
-    }
-
-    private async fetchVideos(id: number) {
-        return this.client.tmdb(`tv/${id}/videos?language=en-US`);
+        return this.client.tmdb(
+            `tv/${id}?language=en-US&append_to_response=aggregate_credits,videos,content_ratings`,
+        );
     }
 
     private async fetchProviders(id: number) {
         return this.client.tmdb(`tv/${id}/watch/providers`);
-    }
-
-    private async fetchReviews(id: number) {
-        return this.client.tmdb(`tv/${id}/reviews?language=en-US&page=1`);
-    }
-
-    private async fetchSimilar(id: number) {
-        return this.client.tmdb(`tv/${id}/similar?language=en-US&page=1`);
-    }
-
-    private async fetchContentRatings(id: number) {
-        return this.client.tmdb(`tv/${id}/content_ratings`);
     }
 
     private async fetchNextEpisode(id: number, infoRaw: any) {
@@ -106,23 +94,15 @@ export class TvDetailsService {
     }
 
     async tvDetails(id: number) {
-        const [
-            infoRaw,
-            creditsRaw,
-            videosRaw,
-            providersRaw,
-            reviewsRaw,
-            similarRaw,
-            contentRatingsRaw,
-        ] = await Promise.all([
+        const [infoRaw, providersRaw] = await Promise.all([
             this.fetchInfo(id),
-            this.fetchCredits(id),
-            this.fetchVideos(id),
             this.fetchProviders(id),
-            this.fetchReviews(id),
-            this.fetchSimilar(id),
-            this.fetchContentRatings(id),
         ]);
+
+        // Sub-resources arrive nested on the main payload via append_to_response.
+        const creditsRaw = infoRaw?.aggregate_credits;
+        const videosRaw = infoRaw?.videos;
+        const contentRatingsRaw = infoRaw?.content_ratings;
 
         const videos = videosRaw?.results ?? videosRaw ?? [];
         const trailer =
@@ -190,17 +170,6 @@ export class TvDetailsService {
             credits,
             trailer,
             providers: providersRaw ?? {},
-            reviews: reviewsRaw?.results ?? reviewsRaw ?? [],
-            similar: similarRaw?.results ?? similarRaw ?? [],
-            raw: {
-                info: infoRaw,
-                credits: creditsRaw,
-                videos: videosRaw,
-                providers: providersRaw,
-                reviews: reviewsRaw,
-                similar: similarRaw,
-                content_ratings: contentRatingsRaw,
-            },
         };
     }
 

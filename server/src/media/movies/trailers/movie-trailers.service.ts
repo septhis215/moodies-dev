@@ -4,6 +4,7 @@ import { MovieContentFilterService } from '../filters/movie-content-filter.servi
 import { MovieRecommendationsService } from '../recommendations/movie-recommendations.service';
 import { TmdbMovie } from '../types/movie.types';
 import { shuffleArray } from '../utils/helpers';
+import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
 
 const MIN_REQUIRED_ITEMS = 25;
 
@@ -189,17 +190,19 @@ export class MovieTrailersService {
                 )
                 .slice(0, min);
 
-            setTimeout(async () => {
-                const tasks = sorted.map((item) => async () => {
-                    try {
-                        item.recommendations = await this.recommendationsService.getSmartRecommendationsMovie(item.id, 3);
-                        return item;
-                    } catch (err) {
-                        this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
-                        return item;
-                    }
+            setTimeout(() => {
+                void runWithTmdbPriority(TMDB_PRIORITY.BACKGROUND, async () => {
+                    const tasks = sorted.map((item) => async () => {
+                        try {
+                            item.recommendations = await this.recommendationsService.getSmartRecommendationsMovie(item.id, 3);
+                            return item;
+                        } catch (err) {
+                            this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
+                            return item;
+                        }
+                    });
+                    await this.client.withConcurrencyLimit(tasks, 3);
                 });
-                await this.client.withConcurrencyLimit(tasks, 3);
             }, 100);
 
             return sorted;

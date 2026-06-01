@@ -3,6 +3,7 @@ import { RedisService } from 'src/redis/redis.service';
 import { TmdbClientService } from '../client/tmdb-client.service';
 import { TmdbAll, Candidate, ScoredCandidate, TrailerCandidate } from '../types/tmdb.types';
 import { CACHE_TTL } from '../utils/helpers';
+import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
 
 @Injectable()
 export class RecommendationsService {
@@ -236,20 +237,22 @@ export class RecommendationsService {
     }
 
     async populateRecommendationsBackground(items: TmdbAll[], cacheKey: string) {
-        setTimeout(async () => {
-            const tasks = items.map(item => async () => {
-                try {
-                    const recs = await this.getSmartRecommendations(item.type!, item.id, 3);
-                    item.recommendations = recs;
-                    return item;
-                } catch (err) {
-                    this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
-                    return item;
-                }
-            });
+        setTimeout(() => {
+            void runWithTmdbPriority(TMDB_PRIORITY.BACKGROUND, async () => {
+                const tasks = items.map(item => async () => {
+                    try {
+                        const recs = await this.getSmartRecommendations(item.type!, item.id, 3);
+                        item.recommendations = recs;
+                        return item;
+                    } catch (err) {
+                        this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
+                        return item;
+                    }
+                });
 
-            const updatedItems = await this.client.withConcurrencyLimit(tasks, 3);
-            await this.redisService.set(cacheKey, JSON.stringify(updatedItems), CACHE_TTL.BASIC_DATA);
+                const updatedItems = await this.client.withConcurrencyLimit(tasks, 3);
+                await this.redisService.set(cacheKey, JSON.stringify(updatedItems), CACHE_TTL.BASIC_DATA);
+            });
         }, 100);
     }
 }

@@ -5,6 +5,7 @@ import { RecommendationsService } from '../recommendations/recommendations.servi
 import { VideoScoringService } from '../videos/video-scoring.service';
 import { TmdbAll } from '../types/tmdb.types';
 import { CACHE_TTL, shuffleArray, getSeededRandom, seededShuffleArray } from '../utils/helpers';
+import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
 
 const ALLOWED_REGIONS = ['US', 'GB', 'CA', 'AU'];
 
@@ -184,17 +185,19 @@ export class TrailersService {
                 )
                 .slice(0, limit);
 
-            setTimeout(async () => {
-                const tasks = sorted.map(item => async () => {
-                    try {
-                        item.recommendations = await this.recommendationsService.getSmartRecommendations(item.type!, item.id, 3);
-                        return item;
-                    } catch (err) {
-                        this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
-                        return item;
-                    }
+            setTimeout(() => {
+                void runWithTmdbPriority(TMDB_PRIORITY.BACKGROUND, async () => {
+                    const tasks = sorted.map(item => async () => {
+                        try {
+                            item.recommendations = await this.recommendationsService.getSmartRecommendations(item.type!, item.id, 3);
+                            return item;
+                        } catch (err) {
+                            this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
+                            return item;
+                        }
+                    });
+                    await this.client.withConcurrencyLimit(tasks, 3);
                 });
-                await this.client.withConcurrencyLimit(tasks, 3);
             }, 100);
 
             return sorted;

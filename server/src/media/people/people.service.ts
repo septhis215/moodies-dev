@@ -1,33 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { TMDBService } from 'src/external-apis/services/tmdb.service';
 
 @Injectable()
 export class PeopleService {
-  private readonly baseUrl: string;
-  private readonly token: string;
   private creditCache = new Map<string, any>();
 
-  constructor(
-    private readonly httpService: HttpService,
-    private readonly configService: ConfigService,
-  ) {
-    this.baseUrl = this.configService.get<string>('TMDB_BASE') ?? 'null tmdb base';
-    this.token = this.configService.get<string>('TMDB_API_KEY') ?? 'null tmdb api key';
-  }
+  constructor(private readonly tmdbService: TMDBService) {}
 
-  private async tmdb(endpoint: string) {
-    const url = `${this.baseUrl}${endpoint}`;
-    const response = await firstValueFrom(
-      this.httpService.get(url, {
-        headers: {
-          Authorization: `Bearer ${this.token}`,
-          Accept: 'application/json',
-        },
-      }),
-    );
-    return response.data;
+  private tmdb(endpoint: string) {
+    return this.tmdbService.request(endpoint);
   }
 
   async trending(type: string) {
