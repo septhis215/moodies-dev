@@ -3,7 +3,16 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Star, Users, Award, Info } from "lucide-react";
+import {
+  Award,
+  ChevronLeft,
+  ChevronRight,
+  Film,
+  Info,
+  Star,
+  Tv,
+  Users,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export interface Person {
@@ -24,6 +33,8 @@ export interface Person {
     first_air_date?: string;
   }[];
 }
+
+type KnownForWork = Person["known_for"][number];
 
 async function fetchPeople() {
   const base = process.env.NEST_API_URL || "http://localhost:4000";
@@ -63,7 +74,7 @@ export default function CelebSection() {
     router.push(`/celeb/${celeb.id}`);
   };
 
-  const handleOpenWork = (work: any) => {
+  const handleOpenWork = (work: KnownForWork) => {
     if (work.media_type === "movie") router.push(`/movies/${work.id}`);
     else if (work.media_type === "tv") router.push(`/tv/${work.id}`);
   };
@@ -79,11 +90,9 @@ export default function CelebSection() {
     }
   };
 
-  const getPopularityLevel = (popularity: number) => {
-    if (popularity >= 40) return { level: "Top Tier", color: "text-red-400", bg: "bg-red-500/10" };
-    if (popularity >= 20) return { level: "Popular", color: "text-orange-400", bg: "bg-orange-500/10" };
-    if (popularity >= 10) return { level: "Rising", color: "text-green-400", bg: "bg-green-500/10" };
-    return { level: "Emerging", color: "text-blue-400", bg: "bg-blue-500/10" };
+  const getWorkYear = (work: KnownForWork) => {
+    const date = work.release_date || work.first_air_date;
+    return date ? date.slice(0, 4) : "";
   };
 
   // set itemsPerView responsive fractional
@@ -242,7 +251,7 @@ export default function CelebSection() {
 
           <motion.div ref={containerRef} className="flex gap-6 overflow-x-auto scroll-smooth scrollbar-hide pb-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }} style={{ WebkitOverflowScrolling: "touch" }}>
             {celebs.map((celeb) => {
-              const popularityInfo = getPopularityLevel(celeb.popularity || 0);
+              const notableWorks = celeb.known_for?.slice(0, 2) ?? [];
 
               return (
                 <motion.div
@@ -252,77 +261,134 @@ export default function CelebSection() {
                     flex: `0 0 ${cardBasisCss}`,
                     minWidth: `${cardWidthPx}px`,
                     maxWidth: `${Math.max(cardWidthPx, 200)}px`,
-                    minHeight: "380px",
-                    maxHeight: "450px",
+                    minHeight: "410px",
+                    maxHeight: "470px",
                     width: cardBasisCss,
                   }}
                 >
-                  <div className="flex flex-col h-full bg-black/70 backdrop-blur-md rounded-2xl overflow-hidden border border-gray-800/60 shadow-md hover:shadow-xl transition-all duration-300">
+                  <div className="flex flex-col h-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/90 shadow-xl shadow-black/30 transition-colors duration-200 hover:border-white/20">
                     {/* --- Top: Profile Section (taller, responsive) --- */}
                     <div
                       onClick={() => handleOpenPerson(celeb)}
-                      className="relative w-full h-36 sm:h-48 md:h-56 cursor-pointer flex-shrink-0"
+                      className="relative w-full h-44 sm:h-52 md:h-56 cursor-pointer flex-shrink-0 overflow-hidden"
                     >
-                      <Image
-                        src={
-                          celeb.profile_path
-                            ? `https://image.tmdb.org/t/p/w400${celeb.profile_path}`
-                            : "/placeholder-person.svg"
-                        }
-                        alt={celeb.name}
-                        fill
-                        className="object-cover object-center transition-transform duration-500"
-                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 256px"
-                      />
+                      <div className="absolute inset-0">
+                        <Image
+                          src={
+                            celeb.profile_path
+                              ? `https://image.tmdb.org/t/p/w500${celeb.profile_path}`
+                              : "/placeholder-person.svg"
+                          }
+                          alt={celeb.name}
+                          fill
+                          className="object-cover object-center"
+                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 256px"
+                          quality={90}
+                        />
 
-                      {/* Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-40 group-hover:opacity-80 transition" />
-
-
-                      <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-medium border border-white/10 backdrop-blur-sm ${popularityInfo.bg} ${popularityInfo.color}`}>
-                        {popularityInfo.level}
+                        {/* Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/25 to-transparent opacity-85" />
+                        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-neutral-950 to-transparent" />
                       </div>
-                      <div className="absolute top-3 left-3 p-2 rounded-lg bg-black/40 backdrop-blur-sm border border-white/10">
+
+                      <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-black/45 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-md ring-1 ring-white/10">
                         {getDepartmentIcon(celeb.known_for_department)}
+                        <span>{celeb.known_for_department || "Entertainment"}</span>
                       </div>
+
+                      <div className="absolute bottom-3 left-3 right-3 flex items-end gap-2">
+                        <h3
+                          className="min-w-0 flex-1 cursor-pointer text-lg font-bold leading-tight text-white line-clamp-2 transition group-hover:text-[#ff7968]"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleOpenPerson(celeb);
+                          }}
+                        >
+                          {celeb.name}
+                        </h3>
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleOpenPerson(celeb);
+                          }}
+                          className="shrink-0 cursor-pointer rounded-full bg-white/10 p-2 text-white ring-1 ring-white/10 backdrop-blur-md transition hover:bg-white/20"
+                          aria-label={`More info about ${celeb.name}`}
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </div>
+
                     </div>
 
-                    <div className="flex-1 flex flex-col p-4 justify-between bg-black/50 h-[calc(400px-192px)]">
-                      <div>
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h3 className="text-md font-semibold text-white line-clamp-2 cursor-pointer hover:text-[#e94f37] transition" onClick={() => handleOpenPerson(celeb)}>{celeb.name}</h3>
-                          <button onClick={() => handleOpenPerson(celeb)} className="ml-1 shrink-0 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white" aria-label={`More info about ${celeb.name}`}>
-                            <Info className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <p className="text-xs text-gray-400 mb-2">{celeb.known_for_department || "Entertainment"}</p>
-                      </div>
+                    <div className="flex flex-1 flex-col justify-between gap-3 bg-neutral-950 p-4">
 
-                      {celeb.known_for && celeb.known_for.length > 0 ? (
-                        <div className="space-y-1 overflow-hidden">
-                          <p className="text-xs text-gray-500">Notable Works</p>
-                          {celeb.known_for.slice(0, 1).map((work: any, idx: number) => (
-                            <div key={idx} onClick={() => handleOpenWork(work)} className="flex items-center gap-2 p-2 rounded-md bg-gray-800/50 border border-gray-700/30 hover:bg-gray-700/50 cursor-pointer transition">
-                              <div className="w-10 h-14 rounded-md overflow-hidden bg-gray-700">
-                                {work.poster_path ? (
-                                  <Image src={`https://image.tmdb.org/t/p/w154${work.poster_path}`} alt={work.title || work.name} width={40} height={56} className="object-cover" />
-                                ) : (
-                                  <Image src="/placeholder-poster.svg" alt={work.title || work.name} width={40} height={56} className="object-cover" />
-                                )}
-                              </div>
 
-                              <div className="flex-1 min-w-0">
-                                <span className="text-sm text-white font-medium truncate block">{work.title || work.name}</span>
-                                {work.release_date || work.first_air_date ? (
-                                  <span className="text-[11px] text-gray-400">{new Date(work.release_date ?? work.first_air_date).getFullYear()}</span>
-                                ) : null}
-                              </div>
-                            </div>
-                          ))}
+                      {notableWorks.length > 0 ? (
+                        <div className="min-h-0">
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Known for</p>
+                            <span className="h-px flex-1 bg-white/10" />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            {notableWorks.map((work) => (
+                              <button
+                                key={`${work.media_type}-${work.id}`}
+                                onClick={() => handleOpenWork(work)}
+                                className="group/work min-w-0 cursor-pointer rounded-lg border border-white/10 bg-white/[0.04] p-1.5 text-left transition hover:border-white/25 hover:bg-white/[0.08]"
+                              >
+                                <div className="flex gap-2">
+                                  <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-md bg-gray-800">
+                                    <Image
+                                      src={
+                                        work.poster_path
+                                          ? `https://image.tmdb.org/t/p/w185${work.poster_path}`
+                                          : "/placeholder-poster.svg"
+                                      }
+                                      alt={work.title || work.name || "Known work"}
+                                      fill
+                                      sizes="40px"
+                                      className="object-cover transition-transform duration-500 group-hover/work:scale-105"
+                                    />
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+                                    <span className="block truncate text-[11px] font-semibold leading-4 text-white">
+                                      {work.title || work.name}
+                                    </span>
+                                    <div className="mt-1 flex items-center gap-1 text-[10px] text-gray-400">
+                                      {work.media_type === "movie" ? (
+                                        <Film size={10} />
+                                      ) : (
+                                        <Tv size={10} />
+                                      )}
+                                      <span>{getWorkYear(work) || (work.media_type === "movie" ? "Movie" : "TV")}</span>
+                                    </div>
+                                    {work.vote_average ? (
+                                      <div className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-yellow-300">
+                                        <Star size={10} fill="currentColor" />
+                                        {work.vote_average.toFixed(1)}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       ) : (
-                        <div className="text-xs text-gray-500">No notable works</div>
+                        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3 text-xs text-gray-400">
+                          More credits are waiting on the profile page.
+                        </div>
                       )}
+
+                      <button
+                        onClick={() => handleOpenPerson(celeb)}
+                        className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-gray-950 shadow-lg shadow-black/20 transition hover:bg-gray-100"
+                      >
+                        View profile
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 </motion.div>
