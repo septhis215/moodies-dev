@@ -9,13 +9,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
-  Play,
   Check,
   Bookmark,
   BookmarkCheck,
   Star,
   Calendar,
-  Users,
   Heart,
   Tv,
   Film,
@@ -26,7 +24,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { style } from "framer-motion/client";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { RatingBadge } from "@/components/ui/rating-badge";
 
@@ -262,9 +259,9 @@ export default function CardCarousel<T extends MovieLike>({
     return date ? date.slice(0, 4) : "";
   };
 
-  function posterGetter(item: MovieLike): string {
+  function posterGetter(item: MovieLike, size: "w342" | "w500" | "w780" = "w500"): string {
     return item.poster_path
-      ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+      ? `https://image.tmdb.org/t/p/${size}${item.poster_path}`
       : item.poster ?? "/placeholder-poster.svg";
   }
 
@@ -304,12 +301,6 @@ export default function CardCarousel<T extends MovieLike>({
     } finally {
       setLoadingStates((prev) => ({ ...prev, [itemId]: false }));
     }
-  };
-
-  const formatVoteCount = (count: number) => {
-    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-    return count?.toString() || "0";
   };
 
   const handleCardClick = (movie: MovieLike) => {
@@ -551,106 +542,116 @@ export default function CardCarousel<T extends MovieLike>({
                         initial={{ opacity: 0 }}
                         whileHover={{ opacity: 1 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute inset-0 z-30 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                        className="absolute inset-0 z-30 overflow-hidden opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
                       >
                         {/* Gradient Background */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-black/40 backdrop-blur-sm" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/85 to-black/20 backdrop-blur-[2px]" />
+                        <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black via-black/75 to-transparent" />
 
                         {/* Safe Content Area - Avoids top action bar */}
                         <div className="absolute inset-0 flex flex-col">
                           {/* Top spacer to avoid collision with action bar */}
                           <div className="h-12 sm:h-14 shrink-0" />
 
-                          {/* Scrollable Content Container */}
-                          <div className="flex-1 overflow-y-auto scrollbar-hide px-2 sm:px-3 pb-2 sm:pb-3 mt-5">
-                            <div className="space-y-1.5 sm:space-y-2">
+                          {/* Compact Content Container */}
+                          <div className="flex-1 overflow-hidden px-3 pb-3 pt-4 sm:px-3.5 sm:pb-3.5">
+                            <div className="flex h-full flex-col justify-end gap-2">
                               {/* Title & Info Button */}
-                              <div className="flex items-start justify-between gap-1.5 sm:gap-2">
-                                <h3 className="text-sm sm:text-md font-bold text-white line-clamp-2 leading-tight flex-1">
+                              <div className="space-y-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span
+                                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shadow-lg backdrop-blur-md ${contentType === "tv"
+                                      ? "bg-blue-500/85 text-white"
+                                      : "bg-purple-500/85 text-white"
+                                      }`}
+                                  >
+                                    {contentType === "tv" ? (
+                                      <Tv size={10} />
+                                    ) : (
+                                      <Film size={10} />
+                                    )}
+                                    {contentType === "tv" ? "Series" : "Movie"}
+                                  </span>
+                                  {inWatchlist && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-green-500/20 px-2 py-0.5 text-[10px] font-semibold text-green-300 ring-1 ring-green-400/30">
+                                      <Check size={10} />
+                                      Saved
+                                    </span>
+                                  )}
+                                </div>
+                                <h3 className="text-base font-bold leading-tight text-white line-clamp-2">
                                   {movieTitle}
                                 </h3>
-                                <button
-                                  className="shrink-0 rounded-full bg-white/20 hover:bg-white/30 text-white transition p-1"
-                                  aria-label="More info"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Info
-                                    size={12}
-                                    className="sm:w-3.5 sm:h-3.5"
-                                  />
-                                </button>
                               </div>
 
                               {/* Metadata Row */}
-                              <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-gray-200 flex-wrap">
+                              <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-medium text-gray-200 sm:text-xs">
                                 {year && (
-                                  <div className="flex items-center gap-0.5 sm:gap-1">
-                                    <Calendar
-                                      size={10}
-                                      className="sm:w-3 sm:h-3"
-                                    />
+                                  <div className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 ring-1 ring-white/10">
+                                    <Calendar size={10} />
                                     <span>{year}</span>
                                   </div>
                                 )}
 
-                                {(movie.origin_country?.length || true) && (
-                                  <span className="text-orange-400 font-semibold">
-                                    {movie.origin_country?.[0]}
+                                {runtime && (
+                                  <span className="rounded-full bg-white/10 px-2 py-0.5 ring-1 ring-white/10">
+                                    {runtime}
                                   </span>
                                 )}
+
+                                {movie.origin_country?.length ? (
+                                  <span className="rounded-full bg-orange-400/15 px-2 py-0.5 font-semibold text-orange-300 ring-1 ring-orange-300/20">
+                                    {movie.origin_country?.[0]}
+                                  </span>
+                                ) : null}
                               </div>
 
                               {/* Genres - Compact */}
                               {movie.genres?.length ? (
                                 <div className="flex flex-wrap gap-1">
-                                  {movie.genres.slice(0, 2).map((genre, i) => (
+                                  {movie.genres.slice(0, 3).map((genre, i) => (
                                     <span
                                       key={i}
-                                      className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-white/10 text-white font-medium border border-white/20"
+                                      className="rounded border border-white/15 bg-white/10 px-1.5 py-px text-[9px] font-medium leading-4 text-white"
                                     >
                                       {genre}
                                     </span>
                                   ))}
-                                  {movie.genres.length > 2 && (
-                                    <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-gray-600/50 text-gray-300 font-medium">
-                                      +{movie.genres.length - 2}
+                                  {movie.genres.length > 3 && (
+                                    <span className="rounded bg-white/5 px-1.5 py-px text-[9px] font-medium leading-4 text-gray-300">
+                                      +{movie.genres.length - 3}
                                     </span>
                                   )}
                                 </div>
                               ) : null}
 
-                              {/* Watchlist Status */}
-                              {inWatchlist && (
-                                <div className="flex items-center gap-1 text-green-400 text-[10px] sm:text-xs">
-                                  <Check size={10} className="sm:w-3 sm:h-3" />
-                                  <span className="font-medium">
-                                    In My List
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* Overview - Hidden on small screens */}
-                              {movie.overview && (
-                                <div className="hidden sm:block pt-0.5">
-                                  <p className="text-[10px] sm:text-xs text-gray-300 line-clamp-2 leading-relaxed opacity-90">
-                                    {movie.overview}
-                                  </p>
-                                </div>
-                              )}
+                              <button
+                                className="inline-flex w-full items-center justify-center gap-1.5 rounded-md bg-white px-2.5 py-1 text-[11px] font-bold leading-4 text-gray-950 shadow-md shadow-black/20 transition hover:bg-gray-100 cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCardClick(movie);
+                                }}
+                              >
+                                <Info size={13} />
+                                View details
+                              </button>
 
                               {/* Recommendations Section */}
                               {movie.recommendations?.length ? (
-                                <div className="pt-1.5 sm:pt-2 border-t border-white/10">
-                                  <div className="flex items-center gap-1 mb-1.5">
-                                    <Heart
-                                      size={10}
-                                      className="sm:w-3 sm:h-3 text-pink-400"
-                                    />
-                                    <p className="text-gray-400 text-[10px] sm:text-xs font-medium">
-                                      You might also like
-                                    </p>
+                                <div className="pt-1.5 border-t border-white/10">
+                                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5">
+                                      <Heart
+                                        size={10}
+                                        className="sm:w-3 sm:h-3 text-pink-400"
+                                      />
+                                      <p className="text-gray-300 text-[10px] sm:text-xs font-semibold">
+                                        You might also like
+                                      </p>
+                                    </div>
+                                    <span className="h-px flex-1 bg-white/10" />
                                   </div>
-                                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                                  <div className="grid grid-cols-3 gap-2">
                                     {movie.recommendations
                                       .slice(0, 3)
                                       .map((rec) => (
@@ -658,21 +659,32 @@ export default function CardCarousel<T extends MovieLike>({
                                           <Tooltip>
                                             <TooltipTrigger asChild>
                                               <motion.div
-                                                whileHover={{ scale: 1.05 }}
-                                                className="relative aspect-[2/3] rounded-md overflow-hidden cursor-pointer shadow-md hover:shadow-lg transition-all"
+                                                whileHover={{ y: -2, scale: 1.04 }}
+                                                className="group/rec relative aspect-[2/3] overflow-hidden rounded-lg border border-white/10 bg-white/5 cursor-pointer shadow-lg shadow-black/30 transition-all hover:border-white/30 hover:shadow-xl"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
                                                   handleCardClick(rec);
                                                 }}
                                               >
                                                 <Image
-                                                  src={posterGetter(rec)}
+                                                  src={posterGetter(rec, "w342")}
                                                   alt={getTitle(rec)}
                                                   fill
-                                                  sizes="48px"
-                                                  className="object-cover"
+                                                  sizes="(max-width: 640px) 64px, (max-width: 768px) 72px, (max-width: 1024px) 80px, 96px"
+                                                  quality={90}
+                                                  className="object-cover transition-transform duration-500 group-hover/rec:scale-105"
                                                 />
-                                                <div className="absolute inset-0 bg-black/20 hover:bg-black/0 transition-colors" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-70 transition-opacity group-hover/rec:opacity-35" />
+                                                {rec.vote_average ? (
+                                                  <div className="absolute bottom-1 left-1 flex items-center gap-0.5 rounded-full bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold text-white backdrop-blur-sm">
+                                                    <Star
+                                                      size={8}
+                                                      fill="currentColor"
+                                                      className="text-yellow-300"
+                                                    />
+                                                    {rec.vote_average.toFixed(1)}
+                                                  </div>
+                                                ) : null}
                                               </motion.div>
                                             </TooltipTrigger>
                                             <TooltipContent

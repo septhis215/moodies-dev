@@ -2,16 +2,15 @@ import {
   Calendar,
   ChevronDown,
   Info,
-  Plus,
-  Share2,
   Star,
-  Check,
   Bookmark,
   BookmarkCheck,
+  SlidersHorizontal,
+  Sparkles,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -33,7 +32,34 @@ type MovieLike = {
   first_air_date?: string | null;
   genre_ids?: number[];
   media_type?: "movie" | "tv";
+  popularity?: number | null;
+  origin_country?: string[];
   _parsedDate?: Date;
+};
+
+type ReleaseMode = "spotlight" | "all";
+type ReleaseSort = "date" | "interest";
+
+const INITIAL_WEEK_ITEMS = 10;
+
+const getReleaseDate = (item: MovieLike) =>
+  item.release_date || item.first_air_date || null;
+
+const getInterestScore = (item: MovieLike) => {
+  const popularity = item.popularity ?? 0;
+  const rating = item.vote_average ?? 0;
+  const posterBoost = item.poster_path ? 2 : 0;
+  const overviewBoost = item.overview ? 1 : 0;
+
+  return popularity + rating * 4 + posterBoost + overviewBoost;
+};
+
+const isSpotlightRelease = (item: MovieLike) => {
+  const popularity = item.popularity ?? 0;
+  const rating = item.vote_average ?? 0;
+
+  if (popularity === 0 && rating === 0) return true;
+  return popularity >= 8 || rating >= 6.8;
 };
 
 export function ComingSoonSection({
@@ -42,7 +68,7 @@ export function ComingSoonSection({
   type,
 }: {
   title: string;
-  items: any[];
+  items: MovieLike[];
   type: "movies" | "tv";
 }) {
   const router = useRouter();
@@ -56,8 +82,10 @@ export function ComingSoonSection({
   >({});
   const [openMonth, setOpenMonth] = useState<string | null>(null);
 
-  function groupByMonthAndWeek(items: any[], type: "movies" | "tv") {
-    const grouped: Record<string, any[]> = {};
+  type GroupedMovieLike = MovieLike & { _parsedDate: Date };
+
+  function groupByMonthAndWeek(items: MovieLike[]) {
+    const grouped: Record<string, GroupedMovieLike[]> = {};
 
     items.forEach((item) => {
       const rawDate = item.release_date || item.first_air_date;
@@ -76,12 +104,10 @@ export function ComingSoonSection({
     return grouped;
   }
 
-  function groupByWeek(movies: any[]) {
-    const weeks: Record<string, any[]> = {};
+  function groupByWeek(movies: GroupedMovieLike[]) {
+    const weeks: Record<string, GroupedMovieLike[]> = {};
     movies.forEach((movie) => {
-      const date =
-        movie._parsedDate ||
-        new Date(movie.release_date || movie.first_air_date);
+      const date = movie._parsedDate;
       const start = new Date(date);
       start.setDate(date.getDate() - date.getDay());
       const end = new Date(start);
@@ -111,13 +137,13 @@ export function ComingSoonSection({
       : "/placeholder-poster.svg";
   };
 
-  const toWatchType = (item: MovieLike): "movie" | "series" => {
+  const toWatchType = useCallback((): "movie" | "series" => {
     return type === "tv" ? "series" : "movie";
-  };
+  }, [type]);
 
-  const _isInWatchlist = (item: MovieLike) => {
-    return hookIsIn(String(item.id), toWatchType(item));
-  };
+  const _isInWatchlist = useCallback((item: MovieLike) => {
+    return hookIsIn(String(item.id), toWatchType());
+  }, [hookIsIn, toWatchType]);
 
   const _addToWatchlist = async (item: MovieLike) => {
     if (!ready) {
@@ -128,7 +154,7 @@ export function ComingSoonSection({
     const title = getTitle(item) ?? null;
     const posterUrl = posterGetter(item) ?? null;
 
-    await add(String(item.id), toWatchType(item), {
+    await add(String(item.id), toWatchType(), {
       title,
       posterUrl,
       variant: "info",
@@ -145,7 +171,7 @@ export function ComingSoonSection({
     const title = getTitle(item) ?? null;
     const posterUrl = posterGetter(item) ?? null;
 
-    await remove(String(item.id), toWatchType(item), {
+    await remove(String(item.id), toWatchType(), {
       title,
       posterUrl,
       variant: "info",
@@ -159,7 +185,7 @@ export function ComingSoonSection({
       states[item.id] = _isInWatchlist(item);
     });
     setWatchlistStates(states);
-  }, [items, hookIsIn, ready]);
+  }, [items, _isInWatchlist, ready]);
 
   const handleWatchlistToggle = async (
     item: MovieLike,
@@ -193,29 +219,30 @@ export function ComingSoonSection({
     }
   };
 
-  const grouped = groupByMonthAndWeek(items, type);
+  const grouped = groupByMonthAndWeek(items);
 
   return (
-    <section id="upcoming" className="relative max-w-7xl w-full mx-auto py-22">
+    <section id="upcoming" className="relative max-w-7xl w-full mx-auto py-16">
+      <div className="rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
       <div className="flex items-center justify-between gap-3 sm:gap-4 mb-8">
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className="relative">
-            <div className="absolute inset-0 bg-slate-500 blur-lg opacity-40" />
-            <div className="relative w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl flex items-center justify-center ring-1 ring-slate-600/50 shadow-lg">
-              <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-slate-300" />
-            </div>
+          <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-white/[0.04] text-[#ff7a66] ring-1 ring-white/10 shadow-lg">
+            <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
+              Release radar
+            </p>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">
               {title}
             </h2>
             <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">
-              Coming soon to You
+              Save the titles you want before they arrive.
             </p>
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
+        <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/[0.04] rounded-xl border border-white/10">
           <span className="text-2xl font-bold text-white">
             {Object.values(grouped).flat().length}
           </span>
@@ -225,7 +252,7 @@ export function ComingSoonSection({
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         {Object.entries(grouped).map(([monthYear, groupedItems]) => {
           const sorted = groupedItems.sort(
             (a, b) => a._parsedDate.getTime() - b._parsedDate.getTime()
@@ -235,24 +262,23 @@ export function ComingSoonSection({
           return (
             <div
               key={monthYear}
-              className="border border-slate-800 rounded-2xl bg-slate-900/50 backdrop-blur-sm overflow-hidden shadow-xl ring-1 ring-white/5"
+              className="border border-white/10 rounded-2xl bg-black/35 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/20"
             >
               <button
                 onClick={() =>
                   setOpenMonth(openMonth === monthYear ? null : monthYear)
                 }
                 className="w-full flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5
-                         bg-gradient-to-r from-slate-800/80 to-slate-900/80
-                         hover:from-slate-800 hover:to-slate-900 transition-all duration-300
-                         border-b border-slate-700/50 group"
+                         bg-white/[0.035] hover:bg-white/[0.06] transition-all duration-300
+                         border-b border-white/10 group cursor-pointer"
               >
                 <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-2 h-2 rounded-full bg-slate-400 group-hover:bg-slate-300 transition-colors" />
+                  <div className="w-2 h-2 rounded-full bg-[#e94f37] transition-colors" />
                   <h3 className="text-lg sm:text-xl font-bold text-white">
                     {monthYear}
                   </h3>
                   <div className="flex items-center gap-3 text-sm">
-                    <span className="px-2 py-1 bg-slate-700/50 rounded text-slate-300 font-medium">
+                    <span className="px-2 py-1 bg-white/[0.06] rounded text-slate-300 font-medium">
                       {groupedItems.length} releases
                     </span>
                     <span className="text-gray-500 hidden sm:inline">
@@ -272,7 +298,7 @@ export function ComingSoonSection({
                   {Object.entries(weeks).map(([range, weekItems], index) => (
                     <div key={range} className="space-y-5">
                       <div className="flex flex-wrap items-center gap-3 mb-5 sm:mb-6">
-                        <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-800/60 border border-slate-700/50 rounded-lg">
+                        <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/[0.05] border border-white/10 rounded-lg">
                           <span className="text-xs sm:text-sm font-bold text-slate-300">
                             Week {index + 1}
                           </span>
@@ -280,11 +306,11 @@ export function ComingSoonSection({
                         <div className="text-xs sm:text-sm text-gray-400 font-medium">
                           {range}
                         </div>
-                        <div className="px-2 py-1 bg-slate-800/40 rounded text-xs text-slate-400">
+                        <div className="px-2 py-1 bg-white/[0.04] rounded text-xs text-slate-400">
                           {weekItems.length}{" "}
                           {weekItems.length === 1 ? "title" : "titles"}
                         </div>
-                        <div className="flex-1 h-px bg-gradient-to-r from-slate-700 to-transparent" />
+                        <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
                       </div>
 
                       <div className="grid gap-4 sm:gap-5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -302,7 +328,7 @@ export function ComingSoonSection({
 
                           return (
                             <Link key={item.id} href={`/${type}/${item.id}`}>
-                              <div className="group relative rounded-xl sm:rounded-2xl border border-slate-800 bg-slate-900 hover:border-slate-600 hover:shadow-xl hover:shadow-slate-900/50 transition-all duration-300 overflow-hidden">
+                              <div className="group relative rounded-xl sm:rounded-2xl border border-white/10 bg-neutral-950 hover:border-white/20 hover:shadow-xl hover:shadow-black/50 transition-all duration-300 overflow-hidden">
                                 <div className="relative w-full aspect-[2/3]">
                                   <Image
                                     src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "/placeholder-poster.svg"}
@@ -312,7 +338,7 @@ export function ComingSoonSection({
                                   />
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
-                                  <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-slate-800/90 backdrop-blur-sm px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg shadow-lg ring-1 ring-slate-700/50 z-10 transition-opacity duration-300 group-hover:opacity-0">
+                                  <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/70 backdrop-blur-sm px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg shadow-lg ring-1 ring-white/10 z-10 transition-opacity duration-300 group-hover:opacity-0">
                                     <div className="text-[10px] sm:text-xs font-bold text-white">
                                       {releaseDate.toLocaleDateString("en-US", {
                                         month: "short",
@@ -356,7 +382,7 @@ export function ComingSoonSection({
                                         {item.title || item.name}
                                       </h4>
                                       <div className="flex flex-wrap gap-1.5 mb-3">
-                                        <div className="px-2 py-0.5 bg-slate-800/90 backdrop-blur-sm rounded text-[9px] sm:text-[10px] text-slate-200 font-medium border border-slate-700/50">
+                                        <div className="px-2 py-0.5 bg-white/[0.06] backdrop-blur-sm rounded text-[9px] sm:text-[10px] text-slate-200 font-medium border border-white/10">
                                           {releaseDate.toLocaleDateString(
                                             "en-US",
                                             { weekday: "short" }
@@ -371,7 +397,7 @@ export function ComingSoonSection({
                                           )}
                                         </div>
                                         {daysUntil > 0 && (
-                                          <div className="px-2 py-0.5 bg-slate-800/90 backdrop-blur-sm rounded text-[9px] sm:text-[10px] text-slate-200 font-medium border border-slate-700/50">
+                                          <div className="px-2 py-0.5 bg-white/[0.06] backdrop-blur-sm rounded text-[9px] sm:text-[10px] text-slate-200 font-medium border border-white/10">
                                             {daysUntil} days away
                                           </div>
                                         )}
@@ -393,8 +419,8 @@ export function ComingSoonSection({
                                                   handleWatchlistToggle(item, e)
                                                 }
                                                 disabled={isLoading}
-                                                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-xl ${inWatchlist
-                                                  ? "bg-green-500/90 hover:bg-green-600"
+                                                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-xl cursor-pointer ${inWatchlist
+                                                  ? "bg-[#e94f37] text-white"
                                                   : "bg-white/95 hover:bg-white"
                                                   } ${isLoading
                                                     ? "opacity-70 cursor-not-allowed"
@@ -413,7 +439,7 @@ export function ComingSoonSection({
                                                     className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-black border-t-transparent rounded-full"
                                                   />
                                                 ) : inWatchlist ? (
-                                                  <BookmarkCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                                                  <BookmarkCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                 ) : (
                                                   <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
                                                 )}
@@ -435,12 +461,29 @@ export function ComingSoonSection({
                                           </Tooltip>
                                         </TooltipProvider>
 
-                                        <button
-                                          className="w-8 h-8 sm:w-9 sm:h-9 bg-white/95 rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all shadow-xl"
-                                          title="More Info"
-                                        >
-                                          <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
-                                        </button>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <button
+                                                onClick={(event) =>
+                                                  event.stopPropagation()
+                                                }
+                                                className="w-8 h-8 sm:w-9 sm:h-9 bg-white/95 rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all shadow-xl cursor-pointer"
+                                              >
+                                                <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
+                                              </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent
+                                              side="bottom"
+                                              sideOffset={8}
+                                              className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
+                                            >
+                                              <div className="text-xs sm:text-sm font-medium text-white">
+                                                More Info
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
 
 
                                       </div>
@@ -459,6 +502,7 @@ export function ComingSoonSection({
             </div>
           );
         })}
+      </div>
       </div>
     </section>
   );
