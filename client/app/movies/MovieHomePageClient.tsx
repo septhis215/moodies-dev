@@ -9,24 +9,18 @@ import {
     Plus,
     Info,
     ChevronRight,
-    ChevronLeft,
     Flame,
-    Calendar,
     Heart,
-    Share2,
     Bookmark,
     Film,
     Award,
     Ticket,
     MessageSquare,
-    Globe,
     Users,
     Sparkles,
-    Trophy,
     Zap,
     BookmarkCheck,
     ThumbsUp,
-    Rat,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -38,10 +32,15 @@ import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { Carousel } from "@/components/ui/Carousel";
 import RatingBadge from "@/components/ui/rating-badge";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 export default function MoviesHomePageClient({
     trendingMovies,
     popularMovies,
-    topRatedMovies,
     movieTrailers,
     newMovieTrailers,
     movieReviews,
@@ -64,7 +63,7 @@ export default function MoviesHomePageClient({
     indieMovies: All[];
     awardWinners: All[];
     actionMovies: All[];
-    moods?: any[];
+    moods?: unknown[];
     newReleaseMovies: All[];
 }) {
     const router = useRouter();
@@ -105,8 +104,6 @@ export default function MoviesHomePageClient({
         if (!show) return null; // safety check
 
         const isWide = size === "wide";
-        const isLarge = size === "large";
-
         const inWL = isInWatchlist(String(show.id), "movie");
         const isLoading = loadingStates[show.id] || false;
 
@@ -116,8 +113,9 @@ export default function MoviesHomePageClient({
                     <div
                         className={`
             relative rounded-2xl overflow-hidden
-            bg-gradient-to-br from-zinc-900 to-zinc-950
-            shadow-xl ring-1 ring-white/5
+            bg-neutral-950
+            shadow-xl shadow-black/30 ring-1 ring-white/10
+            transition duration-300 md:group-hover:ring-[#e94f37]/45
 
             /* MOBILE: bigger + consistent */
             aspect-[2/3]
@@ -143,7 +141,7 @@ export default function MoviesHomePageClient({
                         />
 
                         {/* Always-visible mobile gradient */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
 
                         {/* Rating */}
                         <div className="absolute top-3 right-3 ">
@@ -166,67 +164,96 @@ export default function MoviesHomePageClient({
                         >
                             <div className="flex justify-center gap-2">
                                 {/* Watchlist */}
-                                <button
-                                    onClick={async (e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (!ready) {
-                                            router.push("/auth/login");
-                                            return;
-                                        }
-                                        const itemId = show.id;
-                                        setLoadingStates((prev) => ({ ...prev, [itemId]: true }));
-                                        try {
-                                            const title = show?.title ?? show?.name ?? null;
-                                            const posterUrl = show?.poster_path
-                                                ? getPosterUrl(show.poster_path)
-                                                : null;
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (!ready) {
+                                                        router.push("/auth/login");
+                                                        return;
+                                                    }
+                                                    const itemId = show.id;
+                                                    setLoadingStates((prev) => ({ ...prev, [itemId]: true }));
+                                                    try {
+                                                        const title = show?.title ?? show?.name ?? null;
+                                                        const posterUrl = show?.poster_path
+                                                            ? getPosterUrl(show.poster_path)
+                                                            : null;
 
-                                            if (inWL) {
-                                                await remove(String(show.id), "movie", {
-                                                    title,
-                                                    posterUrl,
-                                                });
-                                            } else {
-                                                await add(String(show.id), "movie", {
-                                                    title,
-                                                    posterUrl,
-                                                });
-                                            }
-                                        } finally {
-                                            setLoadingStates((prev) => ({
-                                                ...prev,
-                                                [itemId]: false,
-                                            }));
-                                        }
-                                    }}
-                                    disabled={isLoading}
-                                    className={`
-                  w-11 h-11 rounded-full flex items-center justify-center
-                  shadow-lg transition-transform active:scale-95 hover:bg-[#e94f37] cursor-pointer
-                  ${inWL ? "bg-emerald-500 text-white" : "bg-white text-black"}
-                `}
-                                >
-                                    {isLoading ? (
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    ) : inWL ? (
-                                        <BookmarkCheck className="w-5 h-5" />
-                                    ) : (
-                                        <Plus className="w-5 h-5 " />
-                                    )}
-                                </button>
+                                                        if (inWL) {
+                                                            await remove(String(show.id), "movie", {
+                                                                title,
+                                                                posterUrl,
+                                                            });
+                                                        } else {
+                                                            await add(String(show.id), "movie", {
+                                                                title,
+                                                                posterUrl,
+                                                            });
+                                                        }
+                                                    } finally {
+                                                        setLoadingStates((prev) => ({
+                                                            ...prev,
+                                                            [itemId]: false,
+                                                        }));
+                                                    }
+                                                }}
+                                                disabled={isLoading}
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 hover:scale-110 cursor-pointer ${inWL ? "bg-[#e94f37] text-white" : "bg-white text-black"
+                                                    } ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
+                                            >
+                                                {isLoading ? (
+                                                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                ) : inWL ? (
+                                                    <BookmarkCheck className="w-4 h-4" />
+                                                ) : (
+                                                    <Bookmark className="w-4 h-4" />
+                                                )}
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                            side="bottom"
+                                            sideOffset={8}
+                                            className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
+                                        >
+                                            <div className="text-xs font-medium text-white">
+                                                {isLoading
+                                                    ? "Updating..."
+                                                    : inWL
+                                                        ? "Remove from My List"
+                                                        : "Add to My List"}
+                                            </div>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
 
                                 {/* Info */}
-                                <button
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        router.push(`/movies/${show.id}`);
-                                    }}
-                                    className="w-11 h-11 bg-white rounded-full sm:flex items-center justify-center shadow-lg hidden  active:scale-95 hover:bg-[#e94f37] cursor-pointer"
-                                >
-                                    <Info className="w-5 h-5 text-black" />
-                                </button>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    router.push(`/movies/${show.id}`);
+                                                }}
+                                                className="w-10 h-10 bg-white rounded-full sm:flex items-center justify-center shadow-lg hidden active:scale-95 hover:scale-110 cursor-pointer"
+                                            >
+                                                <Info className="w-4 h-4 text-black" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                            side="bottom"
+                                            sideOffset={8}
+                                            className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
+                                        >
+                                            <div className="text-xs font-medium text-white">More Info</div>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                             </div>
                         </div>
                     </div>
@@ -238,17 +265,16 @@ export default function MoviesHomePageClient({
                         </h4>
 
                         <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
-                            {show.first_air_date && (
+                            {show.release_date && (
                                 <span className="font-semibold">
-                                    {show.first_air_date.split("-")[0]}
+                                    {show.release_date.split("-")[0]}
                                 </span>
                             )}
-                            {show.number_of_seasons && (
+                            {show.vote_average !== undefined && show.vote_average > 0 && (
                                 <>
                                     <span>•</span>
                                     <span className="font-semibold">
-                                        {show.number_of_seasons} Season
-                                        {show.number_of_seasons > 1 ? "s" : ""}
+                                        {show.vote_average.toFixed(1)}
                                     </span>
                                 </>
                             )}
@@ -293,40 +319,41 @@ export default function MoviesHomePageClient({
 
     return (
         <main className="relative bg-black text-white min-h-screen overflow-hidden">
-            {/* Animated Background Pattern */}
+            {/* Moodies cinema backdrop */}
             <div className="fixed inset-0 -z-10">
-                <div className="absolute top-0 left-0 w-[800px] h-[800px] bg-gradient-to-br from-[#e94f37]/10 via-purple-600/5 to-transparent rounded-full blur-3xl animate-pulse" />
-                <div className="absolute top-1/4 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-cyan-600/10 via-blue-600/5 to-transparent rounded-full blur-3xl animate-pulse delay-1000" />
-                <div className="absolute bottom-0 left-1/3 w-[700px] h-[700px] bg-gradient-to-tr from-fuchsia-600/10 via-pink-600/5 to-transparent rounded-full blur-3xl animate-pulse delay-500" />
-
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem]" />
-
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_100%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(233,79,55,0.18),transparent_42%),linear-gradient(180deg,#030303_0%,#090909_45%,#000_100%)]" />
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff06_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-40" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_82%)]" />
             </div>
 
             <section className="relative w-full text-white overflow-hidden">
                 <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10" />
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-30 pb-20 relative z-20">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-28 pb-16 relative z-20">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
                         {/* LEFT mosaic */}
-                        <div className="md:col-span-7 col-span-1 rounded-3xl overflow-hidden bg-gradient-to-br from-zinc-900/80 via-zinc-900/50 to-zinc-950/80 backdrop-blur-xl p-6 flex flex-col ring-1 ring-white/10 shadow-2xl">
+                        <div className="md:col-span-7 col-span-1 rounded-3xl overflow-hidden bg-neutral-950/80 backdrop-blur-xl p-5 sm:p-6 flex flex-col ring-1 ring-white/10 shadow-2xl shadow-black/40">
+                            <div className="h-1 -mx-5 -mt-5 mb-5 bg-gradient-to-r from-[#e94f37] via-[#ff7a66] to-[#f59e0b] sm:-mx-6 sm:-mt-6" />
                             <div className="mb-6">
                                 <div className="flex items-center gap-3 mb-2">
-                                    <div className="relative">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-[#e94f37] to-orange-400 blur-xl opacity-50" />
-                                        <Film className="relative w-8 h-8 text-[#e94f37]" />
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04] text-[#ff7a66] ring-1 ring-white/10">
+                                        <Film className="w-6 h-6" />
                                     </div>
-                                    <h1 className="text-4xl sm:text-5xl font-black leading-tight tracking-tight bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
-                                        Movies Hub
-                                    </h1>
+                                    <div>
+                                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
+                                            Moodies cinema
+                                        </p>
+                                        <h1 className="text-4xl sm:text-5xl font-black leading-tight tracking-tight bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+                                            Movies Hub
+                                        </h1>
+                                    </div>
                                 </div>
-                                <p className="text-gray-400 text-sm ml-8 font-medium hidden sm:block">
-                                    Click any poster to feature it
+                                <p className="text-gray-400 text-sm font-medium hidden sm:block">
+                                    Pick a poster to tune the spotlight, then follow the mood into your next watch.
                                 </p>
                             </div>
 
-                            <div className="relative flex-1 w-full h-full rounded-2xl overflow-hidden ring-1 ring-white/5">
+                            <div className="relative flex-1 min-h-[460px] w-full rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black/40">
                                 <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 p-3">
                                     {Array.from({ length: 18 }).map((_, i) => {
                                         const s =
@@ -338,10 +365,10 @@ export default function MoviesHomePageClient({
                                                 onClick={() =>
                                                     setHeroIndex((heroIndex + i) % heroMovies.length)
                                                 }
-                                                className={`rounded-xl overflow-hidden border-2 transform transition-all duration-300
+                                                className={`rounded-xl overflow-hidden border transform transition-all duration-300 cursor-pointer
                                                 hover:scale-105 hover:z-10 focus:outline-none
                                                 ${isActive
-                                                        ? "border-[#e94f37]  scale-105 shadow-2xl shadow-[#e94f37]/30"
+                                                        ? "border-[#e94f37] scale-105 shadow-2xl shadow-[#e94f37]/30"
                                                         : "border-white/10 hover:border-[#e94f37]/50"
                                                     }`}
                                             >
@@ -373,7 +400,7 @@ export default function MoviesHomePageClient({
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
                                     exit={{ opacity: 0, scale: 0.95, y: -20 }}
                                     transition={{ duration: 0.5, ease: "easeInOut" }}
-                                    className="relative flex flex-col w-full rounded-3xl bg-gradient-to-br from-zinc-900/90 via-zinc-900/50 to-black/90 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl overflow-hidden"
+                                    className="relative flex flex-col w-full rounded-3xl bg-neutral-950/90 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl shadow-black/40 overflow-hidden"
                                 >
                                     {featured?.backdrop_path && (
                                         <div className="absolute inset-0 -z-10">
@@ -381,7 +408,7 @@ export default function MoviesHomePageClient({
                                                 src={getImageUrl(featured.backdrop_path)}
                                                 alt={featured.title || featured.name || ""}
                                                 fill
-                                                className="object-cover opacity-20 blur-sm"
+                                                className="object-cover opacity-25 blur-sm"
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/80 to-black" />
                                         </div>
@@ -406,7 +433,7 @@ export default function MoviesHomePageClient({
                                     <div className="relative p-6 sm:p-8 flex flex-col flex-1">
                                         <div className="flex items-center gap-2 flex-wrap mb-4">
                                             <span className="px-4 py-2 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white rounded-full text-xs font-black uppercase tracking-wider shadow-lg">
-                                                Featured
+                                                Mood spotlight
                                             </span>
                                             {featured?.release_date && (
                                                 <span className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-xs font-bold ring-1 ring-white/20">
@@ -425,8 +452,8 @@ export default function MoviesHomePageClient({
                                                     handleFeaturedWatchlist();
                                                 }}
                                                 disabled={wlLoading}
-                                                className={`ml-auto px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2  shadow-lg
-s                                                    ${featuredInWatchlist
+                                                className={`ml-auto px-4 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer
+                                                    ${featuredInWatchlist
                                                         ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
                                                         : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
                                                     }`}
@@ -460,7 +487,7 @@ s                                                    ${featuredInWatchlist
 
                                         <div className="flex gap-3 mt-auto pt-6 border-t border-white/10">
                                             <Link href={`/movies/${featured?.id}`} className="flex-1">
-                                                <button className="w-full px-6 py-4 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d4452f] hover:to-[#e94f37] text-white rounded-2xl font-bold transition-all transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg shadow-[#e94f37]/30">
+                                                <button className="w-full px-6 py-4 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d4452f] hover:to-[#e94f37] text-white rounded-2xl font-bold transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg shadow-[#e94f37]/30 cursor-pointer">
                                                     <Info className="w-5 h-5" />
                                                     View Details
                                                 </button>
@@ -475,10 +502,12 @@ s                                                    ${featuredInWatchlist
             </section>
 
             {/* Content */}
-            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-24">
+            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 space-y-20">
+
+
                 {/* Box Office */}
                 {popularMovies.length > 0 && (
-                    <section id="popular-movies" className="relative">
+                    <section id="popular-movies" className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
                         <div className="relative flex items-center justify-between mb-10">
                             <div className="flex items-center gap-4">
                                 <div className="relative">
@@ -544,7 +573,7 @@ s                                                    ${featuredInWatchlist
 
                 {/* New Releases */}
                 {newReleaseMovies.length > 0 && (
-                    <section id="new-release-movies" className="relative">
+                    <section id="new-release-movies" className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
                         <div className="relative flex items-center justify-between mb-10">
                             <div className="flex items-center gap-4">
                                 <div className="relative">
@@ -664,7 +693,7 @@ s                                                    ${featuredInWatchlist
 
                 {/* Featured */}
                 {trendingMovies.length > 0 && (
-                    <section id="trending-movies" className="relative">
+                    <section id="trending-movies" className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
                         <div className="flex items-center justify-between mb-6 sm:mb-8">
                             <div className="flex items-center gap-3 sm:gap-4">
                                 <div className="relative">
@@ -692,7 +721,7 @@ s                                                    ${featuredInWatchlist
 
                 {/* Korean Cinema */}
                 {koreanMovies.length > 0 && (
-                    <section id="korean-movies" className="relative">
+                    <section id="korean-movies" className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
                         <div className="relative flex items-center justify-between mb-6 sm:mb-8">
                             <div className="flex items-center gap-3 sm:gap-4">
                                 <div className="text-3xl sm:text-4xl lg:text-5xl">
@@ -818,7 +847,7 @@ s                                                    ${featuredInWatchlist
 
                                     {/* Top 3 items (larger visuals) */}
                                     <div className="space-y-3">
-                                        {(sec.data || []).slice(0, 3).map((m, i) => {
+                                        {(sec.data || []).slice(0, 3).map((m) => {
                                             const mockStats = {
                                                 likes:
                                                     Math.floor((m.vote_average || 0) * 0.7) ||
@@ -1164,7 +1193,7 @@ s                                                    ${featuredInWatchlist
 
                 {/* Critics Corner */}
                 {movieReviews.length > 0 && (
-                    <section id="reviews" className="relative">
+                    <section id="reviews" className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
                         <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-rose-500 blur-xl opacity-50" />
@@ -1197,7 +1226,7 @@ s                                                    ${featuredInWatchlist
                                         </div>
                                     </div>
                                     <p className="text-xs sm:text-sm text-gray-400 line-clamp-4 leading-relaxed">
-                                        "{review.quote || "No review available"}"
+                                        &ldquo;{review.quote || "No review available"}&rdquo;
                                     </p>
                                 </div>
                             ))}
@@ -1282,7 +1311,7 @@ s                                                    ${featuredInWatchlist
 
                                 {/* Side List (2–5) */}
                                 <div className="space-y-3 sm:space-y-4">
-                                    {actionMovies.slice(1, 5).map((movie, idx) => (
+                                    {actionMovies.slice(1, 5).map((movie) => (
                                         <Link
                                             key={movie.id}
                                             href={`/movies/${movie.id}`}

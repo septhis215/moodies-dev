@@ -4,17 +4,11 @@ import React, { useState, useEffect } from "react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
 import {
-  Play,
   Star,
-  Plus,
   Info,
   ChevronRight,
-  ChevronLeft,
   Flame,
   Calendar,
-  TrendingUp,
-  Zap,
-  Share2,
   Bookmark,
   Sparkles,
   BookmarkCheck,
@@ -33,6 +27,12 @@ import { useScrollToHash } from "@/hooks/useScrollToHash";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { Carousel } from "@/components/ui/Carousel";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 export default function TVHomePageClient({
   trendingTV,
   popularTV,
@@ -40,7 +40,6 @@ export default function TVHomePageClient({
   TVTrailer,
   NewTVTrailer,
   KoreanTV,
-  TVReview,
   newReleaseTV,
   airingToday = [],
   airingThisWeek = [],
@@ -56,19 +55,15 @@ export default function TVHomePageClient({
   newReleaseTV: All[];
   airingToday?: All[];
   airingThisWeek?: All[];
-  moods?: any[];
+  moods?: unknown[];
 }) {
   const router = useRouter();
   const { add, remove, isInWatchlist, ready } = useWatchlist();
-  const [watchlistStates, setWatchlistStates] = useState<
-    Record<string | number, boolean>
-  >({});
   const [loadingStates, setLoadingStates] = useState<
     Record<string | number, boolean>
   >({});
   const [heroIndex, setHeroIndex] = useState(0);
   const heroShows = popularTV.slice(0, 18);
-  const heroShow = heroShows[heroIndex];
   const getImageUrl = (path?: string) =>
     path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder-backdrop.svg";
   const getPosterUrl = (path?: string) =>
@@ -109,8 +104,9 @@ export default function TVHomePageClient({
           <div
             className={`
             relative rounded-2xl overflow-hidden
-            bg-gradient-to-br from-zinc-900 to-zinc-950
-            shadow-xl ring-1 ring-white/5
+            bg-neutral-950
+            shadow-xl shadow-black/30 ring-1 ring-white/10
+            transition duration-300 md:group-hover:ring-[#e94f37]/45
 
             /* MOBILE: bigger + consistent */
             aspect-[2/3]
@@ -136,7 +132,7 @@ export default function TVHomePageClient({
             />
 
             {/* Always-visible mobile gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
 
             {/* Rating */}
             <div className="absolute top-3 right-3 bg-black/80 backdrop-blur text-white px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ring-1 ring-white/10">
@@ -162,67 +158,96 @@ export default function TVHomePageClient({
             >
               <div className="flex justify-center gap-2">
                 {/* Watchlist */}
-                <button
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!ready) {
-                      router.push("/auth/login");
-                      return;
-                    }
-                    const itemId = show.id;
-                    setLoadingStates((prev) => ({ ...prev, [itemId]: true }));
-                    try {
-                      const title = show?.title ?? show?.name ?? null;
-                      const posterUrl = show?.poster_path
-                        ? getPosterUrl(show.poster_path)
-                        : null;
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!ready) {
+                            router.push("/auth/login");
+                            return;
+                          }
+                          const itemId = show.id;
+                          setLoadingStates((prev) => ({ ...prev, [itemId]: true }));
+                          try {
+                            const title = show?.title ?? show?.name ?? null;
+                            const posterUrl = show?.poster_path
+                              ? getPosterUrl(show.poster_path)
+                              : null;
 
-                      if (inWL) {
-                        await remove(String(show.id), "series", {
-                          title,
-                          posterUrl,
-                        });
-                      } else {
-                        await add(String(show.id), "series", {
-                          title,
-                          posterUrl,
-                        });
-                      }
-                    } finally {
-                      setLoadingStates((prev) => ({
-                        ...prev,
-                        [itemId]: false,
-                      }));
-                    }
-                  }}
-                  disabled={isLoading}
-                  className={`
-                  w-11 h-11 rounded-full flex items-center justify-center
-                  shadow-lg transition-transform active:scale-95 hover:bg-[#e94f37] cursor-pointer
-                  ${inWL ? "bg-emerald-500 text-white" : "bg-white text-black"}
-                `}
-                >
-                  {isLoading ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : inWL ? (
-                    <BookmarkCheck className="w-5 h-5" />
-                  ) : (
-                    <Plus className="w-5 h-5 " />
-                  )}
-                </button>
+                            if (inWL) {
+                              await remove(String(show.id), "series", {
+                                title,
+                                posterUrl,
+                              });
+                            } else {
+                              await add(String(show.id), "series", {
+                                title,
+                                posterUrl,
+                              });
+                            }
+                          } finally {
+                            setLoadingStates((prev) => ({
+                              ...prev,
+                              [itemId]: false,
+                            }));
+                          }
+                        }}
+                        disabled={isLoading}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 hover:scale-110 cursor-pointer ${inWL ? "bg-[#e94f37] text-white" : "bg-white text-black"
+                          } ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
+                      >
+                        {isLoading ? (
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : inWL ? (
+                          <BookmarkCheck className="w-4 h-4" />
+                        ) : (
+                          <Bookmark className="w-4 h-4" />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      sideOffset={8}
+                      className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
+                    >
+                      <div className="text-xs font-medium text-white">
+                        {isLoading
+                          ? "Updating..."
+                          : inWL
+                            ? "Remove from My List"
+                            : "Add to My List"}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
                 {/* Info */}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    router.push(`/tv/${show.id}`);
-                  }}
-                  className="w-11 h-11 bg-white rounded-full sm:flex items-center justify-center shadow-lg hidden  active:scale-95 hover:bg-[#e94f37] cursor-pointer"
-                >
-                  <Info className="w-5 h-5 text-black" />
-                </button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/tv/${show.id}`);
+                        }}
+                        className="w-10 h-10 bg-white rounded-full sm:flex items-center justify-center shadow-lg hidden active:scale-95 hover:scale-110 cursor-pointer"
+                      >
+                        <Info className="w-4 h-4 text-black" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      sideOffset={8}
+                      className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
+                    >
+                      <div className="text-xs font-medium text-white">More Info</div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </div>
@@ -241,7 +266,7 @@ export default function TVHomePageClient({
               )}
               {show.number_of_seasons && (
                 <>
-                  <span>•</span>
+                  <span className="text-white/25">•</span>
                   <span className="font-semibold">
                     {show.number_of_seasons} Season
                     {show.number_of_seasons > 1 ? "s" : ""}
@@ -290,43 +315,41 @@ export default function TVHomePageClient({
 
   /* ---------------- Page Layout ---------------- */
   return (
-    <main className="bg-[#070707] text-white min-h-screen">
-      {/* Animated Background Pattern */}
+    <main className="relative bg-black text-white min-h-screen overflow-hidden">
+      {/* Moodies series backdrop */}
       <div className="fixed inset-0 -z-10">
-        {/* Gradient meshes */}
-        <div className="absolute top-0 left-0 w-[800px] h-[800px] bg-gradient-to-br from-[#e94f37]/10 via-purple-600/5 to-transparent rounded-full blur-3xl animate-pulse" />
-        <div className="absolute top-1/4 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-cyan-600/10 via-blue-600/5 to-transparent rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute bottom-0 left-1/3 w-[700px] h-[700px] bg-gradient-to-tr from-fuchsia-600/10 via-pink-600/5 to-transparent rounded-full blur-3xl animate-pulse delay-500" />
-
-        {/* Grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem]" />
-
-        {/* Radial gradient overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(233,79,55,0.18),transparent_42%),linear-gradient(180deg,#030303_0%,#090909_45%,#000_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff06_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-40" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_82%)]" />
       </div>
       <section className="relative w-full text-white overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-30 pb-20 relative z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-28 pb-16 relative z-20">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
             {/* LEFT mosaic */}
-            <div className="md:col-span-7 col-span-1 rounded-3xl overflow-hidden bg-gradient-to-br from-zinc-900/80 via-zinc-900/50 to-zinc-950/80 backdrop-blur-xl p-6 flex flex-col ring-1 ring-white/10 shadow-2xl">
+            <div className="md:col-span-7 col-span-1 rounded-3xl overflow-hidden bg-neutral-950/80 backdrop-blur-xl p-5 sm:p-6 flex flex-col ring-1 ring-white/10 shadow-2xl shadow-black/40">
+              <div className="h-1 -mx-5 -mt-5 mb-5 bg-gradient-to-r from-[#e94f37] via-[#ff7a66] to-[#38bdf8] sm:-mx-6 sm:-mt-6" />
               <div className="mb-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#e94f37] to-orange-400 blur-xl opacity-50" />
-                    <Tv className="relative w-8 h-8 text-[#e94f37]" />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04] text-[#ff7a66] ring-1 ring-white/10">
+                    <Tv className="w-6 h-6" />
                   </div>
-                  <h1 className="text-4xl sm:text-5xl font-black leading-tight tracking-tight bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
-                    TV Series Hub
-                  </h1>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
+                      Moodies series
+                    </p>
+                    <h1 className="text-4xl sm:text-5xl font-black leading-tight tracking-tight bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+                      TV Series Hub
+                    </h1>
+                  </div>
                 </div>
-                <p className="text-gray-400 text-sm ml-11 font-medium hidden sm:block">
-                  Click any poster to feature it
+                <p className="text-gray-400 text-sm font-medium hidden sm:block">
+                  Pick a poster to tune the episode-night spotlight.
                 </p>
               </div>
 
-              <div className="relative flex-1 w-full h-full rounded-2xl overflow-hidden ring-1 ring-white/5">
+              <div className="relative flex-1 min-h-[460px] w-full rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black/40">
                 <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 p-3">
                   {Array.from({ length: 18 }).map((_, i) => {
                     const s =
@@ -338,10 +361,10 @@ export default function TVHomePageClient({
                         onClick={() =>
                           setHeroIndex((heroIndex + i) % heroShows.length)
                         }
-                        className={`rounded-xl overflow-hidden border-2 transform transition-all duration-300
+                        className={`rounded-xl overflow-hidden border transform transition-all duration-300 cursor-pointer
                                                 hover:scale-105 hover:z-10 focus:outline-none
                                                 ${isActive
-                            ? "border-[#e94f37]  scale-105 shadow-2xl shadow-[#e94f37]/30"
+                            ? "border-[#e94f37] scale-105 shadow-2xl shadow-[#e94f37]/30"
                             : "border-white/10 hover:border-[#e94f37]/50"
                           }`}
                       >
@@ -373,7 +396,7 @@ export default function TVHomePageClient({
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -20 }}
                   transition={{ duration: 0.5, ease: "easeInOut" }}
-                  className="relative flex flex-col w-full rounded-3xl bg-gradient-to-br from-zinc-900/90 via-zinc-900/50 to-black/90 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl overflow-hidden"
+                  className="relative flex flex-col w-full rounded-3xl bg-neutral-950/90 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl shadow-black/40 overflow-hidden"
                 >
                   {featured?.backdrop_path && (
                     <div className="absolute inset-0 -z-10">
@@ -381,7 +404,7 @@ export default function TVHomePageClient({
                         src={getImageUrl(featured.backdrop_path)}
                         alt={featured.title || featured.name || ""}
                         fill
-                        className="object-cover opacity-20 blur-sm"
+                        className="object-cover opacity-25 blur-sm"
                       />
                       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/80 to-black" />
                     </div>
@@ -406,7 +429,7 @@ export default function TVHomePageClient({
                   <div className="relative p-6 sm:p-8 flex flex-col flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-4">
                       <span className="px-4 py-2 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white rounded-full text-xs font-black uppercase tracking-wider shadow-lg">
-                        Featured
+                        Series spotlight
                       </span>
                       {featured?.release_date && (
                         <span className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-xs font-bold ring-1 ring-white/20">
@@ -430,7 +453,7 @@ export default function TVHomePageClient({
                           handleFeaturedWatchlist();
                         }}
                         disabled={loadingStates["featured"]}
-                        className={`ml-auto px-6 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg
+                        className={`ml-auto px-4 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer
         ${featuredInWatchlist
                             ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
                             : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
@@ -470,7 +493,7 @@ export default function TVHomePageClient({
 
                     <div className="flex gap-3 mt-auto pt-6 border-t border-white/10">
                       <Link href={`/tv/${featured?.id}`} className="flex-1">
-                        <button className="w-full px-6 py-4 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d4452f] hover:to-[#e94f37] text-white rounded-2xl font-bold transition-all transform hover:scale-105 flex items-center justify-center gap-2 shadow-lg shadow-[#e94f37]/30">
+                        <button className="w-full px-6 py-4 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d4452f] hover:to-[#e94f37] text-white rounded-2xl font-bold transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg shadow-[#e94f37]/30 cursor-pointer">
                           <Info className="w-5 h-5" />
                           View Details
                         </button>
@@ -485,18 +508,19 @@ export default function TVHomePageClient({
       </section>
 
       {/* MAIN CONTENT */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 space-y-16 sm:space-y-20 lg:space-y-24">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 space-y-20">
+
         {/* Airing Today */}
         {airingToday && airingToday.length > 0 && (
-          <section id="airing-today" className="relative ">
+          <section id="airing-today" className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
             <div className="relative flex items-center justify-between mb-8">
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-red-500 blur-lg opacity-50 animate-pulse" />
-                  <div className="relative w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+                  <div className="absolute inset-0 bg-[#e94f37] blur-lg opacity-40 animate-pulse" />
+                  <div className="relative w-3 h-3 rounded-full bg-[#e94f37] animate-pulse" />
                 </div>
                 <div>
-                  <span className="text-xs font-black text-red-400 uppercase tracking-wider block mb-1">
+                  <span className="text-xs font-black text-[#ff8b78] uppercase tracking-wider block mb-1">
                     Live Now
                   </span>
                   <h2 className="text-3xl sm:text-4xl font-black text-white">
@@ -506,7 +530,7 @@ export default function TVHomePageClient({
               </div>
               <Link
                 href="/tv/airing/today"
-                className="text-sm font-bold text-gray-400 hover:text-red-400 transition-colors flex items-center gap-2 group"
+                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group"
               >
                 View All
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -518,7 +542,7 @@ export default function TVHomePageClient({
 
         {/* Trending Now */}
         {popularTV && popularTV.length > 0 && (
-          <section id="trending-tv" className="relative">
+          <section id="trending-tv" className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-4">
                 <div className="relative">
@@ -543,12 +567,12 @@ export default function TVHomePageClient({
 
         {/* New This Week - Responsive Grid */}
         {newReleaseTV && newReleaseTV.length > 0 && (
-          <section id="new-release-tv" className="relative">
+          <section id="new-release-tv" className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
             <div className="flex items-center justify-between mb-10">
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-cyan-400 blur-xl opacity-50" />
-                  <Sparkles className="relative w-9 h-9 text-cyan-400" />
+                  <div className="absolute inset-0 bg-[#e94f37] blur-xl opacity-40" />
+                  <Sparkles className="relative w-9 h-9 text-[#ff7a66]" />
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-black text-white">
                   New Releases
@@ -585,7 +609,7 @@ export default function TVHomePageClient({
                     )}
 
                     <div className="absolute bottom-0 left-0 right-0 p-8 lg:p-10">
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500 rounded-xl text-sm font-black mb-4 shadow-lg">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#e94f37] rounded-xl text-sm font-black mb-4 shadow-lg">
                         <Sparkles className="w-4 h-4" />
                         NEW RELEASE
                       </div>
@@ -632,7 +656,7 @@ export default function TVHomePageClient({
                       )}
 
                       <div className="absolute bottom-0 left-0 right-0 p-5">
-                        <h4 className="text-lg font-bold mb-2 line-clamp-1 group-hover:text-cyan-400 transition-colors text-white">
+                        <h4 className="text-lg font-bold mb-2 line-clamp-1 group-hover:text-[#ff7a66] transition-colors text-white">
                           {tv.title}
                         </h4>
                         <div className="flex items-center gap-3 text-sm">
@@ -665,10 +689,10 @@ export default function TVHomePageClient({
 
         {/* Top Rated */}
         {topRatedTV && topRatedTV.length > 0 && (
-          <section id="top-rated-tv" className="relative">
+          <section id="top-rated-tv" className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <Star className="w-7 h-7 text-yellow-500" />
+                <Star className="w-7 h-7 text-[#ff7a66]" />
                 <h2 className="text-2xl sm:text-3xl font-black">
                   Top Rated Series
                 </h2>
@@ -684,7 +708,7 @@ export default function TVHomePageClient({
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-              {topRatedTV.slice(0, 12).map((show, idx) => (
+              {topRatedTV.slice(0, 12).map((show) => (
                 <TVCard key={show.id} show={show} />
               ))}
             </div>
@@ -693,7 +717,7 @@ export default function TVHomePageClient({
 
         {/* Airing This Week */}
         {airingThisWeek && airingThisWeek.length > 0 && (
-          <section id="airing-this-week" className="relative">
+          <section id="airing-this-week" className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <Calendar className="w-7 h-7 text-indigo-500" />
@@ -716,7 +740,7 @@ export default function TVHomePageClient({
 
         {/* K-Drama Collection */}
         {KoreanTV && KoreanTV.length > 0 && (
-          <section id="korean-tv" className="relative">
+          <section id="korean-tv" className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <Image
@@ -742,7 +766,7 @@ export default function TVHomePageClient({
             <Carousel items={KoreanTV} CardComponent={TVCard} />
           </section>
         )}
-        <section className="relative">
+        <section className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
           {/* Header (shared) */}
           <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="relative">
@@ -834,7 +858,7 @@ export default function TVHomePageClient({
 
                   {/* Top 3 items (larger visuals) */}
                   <div className="space-y-3">
-                    {(sec.data || []).slice(0, 3).map((m, i) => {
+                    {(sec.data || []).slice(0, 3).map((m) => {
                       const mockStats = {
                         likes:
                           Math.floor((m.vote_average || 0) * 0.7) ||
