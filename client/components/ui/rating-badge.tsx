@@ -28,7 +28,7 @@ function getRatingColor(rating: number, variant: "colored" | "minimal") {
 
 export function RatingBadge({
     rating,
-    variant = "minimal",
+    variant = "colored",
     size = "sm", // default smaller now
     className = "",
 }: RatingBadgeProps) {

@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -22,6 +23,11 @@ export const metadata: Metadata = {
   },
   description:
     "Discover trending movies, series, and personalized recommendations on Moodies.",
+  icons: {
+    icon: "/images/moodies-mascot.png",
+    shortcut: "/images/moodies-mascot.png",
+    apple: "/images/moodies-mascot.png",
+  },
 };
 
 export default function RootLayout({

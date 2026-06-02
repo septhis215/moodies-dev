@@ -11,7 +11,6 @@ import {
   Users,
   Play,
   Info,
-  Filter,
   Grid3X3,
   List,
   Tv,
@@ -22,15 +21,10 @@ import {
   SlidersHorizontal,
   Globe,
   Sparkles,
-  ExternalLink,
   TrendingUp,
   Clock,
   Award,
-  ChevronLeft,
-  ChevronRight,
-  MoreHorizontal,
   RotateCcw,
-  ArrowRight,
   Check,
   User,
 } from "lucide-react";
@@ -38,10 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RatingBadge } from "@/components/ui/rating-badge";
-import type { All } from "@/types/all";
 import dynamic from "next/dynamic";
-import { createPortal } from "react-dom";
-import { IconTrendingUp, IconX } from "@tabler/icons-react";
 import Pagination from "@/components/ui/pagination";
 
 // dynamic import (no SSR)
@@ -57,18 +48,52 @@ interface SearchResult {
   overview: string;
   poster_path: string | null;
   backdrop_path: string | null;
+  profile_path?: string | null;
   release_date?: string;
   first_air_date?: string;
   vote_average: number;
   vote_count: number;
-  type: "movie" | "tv";
+  type: "movie" | "tv" | "person";
   genre_ids: number[];
   genres: string[];
   popularity: number;
   adult?: boolean;
   origin_country?: string[];
   trailer_key?: string | null;
+  known_for_department?: string;
+  runtime?: number | null;
+  number_of_episodes?: number | null;
 }
+
+interface VideoResult {
+  key: string;
+  site?: string;
+  type?: string;
+}
+
+interface TrendingTerm {
+  id: number;
+  title: string;
+  media_type: "movie" | "tv" | "person";
+}
+
+type SearchSort = "relevance" | "rating" | "date" | "popularity";
+
+type TrailerItem = {
+  id: number;
+  title: string;
+  poster_path?: string;
+  trailer_key?: string;
+  release_date?: string;
+  runtime?: number;
+  number_of_episodes?: number;
+  genres?: string[];
+  overview?: string;
+  vote_average?: number;
+  recommendations?: TrailerItem[];
+  media_type?: string;
+  type?: string;
+};
 
 interface SearchResponse {
   results: SearchResult[];
@@ -130,38 +155,19 @@ const COUNTRY_OPTIONS = [
   { code: "FI", name: "Finland" },
 ];
 
-const YEAR_OPTIONS = Array.from(
-  { length: 2025 - 1980 + 1 },
-  (_, i) => 2025 - i
-);
-
-// Enhanced year presets
-const YEAR_PRESETS = [
-  { label: "2020s", min: 2020, max: 2025 },
-  { label: "2010s", min: 2010, max: 2019 },
-  { label: "2000s", min: 2000, max: 2009 },
-  { label: "90s", min: 1990, max: 1999 },
-  { label: "80s", min: 1980, max: 1989 },
-];
-
-// Enhanced rating presets
-const RATING_PRESETS = [
-  {
-    label: "Masterpiece",
-    min: 9,
-    max: 10,
-    color: "from-yellow-400 to-orange-500",
-  },
-  {
-    label: "Excellent",
-    min: 8,
-    max: 10,
-    color: "from-green-400 to-emerald-500",
-  },
-  { label: "Great", min: 7, max: 10, color: "from-blue-400 to-cyan-500" },
-  { label: "Good", min: 6, max: 10, color: "from-purple-400 to-pink-500" },
-  { label: "Any Rating", min: 0, max: 10, color: "from-gray-400 to-gray-500" },
-];
+const FILTER_SURFACE =
+  "rounded-xl border border-white/10 bg-white/[0.04] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]";
+const FILTER_SECTION_TITLE =
+  "text-sm font-semibold text-gray-100 flex items-center gap-2";
+const FILTER_CHIP =
+  "border border-white/10 bg-white/[0.04] text-gray-300 hover:bg-white/[0.08] hover:text-white hover:border-[#e94f37]/40";
+const FILTER_CHIP_ACTIVE =
+  "border-[#e94f37]/70 bg-[#e94f37]/15 text-white shadow-[0_0_0_1px_rgba(233,79,55,0.18)]";
+const RESULT_CARD_CLASS =
+  "border border-white/10 bg-white/[0.04] hover:border-[#e94f37]/50 hover:bg-white/[0.07] transition-all";
+const MIN_FILTER_YEAR = 1980;
+const MAX_FILTER_YEAR = 2026;
+const SEARCH_PAGE_SIZE = 20;
 
 export default function SearchResultsPage() {
   const searchParams = useSearchParams();
@@ -176,51 +182,76 @@ export default function SearchResultsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
-  const [availableCountries, setAvailableCountries] = useState(COUNTRY_OPTIONS);
+  const availableCountries = COUNTRY_OPTIONS;
 
   // UI State
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [sortBy, setSortBy] = useState<
-    "relevance" | "rating" | "date" | "popularity"
-  >("relevance");
-  const [filterType, setFilterType] = useState<"all" | "movie" | "tv">("all");
+  const [sortBy, setSortBy] = useState<SearchSort>("relevance");
+  const [filterType, setFilterType] = useState<"all" | "movie" | "tv" | "person">(
+    (searchParams.get("type") as "all" | "movie" | "tv" | "person") || "all"
+  );
   const [showFilters, setShowFilters] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [openYearDropdown, setOpenYearDropdown] = useState<"from" | "to" | null>(null);
+  const [openRatingDropdown, setOpenRatingDropdown] = useState<"min" | "max" | null>(null);
 
   // Enhanced filter states
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
-  const [yearMin, setYearMin] = useState<number | null>(null);
-  const [yearMax, setYearMax] = useState<number | null>(null);
-  const [ratingMin, setRatingMin] = useState<number | null>(null);
-  const [ratingMax, setRatingMax] = useState<number | null>(null);
   const [includeAdult, setIncludeAdult] = useState(false);
+  const [appliedFilterType, setAppliedFilterType] = useState(filterType);
+  const [appliedSortBy, setAppliedSortBy] = useState(sortBy);
+  const [appliedSelectedGenres, setAppliedSelectedGenres] = useState<string[]>([]);
+  const [appliedSelectedCountries, setAppliedSelectedCountries] = useState<string[]>([]);
+  const [appliedYearRange, setAppliedYearRange] = useState([
+    MIN_FILTER_YEAR,
+    MAX_FILTER_YEAR,
+  ]);
+  const [appliedRatingRange, setAppliedRatingRange] = useState([0, 10]);
+  const [appliedIncludeAdult, setAppliedIncludeAdult] = useState(false);
 
   // Enhanced UI states for sliders
-  const [yearRange, setYearRange] = useState([1980, 2025]);
+  const [yearRange, setYearRange] = useState([
+    MIN_FILTER_YEAR,
+    MAX_FILTER_YEAR,
+  ]);
   const [ratingRange, setRatingRange] = useState([0, 10]);
-  const [yearDropdownOpen, setYearDropdownOpen] = useState({
-    from: false,
-    to: false,
-  });
-  const [ratingDropdownOpen, setRatingDropdownOpen] = useState({
-    min: false,
-    max: false,
-  });
-
-  const [activeFilter, setActiveFilter] = useState(null);
-
-  const years = Array.from({ length: 2025 - 1980 + 1 }, (_, i) => 1980 + i);
+  const years = Array.from(
+    { length: MAX_FILTER_YEAR - MIN_FILTER_YEAR + 1 },
+    (_, i) => MIN_FILTER_YEAR + i
+  );
   const ratings = Array.from({ length: 11 }, (_, i) => i);
   const decades = [
     { label: "1980s", start: 1980, end: 1989 },
     { label: "1990s", start: 1990, end: 1999 },
     { label: "2000s", start: 2000, end: 2009 },
     { label: "2010s", start: 2010, end: 2019 },
-    { label: "2020s", start: 2020, end: 2025 },
+    { label: "2020s", start: 2020, end: MAX_FILTER_YEAR },
   ];
 
   const setDecade = (start: number, end: number) => {
     setYearRange([start, end]);
+    setOpenYearDropdown(null);
+  };
+
+  const setYearFrom = (year: number) => {
+    setYearRange((prev) => [year, Math.max(year, prev[1])]);
+    setOpenYearDropdown(null);
+  };
+
+  const setYearTo = (year: number) => {
+    setYearRange((prev) => [Math.min(prev[0], year), year]);
+    setOpenYearDropdown(null);
+  };
+
+  const setRatingMinValue = (rating: number) => {
+    setRatingRange((prev) => [rating, Math.max(rating, prev[1])]);
+    setOpenRatingDropdown(null);
+  };
+
+  const setRatingMaxValue = (rating: number) => {
+    setRatingRange((prev) => [Math.min(prev[0], rating), rating]);
+    setOpenRatingDropdown(null);
   };
 
   // Quick rating presets
@@ -232,26 +263,23 @@ export default function SearchResultsPage() {
   ];
 
   // Trailer modal state
-  const [selectedTrailer, setSelectedTrailer] = useState<All | null>(null);
+  const [selectedTrailer, setSelectedTrailer] = useState<TrailerItem | null>(null);
 
   // Convert SearchResult to All type for TrailerModal
-  const convertToTrailerData = (item: SearchResult): All => {
+  const convertToTrailerData = (item: SearchResult): TrailerItem => {
     return {
       id: item.id,
       title: getTitle(item),
       overview: item.overview ?? "",
-      poster_path: item.poster_path ?? null,
-      backdrop_path: item.backdrop_path ?? null,
-      release_date: item.release_date ?? item.first_air_date ?? null,
+      poster_path: item.poster_path ?? undefined,
+      release_date: item.release_date ?? item.first_air_date ?? undefined,
       vote_average: item.vote_average ?? 0,
-      popularity: item.popularity ?? 0,
-      origin_country: (item as any).origin_country ?? [],
       genres: item.genres,
-      runtime: (item as any).runtime ?? null,
-      number_of_episodes: (item as any).number_of_episodes ?? null,
-      trailer_key: (item as any).trailer_key ?? null,
-      recommendations: [] as All["recommendations"],
-      type: item.type,
+      runtime: item.runtime ?? undefined,
+      number_of_episodes: item.number_of_episodes ?? undefined,
+      trailer_key: item.trailer_key ?? undefined,
+      recommendations: [],
+      type: item.type === "person" ? "movie" : item.type,
     };
   };
 
@@ -275,9 +303,9 @@ export default function SearchResultsPage() {
       if (response.ok) {
         const videoData = await response.json();
         const trailer =
-          videoData.results?.find(
-            (video: any) => video.type === "Trailer" && video.site === "YouTube"
-          ) || videoData.results?.[0];
+          (videoData.results as VideoResult[] | undefined)?.find(
+            (video) => video.type === "Trailer" && video.site === "YouTube"
+          ) || (videoData.results as VideoResult[] | undefined)?.[0];
 
         if (trailer) {
           const trailerData = convertToTrailerData({
@@ -313,7 +341,7 @@ export default function SearchResultsPage() {
     setSelectedTrailer(null);
   };
 
-  const handleSelectTrailer = async (trailer: All) => {
+  const handleSelectTrailer = async (trailer: TrailerItem) => {
     setSelectedTrailer(trailer);
   };
 
@@ -329,7 +357,7 @@ export default function SearchResultsPage() {
         } else {
           setAvailableGenres(GENRE_OPTIONS);
         }
-      } catch (error) {
+      } catch {
         setAvailableGenres(GENRE_OPTIONS);
       }
     };
@@ -340,42 +368,18 @@ export default function SearchResultsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [currentPage]);
 
-  // Update filter states when range changes
-  useEffect(() => {
-    setYearMin(yearRange[0] === 1980 ? null : yearRange[0]);
-    setYearMax(yearRange[1] === 2025 ? null : yearRange[1]);
-  }, [yearRange]);
-
-  useEffect(() => {
-    setRatingMin(ratingRange[0] === 0 ? null : ratingRange[0]);
-    setRatingMax(ratingRange[1] === 10 ? null : ratingRange[1]);
-  }, [ratingRange]);
-
-  // Automatically reset to page 1 when filters or sorting change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    filterType,
-    sortBy,
-    selectedGenres,
-    selectedCountries,
-    yearMin,
-    yearMax,
-    ratingMin,
-    ratingMax,
-    includeAdult,
-  ]);
-
   useEffect(() => {
     // Condition: don't fetch if user hasn't typed AND hasn't applied filters
     const noQueryAndNoFilters =
       !query.trim() &&
-      selectedGenres.length === 0 &&
-      selectedCountries.length === 0 &&
-      yearMin === null &&
-      yearMax === null &&
-      ratingMin === null &&
-      ratingMax === null;
+      appliedSelectedGenres.length === 0 &&
+      appliedSelectedCountries.length === 0 &&
+      appliedYearRange[0] === MIN_FILTER_YEAR &&
+      appliedYearRange[1] === MAX_FILTER_YEAR &&
+      appliedRatingRange[0] === 0 &&
+      appliedRatingRange[1] === 10 &&
+      appliedFilterType === "all" &&
+      !appliedIncludeAdult;
 
     if (noQueryAndNoFilters) {
       setResults([]);
@@ -401,20 +405,22 @@ export default function SearchResultsPage() {
 
         // Always include filters even if query exists
         params.append("page", currentPage.toString());
-        params.append("type", filterType);
-        params.append("sort", sortBy);
-        params.append("include_adult", includeAdult.toString());
+        params.append("type", appliedFilterType);
+        params.append("sort", appliedSortBy);
+        params.append("include_adult", appliedIncludeAdult.toString());
 
-        if (selectedGenres.length > 0)
-          params.append("genres", selectedGenres.join(","));
-        if (selectedCountries.length > 0)
-          params.append("countries", selectedCountries.join(","));
-        if (yearMin !== null) params.append("year_min", yearMin.toString());
-        if (yearMax !== null) params.append("year_max", yearMax.toString());
-        if (ratingMin !== null)
-          params.append("rating_min", ratingMin.toString());
-        if (ratingMax !== null)
-          params.append("rating_max", ratingMax.toString());
+        if (appliedSelectedGenres.length > 0)
+          params.append("genres", appliedSelectedGenres.join(","));
+        if (appliedSelectedCountries.length > 0)
+          params.append("countries", appliedSelectedCountries.join(","));
+        if (appliedYearRange[0] !== MIN_FILTER_YEAR)
+          params.append("year_min", appliedYearRange[0].toString());
+        if (appliedYearRange[1] !== MAX_FILTER_YEAR)
+          params.append("year_max", appliedYearRange[1].toString());
+        if (appliedRatingRange[0] !== 0)
+          params.append("rating_min", appliedRatingRange[0].toString());
+        if (appliedRatingRange[1] !== 10)
+          params.append("rating_max", appliedRatingRange[1].toString());
 
         const response = await fetch(`${base}/search?${params}`, {
           signal: controller.signal,
@@ -422,13 +428,36 @@ export default function SearchResultsPage() {
         if (!response.ok) throw new Error("Search failed");
 
         const data: SearchResponse = await response.json();
+        const nextResults = data.results || [];
+        const hasAppliedAdvancedFilters =
+          appliedSelectedGenres.length > 0 ||
+          appliedSelectedCountries.length > 0 ||
+          appliedYearRange[0] !== MIN_FILTER_YEAR ||
+          appliedYearRange[1] !== MAX_FILTER_YEAR ||
+          appliedRatingRange[0] !== 0 ||
+          appliedRatingRange[1] !== 10 ||
+          appliedIncludeAdult;
+        const apiTotalResults = data.total_results || 0;
+        const apiTotalPages =
+          data.total_pages || Math.ceil(apiTotalResults / SEARCH_PAGE_SIZE);
+        const shouldUseFilteredPageCount =
+          hasAppliedAdvancedFilters &&
+          appliedFilterType === "all";
+        const nextTotalResults = shouldUseFilteredPageCount
+          ? nextResults.length
+          : apiTotalResults;
+        const nextTotalPages = shouldUseFilteredPageCount
+          ? nextResults.length > 0
+            ? 1
+            : 0
+          : apiTotalPages;
 
-        setResults(data.results || []);
+        setResults(nextResults);
         setBestMatch(data.best_match || null);
-        setTotalResults(data.total_results || 0);
-        setTotalPages(Math.ceil((data.total_results || 0) / 20));
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
+        setTotalResults(nextTotalResults);
+        setTotalPages(nextTotalPages);
+      } catch (err: unknown) {
+        if (!(err instanceof DOMException) || err.name !== "AbortError") {
           setError("Failed to search. Please try again.");
           console.error("Search error:", err);
         }
@@ -443,15 +472,13 @@ export default function SearchResultsPage() {
   }, [
     query,
     currentPage,
-    filterType,
-    sortBy,
-    selectedGenres.join(","), // join arrays to prevent false rerenders
-    selectedCountries.join(","),
-    yearMin,
-    yearMax,
-    ratingMin,
-    ratingMax,
-    includeAdult,
+    appliedFilterType,
+    appliedSortBy,
+    appliedSelectedGenres,
+    appliedSelectedCountries,
+    appliedYearRange,
+    appliedRatingRange,
+    appliedIncludeAdult,
   ]);
 
   // Helper functions
@@ -463,6 +490,12 @@ export default function SearchResultsPage() {
   };
 
   const getPosterUrl = (item: SearchResult) => {
+    if (item.type === "person") {
+      return item.profile_path
+        ? `https://image.tmdb.org/t/p/w500${item.profile_path}`
+        : "/placeholder-person.svg";
+    }
+
     return item.poster_path
       ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
       : "/placeholder-poster.svg";
@@ -483,7 +516,8 @@ export default function SearchResultsPage() {
   };
 
   const handleCardClick = (item: SearchResult) => {
-    const path = item.type === "tv" ? "/tv" : "/movies";
+    const path =
+      item.type === "tv" ? "/tv" : item.type === "person" ? "/celeb" : "/movies";
     router.push(`${path}/${item.id}`);
   };
 
@@ -504,36 +538,354 @@ export default function SearchResultsPage() {
   const clearAllFilters = () => {
     setSelectedGenres([]);
     setSelectedCountries([]);
-    setYearRange([1980, 2025]);
+    setYearRange([MIN_FILTER_YEAR, MAX_FILTER_YEAR]);
     setRatingRange([0, 10]);
     setFilterType("all");
     setSortBy("relevance");
     setIncludeAdult(false);
+    setAppliedSelectedGenres([]);
+    setAppliedSelectedCountries([]);
+    setAppliedYearRange([MIN_FILTER_YEAR, MAX_FILTER_YEAR]);
+    setAppliedRatingRange([0, 10]);
+    setAppliedFilterType("all");
+    setAppliedSortBy("relevance");
+    setAppliedIncludeAdult(false);
+    setCurrentPage(1);
+    setExpandedSections({});
+  };
+
+  const applyFilters = () => {
+    setAppliedSelectedGenres(selectedGenres);
+    setAppliedSelectedCountries(selectedCountries);
+    setAppliedYearRange(yearRange);
+    setAppliedRatingRange(ratingRange);
+    setAppliedFilterType(filterType);
+    setAppliedSortBy(sortBy);
+    setAppliedIncludeAdult(includeAdult);
+    setCurrentPage(1);
+    setExpandedSections({});
+    setShowFilters(false);
   };
 
   const hasActiveFilters =
-    selectedGenres.length > 0 ||
-    selectedCountries.length > 0 ||
-    yearRange[0] !== 1950 ||
-    yearRange[1] !== 2025 ||
-    ratingRange[0] !== 0 ||
-    ratingRange[1] !== 10 ||
-    filterType !== "all" ||
-    includeAdult;
+    appliedSelectedGenres.length > 0 ||
+    appliedSelectedCountries.length > 0 ||
+    appliedYearRange[0] !== MIN_FILTER_YEAR ||
+    appliedYearRange[1] !== MAX_FILTER_YEAR ||
+    appliedRatingRange[0] !== 0 ||
+    appliedRatingRange[1] !== 10 ||
+    appliedFilterType !== "all" ||
+    appliedIncludeAdult;
+
+  const hasPendingFilterChanges =
+    selectedGenres.join(",") !== appliedSelectedGenres.join(",") ||
+    selectedCountries.join(",") !== appliedSelectedCountries.join(",") ||
+    yearRange[0] !== appliedYearRange[0] ||
+    yearRange[1] !== appliedYearRange[1] ||
+    ratingRange[0] !== appliedRatingRange[0] ||
+    ratingRange[1] !== appliedRatingRange[1] ||
+    filterType !== appliedFilterType ||
+    sortBy !== appliedSortBy ||
+    includeAdult !== appliedIncludeAdult;
 
   const getActiveFilterCount = () => {
     return (
-      selectedGenres.length +
-      selectedCountries.length +
-      (yearRange[0] !== 1950 ? 1 : 0) +
-      (yearRange[1] !== 2025 ? 1 : 0) +
-      (ratingRange[0] !== 0 ? 1 : 0) +
-      (ratingRange[1] !== 10 ? 1 : 0) +
-      (filterType !== "all" ? 1 : 0) +
-      (includeAdult ? 1 : 0)
+      appliedSelectedGenres.length +
+      appliedSelectedCountries.length +
+      (appliedYearRange[0] !== MIN_FILTER_YEAR ? 1 : 0) +
+      (appliedYearRange[1] !== MAX_FILTER_YEAR ? 1 : 0) +
+      (appliedRatingRange[0] !== 0 ? 1 : 0) +
+      (appliedRatingRange[1] !== 10 ? 1 : 0) +
+      (appliedFilterType !== "all" ? 1 : 0) +
+      (appliedIncludeAdult ? 1 : 0)
     );
   };
-  const [pageSize, setPageSize] = useState(25);
+  const mediaResults = results.filter((item) => item.type !== "person");
+  const movieResults = results.filter((item) => item.type === "movie");
+  const tvResults = results.filter((item) => item.type === "tv");
+  const personResults = results.filter((item) => item.type === "person");
+  const groupedResultSections = [
+    { key: "movie", title: "Movies", icon: Film, results: movieResults },
+    { key: "tv", title: "TV Shows", icon: Tv, results: tvResults },
+    { key: "person", title: "People", icon: User, results: personResults },
+  ].filter((section) => section.results.length > 0);
+
+  const getTypeLabel = (item: SearchResult) =>
+    item.type === "tv" ? "Series" : item.type === "person" ? "Person" : "Movie";
+
+  const getTypeIcon = (type: SearchResult["type"]) =>
+    type === "tv" ? Tv : type === "person" ? User : Film;
+
+  const getSectionPreviewLimit = () => (viewMode === "grid" ? 10 : 8);
+
+  const renderTypeBadge = (item: SearchResult, label = getTypeLabel(item)) => {
+    const contentType = item.type;
+    const TypeIcon = getTypeIcon(contentType);
+    const badgeClass =
+      contentType === "tv"
+        ? "bg-blue-500/85 text-white"
+        : contentType === "person"
+          ? "bg-pink-500/85 text-white"
+          : "bg-purple-500/85 text-white";
+
+    return (
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold shadow-lg backdrop-blur-md ${badgeClass}`}
+      >
+        <TypeIcon size={11} />
+        {label}
+      </span>
+    );
+  };
+
+  const renderYearDropdown = (
+    id: "from" | "to",
+    label: string,
+    value: number,
+    onChange: (year: number) => void
+  ) => {
+    const isOpen = openYearDropdown === id;
+
+    return (
+      <div className="relative">
+        <label className="text-xs text-gray-400 mb-1.5 block">{label}</label>
+        <button
+          type="button"
+          onClick={() => {
+            setOpenRatingDropdown(null);
+            setOpenYearDropdown(isOpen ? null : id);
+          }}
+          className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${isOpen
+            ? "border-[#e94f37]/70 bg-[#e94f37]/10 text-white"
+            : "border-white/10 bg-black/40 text-gray-100 hover:border-[#e94f37]/45 hover:bg-white/[0.06]"
+            }`}
+          aria-expanded={isOpen}
+        >
+          <span className="font-semibold">{value}</span>
+          <ChevronDown
+            size={16}
+            className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.12 }}
+              className="absolute left-0 right-0 z-30 mt-2 max-h-64 overflow-y-auto rounded-xl border border-white/10 bg-[#151515] p-2 shadow-2xl"
+            >
+              <div className="grid grid-cols-3 gap-1.5">
+                {years.map((year) => {
+                  const isSelected = value === year;
+
+                  return (
+                    <button
+                      key={year}
+                      type="button"
+                      onClick={() => onChange(year)}
+                      className={`rounded-lg px-2 py-2 text-xs font-medium transition-colors ${isSelected
+                        ? "bg-[#e94f37] text-white"
+                        : "text-gray-300 hover:bg-white/[0.07] hover:text-white"
+                        }`}
+                    >
+                      {year}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
+  const renderRatingDropdown = (
+    id: "min" | "max",
+    label: string,
+    value: number,
+    onChange: (rating: number) => void
+  ) => {
+    const isOpen = openRatingDropdown === id;
+
+    return (
+      <div className="relative">
+        <label className="text-xs text-gray-400 mb-1.5 block">{label}</label>
+        <button
+          type="button"
+          onClick={() => {
+            setOpenYearDropdown(null);
+            setOpenRatingDropdown(isOpen ? null : id);
+          }}
+          className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${isOpen
+            ? "border-[#e94f37]/70 bg-[#e94f37]/10 text-white"
+            : "border-white/10 bg-black/40 text-gray-100 hover:border-[#e94f37]/45 hover:bg-white/[0.06]"
+            }`}
+          aria-expanded={isOpen}
+        >
+          <span className="font-semibold">{value} stars</span>
+          <ChevronDown
+            size={16}
+            className={`text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.12 }}
+              className="absolute left-0 right-0 z-30 mt-2 rounded-xl border border-white/10 bg-[#151515] p-2 shadow-2xl"
+            >
+              <div className="grid grid-cols-2 gap-1.5">
+                {ratings.map((rating) => {
+                  const isSelected = value === rating;
+
+                  return (
+                    <button
+                      key={rating}
+                      type="button"
+                      onClick={() => onChange(rating)}
+                      className={`flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${isSelected
+                        ? "bg-[#e94f37] text-white"
+                        : "text-gray-300 hover:bg-white/[0.07] hover:text-white"
+                        }`}
+                    >
+                      <span>{rating}</span>
+                      <Star size={12} fill="currentColor" />
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
+  const renderGridResults = (sectionResults: SearchResult[]) => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+      {sectionResults.map((item, index) => (
+        <motion.div
+          key={`${item.type}-${item.id}`}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.02 }}
+          className="group cursor-pointer"
+          onClick={() => handleCardClick(item)}
+        >
+          <div className={`relative aspect-[2/3] mt-2.5 rounded-lg overflow-hidden ${RESULT_CARD_CLASS}`}>
+            <Image
+              src={getPosterUrl(item)}
+              alt={getTitle(item)}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
+            {item.type !== "person" && (
+              <div className="absolute top-2 right-2">
+                <RatingBadge rating={item.vote_average} variant="colored" size="sm" />
+              </div>
+            )}
+            <div className="absolute bottom-2 left-2">{renderTypeBadge(item)}</div>
+          </div>
+
+          <div className="mt-2">
+            <h3 className="font-semibold text-sm text-white line-clamp-2 group-hover:text-orange-300">
+              {getTitle(item)}
+            </h3>
+            <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+              {item.type === "person" && item.known_for_department ? (
+                <span className="text-gray-300">{item.known_for_department}</span>
+              ) : (
+                <>
+                  {getReleaseYear(item) && <span className="text-gray-300">{getReleaseYear(item)}</span>}
+                </>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+
+  const renderListResults = (sectionResults: SearchResult[]) => (
+    <div className="space-y-3">
+      {sectionResults.map((item, index) => (
+        <motion.div
+          key={`${item.type}-${item.id}`}
+          initial={{ opacity: 0, x: -8 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: index * 0.01 }}
+          className={`flex gap-4 rounded-lg p-3 cursor-pointer ${RESULT_CARD_CLASS}`}
+          onClick={() => handleCardClick(item)}
+        >
+          <div className="relative w-20 h-28 rounded-md overflow-hidden flex-shrink-0 border border-white/10 bg-white/[0.04]">
+            <Image src={getPosterUrl(item)} alt={getTitle(item)} fill className="object-cover" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+              <h3 className="font-semibold text-white text-base line-clamp-2">{getTitle(item)}</h3>
+              <div className="flex items-center gap-3 sm:ml-2">
+                {item.type !== "person" && (
+                  <RatingBadge rating={item.vote_average} variant="colored" size="sm" />
+                )}
+                {renderTypeBadge(item)}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400 mt-2">
+              {item.type === "person" && item.known_for_department && (
+                <div className="flex items-center gap-1">
+                  <User size={14} />
+                  <span className="text-gray-300">{item.known_for_department}</span>
+                </div>
+              )}
+              {getReleaseYear(item) && (
+                <div className="flex items-center gap-1">
+                  <Calendar size={14} />
+                  <span className="text-gray-300">{getReleaseYear(item)}</span>
+                </div>
+              )}
+              {item.type !== "person" && (
+                <div className="flex items-center gap-1">
+                  <Users size={14} />
+                  <span className="text-gray-300">
+                    {item.vote_count ? (item.vote_count / 1000).toFixed(1) : "0.0"}K votes
+                  </span>
+                </div>
+              )}
+              {item.origin_country && item.origin_country?.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <Globe size={14} />
+                  <span className="text-gray-300">{getCountryName(item.origin_country[0])}</span>
+                </div>
+              )}
+            </div>
+
+            {item.overview && <p className="text-gray-300 text-sm line-clamp-3 mt-2">{item.overview}</p>}
+
+            {getGenres(item).length > 0 && (
+              <div className="flex gap-2 mt-2">
+                {getGenres(item).map((genre) => (
+                  <Badge key={genre} variant="outline" className="text-xs border-white/10 bg-white/[0.04] text-gray-300">
+                    {genre}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
 
   // Enhanced pagination component
   const renderPagination = () => {
@@ -550,7 +902,7 @@ export default function SearchResultsPage() {
   };
 
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [trendingTerms, setTrendingTerms] = useState<any[]>([
+  const [trendingTerms, setTrendingTerms] = useState<TrendingTerm[]>([
     { id: 0, title: "Avengers", media_type: "movie" },
     { id: 0, title: "Stranger Things", media_type: "tv" },
     { id: 0, title: "Batman", media_type: "movie" },
@@ -570,7 +922,6 @@ export default function SearchResultsPage() {
           if (data && data.length > 0) {
             setTrendingTerms(data);
           }
-          console.log("Terms: ", trendingTerms);
         }
       } catch (error) {
         console.error("Failed to fetch trending terms:", error);
@@ -601,7 +952,7 @@ export default function SearchResultsPage() {
                 Start Your Search
               </h1>
               <p className="text-gray-400 text-md">
-                Discover movies and TV shows you'll love
+                Discover movies and TV shows you&apos;ll love
               </p>
             </div>
             {/* Search Input */}
@@ -678,7 +1029,7 @@ export default function SearchResultsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
           <div className="w-full sm:w-auto text-left sm:text-left">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent mb-2 break-words">
-              Search results for "{query}"
+              Search results for &quot;{query}&quot;
             </h1>
             {!loading && (
               <p className="text-gray-400 text-sm sm:text-md flex items-center gap-2">
@@ -701,17 +1052,20 @@ export default function SearchResultsPage() {
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
               className={`w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-all duration-300 cursor-pointer ${hasActiveFilters
-                ? " bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white border-orange-500/50 shadow-lg"
-                : "border-gray-600 text-white"
+                ? "border-[#e94f37]/60 bg-[#e94f37]/15 text-white"
+                : "border-white/10 bg-white/[0.04] text-gray-200 hover:bg-white/[0.08] hover:text-white"
                 }`}
               aria-expanded={showFilters}
             >
               <SlidersHorizontal size={16} />
               <span className="truncate">Advanced Filters</span>
               {hasActiveFilters && (
-                <Badge variant="secondary" className="ml-2 bg-gray-500 text-white">
+                <Badge variant="secondary" className="ml-2 bg-white/10 text-white">
                   {getActiveFilterCount()}
                 </Badge>
+              )}
+              {hasPendingFilterChanges && (
+                <span className="h-2 w-2 rounded-full bg-[#e94f37]" aria-hidden="true" />
               )}
               <ChevronDown
                 size={16}
@@ -720,13 +1074,13 @@ export default function SearchResultsPage() {
             </Button>
 
             <div className="flex gap-2 mt-2 sm:mt-0">
-              {(["all", "movie", "tv"] as const).map((type) => (
+              {(["all", "movie", "tv", "person"] as const).map((type) => (
                 <Badge
                   key={type}
                   variant={filterType === type ? "default" : "outline"}
                   className={`cursor-pointer transition-all duration-200 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 ${filterType === type
-                    ? " bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white shadow-lg"
-                    : "border-gray-600 text-gray-300 hover:text-white hover:border-orange-400"
+                    ? FILTER_CHIP_ACTIVE
+                    : FILTER_CHIP
                     }`}
                   onClick={() => setFilterType(type)}
                 >
@@ -740,10 +1094,15 @@ export default function SearchResultsPage() {
                       <Film size={12} />
                       <span className="hidden sm:inline">Movies</span>
                     </>
-                  ) : (
+                  ) : type === "tv" ? (
                     <>
                       <Tv size={12} />
                       <span className="hidden sm:inline">TV</span>
+                    </>
+                  ) : (
+                    <>
+                      <User size={12} />
+                      <span className="hidden sm:inline">People</span>
                     </>
                   )}
                 </Badge>
@@ -760,32 +1119,57 @@ export default function SearchResultsPage() {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.28 }}
-              className="mb-6 bg-gray-800/40 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-gray-700/50 shadow-sm"
+              className="mb-6 rounded-2xl border border-white/10 bg-[#101010]/95 p-4 sm:p-5 shadow-sm"
             >
+              <div className="mb-5 flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="flex items-center gap-2 text-base font-semibold text-white">
+                    <SlidersHorizontal size={17} className="text-[#e94f37]" />
+                    Advanced Filters
+                  </h2>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Choose filters here, then apply them together.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className={`rounded-full border px-2.5 py-1 ${hasPendingFilterChanges
+                    ? "border-[#e94f37]/50 bg-[#e94f37]/10 text-[#ffb3a8]"
+                    : "border-white/10 bg-white/[0.04] text-gray-400"
+                    }`}>
+                    {hasPendingFilterChanges ? "Pending changes" : "No pending changes"}
+                  </span>
+                  {hasActiveFilters && (
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-gray-300">
+                      {getActiveFilterCount()} active
+                    </span>
+                  )}
+                </div>
+              </div>
+
               {/* Row 1: Sort + Content Toggle + Adult */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Sort */}
                 <div className="sm:col-span-2">
-                  <label className="text-sm font-semibold text-gray-200 flex items-center gap-2 mb-2">
+                  <label className={`${FILTER_SECTION_TITLE} mb-2`}>
                     <TrendingUp size={16} />
                     Sort Results By
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {[
+                    {([
                       { key: "relevance", label: "Most Relevant", icon: Search },
                       { key: "rating", label: "Highest Rated", icon: Award },
                       { key: "date", label: "Most Recent", icon: Clock },
                       { key: "popularity", label: "Most Popular", icon: TrendingUp },
-                    ].map((option) => {
+                    ] satisfies Array<{ key: SearchSort; label: string; icon: typeof Search }>).map((option) => {
                       const Icon = option.icon;
                       const isActive = sortBy === option.key;
                       return (
                         <button
                           key={option.key}
-                          onClick={() => setSortBy(option.key as any)}
+                          onClick={() => setSortBy(option.key)}
                           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border ${isActive
-                            ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400/50 shadow"
-                            : "bg-gray-800/60 text-gray-300 border-gray-600/50 hover:bg-gray-700/80"
+                            ? FILTER_CHIP_ACTIVE
+                            : FILTER_CHIP
                             }`}
                         >
                           <Icon size={14} />
@@ -799,14 +1183,14 @@ export default function SearchResultsPage() {
                 {/* Adult Toggle */}
                 <div className="flex items-start sm:items-center gap-3">
                   <div className="flex-1">
-                    <label className="text-sm font-semibold text-gray-200">Content Rating</label>
+                    <label className="text-sm font-semibold text-gray-100">Content Rating</label>
                     <p className="text-xs text-gray-400">Include adult content in results</p>
                   </div>
                   <div
                     role="switch"
                     aria-checked={includeAdult}
                     onClick={() => setIncludeAdult(!includeAdult)}
-                    className={`relative inline-flex items-center h-6 w-12 rounded-full transition-colors duration-200 cursor-pointer ${includeAdult ? "bg-red-500" : "bg-gray-600"
+                    className={`relative inline-flex items-center h-6 w-12 rounded-full border transition-colors duration-200 cursor-pointer ${includeAdult ? "border-[#e94f37]/60 bg-[#e94f37]/70" : "border-white/10 bg-white/10"
                       }`}
                   >
                     <span
@@ -820,9 +1204,9 @@ export default function SearchResultsPage() {
               {/* Year & Rating (stack on mobile) */}
               <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Year */}
-                <div className="rounded-2xl p-4 border border-gray-700/50 bg-gradient-to-br from-gray-800/60 to-gray-900/60">
+                <div className={`${FILTER_SURFACE} p-4`}>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-blue-500/20 rounded-lg">
+                    <div className="p-2 bg-white/[0.06] rounded-lg text-[#e94f37]">
                       <Calendar size={16} />
                     </div>
                     <div>
@@ -838,7 +1222,7 @@ export default function SearchResultsPage() {
                         <button
                           key={decade.label}
                           onClick={() => setDecade(decade.start, decade.end)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium ${isSelected ? "bg-blue-500 text-white" : "bg-gray-700/50 text-gray-300"
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${isSelected ? FILTER_CHIP_ACTIVE : FILTER_CHIP
                             }`}
                         >
                           {decade.label}
@@ -848,48 +1232,22 @@ export default function SearchResultsPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs text-gray-400 mb-1.5 block">From</label>
-                      <select
-                        value={yearRange[0]}
-                        onChange={(e) => setYearRange([parseInt(e.target.value), yearRange[1]])}
-                        className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg text-white text-xs"
-                      >
-                        {years.map((year) => (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-400 mb-1.5 block">To</label>
-                      <select
-                        value={yearRange[1]}
-                        onChange={(e) => setYearRange([yearRange[0], parseInt(e.target.value)])}
-                        className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg text-white text-xs"
-                      >
-                        {years.map((year) => (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {renderYearDropdown("from", "From", yearRange[0], setYearFrom)}
+                    {renderYearDropdown("to", "To", yearRange[1], setYearTo)}
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg text-xs">
+                  <div className="mt-3 flex items-center justify-between px-3 py-2 bg-white/[0.04] border border-white/10 rounded-lg text-xs">
                     <span className="text-gray-400">Range:</span>
-                    <span className="font-bold text-blue-400 text-sm">
+                    <span className="font-bold text-[#ff8a78] text-sm">
                       {yearRange[0]} - {yearRange[1]}
                     </span>
                   </div>
                 </div>
 
                 {/* Rating */}
-                <div className="rounded-2xl p-4 border border-gray-700/50 bg-gradient-to-br from-gray-800/60 to-gray-900/60">
+                <div className={`${FILTER_SURFACE} p-4`}>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 bg-yellow-500/20 rounded-lg">
+                    <div className="p-2 bg-white/[0.06] rounded-lg text-[#e94f37]">
                       <Star size={16} />
                     </div>
                     <div>
@@ -905,7 +1263,7 @@ export default function SearchResultsPage() {
                         <button
                           key={preset.label}
                           onClick={() => setRatingRange([preset.min, preset.max])}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1 ${isSelected ? "bg-yellow-600 text-white-900" : "bg-gray-700/50 text-gray-300"
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1 border transition-colors ${isSelected ? FILTER_CHIP_ACTIVE : FILTER_CHIP
                             }`}
                         >
                           {isSelected && <Check size={12} />}
@@ -916,41 +1274,14 @@ export default function SearchResultsPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs text-gray-400 mb-1.5 block">Min</label>
-                      <select
-                        value={ratingRange[0]}
-                        onChange={(e) => setRatingRange([parseInt(e.target.value), ratingRange[1]])}
-                        className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg text-white text-xs"
-                      >
-                        {ratings.map((rating) => (
-                          <option key={rating} value={rating}>
-                            {rating} ★
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-gray-400 mb-1.5 block">Max</label>
-                      <select
-                        value={ratingRange[1]}
-                        onChange={(e) => setRatingRange([ratingRange[0], parseInt(e.target.value)])}
-                        className="w-full px-3 py-2 bg-gray-900/80 border border-gray-600 rounded-lg text-white text-xs"
-                      >
-                        {ratings.map((rating) => (
-                          <option key={rating} value={rating}>
-                            {rating} ★
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {renderRatingDropdown("min", "Min", ratingRange[0], setRatingMinValue)}
+                    {renderRatingDropdown("max", "Max", ratingRange[1], setRatingMaxValue)}
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between px-3 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-xs">
+                  <div className="mt-3 flex items-center justify-between px-3 py-2 bg-white/[0.04] border border-white/10 rounded-lg text-xs">
                     <span className="text-gray-400">Range:</span>
-                    <span className="font-bold text-yellow-400 text-sm">
-                      {ratingRange[0]} ★ - {ratingRange[1]} ★
+                    <span className="font-bold text-[#ff8a78] text-sm">
+                      {ratingRange[0]} - {ratingRange[1]} stars
                     </span>
                   </div>
                 </div>
@@ -958,26 +1289,26 @@ export default function SearchResultsPage() {
 
               {/* Genres & Countries stacked for mobile */}
               <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-200 mb-3 block flex items-center gap-2">
+                <div className={`${FILTER_SURFACE} p-4`}>
+                  <label className={`${FILTER_SECTION_TITLE} mb-3`}>
                     <Film size={16} />
                     Genres
                     {selectedGenres.length > 0 && (
-                      <Badge variant="outline" className="text-xs text-gray-200 bg-purple-500/20 ml-2">
+                      <Badge variant="outline" className="text-xs border-[#e94f37]/40 bg-[#e94f37]/10 text-gray-100 ml-2">
                         {selectedGenres.length} selected
                       </Badge>
                     )}
                   </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  <div className="grid max-h-52 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4">
                     {availableGenres.map((genre) => {
                       const isSelected = selectedGenres.includes(genre);
                       return (
                         <button
                           key={genre}
                           onClick={() => handleGenreToggle(genre)}
-                          className={`px-2 py-2 text-xs rounded-lg text-center font-medium transition-all duration-150 ${isSelected
-                            ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                            : "bg-gray-700/50 text-gray-300"
+                          className={`px-2 py-2 text-xs rounded-lg text-center font-medium border transition-all duration-150 ${isSelected
+                            ? FILTER_CHIP_ACTIVE
+                            : FILTER_CHIP
                             }`}
                         >
                           {genre}
@@ -987,26 +1318,26 @@ export default function SearchResultsPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-200 mb-3 block flex items-center gap-2">
+                <div className={`${FILTER_SURFACE} p-4`}>
+                  <label className={`${FILTER_SECTION_TITLE} mb-3`}>
                     <Globe size={16} />
                     Countries
                     {selectedCountries.length > 0 && (
-                      <Badge variant="outline" className="text-xs text-gray-200 bg-green-500/20 ml-2">
+                      <Badge variant="outline" className="text-xs border-[#e94f37]/40 bg-[#e94f37]/10 text-gray-100 ml-2">
                         {selectedCountries.length} selected
                       </Badge>
                     )}
                   </label>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  <div className="grid max-h-52 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
                     {availableCountries.map((country) => {
                       const isSelected = selectedCountries.includes(country.code);
                       return (
                         <button
                           key={country.code}
                           onClick={() => handleCountryToggle(country.code)}
-                          className={`px-2 py-2 text-xs rounded-lg text-center font-medium transition-all duration-150 ${isSelected
-                            ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
-                            : "bg-gray-700/50 text-gray-300"
+                          className={`px-2 py-2 text-xs rounded-lg text-center font-medium border transition-all duration-150 ${isSelected
+                            ? FILTER_CHIP_ACTIVE
+                            : FILTER_CHIP
                             }`}
                         >
                           {country.name}
@@ -1022,7 +1353,11 @@ export default function SearchResultsPage() {
 
                 {/* Filter count */}
                 <div className="text-sm text-gray-400">
-                  {hasActiveFilters ? `${getActiveFilterCount()} filters active` : "No filters applied"}
+                  {hasPendingFilterChanges
+                    ? "Pending changes"
+                    : hasActiveFilters
+                      ? `${getActiveFilterCount()} filters active`
+                      : "No filters applied"}
                 </div>
 
                 {/* Buttons */}
@@ -1032,7 +1367,7 @@ export default function SearchResultsPage() {
                   <Button
                     size="sm"
                     onClick={clearAllFilters}
-                    disabled={!hasActiveFilters}
+                    disabled={!hasActiveFilters && !hasPendingFilterChanges}
                     className="
     flex items-center gap-1 justify-center
     rounded-lg px-3 py-1.5
@@ -1052,15 +1387,17 @@ export default function SearchResultsPage() {
                   {/* Apply button */}
                   <Button
                     size="sm"
-                    onClick={() => setShowFilters(false)}
+                    onClick={applyFilters}
+                    disabled={!hasPendingFilterChanges}
                     className="
         flex-1 sm:flex-none
        bg-gradient-to-r from-[#e94f37] to-[#ff6b58]
     text-white shadow-sm
         py-2.5 rounded-xl cursor-pointer
+        disabled:cursor-not-allowed disabled:opacity-50
       "
                   >
-                    Apply
+                    {hasPendingFilterChanges ? "Apply changes" : "Applied"}
                   </Button>
                 </div>
               </div>
@@ -1155,14 +1492,22 @@ export default function SearchResultsPage() {
 
                       <div className="flex-1 space-y-3">
                         <div className="flex items-center gap-3">
-                          <Badge className={`${bestMatch.type === "tv" ? "bg-blue-500" : "bg-purple-500"} text-white`}>
-                            {bestMatch.type === "tv" ? <><Tv size={12} className="mr-1" />TV Series</> : <><Film size={12} className="mr-1" />Movie</>}
-                          </Badge>
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-lg backdrop-blur-md ${bestMatch.type === "tv"
+                              ? "bg-blue-500/85 text-white"
+                              : "bg-purple-500/85 text-white"
+                              }`}
+                          >
+                            {bestMatch.type === "tv" ? (
+                              <Tv size={12} />
+                            ) : (
+                              <Film size={12} />
+                            )}
+                            {bestMatch.type === "tv" ? "Series" : "Movie"}
+                          </span>
 
                           <div className="flex items-center gap-2">
-                            <Star size={14} className="text-yellow-400" fill="currentColor" />
-                            <span className="text-white font-semibold">{bestMatch.vote_average?.toFixed(1) ?? "N/A"}</span>
-                            <span className="text-gray-400 text-xs">( {bestMatch.vote_count ? (bestMatch.vote_count / 1000).toFixed(1) : "0.0"}K votes)</span>
+                            <RatingBadge rating={bestMatch.vote_average} variant="colored" size="md" />
                           </div>
                         </div>
 
@@ -1181,9 +1526,17 @@ export default function SearchResultsPage() {
                               <span>{getCountryName(bestMatch.origin_country[0])}</span>
                             </div>
                           )}
+                          {bestMatch.type === "person" && bestMatch.known_for_department && (
+                            <div className="flex items-center gap-1">
+                              <User size={14} />
+                              <span>{bestMatch.known_for_department}</span>
+                            </div>
+                          )}
                         </div>
 
-                        <p className="text-gray-300 text-sm line-clamp-4">{bestMatch.overview}</p>
+                        {bestMatch.overview && (
+                          <p className="text-gray-300 text-sm line-clamp-4">{bestMatch.overview}</p>
+                        )}
 
                         {getGenres(bestMatch).length > 0 && (
                           <div className="flex flex-wrap gap-2">
@@ -1197,10 +1550,10 @@ export default function SearchResultsPage() {
 
                         <div className="flex flex-row gap-2 mt-10 w-full">
 
-                          {/* Play Trailer */}
-                          <Button
-                            onClick={() => handlePlayTrailer(bestMatch)}
-                            className="
+                          {bestMatch.type !== "person" && (
+                            <Button
+                              onClick={() => handlePlayTrailer(bestMatch)}
+                              className="
     flex-1 sm:flex-none
     bg-gradient-to-r from-[#e94f37] to-[#ff6b58]
     text-white font-medium
@@ -1208,10 +1561,11 @@ export default function SearchResultsPage() {
     transition rounded-xl
     flex items-center justify-center cursor-pointer
   "
-                          >
-                            <Play size={18} className="mr-0 sm:mr-2" />
-                            <span className="hidden sm:inline">Play Trailer</span>
-                          </Button>
+                            >
+                              <Play size={18} className="mr-0 sm:mr-2" />
+                              <span className="hidden sm:inline">Play Trailer</span>
+                            </Button>
+                          )}
 
                           {/* More Info */}
                           <Button
@@ -1240,14 +1594,14 @@ export default function SearchResultsPage() {
                 )}
 
                 {/* Top Results */}
-                {results.length > 0 && (
+                {mediaResults.length > 0 && (
                   <div className="mb-8">
                     <h2 className="text-lg sm:text-2xl font-bold mb-4 bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
                       Top Results
                     </h2>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {results.slice(0, 2).map((item) => (
+                      {mediaResults.slice(0, 2).map((item) => (
                         <motion.div
                           key={`featured-${item.id}`}
                           initial={{ opacity: 0, y: 6 }}
@@ -1265,14 +1619,9 @@ export default function SearchResultsPage() {
                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
                             <div className="absolute bottom-3 left-3 right-3">
                               <div className="flex items-center gap-3 mb-2">
-                                <Badge className={`${item.type === "tv" ? "bg-blue-500" : "bg-purple-500"} text-white`}>
-                                  {item.type === "tv" ? <><Tv size={12} className="mr-1" />Series</> : <><Film size={12} className="mr-1" />Movie</>}
-                                </Badge>
+                                {renderTypeBadge(item)}
 
-                                <div className="flex items-center gap-1 text-orange-400">
-                                  <Star size={14} fill="currentColor" />
-                                  <span className="text-sm font-semibold text-white">{item.vote_average}</span>
-                                </div>
+                                <RatingBadge rating={item.vote_average} variant="colored" size="sm" />
                               </div>
 
                               <h3 className="text-lg sm:text-2xl font-bold text-white drop-shadow-lg line-clamp-2">{getTitle(item)}</h3>
@@ -1285,13 +1634,26 @@ export default function SearchResultsPage() {
                   </div>
                 )}
 
-                {/* All Results / Grid or List */}
+                {/* Results grouped by media type */}
                 <div className="mb-8">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg sm:text-2xl font-bold text-gray-200 flex items-center gap-2">
-                      <Search size={18} />
-                      All Results
-                    </h2>
+                  <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-lg sm:text-2xl font-bold text-gray-200 flex items-center gap-2">
+                        <Search size={18} />
+                        Results by Type
+                      </h2>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-400">
+                        {groupedResultSections.map((section) => (
+                          <a
+                            key={section.key}
+                            href={`#search-${section.key}-results`}
+                            className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-gray-300 transition-colors hover:border-[#e94f37]/50 hover:text-white"
+                          >
+                            {section.results.length} {section.title.toLowerCase()}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
 
                     <div className="flex items-center gap-2">
                       <div className="bg-gray-800/60 rounded-xl p-1 flex border border-gray-600/50">
@@ -1313,155 +1675,70 @@ export default function SearchResultsPage() {
                     </div>
                   </div>
 
-                  {viewMode === "grid" ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
-                      {results.map((item, index) => (
-                        <motion.div
-                          key={item.id}
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.02 }}
-                          className="group cursor-pointer"
-                          onClick={() => handleCardClick(item)}
-                        >
-                          <div className="relative aspect-[2/3] mt-2.5 rounded-lg overflow-hidden bg-gray-800/50 border border-gray-700 group-hover:border-orange-500/50 transition-all">
-                            <Image src={getPosterUrl(item)} alt={getTitle(item)} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
-                            <div className="absolute top-2 right-2">
-                              <RatingBadge rating={item.vote_average} variant="minimal" size="sm" />
-                            </div>
-                            <div className="absolute bottom-2 left-2">
-                              <Badge
-                                className={`
-    ${item.type === "tv"
-                                    ? "bg-blue-500"
-                                    : item.type === "movie"
-                                      ? "bg-purple-500"
-                                      : "bg-pink-500"
-                                  } 
-    text-white flex items-center
-  `}
+                  <div className="space-y-8">
+                    {groupedResultSections.map((section) => {
+                      const SectionIcon = section.icon;
+                      const isExpanded = expandedSections[section.key];
+                      const previewLimit = getSectionPreviewLimit();
+                      const visibleResults = isExpanded
+                        ? section.results
+                        : section.results.slice(0, previewLimit);
+                      const hiddenCount = section.results.length - visibleResults.length;
+
+                      return (
+                        <section key={section.key} id={`search-${section.key}-results`} className="scroll-mt-28">
+                          <div className="mb-3 flex items-center justify-between gap-3 border-b border-white/10 pb-2">
+                            <h3 className="flex items-center gap-2 text-base font-semibold text-white">
+                              <SectionIcon size={17} className="text-[#e94f37]" />
+                              {section.title}
+                            </h3>
+                            <span className="text-xs text-gray-500">
+                              {section.results.length} result{section.results.length === 1 ? "" : "s"}
+                            </span>
+                          </div>
+                          {viewMode === "grid"
+                            ? renderGridResults(visibleResults)
+                            : renderListResults(visibleResults)}
+                          {hiddenCount > 0 && (
+                            <div className="mt-4 flex justify-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  setExpandedSections((prev) => ({
+                                    ...prev,
+                                    [section.key]: true,
+                                  }))
+                                }
+                                className="border-white/10 bg-white/[0.04] text-gray-200 hover:border-[#e94f37]/50 hover:bg-white/[0.08] hover:text-white"
                               >
-                                {item.type === "tv" ? (
-                                  <>
-                                    <Tv size={12} className="mr-1" />
-                                    Series
-                                  </>
-                                ) : item.type === "movie" ? (
-                                  <>
-                                    <Film size={12} className="mr-1" />
-                                    Movie
-                                  </>
-                                ) : (
-                                  <>
-                                    <User size={12} className="mr-1" />
-                                    Person
-                                  </>
-                                )}
-                              </Badge>
+                                Show {hiddenCount} more {section.title.toLowerCase()}
+                              </Button>
                             </div>
-                          </div>
-
-                          <div className="mt-2">
-                            <h3 className="font-semibold text-sm text-white line-clamp-2 group-hover:text-orange-300">{getTitle(item)}</h3>
-                            <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
-                              {getReleaseYear(item) && <span className="text-gray-300">{getReleaseYear(item)}</span>}
-                              {getGenres(item)[0] && <span className="text-gray-500">• {getGenres(item)[0]}</span>}
+                          )}
+                          {isExpanded && section.results.length > previewLimit && (
+                            <div className="mt-4 flex justify-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  setExpandedSections((prev) => ({
+                                    ...prev,
+                                    [section.key]: false,
+                                  }))
+                                }
+                                className="border-white/10 bg-white/[0.04] text-gray-200 hover:border-[#e94f37]/50 hover:bg-white/[0.08] hover:text-white"
+                              >
+                                Show fewer {section.title.toLowerCase()}
+                              </Button>
                             </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {results.map((item, index) => (
-                        <motion.div
-                          key={item.id}
-                          initial={{ opacity: 0, x: -8 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.01 }}
-                          className="flex gap-4 bg-gray-800/30 rounded-lg p-3 border border-gray-700 hover:border-orange-500/50 transition-all cursor-pointer"
-                          onClick={() => handleCardClick(item)}
-                        >
-                          <div className="relative w-20 h-28 rounded-md overflow-hidden flex-shrink-0 border border-gray-600">
-                            <Image src={getPosterUrl(item)} alt={getTitle(item)} fill className="object-cover" />
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between">
-                              <h3 className="font-semibold text-white text-base line-clamp-2">{getTitle(item)}</h3>
-                              <div className="flex items-center gap-3 ml-2">
-                                <div className="flex items-center gap-1 text-orange-400">
-                                  <Star size={14} fill="currentColor" />
-                                  <span className="text-sm font-medium text-white">{item.vote_average?.toFixed(1) ?? "N/A"}</span>
-                                </div>
-                                <Badge
-                                  className={`
-    ${item.type === "tv"
-                                      ? "bg-blue-500"
-                                      : item.type === "movie"
-                                        ? "bg-purple-500"
-                                        : "bg-pink-500"
-                                    } 
-    text-white flex items-center
-  `}
-                                >
-                                  {item.type === "tv" ? (
-                                    <>
-                                      <Tv size={12} className="mr-1" />
-                                      Series
-                                    </>
-                                  ) : item.type === "movie" ? (
-                                    <>
-                                      <Film size={12} className="mr-1" />
-                                      Movie
-                                    </>
-                                  ) : (
-                                    <>
-                                      <User size={12} className="mr-1" />
-                                      Person
-                                    </>
-                                  )}
-                                </Badge>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-3 text-sm text-gray-400 mt-2">
-                              {getReleaseYear(item) && (
-                                <div className="flex items-center gap-1">
-                                  <Calendar size={14} />
-                                  <span className="text-gray-300">{getReleaseYear(item)}</span>
-                                </div>
-                              )}
-                              <div className="flex items-center gap-1">
-                                <Users size={14} />
-                                <span className="text-gray-300">{item.vote_count ? (item.vote_count / 1000).toFixed(1) : "0.0"}K votes</span>
-                              </div>
-                              {item.origin_country && item.origin_country?.length > 0 && (
-                                <div className="flex items-center gap-1">
-                                  <Globe size={14} />
-                                  <span className="text-gray-300">{getCountryName(item.origin_country[0])}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            <p className="text-gray-300 text-sm line-clamp-3 mt-2">{item.overview}</p>
-
-                            {getGenres(item).length > 0 && (
-                              <div className="flex gap-2 mt-2">
-                                {getGenres(item).map((genre) => (
-                                  <Badge key={genre} variant="outline" className="text-xs border-gray-500 text-gray-300">
-                                    {genre}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
+                          )}
+                        </section>
+                      );
+                    })}
+                  </div>
                 </div>
+
               </>
             )}
           </>
@@ -1475,7 +1752,7 @@ export default function SearchResultsPage() {
           <div className="text-center mt-6">
             <div className="inline-flex items-center gap-2 bg-gray-800/40 backdrop-blur-sm rounded-lg px-4 py-2 border border-gray-700/50">
               <span className="text-gray-300 text-sm">
-                Showing {(currentPage - 1) * 20 + 1} - {Math.min(currentPage * 20, totalResults)} of {totalResults.toLocaleString()} results
+                Showing {(currentPage - 1) * SEARCH_PAGE_SIZE + 1} - {Math.min(currentPage * SEARCH_PAGE_SIZE, totalResults)} of {totalResults.toLocaleString()} results
               </span>
               {hasActiveFilters && (
                 <Badge variant="outline" className="text-orange-400 border-orange-400/50 bg-orange-500/10 ml-2">
