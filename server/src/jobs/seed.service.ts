@@ -37,20 +37,29 @@ export class SeedService {
             ['genres:movie', () => this.tmdb.getMovieGenres()],
             ['genres:tv', () => this.tmdb.getTVGenres()],
 
-            // Movies homepage
+            // Movies homepage — every TMDB-heavy section it loads
             ['movies:trending', () => this.movies.getTrending(25)],
             ['movies:featured', () => this.movies.getFeatured(25)],
             ['movies:trailers', () => this.movies.getTrailers(25)],
             ['movies:upcoming-trailers', () => this.movies.getUpcomingTrailers(40)],
-            ['movies:korea', () => this.movies.getKoreaTrending(20)],
+            ['movies:korea', () => this.movies.getKoreaTrending(25)],
+            ['movies:action', () => this.movies.getActionMovies(20)],
+            ['movies:animated', () => this.movies.getAnimatedMovies(20)],
+            ['movies:indie', () => this.movies.getIndieMovies(20)],
+            ['movies:award-winners', () => this.movies.getAwardWinners(25)],
+            ['movies:new-releases', () => this.movies.getNewReleases(30)],
+            ['movies:favorites', () => this.movies.getFavorites(30)],
 
-            // TV homepage
+            // TV homepage — every TMDB-heavy section it loads
             ['tv:trending', () => this.tv.getTrending(25)],
             ['tv:featured', () => this.tv.getFeatured(20)],
             ['tv:trailers', () => this.tv.getTrailers(20)],
             ['tv:upcoming-trailers', () => this.tv.getUpcomingTrailers(60)],
             ['tv:korea', () => this.tv.getKoreaTrending(20)],
             ['tv:new-releases', () => this.tv.getNewReleases(30)],
+            ['tv:favorites', () => this.tv.getFavorites(30)],
+            ['tv:airing-today', () => this.tv.airingToday(15)],
+            ['tv:airing-week', () => this.tv.airingThisWeek(20)],
 
             // Default (/) homepage — the /all aggregate endpoints
             ['all:trending', () => this.all.getTrending(25)],

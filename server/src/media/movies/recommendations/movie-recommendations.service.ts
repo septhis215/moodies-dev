@@ -1,13 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { MediaType } from '@prisma/client';
 import { MovieTmdbClientService } from '../client/movie-tmdb-client.service';
 import { TmdbMovie } from '../types/movie.types';
 import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { MediaCacheService } from 'src/external-apis/services/media-cache.service';
+
+const REC_REDIS_TTL = 6 * 60 * 60; // 6h hot L1
+const REC_STALE_DAYS = 1; // refresh recommendation list daily
 
 @Injectable()
 export class MovieRecommendationsService {
     private readonly logger = new Logger(MovieRecommendationsService.name);
 
-    constructor(private readonly client: MovieTmdbClientService) { }
+    constructor(
+        private readonly client: MovieTmdbClientService,
+        private readonly prisma: PrismaService,
+        private readonly mediaCache: MediaCacheService,
+    ) { }
 
     scoreCandidates(
         candidates: any[],
@@ -53,7 +63,37 @@ export class MovieRecommendationsService {
         return scored;
     }
 
+    // Read-through: Redis -> Supabase (recommendation_cache) -> compute. Empty
+    // results are not cached (transient TMDB failures surface as []).
     async getSmartRecommendationsMovie(
+        id: number,
+        limit = 10,
+        minRequired = 3,
+    ): Promise<TmdbMovie[]> {
+        return this.mediaCache.readThrough<TmdbMovie[]>({
+            redisKey: `rec:movie:${id}:${limit}`,
+            redisTtlSeconds: REC_REDIS_TTL,
+            find: async () => {
+                const row = await this.prisma.recommendationCache.findUnique({
+                    where: { tmdbId_mediaType_limit: { tmdbId: id, mediaType: MediaType.MOVIE, limit } },
+                });
+                return row ? { payload: row.payload as any, fetchedAt: row.fetchedAt } : null;
+            },
+            isStale: (fetchedAt) => MediaCacheService.isOlderThanDays(fetchedAt, REC_STALE_DAYS),
+            upsert: async (payload) => {
+                const data = { tmdbId: id, mediaType: MediaType.MOVIE, limit, payload: payload as any };
+                await this.prisma.recommendationCache.upsert({
+                    where: { tmdbId_mediaType_limit: { tmdbId: id, mediaType: MediaType.MOVIE, limit } },
+                    create: data,
+                    update: { ...data, fetchedAt: new Date() },
+                });
+            },
+            shouldCache: (list) => Array.isArray(list) && list.length > 0,
+            fetchFresh: () => this.computeSmartRecommendationsMovie(id, limit, minRequired),
+        });
+    }
+
+    private async computeSmartRecommendationsMovie(
         id: number,
         limit = 10,
         minRequired = 3,

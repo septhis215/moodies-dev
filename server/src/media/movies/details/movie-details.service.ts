@@ -1,11 +1,52 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { MediaType } from '@prisma/client';
 import { MovieTmdbClientService } from '../client/movie-tmdb-client.service';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { MediaCacheService } from 'src/external-apis/services/media-cache.service';
+
+const DETAIL_REDIS_TTL = 6 * 60 * 60; // 6h hot L1
+const DETAIL_STALE_DAYS = 30; // permanent L2 refresh window
 
 @Injectable()
 export class MovieDetailsService {
     private readonly logger = new Logger(MovieDetailsService.name);
 
-    constructor(private readonly client: MovieTmdbClientService) { }
+    constructor(
+        private readonly client: MovieTmdbClientService,
+        private readonly prisma: PrismaService,
+        private readonly mediaCache: MediaCacheService,
+    ) { }
+
+    // Read-through: Redis -> Supabase (media_details) -> TMDB. The assembled
+    // bundle is the same shape consumers already expect; only the source varies.
+    async movieDetails(id: number) {
+        return this.mediaCache.readThrough({
+            redisKey: `detail:movie:${id}`,
+            redisTtlSeconds: DETAIL_REDIS_TTL,
+            find: async () => {
+                const row = await this.prisma.mediaDetail.findUnique({
+                    where: { tmdbId_mediaType: { tmdbId: id, mediaType: MediaType.MOVIE } },
+                });
+                return row ? { payload: row.payload as any, fetchedAt: row.fetchedAt } : null;
+            },
+            isStale: (fetchedAt) => MediaCacheService.isOlderThanDays(fetchedAt, DETAIL_STALE_DAYS),
+            upsert: async (payload: any) => {
+                const data = {
+                    tmdbId: id,
+                    mediaType: MediaType.MOVIE,
+                    title: payload?.info?.title ?? 'Untitled',
+                    popularity: payload?.info?.popularity ?? null,
+                    payload,
+                };
+                await this.prisma.mediaDetail.upsert({
+                    where: { tmdbId_mediaType: { tmdbId: id, mediaType: MediaType.MOVIE } },
+                    create: data,
+                    update: { ...data, fetchedAt: new Date() },
+                });
+            },
+            fetchFresh: () => this.assembleMovieDetails(id),
+        });
+    }
 
     // Bundles credits, videos and release_dates into the single /movie/{id}
     // request via append_to_response. similar + reviews are intentionally NOT
@@ -59,7 +100,7 @@ export class MovieDetailsService {
         return 'NR';
     }
 
-    async movieDetails(id: number) {
+    private async assembleMovieDetails(id: number) {
         const [infoRaw, providersRaw] = await Promise.all([
             this.fetchInfo(id),
             this.fetchProviders(id),

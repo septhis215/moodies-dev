@@ -1,11 +1,53 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { MediaType } from '@prisma/client';
 import { TvTmdbClientService } from '../client/tv-tmdb-client.service';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { MediaCacheService } from 'src/external-apis/services/media-cache.service';
+
+const DETAIL_REDIS_TTL = 6 * 60 * 60; // 6h hot L1
+const DETAIL_STALE_DAYS = 30; // permanent L2 refresh window
+const SEASONS_REDIS_TTL = 6 * 60 * 60; // 6h hot L1
+const SEASONS_STALE_DAYS = 7; // refresh weekly so airing shows pick up new episodes
 
 @Injectable()
 export class TvDetailsService {
     private readonly logger = new Logger(TvDetailsService.name);
 
-    constructor(private readonly client: TvTmdbClientService) { }
+    constructor(
+        private readonly client: TvTmdbClientService,
+        private readonly prisma: PrismaService,
+        private readonly mediaCache: MediaCacheService,
+    ) { }
+
+    // Read-through: Redis -> Supabase (media_details) -> TMDB.
+    async tvDetails(id: number) {
+        return this.mediaCache.readThrough({
+            redisKey: `detail:tv:${id}`,
+            redisTtlSeconds: DETAIL_REDIS_TTL,
+            find: async () => {
+                const row = await this.prisma.mediaDetail.findUnique({
+                    where: { tmdbId_mediaType: { tmdbId: id, mediaType: MediaType.TV } },
+                });
+                return row ? { payload: row.payload as any, fetchedAt: row.fetchedAt } : null;
+            },
+            isStale: (fetchedAt) => MediaCacheService.isOlderThanDays(fetchedAt, DETAIL_STALE_DAYS),
+            upsert: async (payload: any) => {
+                const data = {
+                    tmdbId: id,
+                    mediaType: MediaType.TV,
+                    title: payload?.info?.title ?? 'Untitled',
+                    popularity: payload?.info?.popularity ?? null,
+                    payload,
+                };
+                await this.prisma.mediaDetail.upsert({
+                    where: { tmdbId_mediaType: { tmdbId: id, mediaType: MediaType.TV } },
+                    create: data,
+                    update: { ...data, fetchedAt: new Date() },
+                });
+            },
+            fetchFresh: () => this.assembleTvDetails(id),
+        });
+    }
 
     // Bundles aggregate_credits, videos and content_ratings into the single
     // /tv/{id} request via append_to_response. similar + reviews are
@@ -93,7 +135,7 @@ export class TvDetailsService {
         return 'NR';
     }
 
-    async tvDetails(id: number) {
+    private async assembleTvDetails(id: number) {
         const [infoRaw, providersRaw] = await Promise.all([
             this.fetchInfo(id),
             this.fetchProviders(id),
@@ -173,7 +215,37 @@ export class TvDetailsService {
         };
     }
 
+    // Read-through: Redis -> Supabase (tv_season_bundles) -> TMDB. Only the full
+    // (with-episodes) variant is cached in the bundle table — the lightweight
+    // variant bypasses it since the table is keyed by tmdbId only.
     async fetchSeasonsWithEpisodes(
+        id: number,
+        options: { includeEpisodeDetails?: boolean } = { includeEpisodeDetails: true },
+    ) {
+        if (!options.includeEpisodeDetails) {
+            return this.assembleSeasonsWithEpisodes(id, options);
+        }
+        return this.mediaCache.readThrough<any>({
+            redisKey: `seasons:tv:${id}`,
+            redisTtlSeconds: SEASONS_REDIS_TTL,
+            find: async () => {
+                const row = await this.prisma.tvSeasonBundle.findUnique({ where: { tmdbId: id } });
+                return row ? { payload: row.payload as any, fetchedAt: row.fetchedAt } : null;
+            },
+            isStale: (fetchedAt) => MediaCacheService.isOlderThanDays(fetchedAt, SEASONS_STALE_DAYS),
+            upsert: async (payload) => {
+                await this.prisma.tvSeasonBundle.upsert({
+                    where: { tmdbId: id },
+                    create: { tmdbId: id, payload },
+                    update: { payload, fetchedAt: new Date() },
+                });
+            },
+            shouldCache: (seasons) => Array.isArray(seasons) && seasons.length > 0,
+            fetchFresh: () => this.assembleSeasonsWithEpisodes(id, options),
+        });
+    }
+
+    private async assembleSeasonsWithEpisodes(
         id: number,
         options: { includeEpisodeDetails?: boolean } = { includeEpisodeDetails: true },
     ) {

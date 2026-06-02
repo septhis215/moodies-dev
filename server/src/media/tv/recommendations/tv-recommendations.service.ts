@@ -1,13 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { MediaType } from '@prisma/client';
 import { TvTmdbClientService } from '../client/tv-tmdb-client.service';
 import { TmdbTv } from '../types/tv.types';
 import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { MediaCacheService } from 'src/external-apis/services/media-cache.service';
+
+const REC_REDIS_TTL = 6 * 60 * 60; // 6h hot L1
+const REC_STALE_DAYS = 1; // refresh recommendation list daily
 
 @Injectable()
 export class TvRecommendationsService {
     private readonly logger = new Logger(TvRecommendationsService.name);
 
-    constructor(private readonly client: TvTmdbClientService) { }
+    constructor(
+        private readonly client: TvTmdbClientService,
+        private readonly prisma: PrismaService,
+        private readonly mediaCache: MediaCacheService,
+    ) { }
 
     private scoreCandidates(
         candidates: any[],
@@ -53,7 +63,32 @@ export class TvRecommendationsService {
         return scored;
     }
 
+    // Read-through: Redis -> Supabase (recommendation_cache) -> compute.
     async getSmartRecommendationsTv(id: number, limit = 10, minRequired = 3): Promise<TmdbTv[]> {
+        return this.mediaCache.readThrough<TmdbTv[]>({
+            redisKey: `rec:tv:${id}:${limit}`,
+            redisTtlSeconds: REC_REDIS_TTL,
+            find: async () => {
+                const row = await this.prisma.recommendationCache.findUnique({
+                    where: { tmdbId_mediaType_limit: { tmdbId: id, mediaType: MediaType.TV, limit } },
+                });
+                return row ? { payload: row.payload as any, fetchedAt: row.fetchedAt } : null;
+            },
+            isStale: (fetchedAt) => MediaCacheService.isOlderThanDays(fetchedAt, REC_STALE_DAYS),
+            upsert: async (payload) => {
+                const data = { tmdbId: id, mediaType: MediaType.TV, limit, payload: payload as any };
+                await this.prisma.recommendationCache.upsert({
+                    where: { tmdbId_mediaType_limit: { tmdbId: id, mediaType: MediaType.TV, limit } },
+                    create: data,
+                    update: { ...data, fetchedAt: new Date() },
+                });
+            },
+            shouldCache: (list) => Array.isArray(list) && list.length > 0,
+            fetchFresh: () => this.computeSmartRecommendationsTv(id, limit, minRequired),
+        });
+    }
+
+    private async computeSmartRecommendationsTv(id: number, limit = 10, minRequired = 3): Promise<TmdbTv[]> {
         try {
             const baseItem = await this.client.tmdb(`tv/${id}?language=en-US`);
             if (!baseItem) return [];

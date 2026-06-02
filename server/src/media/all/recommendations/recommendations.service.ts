@@ -1,9 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { MediaType } from '@prisma/client';
 import { RedisService } from 'src/redis/redis.service';
 import { TmdbClientService } from '../client/tmdb-client.service';
 import { TmdbAll, Candidate, ScoredCandidate, TrailerCandidate } from '../types/tmdb.types';
 import { CACHE_TTL } from '../utils/helpers';
 import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { MediaCacheService } from 'src/external-apis/services/media-cache.service';
+
+const REC_REDIS_TTL = 6 * 60 * 60; // 6h hot L1
+const REC_STALE_DAYS = 1; // refresh recommendation list daily
 
 @Injectable()
 export class RecommendationsService {
@@ -12,24 +18,47 @@ export class RecommendationsService {
     constructor(
         private readonly client: TmdbClientService,
         private readonly redisService: RedisService,
+        private readonly prisma: PrismaService,
+        private readonly mediaCache: MediaCacheService,
     ) { }
 
+    // Read-through: Redis -> Supabase (recommendation_cache) -> compute.
     async getSmartRecommendations(
         type: 'movie' | 'tv',
         id: number,
         limit = 10,
         minRequired = 3
     ): Promise<TmdbAll[]> {
-        const cacheKey = `smart-rec-v2-${type}-${id}-${limit}`;
+        const mediaType = type === 'tv' ? MediaType.TV : MediaType.MOVIE;
+        return this.mediaCache.readThrough<TmdbAll[]>({
+            redisKey: `smart-rec-v2-${type}-${id}-${limit}`,
+            redisTtlSeconds: REC_REDIS_TTL,
+            find: async () => {
+                const row = await this.prisma.recommendationCache.findUnique({
+                    where: { tmdbId_mediaType_limit: { tmdbId: id, mediaType, limit } },
+                });
+                return row ? { payload: row.payload as any, fetchedAt: row.fetchedAt } : null;
+            },
+            isStale: (fetchedAt) => MediaCacheService.isOlderThanDays(fetchedAt, REC_STALE_DAYS),
+            upsert: async (payload) => {
+                const data = { tmdbId: id, mediaType, limit, payload: payload as any };
+                await this.prisma.recommendationCache.upsert({
+                    where: { tmdbId_mediaType_limit: { tmdbId: id, mediaType, limit } },
+                    create: data,
+                    update: { ...data, fetchedAt: new Date() },
+                });
+            },
+            shouldCache: (list) => Array.isArray(list) && list.length >= minRequired,
+            fetchFresh: () => this.computeSmartRecommendations(type, id, limit, minRequired),
+        });
+    }
 
-        const cached = await this.redisService.get(cacheKey);
-        if (cached) {
-            try {
-                const result = JSON.parse(cached) as TmdbAll[];
-                if (result.length >= minRequired) return result;
-            } catch { }
-        }
-
+    private async computeSmartRecommendations(
+        type: 'movie' | 'tv',
+        id: number,
+        limit = 10,
+        minRequired = 3
+    ): Promise<TmdbAll[]> {
         if (!this.client.token) return [];
 
         try {
@@ -220,7 +249,6 @@ export class RecommendationsService {
                 type,
             }));
 
-            await this.redisService.set(cacheKey, JSON.stringify(final), CACHE_TTL.RECOMMENDATIONS);
             return final;
         } catch (err) {
             this.logger.error(`getSmartRecommendations failed for ${type}/${id}`, err);

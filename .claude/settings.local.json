@@ -10,7 +10,11 @@
       "Read(//tmp/**)",
       "Bash(curl -s -o /tmp/timeline.json -w \"HTTP %{http_code}\\\\n\" \"http://localhost:4000/people/135651/timeline\")",
       "Bash(curl -s \"http://localhost:4000/people/135651\")",
-      "Bash(git rm *)"
+      "Bash(git rm *)",
+      "Bash(npx prisma *)",
+      "Bash(npm --prefix server run generate)",
+      "Bash(grep -oE '\"\\\\/movies\\\\/[^\"]+\"' client/app/movies/page.tsx)",
+      "Bash(grep -oE '\"\\\\/tv\\\\/[^\"]+\"' client/app/tv/page.tsx)"
     ]
   }
 }
