@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 const API =
@@ -54,10 +55,25 @@ export default function SignupPage() {
     <>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style>
 
-      <div className="w-full max-w-md mx-auto px-6 py-4 overflow-y-hidden">
+      <div className="w-full max-w-md mx-auto">
+        {/* Brand */}
+        <div className="flex items-center gap-2 mb-[clamp(0.5rem,1.8vh,1.1rem)]">
+          <Image
+            src="/images/moodies-transparent.png"
+            alt="Moodies"
+            width={40}
+            height={40}
+            className="h-[clamp(1.6rem,4vh,2.2rem)] w-auto drop-shadow"
+            priority
+          />
+          <span className="font-['Bebas_Neue'] text-[clamp(1rem,2.6vh,1.4rem)] tracking-[0.25em] text-white/90">
+            MOODIES
+          </span>
+        </div>
+
         {/* Header Section */}
-        <div className="mb-6">
-          <h2 className="font-['Bebas_Neue'] text-[2.4rem] tracking-[0.03em] leading-none text-[rgb(233,79,55)]">
+        <div className="mb-[clamp(0.6rem,2.2vh,1.5rem)]">
+          <h2 className="font-['Bebas_Neue'] text-[clamp(1.4rem,4.5vh,2.4rem)] tracking-[0.03em] leading-none text-[rgb(233,79,55)]">
             Create an account
           </h2>
           <div className="w-8 h-0.5 bg-[rgb(233,79,55)] mt-2.5 mb-1.5" />
@@ -73,7 +89,7 @@ export default function SignupPage() {
         </div>
 
         {/* Form Section */}
-        <form onSubmit={onSubmit} className="space-y-3">
+        <form onSubmit={onSubmit} className="space-y-[clamp(0.4rem,1.3vh,0.75rem)]">
           {/* Username Input */}
           <div className="space-y-1">
             <label className="block text-xs font-medium text-white/80 ml-1">
@@ -101,7 +117,7 @@ export default function SignupPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full pl-10 pr-3 py-2.5 rounded-none sm:rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
+                className="w-full pl-10 pr-3 py-[clamp(0.4rem,1.3vh,0.625rem)] rounded-none sm:rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
                          border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
                          focus:border-amber-400/50 focus:bg-white/10 transition-all"
               />
@@ -135,7 +151,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full pl-10 pr-3 py-2.5 rounded-none sm:rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
+                className="w-full pl-10 pr-3 py-[clamp(0.4rem,1.3vh,0.625rem)] rounded-none sm:rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
                          border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
                          focus:border-amber-400/50 focus:bg-white/10 transition-all"
               />
@@ -169,7 +185,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full pl-10 pr-10 py-2.5 rounded-none sm:rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
+                className="w-full pl-10 pr-10 py-[clamp(0.4rem,1.3vh,0.625rem)] rounded-none sm:rounded-lg bg-white/5 text-white text-sm placeholder:text-white/40
                          border border-white/10 focus:outline-none focus:ring-2 focus:ring-amber-400/60
                          focus:border-amber-400/50 focus:bg-white/10 transition-all"
               />
@@ -262,7 +278,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-none sm:rounded-lg font-bold text-sm text-white
+            className="w-full py-[clamp(0.4rem,1.3vh,0.625rem)] rounded-none sm:rounded-lg font-bold text-sm text-white
              bg-[rgb(233,79,55)]
              hover:bg-[rgb(215,65,42)]
              shadow-[0_4px_20px_rgba(233,79,55,0.35)]
@@ -297,7 +313,7 @@ export default function SignupPage() {
         </form>
 
         {/* Divider */}
-        <div className="flex items-center gap-3 my-4">
+        <div className="flex items-center gap-3 my-[clamp(0.4rem,1.5vh,1rem)]">
           <div className="h-px flex-1 bg-white/10" />
           <span className="text-xs text-white/50">Or register with</span>
           <div className="h-px flex-1 bg-white/10" />
@@ -310,7 +326,7 @@ export default function SignupPage() {
           disabled={googleLoading}
           aria-label="Continue with Google"
           className="w-full relative flex items-center justify-center gap-2.5
-                   rounded-none sm:rounded-lg px-3 py-2.5
+                   rounded-none sm:rounded-lg px-3 py-[clamp(0.4rem,1.3vh,0.625rem)]
                    bg-zinc-900/70 text-white text-sm
                    border border-white/10
                    backdrop-blur
