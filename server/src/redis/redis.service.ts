@@ -7,6 +7,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) { }
 
   private client;
+  private readonly inFlight = new Map<string, Promise<unknown>>();
 
   async onModuleInit() {
     const host = await this.configService.get<string>('REDIS_HOST');
@@ -44,7 +45,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.client.del(key);
   }
 
-  async getOrSet<T>(key: string, ttlSeconds: number, fetchFn: () => Promise<T>): Promise<T> {
+  async getOrSet<T>(
+    key: string,
+    ttlSeconds: number,
+    fetchFn: () => Promise<T>,
+    shouldCache: (value: T) => boolean = () => true,
+  ): Promise<T> {
     const cached = await this.client.get(key);
     if (cached !== null && cached !== undefined) {
       try {
@@ -54,8 +60,18 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    const fresh = await fetchFn();
-    await this.client.set(key, JSON.stringify(fresh), { EX: ttlSeconds });
-    return fresh;
+    const pending = this.inFlight.get(key);
+    if (pending) return pending as Promise<T>;
+
+    const promise = (async () => {
+      const fresh = await fetchFn();
+      if (shouldCache(fresh)) {
+        await this.client.set(key, JSON.stringify(fresh), { EX: ttlSeconds });
+      }
+      return fresh;
+    })().finally(() => this.inFlight.delete(key));
+
+    this.inFlight.set(key, promise);
+    return promise;
   }
 }

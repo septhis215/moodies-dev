@@ -31,6 +31,7 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
             src={current.backdrop}
             alt="Background"
             fill
+            sizes="100vw"
             priority
             className="object-cover scale-110 animate-slow-zoom"
           />

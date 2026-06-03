@@ -191,6 +191,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                 src={src}
                 alt=""
                 fill
+            sizes="100vw"
                 priority={active}
                 aria-hidden
                 className="w-full h-full object-cover object-center"

@@ -75,10 +75,32 @@ export default function MoviesHomePageClient({
         Record<string | number, boolean>
     >({});
     useScrollToHash(100);
-    const getImageUrl = (path?: string) =>
+    const getImageUrl = (path?: string | null) =>
         path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder-backdrop.svg";
-    const getPosterUrl = (path?: string) =>
+    const getPosterUrl = (path?: string | null) =>
         path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
+    const seededValue = (seed: string | number, salt: string, min: number, range: number) => {
+        const input = `${seed}-${salt}`;
+        let hash = 0;
+        for (let i = 0; i < input.length; i++) {
+            hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
+        }
+        return min + (hash % range);
+    };
+    const getMockStats = (item: All) => ({
+        likes: Math.max(
+            Math.floor((item.vote_average || 0) * 700),
+            seededValue(item.id, "likes", 1000, 5000)
+        ),
+        reviews: Math.max(
+            Math.floor((item.vote_average || 0) * 300),
+            seededValue(item.id, "reviews", 500, 2000)
+        ),
+        saves: Math.max(
+            Math.floor((item.popularity || 0) * 100),
+            seededValue(item.id, "saves", 800, 3000)
+        ),
+    });
 
     // Keep `featured` derived from heroShows so it's always in sync
     const featured = heroMovies[heroIndex] || heroMovies[0] || null;
@@ -133,6 +155,7 @@ export default function MoviesHomePageClient({
                             }
                             alt={show.title || show.name || ""}
                             fill
+            sizes="(max-width: 768px) 100vw, 50vw"
                             className="
               object-cover
               transition-transform duration-700
@@ -408,6 +431,8 @@ export default function MoviesHomePageClient({
                                                 src={getImageUrl(featured.backdrop_path)}
                                                 alt={featured.title || featured.name || ""}
                                                 fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+                                                priority
                                                 className="object-cover opacity-25 blur-sm"
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/80 to-black" />
@@ -421,6 +446,8 @@ export default function MoviesHomePageClient({
                                                     src={getImageUrl(featured.backdrop_path)}
                                                     alt={featured.title || featured.name || ""}
                                                     fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+                                                    priority
                                                     className="object-cover"
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
@@ -539,6 +566,7 @@ export default function MoviesHomePageClient({
                                                     src={getImageUrl(movie.backdrop_path)}
                                                     alt={movie.title || ""}
                                                     fill
+            sizes="(max-width: 768px) 100vw, 50vw"
                                                     className="object-cover group-hover:scale-105 transition-transform duration-700"
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
@@ -609,6 +637,7 @@ export default function MoviesHomePageClient({
                                                     src={getImageUrl(newReleaseMovies[0].backdrop_path)}
                                                     alt={newReleaseMovies[0].title || ""}
                                                     fill
+            sizes="(max-width: 768px) 100vw, 50vw"
                                                     className="object-cover group-hover:scale-105 transition-transform duration-700"
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
@@ -656,6 +685,7 @@ export default function MoviesHomePageClient({
                                                         src={getImageUrl(movie.backdrop_path)}
                                                         alt={movie.title || ""}
                                                         fill
+            sizes="(max-width: 768px) 100vw, 50vw"
                                                         className="object-cover group-hover:scale-110 transition-transform duration-700"
                                                     />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
@@ -848,17 +878,7 @@ export default function MoviesHomePageClient({
                                     {/* Top 3 items (larger visuals) */}
                                     <div className="space-y-3">
                                         {(sec.data || []).slice(0, 3).map((m) => {
-                                            const mockStats = {
-                                                likes:
-                                                    Math.floor((m.vote_average || 0) * 0.7) ||
-                                                    Math.floor(Math.random() * 5000) + 1000,
-                                                reviews:
-                                                    Math.floor((m.vote_average || 0) * 0.3) ||
-                                                    Math.floor(Math.random() * 2000) + 500,
-                                                saves:
-                                                    Math.floor((m.popularity || 0) * 100) ||
-                                                    Math.floor(Math.random() * 3000) + 800,
-                                            };
+                                            const mockStats = getMockStats(m);
 
                                             const getStatText = () => {
                                                 if (sec.key === "most-liked")
@@ -1052,17 +1072,7 @@ export default function MoviesHomePageClient({
                                 <div className="space-y-3 sm:space-y-4">
                                     {section.data.slice(0, 5).map((m, i) => {
                                         // Generate mock stats based on movie data
-                                        const mockStats = {
-                                            likes:
-                                                Math.floor(m.vote_average * 0.7) ||
-                                                Math.floor(Math.random() * 5000) + 1000,
-                                            reviews:
-                                                Math.floor(m.vote_average * 0.3) ||
-                                                Math.floor(Math.random() * 2000) + 500,
-                                            saves:
-                                                Math.floor(m.popularity * 100) ||
-                                                Math.floor(Math.random() * 3000) + 800,
-                                        };
+                                        const mockStats = getMockStats(m);
 
                                         const getStat = () => {
                                             if (idx === 0)
@@ -1094,6 +1104,7 @@ export default function MoviesHomePageClient({
                                                             src={getPosterUrl(m.poster_path)}
                                                             alt=""
                                                             fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                                                             className="object-cover group-hover:scale-110 transition-transform duration-500"
                                                         />
                                                     )}
@@ -1283,6 +1294,7 @@ export default function MoviesHomePageClient({
                                                         src={getImageUrl(actionMovies[0].backdrop_path)}
                                                         alt={actionMovies[0].title || ""}
                                                         fill
+            sizes="(max-width: 768px) 100vw, 50vw"
                                                         className="object-cover group-hover:scale-105 transition-transform duration-500"
                                                     />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
@@ -1323,6 +1335,7 @@ export default function MoviesHomePageClient({
                                                         src={getPosterUrl(movie.poster_path)}
                                                         alt={movie.title || ""}
                                                         fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                                                         className="object-cover group-hover:scale-110 transition-transform duration-500"
                                                     />
                                                 )}

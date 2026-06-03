@@ -58,11 +58,11 @@ async function fetchTopRatedTV() {
 }
 
 async function fetchTVTrailers() {
-    return fetchWithFallback<All[]>('/tv/trailers?limit=20', []);
+    return fetchWithFallback<All[]>('/tv/trailers?limit=15', []);
 }
 
 async function fetchNewTVTrailers() {
-    return fetchWithFallback<All[]>('/tv/upcoming-trailers', []);
+    return fetchWithFallback<All[]>('/tv/upcoming-trailers?months=6&perMonth=18&maxPagesPerMonth=5', []);
 }
 
 async function fetchKoreanTV() {

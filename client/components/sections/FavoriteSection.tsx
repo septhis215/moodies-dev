@@ -358,6 +358,7 @@ export default function MoodiesMix({
             src={backdropUrl}
             alt={primary.title}
             fill
+            sizes="(max-width: 768px) 100vw, 50vw"
             className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
             priority
           />
@@ -447,7 +448,8 @@ export default function MoodiesMix({
               className={`w-[116px] flex-shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-all sm:w-[130px] sm:rounded-xl ${isActive ? "border-[#e94f37]" : "border-transparent hover:border-white/20"}`}
             >
               <div className="relative h-[68px] w-full sm:h-[76px]">
-                <Image src={thumb} alt={item.title} fill className="object-cover" />
+                <Image src={thumb} alt={item.title} fill
+            sizes="64px" className="object-cover" />
                 {isActive && <div className="absolute inset-0 bg-[#e94f37]/20" />}
               </div>
               <div className="bg-zinc-900 px-2 py-1.5">

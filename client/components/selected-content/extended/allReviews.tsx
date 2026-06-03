@@ -272,6 +272,7 @@ export default function AllReviews({
             src={info.backdrop_path ? `https://image.tmdb.org/t/p/w1280${info.backdrop_path}` : "/placeholder-backdrop.svg"}
             alt={info.title}
             fill
+            sizes="100vw"
             style={{
               objectFit: "cover",
               filter: "brightness(0.3) saturate(0.5)",

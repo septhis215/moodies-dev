@@ -57,11 +57,11 @@ async function fetchTopRatedMovies() {
 }
 
 async function fetchMovieTrailers() {
-  return fetchWithFallback<All[]>("/movies/trailers?limit=25", []);
+  return fetchWithFallback<All[]>("/movies/trailers?limit=15", []);
 }
 
 async function fetchNewMovieTrailers() {
-  return fetchWithFallback<All[]>("/movies/upcoming-trailers", []);
+  return fetchWithFallback<All[]>("/movies/upcoming-trailers?months=6&perMonth=18&maxPagesPerMonth=5", []);
 }
 
 async function fetchKoreanMovies() {
@@ -70,7 +70,7 @@ async function fetchKoreanMovies() {
 
 async function fetchMovieReviews() {
   return fetchWithFallback<ReviewItem[]>(
-    "/movies/trending-reviews?limit=20",
+    "/movies/trending-reviews?limit=10",
     []
   );
 }
@@ -118,35 +118,55 @@ export const metadata = {
 };
 
 export default async function MoviesHomePage() {
+  const bulkData = await fetchWithFallback<{
+    featured?: All[];
+    trending?: All[];
+    trailers?: All[];
+    koreaTrending?: All[];
+    reviews?: ReviewItem[];
+  } | null>("/movies/bulk/dashboard?limit=15", null);
+
   const [
-    trendingMovies,
-    popularMovies,
     topRatedMovies,
-    movieTrailers,
-    newMovieTrailers,
-    movieReviews,
-    koreanMovies,
     animatedMovies,
     indieMovies,
     awardWinners,
     actionMovies,
     moods,
     newReleaseMovies,
+    newMovieTrailers,
   ] = await Promise.all([
-    fetchTrendingMovies(),
-    fetchPopularMovies(),
     fetchTopRatedMovies(),
-    fetchMovieTrailers(),
-    fetchNewMovieTrailers(),
-    fetchMovieReviews(),
-    fetchKoreanMovies(),
     fetchAnimatedMovies(),
     fetchIndieMovies(),
     fetchAwardWinners(),
     fetchActionMovies(),
     fetchMoods(),
     fetchNewReleases(),
+    fetchNewMovieTrailers(),
   ]);
+
+  const [
+    trendingMovies,
+    popularMovies,
+    movieTrailers,
+    movieReviews,
+    koreanMovies,
+  ] = bulkData
+    ? [
+      bulkData.featured || [],
+      bulkData.trending || [],
+      bulkData.trailers || [],
+      bulkData.reviews || [],
+      bulkData.koreaTrending || [],
+    ]
+    : await Promise.all([
+      fetchTrendingMovies(),
+      fetchPopularMovies(),
+      fetchMovieTrailers(),
+      fetchMovieReviews(),
+      fetchKoreanMovies(),
+    ]);
 
   return (
     <MoviesHomePageClient

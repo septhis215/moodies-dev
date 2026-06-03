@@ -785,6 +785,7 @@ export default function SearchResultsPage() {
               src={getPosterUrl(item)}
               alt={getTitle(item)}
               fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
@@ -827,7 +828,8 @@ export default function SearchResultsPage() {
           onClick={() => handleCardClick(item)}
         >
           <div className="relative w-20 h-28 rounded-md overflow-hidden flex-shrink-0 border border-white/10 bg-white/[0.04]">
-            <Image src={getPosterUrl(item)} alt={getTitle(item)} fill className="object-cover" />
+            <Image src={getPosterUrl(item)} alt={getTitle(item)} fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw" className="object-cover" />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -1478,6 +1480,7 @@ export default function SearchResultsPage() {
                             src={getPosterUrl(bestMatch)}
                             alt={getTitle(bestMatch)}
                             fill
+            sizes="(max-width: 768px) 100vw, 50vw"
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center">
@@ -1614,6 +1617,7 @@ export default function SearchResultsPage() {
                               src={getBackdropUrl(item)}
                               alt={getTitle(item)}
                               fill
+            sizes="(max-width: 768px) 100vw, 50vw"
                               className="object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />

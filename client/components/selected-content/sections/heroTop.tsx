@@ -838,6 +838,7 @@ export function HeroContentCard({
             src={mappedContent.backdrop}
             alt=""
             fill
+            sizes="100vw"
             priority
             aria-hidden
             style={{

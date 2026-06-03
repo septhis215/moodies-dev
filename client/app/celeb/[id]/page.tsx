@@ -262,6 +262,7 @@ export default function CelebrityDetailPage({
               }
               alt={show.title || show.name || ""}
               fill
+            sizes="(max-width: 768px) 100vw, 50vw"
               className="group-hover:scale-110 transition-transform duration-700 object-cover"
             />
 
@@ -464,6 +465,7 @@ export default function CelebrityDetailPage({
                     src={person.profile_path ? `https://image.tmdb.org/t/p/w342${person.profile_path}` : "/placeholder-person.svg"}
                     alt={person.name}
                     fill
+            sizes="(max-width: 768px) 50vw, 342px"
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>

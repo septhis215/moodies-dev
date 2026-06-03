@@ -561,6 +561,7 @@ export default function SearchBarWithSuggestions({
                           src={imagePath ? `https://image.tmdb.org/t/p/w154${imagePath}` : (s.type === 'person' ? '/placeholder-person.svg' : '/placeholder-poster.svg')}
                           alt={displayTitle}
                           fill
+            sizes="48px"
                           className="object-cover"
                         />
                         {imagePath && (

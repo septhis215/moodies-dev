@@ -99,6 +99,7 @@ export default function CommonCardCarousel({
               src={getPosterUrl(show.poster_path ?? undefined)}
               alt={show.title || show.name || ""}
               fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
               className="group-hover:scale-110 transition-transform duration-700 object-cover"
             />
 

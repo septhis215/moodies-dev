@@ -388,7 +388,8 @@ export default function ProfilePage() {
                                     className={`relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl overflow-hidden ring-2 ring-[#e94f37]/60 bg-zinc-900 flex-shrink-0${user?.avatarUrl ? " cursor-pointer hover:ring-[#e94f37] transition-shadow" : ""}`}
                                 >
                                     {user?.avatarUrl ? (
-                                        <Image src={user.avatarUrl} alt="avatar" fill className="object-cover" referrerPolicy="no-referrer" />
+                                        <Image src={user.avatarUrl} alt="avatar" fill
+            sizes="40px" className="object-cover" referrerPolicy="no-referrer" />
                                     ) : (
                                         <div className="flex items-center justify-center w-full h-full text-3xl sm:text-5xl font-bold bg-[#e94f37] text-white">
                                             {(user?.name || "U")[0]}
@@ -744,6 +745,7 @@ export default function ProfilePage() {
                                                             src={poster}
                                                             alt={title || "Poster"}
                                                             fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                                                             className="object-cover transition-transform duration-700 group-hover:scale-110"
                                                         />
                                                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -804,6 +806,7 @@ export default function ProfilePage() {
                                                                 src={poster}
                                                                 alt={title || "Poster"}
                                                                 fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                                                                 className="object-cover"
                                                             />
                                                         </div>
@@ -969,7 +972,8 @@ export default function ProfilePage() {
                                                             {/* Poster column */}
                                                             <Link href={href} className="relative w-[56px] sm:w-[72px] flex-shrink-0 border-l border-white/[0.05] overflow-hidden block">
                                                                 {poster ? (
-                                                                    <Image src={poster} alt="" fill className="object-cover" />
+                                                                    <Image src={poster} alt="" fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw" className="object-cover" />
                                                                 ) : (
                                                                     <div className="w-full h-full flex items-center justify-center bg-white/[0.02]">
                                                                         {isMovie ? <Film className="w-3 h-3 text-white/15" /> : <Tv className="w-3 h-3 text-white/15" />}
