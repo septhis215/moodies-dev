@@ -8,10 +8,12 @@ import {
   Brain,
   Compass,
   Film,
-  Sparkles,
   Tv,
-  Zap,
 } from "lucide-react";
+
+type MoodDiscoverySectionProps = {
+  variant?: "full" | "teaser";
+};
 
 const cards = [
   {
@@ -60,9 +62,68 @@ const cards = [
   },
 ];
 
-export default function MoodDiscoverySection() {
+export default function MoodDiscoverySection({ variant = "full" }: MoodDiscoverySectionProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const activeCard = cards.find((card) => card.id === hoveredCard) ?? cards[0];
+
+  if (variant === "teaser") {
+    return (
+      <section
+        id="your-moods"
+        className="relative mx-auto max-w-7xl overflow-hidden bg-black px-4 py-10 sm:px-6 lg:px-8"
+      >
+        <div className="relative overflow-hidden rounded-xl border border-white/10 bg-neutral-950/80 p-5 shadow-2xl shadow-black/30 sm:p-6 lg:p-7">
+          <div className="absolute inset-y-0 right-0 hidden w-72 sm:block">
+            <Image
+              src="/images/moods/romantic.png"
+              alt="Romantic mood mascot"
+              fill
+              sizes="288px"
+              className="object-contain object-right-bottom opacity-25"
+            />
+          </div>
+          <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div className="max-w-2xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
+                Mood paths
+              </p>
+              <h2 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">
+                Start with the feeling, then choose the route.
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-zinc-400 sm:text-base">
+                Spin the wheel, take the quiz, or jump straight into movie and series mood matchers.
+              </p>
+            </div>
+
+            <div className="relative flex flex-wrap gap-2 sm:gap-3 lg:justify-end">
+              {cards.slice(0, 4).map((card) => {
+                const Icon = card.icon;
+                return (
+                  <Link
+                    key={card.id}
+                    href={card.href}
+                    className="group inline-flex min-w-[140px] flex-1 items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.045] px-3 py-3 text-white transition hover:border-white/25 hover:bg-white/[0.075] sm:flex-none"
+                  >
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black/35"
+                      style={{ color: card.accent }}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-black">{card.title}</span>
+                      <span className="block truncate text-xs text-zinc-500">{card.stats}</span>
+                    </span>
+                    <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-zinc-500 transition group-hover:translate-x-1 group-hover:text-white" />
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section
