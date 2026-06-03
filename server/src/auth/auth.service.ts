@@ -47,15 +47,27 @@ export class AuthService {
     // hash password
     const hashedPassword = await argon.hash(dto.password);
 
-    // create user (no createdAt field — Prisma fills it)
-    const user = await this.prismaService.user.create({
-      data: {
-        username: dto.username,
-        email: dto.email.toLowerCase(),
-        password: hashedPassword,
-        provider: 'credentials',
-      },
-    });
+    // create user (no createdAt field — Prisma fills it). The pre-check above is
+    // a fast path; the unique constraint is the real guard against a concurrent
+    // signup with the same email/username, so handle P2002 gracefully here.
+    let user;
+    try {
+      user = await this.prismaService.user.create({
+        data: {
+          username: dto.username,
+          email: dto.email.toLowerCase(),
+          password: hashedPassword,
+          provider: 'credentials',
+        },
+      });
+    } catch (e) {
+      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+        const target = (e.meta?.target as string[] | undefined) ?? [];
+        const field = target.includes('username') ? 'Username' : 'Email';
+        throw new BadRequestException(`${field} already registered`);
+      }
+      throw e;
+    }
 
     const token = await this.signToken(user.id, user.email);
 
@@ -159,69 +171,72 @@ export class AuthService {
     });
   }
 
+  /**
+   * Atomic, race-safe find-or-create for a Google account, keyed on email.
+   * Concurrent first-time logins can't create duplicate users: the upsert (and
+   * its P2002 fallback) collapses the race to a single row. Username is only set
+   * on create — never changed on login — so it can't collide with another user.
+   */
+  private async upsertGoogleAccount(p: {
+    email: string;
+    name?: string;
+    googleId: string;
+    picture?: string | null;
+  }) {
+    const { email, name, googleId, picture } = p;
+
+    const createData = {
+      email,
+      username: name || email.split('@')[0],
+      provider: 'google',
+      googleId,
+      avatarUrl: picture ?? null,
+      password: await argon.hash(`google:${uuid()}`),
+    };
+    const updateData = {
+      provider: 'google',
+      googleId,
+      ...(picture ? { avatarUrl: picture } : {}),
+    };
+
+    try {
+      return await this.prismaService.user.upsert({
+        where: { email },
+        create: createData,
+        update: updateData,
+      });
+    } catch (e) {
+      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
+        const target = (e.meta?.target as string[] | undefined) ?? [];
+        // Lost the create race on email — the row now exists; just update it.
+        if (target.includes('email')) {
+          return this.prismaService.user.update({ where: { email }, data: updateData });
+        }
+        // Display-name collided with a different user — retry with a unique suffix.
+        if (target.includes('username')) {
+          return this.prismaService.user.create({
+            data: { ...createData, username: `${createData.username}-${uuid().slice(0, 6)}` },
+          });
+        }
+      }
+      throw e;
+    }
+  }
+
   async googleLoginOrRegister(params: {
     email: string;
     name?: string;
     googleId: string;
     picture?: string;
   }) {
-    const { email, name, googleId, picture } = params;
-
-    let user = await this.prismaService.user.findUnique({ where: { email } });
-
-    if (!user) {
-      user = await this.prismaService.user.create({
-        data: {
-          email,
-          username: name || email.split('@')[0],
-          provider: 'google',
-          googleId,
-          avatarUrl: picture ?? null,
-          password: await argon.hash(`google:${uuid()}`),
-        },
-      });
-    } else {
-      user = await this.prismaService.user.update({
-        where: { id: user.id },
-        data: {
-          googleId,
-          provider: 'google',
-          // Always sync the latest Google profile picture
-          ...(picture ? { avatarUrl: picture } : {}),
-        },
-      });
-    }
-
+    const user = await this.upsertGoogleAccount(params);
     const token = await this.signToken(user.id, user.email);
     return { access_token: token, user };
   }
 
   async upsertGoogleUser(profile: any) {
     const { email, name, picture, googleId } = profile;
-    let user = await this.prismaService.user.findUnique({ where: { email } });
-
-    if (!user) {
-      user = await this.prismaService.user.create({
-        data: {
-          email,
-          username: name,
-          avatarUrl: picture,
-          provider: 'google',
-          googleId,
-        },
-      });
-    } else {
-      user = await this.prismaService.user.update({
-        where: { email },
-        data: {
-          username: name,
-          avatarUrl: picture,
-          provider: 'google',
-        },
-      });
-    }
-
-    return user;
+    return this.upsertGoogleAccount({ email, name, googleId, picture });
   }
 
   signTempToken(payload: { uid: number; mode: 'set' | 'verify' }) {

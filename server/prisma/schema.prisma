@@ -188,6 +188,7 @@ model Recommendation {
   // Relations
   mood Mood @relation(fields: [moodId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, moodId, tmdbId, mediaType])
   @@index([userId, moodId])
   @@index([score])
   @@index([createdAt])

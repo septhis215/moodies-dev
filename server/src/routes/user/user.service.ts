@@ -9,15 +9,16 @@ export class UserService {
     const WARNING_THRESHOLD = 3;
     const BAN_DURATION_HOURS = 3;
 
-    const user = await this.prisma.user.findUnique({
+    // Atomic increment — the returned value is authoritative under concurrency,
+    // so simultaneous warnings can't both read the same score and lose a bump.
+    const updated = await this.prisma.user.update({
       where: { id: userId },
+      data: { reviewWarningScore: { increment: 1 } },
       select: { reviewWarningScore: true },
     });
 
-    const newScore = (user?.reviewWarningScore || 0) + 1;
-
-    if (newScore >= WARNING_THRESHOLD) {
-      // Apply ban and reset score
+    if (updated.reviewWarningScore >= WARNING_THRESHOLD) {
+      // Threshold reached — apply ban and reset score.
       const banUntil = new Date();
       banUntil.setHours(banUntil.getHours() + BAN_DURATION_HOURS);
 
@@ -30,17 +31,9 @@ export class UserService {
       });
 
       return { banned: true, until: banUntil };
-    } else {
-      // Increment warning score
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: {
-          reviewWarningScore: newScore,
-        },
-      });
-
-      return { banned: false, warningScore: newScore };
     }
+
+    return { banned: false, warningScore: updated.reviewWarningScore };
   }
 
   async getUserById(userId: string) {

@@ -209,21 +209,25 @@ export class AuthController {
 
   @Post('verify-code')
   async verifyCode(@Body('email') email: string, @Body('code') code: string) {
-    const record = await prisma.emailVerification.findFirst({
-      where: { email, code, verified: false },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!record) return { success: false, message: 'Invalid verification code.' };
-    if (record.expiresAt < new Date())
-      return { success: false, message: 'Code expired.' };
-
-    await prisma.emailVerification.update({
-      where: { id: record.id },
+    // Atomically flip an unused, unexpired code to verified. Doing the match and
+    // the write in one statement prevents two concurrent verifies from racing.
+    const { count } = await prisma.emailVerification.updateMany({
+      where: { email, code, verified: false, expiresAt: { gt: new Date() } },
       data: { verified: true },
     });
 
-    return { success: true, message: 'Email verified. You may now reset password.' };
+    if (count > 0) {
+      return { success: true, message: 'Email verified. You may now reset password.' };
+    }
+
+    // Nothing flipped — figure out why for a helpful message.
+    const record = await prisma.emailVerification.findFirst({
+      where: { email, code },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!record) return { success: false, message: 'Invalid verification code.' };
+    if (record.expiresAt < new Date()) return { success: false, message: 'Code expired.' };
+    return { success: false, message: 'Code already used.' };
   }
 
   @Post('reset-password')
@@ -231,23 +235,22 @@ export class AuthController {
     @Body('email') email: string,
     @Body('newPassword') newPassword: string,
   ) {
-    const verified = await prisma.emailVerification.findFirst({
+    const hash = await argon.hash(newPassword);
+
+    // Atomically consume the verified token first, so it can't be replayed by a
+    // concurrent reset. Only proceed to set the password if we actually consumed one.
+    const { count } = await prisma.emailVerification.updateMany({
       where: { email, verified: true },
-      orderBy: { createdAt: 'desc' },
+      data: { verified: false },
     });
 
-    if (!verified)
+    if (count === 0) {
       return { success: false, message: 'Email not verified for password reset.' };
+    }
 
-    const hash = await argon.hash(newPassword);
     await prisma.user.update({
       where: { email },
       data: { password: hash },
-    });
-
-    await prisma.emailVerification.update({
-      where: { id: verified.id },
-      data: { verified: false },
     });
 
     return { success: true, message: 'Password reset successful.' };
