@@ -102,9 +102,20 @@ export class TvController {
   }
 
   @Get('upcoming-trailers')
-  async upcomingTrailers(@Query('limit') limit?: string) {
+  async upcomingTrailers(
+    @Query('limit') limit?: string,
+    @Query('months') months?: string,
+    @Query('perMonth') perMonth?: string,
+    @Query('maxPagesPerMonth') maxPagesPerMonth?: string,
+    @Query('includeTrailers') includeTrailers?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    return this.tvService.getUpcomingTrailers(parsedLimit);
+    return this.tvService.getUpcomingTrailers(parsedLimit, {
+      months: months ? parseInt(months, 10) : undefined,
+      perMonth: perMonth ? parseInt(perMonth, 10) : undefined,
+      maxPagesPerMonth: maxPagesPerMonth ? parseInt(maxPagesPerMonth, 10) : undefined,
+      includeTrailers: includeTrailers === 'true' || includeTrailers === '1',
+    });
   }
 
   @Get('new-releases')

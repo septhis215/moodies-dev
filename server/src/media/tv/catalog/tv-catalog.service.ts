@@ -4,8 +4,10 @@ import { TvContentFilterService } from '../filters/tv-content-filter.service';
 import { TvRecommendationsService } from '../recommendations/tv-recommendations.service';
 import { TmdbTv, TvListResult } from '../types/tv.types';
 import { shuffleArray, getRecentDate, paginateItems, mapToTmdbTv } from '../utils/helpers';
+import { RedisService } from 'src/redis/redis.service';
 
 const MIN_REQUIRED_ITEMS = 30;
+const LIST_CACHE_TTL = 60 * 60 * 6;
 
 @Injectable()
 export class TvCatalogService {
@@ -15,6 +17,7 @@ export class TvCatalogService {
         private readonly client: TvTmdbClientService,
         private readonly filterService: TvContentFilterService,
         private readonly recommendationsService: TvRecommendationsService,
+        private readonly redisService: RedisService,
     ) { }
 
     // ─── Shared helpers ──────────────────────────────────────────────────────────
@@ -48,6 +51,19 @@ export class TvCatalogService {
         return Array.from(new Map(allResults.map((item) => [item.id, item])).values());
     }
 
+    private async cachedList<T>(
+        key: string,
+        fetcher: () => Promise<T>,
+        shouldCache = (value: T) => Array.isArray(value) ? value.length > 0 : true,
+    ): Promise<T> {
+        try {
+            return await this.redisService.getOrSet(key, LIST_CACHE_TTL, fetcher, shouldCache);
+        } catch (err) {
+            this.logger.warn(`List cache bypassed for ${key}: ${(err as Error).message}`);
+            return fetcher();
+        }
+    }
+
     private returnOrPaginate(
         items: TmdbTv[],
         limit: number,
@@ -69,7 +85,8 @@ export class TvCatalogService {
 
     // ─── Featured ────────────────────────────────────────────────────────────────
 
-    async getFeatured(limit = 30): Promise<TmdbTv[]> {
+    async getFeatured(limit = 30, skipCache = false): Promise<TmdbTv[]> {
+        if (!skipCache) return this.cachedList(`tv:featured:${limit}`, () => this.getFeatured(limit, true));
         const minReq = this.min(limit);
 
         if (!this.client.token) {
@@ -110,7 +127,8 @@ export class TvCatalogService {
 
     // ─── Trending ────────────────────────────────────────────────────────────────
 
-    async getTrending(limit = 30, page?: number): Promise<TvListResult> {
+    async getTrending(limit = 30, page?: number, skipCache = false): Promise<TvListResult> {
+        if (!page && !skipCache) return this.cachedList(`tv:trending:${limit}`, () => this.getTrending(limit, page, true));
         const minReq = this.min(limit);
 
         if (!this.client.token) {
@@ -157,7 +175,8 @@ export class TvCatalogService {
 
     // ─── Airing Today ────────────────────────────────────────────────────────────
 
-    async airingToday(limit = 30, page?: number): Promise<TvListResult> {
+    async airingToday(limit = 30, page?: number, skipCache = false): Promise<TvListResult> {
+        if (!page && !skipCache) return this.cachedList(`tv:airingToday:${limit}`, () => this.airingToday(limit, page, true));
         const minReq = this.min(limit);
 
         if (!this.client.token) {
@@ -183,7 +202,8 @@ export class TvCatalogService {
 
     // ─── Airing This Week ────────────────────────────────────────────────────────
 
-    async airingThisWeek(limit = 30, page?: number): Promise<TvListResult> {
+    async airingThisWeek(limit = 30, page?: number, skipCache = false): Promise<TvListResult> {
+        if (!page && !skipCache) return this.cachedList(`tv:airingThisWeek:${limit}`, () => this.airingThisWeek(limit, page, true));
         const minReq = this.min(limit);
 
         if (!this.client.token) {
@@ -209,7 +229,8 @@ export class TvCatalogService {
 
     // ─── Favorites ───────────────────────────────────────────────────────────────
 
-    async getFavorites(limit = 30, page?: number): Promise<TvListResult> {
+    async getFavorites(limit = 30, page?: number, skipCache = false): Promise<TvListResult> {
+        if (!page && !skipCache) return this.cachedList(`tv:favorites:${limit}`, () => this.getFavorites(limit, page, true));
         const minReq = this.min(limit);
 
         if (!this.client.token) {
@@ -251,7 +272,8 @@ export class TvCatalogService {
 
     // ─── Korea Trending ──────────────────────────────────────────────────────────
 
-    async getKoreaTrending(limit = 30, page?: number): Promise<TvListResult> {
+    async getKoreaTrending(limit = 30, page?: number, skipCache = false): Promise<TvListResult> {
+        if (!page && !skipCache) return this.cachedList(`tv:koreaTrending:${limit}`, () => this.getKoreaTrending(limit, page, true));
         const minReq = this.min(limit);
 
         if (!this.client.token) {
@@ -292,7 +314,8 @@ export class TvCatalogService {
 
     // ─── Revenue ─────────────────────────────────────────────────────────────────
 
-    async getRevenue(limit = 30): Promise<TmdbTv[]> {
+    async getRevenue(limit = 30, skipCache = false): Promise<TmdbTv[]> {
+        if (!skipCache) return this.cachedList(`tv:revenue:${limit}`, () => this.getRevenue(limit, true));
         const minReq = this.min(limit);
 
         if (!this.client.token) {

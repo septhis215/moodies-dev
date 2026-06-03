@@ -4,8 +4,10 @@ import { MovieContentFilterService } from '../filters/movie-content-filter.servi
 import { MovieRecommendationsService } from '../recommendations/movie-recommendations.service';
 import { TmdbMovie, MovieListResult } from '../types/movie.types';
 import { shuffleArray, getRecentDate, paginateItems, mapToTmdbMovie } from '../utils/helpers';
+import { RedisService } from 'src/redis/redis.service';
 
 const MIN_REQUIRED_ITEMS = 25;
+const LIST_CACHE_TTL = 60 * 60 * 6;
 
 @Injectable()
 export class MovieCatalogService {
@@ -15,6 +17,7 @@ export class MovieCatalogService {
         private readonly client: MovieTmdbClientService,
         private readonly filterService: MovieContentFilterService,
         private readonly recommendationsService: MovieRecommendationsService,
+        private readonly redisService: RedisService,
     ) { }
 
     // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -48,6 +51,19 @@ export class MovieCatalogService {
         return Array.from(new Map(allResults.map((item) => [item.id, item])).values());
     }
 
+    private async cachedList<T>(
+        key: string,
+        fetcher: () => Promise<T>,
+        shouldCache = (value: T) => Array.isArray(value) ? value.length > 0 : true,
+    ): Promise<T> {
+        try {
+            return await this.redisService.getOrSet(key, LIST_CACHE_TTL, fetcher, shouldCache);
+        } catch (err) {
+            this.logger.warn(`List cache bypassed for ${key}: ${(err as Error).message}`);
+            return fetcher();
+        }
+    }
+
     private returnOrPaginate(
         items: TmdbMovie[],
         limit: number,
@@ -69,7 +85,8 @@ export class MovieCatalogService {
 
     // ─── Featured ───────────────────────────────────────────────────────────────
 
-    async getFeatured(limit = 30, page?: number): Promise<MovieListResult> {
+    async getFeatured(limit = 30, page?: number, skipCache = false): Promise<MovieListResult> {
+        if (!page && !skipCache) return this.cachedList(`movies:featured:${limit}`, () => this.getFeatured(limit, page, true));
         const min = this.minRequired(limit);
 
         if (!this.client.token) {
@@ -95,7 +112,8 @@ export class MovieCatalogService {
 
     // ─── Trending ────────────────────────────────────────────────────────────────
 
-    async getTrending(limit = 30, page?: number): Promise<MovieListResult> {
+    async getTrending(limit = 30, page?: number, skipCache = false): Promise<MovieListResult> {
+        if (!page && !skipCache) return this.cachedList(`movies:trending:${limit}`, () => this.getTrending(limit, page, true));
         const min = this.minRequired(limit);
 
         if (!this.client.token) {
@@ -125,7 +143,8 @@ export class MovieCatalogService {
 
     // ─── Korea Trending ──────────────────────────────────────────────────────────
 
-    async getKoreaTrending(limit = 30, page?: number): Promise<MovieListResult> {
+    async getKoreaTrending(limit = 30, page?: number, skipCache = false): Promise<MovieListResult> {
+        if (!page && !skipCache) return this.cachedList(`movies:koreaTrending:${limit}`, () => this.getKoreaTrending(limit, page, true));
         const min = this.minRequired(limit);
 
         if (!this.client.token) {
@@ -156,6 +175,10 @@ export class MovieCatalogService {
     // ─── Favorites ───────────────────────────────────────────────────────────────
 
     async getFavorites(limit = 30): Promise<TmdbMovie[]> {
+        return this.cachedList(`movies:favorites:${limit}`, () => this.getFavoritesUncached(limit));
+    }
+
+    private async getFavoritesUncached(limit = 30): Promise<TmdbMovie[]> {
         const min = this.minRequired(limit);
 
         if (!this.client.token) {
@@ -197,7 +220,8 @@ export class MovieCatalogService {
 
     // ─── New Releases ────────────────────────────────────────────────────────────
 
-    async getNewReleases(limit = 30, page?: number): Promise<MovieListResult> {
+    async getNewReleases(limit = 30, page?: number, skipCache = false): Promise<MovieListResult> {
+        if (!page && !skipCache) return this.cachedList(`movies:newReleases:${limit}`, () => this.getNewReleases(limit, page, true));
         const min = this.minRequired(limit);
 
         if (!this.client.token) {
@@ -264,7 +288,13 @@ export class MovieCatalogService {
         logName: string,
         limit = 30,
         page?: number,
+        skipCache = false,
     ): Promise<MovieListResult> {
+        if (!page && !skipCache) {
+            return this.cachedList(`movies:${logName}:${limit}`, () =>
+                this.getGenreMovies(genreId, extraParams, logName, limit, page, true),
+            );
+        }
         const min = this.minRequired(limit);
 
         if (!this.client.token) {
@@ -307,6 +337,10 @@ export class MovieCatalogService {
     }
 
     async getDocumentaryMovies(limit = 25): Promise<TmdbMovie[]> {
+        return this.cachedList(`movies:documentary:${limit}`, () => this.getDocumentaryMoviesUncached(limit));
+    }
+
+    private async getDocumentaryMoviesUncached(limit = 25): Promise<TmdbMovie[]> {
         const min = this.minRequired(limit);
 
         if (!this.client.token) {

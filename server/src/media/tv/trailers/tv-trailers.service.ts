@@ -3,8 +3,22 @@ import { TvTmdbClientService } from '../client/tv-tmdb-client.service';
 import { TvRecommendationsService } from '../recommendations/tv-recommendations.service';
 import { TmdbTv, ContentType } from '../types/tv.types';
 import { shuffleArray } from '../utils/helpers';
+import { RedisService } from 'src/redis/redis.service';
 
 const MIN_REQUIRED_ITEMS = 30;
+const TRAILER_CACHE_TTL = 60 * 60 * 6;
+const DEFAULT_UPCOMING_MONTHS = 6;
+const DEFAULT_UPCOMING_PREVIEW_PER_MONTH = 18;
+const DEFAULT_UPCOMING_PRIORITY_PAGES = 5;
+const DEFAULT_UPCOMING_PREVIEW_PAGES = 2;
+const TMDB_PAGE_SIZE = 20;
+
+export type UpcomingTvOptions = {
+    months?: number;
+    perMonth?: number;
+    maxPagesPerMonth?: number;
+    includeTrailers?: boolean;
+};
 
 @Injectable()
 export class TvTrailersService {
@@ -13,9 +27,28 @@ export class TvTrailersService {
     constructor(
         private readonly client: TvTmdbClientService,
         private readonly recommendationsService: TvRecommendationsService,
+        private readonly redisService: RedisService,
     ) { }
 
-    async getTrailers(limit = 30): Promise<TmdbTv[]> {
+    private async cachedTrailers<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+        try {
+            return await this.redisService.getOrSet(
+                key,
+                TRAILER_CACHE_TTL,
+                fetcher,
+                (value) => Array.isArray(value) ? value.length > 0 : true,
+            );
+        } catch (err) {
+            this.logger.warn(`Trailer cache bypassed for ${key}: ${(err as Error).message}`);
+            return fetcher();
+        }
+    }
+
+    async getTrailers(limit = 30, skipCache = false): Promise<TmdbTv[]> {
+        if (!skipCache) {
+            return this.cachedTrailers(`tv:trailers:${limit}`, () => this.getTrailers(limit, true));
+        }
+
         const minReq = Math.max(MIN_REQUIRED_ITEMS, limit);
 
         if (!this.client.token) {
@@ -111,11 +144,78 @@ export class TvTrailersService {
         }
     }
 
-    async getUpcomingTrailers(limit?: number): Promise<TmdbTv[]> {
-        const requestedLimit =
-            typeof limit === 'number' && Number.isFinite(limit)
-                ? Math.max(MIN_REQUIRED_ITEMS, limit)
-                : null;
+    private clamp(value: number | undefined, fallback: number, min: number, max: number) {
+        if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+        return Math.min(max, Math.max(min, Math.floor(value)));
+    }
+
+    private formatDate(date: Date) {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+
+    private getMonthRanges(months: number) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        return Array.from({ length: months }, (_, index) => {
+            const start =
+                index === 0
+                    ? new Date(today)
+                    : new Date(today.getFullYear(), today.getMonth() + index, 1);
+            const end = new Date(today.getFullYear(), today.getMonth() + index + 1, 0);
+            end.setHours(0, 0, 0, 0);
+            return {
+                from: this.formatDate(start),
+                to: this.formatDate(end),
+            };
+        });
+    }
+
+    private getMonthBudget(monthIndex: number, previewPerMonth: number, maxPagesPerMonth: number) {
+        const pages = monthIndex < 2
+            ? maxPagesPerMonth
+            : Math.min(DEFAULT_UPCOMING_PREVIEW_PAGES, maxPagesPerMonth);
+
+        return {
+            pages,
+            limit: monthIndex < 2 ? pages * TMDB_PAGE_SIZE : previewPerMonth,
+        };
+    }
+
+    async getUpcomingTrailers(
+        limit?: number,
+        options: UpcomingTvOptions = {},
+        skipCache = false,
+    ): Promise<TmdbTv[]> {
+        const months = this.clamp(options.months, DEFAULT_UPCOMING_MONTHS, 1, 12);
+        const previewPerMonth = this.clamp(options.perMonth, DEFAULT_UPCOMING_PREVIEW_PER_MONTH, 1, 40);
+        const maxPagesPerMonth = this.clamp(options.maxPagesPerMonth, DEFAULT_UPCOMING_PRIORITY_PAGES, 1, 5);
+        const totalBudget = Array.from({ length: months }, (_, index) =>
+            this.getMonthBudget(index, previewPerMonth, maxPagesPerMonth).limit,
+        ).reduce((sum, monthLimit) => sum + monthLimit, 0);
+        const requestedLimit = this.clamp(limit, totalBudget, 1, totalBudget);
+        const includeTrailers = options.includeTrailers === true;
+
+        if (!skipCache) {
+            const cacheKey = [
+                'tv:upcomingMonthly',
+                'v4',
+                requestedLimit,
+                months,
+                previewPerMonth,
+                maxPagesPerMonth,
+                includeTrailers ? 'trailers' : 'basic',
+            ].join(':');
+
+            return this.cachedTrailers(cacheKey, () =>
+                this.getUpcomingTrailers(requestedLimit, {
+                    months,
+                    perMonth: previewPerMonth,
+                    maxPagesPerMonth,
+                    includeTrailers,
+                }, true),
+            );
+        }
 
         if (!this.client.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty trailers');
@@ -123,84 +223,66 @@ export class TvTrailersService {
         }
 
         try {
-            const items: TmdbTv[] = [];
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const currentYear = today.getFullYear();
-            const todayStr = `${currentYear}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            const yearEndStr = `${currentYear}-12-31`;
-            let totalPages = 1;
+            const monthTasks = this.getMonthRanges(months).map((range, monthIndex) => async () => {
+                const monthItems: TmdbTv[] = [];
+                const monthBudget = this.getMonthBudget(monthIndex, previewPerMonth, maxPagesPerMonth);
 
-            for (let page = 1; page <= totalPages; page++) {
-                const data = await this.client.tmdb(
-                    `/discover/tv?language=en-US&sort_by=popularity.desc&include_adult=false&first_air_date.gte=${todayStr}&first_air_date.lte=${yearEndStr}&page=${page}`,
-                );
-                totalPages = data?.total_pages ?? page;
-                const results = data?.results ?? [];
+                for (let page = 1; page <= monthBudget.pages && monthItems.length < monthBudget.limit; page++) {
+                    const data = await this.client.tmdb(
+                        `/discover/tv?include_adult=false&include_null_first_air_dates=false&language=en-US&page=${page}` +
+                        `&sort_by=popularity.desc&first_air_date.gte=${range.from}&first_air_date.lte=${range.to}`,
+                    );
 
-                const trailerTasks = results.map((m: any) => async () => {
-                    const rd = m.release_date ?? m.first_air_date;
-                    if (!rd || rd < todayStr || rd > yearEndStr) return null;
+                    const results = data?.results ?? [];
+                    if (results.length === 0) break;
 
-                    try {
-                        const [videosResult, detailsResult] = await Promise.allSettled([
-                            this.client.tmdb(`tv/${m.id}/videos?language=en-US`),
-                            this.client.tmdb(`tv/${m.id}?language=en-US`),
-                        ]);
-                        const videosData = videosResult.status === 'fulfilled' ? videosResult.value : null;
-                        const details = detailsResult.status === 'fulfilled' ? detailsResult.value : null;
-
-                        const trailerTypes = ['Trailer', 'Teaser', 'Clip'];
-                        const trailer = trailerTypes
-                            .map((trailerType) =>
-                                (videosData?.results ?? []).find(
-                                    (v: any) => v.type === trailerType && v.site === 'YouTube',
-                                ),
+                    monthItems.push(
+                        ...results
+                            .filter(
+                                (m: any) =>
+                                    m.id &&
+                                    m.poster_path &&
+                                    m.first_air_date &&
+                                    m.first_air_date >= range.from &&
+                                    m.first_air_date <= range.to,
                             )
-                            .find(Boolean);
+                            .map((m: any) => ({
+                                id: m.id,
+                                title: m.title ?? m.name ?? 'Untitled',
+                                overview: m.overview ?? '',
+                                poster_path: m.poster_path ?? null,
+                                backdrop_path: m.backdrop_path ?? null,
+                                release_date: m.first_air_date,
+                                vote_average: m.vote_average ?? 0,
+                                vote_count: m.vote_count ?? 0,
+                                popularity: m.popularity ?? 0,
+                                trailer_key: null,
+                                type: 'tv' as ContentType,
+                                recommendations: [],
+                                number_of_episodes: null,
+                                number_of_seasons: null,
+                                genres: m.genre_ids
+                                    ? m.genre_ids.map((id: number) => this.client.genreMap[id] || 'Unknown')
+                                    : [],
+                                genre_ids: m.genre_ids ?? [],
+                                first_air_date: m.first_air_date ?? null,
+                                last_air_date: null,
+                                status: undefined,
+                            })),
+                    );
+                }
 
-                        return {
-                            id: m.id,
-                            title: m.title ?? m.name ?? 'Untitled',
-                            overview: m.overview ?? '',
-                            poster_path: m.poster_path ?? null,
-                            backdrop_path: m.backdrop_path ?? null,
-                            release_date: rd,
-                            vote_average: m.vote_average,
-                            vote_count: m.vote_count,
-                            popularity: m.popularity,
-                            trailer_key: trailer?.key ?? null,
-                            type: 'tv' as ContentType,
-                            recommendations: [],
-                            number_of_episodes: details?.number_of_episodes ?? null,
-                            number_of_seasons: details?.number_of_seasons ?? null,
-                            genres: details?.genres ? details.genres.map((g: any) => g.name) : [],
-                            genre_ids: details?.genres
-                                ? details.genres.map((g: any) => g.id)
-                                : (m.genre_ids ?? []),
-                            first_air_date: m.first_air_date ?? null,
-                            last_air_date: details?.last_air_date ?? null,
-                            status: details?.status ?? undefined,
-                        } as TmdbTv;
-                    } catch {
-                        return null;
-                    }
-                });
+                return Array.from(new Map(monthItems.map((item) => [item.id, item])).values())
+                    .sort(
+                        (a, b) =>
+                            (a.release_date ? new Date(a.release_date).getTime() : Infinity) -
+                            (b.release_date ? new Date(b.release_date).getTime() : Infinity),
+                    )
+                    .slice(0, monthBudget.limit);
+            });
 
-                const pageResults = (await this.client.withConcurrencyLimit(trailerTasks))
-                    .filter((item): item is TmdbTv => item !== null);
-                items.push(...pageResults);
-
-                const uniqueWithPosters = new Map(
-                    items
-                        .filter((item) => item.poster_path !== null)
-                        .map((item) => [item.id, item]),
-                );
-                if (requestedLimit && uniqueWithPosters.size >= requestedLimit) break;
-            }
-
-            const withImages = items.filter((item) => item.poster_path !== null);
-            const uniqueItems = Array.from(new Map(withImages.map((item) => [item.id, item])).values());
+            const monthlyItems = (await this.client.withConcurrencyLimit(monthTasks, 2)).flat();
+            const uniqueItems = Array.from(new Map(monthlyItems.map((item) => [item.id, item])).values());
 
             const sorted = uniqueItems
                 .sort(
@@ -209,9 +291,27 @@ export class TvTrailersService {
                         (b.release_date ? new Date(b.release_date).getTime() : Infinity),
                 );
 
-            const result = requestedLimit ? sorted.slice(0, requestedLimit) : sorted;
+            const result = sorted.slice(0, requestedLimit);
 
-            void this.recommendationsService.populateRecommendationsBackground(result);
+            if (includeTrailers) {
+                const trailerTasks = result.map((item) => async () => {
+                    try {
+                        const videosData = await this.client.tmdb(`tv/${item.id}/videos?language=en-US`);
+                        const trailer = ['Trailer', 'Teaser', 'Clip']
+                            .map((trailerType) =>
+                                (videosData?.results ?? []).find(
+                                    (v: any) => v.type === trailerType && v.site === 'YouTube',
+                                ),
+                            )
+                            .find(Boolean);
+                        item.trailer_key = trailer?.key ?? null;
+                    } catch {
+                        item.trailer_key = null;
+                    }
+                    return item;
+                });
+                await this.client.withConcurrencyLimit(trailerTasks, 3);
+            }
 
             return result;
         } catch (err) {

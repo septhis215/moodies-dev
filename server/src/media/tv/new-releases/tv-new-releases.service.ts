@@ -2,16 +2,34 @@ import { Injectable, Logger } from '@nestjs/common';
 import { TvTmdbClientService } from '../client/tv-tmdb-client.service';
 import { TmdbTv, ContentType, TvListResult } from '../types/tv.types';
 import { paginateItems } from '../utils/helpers';
+import { RedisService } from 'src/redis/redis.service';
 
 const MIN_REQUIRED_ITEMS = 30;
+const LIST_CACHE_TTL = 60 * 60 * 6;
 
 @Injectable()
 export class TvNewReleasesService {
     private readonly logger = new Logger(TvNewReleasesService.name);
 
-    constructor(private readonly client: TvTmdbClientService) { }
+    constructor(
+        private readonly client: TvTmdbClientService,
+        private readonly redisService: RedisService,
+    ) { }
 
-    async getNewReleases(limit = 30, page?: number): Promise<TvListResult> {
+    async getNewReleases(limit = 30, page?: number, skipCache = false): Promise<TvListResult> {
+        if (!page && !skipCache) {
+            try {
+                return await this.redisService.getOrSet(
+                    `tv:newReleases:${limit}`,
+                    LIST_CACHE_TTL,
+                    () => this.getNewReleases(limit, page, true),
+                    (value) => Array.isArray(value) ? value.length > 0 : true,
+                );
+            } catch (err) {
+                this.logger.warn(`List cache bypassed for tv:newReleases:${limit}: ${(err as Error).message}`);
+            }
+        }
+
         const minReq = Math.max(MIN_REQUIRED_ITEMS, limit);
 
         if (!this.client.token) {
@@ -41,18 +59,10 @@ export class TvNewReleasesService {
                 );
                 const results = data?.results ?? [];
 
-                const trailerTasks = results.map((m: any) => async () => {
+                const pageItems = results
+                    .filter((m: any) => m.id && (m.title || m.name) && m.poster_path && m.backdrop_path && m.first_air_date)
+                    .map((m: any) => {
                     const rd = m.first_air_date;
-                    try {
-                        const [videosData, details] = await Promise.all([
-                            this.client.tmdb(`tv/${m.id}/videos?language=en-US`),
-                            this.client.tmdb(`tv/${m.id}?language=en-US`),
-                        ]);
-
-                        const trailer = (videosData?.results ?? []).find(
-                            (v: any) => v.type === 'Trailer' && v.site === 'YouTube',
-                        );
-                        if (!trailer) return null;
 
                         return {
                             id: m.id,
@@ -62,21 +72,20 @@ export class TvNewReleasesService {
                             backdrop_path: m.backdrop_path ?? null,
                             release_date: rd,
                             vote_average: m.vote_average,
-                            trailer_key: trailer.key,
+                            vote_count: m.vote_count,
+                            popularity: m.popularity,
+                            trailer_key: null,
                             type: 'tv' as ContentType,
                             recommendations: [],
-                            number_of_episodes: details.number_of_episodes ?? null,
-                            genres: details.genres ? details.genres.map((g: any) => g.name) : [],
+                            genres: m.genre_ids
+                                ? m.genre_ids.map((id: number) => this.client.genreMap[id] || 'Unknown')
+                                : [],
+                            genre_ids: m.genre_ids ?? [],
+                            first_air_date: rd,
                         } as TmdbTv;
-                    } catch {
-                        return null;
-                    }
                 });
 
-                const pageResults = (await this.client.withConcurrencyLimit(trailerTasks)).filter(
-                    (item): item is TmdbTv => item !== null,
-                );
-                items.push(...pageResults);
+                items.push(...pageItems);
             }
 
             const withImages = items.filter(

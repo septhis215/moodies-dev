@@ -5,12 +5,11 @@ import {
   Star,
   Bookmark,
   BookmarkCheck,
-  SlidersHorizontal,
   Sparkles,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useCallback, useState, useEffect, useMemo } from "react";
+import React, { useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -37,9 +36,6 @@ type MovieLike = {
   _parsedDate?: Date;
 };
 
-type ReleaseMode = "spotlight" | "all";
-type ReleaseSort = "date" | "interest";
-
 const INITIAL_WEEK_ITEMS = 10;
 
 const getReleaseDate = (item: MovieLike) =>
@@ -52,14 +48,6 @@ const getInterestScore = (item: MovieLike) => {
   const overviewBoost = item.overview ? 1 : 0;
 
   return popularity + rating * 4 + posterBoost + overviewBoost;
-};
-
-const isSpotlightRelease = (item: MovieLike) => {
-  const popularity = item.popularity ?? 0;
-  const rating = item.vote_average ?? 0;
-
-  if (popularity === 0 && rating === 0) return true;
-  return popularity >= 8 || rating >= 6.8;
 };
 
 export function ComingSoonSection({
@@ -81,11 +69,12 @@ export function ComingSoonSection({
     Record<string | number, boolean>
   >({});
   const [openMonth, setOpenMonth] = useState<string | null>(null);
-  const [releaseMode, setReleaseMode] = useState<ReleaseMode>("spotlight");
-  const [releaseSort, setReleaseSort] = useState<ReleaseSort>("date");
   const [expandedWeeks, setExpandedWeeks] = useState<Record<string, number>>(
     {}
   );
+  const hasAutoOpenedMonth = useRef(false);
+  const monthRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const pendingScrollMonth = useRef<string | null>(null);
 
   type GroupedMovieLike = MovieLike & { _parsedDate: Date };
 
@@ -132,21 +121,13 @@ export function ComingSoonSection({
     return weeks;
   }, []);
 
-  const sortReleases = useCallback(
-    (releaseItems: GroupedMovieLike[]) => {
-      return [...releaseItems].sort((a, b) => {
-        if (releaseSort === "interest") {
-          const scoreDiff = getInterestScore(b) - getInterestScore(a);
-          if (scoreDiff !== 0) return scoreDiff;
-        }
-
-        const dateDiff = a._parsedDate.getTime() - b._parsedDate.getTime();
-        if (dateDiff !== 0) return dateDiff;
-        return getInterestScore(b) - getInterestScore(a);
-      });
-    },
-    [releaseSort]
-  );
+  const sortReleases = useCallback((releaseItems: GroupedMovieLike[]) => {
+    return [...releaseItems].sort((a, b) => {
+      const dateDiff = a._parsedDate.getTime() - b._parsedDate.getTime();
+      if (dateDiff !== 0) return dateDiff;
+      return getInterestScore(b) - getInterestScore(a);
+    });
+  }, []);
 
   const getTitle = (item: MovieLike): string => {
     return item.name || item.title || "";
@@ -240,29 +221,52 @@ export function ComingSoonSection({
     }
   };
 
+  const handleMonthToggle = useCallback((monthYear: string) => {
+    pendingScrollMonth.current = monthYear;
+    setOpenMonth((currentMonth) =>
+      currentMonth === monthYear ? null : monthYear
+    );
+  }, []);
+
   const validItems = useMemo(
     () => items.filter((item) => Boolean(getReleaseDate(item))),
     [items]
   );
 
-  const visibleItems = useMemo(
-    () =>
-      releaseMode === "spotlight"
-        ? validItems.filter(isSpotlightRelease)
-        : validItems,
-    [releaseMode, validItems]
-  );
-
   const grouped = useMemo(
-    () => groupByMonthAndWeek(visibleItems),
-    [groupByMonthAndWeek, visibleItems]
-  );
-  const allGrouped = useMemo(
     () => groupByMonthAndWeek(validItems),
     [groupByMonthAndWeek, validItems]
   );
   const totalVisible = Object.values(grouped).flat().length;
   const totalReleases = validItems.length;
+  const todayMs = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today.getTime();
+  }, []);
+
+  useEffect(() => {
+    const firstMonth = Object.keys(grouped)[0];
+    if (!hasAutoOpenedMonth.current && firstMonth) {
+      setOpenMonth(firstMonth);
+      hasAutoOpenedMonth.current = true;
+    }
+  }, [grouped]);
+
+  useEffect(() => {
+    const monthYear = pendingScrollMonth.current;
+    if (!monthYear) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      monthRefs.current[monthYear]?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      pendingScrollMonth.current = null;
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [openMonth]);
 
   return (
     <section id="upcoming" className="relative max-w-7xl w-full mx-auto py-16">
@@ -286,14 +290,7 @@ export function ComingSoonSection({
           </div>
 
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-              <div className="text-xl font-bold leading-none text-white">
-                {totalVisible}
-              </div>
-              <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500">
-                Showing
-              </div>
-            </div>
+            
             <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
               <div className="text-xl font-bold leading-none text-white">
                 {totalReleases}
@@ -305,61 +302,17 @@ export function ComingSoonSection({
           </div>
         </div>
 
-        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/30 p-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-400">
-            <SlidersHorizontal className="h-4 w-4 text-[#ff7a66]" />
-            Browse controls
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {(["spotlight", "all"] as ReleaseMode[]).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setReleaseMode(mode)}
-                className={`cursor-pointer rounded-lg px-3 py-2 text-xs font-bold transition ${
-                  releaseMode === mode
-                    ? "bg-[#e94f37] text-white shadow-lg shadow-[#e94f37]/20"
-                    : "bg-white/[0.06] text-gray-300 hover:bg-white/[0.1]"
-                }`}
-              >
-                {mode === "spotlight" ? "Spotlight" : "All releases"}
-              </button>
-            ))}
-
-            {(["date", "interest"] as ReleaseSort[]).map((sort) => (
-              <button
-                key={sort}
-                onClick={() => setReleaseSort(sort)}
-                className={`cursor-pointer rounded-lg px-3 py-2 text-xs font-bold transition ${
-                  releaseSort === sort
-                    ? "bg-white text-black"
-                    : "bg-white/[0.06] text-gray-300 hover:bg-white/[0.1]"
-                }`}
-              >
-                {sort === "date" ? "Date order" : "Most anticipated"}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {totalVisible === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-black/30 p-6 text-center">
             <p className="text-sm font-semibold text-white">
-              No spotlight releases matched this view.
+              No upcoming releases are available right now.
             </p>
-            <button
-              onClick={() => setReleaseMode("all")}
-              className="mt-4 cursor-pointer rounded-lg bg-white px-4 py-2 text-xs font-bold text-black transition hover:bg-gray-200"
-            >
-              Show all releases
-            </button>
           </div>
         ) : (
       <div className="space-y-5">
         {Object.entries(grouped).map(([monthYear, groupedItems]) => {
           const sorted = sortReleases(groupedItems);
           const weeks = groupByWeek(sorted);
-          const allMonthCount = allGrouped[monthYear]?.length ?? groupedItems.length;
           const topPicks = [...groupedItems]
             .sort((a, b) => getInterestScore(b) - getInterestScore(a))
             .slice(0, 6);
@@ -367,12 +320,13 @@ export function ComingSoonSection({
           return (
             <div
               key={monthYear}
-              className="border border-white/10 rounded-2xl bg-black/35 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/20"
+              ref={(element) => {
+                monthRefs.current[monthYear] = element;
+              }}
+              className="scroll-mt-24 border border-white/10 rounded-2xl bg-black/35 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/20"
             >
               <button
-                onClick={() =>
-                  setOpenMonth(openMonth === monthYear ? null : monthYear)
-                }
+                onClick={() => handleMonthToggle(monthYear)}
                 className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-4 sm:py-5
                          bg-white/[0.035] hover:bg-white/[0.06] transition-all duration-300
                          border-b border-white/10 group cursor-pointer"
@@ -386,11 +340,6 @@ export function ComingSoonSection({
                     <span className="px-2 py-1 bg-white/[0.06] rounded text-slate-300 font-medium">
                       {groupedItems.length} showing
                     </span>
-                    {allMonthCount !== groupedItems.length && (
-                      <span className="px-2 py-1 bg-white/[0.04] rounded text-gray-500 font-medium">
-                        {allMonthCount} total
-                      </span>
-                    )}
                     <span className="text-gray-500 hidden sm:inline">
                       • {Object.keys(weeks).length}{" "}
                       {Object.keys(weeks).length === 1 ? "week" : "weeks"}
@@ -480,10 +429,10 @@ export function ComingSoonSection({
                       <div className="grid gap-4 sm:gap-5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                         {visibleWeekItems.map((item) => {
                           const releaseDate = new Date(
-                            item.release_date || item.first_air_date
+                            getReleaseDate(item) ?? ""
                           );
                           const daysUntil = Math.ceil(
-                            (releaseDate.getTime() - Date.now()) /
+                            (releaseDate.getTime() - todayMs) /
                             (1000 * 60 * 60 * 24)
                           );
                           const inWatchlist =
@@ -498,6 +447,7 @@ export function ComingSoonSection({
                                     src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "/placeholder-poster.svg"}
                                     alt={item.title || item.name || ""}
                                     fill
+                                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                                   />
                                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />

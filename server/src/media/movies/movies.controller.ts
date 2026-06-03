@@ -70,9 +70,24 @@ export class MoviesController {
   }
 
   @Get('upcoming-trailers')
-  async upcomingTrailers(@Query('limit') limit?: string) {
+  async upcomingTrailers(
+    @Query('limit') limit?: string,
+    @Query('months') months?: string,
+    @Query('perMonth') perMonth?: string,
+    @Query('maxPagesPerMonth') maxPagesPerMonth?: string,
+    @Query('region') region?: string,
+    @Query('releaseTypes') releaseTypes?: string,
+    @Query('includeTrailers') includeTrailers?: string,
+  ) {
     const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-    return this.movieService.getUpcomingTrailers(parsedLimit);
+    return this.movieService.getUpcomingTrailers(parsedLimit, {
+      months: months ? parseInt(months, 10) : undefined,
+      perMonth: perMonth ? parseInt(perMonth, 10) : undefined,
+      maxPagesPerMonth: maxPagesPerMonth ? parseInt(maxPagesPerMonth, 10) : undefined,
+      region,
+      releaseTypes,
+      includeTrailers: includeTrailers === 'true' || includeTrailers === '1',
+    });
   }
 
   // Enhanced recommendations endpoint with better error handling

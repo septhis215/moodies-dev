@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TMDBService } from 'src/external-apis/services/tmdb.service';
+import { RedisService } from 'src/redis/redis.service';
 
 export type TmdbAll = {
   id: number;
@@ -51,6 +52,7 @@ export class CategoryService {
   constructor(
     private readonly tmdbService: TMDBService,
     private readonly configService: ConfigService,
+    private readonly redisService: RedisService,
   ) {
     // Kept only as a "is TMDB configured?" guard for internal checks.
     this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
@@ -94,6 +96,24 @@ export class CategoryService {
         return null;
       }
       throw err;
+    }
+  }
+
+  private async cachedCategory<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+    try {
+      return await this.redisService.getOrSet(
+        key,
+        this.CACHE_TTL.BASIC_DATA,
+        fetcher,
+        (value) => {
+          if (Array.isArray(value)) return value.length > 0;
+          const data = (value as any)?.data;
+          return Array.isArray(data) ? data.length > 0 : true;
+        },
+      );
+    } catch (err) {
+      this.logger.warn(`Category cache bypassed for ${key}: ${(err as Error).message}`);
+      return fetcher();
     }
   }
 
@@ -197,12 +217,19 @@ export class CategoryService {
   async getTrending(
     page: number = 1,
     limit: number = 20,
+    skipCache = false,
   ): Promise<{
     data: TmdbAll[];
     total: number;
     page: number;
     totalPages: number;
   }> {
+    if (!skipCache) {
+      return this.cachedCategory(`category:trending:${page}:${limit}`, () =>
+        this.getTrending(page, limit, true),
+      );
+    }
+
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty trending');
       return { data: [], total: 0, page: 1, totalPages: 0 };
@@ -319,12 +346,19 @@ export class CategoryService {
   async getNewReleases(
     page: number = 1,
     limit: number = 20,
+    skipCache = false,
   ): Promise<{
     data: TmdbAll[];
     total: number;
     page: number;
     totalPages: number;
   }> {
+    if (!skipCache) {
+      return this.cachedCategory(`category:newReleases:${page}:${limit}`, () =>
+        this.getNewReleases(page, limit, true),
+      );
+    }
+
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty New Releases');
       return { data: [], total: 0, page: 1, totalPages: 0 };
@@ -469,12 +503,19 @@ export class CategoryService {
   async getKoreaTrending(
     page: number = 1,
     limit: number = 20,
+    skipCache = false,
   ): Promise<{
     data: TmdbAll[];
     total: number;
     page: number;
     totalPages: number;
   }> {
+    if (!skipCache) {
+      return this.cachedCategory(`category:koreaTrending:${page}:${limit}`, () =>
+        this.getKoreaTrending(page, limit, true),
+      );
+    }
+
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty koreaTrending');
       return { data: [], total: 0, page: 1, totalPages: 0 };
@@ -588,12 +629,19 @@ export class CategoryService {
   async getComingSoon(
     page: number = 1,
     limit: number = 20,
+    skipCache = false,
   ): Promise<{
     data: TmdbAll[];
     total: number;
     page: number;
     totalPages: number;
   }> {
+    if (!skipCache) {
+      return this.cachedCategory(`category:comingSoon:${page}:${limit}`, () =>
+        this.getComingSoon(page, limit, true),
+      );
+    }
+
     if (!this.token) {
       this.logger.warn('TMDB_API_KEY not set; returning empty ComingSoon');
       return { data: [], total: 0, page: 1, totalPages: 0 };

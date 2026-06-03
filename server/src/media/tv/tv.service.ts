@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { TvTmdbClientService } from './client/tv-tmdb-client.service';
 import { TvCatalogService } from './catalog/tv-catalog.service';
-import { TvTrailersService } from './trailers/tv-trailers.service';
+import { TvTrailersService, UpcomingTvOptions } from './trailers/tv-trailers.service';
 import { TvDetailsService } from './details/tv-details.service';
 import { TvRecommendationsService } from './recommendations/tv-recommendations.service';
 import { TvMediaService } from './media/tv-media.service';
@@ -81,8 +81,8 @@ export class TvService implements OnModuleInit {
     return this.trailersService.getTrailers(limit);
   }
 
-  getUpcomingTrailers(limit?: number) {
-    return this.trailersService.getUpcomingTrailers(limit);
+  getUpcomingTrailers(limit?: number, options?: UpcomingTvOptions) {
+    return this.trailersService.getUpcomingTrailers(limit, options);
   }
 
   getTrailersForItems(items: { id: number }[]) {

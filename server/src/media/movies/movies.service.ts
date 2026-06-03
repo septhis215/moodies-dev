@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { MovieTmdbClientService } from './client/movie-tmdb-client.service';
 import { MovieCatalogService } from './catalog/movie-catalog.service';
-import { MovieTrailersService } from './trailers/movie-trailers.service';
+import { MovieTrailersService, UpcomingMovieOptions } from './trailers/movie-trailers.service';
 import { MovieDetailsService } from './details/movie-details.service';
 import { MovieRecommendationsService } from './recommendations/movie-recommendations.service';
 import { MovieMediaService } from './media/movie-media.service';
@@ -75,8 +75,8 @@ export class MoviesService implements OnModuleInit {
         return this.trailersService.getTrailers(limit);
     }
 
-    getUpcomingTrailers(limit?: number) {
-        return this.trailersService.getUpcomingTrailers(limit);
+    getUpcomingTrailers(limit?: number, options?: UpcomingMovieOptions) {
+        return this.trailersService.getUpcomingTrailers(limit, options);
     }
 
     getTrailersForItems(items: { type: 'movie'; id: number }[]) {
