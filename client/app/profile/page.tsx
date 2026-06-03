@@ -371,6 +371,48 @@ export default function ProfilePage() {
         );
     }
 
+    function ReviewEmptyState({ filter }: { filter: "all" | "MOVIE" | "TV" }) {
+        const isMovie = filter === "MOVIE";
+        const isTv = filter === "TV";
+        const heading = isMovie
+            ? "No movie reviews yet"
+            : isTv
+                ? "No series reviews yet"
+                : "Share your first review";
+        const sub = isMovie
+            ? "You haven’t reviewed any movies yet. Watched something great? Rate it and your thoughts will collect here."
+            : isTv
+                ? "You haven’t reviewed any TV series yet. Just finished a show? Share your take and it’ll show up here."
+                : "You haven’t reviewed anything yet. Rate a movie or series and your reviews will collect here.";
+
+        return (
+            <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-transparent px-6 py-10 sm:px-10 sm:py-14">
+                <div aria-hidden className="pointer-events-none absolute -top-12 -right-12 w-44 h-44 rounded-full bg-[#e94f37]/15 blur-3xl" />
+                <div className="relative flex flex-col items-center text-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-[#e94f37]/15 border border-[#e94f37]/25 flex items-center justify-center">
+                        {isTv ? <Tv className="w-7 h-7 text-[#e94f37]" /> : <Film className="w-7 h-7 text-[#e94f37]" />}
+                    </div>
+                    <div className="space-y-1.5 max-w-md">
+                        <h3 className="text-lg sm:text-xl font-bold text-white">{heading}</h3>
+                        <p className="text-sm sm:text-base text-white/50 leading-relaxed">{sub}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-2.5 mt-1">
+                        {!isTv && (
+                            <Link href="/movies" className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#e94f37] hover:bg-[#ff5746] text-white text-sm font-semibold transition">
+                                <Film className="w-4 h-4" /> Review a movie
+                            </Link>
+                        )}
+                        {!isMovie && (
+                            <Link href="/tv" className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${isTv ? "bg-[#e94f37] hover:bg-[#ff5746] text-white" : "border border-white/15 text-white/80 hover:bg-white/5"}`}>
+                                <Tv className="w-4 h-4" /> Review a series
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <main className="min-h-screen bg-black text-white pb-8">
             <div className="mx-auto w-full max-w-7xl px-8 sm:px-14 py-24">
@@ -905,22 +947,9 @@ export default function ProfilePage() {
                                 </div>
                             )}
 
-                            {/* Empty state */}
-                            {!reviewsLoading && reviews.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-20 gap-5">
-                                    <div className="relative">
-                                        <div className="w-20 h-20 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center">
-                                            <Star className="w-9 h-9 text-white/20" />
-                                        </div>
-                                        <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[#e94f37]/20 border border-[#e94f37]/30 flex items-center justify-center">
-                                            <span className="text-[10px] text-[#e94f37] font-bold">0</span>
-                                        </div>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-base font-semibold text-white/60 mb-1">No reviews yet</p>
-                                        <p className="text-sm text-white/30 max-w-xs">Start reviewing movies and TV shows to see them collected here.</p>
-                                    </div>
-                                </div>
+                            {/* Empty state — covers both "no reviews at all" and "none in this tab" */}
+                            {!reviewsLoading && filteredMediaGroups.length === 0 && (
+                                <ReviewEmptyState filter={reviewTypeFilter} />
                             )}
 
                             {/* Review groups — score-stripe card design */}
@@ -1005,11 +1034,11 @@ export default function ProfilePage() {
                                                                             {isMovie ? "Movie" : "TV"}
                                                                         </span>
                                                                         <span className="text-white/15 text-[0.5rem]">·</span>
-                                                                        <span className="text-[0.68rem] font-semibold text-white/35 group-hover/attr:text-white/65 transition-colors truncate">
+                                                                        <span className="text-[0.85rem] sm:text-[0.95rem] font-semibold text-white/75 group-hover/attr:text-white transition-colors truncate">
                                                                             {rep.tmdbTitle || `#${rep.tmdbId}`}
                                                                         </span>
                                                                         {rep.tmdbYear && (
-                                                                            <span className="text-[0.52rem] text-white/18 flex-shrink-0">{rep.tmdbYear}</span>
+                                                                            <span className="text-[0.7rem] text-white/45 flex-shrink-0">{rep.tmdbYear}</span>
                                                                         )}
                                                                     </Link>
 
@@ -1020,9 +1049,9 @@ export default function ProfilePage() {
                                                                         {group.reviews.length > 1 && rIdx === 0 && !hasLess && (
                                                                             <span className="text-[0.55rem] text-white/18 font-medium">+{group.reviews.length - 1}</span>
                                                                         )}
-                                                                        <span className="text-[0.62rem] text-white/20 font-medium tabular-nums">
+                                                                        <span className="text-[0.72rem] sm:text-[0.8rem] text-white/55 font-medium tabular-nums">
                                                                             {new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                                                                            <span className="text-white/12 mx-0.5">·</span>
+                                                                            <span className="text-white/30 mx-0.5">·</span>
                                                                             {new Date(review.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                                                                         </span>
                                                                     </div>
