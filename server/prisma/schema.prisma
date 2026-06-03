@@ -28,6 +28,7 @@ model User {
   preferredLanguages String[]      @default([])
   reviewWarningScore Int           @default(0)
   reviewBannedUntil  DateTime?
+  reviewCount        Int           @default(0)
   createdAt          DateTime      @default(now())
   Quiz               Quiz[]
   Badge              Badge[]
@@ -257,6 +258,21 @@ model RecommendationCache {
   @@unique([tmdbId, mediaType, limit])
   @@index([fetchedAt])
   @@map("recommendation_cache")
+}
+
+// Per-content engagement counters, maintained incrementally on each
+// like/save/review mutation (never recomputed by scanning). Row is created on
+// first interaction; absent row = all counts 0.
+model MediaStat {
+  tmdbId      Int
+  mediaType   MediaType
+  likeCount   Int      @default(0)
+  savedCount  Int      @default(0)
+  reviewCount Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@id([tmdbId, mediaType])
+  @@map("media_stats")
 }
 
 enum ReviewStatus {
