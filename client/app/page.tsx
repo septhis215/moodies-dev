@@ -26,7 +26,7 @@ async function fetchFeatured() {
 const mobileActions = [
   { label: "Movies", href: "/movies", description: "Cinema picks", icon: Clapperboard },
   { label: "Series", href: "/tv", description: "Binge-worthy shows", icon: Tv },
-  { label: "Moods", href: "/moods", description: "Spin your vibe", icon: Heart },
+  { label: "Moods", href: "/moods/explore", description: "Choose your mood path", icon: Heart },
   { label: "Feed", href: "/feed", description: "Swipe trailers", icon: MessageCircle },
 ];
 
@@ -62,7 +62,7 @@ export default async function LandingPage() {
       <FavoritesSection />
       <ImmersiveFeedSection />
       <KoreaTrendingSection />
-      <MoodDiscoverySection />
+      <MoodDiscoverySection variant="teaser" />
       <CelebSection />
       <CommunityPicks />
       <UpcomingTrailers />

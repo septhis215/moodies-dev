@@ -52,7 +52,7 @@ const routes = [
   { name: "Movies", href: "/movies" },
   { name: "Series", href: "/tv" },
   // { name: "Community", href: "/community" },
-  { name: "Your Moods", href: "/moods", noLink: true },
+  { name: "Your Moods", href: "/moods/explore", noLink: true },
   { name: "My Collection", href: "/collection", noLink: true },
 ];
 
@@ -87,7 +87,7 @@ export function NavbarComponent() {
       { label: "Trending", path: "/trending" },
       { label: "New Releases", path: "/new-releases" },
       { label: "Korean Hits", path: "/korea-hits" },
-      { label: "Moods", path: "/moods" },
+      { label: "Moods", path: "/moods/explore" },
       { label: "Coming Soon", path: "/coming-soon" },
     ],
 
@@ -100,7 +100,7 @@ export function NavbarComponent() {
       { label: "Award Winners", path: "/movies/award-winners" },
       { label: "Animated Magic", path: "/movies/animated" },
       { label: "Indie Spotlight", path: "/movies/indie" },
-      { label: "Moods Matcher", path: "/movies/moods" },
+      { label: "Moods Matcher", path: "/movies#moods" },
     ],
 
     "/tv": [
@@ -110,12 +110,19 @@ export function NavbarComponent() {
       { label: "Top Rated", path: "/tv/top-rated" },
       { label: "Airing This Week", path: "/tv/airing/week" },
       { label: "K-Drama Collection", path: "/tv/k-drama" },
-      { label: "Moods Matcher", path: "/tv/moods" },
+      { label: "Moods Matcher", path: "/tv#moods" },
     ],
 
     "/moods": [
       { label: "Moodies Feed", path: "/feed" },
       { label: "Mood Wheels", path: "/moods" },
+      { label: "Personality Quiz", path: "/quiz" },
+    ],
+
+    "/moods/explore": [
+      { label: "Mood Wheels", path: "/moods" },
+      { label: "Movie Matcher", path: "/movies#moods" },
+      { label: "TV Matcher", path: "/tv#moods" },
       { label: "Personality Quiz", path: "/quiz" },
     ],
 
@@ -656,7 +663,7 @@ export function NavbarComponent() {
           </Link>
 
           <Link
-            href="/#your-moods"
+            href="/moods/explore"
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
             title="Your Moods"
           >
