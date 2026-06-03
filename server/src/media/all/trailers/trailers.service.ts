@@ -208,18 +208,27 @@ export class TrailersService {
     }
 
     async getTrailersForItems(items: { type: 'movie' | 'tv', id: number }[]): Promise<Record<string, string | null>> {
-        const tasks = items.map(item => async () => {
-            try {
-                const videosData = await this.client.tmdb(
-                    `${this.client.baseUrl}/${item.type}/${item.id}/videos?language=en-US`
-                );
-                const trailer = (videosData?.results ?? []).find(
-                    (v: any) => v.type === 'Trailer' && v.site === 'YouTube'
-                );
-                return [`${item.type}-${item.id}`, trailer?.key ?? null];
-            } catch {
-                return [`${item.type}-${item.id}`, null];
-            }
+        const tasks = items.map(item => async (): Promise<[string, string | null]> => {
+            // Trailer keys are stable and shared across all users, so cache per item.
+            // getOrSet also coalesces concurrent requests and negatively caches misses.
+            const key = await this.redisService.getOrSet<string | null>(
+                `trailer:${item.type}:${item.id}`,
+                CACHE_TTL.TRAILERS,
+                async () => {
+                    try {
+                        const videosData = await this.client.tmdb(
+                            `${this.client.baseUrl}/${item.type}/${item.id}/videos?language=en-US`
+                        );
+                        const trailer = (videosData?.results ?? []).find(
+                            (v: any) => v.type === 'Trailer' && v.site === 'YouTube'
+                        );
+                        return trailer?.key ?? null;
+                    } catch {
+                        return null;
+                    }
+                },
+            );
+            return [`${item.type}-${item.id}`, key];
         });
 
         const results = await this.client.withConcurrencyLimit(tasks);
