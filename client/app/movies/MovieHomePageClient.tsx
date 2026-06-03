@@ -293,14 +293,7 @@ export default function MoviesHomePageClient({
                                     {show.release_date.split("-")[0]}
                                 </span>
                             )}
-                            {show.vote_average !== undefined && show.vote_average > 0 && (
-                                <>
-                                    <span>•</span>
-                                    <span className="font-semibold">
-                                        {show.vote_average.toFixed(1)}
-                                    </span>
-                                </>
-                            )}
+                           
                         </div>
                     </div>
                 </Link>
@@ -1521,7 +1514,7 @@ export default function MoviesHomePageClient({
 
                 {moods && moods.length > 0 && (
                     <div className="max-w-7xl mx-auto w-full">
-                        <MoodRecommendationsSection mediaType="movie" />
+                        <MoodRecommendationsSection mediaType="movie" initialMoods={moods} />
                     </div>
                 )}
             </div>

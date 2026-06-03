@@ -57,29 +57,243 @@ const DEFAULT_LANGUAGES = ['en', 'ko', 'ja', 'zh'];
 const FALLBACK_MOVIE_GENRES = [18, 35, 28, 12, 878, 14];
 const FALLBACK_TV_GENRES = [18, 35, 10759, 10765, 9648, 80];
 const MIN_STRONG_SCORE = 0.46;
+const RECOMMENDATION_ALGORITHM = 'mood-scored-v4';
 
-const MEDIA_SPECIFIC_MOOD_GENRES: Record<string, { movie: number[]; tv: number[]; related: string[] }> = {
-    happy: { movie: [35, 16, 10751, 12, 10402], tv: [35, 16, 10751, 10762, 10759], related: ['funny', 'cozy', 'whimsy', 'inspirational'] },
-    funny: { movie: [35, 10751, 16], tv: [35, 16, 10751], related: ['happy', 'cozy', 'whimsy'] },
-    cozy: { movie: [10751, 16, 35, 10749, 18], tv: [10751, 16, 35, 18], related: ['happy', 'serenity', 'romantic', 'nostalgic'] },
-    whimsy: { movie: [14, 16, 10751, 35, 12], tv: [10765, 16, 10751, 35], related: ['happy', 'cozy', 'epic', 'sci-fi'] },
-    romantic: { movie: [10749, 18, 35], tv: [18, 10766, 35], related: ['cozy', 'bittersweet', 'happy'] },
-    serenity: { movie: [18, 99, 10402, 10751, 36], tv: [18, 99, 35], related: ['chill', 'cozy', 'documentary'] },
-    chill: { movie: [18, 99, 10402, 14, 10751], tv: [18, 99, 35], related: ['serenity', 'cozy', 'documentary'] },
-    inspirational: { movie: [18, 36, 99, 12, 10402], tv: [18, 99, 10759], related: ['happy', 'documentary', 'epic'] },
-    nostalgic: { movie: [35, 16, 10751, 10402, 36], tv: [16, 35, 10751, 18], related: ['cozy', 'happy', 'bittersweet'] },
-    bittersweet: { movie: [18, 10749, 36, 35], tv: [18, 10766, 16], related: ['sad', 'romantic', 'nostalgic'] },
-    sad: { movie: [18, 10749, 36, 99], tv: [18, 10766, 99], related: ['bittersweet', 'romantic', 'serenity'] },
-    thrilling: { movie: [53, 28, 12, 80, 878], tv: [10759, 80, 9648, 10765], related: ['chaos', 'dark', 'mind-bending'] },
-    epic: { movie: [12, 14, 28, 878, 36], tv: [10765, 10759, 18], related: ['thrilling', 'sci-fi', 'whimsy'] },
-    chaos: { movie: [28, 53, 80, 878, 27], tv: [10759, 80, 9648, 10765], related: ['thrilling', 'horror', 'dark'] },
-    horror: { movie: [27, 9648, 53, 14], tv: [9648, 10765, 80], related: ['dark', 'mind-bending', 'chaos'] },
-    dark: { movie: [9648, 53, 80, 18, 878], tv: [9648, 80, 10765, 18], related: ['gritty', 'horror', 'mind-bending'] },
-    gritty: { movie: [80, 18, 53, 36], tv: [80, 18, 9648], related: ['dark', 'thrilling', 'documentary'] },
-    'mind-bending': { movie: [9648, 878, 53, 18, 14], tv: [9648, 10765, 80], related: ['dark', 'sci-fi', 'thrilling'] },
-    'sci-fi': { movie: [878, 12, 28, 14, 53], tv: [10765, 10759, 18], related: ['mind-bending', 'epic', 'thrilling'] },
-    western: { movie: [37, 28, 12, 80, 18], tv: [10759, 80, 18], related: ['gritty', 'epic', 'thrilling'] },
-    documentary: { movie: [99, 36, 10402, 18], tv: [99, 10764, 18], related: ['inspirational', 'serenity', 'gritty'] },
+const TMDB_MOVIE_GENRES = [
+    { id: 28, name: 'Action' },
+    { id: 12, name: 'Adventure' },
+    { id: 16, name: 'Animation' },
+    { id: 35, name: 'Comedy' },
+    { id: 80, name: 'Crime' },
+    { id: 99, name: 'Documentary' },
+    { id: 18, name: 'Drama' },
+    { id: 10751, name: 'Family' },
+    { id: 14, name: 'Fantasy' },
+    { id: 36, name: 'History' },
+    { id: 27, name: 'Horror' },
+    { id: 10402, name: 'Music' },
+    { id: 9648, name: 'Mystery' },
+    { id: 10749, name: 'Romance' },
+    { id: 878, name: 'Science Fiction' },
+    { id: 10770, name: 'TV Movie' },
+    { id: 53, name: 'Thriller' },
+    { id: 10752, name: 'War' },
+    { id: 37, name: 'Western' },
+];
+
+const TMDB_TV_GENRES = [
+    { id: 10759, name: 'Action & Adventure' },
+    { id: 16, name: 'Animation' },
+    { id: 35, name: 'Comedy' },
+    { id: 80, name: 'Crime' },
+    { id: 99, name: 'Documentary' },
+    { id: 18, name: 'Drama' },
+    { id: 10751, name: 'Family' },
+    { id: 10762, name: 'Kids' },
+    { id: 9648, name: 'Mystery' },
+    { id: 10763, name: 'News' },
+    { id: 10764, name: 'Reality' },
+    { id: 10765, name: 'Sci-Fi & Fantasy' },
+    { id: 10766, name: 'Soap' },
+    { id: 10767, name: 'Talk' },
+    { id: 10768, name: 'War & Politics' },
+    { id: 37, name: 'Western' },
+];
+
+const TMDB_MOVIE_GENRE_IDS = new Set(TMDB_MOVIE_GENRES.map(genre => genre.id));
+const TMDB_TV_GENRE_IDS = new Set(TMDB_TV_GENRES.map(genre => genre.id));
+
+interface MoodGenreConfig {
+    moviePrimaryGenreIds: number[];
+    movieSecondaryGenreIds: number[];
+    tvPrimaryGenreIds: number[];
+    tvSecondaryGenreIds: number[];
+    excludedGenreIds: number[];
+    keywords: string[];
+}
+
+const MOOD_GENRE_CONFIG: Record<string, MoodGenreConfig> = {
+    romantic: {
+        moviePrimaryGenreIds: [10749],
+        movieSecondaryGenreIds: [18, 35],
+        tvPrimaryGenreIds: [],
+        tvSecondaryGenreIds: [18, 35, 10766],
+        excludedGenreIds: [27, 10752, 80, 53, 10768],
+        keywords: [
+            'love',
+            'romance',
+            'romantic',
+            'relationship',
+            'couple',
+            'dating',
+            'marriage',
+            'heartbreak',
+            'affection',
+            'lovers',
+            'first love',
+            'love story',
+        ],
+    },
+    happy: {
+        moviePrimaryGenreIds: [35, 10751, 16],
+        movieSecondaryGenreIds: [12, 14, 10402],
+        tvPrimaryGenreIds: [35, 10751, 16],
+        tvSecondaryGenreIds: [10762, 10766],
+        excludedGenreIds: [27, 10752, 80, 53, 10768],
+        keywords: [
+            'fun',
+            'funny',
+            'comedy',
+            'friendship',
+            'joy',
+            'uplifting',
+            'feel good',
+            'family',
+            'adventure',
+        ],
+    },
+    sad: {
+        moviePrimaryGenreIds: [18],
+        movieSecondaryGenreIds: [10749],
+        tvPrimaryGenreIds: [18],
+        tvSecondaryGenreIds: [10766],
+        excludedGenreIds: [27, 28, 10759],
+        keywords: [
+            'grief',
+            'loss',
+            'tragedy',
+            'heartbreak',
+            'emotional',
+            'sad',
+            'melancholy',
+            'farewell',
+            'drama',
+        ],
+    },
+    excited: {
+        moviePrimaryGenreIds: [28, 12],
+        movieSecondaryGenreIds: [878, 53, 14],
+        tvPrimaryGenreIds: [10759],
+        tvSecondaryGenreIds: [10765, 9648],
+        excludedGenreIds: [99, 10767, 10763],
+        keywords: [
+            'action',
+            'adventure',
+            'hero',
+            'battle',
+            'mission',
+            'survival',
+            'chase',
+            'fight',
+            'warrior',
+            'power',
+        ],
+    },
+    relaxed: {
+        moviePrimaryGenreIds: [10751, 16, 35],
+        movieSecondaryGenreIds: [12, 14, 10402],
+        tvPrimaryGenreIds: [10751, 16, 35],
+        tvSecondaryGenreIds: [10762, 10766],
+        excludedGenreIds: [27, 53, 80, 10768],
+        keywords: [
+            'calm',
+            'cozy',
+            'comfort',
+            'family',
+            'friendship',
+            'slice of life',
+            'peaceful',
+            'lighthearted',
+            'warm',
+        ],
+    },
+    scared: {
+        moviePrimaryGenreIds: [27, 53],
+        movieSecondaryGenreIds: [9648, 878],
+        tvPrimaryGenreIds: [9648],
+        tvSecondaryGenreIds: [10765, 80],
+        excludedGenreIds: [10751, 10762, 16, 35],
+        keywords: [
+            'horror',
+            'ghost',
+            'evil spirit',
+            'demon',
+            'haunted',
+            'supernatural',
+            'curse',
+            'possession',
+            'monster',
+            'paranormal',
+            'fear',
+            'nightmare',
+        ],
+    },
+};
+
+const MOOD_CONFIG_ALIASES: Record<string, keyof typeof MOOD_GENRE_CONFIG> = {
+    funny: 'happy',
+    cozy: 'relaxed',
+    serenity: 'relaxed',
+    chill: 'relaxed',
+    nostalgic: 'relaxed',
+    bittersweet: 'sad',
+    thrilling: 'excited',
+    epic: 'excited',
+    chaos: 'excited',
+    horror: 'scared',
+};
+const ROMANCE_TEXT_TERMS = [
+    'romance',
+    'romantic',
+    'love',
+    'lovers',
+    'relationship',
+    'relationships',
+    'couple',
+    'couples',
+    'dating',
+    'marriage',
+    'heart',
+    'affair',
+    'passion',
+    'fall in love',
+    'love story',
+];
+
+interface MediaGenreProfile {
+    primary: number[];
+    secondary: number[];
+    excluded: number[];
+}
+
+interface MoodGenreProfile {
+    movie: MediaGenreProfile;
+    tv: MediaGenreProfile;
+    related: string[];
+}
+
+const MEDIA_SPECIFIC_MOOD_GENRES: Record<string, MoodGenreProfile> = {
+    happy: { movie: { primary: [35, 16], secondary: [10751, 12, 10402], excluded: [27, 80] }, tv: { primary: [35, 16], secondary: [10751, 10762, 10759], excluded: [80, 9648] }, related: ['funny', 'cozy', 'whimsy', 'inspirational'] },
+    funny: { movie: { primary: [35], secondary: [16, 10751], excluded: [27, 53] }, tv: { primary: [35], secondary: [16, 10751], excluded: [80, 9648] }, related: ['happy', 'cozy', 'whimsy'] },
+    cozy: { movie: { primary: [10751, 16], secondary: [35, 10749, 18], excluded: [27, 53, 80] }, tv: { primary: [10751, 16], secondary: [35, 18], excluded: [80, 9648] }, related: ['happy', 'serenity', 'romantic', 'nostalgic'] },
+    whimsy: { movie: { primary: [14, 16], secondary: [10751, 35, 12], excluded: [27, 80] }, tv: { primary: [10765, 16], secondary: [10751, 35], excluded: [80] }, related: ['happy', 'cozy', 'epic', 'sci-fi'] },
+    romantic: { movie: { primary: [10749], secondary: [18, 35], excluded: [10751, 16, 28, 12, 27, 878] }, tv: { primary: [10766, 18], secondary: [35], excluded: [10751, 16, 10759, 10762, 9648] }, related: ['bittersweet', 'cozy'] },
+    serenity: { movie: { primary: [18, 99], secondary: [10402, 10751, 36], excluded: [27, 53, 28] }, tv: { primary: [18, 99], secondary: [35], excluded: [80, 9648, 10759] }, related: ['chill', 'cozy', 'documentary'] },
+    chill: { movie: { primary: [18, 99], secondary: [10402, 14, 10751], excluded: [27, 53, 28] }, tv: { primary: [18, 99], secondary: [35], excluded: [80, 10759] }, related: ['serenity', 'cozy', 'documentary'] },
+    inspirational: { movie: { primary: [18, 36, 99], secondary: [12, 10402], excluded: [27, 80] }, tv: { primary: [18, 99], secondary: [10759], excluded: [27, 9648] }, related: ['happy', 'documentary', 'epic'] },
+    nostalgic: { movie: { primary: [35, 16, 10751], secondary: [10402, 36], excluded: [27, 53] }, tv: { primary: [16, 35, 10751], secondary: [18], excluded: [80, 9648] }, related: ['cozy', 'happy', 'bittersweet'] },
+    bittersweet: { movie: { primary: [18, 10749], secondary: [36, 35], excluded: [27, 28] }, tv: { primary: [18, 10766], secondary: [16], excluded: [10759, 80] }, related: ['sad', 'romantic', 'nostalgic'] },
+    sad: { movie: { primary: [18], secondary: [10749, 36, 99], excluded: [35, 10751] }, tv: { primary: [18], secondary: [10766, 99], excluded: [35, 10762] }, related: ['bittersweet', 'romantic', 'serenity'] },
+    thrilling: { movie: { primary: [53, 28], secondary: [12, 80, 878], excluded: [10751, 10402] }, tv: { primary: [10759, 80], secondary: [9648, 10765], excluded: [10751, 10762] }, related: ['chaos', 'dark', 'mind-bending'] },
+    epic: { movie: { primary: [12, 14, 28], secondary: [878, 36], excluded: [99, 10749] }, tv: { primary: [10765, 10759], secondary: [18], excluded: [10764, 10762] }, related: ['thrilling', 'sci-fi', 'whimsy'] },
+    chaos: { movie: { primary: [28, 53], secondary: [80, 878, 27], excluded: [10751, 10749] }, tv: { primary: [10759, 80], secondary: [9648, 10765], excluded: [10751, 10762] }, related: ['thrilling', 'horror', 'dark'] },
+    horror: { movie: { primary: [27], secondary: [9648, 53, 14], excluded: [10751, 35, 10749] }, tv: { primary: [9648, 10765], secondary: [80], excluded: [10751, 35] }, related: ['dark', 'mind-bending', 'chaos'] },
+    dark: { movie: { primary: [9648, 53, 80], secondary: [18, 878], excluded: [10751, 35] }, tv: { primary: [9648, 80], secondary: [10765, 18], excluded: [10751, 10762] }, related: ['gritty', 'horror', 'mind-bending'] },
+    gritty: { movie: { primary: [80, 18], secondary: [53, 36], excluded: [10751, 16] }, tv: { primary: [80, 18], secondary: [9648], excluded: [10751, 10762] }, related: ['dark', 'thrilling', 'documentary'] },
+    'mind-bending': { movie: { primary: [9648, 878], secondary: [53, 18, 14], excluded: [10751, 35] }, tv: { primary: [9648, 10765], secondary: [80], excluded: [10751, 10762] }, related: ['dark', 'sci-fi', 'thrilling'] },
+    'sci-fi': { movie: { primary: [878], secondary: [12, 28, 14, 53], excluded: [10749, 10751] }, tv: { primary: [10765], secondary: [10759, 18], excluded: [10751, 10762] }, related: ['mind-bending', 'epic', 'thrilling'] },
+    western: { movie: { primary: [37], secondary: [28, 12, 80, 18], excluded: [10749, 10751] }, tv: { primary: [10759, 80], secondary: [18], excluded: [10751, 10762] }, related: ['gritty', 'epic', 'thrilling'] },
+    documentary: { movie: { primary: [99], secondary: [36, 10402, 18], excluded: [27, 28] }, tv: { primary: [99], secondary: [10764, 18], excluded: [10759, 10765] }, related: ['inspirational', 'serenity', 'gritty'] },
 };
 
 // ---------------------------------------------------------------------------
@@ -141,6 +355,10 @@ const GENRE_AROUSAL: Record<number, number> = {
 
 interface ScoreBreakdown {
     genreScore: number;
+    primaryGenreMatches: number;
+    secondaryGenreMatches: number;
+    excludedGenreMatches: number;
+    romanceTextScore: number;
     valenceScore: number;
     arousalScore: number;
     popularityScore: number;
@@ -184,13 +402,15 @@ export class MoodsService {
                 this.tmdbService.getTVGenres(),
             ]);
             const map = new Map<number, string>();
-            for (const g of [...movieGenres, ...tvGenres]) map.set(g.id, g.name);
+            for (const g of [...TMDB_MOVIE_GENRES, ...TMDB_TV_GENRES, ...movieGenres, ...tvGenres]) {
+                map.set(g.id, g.name);
+            }
             this.genreCache = map;
             this.genreCacheExpiry = now + this.GENRE_CACHE_TTL_MS;
             return map;
         } catch (error) {
             this.logger.error('Failed to build genre map', error);
-            return this.genreCache ?? new Map();
+            return this.genreCache ?? new Map([...TMDB_MOVIE_GENRES, ...TMDB_TV_GENRES].map(g => [g.id, g.name]));
         }
     }
 
@@ -204,15 +424,85 @@ export class MoodsService {
         return mood.name.toLowerCase().replace(/\s+/g, '-');
     }
 
+    private getMoodConfig(mood: Pick<Mood, 'name'>): MoodGenreConfig | undefined {
+        const moodKey = this.getMoodKey(mood);
+        return MOOD_GENRE_CONFIG[moodKey] ?? MOOD_GENRE_CONFIG[MOOD_CONFIG_ALIASES[moodKey]];
+    }
+
+    private getMoodKeywords(mood: Mood): string[] {
+        const configured = this.getMoodConfig(mood)?.keywords ?? [];
+        const stored = (mood.keywords as string[] | null) ?? [];
+        return Array.from(new Set([...configured, ...stored].map(keyword => keyword.toLowerCase())));
+    }
+
+    private getMoodGenreProfile(mood: Mood, mediaType: 'movie' | 'tv'): MediaGenreProfile {
+        const config = this.getMoodConfig(mood);
+        if (config) {
+            const validGenreIds = mediaType === 'movie' ? TMDB_MOVIE_GENRE_IDS : TMDB_TV_GENRE_IDS;
+            const primary = mediaType === 'movie' ? config.moviePrimaryGenreIds : config.tvPrimaryGenreIds;
+            const secondary = mediaType === 'movie' ? config.movieSecondaryGenreIds : config.tvSecondaryGenreIds;
+
+            return {
+                primary: primary.filter(id => validGenreIds.has(id)),
+                secondary: secondary.filter(id => validGenreIds.has(id)),
+                excluded: config.excludedGenreIds.filter(id => validGenreIds.has(id)),
+            };
+        }
+
+        const profile = MEDIA_SPECIFIC_MOOD_GENRES[this.getMoodKey(mood)]?.[mediaType];
+        if (profile) return profile;
+
+        const fallback = (mood.tmdbGenres as number[] | null) ?? (mediaType === 'movie' ? FALLBACK_MOVIE_GENRES : FALLBACK_TV_GENRES);
+        return {
+            primary: fallback.slice(0, 2),
+            secondary: fallback.slice(2),
+            excluded: [],
+        };
+    }
+
     private getMoodGenresForMedia(mood: Mood, mediaType: 'movie' | 'tv'): number[] {
-        const profile = MEDIA_SPECIFIC_MOOD_GENRES[this.getMoodKey(mood)];
-        if (profile?.[mediaType]?.length) return profile[mediaType];
-        return (mood.tmdbGenres as number[] | null) ?? (mediaType === 'movie' ? FALLBACK_MOVIE_GENRES : FALLBACK_TV_GENRES);
+        const profile = this.getMoodGenreProfile(mood, mediaType);
+        return Array.from(new Set([...profile.primary, ...profile.secondary]));
     }
 
     private getScoringGenreSet(mood: Mood, mediaType?: 'movie' | 'tv'): Set<number> {
         if (mediaType) return new Set(this.getMoodGenresForMedia(mood, mediaType));
         return new Set((mood.tmdbGenres as number[] | null) ?? []);
+    }
+
+    private getItemSearchText(item: any): string {
+        const metadata = typeof item.metadata === 'object' && item.metadata ? item.metadata : {};
+        return [
+            item.title,
+            item.name,
+            item.original_title,
+            item.original_name,
+            item.overview,
+            item.tagline,
+            item.status,
+            item.origin_country,
+            item.original_language,
+            metadata.tagline,
+            metadata.keywords,
+            metadata.origin_country,
+            metadata.original_language,
+        ]
+            .flat()
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+    }
+
+    private getKeywordMatchScore(item: any, keywords: string[]): number {
+        const text = this.getItemSearchText(item);
+        if (!text.trim()) return 0;
+
+        const matches = keywords.filter(term => text.includes(term.toLowerCase())).length;
+        return Math.min(1, matches / 3);
+    }
+
+    private getRomanceTextScore(item: any): number {
+        return this.getKeywordMatchScore(item, ROMANCE_TEXT_TERMS);
     }
 
     private async getRelatedMoodGenres(
@@ -223,7 +513,10 @@ export class MoodsService {
         const direct = this.getMoodGenresForMedia(mood, mediaType);
         if (!profile?.related?.length) return direct;
 
-        const related = profile.related.flatMap(key => MEDIA_SPECIFIC_MOOD_GENRES[key]?.[mediaType] ?? []);
+        const related = profile.related.flatMap(key => {
+            const relatedProfile = MEDIA_SPECIFIC_MOOD_GENRES[key]?.[mediaType];
+            return relatedProfile ? [...relatedProfile.primary, ...relatedProfile.secondary] : [];
+        });
         return Array.from(new Set([...direct.slice(0, 3), ...related]));
     }
 
@@ -304,6 +597,10 @@ export class MoodsService {
                 return this.paginateResults(fallback, page, limit);
             }
 
+            if (dto.forceRefresh) {
+                await this.clearCachedRecommendations(dto);
+            }
+
             await this.saveRecommendations(fresh);
             return this.paginateResults(
                 this.selectVariedRecommendations(fresh, limit * page, dto.shuffle !== false),
@@ -363,6 +660,7 @@ export class MoodsService {
 
         const where: Prisma.RecommendationWhereInput = {
             moodId: dto.moodId,
+            algorithm: RECOMMENDATION_ALGORITHM,
             createdAt: { gte: windowStart },
             ...(dto.userId ? { userId: dto.userId } : {}),
             ...(dto.mediaType && dto.mediaType !== 'both'
@@ -391,6 +689,7 @@ export class MoodsService {
         const rows = await this.prisma.recommendation.findMany({
             where: {
                 moodId: mood.id,
+                algorithm: RECOMMENDATION_ALGORITHM,
                 createdAt: { gte: windowStart },
                 ...(dto.mediaType && dto.mediaType !== 'both'
                     ? { mediaType: dto.mediaType.toUpperCase() as MediaType } : {}),
@@ -411,22 +710,35 @@ export class MoodsService {
         return this.selectVariedRecommendations(mapped, dto.limit ?? 12, dto.shuffle !== false);
     }
 
+    private async clearCachedRecommendations(dto: GetRecommendationsDto): Promise<void> {
+        await this.prisma.recommendation.deleteMany({
+            where: {
+                moodId: dto.moodId,
+                algorithm: RECOMMENDATION_ALGORITHM,
+                ...(dto.userId ? { userId: dto.userId } : {}),
+                ...(dto.mediaType && dto.mediaType !== 'both'
+                    ? { mediaType: dto.mediaType.toUpperCase() as MediaType } : {}),
+            },
+        });
+    }
+
     // ---------------------------------------------------------------------------
     // Content fetching — three passes
     // ---------------------------------------------------------------------------
 
     private async fetchCandidates(mood: Mood, dto: GetRecommendationsDto): Promise<any[]> {
-        const keywords = (mood.keywords as string[] | null) ?? [];
+        const keywords = this.getMoodKeywords(mood);
         const minVote = dto.minRating ?? 0;
         const requestedMedia = dto.mediaType ?? 'both';
         const wantMovies = requestedMedia === 'both' || requestedMedia === 'movie';
         const wantTV = requestedMedia === 'both' || requestedMedia === 'tv';
+        const moodKey = this.getMoodKey(mood);
         const movieGenres = this.getMoodGenresForMedia(mood, 'movie');
         const tvGenres = this.getMoodGenresForMedia(mood, 'tv');
         const allContent: any[] = [];
 
         // Pass 1 — genre discover
-        const pages = Array.from({ length: DISCOVER_PAGES }, (_, i) => i + 1);
+        const pages = this.pickRandomPages(1, DISCOVER_PAGES + 8, DISCOVER_PAGES);
         await Promise.all(pages.flatMap(page => {
             const tasks: Promise<void>[] = [];
             if (wantMovies && movieGenres.length > 0) {
@@ -447,7 +759,7 @@ export class MoodsService {
         }));
 
         // Pass 2 — keyword search
-        const searchKeywords = keywords.slice(0, 3);
+        const searchKeywords = this.shuffleArray(keywords).slice(0, 5);
         if (searchKeywords.length > 0) {
             await Promise.all(searchKeywords.flatMap(kw => {
                 const tasks: Promise<void>[] = [];
@@ -471,9 +783,52 @@ export class MoodsService {
         }
 
         // Pass 3 — broad fallback
+        const configuredMoodKey = MOOD_CONFIG_ALIASES[moodKey] ?? moodKey;
+        const internationalMood = ['romantic', 'sad', 'excited', 'scared'].includes(configuredMoodKey);
+        if (internationalMood && searchKeywords.length > 0) {
+            const languages = ['ko-KR', 'ja-JP', 'zh-CN'];
+            await Promise.all(this.shuffleArray(searchKeywords).slice(0, 3).flatMap(kw =>
+                languages.flatMap(language => {
+                    const tasks: Promise<void>[] = [];
+                    if (wantMovies) {
+                        tasks.push(
+                            this.tmdbService.searchContent(kw, 'movie', 1, language)
+                                .then(r => { if (Array.isArray(r)) allContent.push(...r.filter(i => !minVote || (i.vote_average ?? 0) >= minVote).map((m: any) => ({ ...m, mediaType: 'movie', _source: 'international-keyword' }))); })
+                                .catch(e => this.logger.warn(`International movie "${kw}" ${language}: ${e?.message}`)),
+                        );
+                    }
+                    if (wantTV) {
+                        tasks.push(
+                            this.tmdbService.searchContent(kw, 'tv', 1, language)
+                                .then(r => { if (Array.isArray(r)) allContent.push(...r.filter(i => !minVote || (i.vote_average ?? 0) >= minVote).map((t: any) => ({ ...t, mediaType: 'tv', _source: 'international-keyword' }))); })
+                                .catch(e => this.logger.warn(`International TV "${kw}" ${language}: ${e?.message}`)),
+                        );
+                    }
+                    return tasks;
+                }),
+            ));
+        }
+
+        if (moodKey === 'romantic' && wantTV) {
+            const romanticTvSearches = ['romance', 'romantic drama', 'love story', 'relationship drama'];
+            await Promise.all(romanticTvSearches.map(kw =>
+                this.tmdbService.searchContent(kw, 'tv')
+                    .then(r => {
+                        if (Array.isArray(r)) {
+                            allContent.push(
+                                ...r
+                                    .filter(i => !minVote || (i.vote_average ?? 0) >= minVote)
+                                    .map((t: any) => ({ ...t, mediaType: 'tv', _source: 'romance-keyword' })),
+                            );
+                        }
+                    })
+                    .catch(e => this.logger.warn(`Romantic TV keyword "${kw}": ${e?.message}`)),
+            ));
+        }
+
         if (allContent.length < 60) {
             this.logger.debug(`Only ${allContent.length} candidates — broadening with related mood genres`);
-            const extraPages = [1, 2, 3, 4];
+            const extraPages = this.pickRandomPages(1, 10, 4);
             const relatedMovieGenres = wantMovies ? await this.getRelatedMoodGenres(mood, 'movie') : [];
             const relatedTvGenres = wantTV ? await this.getRelatedMoodGenres(mood, 'tv') : [];
             await Promise.all(extraPages.flatMap(page => {
@@ -617,20 +972,40 @@ export class MoodsService {
      */
     private scoreItem(item: any, mood: Mood): ScoredItem {
         const mediaType = item.mediaType === 'tv' ? 'tv' : 'movie';
-        const moodGenreSet = this.getScoringGenreSet(mood, mediaType);
+        const moodGenreProfile = this.getMoodGenreProfile(mood, mediaType);
+        const primaryGenreSet = new Set(moodGenreProfile.primary);
+        const secondaryGenreSet = new Set(moodGenreProfile.secondary);
+        const excludedGenreSet = new Set(moodGenreProfile.excluded);
         const itemGenreSet = new Set<number>(item.genre_ids ?? []);
         const moodValence = Number(mood.valence ?? 0);
         const moodArousal = Number(mood.arousal ?? 0);
-        const keywords = (mood.keywords as string[] | null) ?? [];
+        const keywords = this.getMoodKeywords(mood);
+        const moodKey = this.getMoodKey(mood);
+        const romanceTextScore = moodKey === 'romantic' ? this.getRomanceTextScore(item) : 0;
 
-        // 1. Genre similarity. Reward any direct overlap strongly, then add a
-        // small bonus when the item's lead genre matches the mood profile.
-        const intersection = [...itemGenreSet].filter(g => moodGenreSet.has(g)).length;
-        const coverage = moodGenreSet.size > 0 ? intersection / Math.min(moodGenreSet.size, 3) : 0;
-        const density = itemGenreSet.size > 0 ? intersection / itemGenreSet.size : 0;
+        // 1. Genre match. Primary genres define the mood. Secondary genres can
+        // support the match, while excluded genres strongly reduce confidence.
+        const primaryGenreMatches = [...itemGenreSet].filter(g => primaryGenreSet.has(g)).length;
+        const secondaryGenreMatches = [...itemGenreSet].filter(g => secondaryGenreSet.has(g)).length;
+        const excludedGenreMatches = [...itemGenreSet].filter(g => excludedGenreSet.has(g)).length;
         const primaryGenre = (item.genre_ids ?? [])[0] as number | undefined;
-        const primaryBonus = primaryGenre !== undefined && moodGenreSet.has(primaryGenre) ? 0.18 : 0;
-        const genreScore = Math.min(1, coverage * 0.62 + density * 0.38 + primaryBonus);
+        const primaryCoverage = primaryGenreSet.size > 0 ? primaryGenreMatches / Math.min(primaryGenreSet.size, 2) : 0;
+        const secondaryCoverage = secondaryGenreSet.size > 0 ? secondaryGenreMatches / Math.min(secondaryGenreSet.size, 3) : 0;
+        const genreDensity = itemGenreSet.size > 0
+            ? (primaryGenreMatches + secondaryGenreMatches * 0.45) / itemGenreSet.size
+            : 0;
+        const leadGenreBonus =
+            primaryGenre !== undefined && primaryGenreSet.has(primaryGenre)
+                ? 0.18
+                : primaryGenre !== undefined && secondaryGenreSet.has(primaryGenre)
+                    ? 0.06
+                    : 0;
+        const exclusionPenalty = Math.min(0.5, excludedGenreMatches * 0.28);
+        const romanceTextBoost = moodKey === 'romantic' && mediaType === 'tv' ? romanceTextScore * 0.26 : romanceTextScore * 0.12;
+        const genreScore = Math.max(
+            0,
+            Math.min(1, primaryCoverage * 0.68 + secondaryCoverage * 0.20 + genreDensity * 0.12 + leadGenreBonus + romanceTextBoost - exclusionPenalty),
+        );
 
         // 2. Valence alignment
         const itemValenceVals = [...itemGenreSet]
@@ -670,9 +1045,9 @@ export class MoodsService {
             recencyScore = Math.pow(recencyScore, 0.85);
         }
 
-        // 7. Keyword match
-        const searchText = `${item.title ?? item.name ?? ''} ${item.overview ?? ''}`.toLowerCase();
-        const keywordScore = keywords.some(kw => searchText.includes(kw.toLowerCase())) ? 1 : 0;
+        // 7. Keyword match from title, overview, tagline, metadata, and source
+        // language/country hints.
+        const keywordScore = this.getKeywordMatchScore(item, keywords);
 
         // 8. Language preference (soft boost)
         const lang = (item.original_language ?? '').toLowerCase();
@@ -688,7 +1063,15 @@ export class MoodsService {
             languageScore = 0.4;
         }
 
-        const sourceScore = item._source === 'discover' ? 1 : item._source === 'related' ? 0.82 : 0.72;
+        const sourceScore = item._source === 'discover'
+            ? 1
+            : item._source === 'romance-keyword'
+                ? 0.9
+                : item._source === 'international-keyword'
+                    ? 0.88
+                    : item._source === 'related'
+                        ? 0.82
+                        : 0.72;
         const raw =
             W_GENRE * genreScore +
             W_VALENCE * valenceScore +
@@ -706,6 +1089,10 @@ export class MoodsService {
             score,
             breakdown: {
                 genreScore: parseFloat(genreScore.toFixed(3)),
+                primaryGenreMatches,
+                secondaryGenreMatches,
+                excludedGenreMatches,
+                romanceTextScore: parseFloat(romanceTextScore.toFixed(3)),
                 valenceScore: parseFloat(valenceScore.toFixed(3)),
                 arousalScore: parseFloat(arousalScore.toFixed(3)),
                 popularityScore: parseFloat(popularityScore.toFixed(3)),
@@ -716,6 +1103,31 @@ export class MoodsService {
                 sourceScore: parseFloat(sourceScore.toFixed(3)),
             },
         };
+    }
+
+    private hasAcceptableMoodGenreFit(scored: ScoredItem, mood: Mood): boolean {
+        const moodKey = this.getMoodKey(mood);
+        const mediaType = scored.raw.mediaType === 'tv' ? 'tv' : 'movie';
+        const { genreScore, primaryGenreMatches, secondaryGenreMatches, excludedGenreMatches, romanceTextScore, keywordScore } = scored.breakdown;
+
+        if (excludedGenreMatches >= 2) return false;
+        if (excludedGenreMatches > 0 && primaryGenreMatches === 0) return false;
+
+        if (moodKey === 'romantic') {
+            if (mediaType === 'tv') {
+                return excludedGenreMatches === 0
+                    && romanceTextScore >= 0.5
+                    && (genreScore >= 0.28 || secondaryGenreMatches > 0);
+            }
+
+            return primaryGenreMatches > 0 && excludedGenreMatches === 0 && genreScore >= 0.42;
+        }
+
+        if (mediaType === 'tv' && keywordScore >= 0.67 && excludedGenreMatches === 0 && genreScore >= 0.26) {
+            return true;
+        }
+
+        return primaryGenreMatches > 0 || (secondaryGenreMatches > 0 && genreScore >= 0.32);
     }
 
     // ---------------------------------------------------------------------------
@@ -744,17 +1156,22 @@ export class MoodsService {
 
         const scored = filtered
             .map(item => this.scoreItem(item, mood))
+            .filter(item => this.hasAcceptableMoodGenreFit(item, mood))
             .sort((a, b) => b.score - a.score);
+
+        if (scored.length === 0) {
+            this.logger.warn(`No candidates passed mood genre fit for "${mood.name}"`);
+            return [];
+        }
 
         const requestedLimit = dto.limit ?? 12;
         const limit = Math.min(50, Math.max(requestedLimit * 3, 24));
         const strong = scored.filter(item => item.score >= MIN_STRONG_SCORE);
         const rankedPool = strong.length >= Math.min(limit, 8) ? strong : scored;
 
-        // Keep ranking deterministic by score, then enforce a light genre cap so
-        // one broad genre cannot swallow the entire set.
-        const topPool = rankedPool.slice(0, limit * 4);
-        const diverse = this.applyDiversityCap(topPool, limit, Math.max(GENRE_DIVERSITY_CAP, Math.ceil(limit / 4)));
+        const topPool = rankedPool.slice(0, limit * 5);
+        const randomizedPool = this.randomizeWithinScoreBands(topPool, 0.05);
+        const diverse = this.applyDiversityCap(randomizedPool, limit, Math.max(GENRE_DIVERSITY_CAP, Math.ceil(limit / 4)));
 
         this.logger.debug(
             `Final: ${diverse.length} items selected for mood "${mood.name}" (scores ${diverse[0]?.score ?? 0}–${diverse[diverse.length - 1]?.score ?? 0})`,
@@ -793,8 +1210,8 @@ export class MoodsService {
             posterPath: item.poster_path ?? null,
             backdropPath: item.backdrop_path ?? null,
             score: new Prisma.Decimal(scored.score),
-            reason: this.buildReason(mood, scored.breakdown, genreNames, item),
-            algorithm: 'mood-scored-v3',
+            reason: this.buildReason(mood, scored.breakdown, itemGenres, genreMap),
+            algorithm: RECOMMENDATION_ALGORITHM,
             metadata: {
                 scoreBreakdown: scored.breakdown,
                 source: item._source ?? 'unknown',
@@ -823,47 +1240,44 @@ export class MoodsService {
     private buildReason(
         mood: Mood,
         breakdown: ScoreBreakdown,
-        genreNames: string[],
-        item: any,
+        genreIds: number[],
+        genreMap: Map<number, string>,
     ): string {
         const moodName = mood.name.toLowerCase();
-        const moodValence = Number(mood.valence ?? 0);
-        const moodArousal = Number(mood.arousal ?? 0);
-        const keywords = (mood.keywords as string[] | null) ?? [];
-        const { genreScore, valenceScore, arousalScore, popularityScore, recencyScore, keywordScore } = breakdown;
+        const mediaType = genreIds.some(id => id === 10766 || id === 10759 || id === 10765 || id === 10762 || id === 10764)
+            ? 'tv'
+            : 'movie';
+        const profile = this.getMoodGenreProfile(mood, mediaType);
+        const genreSet = new Set(genreIds);
+        const primaryNames = profile.primary
+            .filter(id => genreSet.has(id))
+            .map(id => genreMap.get(id))
+            .filter((name): name is string => Boolean(name));
+        const secondaryNames = profile.secondary
+            .filter(id => genreSet.has(id))
+            .map(id => genreMap.get(id))
+            .filter((name): name is string => Boolean(name));
+        const parts: string[] = [];
 
-        const signals: string[] = [];
-
-        if (genreScore >= 0.35 && genreNames.length > 0)
-            signals.push(`its ${genreNames.slice(0, 2).join(' & ')} themes`);
-
-        if (signals.length < 2 && valenceScore >= 0.80) {
-            if (moodValence >= 0.5) signals.push('uplifting tone');
-            else if (moodValence <= -0.3) signals.push('dark atmosphere');
-            else signals.push('balanced emotional tone');
+        if (primaryNames.length > 0) {
+            parts.push(`${primaryNames.slice(0, 2).join(' and ')} as the main match`);
         }
 
-        if (signals.length < 2 && arousalScore >= 0.80) {
-            if (moodArousal >= 0.7) signals.push('fast pace');
-            else if (moodArousal <= -0.2) signals.push('relaxed rhythm');
-            else signals.push('steady tension');
+        if (secondaryNames.length > 0) {
+            parts.push(`${secondaryNames.slice(0, 2).join(' and ')} as supporting flavor`);
         }
 
-        if (signals.length < 2 && popularityScore >= 0.70)
-            signals.push('widely popular');
-
-        if (signals.length < 2 && recencyScore >= 0.75)
-            signals.push('recently released');
-
-        if (signals.length < 2 && keywordScore === 1) {
-            const searchText = `${item.title ?? item.name ?? ''} ${item.overview ?? ''}`.toLowerCase();
-            const hitKw = keywords.find(kw => searchText.includes(kw.toLowerCase()));
-            if (hitKw) signals.push(`"${hitKw}" theme`);
+        if (this.getMoodKey(mood) === 'romantic' && breakdown.romanceTextScore >= 0.5) {
+            parts.push('romantic story signals');
         }
 
-        return signals.length === 0
-            ? `Matched your ${moodName} mood`
-            : `Picked for ${moodName} — ${signals.join(', ')}`;
+        if (parts.length === 0 && breakdown.genreScore >= 0.32) {
+            parts.push('compatible genre signals');
+        }
+
+        return parts.length > 0
+            ? `Matches your ${moodName} mood with ${parts.join(', ')}.`
+            : `Matches your ${moodName} mood with a strong overall fit.`;
     }
 
     // ---------------------------------------------------------------------------
@@ -977,36 +1391,28 @@ export class MoodsService {
         };
     }
 
-    private selectVariedRecommendations<T extends { score?: any; tmdbId?: number; mediaType?: MediaType | string }>(
+    private selectVariedRecommendations<T extends { score?: any; tmdbId?: number; id?: number | string; mediaType?: MediaType | string }>(
         recommendations: T[],
         limit: number,
         shuffle: boolean,
     ): T[] {
-        const sorted = [...recommendations]
-            .sort((a, b) => this.getRecommendationScore(b) - this.getRecommendationScore(a));
+        const sorted = this.dedupeByContent(
+            [...recommendations].sort((a, b) => this.getRecommendationScore(b) - this.getRecommendationScore(a)),
+        );
 
         if (!shuffle || sorted.length <= limit) return sorted.slice(0, limit);
 
         const selected: T[] = [];
         const seen = new Set<string>();
         const add = (item: T) => {
-            const key = `${item.mediaType ?? 'unknown'}:${item.tmdbId ?? (item as any).id ?? 'missing'}`;
+            const key = this.getContentKey(item);
             if (seen.has(key)) return;
             seen.add(key);
             selected.push(item);
         };
 
-        const anchorCount = Math.min(1, limit);
-        sorted.slice(0, anchorCount).forEach(add);
-
-        const candidatePool = sorted.slice(anchorCount, Math.min(sorted.length, limit * 6));
-        const jittered = candidatePool
-            .map(item => ({
-                item,
-                rank: this.getRecommendationScore(item) + Math.random() * 0.10,
-            }))
-            .sort((a, b) => b.rank - a.rank)
-            .map(entry => entry.item);
+        const candidatePool = sorted.slice(0, Math.min(sorted.length, limit * 8));
+        const jittered = this.randomizeWithinScoreBands(candidatePool, 0.05);
 
         for (const item of jittered) {
             add(item);
@@ -1023,12 +1429,48 @@ export class MoodsService {
         return selected.slice(0, limit);
     }
 
+    private dedupeByContent<T extends { tmdbId?: number; id?: number | string; mediaType?: MediaType | string }>(items: T[]): T[] {
+        const seen = new Set<string>();
+        return items.filter(item => {
+            const key = this.getContentKey(item);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }
+
+    private getContentKey(item: { tmdbId?: number; id?: number | string; mediaType?: MediaType | string }): string {
+        const rawMedia = String(item.mediaType ?? 'unknown').toLowerCase();
+        const media = rawMedia === 'movie' || rawMedia === 'movies'
+            ? 'movie'
+            : rawMedia === 'tv' || rawMedia === 'series'
+                ? 'tv'
+                : rawMedia;
+        return `${media}:${item.tmdbId ?? item.id ?? 'missing'}`;
+    }
+
     private getRecommendationScore(item: { score?: any }): number {
         const score = item.score;
         if (typeof score === 'number') return score;
         if (typeof score === 'string') return Number(score);
         if (score && typeof score.toNumber === 'function') return score.toNumber();
         return Number(score ?? 0);
+    }
+
+    private randomizeWithinScoreBands<T extends { score?: any }>(items: T[], bandSize = 0.05): T[] {
+        const bands = new Map<number, T[]>();
+
+        for (const item of items) {
+            const score = this.getRecommendationScore(item);
+            const band = Math.floor(score / bandSize);
+            const current = bands.get(band) ?? [];
+            current.push(item);
+            bands.set(band, current);
+        }
+
+        return [...bands.entries()]
+            .sort(([a], [b]) => b - a)
+            .flatMap(([, bandItems]) => this.shuffleArray(bandItems));
     }
 
     private removeDuplicates<T>(array: T[], key: keyof T): T[] {
@@ -1042,13 +1484,7 @@ export class MoodsService {
     }
 
     private removeDuplicateContent<T extends { id?: number; mediaType?: string }>(array: T[]): T[] {
-        const seen = new Set<string>();
-        return array.filter(item => {
-            const key = `${item.mediaType ?? 'unknown'}:${item.id ?? 'missing'}`;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
+        return this.dedupeByContent(array);
     }
 
     private shuffleArray<T>(array: T[]): T[] {

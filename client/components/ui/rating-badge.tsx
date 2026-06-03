@@ -34,8 +34,9 @@ export function RatingBadge({
 }: RatingBadgeProps) {
     if (rating === null || rating === undefined) return null;
 
-    const isNew = rating === 0;
-    const displayRating = rating === 0 ? null : rating.toFixed(1);
+    const numericRating = Number(rating);
+    const isNew = numericRating === 0;
+    const displayRating = isNew ? null : numericRating.toFixed(1);
 
     // ===== NEW STATE =====
     if (isNew) {
@@ -61,7 +62,7 @@ export function RatingBadge({
             ? "px-2 py-0.5 text-[11px] gap-1"
             : "px-2.5 py-1 text-xs gap-1.5";
 
-    const colorClasses = getRatingColor(rating, variant);
+    const colorClasses = getRatingColor(numericRating, variant);
 
     return (
         <div

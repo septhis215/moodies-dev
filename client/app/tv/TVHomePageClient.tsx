@@ -1212,7 +1212,7 @@ export default function TVHomePageClient({
         )}
         {moods && moods.length > 0 && (
           <div className="max-w-7xl mx-auto">
-            <MoodRecommendationsSection mediaType="tv" />
+            <MoodRecommendationsSection mediaType="tv" initialMoods={moods} />
           </div>
         )}
       </div>

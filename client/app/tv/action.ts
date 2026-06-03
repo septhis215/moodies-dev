@@ -32,6 +32,12 @@ export async function getMoodRecommendations(
     mediaType: string = 'both',
     forceRefresh: boolean = false,
     shuffle: boolean = true,
+    options: {
+        userId?: string;
+        minRating?: number;
+        excludeViewed?: boolean;
+        page?: number;
+    } = {},
 ) {
     try {
         const params = new URLSearchParams({
@@ -40,7 +46,14 @@ export async function getMoodRecommendations(
             mediaType,
             forceRefresh: forceRefresh.toString(),
             shuffle: shuffle.toString(),
+            page: String(options.page ?? 1),
+            minRating: String(options.minRating ?? 5.8),
+            excludeViewed: String(options.excludeViewed ?? true),
         });
+
+        if (options.userId) {
+            params.set('userId', options.userId);
+        }
 
         const url = `${NEST_API_URL}/moods/recommendations?${params}`;
 
