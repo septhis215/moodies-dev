@@ -55,30 +55,42 @@ export class ReviewService {
       );
     }
 
-    const review = await this.prisma.review.create({
-      data: {
-        userId,
-        tmdbId: dto.tmdbId,
-        mediaType: dto.mediaType,
-        rating: dto.rating,
-        content: dto.content,
-        moodEmojis: dto.moodEmojis,
-        status: decision.status,
-        affectsRating: decision.affectsRating,
-        profanityHit: profanityResult.hit,
-        toxicityScore: toxicity.score,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            name: true,
-            avatarUrl: true,
+    // Create the review and bump both counters (user + content) atomically.
+    const [review] = await this.prisma.$transaction([
+      this.prisma.review.create({
+        data: {
+          userId,
+          tmdbId: dto.tmdbId,
+          mediaType: dto.mediaType,
+          rating: dto.rating,
+          content: dto.content,
+          moodEmojis: dto.moodEmojis,
+          status: decision.status,
+          affectsRating: decision.affectsRating,
+          profanityHit: profanityResult.hit,
+          toxicityScore: toxicity.score,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              avatarUrl: true,
+            },
           },
         },
-      },
-    });
+      }),
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { reviewCount: { increment: 1 } },
+      }),
+      this.prisma.mediaStat.upsert({
+        where: { tmdbId_mediaType: { tmdbId: dto.tmdbId, mediaType: dto.mediaType } },
+        create: { tmdbId: dto.tmdbId, mediaType: dto.mediaType, reviewCount: 1 },
+        update: { reviewCount: { increment: 1 } },
+      }),
+    ]);
 
     if (decision.warnUser) {
       await this.userService.applyReviewWarning(userId);

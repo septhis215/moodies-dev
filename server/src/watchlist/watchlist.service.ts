@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { MediaType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 type Kind = 'movie' | 'series';
@@ -44,11 +45,22 @@ export class WatchlistService {
     const existed = arr.includes(tmdbId);
     const updatedArr = existed ? arr.filter(id => id !== tmdbId) : [...arr, tmdbId];
 
-    // update MUST target a unique field -> use the row id
-    const updated = await this.prisma.watchlist.update({
-      where: { id: wl.id },
-      data: { [field]: updatedArr } as any,
-    });
+    const mediaType = type === 'movie' ? MediaType.MOVIE : MediaType.TV;
+    const numericId = Number(tmdbId);
+
+    // update MUST target a unique field -> use the row id.
+    // Adjust the content's saved counter in the same transaction.
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.watchlist.update({
+        where: { id: wl.id },
+        data: { [field]: updatedArr } as any,
+      }),
+      this.prisma.mediaStat.upsert({
+        where: { tmdbId_mediaType: { tmdbId: numericId, mediaType } },
+        create: { tmdbId: numericId, mediaType, savedCount: existed ? 0 : 1 },
+        update: { savedCount: { increment: existed ? -1 : 1 } },
+      }),
+    ]);
 
     return {
       removed: existed,
@@ -60,9 +72,29 @@ export class WatchlistService {
   /** Optional clear-all */
   async clear(userId: string) {
     const wl = await this.ensureWatchlist(userId);
-    return this.prisma.watchlist.update({
-      where: { id: wl.id },
-      data: { movieId: [], seriesId: [] },
+
+    const movieIds = (wl.movieId ?? []).map(Number).filter((n) => !Number.isNaN(n));
+    const seriesIds = (wl.seriesId ?? []).map(Number).filter((n) => !Number.isNaN(n));
+
+    // Decrement saved counters only for this user's saved items (bounded list,
+    // not a full-table scan), then clear the arrays — all in one transaction.
+    return this.prisma.$transaction(async (tx) => {
+      if (movieIds.length) {
+        await tx.mediaStat.updateMany({
+          where: { mediaType: MediaType.MOVIE, tmdbId: { in: movieIds } },
+          data: { savedCount: { decrement: 1 } },
+        });
+      }
+      if (seriesIds.length) {
+        await tx.mediaStat.updateMany({
+          where: { mediaType: MediaType.TV, tmdbId: { in: seriesIds } },
+          data: { savedCount: { decrement: 1 } },
+        });
+      }
+      return tx.watchlist.update({
+        where: { id: wl.id },
+        data: { movieId: [], seriesId: [] },
+      });
     });
   }
 
@@ -76,23 +108,33 @@ export class WatchlistService {
     const wl = await this.ensureWatchlist(userId);
 
     const idStr = String(tmdbId);
+    const field: Field = type === 'movie' ? 'movieId' : 'seriesId';
+    const arr = (wl as any)[field] as string[];
 
-    if (type === 'movie') {
-      const updated = (wl.movieId ?? []).filter((x) => x !== idStr);
-      // IMPORTANT: update by unique primary key (id), not userId
-      await this.prisma.watchlist.update({
-        where: { id: wl.id },
-        data: { movieId: updated },
-      });
-      return { message: `Movie ${tmdbId} removed from watchlist` };
-    } else {
-      const updated = (wl.seriesId ?? []).filter((x) => x !== idStr);
-      await this.prisma.watchlist.update({
-        where: { id: wl.id },
-        data: { seriesId: updated },
-      });
-      return { message: `Series ${tmdbId} removed from watchlist` };
+    // Nothing to remove — skip so we never decrement a counter we didn't add to.
+    if (!arr.includes(idStr)) {
+      return { message: `${type === 'movie' ? 'Movie' : 'Series'} ${tmdbId} was not in watchlist` };
     }
+
+    const mediaType = type === 'movie' ? MediaType.MOVIE : MediaType.TV;
+    const updated = arr.filter((x) => x !== idStr);
+
+    // IMPORTANT: update by unique primary key (id), not userId
+    await this.prisma.$transaction([
+      this.prisma.watchlist.update({
+        where: { id: wl.id },
+        data: { [field]: updated } as any,
+      }),
+      this.prisma.mediaStat.upsert({
+        where: { tmdbId_mediaType: { tmdbId, mediaType } },
+        create: { tmdbId, mediaType, savedCount: 0 },
+        update: { savedCount: { decrement: 1 } },
+      }),
+    ]);
+
+    return {
+      message: `${type === 'movie' ? 'Movie' : 'Series'} ${tmdbId} removed from watchlist`,
+    };
   }
 
 
