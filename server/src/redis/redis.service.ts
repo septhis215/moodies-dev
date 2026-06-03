@@ -60,18 +60,85 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
+    // First line of defence: collapse concurrent misses within THIS process.
     const pending = this.inFlight.get(key);
     if (pending) return pending as Promise<T>;
 
-    const promise = (async () => {
-      const fresh = await fetchFn();
-      if (shouldCache(fresh)) {
-        await this.client.set(key, JSON.stringify(fresh), { EX: ttlSeconds });
-      }
-      return fresh;
-    })().finally(() => this.inFlight.delete(key));
+    const promise = this.computeWithLock(key, ttlSeconds, fetchFn, shouldCache).finally(
+      () => this.inFlight.delete(key),
+    );
 
     this.inFlight.set(key, promise);
     return promise;
   }
+
+  // Second line of defence: a short Redis lock so that across MULTIPLE instances
+  // only one fetches a cold key; the rest briefly wait for it to be populated.
+  // Everything here fails open — any Redis hiccup degrades to "just fetch", which
+  // is exactly the pre-lock behaviour, so reads can never be broken by the lock.
+  private async computeWithLock<T>(
+    key: string,
+    ttlSeconds: number,
+    fetchFn: () => Promise<T>,
+    shouldCache: (value: T) => boolean,
+  ): Promise<T> {
+    const lockKey = `lock:${key}`;
+    let haveLock = false;
+
+    try {
+      const res = await this.client.set(lockKey, '1', { NX: true, PX: LOCK_TTL_MS });
+      haveLock = res === 'OK';
+    } catch {
+      // Couldn't reach the lock — act as the holder and just fetch.
+      haveLock = true;
+    }
+
+    if (!haveLock) {
+      // Another instance is fetching — wait briefly for the cache to fill.
+      const populated = await this.waitForKey<T>(key);
+      if (populated !== undefined) return populated;
+      // Timed out waiting — fall through and fetch ourselves rather than block.
+    }
+
+    try {
+      const fresh = await fetchFn();
+      if (shouldCache(fresh)) {
+        try {
+          await this.client.set(key, JSON.stringify(fresh), { EX: ttlSeconds });
+        } catch {
+          // Cache write failed — still return the fresh value.
+        }
+      }
+      return fresh;
+    } finally {
+      if (haveLock) {
+        try {
+          await this.client.del(lockKey);
+        } catch {
+          // Lock will expire via PX anyway.
+        }
+      }
+    }
+  }
+
+  private async waitForKey<T>(key: string): Promise<T | undefined> {
+    const deadline = Date.now() + LOCK_WAIT_MS;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, LOCK_POLL_MS));
+      try {
+        const cached = await this.client.get(key);
+        if (cached !== null && cached !== undefined) {
+          return JSON.parse(cached) as T;
+        }
+      } catch {
+        return undefined; // give up waiting; caller will fetch
+      }
+    }
+    return undefined;
+  }
 }
+
+// Distributed single-flight tuning (milliseconds).
+const LOCK_TTL_MS = 10000; // max time one fetcher holds the lock before it auto-expires
+const LOCK_WAIT_MS = 3000; // max time a waiter polls for the populated cache
+const LOCK_POLL_MS = 100; // gap between polls while waiting

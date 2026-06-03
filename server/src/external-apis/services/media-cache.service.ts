@@ -35,6 +35,7 @@ export interface ReadThroughOptions<T> {
 @Injectable()
 export class MediaCacheService {
     private readonly logger = new Logger(MediaCacheService.name);
+    private readonly inFlight = new Map<string, Promise<unknown>>();
 
     constructor(private readonly redis: RedisService) {}
 
@@ -47,6 +48,19 @@ export class MediaCacheService {
             this.logger.warn(`Redis read failed for ${opts.redisKey}: ${(err as Error).message}`);
         }
 
+        // Collapse concurrent identical misses within this process so the L2 read
+        // and (expensive) L3 fetch run once, not once per caller. Cross-instance
+        // dedup is bounded by L2: the first instance's fetch is written to Postgres,
+        // which subsequent instances then read instead of refetching.
+        const pending = this.inFlight.get(opts.redisKey);
+        if (pending) return pending as Promise<T>;
+
+        const promise = this.loadAndStore(opts).finally(() => this.inFlight.delete(opts.redisKey));
+        this.inFlight.set(opts.redisKey, promise);
+        return promise;
+    }
+
+    private async loadAndStore<T>(opts: ReadThroughOptions<T>): Promise<T> {
         // ── L2: Postgres/Supabase ──────────────────────────────────
         try {
             const row = await opts.find();
