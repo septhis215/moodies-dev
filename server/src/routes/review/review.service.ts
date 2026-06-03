@@ -345,6 +345,84 @@ export class ReviewService {
     };
   }
 
+  async getPublicUserProfile(userIdOrUsername: string, limit = 80) {
+    const take = Math.max(1, Math.min(Number(limit) || 80, 120));
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ id: userIdOrUsername }, { username: userIdOrUsername }],
+      },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        avatarUrl: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User profile not found');
+    }
+
+    const publicWhere = {
+      userId: user.id,
+      status: { in: [ReviewStatus.PUBLISHED, ReviewStatus.FLAGGED] },
+    };
+
+    const [reviews, totalReviews, ratingAggregate, movieReviews, tvReviews] =
+      await Promise.all([
+        this.prisma.review.findMany({
+          where: publicWhere,
+          take,
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.review.count({ where: publicWhere }),
+        this.prisma.review.aggregate({
+          where: {
+            ...publicWhere,
+            status: ReviewStatus.PUBLISHED,
+            affectsRating: true,
+          },
+          _avg: { rating: true },
+        }),
+        this.prisma.review.count({
+          where: { ...publicWhere, mediaType: 'MOVIE' },
+        }),
+        this.prisma.review.count({
+          where: { ...publicWhere, mediaType: 'TV' },
+        }),
+      ]);
+
+    const moodCounts = reviews
+      .flatMap((review) => review.moodEmojis)
+      .reduce(
+        (acc, mood) => {
+          acc[mood] = (acc[mood] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+    const topMoods = Object.entries(moodCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([emoji, count]) => ({ emoji, count }));
+
+    return {
+      user,
+      stats: {
+        totalReviews,
+        movieReviews,
+        tvReviews,
+        averageRating: ratingAggregate._avg.rating
+          ? Math.round(ratingAggregate._avg.rating * 10) / 10
+          : 0,
+        topMoods,
+      },
+      reviews: reviews.map((review) => new ReviewEntity(review).toPublic()),
+    };
+  }
+
   async getMyReviews(userId: string, page = 1, limit = 200) {
     const skip = (page - 1) * limit;
 

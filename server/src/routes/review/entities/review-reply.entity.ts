@@ -26,6 +26,7 @@ export class ReviewReplyEntity implements PrismaReviewReply {
       createdAt: this.createdAt,
       user: this.user
         ? {
+            id: this.user.id,
             username: this.user.username,
             name: this.user.name,
             avatarUrl: this.user.avatarUrl,

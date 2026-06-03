@@ -42,6 +42,14 @@ export class ReviewController {
     return this.reviewsService.getReviews(query);
   }
 
+  @Get('users/:userId/profile')
+  getPublicUserProfile(
+    @Param('userId') userId: string,
+    @Query('limit') limit?: number,
+  ) {
+    return this.reviewsService.getPublicUserProfile(userId, limit);
+  }
+
   @Get('media/:mediaType/:tmdbId')
   getMediaReviews(
     @Param('mediaType') mediaType: string,

@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
 import Link from "next/link";
 import { Star, PenSquare, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,8 +13,10 @@ import { sGet } from "@/utils/secureStorage";
 
 type Review = {
   id: string;
+  userId?: string;
   author: string;
   author_details: {
+    id?: string;
     name?: string;
     username?: string;
     avatar_path?: string;
@@ -26,6 +27,28 @@ type Review = {
   updated_at: string;
   url: string;
   moodEmojis?: string[];
+};
+
+type RawReview = Partial<Review> & {
+  id?: string;
+  userId?: string;
+  user?: {
+    id?: string;
+    username?: string;
+    name?: string | null;
+    avatarUrl?: string | null;
+  };
+  rating?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  moodEmojis?: string[];
+};
+
+type SortOption = "latest" | "highest" | "popularity";
+
+type ReviewFormUser = {
+  username?: string | null;
+  name?: string | null;
 };
 
 interface ReviewsSectionProps {
@@ -41,25 +64,27 @@ export default function ReviewsSection({
 }: ReviewsSectionProps) {
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
-  const reviewsArray: Review[] = Array.isArray(reviews)
-    ? reviews.map((r: any) => ({
+  const reviewsArray: Review[] = useMemo(() => Array.isArray(reviews)
+    ? reviews.map((r: RawReview) => ({
       id: r.id || `review-${r.createdAt}`,
+      userId: r.user?.id || r.userId,
       author: r.user?.name || r.user?.username || "Anonymous",
       author_details: {
+        id: r.user?.id || r.userId,
         username: r.user?.username,
         name: r.user?.name || r.user?.username,
         avatar_path: r.user?.avatarUrl,
         rating: r.rating,
       },
-      content: r.content,
-      created_at: r.createdAt,
-      updated_at: r.updatedAt,
+      content: r.content ?? "",
+      created_at: r.createdAt ?? new Date().toISOString(),
+      updated_at: r.updatedAt ?? r.createdAt ?? new Date().toISOString(),
       url: "",
       moodEmojis: r.moodEmojis || [],
     }))
-    : [];
+    : [], [reviews]);
 
-  const [sortBy, setSortBy] = useState<"latest" | "highest" | "popularity">("latest");
+  const [sortBy, setSortBy] = useState<SortOption>("latest");
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   function popularityProxy(r: Review) {
@@ -102,7 +127,8 @@ export default function ReviewsSection({
   const toggleExpand = (id: string) => {
     setExpandedReviews((prev) => {
       const s = new Set(prev);
-      s.has(id) ? s.delete(id) : s.add(id);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
       return s;
     });
   };
@@ -154,7 +180,7 @@ export default function ReviewsSection({
 
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
               className="md:hidden bg-white/[0.07] text-white rounded-lg px-3 py-2 text-sm border border-white/[0.10] outline-none cursor-pointer"
             >
               <option value="latest">Latest</option>
@@ -207,6 +233,9 @@ export default function ReviewsSection({
                 const isExpanded = expandedReviews.has(r.id);
                 const preview = r.content.slice(0, 150);
                 const needsTruncation = r.content.length > 150;
+                const profileHref = r.userId
+                  ? `/profile/${encodeURIComponent(r.userId)}`
+                  : undefined;
                 return (
                   <motion.div
                     key={r.id}
@@ -230,11 +259,20 @@ export default function ReviewsSection({
                     </svg>
 
                     <div className="flex items-center gap-3 min-w-0">
-                      <AvatarBlock review={r} />
+                      <AvatarBlock review={r} href={profileHref} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">
-                          {r.author}
-                        </p>
+                        {profileHref ? (
+                          <Link
+                            href={profileHref}
+                            className="block text-sm font-semibold text-white truncate transition-colors hover:text-[#ff8a78]"
+                          >
+                            {r.author}
+                          </Link>
+                        ) : (
+                          <p className="text-sm font-semibold text-white truncate">
+                            {r.author}
+                          </p>
+                        )}
                         <p className="text-[11px] text-white/40">
                           {new Date(r.created_at).toLocaleDateString()}
                         </p>
@@ -464,7 +502,7 @@ function ReviewForm({
   contentId?: string;
   contentType?: "movie" | "tv";
   onSuccess?: () => void;
-  user?: any;
+  user?: ReviewFormUser;
 }) {
   const [content, setContent] = useState("");
   const [rating, setRating] = useState<number | null>(null);
@@ -711,7 +749,7 @@ function RatingArc({ rating }: { rating: number }) {
   );
 }
 
-function AvatarBlock({ review }: { review: Review }) {
+function AvatarBlock({ review, href }: { review: Review; href?: string }) {
   const size = 40;
   const avatarSrc = (() => {
     const av = review.author_details?.avatar_path;
@@ -726,10 +764,10 @@ function AvatarBlock({ review }: { review: Review }) {
     .map((s) => s[0]?.toUpperCase() ?? "")
     .slice(0, 2)
     .join("");
-  return (
+  const avatar = (
     <div
       style={{ width: size, height: size, minWidth: size }}
-      className="rounded-full overflow-hidden bg-white/[0.10] flex items-center justify-center ring-1 ring-white/[0.15] flex-shrink-0"
+      className="rounded-full overflow-hidden bg-white/[0.10] flex items-center justify-center ring-1 ring-white/[0.15] flex-shrink-0 transition-all group-hover:ring-[#e94f37]/70"
     >
       {avatarSrc ? (
         <img
@@ -744,5 +782,17 @@ function AvatarBlock({ review }: { review: Review }) {
         <span className="text-white/70 font-semibold text-xs">{initials}</span>
       )}
     </div>
+  );
+
+  if (!href) return avatar;
+
+  return (
+    <Link
+      href={href}
+      aria-label={`View ${review.author}'s profile`}
+      className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]"
+    >
+      {avatar}
+    </Link>
   );
 }

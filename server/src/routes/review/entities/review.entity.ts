@@ -48,6 +48,7 @@ export class ReviewEntity implements PrismaReview {
       ...rest,
       user: user
         ? {
+            id: user.id,
             username: user.username,
             name: user.name,
             avatarUrl: user.avatarUrl,
