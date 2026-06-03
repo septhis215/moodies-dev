@@ -31,8 +31,10 @@ type ReplyFormState = { reviewId: string; prefill: string } | null;
 
 type Review = {
   id: string;
+  userId?: string;
   author: string;
   author_details: {
+    id?: string;
     name?: string;
     username?: string;
     avatar_path?: string;
@@ -508,14 +510,30 @@ export default function AllReviews({
                     <div className="p-5 sm:p-6">
                       {/* Review header */}
                       <div className="flex items-start gap-3 sm:gap-4 mb-4">
-                        <AvatarBlock review={review} />
+                        <AvatarBlock
+                          review={review}
+                          href={
+                            review.userId
+                              ? `/profile/${encodeURIComponent(review.userId)}`
+                              : undefined
+                          }
+                        />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm font-semibold text-white truncate">
-                                  {review.author}
-                                </span>
+                                {review.userId ? (
+                                  <Link
+                                    href={`/profile/${encodeURIComponent(review.userId)}`}
+                                    className="text-sm font-semibold text-white truncate transition-colors hover:text-[#ff8a78]"
+                                  >
+                                    {review.author}
+                                  </Link>
+                                ) : (
+                                  <span className="text-sm font-semibold text-white truncate">
+                                    {review.author}
+                                  </span>
+                                )}
                                 {review.moodEmojis &&
                                   review.moodEmojis.length > 0 && (
                                     <span
@@ -1144,7 +1162,7 @@ function RatingArc({
   );
 }
 
-function AvatarBlock({ review }: { review: Review }) {
+function AvatarBlock({ review, href }: { review: Review; href?: string }) {
   const size = 44;
   const avatarSrc = (() => {
     const av = review.author_details?.avatar_path;
@@ -1163,10 +1181,10 @@ function AvatarBlock({ review }: { review: Review }) {
     .map((s) => s[0]?.toUpperCase() ?? "")
     .slice(0, 2)
     .join("");
-  return (
+  const avatar = (
     <div
       style={{ width: size, height: size, minWidth: size }}
-      className="rounded-full overflow-hidden bg-white/[0.08] border border-white/[0.1] flex items-center justify-center flex-shrink-0"
+      className="rounded-full overflow-hidden bg-white/[0.08] border border-white/[0.1] flex items-center justify-center flex-shrink-0 transition-colors group-hover:border-[#e94f37]/70"
     >
       {avatarSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -1182,5 +1200,17 @@ function AvatarBlock({ review }: { review: Review }) {
         <span className="text-white/50 font-semibold text-sm">{initials}</span>
       )}
     </div>
+  );
+
+  if (!href) return avatar;
+
+  return (
+    <Link
+      href={href}
+      aria-label={`View ${review.author}'s profile`}
+      className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]"
+    >
+      {avatar}
+    </Link>
   );
 }

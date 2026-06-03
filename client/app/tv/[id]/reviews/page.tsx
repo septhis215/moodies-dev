@@ -7,6 +7,33 @@ type Props = {
   searchParams: Promise<{ highlight?: string }>;
 };
 
+type ApiReview = {
+  id: string;
+  rating: number;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  moodEmojis?: string[];
+  user?: {
+    id?: string;
+    username?: string;
+    name?: string | null;
+    avatarUrl?: string | null;
+  };
+  replies?: ApiReply[];
+};
+
+type ApiReply = {
+  id?: string;
+  content: string;
+  createdAt: string;
+  user?: {
+    id?: string;
+    username?: string;
+    avatarUrl?: string | null;
+  };
+};
+
 async function fetchReviews(id: string) {
   try {
     const base = process.env.NEST_API_URL ?? "http://localhost:4000";
@@ -82,10 +109,12 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
   const mediaType = tvInfo.content_type === "tv" ? "TV" : "MOVIE";
   const reviewStats = await fetchReviewStats(id, mediaType);
 
-  const transformedReviews = reviewsData.reviews.map((r: any) => ({
+  const transformedReviews = reviewsData.reviews.map((r: ApiReview) => ({
     id: r.id,
+    userId: r.user?.id,
     author: r.user?.name || r.user?.username || "Anonymous",
     author_details: {
+      id: r.user?.id,
       username: r.user?.username,
       name: r.user?.name || r.user?.username,
       avatar_path: r.user?.avatarUrl,
@@ -97,7 +126,7 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
     url: "",
     moodEmojis: r.moodEmojis || [],
     replies:
-      r.replies?.map((reply: any) => ({
+      r.replies?.map((reply) => ({
         content: reply.content,
         created_at: reply.createdAt,
         user: {
