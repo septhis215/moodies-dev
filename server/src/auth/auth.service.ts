@@ -243,4 +243,106 @@ export class AuthService {
     return this.jwt.sign(payload, { expiresIn: '5m', subject: String(payload.uid), jwtid: 'temp' });
   }
 
+  async getAchievementProgress(userId: string) {
+    const [
+      achievements,
+      user,
+      moodLogs,
+      moodTotal,
+      reviewCount,
+      watchlist,
+      liked,
+      quizCount,
+      unlockedCount,
+    ] = await Promise.all([
+      this.prismaService.achievement.findMany({
+        where: { active: true },
+        include: { badge: true },
+        orderBy: { badge: { displayOrder: 'asc' } },
+      }),
+      this.prismaService.user.findUnique({
+        where: { id: userId },
+        select: {
+          name: true,
+          username: true,
+          avatarUrl: true,
+          preferredGenres: true,
+          preferredLanguages: true,
+        },
+      }),
+      this.prismaService.moodLog.findMany({
+        where: { userId },
+        select: { moodId: true },
+      }),
+      this.prismaService.mood.count({ where: { isActive: true } }),
+      this.prismaService.review.count({ where: { userId } }),
+      this.prismaService.watchlist.findUnique({ where: { userId } }),
+      this.prismaService.likedList.findUnique({ where: { userId } }),
+      this.prismaService.quiz.count({ where: { userId } }),
+      this.prismaService.userAchievement.count({ where: { userId, unlocked: true } }),
+    ]);
+
+    const distinctMoods = new Set(moodLogs.map((log) => log.moodId)).size;
+    const savedCount = (watchlist?.movieId.length ?? 0) + (watchlist?.seriesId.length ?? 0);
+    const likedCount = (liked?.movieId.length ?? 0) + (liked?.seriesId.length ?? 0);
+    const profileBasic = user?.name && user?.username ? 1 : 0;
+    const profileStyled =
+      user?.avatarUrl && (user.preferredGenres.length > 0 || user.preferredLanguages.length > 0) ? 1 : 0;
+    const fullIdentity = profileBasic && profileStyled && quizCount > 0 && moodLogs.length > 0 ? 1 : 0;
+
+    const progressFor = (target: string, required: number | null) => {
+      switch (target) {
+        case 'mood_selections': return moodLogs.length;
+        case 'distinct_moods': return distinctMoods;
+        case 'all_moods': return moodTotal > 0 ? Math.min(distinctMoods, moodTotal) : 0;
+        case 'reviews': return reviewCount;
+        case 'liked_titles': return likedCount;
+        case 'watchlist_titles': return savedCount;
+        case 'quizzes': return quizCount;
+        case 'profile_basic': return profileBasic;
+        case 'profile_stylist': return profileStyled ? 1 : 0;
+        case 'full_identity': return fullIdentity ? 1 : 0;
+        case 'badges_earned': return unlockedCount;
+        default: return 0;
+      }
+    };
+
+    const rows: Array<{ achievement: any; badge: any; progress: any }> = [];
+    for (const achievement of achievements) {
+      const required = achievement.requiredCount ?? (achievement.requirementTarget === 'all_moods' ? moodTotal : 1);
+      const currentProgress = progressFor(achievement.requirementTarget, required);
+      const completionPercentage = required > 0 ? Math.min(100, Math.round((currentProgress / required) * 100)) : 0;
+      const shouldUnlock = completionPercentage >= 100;
+      const existing = await this.prismaService.userAchievement.findUnique({
+        where: { userId_achievementId: { userId, achievementId: achievement.id } },
+      });
+      const progress = await this.prismaService.userAchievement.upsert({
+        where: { userId_achievementId: { userId, achievementId: achievement.id } },
+        update: {
+          currentProgress,
+          completionPercentage,
+          unlocked: existing?.unlocked || shouldUnlock,
+          unlockedAt: existing?.unlockedAt ?? (shouldUnlock ? new Date() : null),
+          relatedActivityRef: achievement.requirementTarget,
+        },
+        create: {
+          userId,
+          achievementId: achievement.id,
+          currentProgress,
+          completionPercentage,
+          unlocked: shouldUnlock,
+          unlockedAt: shouldUnlock ? new Date() : null,
+          relatedActivityRef: achievement.requirementTarget,
+        },
+      });
+      rows.push({
+        achievement,
+        badge: achievement.badge,
+        progress,
+      });
+    }
+
+    return rows;
+  }
+
 }

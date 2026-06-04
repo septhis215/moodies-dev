@@ -27,6 +27,7 @@ import { sendVerificationCode } from '../utils/mailer';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import type { Response as ExpressResponse } from 'express';
+import { UpdateProfileDto } from './dto';
 
 
 
@@ -260,17 +261,26 @@ export class AuthController {
   @Patch('me/profile')
   async updateProfile(
     @Req() req: any,
-    @Body() body: { name?: string; username?: string },
+    @Body() body: UpdateProfileDto,
   ) {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.uid;
     if (!userId) throw new UnauthorizedException('Invalid token');
 
-    const { name, username } = body;
-    if (!name?.trim() && !username?.trim()) {
-      throw new BadRequestException('At least one field (name or username) is required');
+    const { name, username, disclosure } = body;
+    if (!name?.trim() && !username?.trim() && !disclosure) {
+      throw new BadRequestException('At least one profile field is required');
     }
 
-    const data: { name?: string; username?: string } = {};
+    const data: {
+      name?: string;
+      username?: string;
+      discloseProfileInfo?: boolean;
+      discloseWatchlist?: boolean;
+      discloseReviews?: boolean;
+      discloseLiked?: boolean;
+      discloseBadges?: boolean;
+      discloseRecentActivity?: boolean;
+    } = {};
     if (name?.trim()) {
       if (name.trim().length < 2 || name.trim().length > 50) {
         throw new BadRequestException('Display name must be between 2 and 50 characters');
@@ -292,14 +302,44 @@ export class AuthController {
       }
       data.username = username.trim();
     }
+    if (disclosure) {
+      if (typeof disclosure.profileInfo === 'boolean') data.discloseProfileInfo = disclosure.profileInfo;
+      if (typeof disclosure.watchlist === 'boolean') data.discloseWatchlist = disclosure.watchlist;
+      if (typeof disclosure.reviews === 'boolean') data.discloseReviews = disclosure.reviews;
+      if (typeof disclosure.liked === 'boolean') data.discloseLiked = disclosure.liked;
+      if (typeof disclosure.badges === 'boolean') data.discloseBadges = disclosure.badges;
+      if (typeof disclosure.recentActivity === 'boolean') data.discloseRecentActivity = disclosure.recentActivity;
+    }
 
     try {
       const updated = await this.PrismaService.user.update({
         where: { id: String(userId) },
         data,
-        select: { id: true, name: true, username: true },
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          discloseProfileInfo: true,
+          discloseWatchlist: true,
+          discloseReviews: true,
+          discloseLiked: true,
+          discloseBadges: true,
+          discloseRecentActivity: true,
+        },
       });
-      return updated;
+      return {
+        id: updated.id,
+        name: updated.name,
+        username: updated.username,
+        disclosure: {
+          profileInfo: updated.discloseProfileInfo,
+          watchlist: updated.discloseWatchlist,
+          reviews: updated.discloseReviews,
+          liked: updated.discloseLiked,
+          badges: updated.discloseBadges,
+          recentActivity: updated.discloseRecentActivity,
+        },
+      };
     } catch (e: any) {
       if (e?.code === 'P2002') {
         throw new BadRequestException('Username is already taken');
@@ -343,7 +383,8 @@ export class AuthController {
   async me(@Req() req: any) {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.uid;
     if (!userId) return null;
-    return this.PrismaService.user.findUnique({
+    const [user, achievements] = await Promise.all([
+      this.PrismaService.user.findUnique({
       where: { id: String(userId) },
       select: {
         id: true,
@@ -357,7 +398,44 @@ export class AuthController {
         age: true,
         preferredGenres: true,
         preferredLanguages: true,
+        discloseProfileInfo: true,
+        discloseWatchlist: true,
+        discloseReviews: true,
+        discloseLiked: true,
+        discloseBadges: true,
+        discloseRecentActivity: true,
       },
+    }),
+      this.authService.getAchievementProgress(String(userId)),
+    ]);
+    return user && ({
+      ...user,
+      disclosure: {
+        profileInfo: user.discloseProfileInfo,
+        watchlist: user.discloseWatchlist,
+        reviews: user.discloseReviews,
+        liked: user.discloseLiked,
+        badges: user.discloseBadges,
+        recentActivity: user.discloseRecentActivity,
+      },
+      achievements: achievements.map(({ achievement, badge, progress }) => ({
+        achievement: {
+          id: achievement.id,
+          key: achievement.key,
+          title: achievement.title,
+          description: achievement.description,
+          category: achievement.category,
+          requirementType: achievement.requirementType,
+          requirementTarget: achievement.requirementTarget,
+          requiredCount: achievement.requiredCount,
+          progressLogic: achievement.progressLogic,
+          reasoningTemplate: achievement.reasoningTemplate,
+          lockedHint: achievement.lockedHint,
+          active: achievement.active,
+        },
+        badge,
+        progress,
+      })),
     });
   }
 

@@ -29,6 +29,12 @@ model User {
   reviewWarningScore Int           @default(0)
   reviewBannedUntil  DateTime?
   reviewCount        Int           @default(0)
+  discloseProfileInfo Boolean      @default(true)
+  discloseWatchlist   Boolean      @default(false)
+  discloseReviews     Boolean      @default(true)
+  discloseLiked       Boolean      @default(false)
+  discloseBadges      Boolean      @default(true)
+  discloseRecentActivity Boolean   @default(true)
   createdAt          DateTime      @default(now())
   Quiz               Quiz[]
   Badge              Badge[]
@@ -36,6 +42,7 @@ model User {
   LikedList          LikedList?
   reviews            Review[]
   reviewReplies      ReviewReply[]
+  userAchievements   UserAchievement[]
 }
 
 model EmailVerification {
@@ -62,6 +69,74 @@ model Badge {
   user      User     @relation(fields: [userId], references: [id])
   badgeType String
   awardedAt DateTime @default(now())
+}
+
+model Achievement {
+  id                String            @id @default(uuid())
+  key               String            @unique
+  title             String
+  description       String
+  category          String
+  requirementType   String
+  requirementTarget String
+  requiredCount     Int?
+  progressLogic     String
+  reasoningTemplate String
+  lockedHint        String
+  active            Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  badge             BadgeDefinition?
+  userProgress      UserAchievement[]
+
+  @@index([category])
+  @@index([active])
+  @@map("achievements")
+}
+
+model BadgeDefinition {
+  id                  String      @id @default(uuid())
+  key                 String      @unique
+  achievementId       String      @unique
+  achievement         Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  badgeName           String
+  icon                String
+  rarity              String
+  mascotMood          String
+  mascotMotion        String
+  colorTheme          Json
+  lockedVisualState   Json
+  unlockedVisualState Json
+  displayOrder        Int
+  active              Boolean     @default(true)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([rarity])
+  @@index([displayOrder])
+  @@index([active])
+  @@map("badge_definitions")
+}
+
+model UserAchievement {
+  id                   String      @id @default(uuid())
+  userId               String
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId        String
+  achievement          Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  currentProgress      Int         @default(0)
+  completionPercentage Float       @default(0)
+  unlocked             Boolean     @default(false)
+  unlockedAt           DateTime?
+  relatedActivityRef   String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+  @@index([unlocked])
+  @@map("user_achievements")
 }
 
 model Watchlist {
