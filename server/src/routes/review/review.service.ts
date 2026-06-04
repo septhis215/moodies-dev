@@ -369,6 +369,43 @@ export class ReviewService {
         name: true,
         avatarUrl: true,
         createdAt: true,
+        discloseProfileInfo: true,
+        discloseWatchlist: true,
+        discloseReviews: true,
+        discloseLiked: true,
+        discloseBadges: true,
+        discloseRecentActivity: true,
+        Watchlist: {
+          select: {
+            movieId: true,
+            seriesId: true,
+            addedAt: true,
+          },
+        },
+        LikedList: {
+          select: {
+            movieId: true,
+            seriesId: true,
+            addedAt: true,
+          },
+        },
+        Badge: {
+          select: {
+            id: true,
+            badgeType: true,
+            awardedAt: true,
+          },
+          orderBy: { awardedAt: 'desc' },
+        },
+        userAchievements: {
+          where: { unlocked: true },
+          include: {
+            achievement: {
+              include: { badge: true },
+            },
+          },
+          orderBy: { unlockedAt: 'desc' },
+        },
       },
     });
 
@@ -376,34 +413,79 @@ export class ReviewService {
       throw new NotFoundException('User profile not found');
     }
 
+    const disclosure = {
+      profileInfo: user.discloseProfileInfo,
+      watchlist: user.discloseWatchlist,
+      reviews: user.discloseReviews,
+      liked: user.discloseLiked,
+      badges: user.discloseBadges,
+      recentActivity: user.discloseRecentActivity,
+    };
+    const publicUser = {
+      id: user.id,
+      username: user.username,
+      name: disclosure.profileInfo ? user.name : null,
+      avatarUrl: disclosure.profileInfo ? user.avatarUrl : null,
+      createdAt: disclosure.profileInfo ? user.createdAt : null,
+    };
+    const watchlist = disclosure.watchlist
+      ? (user.Watchlist[0] ?? { movieId: [], seriesId: [], addedAt: null })
+      : { movieId: [], seriesId: [], addedAt: null };
+    const liked = disclosure.liked
+      ? (user.LikedList ?? { movieId: [], seriesId: [], addedAt: null })
+      : { movieId: [], seriesId: [], addedAt: null };
+    const badges = disclosure.badges ? user.Badge : [];
+    const achievements = disclosure.badges
+      ? user.userAchievements.map((progress) => ({
+          achievement: {
+            id: progress.achievement.id,
+            key: progress.achievement.key,
+            title: progress.achievement.title,
+            description: progress.achievement.description,
+            category: progress.achievement.category,
+            requirementType: progress.achievement.requirementType,
+            requirementTarget: progress.achievement.requirementTarget,
+            requiredCount: progress.achievement.requiredCount,
+            progressLogic: progress.achievement.progressLogic,
+            reasoningTemplate: progress.achievement.reasoningTemplate,
+            lockedHint: progress.achievement.lockedHint,
+            active: progress.achievement.active,
+          },
+          badge: progress.achievement.badge,
+          progress,
+        }))
+      : [];
+
     const publicWhere = {
       userId: user.id,
       status: { in: [ReviewStatus.PUBLISHED, ReviewStatus.FLAGGED] },
     };
 
     const [reviews, totalReviews, ratingAggregate, movieReviews, tvReviews] =
-      await Promise.all([
-        this.prisma.review.findMany({
-          where: publicWhere,
-          take,
-          orderBy: { createdAt: 'desc' },
-        }),
-        this.prisma.review.count({ where: publicWhere }),
-        this.prisma.review.aggregate({
-          where: {
-            ...publicWhere,
-            status: ReviewStatus.PUBLISHED,
-            affectsRating: true,
-          },
-          _avg: { rating: true },
-        }),
-        this.prisma.review.count({
-          where: { ...publicWhere, mediaType: 'MOVIE' },
-        }),
-        this.prisma.review.count({
-          where: { ...publicWhere, mediaType: 'TV' },
-        }),
-      ]);
+      disclosure.reviews
+        ? await Promise.all([
+            this.prisma.review.findMany({
+              where: publicWhere,
+              take,
+              orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.review.count({ where: publicWhere }),
+            this.prisma.review.aggregate({
+              where: {
+                ...publicWhere,
+                status: ReviewStatus.PUBLISHED,
+                affectsRating: true,
+              },
+              _avg: { rating: true },
+            }),
+            this.prisma.review.count({
+              where: { ...publicWhere, mediaType: 'MOVIE' },
+            }),
+            this.prisma.review.count({
+              where: { ...publicWhere, mediaType: 'TV' },
+            }),
+          ])
+        : [[], 0, { _avg: { rating: null } }, 0, 0];
 
     const moodCounts = reviews
       .flatMap((review) => review.moodEmojis)
@@ -420,8 +502,29 @@ export class ReviewService {
       .slice(0, 5)
       .map(([emoji, count]) => ({ emoji, count }));
 
+    const recentActivity = disclosure.recentActivity
+      ? [
+          ...(disclosure.reviews
+            ? reviews.slice(0, 3).map((review) => ({
+                type: 'review',
+                label: `Reviewed ${review.mediaType === 'TV' ? 'a TV show' : 'a movie'}`,
+                createdAt: review.createdAt,
+              }))
+            : []),
+          ...(disclosure.watchlist && watchlist.addedAt
+            ? [{ type: 'watchlist', label: 'Updated watchlist', createdAt: watchlist.addedAt }]
+            : []),
+          ...(disclosure.liked && liked.addedAt
+            ? [{ type: 'liked', label: 'Updated liked titles', createdAt: liked.addedAt }]
+            : []),
+        ]
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 5)
+      : [];
+
     return {
-      user,
+      user: publicUser,
+      disclosure,
       stats: {
         totalReviews,
         movieReviews,
@@ -432,6 +535,17 @@ export class ReviewService {
         topMoods,
       },
       reviews: reviews.map((review) => new ReviewEntity(review).toPublic()),
+      watchlist: {
+        movieId: watchlist.movieId,
+        seriesId: watchlist.seriesId,
+      },
+      liked: {
+        movieId: liked.movieId,
+        seriesId: liked.seriesId,
+      },
+      badges,
+      achievements,
+      recentActivity,
     };
   }
 

@@ -3,14 +3,24 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Film, Tv, Bookmark, Settings, LogOut, Star, TrendingUp, Award, Target, Calendar, Search, Filter, Grid, List, Heart, Eye, X } from "lucide-react";
+import { Film, Tv, Bookmark, Settings, LogOut, Star, TrendingUp, Award, Calendar, Search, Filter, Grid, List, Heart, X, Sparkles, Shield, Lock, Unlock, Flame, Medal, Camera, Mail, UserRound, Save } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
 import { FilterDropdown } from "@/components/ui/filterdropdown";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || "";
-const TMDB_READ_TOKEN = process.env.NEXT_PUBLIC_TMDB_READ_TOKEN || "";
+const MASCOT_SRC = "/images/moodies-mascot.png";
+const LOGO_SRC = "/images/moodies-transparent.png";
+
+type ProfileDisclosure = {
+    profileInfo: boolean;
+    watchlist: boolean;
+    reviews: boolean;
+    liked: boolean;
+    badges: boolean;
+    recentActivity: boolean;
+};
 
 type Watchlist = { movieId: string[]; seriesId: string[] };
 type ServerUser = {
@@ -20,6 +30,8 @@ type ServerUser = {
     email?: string;
     role?: string;
     avatarUrl?: string | null;
+    disclosure?: ProfileDisclosure;
+    achievements?: UserAchievementView[];
     reviewWarningScore?: number | null;
     reviewBannedUntil?: string | null;
 };
@@ -52,6 +64,36 @@ type UserReview = {
     tmdbYear?: string;
 };
 
+type UserAchievementView = {
+    achievement: {
+        key: string;
+        title: string;
+        description: string;
+        category: string;
+        requirementType: string;
+        requirementTarget: string;
+        requiredCount: number | null;
+        reasoningTemplate: string;
+        lockedHint: string;
+    };
+    badge: {
+        badgeName: string;
+        icon: string;
+        rarity: string;
+        mascotMood: string;
+        mascotMotion: string;
+        colorTheme?: { accent?: string; glow?: string };
+        displayOrder: number;
+    } | null;
+    progress: {
+        currentProgress: number;
+        completionPercentage: number;
+        unlocked: boolean;
+        unlockedAt?: string | null;
+        relatedActivityRef?: string | null;
+    };
+};
+
 export default function ProfilePage() {
     const { user: decodedUser, token, logoutSilent } = useAuth();
 
@@ -72,12 +114,19 @@ export default function ProfilePage() {
     const [cardReviewsVisible, setCardReviewsVisible] = useState<Record<string, number>>({});
     const [reviewTypeFilter, setReviewTypeFilter] = useState<"all" | "MOVIE" | "TV">("all");
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-    const [avatarUploading, setAvatarUploading] = useState(false);
     const [avatarLightbox, setAvatarLightbox] = useState(false);
     const [profileName, setProfileName] = useState("");
     const [profileUsername, setProfileUsername] = useState("");
     const [profileSaving, setProfileSaving] = useState(false);
     const [profileError, setProfileError] = useState<string | null>(null);
+    const [disclosure, setDisclosure] = useState({
+        profileInfo: true,
+        watchlist: true,
+        liked: false,
+        reviews: true,
+        badges: true,
+        recentActivity: true,
+    });
     const avatarInputRef = useRef<HTMLInputElement>(null);
 
     const handleAvatarFile = useCallback((file: File) => {
@@ -101,33 +150,29 @@ export default function ProfilePage() {
         reader.readAsDataURL(file);
     }, []);
 
-    const saveAvatar = useCallback(async () => {
-        if (!avatarPreview || !token) return;
-        setAvatarUploading(true);
-        try {
-            const res = await fetch(`${API_BASE}/auth/me/avatar`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ avatarUrl: avatarPreview }),
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setProfile((prev) => prev ? { ...prev, avatarUrl: data.avatarUrl } : prev);
-                setAvatarPreview(null);
-            }
-        } finally {
-            setAvatarUploading(false);
-        }
-    }, [avatarPreview, token]);
-
     const saveProfile = useCallback(async () => {
         if (!token) return;
+        const name = profileName.trim();
+        const username = profileUsername.trim();
+
+        if (name.length < 2 || name.length > 50) {
+            setProfileError("Display name must be 2-50 characters.");
+            return;
+        }
+
+        if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+            setProfileError("Username must be 3-20 characters and use only letters, numbers, or underscores.");
+            return;
+        }
+
         setProfileSaving(true);
         setProfileError(null);
         try {
-            const body: { name?: string; username?: string } = {};
-            if (profileName.trim()) body.name = profileName.trim();
-            if (profileUsername.trim()) body.username = profileUsername.trim();
+            const body: { name?: string; username?: string; disclosure: ProfileDisclosure } = {
+                disclosure,
+            };
+            body.name = name;
+            body.username = username;
 
             const [profileRes, avatarRes] = await Promise.all([
                 Object.keys(body).length > 0
@@ -157,6 +202,10 @@ export default function ProfilePage() {
                 const d = await profileRes.json();
                 if (d.name !== undefined) updates.name = d.name;
                 if (d.username !== undefined) updates.username = d.username;
+                if (d.disclosure !== undefined) {
+                    updates.disclosure = d.disclosure;
+                    setDisclosure(d.disclosure);
+                }
             }
             if (avatarRes?.ok) {
                 const d = await avatarRes.json();
@@ -171,7 +220,7 @@ export default function ProfilePage() {
         } finally {
             setProfileSaving(false);
         }
-    }, [token, profileName, profileUsername, avatarPreview, profile]);
+    }, [token, profileName, profileUsername, avatarPreview, disclosure]);
 
     const user = profile ?? (decodedUser as ServerUser | null);
 
@@ -193,7 +242,7 @@ export default function ProfilePage() {
 
     /* ---------------- Fetch reviews when tab active ---------------- */
     useEffect(() => {
-        if (tab !== "reviews" || !token) return;
+        if (tab === "watchlist" || !token) return;
         let alive = true;
         setReviewsLoading(true);
 
@@ -251,7 +300,13 @@ export default function ProfilePage() {
                 if (!alive) return;
                 if (meRes.status === 401 || wlRes.status === 401) return logoutSilent();
 
-                if (meRes.ok) setProfile(await meRes.json());
+                if (meRes.ok) {
+                    const me = await meRes.json();
+                    setProfile(me);
+                    if (me.disclosure) {
+                        setDisclosure((prev) => ({ ...prev, ...me.disclosure }));
+                    }
+                }
                 if (wlRes.ok) setWatchlist(await wlRes.json());
             } finally {
                 if (alive) setLoading(false);
@@ -330,6 +385,55 @@ export default function ProfilePage() {
         const sum = tmdbItems.reduce((acc, item) => acc + (item.vote_average || 0), 0);
         return sum / tmdbItems.length;
     }, [tmdbItems]);
+
+    const reviewCount = reviews.length;
+    const profilePersona = useMemo(() => {
+        if (totalCount === 0 && reviewCount === 0) {
+            return {
+                title: "Fresh Explorer",
+                detail: "Start saving and reviewing titles to shape your Moodies read.",
+                signal: "New taste profile",
+            };
+        }
+        if (seriesCount > movieCount * 1.2) {
+            return {
+                title: "Arc Follower",
+                detail: "Your profile leans toward long-form stories and season-to-season payoff.",
+                signal: `${seriesCount} series saved`,
+            };
+        }
+        if (movieCount > seriesCount * 1.2) {
+            return {
+                title: "Momentum Seeker",
+                detail: "You move through films with pace and build a watchlist around quick emotional hits.",
+                signal: `${movieCount} movies saved`,
+            };
+        }
+        if (averageRating >= 8) {
+            return {
+                title: "Joy Hunter",
+                detail: "Your saved titles skew toward crowd-pleasers and confident picks.",
+                signal: `${averageRating.toFixed(1)} avg TMDB score`,
+            };
+        }
+        return {
+            title: "Mood Cartographer",
+            detail: "Your taste is balanced across movies and TV, with room for mood-led discovery.",
+            signal: `${totalCount} saved titles`,
+        };
+    }, [averageRating, movieCount, reviewCount, seriesCount, totalCount]);
+
+    const earnedBadges = useMemo(() => [
+        { name: "First Save", earned: totalCount >= 1, icon: <Bookmark className="w-3.5 h-3.5" /> },
+        { name: "Movie Buff", earned: movieCount >= 10, icon: <Film className="w-3.5 h-3.5" /> },
+        { name: "Series Scout", earned: seriesCount >= 10, icon: <Tv className="w-3.5 h-3.5" /> },
+        { name: "Century Club", earned: totalCount >= 100, icon: <Medal className="w-3.5 h-3.5" /> },
+        { name: "Taste Signal", earned: averageRating >= 8 && totalCount >= 5, icon: <Sparkles className="w-3.5 h-3.5" /> },
+        { name: "Active Critic", earned: reviewCount >= 10, icon: <Flame className="w-3.5 h-3.5" /> },
+    ], [averageRating, movieCount, reviewCount, seriesCount, totalCount]);
+    const achievementRows = user?.achievements ?? [];
+    const unlockedAchievementRows = achievementRows.filter((row) => row.progress.unlocked);
+    const visibleAchievementRows = achievementRows.length > 0 ? achievementRows.slice(0, 9) : [];
 
     const isBanned = !!user?.reviewBannedUntil && new Date(user.reviewBannedUntil) > new Date();
     const bannedUntil = user?.reviewBannedUntil ? new Date(user.reviewBannedUntil) : null;
@@ -415,75 +519,99 @@ export default function ProfilePage() {
 
     return (
         <main className="min-h-screen bg-black text-white pb-8">
-            <div className="mx-auto w-full max-w-7xl px-8 sm:px-14 py-24">
-                {/* Hero Section */}
-                <div className="mb-8 sm:mb-12">
-                    <div className="flex flex-col gap-4 sm:gap-6">
-                        {/* Profile Info */}
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 sm:justify-between">
-                            {/* Left: Avatar + Name */}
-                            <div className="flex items-start sm:items-center gap-4 sm:gap-6 flex-1 min-w-0">
-                                <motion.div
-                                    initial={{ scale: 0.8, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    onClick={() => user?.avatarUrl && setAvatarLightbox(true)}
-                                    className={`relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl overflow-hidden ring-2 ring-[#e94f37]/60 bg-zinc-900 flex-shrink-0${user?.avatarUrl ? " cursor-pointer hover:ring-[#e94f37] transition-shadow" : ""}`}
-                                >
-                                    {user?.avatarUrl ? (
-                                        <Image src={user.avatarUrl} alt="avatar" fill
-            sizes="40px" className="object-cover" referrerPolicy="no-referrer" />
-                                    ) : (
-                                        <div className="flex items-center justify-center w-full h-full text-3xl sm:text-5xl font-bold bg-[#e94f37] text-white">
-                                            {(user?.name || "U")[0]}
-                                        </div>
-                                    )}
-                                </motion.div>
+            <div className="mx-auto w-full max-w-7xl px-6 sm:px-14 py-24">
+                <section className="relative mb-8 sm:mb-10 overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_18%_0%,rgba(233,79,55,0.28),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025)_44%,rgba(0,0,0,0.12))] p-5 sm:p-7">
+                    <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/70 to-transparent" />
+                    <div className="pointer-events-none absolute -right-8 top-2 hidden h-52 w-52 opacity-20 blur-[1px] sm:block">
+                        <Image src={MASCOT_SRC} alt="" fill sizes="208px" className="object-contain" priority />
+                    </div>
 
-                                <div className="flex-1 min-w-0">
-                                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black truncate">{user?.name || user?.username || "Your Profile"}</h1>
-                                    <p className="text-gray-400 text-sm sm:text-base mt-1">@{user?.username ?? "user"}</p>
-                                    <div className="mt-2 sm:mt-3 flex flex-wrap gap-2 items-center">
-                                        <span className="px-2 sm:px-3 py-1 rounded-lg bg-[#e94f37]/20 text-[#e94f37] text-xs font-bold uppercase">
-                                            {user?.role ?? "user"}
-                                        </span>
-                                        {isBanned && (
-                                            <span className="px-2 sm:px-3 py-1 rounded-lg bg-yellow-500/20 text-yellow-300 text-xs font-semibold">
-                                                Banned until {bannedUntil?.toLocaleDateString()}
-                                            </span>
-                                        )}
+                    <div className="relative grid gap-6 lg:grid-cols-[1fr_300px] lg:items-center">
+                        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                            <motion.div
+                                initial={{ scale: 0.92, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                onClick={() => user?.avatarUrl && setAvatarLightbox(true)}
+                                className={`relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-zinc-900 ring-2 ring-[#e94f37]/70 shadow-2xl shadow-[#e94f37]/10 sm:h-32 sm:w-32${user?.avatarUrl ? " cursor-pointer hover:ring-[#ff8a78] transition-shadow" : ""}`}
+                            >
+                                {user?.avatarUrl ? (
+                                    <Image
+                                        src={user.avatarUrl}
+                                        alt="Profile avatar"
+                                        fill
+                                        sizes="128px"
+                                        className="object-cover"
+                                        referrerPolicy="no-referrer"
+                                    />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center bg-[#e94f37] text-4xl font-black text-white sm:text-5xl">
+                                        {(user?.name || "U")[0]}
                                     </div>
+                                )}
+                            </motion.div>
+
+                            <div className="min-w-0 flex-1">
+                                <div className="mb-3 flex flex-wrap items-center gap-2">
+                                    <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-black/25 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#ff8a78]">
+                                        <Image src={LOGO_SRC} alt="" width={18} height={18} className="h-4 w-4 object-contain" />
+                                        Moodies Profile
+                                    </span>
+                                    <span className="rounded-lg bg-[#e94f37]/20 px-3 py-1.5 text-xs font-bold uppercase text-[#ff8a78]">
+                                        {user?.role ?? "user"}
+                                    </span>
+                                    {isBanned && (
+                                        <span className="rounded-lg bg-yellow-500/15 px-3 py-1.5 text-xs font-semibold text-yellow-300">
+                                            Banned until {bannedUntil?.toLocaleDateString()}
+                                        </span>
+                                    )}
+                                </div>
+                                <h1 className="truncate text-3xl font-black tracking-tight sm:text-5xl">
+                                    {user?.name || user?.username || "Your Profile"}
+                                </h1>
+                                <p className="mt-2 text-sm text-white/50 sm:text-base">@{user?.username ?? "user"}</p>
+                                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58">
+                                    Your watchlist, reviews, and mood signals come together here as a living taste profile.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
+                            <div className="flex items-center gap-3">
+                                <div className="relative h-20 w-20 flex-shrink-0">
+                                    <Image src={MASCOT_SRC} alt="Moodies mascot" fill sizes="80px" className="object-contain" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-white">Moodies read</p>
+                                    <p className="mt-1 text-xs leading-5 text-white/45">{profilePersona.title} is your current viewing shape.</p>
                                 </div>
                             </div>
-
-                            {/* Right: Actions - now on same row as profile */}
-                            <div className="mt-2 sm:mt-0 sm:ml-4 flex items-center gap-2 sm:gap-3">
+                            <div className="mt-4 grid grid-cols-3 gap-2">
                                 <button
-                                    className="px-3 sm:px-4 py-2 rounded-xl bg-[#e94f37] hover:bg-[#ff5746] transition font-semibold text-sm"
+                                    className="inline-flex h-10 items-center justify-center rounded-xl bg-[#e94f37] text-sm font-semibold text-white transition hover:bg-[#ff5746]"
                                     onClick={() => {
                                         setProfileName(user?.name ?? user?.username ?? "");
                                         setProfileUsername(user?.username ?? "");
                                         setProfileError(null);
                                         setEditOpen(true);
                                     }}
+                                    title="Edit profile"
                                 >
-                                    Edit
+                                    <Settings className="h-4 w-4" />
                                 </button>
-                                <Link href="/settings" className="px-2 sm:px-3 py-2 rounded-xl border border-white/10 hover:bg-white/5 transition flex items-center">
-                                    <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+                                <Link href="/settings" className="inline-flex h-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/[0.08] hover:text-white" title="Settings">
+                                    <Shield className="h-4 w-4" />
                                 </Link>
                                 <button
-                                    className="px-2 sm:px-3 py-2 rounded-xl border border-red-500/30 hover:bg-red-500/10 transition text-red-400 flex items-center"
+                                    className="inline-flex h-10 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/5 text-red-300 transition hover:bg-red-500/10"
                                     onClick={logoutSilent}
+                                    title="Log out"
                                 >
-                                    <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
+                                    <LogOut className="h-4 w-4" />
                                 </button>
                             </div>
                         </div>
-
-                        {/* Action Buttons (mobile extra spacing removed) */}
-                        {/* kept removed; actions are now inline with profile */}
                     </div>
-                </div>
+                </section>
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10">
@@ -511,12 +639,74 @@ export default function ProfilePage() {
                     />
                 </div>
 
+                <div className="mb-8 sm:mb-10 grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+                    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(233,79,55,0.16),rgba(255,255,255,0.045)_45%,rgba(0,0,0,0.2))] p-5 sm:p-6">
+                        <div className="pointer-events-none absolute -bottom-8 right-2 h-32 w-32 opacity-15">
+                            <Image src={MASCOT_SRC} alt="" fill sizes="128px" className="object-contain" />
+                        </div>
+                        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <div className="inline-flex items-center gap-2 rounded-lg border border-[#e94f37]/30 bg-[#e94f37]/15 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#ff8a78]">
+                                    <Sparkles className="h-4 w-4" />
+                                    Mood profile
+                                </div>
+                                <h2 className="mt-4 text-2xl sm:text-3xl font-black">{profilePersona.title}</h2>
+                                <p className="mt-2 max-w-2xl text-sm sm:text-base leading-6 text-white/58">
+                                    {profilePersona.detail}
+                                </p>
+                            </div>
+                            <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-3">
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/35">Signal</p>
+                                <p className="mt-1 text-sm font-bold text-white">{profilePersona.signal}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                                <Shield className="h-5 w-5 text-[#ff8a78]" />
+                                <h2 className="text-lg font-bold">Disclosure</h2>
+                            </div>
+                            <div className="relative h-10 w-10">
+                                <Image src={MASCOT_SRC} alt="" fill sizes="40px" className="object-contain" />
+                            </div>
+                        </div>
+                        <div className="mt-4 space-y-3">
+                            {([
+                                ["profileInfo", "Profile info"],
+                                ["watchlist", "Watchlist"],
+                                ["liked", "Liked titles"],
+                                ["reviews", "Reviews"],
+                                ["badges", "Badges"],
+                                ["recentActivity", "Recent activity"],
+                            ] as const).map(([key, label]) => (
+                                <label key={key} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
+                                    <span className="flex items-center gap-2 text-sm font-semibold text-white/75">
+                                        {disclosure[key] ? <Unlock className="h-4 w-4 text-emerald-300" /> : <Lock className="h-4 w-4 text-white/35" />}
+                                        {label}
+                                    </span>
+                                    <input
+                                        type="checkbox"
+                                        checked={disclosure[key]}
+                                        onChange={() => setDisclosure((prev) => ({ ...prev, [key]: !prev[key] }))}
+                                        className="h-4 w-4 accent-[#e94f37]"
+                                    />
+                                </label>
+                            ))}
+                        </div>
+                        <p className="mt-3 text-xs leading-5 text-white/35">
+                            These choices are staged in the profile UI and ready to connect to account privacy settings.
+                        </p>
+                    </div>
+                </div>
+
                 {/* Tabs – comfortable & touch-friendly */}
                 <div className="flex gap-1.5 sm:gap-2 mb-6 sm:mb-8 bg-white/5 p-1.5 rounded-2xl border border-white/10 overflow-x-auto">
-                    {["profile", "watchlist", "reviews"].map((t) => (
+                    {(["profile", "watchlist", "reviews"] as const).map((t) => (
                         <button
                             key={t}
-                            onClick={() => setTab(t as any)}
+                            onClick={() => setTab(t)}
                             className={`
         whitespace-nowrap
         px-3 sm:px-4
@@ -553,42 +743,32 @@ export default function ProfilePage() {
                                     Achievements
                                 </h2>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                                    <Achievement
-                                        title="Movie Collector"
-                                        description="Save 50 movies to your watchlist"
-                                        progress={movieCount / 50}
-                                        icon={<Film className="w-4 h-4 sm:w-5 sm:h-5" />}
-                                    />
-                                    <Achievement
-                                        title="Binge Watcher"
-                                        description="Add 25 TV series"
-                                        progress={seriesCount / 25}
-                                        icon={<Tv className="w-4 h-4 sm:w-5 sm:h-5" />}
-                                    />
-                                    <Achievement
-                                        title="Century Club"
-                                        description="Reach 100 total items"
-                                        progress={totalCount / 100}
-                                        icon={<Target className="w-4 h-4 sm:w-5 sm:h-5" />}
-                                    />
-                                    <Achievement
-                                        title="Critic's Choice"
-                                        description="Write 10 reviews"
-                                        progress={0.2}
-                                        icon={<Star className="w-4 h-4 sm:w-5 sm:h-5" />}
-                                    />
-                                    <Achievement
-                                        title="Dedicated Fan"
-                                        description="Use the app for 30 days"
-                                        progress={0.6}
-                                        icon={<Calendar className="w-4 h-4 sm:w-5 sm:h-5" />}
-                                    />
-                                    <Achievement
-                                        title="Completionist"
-                                        description="Mark 50 items as watched"
-                                        progress={0.4}
-                                        icon={<Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
-                                    />
+                                    {visibleAchievementRows.length > 0 ? (
+                                        visibleAchievementRows.map((row) => (
+                                            <AchievementCard key={row.achievement.key} row={row} />
+                                        ))
+                                    ) : (
+                                        <>
+                                            <Achievement
+                                                title="Movie Collector"
+                                                description="Save 50 movies to your watchlist"
+                                                progress={movieCount / 50}
+                                                icon={<Film className="w-4 h-4 sm:w-5 sm:h-5" />}
+                                            />
+                                            <Achievement
+                                                title="Binge Watcher"
+                                                description="Add 25 TV series"
+                                                progress={seriesCount / 25}
+                                                icon={<Tv className="w-4 h-4 sm:w-5 sm:h-5" />}
+                                            />
+                                            <Achievement
+                                                title="Critic's Choice"
+                                                description="Write 10 reviews"
+                                                progress={reviewCount / 10}
+                                                icon={<Star className="w-4 h-4 sm:w-5 sm:h-5" />}
+                                            />
+                                        </>
+                                    )}
                                 </div>
                             </div>
 
@@ -598,27 +778,23 @@ export default function ProfilePage() {
                                     <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-[#e94f37]" />
                                     Earned Badges
                                 </h2>
-                                <div className="flex flex-wrap gap-2 sm:gap-3">
-                                    <Badge
-                                        name="Top Reviewer"
-                                        color="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                                        icon={<Award className="w-3 h-3 sm:w-4 sm:h-4" />}
-                                    />
-                                    <Badge
-                                        name="Movie Buff"
-                                        color="bg-red-500/20 text-red-400 border border-red-500/30"
-                                        icon={<Film className="w-3 h-3 sm:w-4 sm:h-4" />}
-                                    />
-                                    <Badge
-                                        name="Series Addict"
-                                        color="bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                                        icon={<Tv className="w-3 h-3 sm:w-4 sm:h-4" />}
-                                    />
-                                    <Badge
-                                        name="Early Adopter"
-                                        color="bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                                        icon={<Star className="w-3 h-3 sm:w-4 sm:h-4" />}
-                                    />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {unlockedAchievementRows.length > 0 ? (
+                                        unlockedAchievementRows.slice(0, 6).map((row) => (
+                                            <RewardBadgeCard key={row.achievement.key} row={row} />
+                                        ))
+                                    ) : (
+                                        earnedBadges.map((badge) => (
+                                            <Badge
+                                                key={badge.name}
+                                                name={badge.name}
+                                                color={badge.earned
+                                                    ? "bg-[#e94f37]/15 text-[#ff8a78] border border-[#e94f37]/30"
+                                                    : "bg-white/[0.03] text-white/30 border border-white/10"}
+                                                icon={badge.icon}
+                                            />
+                                        ))
+                                    )}
                                 </div>
                             </div>
 
@@ -1018,7 +1194,7 @@ export default function ProfilePage() {
                                                                     <span
                                                                         className="absolute -top-1 -left-1 text-[1.4rem] font-black leading-none select-none pointer-events-none"
                                                                         style={{ color: accentHex, opacity: 0.35 }}
-                                                                    >"</span>
+                                                                    >&quot;</span>
                                                                     <p className="text-[0.82rem] sm:text-[0.95rem] text-white/80 leading-relaxed line-clamp-4 sm:line-clamp-5 pl-4 font-medium tracking-wide">
                                                                         {review.content}
                                                                     </p>
@@ -1170,7 +1346,7 @@ export default function ProfilePage() {
                                         <div className="relative">
                                             <select
                                                 value={filterType}
-                                                onChange={(e) => setFilterType(e.target.value as any)}
+                                                onChange={(e) => setFilterType(e.target.value as "all" | "movie" | "tv")}
                                                 className="
         w-full appearance-none
         px-4 py-3 pr-10
@@ -1206,7 +1382,7 @@ export default function ProfilePage() {
                                         <div className="relative">
                                             <select
                                                 value={sortBy}
-                                                onChange={(e) => setSortBy(e.target.value as any)}
+                                                onChange={(e) => setSortBy(e.target.value as "dateAdded" | "rating" | "title")}
                                                 className="
         w-full appearance-none
         px-4 py-3 pr-10
@@ -1253,26 +1429,57 @@ export default function ProfilePage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-                            onClick={() => setEditOpen(false)}
+                            className="fixed inset-0 z-[300] flex items-end justify-center bg-black/85 p-3 backdrop-blur-md sm:items-center sm:p-6"
+                            onClick={() => {
+                                if (!profileSaving) {
+                                    setAvatarPreview(null);
+                                    setEditOpen(false);
+                                }
+                            }}
                         >
                             <motion.div
-                                initial={{ y: "100%", opacity: 0 }}
+                                initial={{ y: 28, opacity: 0, scale: 0.98 }}
                                 animate={{ y: 0, opacity: 1 }}
-                                exit={{ y: "100%", opacity: 0 }}
-                                className="w-full max-w-lg bg-zinc-900 rounded-t-2xl sm:rounded-2xl p-6 sm:p-8 border border-white/10 max-h-[90vh] overflow-y-auto"
+                                exit={{ y: 28, opacity: 0, scale: 0.98 }}
+                                transition={{ duration: 0.18 }}
+                                className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl shadow-black/60 sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl sm:p-8"
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                <h2 className="text-xl sm:text-2xl font-bold mb-6 flex items-center gap-2 sm:gap-3">
-                                    <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-[#e94f37]" />
-                                    Edit Profile
-                                </h2>
+                                <div className="mb-6 flex items-start justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative h-12 w-12 flex-shrink-0">
+                                            <Image src={MASCOT_SRC} alt="Moodies mascot" fill sizes="48px" className="object-contain" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8a78]">Profile tune-up</p>
+                                            <h2 className="text-xl sm:text-2xl font-black">Edit profile</h2>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!profileSaving) {
+                                                setAvatarPreview(null);
+                                                setEditOpen(false);
+                                            }
+                                        }}
+                                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:bg-white/[0.08] hover:text-white disabled:opacity-40"
+                                        disabled={profileSaving}
+                                        aria-label="Close edit profile"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
 
                                 <div className="space-y-4 sm:space-y-5">
-                                    <div>
-                                        <label className="block text-sm font-semibold mb-2 text-gray-300">Profile Picture</label>
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-16 h-16 rounded-xl overflow-hidden bg-zinc-800 flex-shrink-0 ring-2 ring-white/10">
+                                    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                                        <label className="block text-sm font-semibold mb-3 text-white/80">Profile picture</label>
+                                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                                            <button
+                                                type="button"
+                                                onClick={() => avatarInputRef.current?.click()}
+                                                className="group relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-zinc-900 ring-2 ring-[#e94f37]/50 transition hover:ring-[#ff8a78]"
+                                            >
                                                 {avatarPreview ? (
                                                     // eslint-disable-next-line @next/next/no-img-element
                                                     <img src={avatarPreview} alt="preview" className="w-full h-full object-cover" />
@@ -1284,7 +1491,11 @@ export default function ProfilePage() {
                                                         {(user?.name || "U")[0]}
                                                     </div>
                                                 )}
-                                            </div>
+                                                <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-black/65 py-2 text-xs font-bold text-white opacity-0 transition group-hover:opacity-100">
+                                                    <Camera className="h-3.5 w-3.5" />
+                                                    Change
+                                                </span>
+                                            </button>
                                             <div className="flex flex-col gap-2">
                                                 <input
                                                     ref={avatarInputRef}
@@ -1300,27 +1511,32 @@ export default function ProfilePage() {
                                                 <button
                                                     type="button"
                                                     onClick={() => avatarInputRef.current?.click()}
-                                                    className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm font-semibold"
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.055] px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/[0.09] hover:text-white"
                                                 >
-                                                    {avatarPreview ? "Change" : "Upload New"}
+                                                    <Camera className="h-4 w-4" />
+                                                    {avatarPreview ? "Choose another" : "Upload avatar"}
                                                 </button>
                                                 {avatarPreview && (
                                                     <button
                                                         type="button"
                                                         onClick={() => setAvatarPreview(null)}
-                                                        className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm font-semibold text-red-400"
+                                                        className="px-4 py-2 text-left text-sm font-semibold text-red-300 transition hover:text-red-200"
                                                     >
-                                                        Remove
+                                                        Remove preview
                                                     </button>
                                                 )}
+                                                <p className="max-w-xs text-xs leading-5 text-white/35">Square images work best. Large uploads are resized before saving.</p>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <label className="block text-sm font-semibold text-gray-300">Display Name</label>
-                                            <span className={`text-xs tabular-nums ${profileName.length > 48 ? "text-red-400" : "text-gray-500"}`}>
+                                            <label className="flex items-center gap-2 text-sm font-semibold text-white/80">
+                                                <UserRound className="h-4 w-4 text-[#ff8a78]" />
+                                                Display name
+                                            </label>
+                                            <span className={`text-xs tabular-nums ${profileName.length > 48 ? "text-red-400" : "text-white/35"}`}>
                                                 {profileName.length}/50
                                             </span>
                                         </div>
@@ -1329,62 +1545,108 @@ export default function ProfilePage() {
                                             value={profileName}
                                             onChange={(e) => setProfileName(e.target.value.slice(0, 50))}
                                             maxLength={50}
-                                            className="w-full px-4 py-3 text-sm sm:text-base bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e94f37]/50 transition"
+                                            className="w-full rounded-xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[#e94f37]/60 focus:ring-2 focus:ring-[#e94f37]/25 sm:text-base"
                                             placeholder="Enter your name"
                                         />
-                                        <p className="text-xs text-gray-600 mt-1">2–50 characters</p>
+                                        <p className="text-xs text-white/35 mt-1">2-50 characters</p>
                                     </div>
 
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <label className="block text-sm font-semibold text-gray-300">Username</label>
-                                            <span className={`text-xs tabular-nums ${profileUsername.length > 18 ? "text-red-400" : "text-gray-500"}`}>
+                                            <label className="flex items-center gap-2 text-sm font-semibold text-white/80">
+                                                <Sparkles className="h-4 w-4 text-[#ff8a78]" />
+                                                Username
+                                            </label>
+                                            <span className={`text-xs tabular-nums ${profileUsername.length > 18 ? "text-red-400" : "text-white/35"}`}>
                                                 {profileUsername.length}/20
                                             </span>
                                         </div>
                                         <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">@</span>
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-white/35">@</span>
                                             <input
                                                 type="text"
                                                 value={profileUsername}
-                                                onChange={(e) => setProfileUsername(e.target.value.replace(/^@/, "").slice(0, 20))}
+                                                onChange={(e) => setProfileUsername(e.target.value.replace(/^@/, "").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))}
                                                 maxLength={20}
-                                                className="w-full pl-8 pr-4 py-3 text-sm sm:text-base bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e94f37]/50 transition"
+                                                className="w-full rounded-xl border border-white/10 bg-white/[0.055] py-3 pl-8 pr-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[#e94f37]/60 focus:ring-2 focus:ring-[#e94f37]/25 sm:text-base"
                                                 placeholder="username"
                                             />
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">3–20 characters, letters, numbers, underscores only</p>
+                                        <p className="text-xs text-white/35 mt-1">3-20 characters, letters, numbers, underscores only</p>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-semibold mb-2 text-gray-300">Email</label>
+                                        <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
+                                            <Mail className="h-4 w-4 text-[#ff8a78]" />
+                                            Email
+                                        </label>
                                         <input
                                             type="email"
                                             value={user?.email ?? ""}
                                             readOnly
-                                            className="w-full px-4 py-3 text-sm sm:text-base bg-white/[0.03] border border-white/5 rounded-xl text-gray-500 cursor-not-allowed"
+                                            className="w-full cursor-not-allowed rounded-xl border border-white/5 bg-white/[0.025] px-4 py-3 text-sm text-white/35 outline-none sm:text-base"
                                         />
-                                        <p className="text-xs text-gray-600 mt-1">Email cannot be changed</p>
+                                        <p className="text-xs text-white/30 mt-1">Email cannot be changed</p>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                                        <div className="mb-3 flex items-center justify-between gap-3">
+                                            <div className="flex items-center gap-2">
+                                                <Shield className="h-4 w-4 text-[#ff8a78]" />
+                                                <h3 className="text-sm font-bold text-white">Public visibility</h3>
+                                            </div>
+                                            <span className="text-xs font-medium text-white/35">Your profile</span>
+                                        </div>
+                                        <div className="grid gap-2 sm:grid-cols-2">
+                                            {([
+                                                ["profileInfo", "Profile info"],
+                                                ["watchlist", "Watchlist"],
+                                                ["liked", "Liked titles"],
+                                                ["reviews", "Reviews"],
+                                                ["badges", "Badges"],
+                                                ["recentActivity", "Recent activity"],
+                                            ] as const).map(([key, label]) => (
+                                                <label key={key} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
+                                                    <span className="flex items-center gap-2 text-sm font-semibold text-white/75">
+                                                        {disclosure[key] ? <Unlock className="h-4 w-4 text-emerald-300" /> : <Lock className="h-4 w-4 text-white/35" />}
+                                                        {label}
+                                                    </span>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={disclosure[key]}
+                                                        onChange={() => setDisclosure((prev) => ({ ...prev, [key]: !prev[key] }))}
+                                                        className="h-4 w-4 accent-[#e94f37]"
+                                                    />
+                                                </label>
+                                            ))}
+                                        </div>
                                     </div>
 
                                     {profileError && (
-                                        <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2">{profileError}</p>
+                                        <p className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-200">{profileError}</p>
                                     )}
                                 </div>
 
-                                <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 sm:mt-8">
+                                <div className="mt-7 flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:justify-end">
                                     <button
-                                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 transition font-semibold order-2 sm:order-1"
-                                        onClick={() => setEditOpen(false)}
+                                        type="button"
+                                        className="order-2 w-full rounded-xl border border-white/10 px-5 py-3 font-semibold text-white/70 transition hover:bg-white/5 hover:text-white disabled:opacity-50 sm:order-1 sm:w-auto"
+                                        onClick={() => {
+                                            setAvatarPreview(null);
+                                            setEditOpen(false);
+                                        }}
+                                        disabled={profileSaving}
                                     >
                                         Cancel
                                     </button>
                                     <button
-                                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#e94f37] hover:bg-[#ff5746] transition font-semibold order-1 sm:order-2 disabled:opacity-50"
+                                        type="button"
+                                        className="order-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#e94f37] px-5 py-3 font-semibold text-white transition hover:bg-[#ff5746] disabled:cursor-not-allowed disabled:opacity-50 sm:order-2 sm:w-auto"
                                         onClick={saveProfile}
-                                        disabled={profileSaving || avatarUploading}
+                                                disabled={profileSaving}
                                     >
-                                        {profileSaving ? "Saving…" : "Save Changes"}
+                                        <Save className="h-4 w-4" />
+                                        {profileSaving ? "Saving..." : "Save changes"}
                                     </button>
                                 </div>
                             </motion.div>
@@ -1434,6 +1696,83 @@ export default function ProfilePage() {
 }
 
 /* ---------------- UI Components ---------------- */
+function resolveBadgeIcon(icon?: string) {
+    const className = "w-4 h-4";
+    if (icon?.toLowerCase().includes("tv") || icon?.toLowerCase().includes("monitor")) return <Tv className={className} />;
+    if (icon?.toLowerCase().includes("film") || icon?.toLowerCase().includes("ticket")) return <Film className={className} />;
+    if (icon?.toLowerCase().includes("heart")) return <Heart className={className} />;
+    if (icon?.toLowerCase().includes("bookmark") || icon?.toLowerCase().includes("library")) return <Bookmark className={className} />;
+    if (icon?.toLowerCase().includes("calendar")) return <Calendar className={className} />;
+    if (icon?.toLowerCase().includes("crown") || icon?.toLowerCase().includes("trophy")) return <Award className={className} />;
+    if (icon?.toLowerCase().includes("search")) return <Search className={className} />;
+    return <Sparkles className={className} />;
+}
+
+function AchievementCard({ row }: { row: UserAchievementView }) {
+    const percent = Math.min(Math.max(row.progress.completionPercentage, 0), 100);
+    const required = row.achievement.requiredCount ?? 1;
+    const unlocked = row.progress.unlocked;
+    const badgeName = row.badge?.badgeName ?? row.achievement.title;
+
+    return (
+        <div className={`rounded-2xl border p-4 transition hover:-translate-y-0.5 ${unlocked ? "border-[#e94f37]/35 bg-[#e94f37]/10" : "border-white/10 bg-white/[0.04] hover:bg-white/[0.06]"}`}>
+            <div className="flex items-start gap-3">
+                <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${unlocked ? "bg-[#e94f37] text-white" : "bg-white/10 text-white/45"}`}>
+                    {resolveBadgeIcon(row.badge?.icon)}
+                </div>
+                <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-bold text-white">{row.achievement.title}</p>
+                        <span className="rounded-md border border-white/10 px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide text-white/40">
+                            {row.achievement.category}
+                        </span>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-white/48">
+                        {unlocked ? row.achievement.reasoningTemplate : row.achievement.lockedHint}
+                    </p>
+                </div>
+            </div>
+            <div className="mt-4">
+                <div className="mb-2 flex items-center justify-between text-xs">
+                    <span className="font-semibold text-white/45">{badgeName}</span>
+                    <span className="tabular-nums text-white/45">{row.progress.currentProgress}/{required}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-[#e94f37]" style={{ width: `${percent}%` }} />
+                </div>
+                <p className="mt-2 text-xs text-white/35">{percent}% complete</p>
+            </div>
+        </div>
+    );
+}
+
+function RewardBadgeCard({ row }: { row: UserAchievementView }) {
+    const accent = row.badge?.colorTheme?.accent ?? "#e94f37";
+    return (
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="absolute -right-6 -top-6 h-24 w-24 opacity-20">
+                <Image src={MASCOT_SRC} alt="" fill sizes="96px" className="object-contain" />
+            </div>
+            <div className="relative flex items-start gap-3">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-white" style={{ backgroundColor: accent }}>
+                    {resolveBadgeIcon(row.badge?.icon)}
+                </div>
+                <div className="min-w-0">
+                    <p className="font-black text-white">{row.badge?.badgeName ?? row.achievement.title}</p>
+                    <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-white/35">{row.badge?.rarity ?? "Common"}</p>
+                </div>
+            </div>
+            <p className="relative mt-3 text-xs leading-5 text-white/55">{row.achievement.reasoningTemplate}</p>
+            {row.progress.unlockedAt && (
+                <p className="relative mt-3 text-xs text-white/35">
+                    Earned {new Date(row.progress.unlockedAt).toLocaleDateString()}
+                </p>
+            )}
+            <p className="relative mt-2 text-xs text-[#ff8a78]">{row.badge?.mascotMood}: {row.badge?.mascotMotion}</p>
+        </div>
+    );
+}
+
 function StatCard({ label, value, icon, trend }: {
     label: string;
     value: string | number;

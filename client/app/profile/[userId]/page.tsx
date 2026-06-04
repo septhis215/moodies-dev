@@ -2,21 +2,46 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Calendar, Film, Star, Tv, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Bookmark,
+  Calendar,
+  Eye,
+  Film,
+  Flame,
+  Heart,
+  Medal,
+  Sparkles,
+  Star,
+  Tv,
+  UserRound,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || "";
 const TMDB_READ_TOKEN = process.env.NEXT_PUBLIC_TMDB_READ_TOKEN || "";
+const MASCOT_SRC = "/images/moodies-mascot.png";
+const LOGO_SRC = "/images/moodies-transparent.png";
 
 type PublicUser = {
   id: string;
   username: string;
   name?: string | null;
   avatarUrl?: string | null;
-  createdAt?: string;
+  createdAt?: string | null;
+};
+
+type ProfileDisclosure = {
+  profileInfo: boolean;
+  watchlist: boolean;
+  reviews: boolean;
+  liked: boolean;
+  badges: boolean;
+  recentActivity: boolean;
 };
 
 type PublicReview = {
@@ -35,6 +60,7 @@ type PublicReview = {
 
 type PublicProfile = {
   user: PublicUser;
+  disclosure: ProfileDisclosure;
   stats: {
     totalReviews: number;
     movieReviews: number;
@@ -43,6 +69,33 @@ type PublicProfile = {
     topMoods: Array<{ emoji: string; count: number }>;
   };
   reviews: PublicReview[];
+  watchlist: { movieId: string[]; seriesId: string[] };
+  liked: { movieId: string[]; seriesId: string[] };
+  badges: Array<{ id: string; badgeType: string; awardedAt: string }>;
+  achievements: Array<{
+    achievement: {
+      key: string;
+      title: string;
+      description: string;
+      category: string;
+      reasoningTemplate: string;
+      lockedHint: string;
+    };
+    badge: {
+      badgeName: string;
+      icon: string;
+      rarity: string;
+      mascotMood: string;
+      mascotMotion: string;
+    } | null;
+    progress: {
+      currentProgress: number;
+      completionPercentage: number;
+      unlocked: boolean;
+      unlockedAt?: string | null;
+    };
+  }>;
+  recentActivity: Array<{ type: string; label: string; createdAt: string }>;
 };
 
 type TmdbDetail = {
@@ -51,6 +104,21 @@ type TmdbDetail = {
   poster_path?: string | null;
   release_date?: string;
   first_air_date?: string;
+};
+
+type PublicListItem = {
+  id: string;
+  mediaType: "MOVIE" | "TV";
+  title: string;
+  poster?: string | null;
+  year?: string;
+};
+
+type MoodPersona = {
+  title: string;
+  description: string;
+  signal: string;
+  tone: string;
 };
 
 function avatarSrc(avatarUrl?: string | null) {
@@ -67,7 +135,9 @@ function posterSrc(path?: string | null) {
   return path ? `https://image.tmdb.org/t/p/w342${path}` : null;
 }
 
-async function fetchTmdbDetail(review: PublicReview): Promise<TmdbDetail | null> {
+async function fetchTmdbDetail(
+  review: PublicReview,
+): Promise<TmdbDetail | null> {
   if (!TMDB_API_KEY && !TMDB_READ_TOKEN) return null;
   const type = review.mediaType === "TV" ? "tv" : "movie";
   const url = TMDB_API_KEY
@@ -75,10 +145,141 @@ async function fetchTmdbDetail(review: PublicReview): Promise<TmdbDetail | null>
     : `https://api.themoviedb.org/3/${type}/${review.tmdbId}?language=en-US`;
 
   const res = await fetch(url, {
-    headers: TMDB_READ_TOKEN ? { Authorization: `Bearer ${TMDB_READ_TOKEN}` } : undefined,
+    headers: TMDB_READ_TOKEN
+      ? { Authorization: `Bearer ${TMDB_READ_TOKEN}` }
+      : undefined,
   });
   if (!res.ok) return null;
   return res.json();
+}
+
+async function fetchTmdbListItem(
+  mediaType: "MOVIE" | "TV",
+  id: string,
+): Promise<PublicListItem> {
+  const type = mediaType === "TV" ? "tv" : "movie";
+  const fallback = `${mediaType === "TV" ? "TV" : "Movie"} #${id}`;
+  if (!TMDB_API_KEY && !TMDB_READ_TOKEN) {
+    return { id, mediaType, title: fallback };
+  }
+
+  const url = TMDB_API_KEY
+    ? `https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US`
+    : `https://api.themoviedb.org/3/${type}/${id}?language=en-US`;
+
+  try {
+    const res = await fetch(url, {
+      headers: TMDB_READ_TOKEN
+        ? { Authorization: `Bearer ${TMDB_READ_TOKEN}` }
+        : undefined,
+    });
+    if (!res.ok) return { id, mediaType, title: fallback };
+    const detail: TmdbDetail = await res.json();
+    const title = detail.title || detail.name || fallback;
+    const date = detail.release_date || detail.first_air_date;
+    return {
+      id,
+      mediaType,
+      title,
+      poster: detail.poster_path ?? null,
+      year: date ? date.slice(0, 4) : undefined,
+    };
+  } catch {
+    return { id, mediaType, title: fallback };
+  }
+}
+
+function getMoodPersona(profile: PublicProfile): MoodPersona {
+  const { movieReviews, tvReviews, totalReviews, averageRating, topMoods } =
+    profile.stats;
+  const favoriteMood = topMoods[0]?.emoji;
+  const rating = averageRating / 2;
+
+  if (totalReviews === 0) {
+    return {
+      title: "Quiet Curator",
+      description:
+        "They are still shaping their public taste profile, so every new review will move the needle.",
+      signal: "Fresh profile",
+      tone: "text-white/70",
+    };
+  }
+
+  if (rating >= 4.2 && totalReviews >= 8) {
+    return {
+      title: "Joy Hunter",
+      description:
+        "This viewer gravitates toward titles that land well and leaves a warm trail of high-confidence picks.",
+      signal: `${rating.toFixed(1)} avg score`,
+      tone: "text-yellow-300",
+    };
+  }
+
+  if (tvReviews > movieReviews * 1.25) {
+    return {
+      title: "Arc Follower",
+      description:
+        "They lean into long-form stories, character turns, and the slow burn of a good season.",
+      signal: `${tvReviews} TV reviews`,
+      tone: "text-sky-300",
+    };
+  }
+
+  if (movieReviews > tvReviews * 1.25) {
+    return {
+      title: "Momentum Seeker",
+      description:
+        "They move through films with pace, chasing strong premises, memorable scenes, and quick emotional payoff.",
+      signal: `${movieReviews} movie reviews`,
+      tone: "text-[#ff8a78]",
+    };
+  }
+
+  return {
+    title: favoriteMood ? "Mood Cartographer" : "Balanced Explorer",
+    description: favoriteMood
+      ? `Their reviews cluster around ${favoriteMood}, with a balanced spread across movies and TV.`
+      : "They sample across formats and let the story decide where their attention goes next.",
+    signal: favoriteMood ? `Top mood ${favoriteMood}` : "Balanced taste",
+    tone: "text-emerald-300",
+  };
+}
+
+function getBadges(profile: PublicProfile) {
+  const { totalReviews, movieReviews, tvReviews, averageRating, topMoods } =
+    profile.stats;
+  return [
+    {
+      name: "First Impression",
+      earned: totalReviews >= 1,
+      icon: <Sparkles size={14} />,
+    },
+    {
+      name: "Conversation Starter",
+      earned: totalReviews >= 10,
+      icon: <Flame size={14} />,
+    },
+    {
+      name: "Movie Minded",
+      earned: movieReviews >= 5,
+      icon: <Film size={14} />,
+    },
+    {
+      name: "Series Scout",
+      earned: tvReviews >= 5,
+      icon: <Tv size={14} />,
+    },
+    {
+      name: "Mood Mapper",
+      earned: topMoods.length >= 3,
+      icon: <Heart size={14} />,
+    },
+    {
+      name: "High Bar",
+      earned: totalReviews >= 5 && averageRating / 2 >= 4,
+      icon: <Medal size={14} />,
+    },
+  ];
 }
 
 export default function PublicProfilePage() {
@@ -86,9 +287,13 @@ export default function PublicProfilePage() {
   const profileId = params.userId;
   const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [watchlistItems, setWatchlistItems] = useState<PublicListItem[]>([]);
+  const [likedItems, setLikedItems] = useState<PublicListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reviewFilter, setReviewFilter] = useState<"all" | "MOVIE" | "TV">("all");
+  const [reviewFilter, setReviewFilter] = useState<"all" | "MOVIE" | "TV">(
+    "all",
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -103,11 +308,15 @@ export default function PublicProfilePage() {
           { cache: "no-store" },
         );
         if (!res.ok) {
-          throw new Error(res.status === 404 ? "This profile does not exist." : "Unable to load this profile.");
+          throw new Error(
+            res.status === 404
+              ? "This profile does not exist."
+              : "Unable to load this profile.",
+          );
         }
 
         const data: PublicProfile = await res.json();
-        const enriched = await Promise.all(
+        const enrichedReviews = await Promise.all(
           data.reviews.map(async (review) => {
             const detail = await fetchTmdbDetail(review).catch(() => null);
             const title = detail?.title || detail?.name;
@@ -115,17 +324,57 @@ export default function PublicProfilePage() {
 
             return {
               ...review,
-              tmdbTitle: title || `${review.mediaType === "TV" ? "TV" : "Movie"} #${review.tmdbId}`,
+              tmdbTitle:
+                title ||
+                `${review.mediaType === "TV" ? "TV" : "Movie"} #${review.tmdbId}`,
               tmdbPoster: detail?.poster_path ?? null,
               tmdbYear: date ? date.slice(0, 4) : undefined,
             };
           }),
         );
+        const watchlistIds = [
+          ...(data.watchlist?.movieId ?? []).map((id) => ({
+            id,
+            mediaType: "MOVIE" as const,
+          })),
+          ...(data.watchlist?.seriesId ?? []).map((id) => ({
+            id,
+            mediaType: "TV" as const,
+          })),
+        ];
+        const likedIds = [
+          ...(data.liked?.movieId ?? []).map((id) => ({
+            id,
+            mediaType: "MOVIE" as const,
+          })),
+          ...(data.liked?.seriesId ?? []).map((id) => ({
+            id,
+            mediaType: "TV" as const,
+          })),
+        ];
+        const [enrichedWatchlist, enrichedLiked] = await Promise.all([
+          Promise.all(
+            watchlistIds
+              .slice(0, 12)
+              .map((item) => fetchTmdbListItem(item.mediaType, item.id)),
+          ),
+          Promise.all(
+            likedIds
+              .slice(0, 12)
+              .map((item) => fetchTmdbListItem(item.mediaType, item.id)),
+          ),
+        ]);
 
-        if (!cancelled) setProfile({ ...data, reviews: enriched });
+        if (!cancelled) {
+          setProfile({ ...data, reviews: enrichedReviews });
+          setWatchlistItems(enrichedWatchlist);
+          setLikedItems(enrichedLiked);
+        }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Unable to load this profile.");
+          setError(
+            err instanceof Error ? err.message : "Unable to load this profile.",
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -141,17 +390,57 @@ export default function PublicProfilePage() {
   const filteredReviews = useMemo(() => {
     if (!profile) return [];
     if (reviewFilter === "all") return profile.reviews;
-    return profile.reviews.filter((review) => review.mediaType === reviewFilter);
+    return profile.reviews.filter(
+      (review) => review.mediaType === reviewFilter,
+    );
   }, [profile, reviewFilter]);
 
-  const ownProfile = Boolean(currentUser?.id && profile?.user.id === currentUser.id);
-  const displayName = profile?.user.name || profile?.user.username || "Moodies user";
+  const ownProfile = Boolean(
+    currentUser?.id && profile?.user.id === currentUser.id,
+  );
+  const displayName =
+    profile?.user.name || profile?.user.username || "Moodies user";
   const avatar = avatarSrc(profile?.user.avatarUrl);
   const initials = displayName
     .split(" ")
     .map((part) => part[0]?.toUpperCase() ?? "")
     .slice(0, 2)
     .join("");
+  const disclosure = profile?.disclosure ?? {
+    profileInfo: true,
+    watchlist: false,
+    reviews: true,
+    liked: false,
+    badges: true,
+    recentActivity: true,
+  };
+  const persona = profile ? getMoodPersona(profile) : null;
+  const visiblePersona =
+    !disclosure.reviews && persona
+      ? {
+          title: "Private Viewer",
+          description:
+            "This user keeps their taste signals private, so only disclosed profile sections are shown.",
+          signal: "Private taste profile",
+          tone: "text-white/55",
+        }
+      : persona;
+  const badges = profile ? getBadges(profile) : [];
+  const earnedBadges = badges.filter((badge) => badge.earned);
+  const reviewCadence =
+    profile?.reviews && profile.reviews.length > 1
+      ? Math.max(
+          1,
+          Math.round(
+            (new Date(profile.reviews[0].createdAt).getTime() -
+              new Date(
+                profile.reviews[profile.reviews.length - 1].createdAt,
+              ).getTime()) /
+              86400000 /
+              Math.max(profile.reviews.length - 1, 1),
+          ),
+        )
+      : null;
 
   if (loading) {
     return (
@@ -167,7 +456,7 @@ export default function PublicProfilePage() {
 
   if (error || !profile) {
     return (
-      <main className="min-h-screen bg-[#12111d] text-white">
+      <main className="min-h-screen bg-[#12111d] text-white ">
         <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-6">
           <div className="w-full rounded-2xl border border-white/10 bg-white/[0.04] p-8 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white/[0.07] text-white/50">
@@ -189,9 +478,12 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#12111d] text-white">
-      <section className="border-b border-white/10 bg-[radial-gradient(circle_at_20%_0%,rgba(233,79,55,0.20),transparent_34%),linear-gradient(180deg,#1b1828_0%,#12111d_100%)]">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-black text-white pb-8">
+      <section className="relative border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(233,79,55,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent)]">
+        <div className="mx-auto w-full max-w-7xl px-6 py-24 sm:px-14 sm:py-28">
+          <div className="pointer-events-none absolute right-10 top-24 hidden h-48 w-48 opacity-15 lg:block">
+            <Image src={MASCOT_SRC} alt="" fill sizes="192px" className="object-contain" />
+          </div>
           <Link
             href="/"
             className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-white/55 transition hover:text-white"
@@ -200,9 +492,9 @@ export default function PublicProfilePage() {
             Back to Moodies
           </Link>
 
-          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="flex items-center gap-5">
-              <div className="h-24 w-24 overflow-hidden rounded-full border border-white/15 bg-white/[0.08] shadow-2xl shadow-black/30 sm:h-28 sm:w-28">
+          <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-end">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+              <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.08] shadow-2xl shadow-black/30 sm:h-32 sm:w-32">
                 {avatar ? (
                   <img
                     src={avatar}
@@ -217,106 +509,273 @@ export default function PublicProfilePage() {
                 )}
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#ff8a78]">
-                  Public profile
+                  <span className="inline-flex items-center gap-2">
+                    <Image src={LOGO_SRC} alt="" width={18} height={18} className="h-4 w-4 object-contain" />
+                    Public profile
+                  </span>
                 </p>
                 <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
                   {displayName}
                 </h1>
+                {visiblePersona && (
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-2 rounded-lg border border-[#e94f37]/35 bg-[#e94f37]/15 px-3 py-1.5 text-sm font-bold text-white">
+                      <Sparkles size={15} className="text-[#ff8a78]" />
+                      {visiblePersona.title}
+                    </span>
+                    <span className={`text-sm font-semibold ${visiblePersona.tone}`}>
+                      {visiblePersona.signal}
+                    </span>
+                  </div>
+                )}
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/55">
                   <span>@{profile.user.username}</span>
                   {profile.user.createdAt && (
                     <span className="inline-flex items-center gap-1.5">
                       <Calendar size={14} />
-                      Joined {new Date(profile.user.createdAt).toLocaleDateString()}
+                      Joined{" "}
+                      {new Date(profile.user.createdAt).toLocaleDateString()}
                     </span>
                   )}
                 </div>
               </div>
             </div>
 
-            {ownProfile && (
-              <Link
-                href="/profile"
-                className="inline-flex items-center justify-center rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.10]"
-              >
-                Edit my profile
-              </Link>
-            )}
+            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur">
+              <div className="pointer-events-none absolute -bottom-8 -right-4 h-28 w-28 opacity-20">
+                <Image src={MASCOT_SRC} alt="" fill sizes="112px" className="object-contain" />
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[#e94f37]/15 text-[#ff8a78]">
+                  <Eye size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">Taste read</p>
+                  <p className="mt-1 text-sm leading-6 text-white/60">
+                    {visiblePersona?.description}
+                  </p>
+                </div>
+              </div>
+              {ownProfile && (
+                <Link
+                  href="/profile"
+                  className="mt-5 inline-flex w-full items-center justify-center rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.10]"
+                >
+                  Edit my profile
+                </Link>
+              )}
+            </div>
           </div>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatTile label="Reviews" value={profile.stats.totalReviews} icon={<Star size={18} />} />
-            <StatTile label="Movies" value={profile.stats.movieReviews} icon={<Film size={18} />} />
-            <StatTile label="TV shows" value={profile.stats.tvReviews} icon={<Tv size={18} />} />
-            <StatTile label="Avg rating" value={profile.stats.averageRating ? (profile.stats.averageRating / 2).toFixed(1) : "0.0"} icon={<Star size={18} />} />
-          </div>
+          {disclosure.reviews && (
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <StatTile
+                label="Reviews"
+                value={profile.stats.totalReviews}
+                icon={<Star size={18} />}
+              />
+              <StatTile
+                label="Movies"
+                value={profile.stats.movieReviews}
+                icon={<Film size={18} />}
+              />
+              <StatTile
+                label="TV shows"
+                value={profile.stats.tvReviews}
+                icon={<Tv size={18} />}
+              />
+              <StatTile
+                label="Avg rating"
+                value={
+                  profile.stats.averageRating
+                    ? (profile.stats.averageRating / 2).toFixed(1)
+                    : "0.0"
+                }
+                icon={<Star size={18} />}
+              />
+            </div>
+          )}
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+      <section className="mx-auto max-w-7xl px-6 py-8 sm:px-14">
+        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
           <aside className="space-y-4">
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
-              <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
-                Mood pattern
-              </h2>
-              {profile.stats.topMoods.length > 0 ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {profile.stats.topMoods.map((mood) => (
-                    <span
-                      key={mood.emoji}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-sm text-white/80"
-                    >
-                      <span>{mood.emoji}</span>
-                      <span className="text-xs text-white/45">{mood.count}</span>
-                    </span>
+            {disclosure.reviews && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
+                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
+                  Mood pattern
+                </h2>
+                {profile.stats.topMoods.length > 0 ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {profile.stats.topMoods.map((mood) => (
+                      <span
+                        key={mood.emoji}
+                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-sm text-white/80"
+                      >
+                        <span>{mood.emoji}</span>
+                        <span className="text-xs text-white/45">
+                          {mood.count}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-4 text-sm text-white/45">
+                    No public mood tags yet.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {disclosure.badges && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
+                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
+                  Achievements
+                </h2>
+                <div className="mt-4 space-y-2">
+                  {profile.achievements.length > 0 ? (
+                    profile.achievements.slice(0, 6).map((row) => (
+                      <div
+                        key={row.achievement.key}
+                        className="rounded-lg border border-[#e94f37]/25 bg-[#e94f37]/10 px-3 py-2 text-sm text-white"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-semibold">{row.badge?.badgeName ?? row.achievement.title}</span>
+                          <span className="text-[0.62rem] font-bold uppercase tracking-wide text-[#ff8a78]">{row.badge?.rarity ?? "Common"}</span>
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-white/50">{row.achievement.reasoningTemplate}</p>
+                      </div>
+                    ))
+                  ) : badges.map((badge) => (
+                      <div
+                        key={badge.name}
+                        className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm ${
+                          badge.earned
+                            ? "border-[#e94f37]/25 bg-[#e94f37]/10 text-white"
+                            : "border-white/10 bg-white/[0.03] text-white/32"
+                        }`}
+                      >
+                        <span
+                          className={
+                            badge.earned ? "text-[#ff8a78]" : "text-white/25"
+                          }
+                        >
+                          {badge.icon}
+                        </span>
+                        <span className="font-semibold">{badge.name}</span>
+                      </div>
+                    ))}
+                  {profile.badges.length > 0 && (
+                    <p className="pt-2 text-xs text-white/35">
+                      {profile.badges.length} account badge{profile.badges.length === 1 ? "" : "s"} shared
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {(disclosure.watchlist || disclosure.liked) && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
+                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
+                  Shared lists
+                </h2>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  {disclosure.watchlist && (
+                    <InsightMini
+                      label="Watchlist"
+                      value={`${profile.watchlist.movieId.length + profile.watchlist.seriesId.length}`}
+                    />
+                  )}
+                  {disclosure.liked && (
+                    <InsightMini
+                      label="Liked"
+                      value={`${profile.liked.movieId.length + profile.liked.seriesId.length}`}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {(disclosure.badges || disclosure.recentActivity) && (
+              <div className="grid grid-cols-2 gap-3">
+                {disclosure.badges && (
+                  <InsightMini
+                    label="Earned"
+                    value={`${earnedBadges.length}/${badges.length}`}
+                  />
+                )}
+                {disclosure.recentActivity && (
+                  <InsightMini
+                    label="Cadence"
+                    value={reviewCadence ? `${reviewCadence}d` : "New"}
+                  />
+                )}
+              </div>
+            )}
+
+            {disclosure.recentActivity && profile.recentActivity.length > 0 && (
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
+                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
+                  Recent activity
+                </h2>
+                <div className="mt-4 space-y-2">
+                  {profile.recentActivity.map((activity, index) => (
+                    <div key={`${activity.type}-${index}`} className="rounded-lg bg-white/[0.04] px-3 py-2">
+                      <p className="text-sm font-semibold text-white/75">{activity.label}</p>
+                      <p className="mt-0.5 text-xs text-white/35">
+                        {new Date(activity.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
                   ))}
                 </div>
-              ) : (
-                <p className="mt-4 text-sm text-white/45">No public mood tags yet.</p>
-              )}
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
-              <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
-                Profile read
-              </h2>
-              <p className="mt-4 text-sm leading-6 text-white/60">
-                {displayName} tends to leave {profile.stats.movieReviews >= profile.stats.tvReviews ? "movie-first" : "TV-first"} reactions,
-                with an average score of {(profile.stats.averageRating / 2 || 0).toFixed(1)} out of 5.
-              </p>
-            </div>
+              </div>
+            )}
           </aside>
 
           <div className="space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-2xl font-black">Public reviews</h2>
+                <h2 className="text-2xl font-black">
+                  {disclosure.reviews ? "Public reviews" : "Reviews are private"}
+                </h2>
                 <p className="mt-1 text-sm text-white/45">
-                  Recent thoughts this user shared with the community.
+                  {disclosure.reviews
+                    ? "Recent thoughts this user shared with the community."
+                    : "This user has chosen not to show reviews on their public profile."}
                 </p>
               </div>
-              <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.05] p-1">
-                {(["all", "MOVIE", "TV"] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    onClick={() => setReviewFilter(filter)}
-                    className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                      reviewFilter === filter
-                        ? "bg-[#e94f37] text-white"
-                        : "text-white/55 hover:text-white"
-                    }`}
-                  >
-                    {filter === "all" ? "All" : filter === "MOVIE" ? "Movies" : "TV"}
-                  </button>
-                ))}
-              </div>
+              {disclosure.reviews && (
+                <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.05] p-1">
+                  {(["all", "MOVIE", "TV"] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      type="button"
+                      onClick={() => setReviewFilter(filter)}
+                      className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                        reviewFilter === filter
+                          ? "bg-[#e94f37] text-white"
+                          : "text-white/55 hover:text-white"
+                      }`}
+                    >
+                      {filter === "all"
+                        ? "All"
+                        : filter === "MOVIE"
+                          ? "Movies"
+                          : "TV"}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {filteredReviews.length === 0 ? (
+            {!disclosure.reviews ? (
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-10 text-center text-sm text-white/45">
+                Hidden by this user&apos;s disclosure settings.
+              </div>
+            ) : filteredReviews.length === 0 ? (
               <div className="rounded-xl border border-white/10 bg-white/[0.04] p-10 text-center text-sm text-white/45">
                 No reviews in this filter yet.
               </div>
@@ -326,6 +785,26 @@ export default function PublicProfilePage() {
                   <ReviewRow key={review.id} review={review} index={index} />
                 ))}
               </div>
+            )}
+
+            {disclosure.watchlist && (
+              <PublicListSection
+                title="Public watchlist"
+                description="Titles this user has saved for later."
+                emptyText="This user has not shared any watchlist titles yet."
+                icon={<Bookmark size={18} />}
+                items={watchlistItems}
+              />
+            )}
+
+            {disclosure.liked && (
+              <PublicListSection
+                title="Liked titles"
+                description="Movies and series this user marked as favorites."
+                emptyText="This user has not shared any liked titles yet."
+                icon={<Heart size={18} />}
+                items={likedItems}
+              />
             )}
           </div>
         </div>
@@ -356,6 +835,97 @@ function StatTile({
   );
 }
 
+function InsightMini({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+      <p className="text-xl font-black text-white">{value}</p>
+      <p className="mt-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-white/35">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function PublicListSection({
+  title,
+  description,
+  emptyText,
+  icon,
+  items,
+}: {
+  title: string;
+  description: string;
+  emptyText: string;
+  icon: React.ReactNode;
+  items: PublicListItem[];
+}) {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-black text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#e94f37]/15 text-[#ff8a78]">
+              {icon}
+            </span>
+            {title}
+          </h2>
+          <p className="mt-1 text-sm text-white/45">{description}</p>
+        </div>
+        {items.length > 0 && (
+          <span className="w-fit rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-white/35">
+            {items.length} shown
+          </span>
+        )}
+      </div>
+
+      {items.length === 0 ? (
+        <div className="rounded-xl border border-white/10 bg-black/20 p-8 text-center text-sm text-white/45">
+          {emptyText}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {items.map((item) => (
+            <PublicListCard key={`${item.mediaType}-${item.id}`} item={item} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PublicListCard({ item }: { item: PublicListItem }) {
+  const href = item.mediaType === "TV" ? `/tv/${item.id}` : `/movies/${item.id}`;
+  const poster = posterSrc(item.poster);
+
+  return (
+    <Link
+      href={href}
+      className="group min-w-0 rounded-xl border border-white/10 bg-black/25 p-2 transition hover:-translate-y-0.5 hover:border-[#e94f37]/40 hover:bg-white/[0.06]"
+    >
+      <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-white/[0.08]">
+        {poster ? (
+          <img
+            src={poster}
+            alt={item.title}
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-white/25">
+            {item.mediaType === "TV" ? <Tv size={24} /> : <Film size={24} />}
+          </div>
+        )}
+        <span className="absolute left-2 top-2 rounded-md bg-black/70 px-2 py-1 text-[0.62rem] font-bold text-white/80">
+          {item.mediaType === "TV" ? "TV" : "Movie"}
+        </span>
+      </div>
+      <p className="mt-2 line-clamp-2 text-sm font-bold leading-5 text-white group-hover:text-[#ff8a78]">
+        {item.title}
+      </p>
+      {item.year && <p className="mt-0.5 text-xs text-white/35">{item.year}</p>}
+    </Link>
+  );
+}
+
 function ReviewRow({ review, index }: { review: PublicReview; index: number }) {
   const type = review.mediaType === "TV" ? "tv" : "movies";
   const poster = posterSrc(review.tmdbPoster);
@@ -373,10 +943,18 @@ function ReviewRow({ review, index }: { review: PublicReview; index: number }) {
           className="h-28 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-white/[0.08]"
         >
           {poster ? (
-            <img src={poster} alt={review.tmdbTitle} className="h-full w-full object-cover" />
+            <img
+              src={poster}
+              alt={review.tmdbTitle}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-white/30">
-              {review.mediaType === "TV" ? <Tv size={24} /> : <Film size={24} />}
+              {review.mediaType === "TV" ? (
+                <Tv size={24} />
+              ) : (
+                <Film size={24} />
+              )}
             </div>
           )}
         </Link>
@@ -400,7 +978,9 @@ function ReviewRow({ review, index }: { review: PublicReview; index: number }) {
 
             <div className="inline-flex w-fit items-center gap-1 rounded-lg border border-white/10 bg-white/[0.06] px-2 py-1">
               <Star size={12} className="fill-yellow-400 text-yellow-400" />
-              <span className="text-xs font-bold">{(review.rating / 2).toFixed(1)}</span>
+              <span className="text-xs font-bold">
+                {(review.rating / 2).toFixed(1)}
+              </span>
             </div>
           </div>
 
