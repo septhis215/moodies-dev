@@ -78,6 +78,27 @@ export class FeedUtilsService {
     return `${this.getMediaType(item)}:${item.id}`;
   }
 
+  getVideoEntryKey(
+    mediaType: FeedMediaType,
+    id: number,
+    videoKey?: string | null,
+  ) {
+    return `${mediaType}:${id}:${videoKey || 'primary'}`;
+  }
+
+  getPrimaryVideoKey(item: any) {
+    const mediaType = this.getMediaType(item);
+    return this.getVideoEntryKey(
+      mediaType,
+      Number(item.id),
+      item.video_key || item.primary_video?.key,
+    );
+  }
+
+  getViewedVideoKeys(history: ViewedTrailerEntry[]) {
+    return new Set(history.map((entry) => entry.trailerKey).filter(Boolean));
+  }
+
   normalizeViewerId(viewerId?: string) {
     if (!viewerId || typeof viewerId !== 'string') return null;
     const normalized = viewerId.trim().replace(/[^a-zA-Z0-9:_-]/g, '_');
@@ -142,6 +163,29 @@ export class FeedUtilsService {
       : [...unviewed, ...viewed];
   }
 
+  prioritizeUnviewedVideos<T = any>(
+    items: T[],
+    viewedVideoKeys: Set<string>,
+    options: { minimumUnviewed?: number; keepViewedFallback?: boolean } = {},
+  ) {
+    if (viewedVideoKeys.size === 0) return items;
+
+    const unviewed = items.filter(
+      (item: any) => !viewedVideoKeys.has(this.getPrimaryVideoKey(item)),
+    );
+    const viewed = items.filter((item: any) =>
+      viewedVideoKeys.has(this.getPrimaryVideoKey(item)),
+    );
+    const minimumUnviewed =
+      options.minimumUnviewed ?? Math.min(12, items.length);
+
+    if (!options.keepViewedFallback && unviewed.length >= minimumUnviewed) {
+      return unviewed;
+    }
+
+    return [...unviewed, ...viewed];
+  }
+
   async recordViewedTrailer(
     viewerId: string | undefined,
     mediaType: FeedMediaType,
@@ -153,7 +197,7 @@ export class FeedUtilsService {
 
     const history = await this.getViewedTrailerHistory(viewerKey);
     const itemKey = `${mediaType}:${id}`;
-    const trailerKey = `${itemKey}:${videoKey || 'primary'}`;
+    const trailerKey = this.getVideoEntryKey(mediaType, id, videoKey);
     const nextHistory: ViewedTrailerEntry[] = [
       { itemKey, trailerKey, mediaType, id, videoKey, viewedAt: Date.now() },
       ...history.filter((entry) => entry.trailerKey !== trailerKey),
@@ -172,6 +216,13 @@ export class FeedUtilsService {
     const mediaType = this.getMediaType(item);
     const title = item.title || item.name || 'Untitled';
     const releaseDate = item.release_date || item.first_air_date || null;
+    const primaryVideo = item.primary_video || null;
+    const videoType = primaryVideo
+      ? this.videoScoring.normalizeVideoType(primaryVideo)
+      : null;
+    const videoTypeLabel = primaryVideo
+      ? this.videoScoring.getVideoTypeLabel(primaryVideo)
+      : null;
 
     return {
       ...item,
@@ -195,8 +246,22 @@ export class FeedUtilsService {
       vote_count: item.vote_count || 0,
       popularity: item.popularity || 0,
       original_language: item.original_language || 'en',
-      videos: item.videos || [],
-      primary_video: item.primary_video || null,
+      videos: (item.videos || []).map((video: any) => ({
+        ...video,
+        video_type: this.videoScoring.normalizeVideoType(video),
+        video_type_label: this.videoScoring.getVideoTypeLabel(video),
+      })),
+      primary_video: primaryVideo
+        ? {
+            ...primaryVideo,
+            video_type: videoType,
+            video_type_label: videoTypeLabel,
+          }
+        : null,
+      video_key: primaryVideo?.key || null,
+      video_name: primaryVideo?.name || null,
+      video_type: videoType,
+      video_type_label: videoTypeLabel,
     };
   }
 
@@ -237,6 +302,7 @@ export class FeedUtilsService {
       targetCount?: number;
       batchSize?: number;
       allowUpcomingFallback?: boolean;
+      viewedVideoKeys?: Set<string>;
     } = {},
   ) {
     const enriched: any[] = [];
@@ -255,6 +321,7 @@ export class FeedUtilsService {
             item,
             seed,
             options.allowUpcomingFallback ?? false,
+            options.viewedVideoKeys ?? new Set(),
           ),
         ),
       );
@@ -276,6 +343,7 @@ export class FeedUtilsService {
     item: any,
     seed: number,
     allowUpcomingFallback = false,
+    viewedVideoKeys: Set<string> = new Set(),
   ) {
     try {
       const mediaType = this.getMediaType(item);
@@ -304,10 +372,23 @@ export class FeedUtilsService {
 
       if (videosToUse.length === 0) return null;
 
-      const topVideos = this.videoScoring.sortByScore(videosToUse).slice(0, 8);
-      const primaryCandidates = topVideos.slice(
+      const topVideos = this.prioritizeVideosForItem(
+        mediaType,
+        item.id,
+        this.videoScoring.sortByScore(videosToUse).slice(0, 8),
+        viewedVideoKeys,
+      );
+      const unviewedTopVideos = topVideos.filter(
+        (video) =>
+          !viewedVideoKeys.has(
+            this.getVideoEntryKey(mediaType, Number(item.id), video.key),
+          ),
+      );
+      const primaryPool =
+        unviewedTopVideos.length > 0 ? unviewedTopVideos : topVideos;
+      const primaryCandidates = primaryPool.slice(
         0,
-        Math.min(4, topVideos.length),
+        Math.min(4, primaryPool.length),
       );
       const primaryIndex = getSeededRandom(
         item.id + seed,
@@ -366,5 +447,27 @@ export class FeedUtilsService {
           result.status === 'fulfilled' && result.value,
       )
       .map((result) => result.value);
+  }
+
+  private prioritizeVideosForItem(
+    mediaType: FeedMediaType,
+    id: number,
+    videos: any[],
+    viewedVideoKeys: Set<string>,
+  ) {
+    if (viewedVideoKeys.size === 0) return videos;
+
+    const unviewed = videos.filter(
+      (video) =>
+        !viewedVideoKeys.has(this.getVideoEntryKey(mediaType, id, video.key)),
+    );
+    const viewed = videos.filter((video) =>
+      viewedVideoKeys.has(this.getVideoEntryKey(mediaType, id, video.key)),
+    );
+
+    return [
+      ...unviewed,
+      ...viewed.map((video) => ({ ...video, viewed: true })),
+    ];
   }
 }

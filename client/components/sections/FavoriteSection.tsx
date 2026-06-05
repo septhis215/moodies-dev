@@ -2,7 +2,18 @@
 import { useEffect, useState } from "react";
 import type { All } from "@/types/all";
 import Image from "next/image";
-import { ChevronRight, Film, Tv, Play, Plus, Star, Info } from "lucide-react";
+import {
+  ChevronRight,
+  Film,
+  Tv,
+  Play,
+  Plus,
+  Star,
+  Info,
+  Sparkles,
+  Heart,
+  Clapperboard,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -15,6 +26,11 @@ interface MoodiesMixProps {
   subtitle?: string;
   endpoint?: string;
 }
+
+type FavoriteContent = Omit<Partial<All>, "type"> & {
+  media_type?: "movie" | "tv";
+  type?: All["type"] | "movies";
+};
 
 async function fetchFavorites(token: string): Promise<All[]> {
   const base = process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
@@ -48,16 +64,11 @@ export default function MoodiesMix({
   const [offset, setOffset] = useState(0);
   const [wlLoading, setWlLoading] = useState(false);
 
-  // Derive auth state from token — this is the single source of truth.
-  // `null`  = not yet resolved (hydrating)
-  // `""`    = resolved, guest
-  // `"xyz"` = resolved, authenticated
   const [token, setToken] = useState<string | null>(null);
 
   const router = useRouter();
-  const { ready, add, remove, isInWatchlist } = useWatchlist();
+  const { add, remove, isInWatchlist } = useWatchlist();
 
-  // Resolve token once on mount (client-only)
   useEffect(() => {
     const t = sGet("authToken") ?? "";
     setToken(t);
@@ -97,13 +108,11 @@ export default function MoodiesMix({
     load();
   }, [data, token, isAuthenticated]);
 
-  // ─── Helpers ────────────────────────────────────────────────────────────────
-
-  const getContentType = (item: Partial<All>): "movie" | "tv" => {
-    if ((item as any).media_type) return (item as any).media_type;
-    if ((item as any).type === "movies" || (item as any).type === "movie") return "movie";
-    if ((item as any).type === "tv") return "tv";
-    if ((item as any).number_of_seasons || (item as any).first_air_date || (item as any).name) return "tv";
+  const getContentType = (item: FavoriteContent): "movie" | "tv" => {
+    if (item.media_type) return item.media_type;
+    if (item.type === "movies" || item.type === "movie") return "movie";
+    if (item.type === "tv") return "tv";
+    if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
     return "movie";
   };
 
@@ -118,14 +127,11 @@ export default function MoodiesMix({
   const scoreBg = (s: number) =>
     s >= 7 ? "bg-green-400/10" : s >= 5 ? "bg-yellow-400/10" : "bg-red-400/10";
 
-  // ─── State: hydrating (token not yet read) ──────────────────────────────────
   if (token === null) return null;
 
-  // ─── State: guest ───────────────────────────────────────────────────────────
   if (!isAuthenticated) {
     return (
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-10 lg:px-8 xl:max-w-7xl">
-        {/* Header */}
         <div className="mb-5">
           <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#e94f37]">
             Recommended for you
@@ -147,51 +153,63 @@ export default function MoodiesMix({
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="relative flex w-full items-stretch overflow-hidden rounded-xl border border-white/10 bg-[#0e0e0e] sm:min-h-[260px] sm:rounded-2xl"
+          className="relative flex w-full items-stretch overflow-hidden rounded-xl border border-white/10 bg-[#090909] shadow-2xl shadow-black/30 sm:min-h-[286px] sm:rounded-2xl"
         >
-          {/* Tiled mood-grid background */}
-          <div className="absolute inset-0 grid grid-cols-5 gap-[3px] opacity-20 pointer-events-none">
-            {[
-              "#1e1e2e", "#2a1a0e", "#0e1a2a", "#1a0e1a", "#0e1e0e",
-              "#2a0e0e", "#1e2a0e", "#0e2a1a", "#2a1e0e", "#1a1a1a",
-              "#0e1a1e", "#2a0e1a", "#1e0e2a", "#0e2e0e", "#2e1a0e",
-            ].map((bg, i) => (
-              <div key={i} className="rounded-sm" style={{ background: bg }} />
-            ))}
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(233,79,55,0.22),transparent_30%),radial-gradient(circle_at_78%_20%,rgba(245,158,11,0.16),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.06),transparent_34%)]" />
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff8b78]/60 to-transparent" />
+            <div className="absolute -right-12 top-8 h-40 w-40 rounded-full border border-[#e94f37]/20" />
+            <div className="absolute -right-5 top-20 h-24 w-24 rounded-full border border-white/10" />
+            <div className="absolute bottom-0 right-0 hidden h-full w-[46%] bg-[linear-gradient(90deg,transparent,rgba(233,79,55,0.08))] sm:block" />
           </div>
 
-          {/* Left-to-right scrim */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0a0a]/95 via-[#0a0a0a]/85 to-[#0a0a0a]/45 pointer-events-none sm:bg-gradient-to-r sm:from-[#0a0a0a]/95 sm:via-[#0a0a0a]/75 sm:to-transparent" />
-          {/* Bottom scrim */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a]/50 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#090909] via-[#090909]/90 to-[#090909]/55 pointer-events-none sm:bg-gradient-to-r sm:from-[#090909] sm:via-[#090909]/78 sm:to-[#090909]/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
 
-          {/* ── Left: copy + CTA ── */}
           <div className="relative z-10 flex w-full flex-col justify-center px-4 py-6 sm:max-w-[58%] sm:px-10 sm:py-8">
-            {/* Eyebrow pill */}
-            <div className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full border border-[#e94f37]/30 bg-[#e94f37]/15 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-[#e94f37]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#e94f37]" />
-              Members only
-            </div>
 
             {/* Headline */}
-            <h3 className="mb-2 text-2xl font-extrabold leading-tight text-white sm:text-3xl lg:text-[2rem]">
+            <h3 className="mb-2 max-w-[13ch] text-2xl font-extrabold leading-tight text-white sm:text-3xl lg:text-[2.25rem]">
               Movies picked{" "}
-              <span className="text-[#e94f37]">just for you</span>
+              <span className="bg-gradient-to-r from-[#ff8b78] to-[#f59e0b] bg-clip-text text-transparent">
+                just for you
+              </span>
             </h3>
 
             {/* Subline */}
-            <p className="mb-5 max-w-sm text-sm leading-6 text-white/55">
-              Sign in to unlock recommendations built around your taste — your genres, your vibe, your watchlist.
+            <p className="mb-5 max-w-md text-sm leading-6 text-white/60">
+              Sign in to unlock a cinematic mix shaped by your favorite moods,
+              genres, and saved titles.
             </p>
+
+            <div className="mb-5 flex flex-wrap gap-2">
+              {["Cozy", "Thrilling", "Funny", "Epic"].map((mood, i) => (
+                <span
+                  key={mood}
+                  className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold text-white/75"
+                  style={{
+                    boxShadow:
+                      i === 1
+                        ? "inset 0 0 0 1px rgba(233,79,55,0.28)"
+                        : undefined,
+                  }}
+                >
+                  {mood}
+                </span>
+              ))}
+            </div>
 
             {/* Perks */}
             <ul className="mb-6 flex flex-col gap-2">
               {[
-                "Personalised picks refreshed daily",
-                "Save titles to your watchlist",
-                "Sync across all your devices",
+                "Daily picks tuned to your watch history",
+                "Mood-aware movie routes for any night",
+                "One tap to save and keep watching later",
               ].map((perk) => (
-                <li key={perk} className="flex items-center gap-2.5 text-xs text-white/60">
+                <li
+                  key={perk}
+                  className="flex items-center gap-2.5 text-xs text-white/60"
+                >
                   <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[#e94f37]/15">
                     <span className="h-[5px] w-[5px] rounded-full bg-[#e94f37]" />
                   </span>
@@ -220,41 +238,95 @@ export default function MoodiesMix({
           </div>
 
           {/* ── Right: poster stack (hidden on very small screens) ── */}
-          <div className="absolute right-6 sm:right-10 top-0 bottom-0 hidden sm:flex items-center justify-center z-10">
-            <div className="relative w-[170px] h-[210px]">
+          <div className="absolute bottom-0 right-3 top-0 z-10 hidden items-center justify-center sm:flex lg:right-10">
+            <div className="relative h-[238px] w-[248px]">
               {/* Back poster */}
               <div
-                className="absolute w-[108px] h-[158px] rounded-xl border-2 border-white/10 overflow-hidden"
-                style={{ right: 0, top: 14, transform: "rotate(8deg)", zIndex: 1, background: "linear-gradient(135deg,#1a1a2e,#0f3460)" }}
+                className="absolute h-[172px] w-[116px] overflow-hidden rounded-xl border border-white/15 shadow-2xl shadow-black/45"
+                style={{
+                  right: 4,
+                  top: 32,
+                  transform: "rotate(8deg)",
+                  zIndex: 1,
+                  background: "linear-gradient(145deg,#30140f,#b14332)",
+                }}
               >
-                <div className="flex items-center justify-center h-full">
-                  <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Drama</span>
+                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),transparent_36%),linear-gradient(to_top,rgba(0,0,0,0.7),transparent_55%)]" />
+                <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-black/35 text-white ring-1 ring-white/15">
+                  <Heart size={15} />
+                </div>
+                <div className="absolute bottom-3 left-3 right-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/45">
+                    Mood
+                  </p>
+                  <p className="mt-1 truncate text-sm font-black text-white">
+                    Cozy
+                  </p>
                 </div>
               </div>
               {/* Middle poster */}
               <div
-                className="absolute w-[108px] h-[158px] rounded-xl border-2 border-white/10 overflow-hidden"
-                style={{ left: 0, top: 22, transform: "rotate(-5deg)", zIndex: 2, background: "linear-gradient(135deg,#2d1b00,#8b4513)" }}
+                className="absolute h-[172px] w-[116px] overflow-hidden rounded-xl border border-white/15 shadow-2xl shadow-black/45"
+                style={{
+                  left: 12,
+                  top: 40,
+                  transform: "rotate(-6deg)",
+                  zIndex: 2,
+                  background: "linear-gradient(145deg,#111827,#0f766e)",
+                }}
               >
-                <div className="flex items-center justify-center h-full">
-                  <span className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Thriller</span>
+                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),transparent_36%),linear-gradient(to_top,rgba(0,0,0,0.7),transparent_55%)]" />
+                <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-black/35 text-white ring-1 ring-white/15">
+                  <Film size={15} />
+                </div>
+                <div className="absolute bottom-3 left-3 right-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/45">
+                    Mood
+                  </p>
+                  <p className="mt-1 truncate text-sm font-black text-white">
+                    Thrill
+                  </p>
                 </div>
               </div>
               {/* Front poster — highlighted */}
               <div
-                className="absolute w-[108px] h-[158px] rounded-xl border-2 overflow-hidden"
-                style={{ left: 30, top: 8, transform: "rotate(1deg)", zIndex: 3, borderColor: "rgba(233,79,55,0.45)", background: "linear-gradient(135deg,#1a0a0a,#6b0000)", boxShadow: "0 8px 32px rgba(0,0,0,0.55)" }}
+                className="absolute h-[172px] w-[116px] overflow-hidden rounded-xl border border-[#e94f37]/45 shadow-2xl shadow-black/55"
+                style={{
+                  left: 64,
+                  top: 4,
+                  transform: "rotate(1deg)",
+                  zIndex: 3,
+                  background:
+                    "linear-gradient(145deg,#240b08,#e94f37 62%,#f59e0b)",
+                }}
               >
-                <div className="flex items-center justify-center h-full">
-                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Your mix</span>
+                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.2),transparent_36%),linear-gradient(to_top,rgba(0,0,0,0.68),transparent_55%)]" />
+                <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-black/35 text-white ring-1 ring-white/15">
+                  <Clapperboard size={15} />
+                </div>
+                <div className="absolute bottom-3 left-3 right-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/55">
+                    Mood
+                  </p>
+                  <p className="mt-1 truncate text-sm font-black text-white">
+                    Your mix
+                  </p>
                 </div>
               </div>
               {/* Floating badge */}
-              <div
-                className="absolute left-1/2 -translate-x-1/2 -bottom-3 bg-[#e94f37] text-white text-[10px] font-bold px-3 py-1 rounded-full whitespace-nowrap z-20"
-                style={{ boxShadow: "0 2px 12px rgba(233,79,55,0.45)" }}
-              >
-                1,000+ titles waiting
+              <div className="absolute bottom-8 left-0 z-20 flex items-center gap-2 rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-white shadow-2xl shadow-black/50 backdrop-blur">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e94f37]">
+                  <Star size={14} className="fill-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">
+                    Match ready
+                  </p>
+                  <p className="text-xs font-black">1,000+ titles</p>
+                </div>
+              </div>
+              <div className="absolute bottom-0 right-4 z-20 rounded-full border border-[#e94f37]/35 bg-[#e94f37]/15 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#ff8b78]">
+                Members only
               </div>
             </div>
           </div>
@@ -276,7 +348,10 @@ export default function MoodiesMix({
         <div className="mb-3 h-[360px] w-full animate-pulse rounded-xl bg-zinc-900 sm:h-[340px] sm:rounded-2xl" />
         <div className="flex gap-3 overflow-hidden">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-[96px] w-[116px] flex-shrink-0 animate-pulse rounded-xl bg-zinc-900 sm:h-[110px] sm:w-[130px]" />
+            <div
+              key={i}
+              className="h-[96px] w-[116px] flex-shrink-0 animate-pulse rounded-xl bg-zinc-900 sm:h-[110px] sm:w-[130px]"
+            />
           ))}
         </div>
       </section>
@@ -297,14 +372,17 @@ export default function MoodiesMix({
       : "/placeholder-backdrop.svg";
 
   const currentKind = getContentType(primary);
-  const toHookType = (k: "movie" | "tv"): "movie" | "series" => (k === "tv" ? "series" : "movie");
-  const currentInWatchlist = primary?.id ? isInWatchlist(String(primary.id), toHookType(currentKind)) : false;
+  const toHookType = (k: "movie" | "tv"): "movie" | "series" =>
+    k === "tv" ? "series" : "movie";
+  const currentInWatchlist = primary?.id
+    ? isInWatchlist(String(primary.id), toHookType(currentKind))
+    : false;
 
   const toggleWatchlist = async () => {
     if (!primary?.id) return;
     setWlLoading(true);
     try {
-      const title = primary.title ?? (primary as any).name ?? null;
+      const title = primary.title ?? primary.name ?? null;
       const posterUrl = primary.poster_path
         ? `https://image.tmdb.org/t/p/w154${primary.poster_path}`
         : primary.backdrop_path
@@ -312,9 +390,15 @@ export default function MoodiesMix({
           : "/placeholder-poster.svg";
 
       if (currentInWatchlist) {
-        await remove(String(primary.id), toHookType(currentKind), { title, posterUrl });
+        await remove(String(primary.id), toHookType(currentKind), {
+          title,
+          posterUrl,
+        });
       } else {
-        await add(String(primary.id), toHookType(currentKind), { title, posterUrl });
+        await add(String(primary.id), toHookType(currentKind), {
+          title,
+          posterUrl,
+        });
       }
     } catch (e) {
       console.error("Watchlist toggle failed:", e);
@@ -340,7 +424,11 @@ export default function MoodiesMix({
         >
           {title}
         </h2>
-        {subtitle && <p className="mt-2 max-w-[34ch] text-sm leading-5 text-gray-500 sm:max-w-none">{subtitle}</p>}
+        {subtitle && (
+          <p className="mt-2 max-w-[34ch] text-sm leading-5 text-gray-500 sm:max-w-none">
+            {subtitle}
+          </p>
+        )}
       </div>
 
       {/* Hero banner */}
@@ -368,11 +456,17 @@ export default function MoodiesMix({
           <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 lg:p-8">
             <div className="mb-3 flex items-center gap-2">
               <span className="flex items-center gap-1 bg-[#e94f37]/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">
-                {getContentType(primary) === "tv" ? <Tv size={10} /> : <Film size={10} />}
+                {getContentType(primary) === "tv" ? (
+                  <Tv size={10} />
+                ) : (
+                  <Film size={10} />
+                )}
                 {getContentType(primary) === "tv" ? "Series" : "Movie"}
               </span>
               {typeof primary.vote_average === "number" && (
-                <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md ${scoreColor(primary.vote_average)} ${scoreBg(primary.vote_average)}`}>
+                <span
+                  className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md ${scoreColor(primary.vote_average)} ${scoreBg(primary.vote_average)}`}
+                >
                   <Star size={10} className="fill-current" />
                   {primary.vote_average.toFixed(1)}
                 </span>
@@ -386,11 +480,20 @@ export default function MoodiesMix({
             <div className="mb-3 flex flex-wrap gap-2">
               {(primary.release_date || primary.first_air_date) && (
                 <span className="text-[11px] bg-[#e94f37]/20 text-[#e94f37] font-semibold px-2 py-0.5 rounded-full">
-                  {(primary.release_date || primary.first_air_date || "").split("-")[0]}
+                  {
+                    (
+                      primary.release_date ||
+                      primary.first_air_date ||
+                      ""
+                    ).split("-")[0]
+                  }
                 </span>
               )}
               {primary.genres?.slice(0, 3).map((g) => (
-                <span key={g} className="text-[11px] bg-white/10 text-gray-300 font-medium px-2 py-0.5 rounded-full">
+                <span
+                  key={g}
+                  className="text-[11px] bg-white/10 text-gray-300 font-medium px-2 py-0.5 rounded-full"
+                >
                   {g}
                 </span>
               ))}
@@ -405,25 +508,36 @@ export default function MoodiesMix({
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               <button
                 className="flex items-center justify-center gap-1 rounded-lg bg-[#e94f37] px-3 py-3 text-[11px] font-bold text-white transition-colors hover:bg-[#ff5a42] sm:px-4 sm:py-2.5 sm:text-xs"
-                onClick={(e) => { e.stopPropagation(); handleClick(primary); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClick(primary);
+                }}
               >
                 <Info size={12} />
                 More Info
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); toggleWatchlist(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleWatchlist();
+                }}
                 disabled={wlLoading}
-                className={`flex items-center justify-center gap-1 rounded-lg border px-3 py-3 text-[11px] font-bold transition-colors sm:px-4 sm:py-2.5 sm:text-xs ${currentInWatchlist
-                  ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-                  : "bg-white/10 border-white/20 text-white hover:bg-white/20"
-                  }`}
+                className={`flex items-center justify-center gap-1 rounded-lg border px-3 py-3 text-[11px] font-bold transition-colors sm:px-4 sm:py-2.5 sm:text-xs ${
+                  currentInWatchlist
+                    ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
+                    : "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                }`}
               >
                 {wlLoading ? (
                   <span className="w-3.5 h-3.5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
                 ) : currentInWatchlist ? (
-                  <><BookmarkCheck size={12} /> Added</>
+                  <>
+                    <BookmarkCheck size={12} /> Added
+                  </>
                 ) : (
-                  <><Bookmark size={12} /> My List</>
+                  <>
+                    <Bookmark size={12} /> My List
+                  </>
                 )}
               </button>
             </div>
@@ -448,18 +562,29 @@ export default function MoodiesMix({
               className={`w-[116px] flex-shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-all sm:w-[130px] sm:rounded-xl ${isActive ? "border-[#e94f37]" : "border-transparent hover:border-white/20"}`}
             >
               <div className="relative h-[68px] w-full sm:h-[76px]">
-                <Image src={thumb} alt={item.title} fill
-            sizes="64px" className="object-cover" />
-                {isActive && <div className="absolute inset-0 bg-[#e94f37]/20" />}
+                <Image
+                  src={thumb}
+                  alt={item.title}
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                />
+                {isActive && (
+                  <div className="absolute inset-0 bg-[#e94f37]/20" />
+                )}
               </div>
               <div className="bg-zinc-900 px-2 py-1.5">
-                <p className="text-[11px] font-semibold text-white truncate">{item.title}</p>
+                <p className="text-[11px] font-semibold text-white truncate">
+                  {item.title}
+                </p>
                 <div className="flex items-center justify-between mt-0.5">
                   <span className="text-[10px] text-gray-500">
                     {item.year || (item.release_date || "").split("-")[0]}
                   </span>
                   {typeof item.vote_average === "number" && (
-                    <span className={`text-[10px] font-bold ${scoreColor(item.vote_average)}`}>
+                    <span
+                      className={`text-[10px] font-bold ${scoreColor(item.vote_average)}`}
+                    >
                       {item.vote_average.toFixed(1)}
                     </span>
                   )}

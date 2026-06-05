@@ -26,7 +26,7 @@ export class UpcomingFeedService {
     const viewedHistory = viewerKey
       ? await this.feedUtils.getViewedTrailerHistory(viewerKey)
       : [];
-    const viewedItemKeys = new Set(viewedHistory.map((entry) => entry.itemKey));
+    const viewedVideoKeys = this.feedUtils.getViewedVideoKeys(viewedHistory);
     const historySeed = this.feedUtils.getHistorySeed(viewedHistory);
     const cacheKey = this.feedUtils.cacheKey(
       'upcoming-feed',
@@ -48,7 +48,7 @@ export class UpcomingFeedService {
         this.buildUpcomingFeeds(
           safePage,
           safeLimit,
-          viewedItemKeys,
+          viewedVideoKeys,
           historySeed,
         ),
       (value) => Array.isArray(value?.results) && value.results.length > 0,
@@ -58,7 +58,7 @@ export class UpcomingFeedService {
   private async buildUpcomingFeeds(
     page: number,
     limit: number,
-    viewedItemKeys: Set<string> = new Set(),
+    viewedVideoKeys: Set<string> = new Set(),
     historySeed: number = 0,
   ) {
     try {
@@ -75,9 +75,9 @@ export class UpcomingFeedService {
       );
       const pageSeed = page * 12345 + historySeed;
       const recycledMode =
-        viewedItemKeys.size > 0 &&
+        viewedVideoKeys.size > 0 &&
         page > 1 &&
-        viewedItemKeys.size >= (page - 1) * Math.max(limit, 1);
+        viewedVideoKeys.size >= (page - 1) * Math.max(limit, 1);
 
       const endpoints = tmdbPages.flatMap((tmdbPage) => [
         {
@@ -125,19 +125,15 @@ export class UpcomingFeedService {
         )
         .filter((item): item is TmdbAll => Boolean(item));
       const uniqueItems = this.feedUtils.uniqueByMedia(candidates);
-      const unviewedCount = uniqueItems.filter(
-        (item) => !viewedItemKeys.has(this.feedUtils.getItemKey(item)),
-      ).length;
-      const exhaustedMode = viewedItemKeys.size > 0 && unviewedCount < limit;
+      const exhaustedMode =
+        viewedVideoKeys.size > 0 &&
+        page > 1 &&
+        viewedVideoKeys.size >= page * Math.max(limit, 1);
       const rankedBase = this.shuffleUpcomingTrailers(
         uniqueItems,
-        exhaustedMode ? pageSeed + viewedItemKeys.size * 409 : pageSeed,
+        exhaustedMode ? pageSeed + viewedVideoKeys.size * 409 : pageSeed,
       );
-      const ranked = this.prioritizeUpcomingPool(
-        rankedBase,
-        viewedItemKeys,
-        exhaustedMode,
-      );
+      const ranked = this.prioritizeUpcomingPool(rankedBase, new Set(), false);
       const detailTarget = Math.min(
         Math.max(limit * (exhaustedMode ? 3 : 2), 24),
         ranked.length,
@@ -152,6 +148,7 @@ export class UpcomingFeedService {
           targetCount: Math.min(limit, 30),
           batchSize: 8,
           allowUpcomingFallback: true,
+          viewedVideoKeys,
         },
       );
 
@@ -159,7 +156,7 @@ export class UpcomingFeedService {
         .normalizeResults(
           this.prioritizeUpcomingPool(
             enrichedItems,
-            viewedItemKeys,
+            viewedVideoKeys,
             exhaustedMode,
           ),
         )
@@ -171,7 +168,7 @@ export class UpcomingFeedService {
           exhaustedMode);
 
       this.logger.debug(
-        `Upcoming feed page ${page}: ${results.length}/${uniqueItems.length} results, unviewed=${unviewedCount}, recycled=${exhaustedMode}`,
+        `Upcoming feed page ${page}: ${results.length}/${uniqueItems.length} results, viewedVideos=${viewedVideoKeys.size}, recycled=${exhaustedMode}`,
       );
       return this.feedUtils.paginate(
         results,
@@ -317,16 +314,16 @@ export class UpcomingFeedService {
 
   private prioritizeUpcomingPool(
     items: TmdbAll[],
-    viewedItemKeys: Set<string>,
+    viewedVideoKeys: Set<string>,
     exhaustedMode: boolean,
   ) {
-    if (viewedItemKeys.size === 0) return items;
+    if (viewedVideoKeys.size === 0) return items;
 
     const unviewed = items.filter(
-      (item) => !viewedItemKeys.has(this.feedUtils.getItemKey(item)),
+      (item) => !viewedVideoKeys.has(this.feedUtils.getPrimaryVideoKey(item)),
     );
     const viewed = items.filter((item) =>
-      viewedItemKeys.has(this.feedUtils.getItemKey(item)),
+      viewedVideoKeys.has(this.feedUtils.getPrimaryVideoKey(item)),
     );
 
     if (!exhaustedMode && unviewed.length >= Math.min(12, items.length)) {

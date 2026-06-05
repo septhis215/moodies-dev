@@ -33,7 +33,7 @@ export class VideoFeedService {
     const viewedHistory = viewerKey
       ? await this.feedUtils.getViewedTrailerHistory(viewerKey)
       : [];
-    const viewedItemKeys = new Set(viewedHistory.map((entry) => entry.itemKey));
+    const viewedVideoKeys = this.feedUtils.getViewedVideoKeys(viewedHistory);
     const historySeed = this.feedUtils.getHistorySeed(viewedHistory);
     const cacheKey = this.feedUtils.cacheKey(
       'video-feed',
@@ -54,7 +54,7 @@ export class VideoFeedService {
           safePage,
           mediaType,
           safeLimit,
-          viewedItemKeys,
+          viewedVideoKeys,
         ),
       (value) => Array.isArray(value?.results) && value.results.length > 0,
     );
@@ -79,7 +79,7 @@ export class VideoFeedService {
     page: number,
     mediaType?: 'movie' | 'tv',
     limit: number = 18,
-    viewedItemKeys: Set<string> = new Set(),
+    viewedVideoKeys: Set<string> = new Set(),
   ) {
     try {
       const today = new Date();
@@ -132,11 +132,7 @@ export class VideoFeedService {
 
       const filteredItems = this.preFilterItems(allItems);
       const uniqueItems = this.feedUtils.uniqueByMedia(filteredItems);
-      const rankedItems = this.feedUtils.prioritizeUnviewed(
-        uniqueItems,
-        viewedItemKeys,
-      );
-      const scoredMixed = this.seededShuffle(rankedItems, pageSeed, 2.0);
+      const scoredMixed = this.seededShuffle(uniqueItems, pageSeed, 2.0);
       const itemsToEnrich = scoredMixed.slice(0, Math.max(limit * 3, 35));
       const itemsWithVideos = await this.feedUtils.enrichWithVideos(
         itemsToEnrich,
@@ -145,12 +141,13 @@ export class VideoFeedService {
           targetCount: Math.min(Math.max(limit * 2, 20), 35),
           batchSize: 8,
           allowUpcomingFallback: true,
+          viewedVideoKeys,
         },
       );
 
       const validItems = itemsWithVideos.filter((item) => item.primary_video);
       const finalResults = this.feedUtils.normalizeResults(
-        this.applyFinalShuffle(validItems, pageSeed, viewedItemKeys).slice(
+        this.applyFinalShuffle(validItems, pageSeed, viewedVideoKeys).slice(
           0,
           limit,
         ),
@@ -174,13 +171,14 @@ export class VideoFeedService {
   private applyFinalShuffle(
     items: any[],
     seed: number,
-    viewedItemKeys: Set<string> = new Set(),
+    viewedVideoKeys: Set<string> = new Set(),
   ): any[] {
     if (items.length === 0) return items;
 
-    const orderedItems = this.feedUtils.prioritizeUnviewed(
+    const orderedItems = this.feedUtils.prioritizeUnviewedVideos(
       items,
-      viewedItemKeys,
+      viewedVideoKeys,
+      { keepViewedFallback: true },
     );
     const upcomingItems = orderedItems.filter((i) => isUpcoming(i));
     const releasedItems = orderedItems.filter((i) => !isUpcoming(i));
@@ -245,7 +243,9 @@ export class VideoFeedService {
 
     while (uIdx < shuffledUpcoming.length)
       result.push(shuffledUpcoming[uIdx++]);
-    return this.feedUtils.prioritizeUnviewed(result, viewedItemKeys);
+    return this.feedUtils.prioritizeUnviewedVideos(result, viewedVideoKeys, {
+      keepViewedFallback: true,
+    });
   }
 
   private seededShuffle(array: any[], seed: number, jitter = 2.0): any[] {
