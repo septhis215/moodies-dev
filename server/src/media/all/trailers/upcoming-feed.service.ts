@@ -1,299 +1,386 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from 'src/redis/redis.service';
 import { TmdbClientService } from '../client/tmdb-client.service';
-import { RecommendationsService } from '../recommendations/recommendations.service';
-import { VideoScoringService } from '../videos/video-scoring.service';
 import { TmdbAll } from '../types/tmdb.types';
-import { CACHE_TTL, getSeededRandom, seededShuffleArray } from '../utils/helpers';
-import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
+import { CACHE_TTL, seededShuffleArray } from '../utils/helpers';
+import { FeedUtilsService } from '../feed/feed-utils.service';
 
 @Injectable()
 export class UpcomingFeedService {
-    private readonly logger = new Logger(UpcomingFeedService.name);
+  private readonly logger = new Logger(UpcomingFeedService.name);
 
-    constructor(
-        private readonly client: TmdbClientService,
-        private readonly redisService: RedisService,
-        private readonly recommendationsService: RecommendationsService,
-        private readonly videoScoring: VideoScoringService,
-    ) { }
+  constructor(
+    private readonly client: TmdbClientService,
+    private readonly redisService: RedisService,
+    private readonly feedUtils: FeedUtilsService,
+  ) {}
 
-    async getUpcomingFeeds(page: number = 1, limit: number = 35): Promise<{
-        results: any[];
-        page: number;
-        total_pages: number;
-        hasMore: boolean;
-    }> {
-        if (!this.client.token) {
-            this.logger.warn('TMDB_API_KEY not set; returning empty trailers');
-            return { results: [], page, total_pages: 0, hasMore: false };
-        }
+  async getUpcomingFeeds(
+    page: number = 1,
+    limit: number = 35,
+    viewerId?: string,
+  ) {
+    const safePage = Math.max(1, Math.min(Number(page) || 1, 100));
+    const safeLimit = Math.max(1, Math.min(Number(limit) || 35, 35));
+    const viewerKey = this.feedUtils.normalizeViewerId(viewerId);
+    const viewedHistory = viewerKey
+      ? await this.feedUtils.getViewedTrailerHistory(viewerKey)
+      : [];
+    const viewedItemKeys = new Set(viewedHistory.map((entry) => entry.itemKey));
+    const historySeed = this.feedUtils.getHistorySeed(viewedHistory);
+    const cacheKey = this.feedUtils.cacheKey(
+      'upcoming-feed',
+      safePage,
+      safeLimit,
+      viewerKey ? `viewer_${viewerKey}` : 'anon',
+      historySeed,
+    );
 
-        try {
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
-            const futureDate = new Date();
-            futureDate.setMonth(futureDate.getMonth() + 6);
-            const futureDateStr = futureDate.toISOString().split('T')[0];
-
-            const tmdbPagesPerRequest = 3;
-            const startTmdbPage = ((page - 1) * tmdbPagesPerRequest) + 1;
-            const endTmdbPage = startTmdbPage + tmdbPagesPerRequest;
-
-            this.logger.log(`Page ${page}: Fetching TMDB pages ${startTmdbPage}-${endTmdbPage - 1}`);
-
-            const items: TmdbAll[] = [];
-            const seenIds = new Set<number>();
-
-            const fetchTrailers = async (mediaType: 'movie' | 'tv') => {
-                const fetchedItems: TmdbAll[] = [];
-
-                for (let tmdbPage = startTmdbPage; tmdbPage < endTmdbPage; tmdbPage++) {
-                    try {
-                        const url = mediaType === 'movie'
-                            ? `discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${todayStr}&primary_release_date.lte=${futureDateStr}&page=${tmdbPage}`
-                            : `discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&first_air_date.lte=${futureDateStr}&page=${tmdbPage}`;
-
-                        const data = await this.client.tmdb(url);
-                        const results = data?.results ?? [];
-
-                        const trailerTasks = results.map((m: any) => async () => {
-                            if (seenIds.has(m.id)) return null;
-
-                            const rd = m.release_date ?? m.first_air_date;
-                            if (!rd || new Date(rd) < today) return null;
-                            if (!m.poster_path || !m.overview || m.overview.length < 10) return null;
-
-                            try {
-                                const [videosData, details] = await Promise.all([
-                                    this.client.tmdb(`${mediaType}/${m.id}/videos?language=en-US`),
-                                    this.client.tmdb(`${mediaType}/${m.id}?language=en-US`)
-                                ]);
-
-                                const allVideos = videosData?.results ?? [];
-                                seenIds.add(m.id);
-
-                                return {
-                                    id: m.id,
-                                    title: m.title ?? m.name ?? 'Untitled',
-                                    overview: m.overview ?? '',
-                                    poster_path: m.poster_path ?? null,
-                                    backdrop_path: m.backdrop_path ?? null,
-                                    release_date: rd,
-                                    vote_average: m.vote_average || 0,
-                                    vote_count: m.vote_count || 0,
-                                    type: mediaType,
-                                    recommendations: [],
-                                    runtime: mediaType === 'movie' ? details.runtime ?? null : null,
-                                    number_of_episodes: mediaType === 'tv' ? details.number_of_episodes ?? null : null,
-                                    genres: details.genres ? details.genres.map((g: any) => g.name) : [],
-                                    popularity: m.popularity || 0,
-                                    original_language: m.original_language || 'en',
-                                    videos: allVideos,
-                                } as TmdbAll;
-                            } catch (err) {
-                                this.logger.error(`Failed to fetch details for ${mediaType} ${m.id}`, err);
-                                return null;
-                            }
-                        });
-
-                        const pageResults = (await this.client.withConcurrencyLimit(trailerTasks, 10))
-                            .filter((item): item is TmdbAll => item !== null);
-
-                        fetchedItems.push(...pageResults);
-                    } catch (err) {
-                        this.logger.error(`Failed to fetch ${mediaType} page ${tmdbPage}`, err);
-                    }
-                }
-
-                return fetchedItems;
-            };
-
-            const [movieItems, tvItems] = await Promise.all([
-                fetchTrailers('movie'),
-                fetchTrailers('tv')
-            ]);
-
-            items.push(...movieItems, ...tvItems);
-
-            const uniqueItems = Array.from(
-                new Map(items.map(item => [item.id, item])).values()
-            );
-
-            this.logger.log(`Page ${page}: Fetched ${uniqueItems.length} unique items before video enrichment`);
-
-            const pageSeed = page * 12345;
-            const shuffled = this.shuffleUpcomingTrailers(uniqueItems, pageSeed);
-            const itemsToEnrich = shuffled.slice(0, Math.min(shuffled.length, limit * 2));
-            const enrichedItems = await this.enrichWithVideos(itemsToEnrich, pageSeed);
-
-            this.logger.log(`Page ${page}: ${enrichedItems.length} items with verified videos`);
-
-            const paginatedResults = enrichedItems.slice(0, limit);
-            const hasMore = enrichedItems.length >= Math.floor(limit * 0.8) && uniqueItems.length >= limit;
-
-            this.logger.log(`Page ${page}: Returning ${paginatedResults.length} results, hasMore: ${hasMore}`);
-
-            const response = { results: paginatedResults, page, total_pages: 100, hasMore };
-
-            if (paginatedResults.length > 0) {
-                setTimeout(() => {
-                    void runWithTmdbPriority(TMDB_PRIORITY.BACKGROUND, async () => {
-                        const tasks = paginatedResults.map(item => async () => {
-                            try {
-                                item.recommendations = await this.recommendationsService.getSmartRecommendations(item.type!, item.id, 3);
-                                return item;
-                            } catch (err) {
-                                this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
-                                return item;
-                            }
-                        });
-                        await this.client.withConcurrencyLimit(tasks, 3);
-                    });
-                }, 100);
-            }
-
-            return response;
-        } catch (err) {
-            this.logger.error('Failed to fetch upcoming trailers feed', err as any);
-            return { results: [], page, total_pages: 0, hasMore: false };
-        }
+    if (!this.client.token) {
+      this.logger.warn('TMDB_API_KEY not set; returning empty trailers');
+      return this.feedUtils.paginate([], safePage, 0, false);
     }
 
-    private async enrichWithVideos(items: any[], seed: number) {
-        const enriched: any[] = [];
-        const allowedRegions = [
-            'MY', 'SG', 'ID', 'TH', 'PH', 'VN', 'BN', 'KH', 'LA',
-            'HK', 'TW', 'IN', 'AU', 'NZ', 'US', 'GB', 'KR', 'JP'
-        ];
+    return this.redisService.getOrSet(
+      cacheKey,
+      60 * 20,
+      () =>
+        this.buildUpcomingFeeds(
+          safePage,
+          safeLimit,
+          viewedItemKeys,
+          historySeed,
+        ),
+      (value) => Array.isArray(value?.results) && value.results.length > 0,
+    );
+  }
 
-        const targetCount = Math.min(items.length, 30);
-        const batchSize = 8;
+  private async buildUpcomingFeeds(
+    page: number,
+    limit: number,
+    viewedItemKeys: Set<string> = new Set(),
+    historySeed: number = 0,
+  ) {
+    try {
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      const futureDate = new Date();
+      futureDate.setMonth(futureDate.getMonth() + 6);
+      const futureDateStr = futureDate.toISOString().split('T')[0];
+      const tmdbPagesPerRequest = 3;
+      const startTmdbPage = (page - 1) * tmdbPagesPerRequest + 1;
+      const tmdbPages = Array.from(
+        { length: tmdbPagesPerRequest },
+        (_, index) => startTmdbPage + index,
+      );
+      const pageSeed = page * 12345 + historySeed;
+      const recycledMode =
+        viewedItemKeys.size > 0 &&
+        page > 1 &&
+        viewedItemKeys.size >= (page - 1) * Math.max(limit, 1);
 
-        this.logger.log(`Starting enrichment of ${items.length} items, target: ${targetCount}`);
+      const endpoints = tmdbPages.flatMap((tmdbPage) => [
+        {
+          mediaType: 'movie' as const,
+          endpoint: `discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${todayStr}&primary_release_date.lte=${futureDateStr}&page=${tmdbPage}`,
+        },
+        {
+          mediaType: 'tv' as const,
+          endpoint: `discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&first_air_date.lte=${futureDateStr}&page=${tmdbPage}`,
+        },
+      ]);
 
-        for (let i = 0; i < items.length && enriched.length < targetCount; i += batchSize) {
-            const batch = items.slice(i, i + batchSize);
+      if (recycledMode) {
+        endpoints.push(
+          {
+            mediaType: 'movie' as const,
+            endpoint: `movie/upcoming?language=en-US&region=US&page=${((page + historySeed) % 4) + 1}`,
+          },
+          {
+            mediaType: 'movie' as const,
+            endpoint: `discover/movie?language=en-US&sort_by=popularity.desc&with_original_language=ko&primary_release_date.gte=${todayStr}&primary_release_date.lte=${futureDateStr}&page=${((page + historySeed) % 3) + 1}`,
+          },
+          {
+            mediaType: 'tv' as const,
+            endpoint: `discover/tv?language=en-US&sort_by=popularity.desc&with_original_language=ko&first_air_date.gte=${todayStr}&first_air_date.lte=${futureDateStr}&page=${((page + historySeed) % 3) + 1}`,
+          },
+        );
+      }
 
-            const batchResults = await Promise.allSettled(
-                batch.map(item => this.processItemWithVideos(item, allowedRegions, seed))
-            );
+      const sourceResults = await Promise.allSettled(
+        endpoints.map(async (source) => {
+          const data = await this.feedUtils.getCachedTmdb(
+            source.endpoint,
+            CACHE_TTL.BASIC_DATA,
+          );
+          return (data?.results || []).map((item: any) =>
+            this.toUpcomingCandidate(item, source.mediaType, today),
+          );
+        }),
+      );
 
-            for (const result of batchResults) {
-                if (result.status === 'fulfilled' && result.value) {
-                    enriched.push(result.value);
-                    if (enriched.length >= targetCount) break;
-                } else if (result.status === 'rejected') {
-                    this.logger.error('Failed to process item:', result.reason);
-                }
-            }
+      const candidates = sourceResults
+        .flatMap((result) =>
+          result.status === 'fulfilled' ? result.value : [],
+        )
+        .filter((item): item is TmdbAll => Boolean(item));
+      const uniqueItems = this.feedUtils.uniqueByMedia(candidates);
+      const unviewedCount = uniqueItems.filter(
+        (item) => !viewedItemKeys.has(this.feedUtils.getItemKey(item)),
+      ).length;
+      const exhaustedMode = viewedItemKeys.size > 0 && unviewedCount < limit;
+      const rankedBase = this.shuffleUpcomingTrailers(
+        uniqueItems,
+        exhaustedMode ? pageSeed + viewedItemKeys.size * 409 : pageSeed,
+      );
+      const ranked = this.prioritizeUpcomingPool(
+        rankedBase,
+        viewedItemKeys,
+        exhaustedMode,
+      );
+      const detailTarget = Math.min(
+        Math.max(limit * (exhaustedMode ? 3 : 2), 24),
+        ranked.length,
+      );
+      const detailedItems = await this.enrichDetails(
+        ranked.slice(0, detailTarget),
+      );
+      const enrichedItems = await this.feedUtils.enrichWithVideos(
+        detailedItems,
+        pageSeed,
+        {
+          targetCount: Math.min(limit, 30),
+          batchSize: 8,
+          allowUpcomingFallback: true,
+        },
+      );
 
-            if (i + batchSize < items.length && enriched.length < targetCount) {
-                await new Promise(resolve => setTimeout(resolve, 50));
-            }
-        }
+      const results = this.feedUtils
+        .normalizeResults(
+          this.prioritizeUpcomingPool(
+            enrichedItems,
+            viewedItemKeys,
+            exhaustedMode,
+          ),
+        )
+        .slice(0, limit);
+      const hasMore =
+        page < 100 &&
+        (results.length >= Math.floor(limit * 0.5) ||
+          uniqueItems.length >= limit ||
+          exhaustedMode);
 
-        this.logger.log(`Enrichment complete: ${enriched.length} items`);
-        return enriched;
+      this.logger.debug(
+        `Upcoming feed page ${page}: ${results.length}/${uniqueItems.length} results, unviewed=${unviewedCount}, recycled=${exhaustedMode}`,
+      );
+      return this.feedUtils.paginate(
+        results,
+        page,
+        100,
+        hasMore && results.length > 0,
+      );
+    } catch (err) {
+      this.logger.error('Failed to fetch upcoming trailers feed', err as any);
+      return this.feedUtils.paginate([], page, 0, false);
     }
+  }
 
-    private async processItemWithVideos(item: any, allowedRegions: string[], seed: number) {
-        try {
-            const mediaType = item.title ? 'movie' : 'tv';
-            let videos = item.videos || [];
+  private toUpcomingCandidate(
+    item: any,
+    mediaType: 'movie' | 'tv',
+    today: Date,
+  ) {
+    const releaseDate = item.release_date ?? item.first_air_date;
+    if (!releaseDate || new Date(releaseDate) < today) return null;
+    if (!item.poster_path || !item.overview || item.overview.length < 10)
+      return null;
 
-            if (videos.length === 0) {
-                const videosResponse = await this.client.tmdb(`${mediaType}/${item.id}/videos`);
-                videos = videosResponse.results || [];
-            }
+    return {
+      ...item,
+      title: item.title ?? item.name ?? 'Untitled',
+      name: item.title ?? item.name ?? 'Untitled',
+      release_date: releaseDate,
+      first_air_date: releaseDate,
+      type: mediaType,
+      media_type: mediaType,
+      recommendations: [],
+      genres: [],
+      vote_average: item.vote_average || 0,
+      vote_count: item.vote_count || 0,
+      popularity: item.popularity || 0,
+      original_language: item.original_language || 'en',
+    } as TmdbAll;
+  }
 
-            const filteredVideos = this.videoScoring.filterVideos(videos, allowedRegions);
-            if (filteredVideos.length === 0) return null;
+  private async enrichDetails(items: TmdbAll[]) {
+    const tasks = items.map((item) => async () => {
+      const mediaType = item.type === 'tv' ? 'tv' : 'movie';
 
-            const availableVideos = await this.videoScoring.getAvailableVideos(filteredVideos);
-            if (availableVideos.length === 0) return null;
+      try {
+        const details = await this.redisService.getOrSet(
+          this.feedUtils.cacheKey('feed-detail', mediaType, item.id),
+          CACHE_TTL.BASIC_DATA,
+          () =>
+            this.client.tmdb(
+              `${mediaType}/${item.id}?language=en-US&append_to_response=videos`,
+            ),
+          (value) => Boolean(value),
+        );
 
-            const scoredVideos = this.videoScoring.sortByScore(availableVideos);
-            const topVideos = scoredVideos.slice(0, 8);
-
-            const primaryCandidates = topVideos.slice(0, Math.min(4, topVideos.length));
-            const primaryIndex = getSeededRandom(item.id + seed, primaryCandidates.length);
-            const primaryVideo = primaryCandidates[primaryIndex];
-
-            if (!primaryVideo || !primaryVideo.key) return null;
-
-            return { ...item, media_type: mediaType, videos: topVideos, primary_video: primaryVideo };
-        } catch (err) {
-            this.logger.error(`Error processing item ${item.id}:`, err);
-            return null;
-        }
-    }
-
-    private shuffleUpcomingTrailers(items: TmdbAll[], seed: number): TmdbAll[] {
-        if (items.length === 0) return items;
-
-        const seededRandomForId = (id: number) => {
-            const x = Math.sin(seed * 9301 + id * 49297) * 43758.5453123;
-            return Math.abs(x - Math.floor(x));
+        const videos = details?.videos?.results || [];
+        return {
+          ...item,
+          runtime: mediaType === 'movie' ? (details?.runtime ?? null) : null,
+          number_of_episodes:
+            mediaType === 'tv' ? (details?.number_of_episodes ?? null) : null,
+          genres: Array.isArray(details?.genres)
+            ? details.genres.map((g: any) => g.name).filter(Boolean)
+            : [],
+          production_countries: details?.production_countries || [],
+          origin_country: details?.origin_country || item.origin_country || [],
+          videos,
         };
+      } catch (err) {
+        this.logger.error(
+          `Failed to fetch details for ${mediaType} ${item.id}`,
+          err as any,
+        );
+        return item;
+      }
+    });
 
-        const jitter = 2.5;
-        const scoredItems = items.map(item => ({
-            item,
-            qualityScore: this.calculateUpcomingQualityScore(item),
-            releaseDateScore: this.getReleaseDateProximityScore(item),
-        }));
+    return this.client.withConcurrencyLimit(tasks, 8);
+  }
 
-        scoredItems.sort((a, b) => {
-            const scoreDiff = (b.qualityScore + b.releaseDateScore) - (a.qualityScore + a.releaseDateScore);
-            const randA = seededRandomForId(a.item.id);
-            const randB = seededRandomForId(b.item.id);
-            return scoreDiff + (randB - randA) * jitter;
-        });
+  private shuffleUpcomingTrailers(items: TmdbAll[], seed: number): TmdbAll[] {
+    if (items.length === 0) return items;
 
-        const tiers = { premium: [] as TmdbAll[], high: [] as TmdbAll[], medium: [] as TmdbAll[] };
-        scoredItems.forEach(scored => {
-            const totalScore = scored.qualityScore + scored.releaseDateScore;
-            if (totalScore >= 45) tiers.premium.push(scored.item);
-            else if (totalScore >= 30) tiers.high.push(scored.item);
-            else tiers.medium.push(scored.item);
-        });
+    const seededRandomForId = (id: number) => {
+      const x = Math.sin(seed * 9301 + id * 49297) * 43758.5453123;
+      return Math.abs(x - Math.floor(x));
+    };
 
-        const result: TmdbAll[] = [];
-        let pIdx = 0, hIdx = 0, mIdx = 0;
+    const jitter = 2.5;
+    const scoredItems = items.map((item) => ({
+      item,
+      qualityScore: this.calculateUpcomingQualityScore(item),
+      releaseDateScore: this.getReleaseDateProximityScore(item),
+    }));
 
-        while (pIdx < tiers.premium.length || hIdx < tiers.high.length || mIdx < tiers.medium.length) {
-            for (let i = 0; i < 3 && pIdx < tiers.premium.length; i++) result.push(tiers.premium[pIdx++]);
-            for (let i = 0; i < 2 && hIdx < tiers.high.length; i++) result.push(tiers.high[hIdx++]);
-            if (mIdx < tiers.medium.length) result.push(tiers.medium[mIdx++]);
-        }
+    scoredItems.sort((a, b) => {
+      const scoreDiff =
+        b.qualityScore +
+        b.releaseDateScore -
+        (a.qualityScore + a.releaseDateScore);
+      const randA = seededRandomForId(a.item.id);
+      const randB = seededRandomForId(b.item.id);
+      return scoreDiff + (randB - randA) * jitter;
+    });
 
-        return result;
+    const tiers = {
+      premium: [] as TmdbAll[],
+      high: [] as TmdbAll[],
+      medium: [] as TmdbAll[],
+    };
+    scoredItems.forEach((scored) => {
+      const totalScore = scored.qualityScore + scored.releaseDateScore;
+      if (totalScore >= 45) tiers.premium.push(scored.item);
+      else if (totalScore >= 30) tiers.high.push(scored.item);
+      else tiers.medium.push(scored.item);
+    });
+
+    return [
+      ...seededShuffleArray(tiers.premium, seed),
+      ...seededShuffleArray(tiers.high, seed + 100),
+      ...seededShuffleArray(tiers.medium, seed + 200),
+    ];
+  }
+
+  private calculateUpcomingQualityScore(item: TmdbAll): number {
+    let score = 0;
+    const popularity = item.popularity || 0;
+    score += Math.log10(popularity + 1) * 14;
+    if (popularity >= 250) score += 18;
+    else if (popularity >= 150) score += 13;
+    else if (popularity >= 80) score += 9;
+    else if (popularity >= 40) score += 5;
+
+    if (item.vote_average && item.vote_average > 0)
+      score += item.vote_average * 3;
+    score += Math.log10((item.vote_count || 1) + 1) * 5;
+    if (item.backdrop_path) score += 3;
+    if (item.overview && item.overview.length > 100) score += 2;
+    if (item.type === 'movie') score += 2;
+    score += this.getMarketRelevanceScore(item);
+    return score;
+  }
+
+  private prioritizeUpcomingPool(
+    items: TmdbAll[],
+    viewedItemKeys: Set<string>,
+    exhaustedMode: boolean,
+  ) {
+    if (viewedItemKeys.size === 0) return items;
+
+    const unviewed = items.filter(
+      (item) => !viewedItemKeys.has(this.feedUtils.getItemKey(item)),
+    );
+    const viewed = items.filter((item) =>
+      viewedItemKeys.has(this.feedUtils.getItemKey(item)),
+    );
+
+    if (!exhaustedMode && unviewed.length >= Math.min(12, items.length)) {
+      return unviewed;
     }
 
-    private calculateUpcomingQualityScore(item: TmdbAll): number {
-        let score = 0;
-        score += Math.log10((item.popularity || 1) + 1) * 10;
-        if (item.vote_average && item.vote_average > 0) score += item.vote_average * 3;
-        score += Math.log10((item.vote_count || 1) + 1) * 5;
-        if (item.backdrop_path) score += 3;
-        if (item.overview && item.overview.length > 100) score += 2;
-        if (item.genres && item.genres.length > 0) score += 2;
-        if (item.type === 'movie') score += 2;
-        if (item.original_language === 'en') score += 3;
-        else if (['ko', 'ja', 'es', 'fr'].includes(item.original_language || '')) score += 4;
-        return score;
-    }
+    return [
+      ...unviewed,
+      ...viewed.sort(
+        (a, b) =>
+          this.calculateUpcomingQualityScore(b) -
+          this.calculateUpcomingQualityScore(a),
+      ),
+    ];
+  }
 
-    private getReleaseDateProximityScore(item: TmdbAll): number {
-        if (!item.release_date) return 0;
-        const releaseDate = new Date(item.release_date);
-        const daysUntilRelease = Math.floor((releaseDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        if (daysUntilRelease <= 14) return 12;
-        if (daysUntilRelease <= 30) return 10;
-        if (daysUntilRelease <= 60) return 8;
-        if (daysUntilRelease <= 90) return 4;
-        if (daysUntilRelease <= 180) return 2;
-        return 0;
-    }
+  private getMarketRelevanceScore(item: TmdbAll) {
+    let score = 0;
+    const language = item.original_language || '';
+    const countries = new Set<string>([
+      ...(item.origin_country || []),
+      ...((item as any).production_countries || []).map(
+        (country: any) => country?.iso_3166_1,
+      ),
+    ]);
+
+    if (language === 'en') score += 8;
+    else if (language === 'ko') score += 9;
+    else if (language === 'ja') score += 6;
+    else if (['zh', 'cn'].includes(language)) score += 5;
+    else if (['es', 'fr', 'de', 'hi'].includes(language)) score += 4;
+
+    if (countries.has('US')) score += 7;
+    if (countries.has('GB')) score += 6;
+    if (countries.has('KR')) score += 8;
+    if (countries.has('JP')) score += 5;
+    if (countries.has('CA') || countries.has('AU')) score += 3;
+    if (countries.has('HK') || countries.has('TW')) score += 3;
+    if (countries.has('IN')) score += 3;
+
+    return score;
+  }
+
+  private getReleaseDateProximityScore(item: TmdbAll): number {
+    if (!item.release_date) return 0;
+    const releaseDate = new Date(item.release_date);
+    const daysUntilRelease = Math.floor(
+      (releaseDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
+    if (daysUntilRelease <= 14) return 12;
+    if (daysUntilRelease <= 30) return 10;
+    if (daysUntilRelease <= 60) return 8;
+    if (daysUntilRelease <= 90) return 4;
+    if (daysUntilRelease <= 180) return 2;
+    return 0;
+  }
 }
