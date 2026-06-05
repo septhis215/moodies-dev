@@ -383,8 +383,7 @@ export class AuthController {
   async me(@Req() req: any) {
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.uid;
     if (!userId) return null;
-    const [user, achievements] = await Promise.all([
-      this.PrismaService.user.findUnique({
+    const user = await this.PrismaService.user.findUnique({
       where: { id: String(userId) },
       select: {
         id: true,
@@ -405,9 +404,7 @@ export class AuthController {
         discloseBadges: true,
         discloseRecentActivity: true,
       },
-    }),
-      this.authService.getAchievementProgress(String(userId)),
-    ]);
+    });
     return user && ({
       ...user,
       disclosure: {
@@ -418,6 +415,16 @@ export class AuthController {
         badges: user.discloseBadges,
         recentActivity: user.discloseRecentActivity,
       },
+    });
+  }
+
+  @UseGuards(JwtGuard)
+  @Get('me/achievements')
+  async myAchievements(@Req() req: any) {
+    const userId = req.user?.sub ?? req.user?.id ?? req.user?.uid;
+    if (!userId) throw new UnauthorizedException('Invalid token');
+    const achievements = await this.authService.getAchievementProgress(String(userId));
+    return {
       achievements: achievements.map(({ achievement, badge, progress }) => ({
         achievement: {
           id: achievement.id,
@@ -436,7 +443,7 @@ export class AuthController {
         badge,
         progress,
       })),
-    });
+    };
   }
 
 

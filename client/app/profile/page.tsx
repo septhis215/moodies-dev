@@ -110,6 +110,7 @@ export default function ProfilePage() {
     const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
     const [reviews, setReviews] = useState<UserReview[]>([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
+    const [achievements, setAchievements] = useState<UserAchievementView[]>([]);
     const [reviewsVisible, setReviewsVisible] = useState(3);
     const [cardReviewsVisible, setCardReviewsVisible] = useState<Record<string, number>>({});
     const [reviewTypeFilter, setReviewTypeFilter] = useState<"all" | "MOVIE" | "TV">("all");
@@ -292,14 +293,13 @@ export default function ProfilePage() {
         (async () => {
             setLoading(true);
             try {
-                const [meRes, wlRes] = await Promise.all([
-                    fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }),
-                    fetch(`${API_BASE}/watchlist`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }),
-                ]);
+                const headers = { Authorization: `Bearer ${token}` };
+                const mePromise = fetch(`${API_BASE}/auth/me`, { headers, cache: "no-store" });
+                const watchlistPromise = fetch(`${API_BASE}/watchlist`, { headers, cache: "no-store" });
+                const meRes = await mePromise;
 
                 if (!alive) return;
-                if (meRes.status === 401 || wlRes.status === 401) return logoutSilent();
-
+                if (meRes.status === 401) return logoutSilent();
                 if (meRes.ok) {
                     const me = await meRes.json();
                     setProfile(me);
@@ -307,9 +307,38 @@ export default function ProfilePage() {
                         setDisclosure((prev) => ({ ...prev, ...me.disclosure }));
                     }
                 }
+
+                const wlRes = await watchlistPromise;
+                if (!alive) return;
+                if (wlRes.status === 401) return logoutSilent();
                 if (wlRes.ok) setWatchlist(await wlRes.json());
             } finally {
                 if (alive) setLoading(false);
+            }
+        })();
+
+        return () => { alive = false; };
+    }, [token, logoutSilent]);
+
+    useEffect(() => {
+        if (!token) return;
+        let alive = true;
+
+        (async () => {
+            try {
+                const res = await fetch(`${API_BASE}/auth/me/achievements`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                    cache: "no-store",
+                });
+
+                if (!alive) return;
+                if (res.status === 401) return logoutSilent();
+                if (res.ok) {
+                    const payload = await res.json();
+                    setAchievements(Array.isArray(payload.achievements) ? payload.achievements : []);
+                }
+            } catch {
+                if (alive) setAchievements([]);
             }
         })();
 
@@ -431,9 +460,27 @@ export default function ProfilePage() {
         { name: "Taste Signal", earned: averageRating >= 8 && totalCount >= 5, icon: <Sparkles className="w-3.5 h-3.5" /> },
         { name: "Active Critic", earned: reviewCount >= 10, icon: <Flame className="w-3.5 h-3.5" /> },
     ], [averageRating, movieCount, reviewCount, seriesCount, totalCount]);
-    const achievementRows = user?.achievements ?? [];
+    const achievementRows = achievements.length > 0 ? achievements : (user?.achievements ?? []);
     const unlockedAchievementRows = achievementRows.filter((row) => row.progress.unlocked);
     const visibleAchievementRows = achievementRows.length > 0 ? achievementRows.slice(0, 9) : [];
+    const disclosureItems = [
+        ["profileInfo", "Profile info"],
+        ["watchlist", "Watchlist"],
+        ["liked", "Liked titles"],
+        ["reviews", "Reviews"],
+        ["badges", "Badges"],
+        ["recentActivity", "Recent activity"],
+    ] as const;
+    const visibleDisclosureCount = disclosureItems.filter(([key]) => disclosure[key]).length;
+    const profileCompletion = Math.round(([
+        Boolean(user?.name),
+        Boolean(user?.username),
+        Boolean(user?.avatarUrl),
+        totalCount > 0,
+        reviewCount > 0,
+        unlockedAchievementRows.length > 0,
+    ].filter(Boolean).length / 6) * 100);
+    const featuredAchievement = unlockedAchievementRows[0] ?? visibleAchievementRows[0];
 
     const isBanned = !!user?.reviewBannedUntil && new Date(user.reviewBannedUntil) > new Date();
     const bannedUntil = user?.reviewBannedUntil ? new Date(user.reviewBannedUntil) : null;
@@ -519,20 +566,21 @@ export default function ProfilePage() {
 
     return (
         <main className="min-h-screen bg-black text-white pb-8">
-            <div className="mx-auto w-full max-w-7xl px-6 sm:px-14 py-24">
-                <section className="relative mb-8 sm:mb-10 overflow-hidden rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_18%_0%,rgba(233,79,55,0.28),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025)_44%,rgba(0,0,0,0.12))] p-5 sm:p-7">
-                    <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/70 to-transparent" />
-                    <div className="pointer-events-none absolute -right-8 top-2 hidden h-52 w-52 opacity-20 blur-[1px] sm:block">
-                        <Image src={MASCOT_SRC} alt="" fill sizes="208px" className="object-contain" priority />
+            <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(233,79,55,0.18),transparent_32%),radial-gradient(circle_at_88%_12%,rgba(255,255,255,0.07),transparent_24%),linear-gradient(180deg,#050505_0%,#000_58%)]" />
+            <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,0.65)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.65)_1px,transparent_1px)] [background-size:44px_44px]" />
+            <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-8 sm:py-24 lg:px-10">
+                <section className="relative mb-6 overflow-hidden border-b border-white/10 pb-8 sm:mb-8 sm:pb-10">
+                    <div className="pointer-events-none absolute right-0 top-0 hidden h-72 w-72 opacity-20 sm:block">
+                        <Image src={MASCOT_SRC} alt="" fill sizes="288px" className="object-contain" priority />
                     </div>
 
-                    <div className="relative grid gap-6 lg:grid-cols-[1fr_300px] lg:items-center">
-                        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                    <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+                        <div className="flex flex-col gap-5 sm:flex-row sm:items-end">
                             <motion.div
                                 initial={{ scale: 0.92, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 onClick={() => user?.avatarUrl && setAvatarLightbox(true)}
-                                className={`relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-zinc-900 ring-2 ring-[#e94f37]/70 shadow-2xl shadow-[#e94f37]/10 sm:h-32 sm:w-32${user?.avatarUrl ? " cursor-pointer hover:ring-[#ff8a78] transition-shadow" : ""}`}
+                                className={`relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-zinc-900 ring-2 ring-[#e94f37]/70 shadow-2xl shadow-[#e94f37]/10 sm:h-32 sm:w-32 lg:h-36 lg:w-36${user?.avatarUrl ? " cursor-pointer hover:ring-[#ff8a78] transition-shadow" : ""}`}
                             >
                                 {user?.avatarUrl ? (
                                     <Image
@@ -550,9 +598,9 @@ export default function ProfilePage() {
                                 )}
                             </motion.div>
 
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0 flex-1 pb-1">
                                 <div className="mb-3 flex flex-wrap items-center gap-2">
-                                    <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-black/25 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#ff8a78]">
+                                    <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#ff8a78]">
                                         <Image src={LOGO_SRC} alt="" width={18} height={18} className="h-4 w-4 object-contain" />
                                         Moodies Profile
                                     </span>
@@ -565,24 +613,35 @@ export default function ProfilePage() {
                                         </span>
                                     )}
                                 </div>
-                                <h1 className="truncate text-3xl font-black tracking-tight sm:text-5xl">
+                                <h1 className="break-words text-4xl font-black tracking-tight sm:text-6xl">
                                     {user?.name || user?.username || "Your Profile"}
                                 </h1>
-                                <p className="mt-2 text-sm text-white/50 sm:text-base">@{user?.username ?? "user"}</p>
-                                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58">
-                                    Your watchlist, reviews, and mood signals come together here as a living taste profile.
+                                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/55">
+                                    <span>@{user?.username ?? "user"}</span>
+                                    <span className="text-white/18">/</span>
+                                    <span>{profilePersona.title}</span>
+                                    <span className="text-white/18">/</span>
+                                    <span>{profileCompletion}% complete</span>
+                                </div>
+                                <p className="mt-4 max-w-2xl text-sm leading-6 text-white/58 sm:text-base">
+                                    A living read of what you save, rate, and return to, tuned for mood-first discovery.
                                 </p>
                             </div>
                         </div>
 
-                        <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
-                            <div className="flex items-center gap-3">
-                                <div className="relative h-20 w-20 flex-shrink-0">
-                                    <Image src={MASCOT_SRC} alt="Moodies mascot" fill sizes="80px" className="object-contain" />
+                        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] p-4 backdrop-blur">
+                            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/70 to-transparent" />
+                            <div className="flex items-start gap-3">
+                                <div className="relative h-20 w-20 flex-shrink-0 rounded-2xl bg-[#e94f37]/10">
+                                    <Image src={MASCOT_SRC} alt="Moodies mascot" fill sizes="80px" className="object-contain p-1" />
                                 </div>
-                                <div>
-                                    <p className="text-sm font-bold text-white">Moodies read</p>
-                                    <p className="mt-1 text-xs leading-5 text-white/45">{profilePersona.title} is your current viewing shape.</p>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8a78]">Moodies read</p>
+                                    <p className="mt-1 text-lg font-black text-white">{profilePersona.title}</p>
+                                    <p className="mt-1 text-xs leading-5 text-white/48">{profilePersona.detail}</p>
+                                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                                        <div className="h-full rounded-full bg-[#e94f37]" style={{ width: `${profileCompletion}%` }} />
+                                    </div>
                                 </div>
                             </div>
                             <div className="mt-4 grid grid-cols-3 gap-2">
@@ -614,18 +673,16 @@ export default function ProfilePage() {
                 </section>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10">
+                <div className="mb-6 grid grid-cols-2 gap-3 sm:mb-8 lg:grid-cols-4">
                     <StatCard
                         label="Movies"
                         value={movieCount}
                         icon={<Film className="w-4 h-4 sm:w-5 sm:h-5" />}
-                        trend="+12%"
                     />
                     <StatCard
                         label="TV Series"
                         value={seriesCount}
                         icon={<Tv className="w-4 h-4 sm:w-5 sm:h-5" />}
-                        trend="+8%"
                     />
                     <StatCard
                         label="Total Items"
@@ -639,89 +696,79 @@ export default function ProfilePage() {
                     />
                 </div>
 
-                <div className="mb-8 sm:mb-10 grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
-                    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(233,79,55,0.16),rgba(255,255,255,0.045)_45%,rgba(0,0,0,0.2))] p-5 sm:p-6">
-                        <div className="pointer-events-none absolute -bottom-8 right-2 h-32 w-32 opacity-15">
-                            <Image src={MASCOT_SRC} alt="" fill sizes="128px" className="object-contain" />
+                <div className="mb-8 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+                        <div className="mb-5 flex items-start justify-between gap-4">
+                            <div className="min-w-0">
+                                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8a78]">Taste insight</p>
+                                <h2 className="mt-2 text-2xl font-black sm:text-3xl">{profilePersona.title}</h2>
+                                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">{profilePersona.detail}</p>
+                            </div>
+                            <div className="hidden h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-[#e94f37]/15 text-[#ff8a78] sm:flex">
+                                <Sparkles className="h-6 w-6" />
+                            </div>
                         </div>
-                        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                                <div className="inline-flex items-center gap-2 rounded-lg border border-[#e94f37]/30 bg-[#e94f37]/15 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#ff8a78]">
-                                    <Sparkles className="h-4 w-4" />
-                                    Mood profile
-                                </div>
-                                <h2 className="mt-4 text-2xl sm:text-3xl font-black">{profilePersona.title}</h2>
-                                <p className="mt-2 max-w-2xl text-sm sm:text-base leading-6 text-white/58">
-                                    {profilePersona.detail}
-                                </p>
-                            </div>
-                            <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-3">
-                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/35">Signal</p>
-                                <p className="mt-1 text-sm font-bold text-white">{profilePersona.signal}</p>
-                            </div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <InsightTile label="Primary signal" value={profilePersona.signal} />
+                            <InsightTile label="Badges earned" value={`${unlockedAchievementRows.length} unlocked`} />
+                            <InsightTile label="Privacy visible" value={`${visibleDisclosureCount}/${disclosureItems.length} sections`} />
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
                                 <Shield className="h-5 w-5 text-[#ff8a78]" />
-                                <h2 className="text-lg font-bold">Disclosure</h2>
+                                <h2 className="text-lg font-bold">Public profile</h2>
                             </div>
-                            <div className="relative h-10 w-10">
-                                <Image src={MASCOT_SRC} alt="" fill sizes="40px" className="object-contain" />
-                            </div>
+                            <button
+                                className="inline-flex h-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 text-xs font-bold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+                                onClick={() => {
+                                    setProfileName(user?.name ?? user?.username ?? "");
+                                    setProfileUsername(user?.username ?? "");
+                                    setProfileError(null);
+                                    setEditOpen(true);
+                                }}
+                            >
+                                <Settings className="mr-1.5 h-3.5 w-3.5" />
+                                Edit
+                            </button>
                         </div>
-                        <div className="mt-4 space-y-3">
-                            {([
-                                ["profileInfo", "Profile info"],
-                                ["watchlist", "Watchlist"],
-                                ["liked", "Liked titles"],
-                                ["reviews", "Reviews"],
-                                ["badges", "Badges"],
-                                ["recentActivity", "Recent activity"],
-                            ] as const).map(([key, label]) => (
-                                <label key={key} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
-                                    <span className="flex items-center gap-2 text-sm font-semibold text-white/75">
+                        <p className="mt-2 text-sm leading-6 text-white/48">
+                            {visibleDisclosureCount} of {disclosureItems.length} profile sections are visible on your public page.
+                        </p>
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                            {disclosureItems.map(([key, label]) => (
+                                <div key={key} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5">
+                                    <span className="flex items-center gap-2 text-sm font-semibold text-white/70">
                                         {disclosure[key] ? <Unlock className="h-4 w-4 text-emerald-300" /> : <Lock className="h-4 w-4 text-white/35" />}
                                         {label}
                                     </span>
-                                    <input
-                                        type="checkbox"
-                                        checked={disclosure[key]}
-                                        onChange={() => setDisclosure((prev) => ({ ...prev, [key]: !prev[key] }))}
-                                        className="h-4 w-4 accent-[#e94f37]"
-                                    />
-                                </label>
+                                    <span className={`text-[0.65rem] font-bold uppercase tracking-[0.12em] ${disclosure[key] ? "text-emerald-300/75" : "text-white/25"}`}>
+                                        {disclosure[key] ? "Shown" : "Hidden"}
+                                    </span>
+                                </div>
                             ))}
                         </div>
-                        <p className="mt-3 text-xs leading-5 text-white/35">
-                            These choices are staged in the profile UI and ready to connect to account privacy settings.
-                        </p>
                     </div>
                 </div>
 
                 {/* Tabs – comfortable & touch-friendly */}
-                <div className="flex gap-1.5 sm:gap-2 mb-6 sm:mb-8 bg-white/5 p-1.5 rounded-2xl border border-white/10 overflow-x-auto">
+                <div className="mb-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.035] p-1.5 sm:mb-8 sm:gap-2">
                     {(["profile", "watchlist", "reviews"] as const).map((t) => (
                         <button
                             key={t}
                             onClick={() => setTab(t)}
-                            className={`
-        whitespace-nowrap
-        px-3 sm:px-4
-        py-1.5 sm:py-2
-        rounded-xl
-        text-xs sm:text-sm
-        font-medium
-        transition-all duration-200
-        ${tab === t
-                                    ? "bg-[#e94f37] text-white shadow-sm"
-                                    : "text-gray-400 hover:text-white hover:bg-white/10"
-                                }
-      `}
+                            className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs font-bold transition-all duration-200 sm:px-4 sm:text-sm ${
+                                tab === t
+                                    ? "bg-[#e94f37] text-white shadow-lg shadow-[#e94f37]/15"
+                                    : "text-white/42 hover:bg-white/[0.06] hover:text-white"
+                            }`}
                         >
-                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                            {t === "profile" && <Sparkles className="h-4 w-4" />}
+                            {t === "watchlist" && <Bookmark className="h-4 w-4" />}
+                            {t === "reviews" && <Star className="h-4 w-4" />}
+                            {t === "profile" ? "Overview" : t.charAt(0).toUpperCase() + t.slice(1)}
                         </button>
                     ))}
                 </div>
@@ -736,12 +783,30 @@ export default function ProfilePage() {
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.3 }}
                         >
+                            <div className="mb-8 grid gap-3 md:grid-cols-3">
+                                <OverviewCard
+                                    icon={<Sparkles className="h-5 w-5" />}
+                                    label="Profile pulse"
+                                    title={profilePersona.title}
+                                    detail={profilePersona.signal}
+                                />
+                                <OverviewCard
+                                    icon={<Award className="h-5 w-5" />}
+                                    label="Featured badge"
+                                    title={featuredAchievement?.badge?.badgeName ?? featuredAchievement?.achievement.title ?? "No badge yet"}
+                                    detail={featuredAchievement?.progress.unlocked ? "Unlocked and public-ready" : "Keep building progress"}
+                                />
+                                <OverviewCard
+                                    icon={<Shield className="h-5 w-5" />}
+                                    label="Public visibility"
+                                    title={`${visibleDisclosureCount}/${disclosureItems.length} sections visible`}
+                                    detail="Change this anytime from edit profile"
+                                />
+                            </div>
+
                             {/* Achievements */}
                             <div className="mb-8 sm:mb-10">
-                                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-                                    <Award className="w-6 h-6 sm:w-8 sm:h-8 text-[#e94f37]" />
-                                    Achievements
-                                </h2>
+                                <SectionHeading icon={<Award className="h-6 w-6 text-[#e94f37]" />} title="Achievements" caption={`${visibleAchievementRows.length || 3} active goals`} />
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                     {visibleAchievementRows.length > 0 ? (
                                         visibleAchievementRows.map((row) => (
@@ -774,10 +839,7 @@ export default function ProfilePage() {
 
                             {/* Badges */}
                             <div className="mb-8 sm:mb-10">
-                                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
-                                    <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-[#e94f37]" />
-                                    Earned Badges
-                                </h2>
+                                <SectionHeading icon={<TrendingUp className="h-6 w-6 text-[#e94f37]" />} title="Earned Badges" caption={`${unlockedAchievementRows.length} unlocked`} />
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {unlockedAchievementRows.length > 0 ? (
                                         unlockedAchievementRows.slice(0, 6).map((row) => (
@@ -1429,7 +1491,7 @@ export default function ProfilePage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[300] flex items-end justify-center bg-black/85 p-3 backdrop-blur-md sm:items-center sm:p-6"
+                            className="fixed inset-0 z-[999] flex items-end justify-center bg-black/85 p-3 backdrop-blur-md sm:items-center sm:p-6"
                             onClick={() => {
                                 if (!profileSaving) {
                                     setAvatarPreview(null);
@@ -1708,6 +1770,45 @@ function resolveBadgeIcon(icon?: string) {
     return <Sparkles className={className} />;
 }
 
+function InsightTile({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+            <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/30">{label}</p>
+            <p className="mt-1 text-sm font-bold text-white/80">{value}</p>
+        </div>
+    );
+}
+
+function OverviewCard({ icon, label, title, detail }: { icon: React.ReactNode; label: string; title: string; detail: string }) {
+    return (
+        <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition hover:border-[#e94f37]/30 hover:bg-white/[0.055]">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:via-[#e94f37]/60" />
+            <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[#e94f37]/14 text-[#ff8a78]">
+                    {icon}
+                </div>
+                <div className="min-w-0">
+                    <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/32">{label}</p>
+                    <h3 className="mt-1 truncate text-base font-black text-white">{title}</h3>
+                    <p className="mt-1 text-xs leading-5 text-white/45">{detail}</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function SectionHeading({ icon, title, caption }: { icon: React.ReactNode; title: string; caption: string }) {
+    return (
+        <div className="mb-4 flex items-end justify-between gap-4 sm:mb-6">
+            <div className="flex items-center gap-3">
+                {icon}
+                <h2 className="text-xl font-black sm:text-2xl md:text-3xl">{title}</h2>
+            </div>
+            <p className="hidden text-xs font-bold uppercase tracking-[0.16em] text-white/28 sm:block">{caption}</p>
+        </div>
+    );
+}
+
 function AchievementCard({ row }: { row: UserAchievementView }) {
     const percent = Math.min(Math.max(row.progress.completionPercentage, 0), 100);
     const required = row.achievement.requiredCount ?? 1;
@@ -1780,10 +1881,11 @@ function StatCard({ label, value, icon, trend }: {
     trend?: string;
 }) {
     return (
-        <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-5 flex flex-col gap-2 sm:gap-3 hover:bg-white/10 transition-all">
+        <div className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] p-3 transition-all hover:-translate-y-0.5 hover:border-[#e94f37]/25 hover:bg-white/[0.055] sm:rounded-2xl sm:p-5">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             <div className="flex items-center justify-between">
                 {icon && (
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white/10 flex items-center justify-center">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-[#e94f37]/12 text-[#ff8a78] flex items-center justify-center">
                         {icon}
                     </div>
                 )}
@@ -1794,7 +1896,7 @@ function StatCard({ label, value, icon, trend }: {
                     </span>
                 )}
             </div>
-            <div>
+            <div className="mt-3">
                 <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-0.5 sm:mb-1">{label}</p>
                 <p className="text-2xl sm:text-3xl font-black">{value}</p>
             </div>

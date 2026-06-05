@@ -427,6 +427,31 @@ export default function PublicProfilePage() {
       : persona;
   const badges = profile ? getBadges(profile) : [];
   const earnedBadges = badges.filter((badge) => badge.earned);
+  const disclosureItems = [
+    ["profileInfo", "Profile info"],
+    ["watchlist", "Watchlist"],
+    ["liked", "Liked titles"],
+    ["reviews", "Reviews"],
+    ["badges", "Badges"],
+    ["recentActivity", "Recent activity"],
+  ] as const;
+  const visibleDisclosureCount = disclosureItems.filter(([key]) => disclosure[key]).length;
+  const sharedListCount =
+    (disclosure.watchlist
+      ? (profile?.watchlist.movieId.length ?? 0) + (profile?.watchlist.seriesId.length ?? 0)
+      : 0) +
+    (disclosure.liked
+      ? (profile?.liked.movieId.length ?? 0) + (profile?.liked.seriesId.length ?? 0)
+      : 0);
+  const featuredAchievement = profile?.achievements[0];
+  const publicScore = Math.round(([
+    disclosure.profileInfo,
+    disclosure.reviews && (profile?.stats.totalReviews ?? 0) > 0,
+    disclosure.badges && ((profile?.achievements.length ?? 0) > 0 || earnedBadges.length > 0),
+    disclosure.watchlist && watchlistItems.length > 0,
+    disclosure.liked && likedItems.length > 0,
+    disclosure.recentActivity && (profile?.recentActivity.length ?? 0) > 0,
+  ].filter(Boolean).length / 6) * 100);
   const reviewCadence =
     profile?.reviews && profile.reviews.length > 1
       ? Math.max(
@@ -478,129 +503,139 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white pb-8">
-      <section className="relative border-b border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(233,79,55,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent)]">
-        <div className="mx-auto w-full max-w-7xl px-6 py-24 sm:px-14 sm:py-28">
-          <div className="pointer-events-none absolute right-10 top-24 hidden h-48 w-48 opacity-15 lg:block">
-            <Image src={MASCOT_SRC} alt="" fill sizes="192px" className="object-contain" />
-          </div>
+    <main className="min-h-screen bg-black pb-8 text-white">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_16%_0%,rgba(233,79,55,0.18),transparent_32%),radial-gradient(circle_at_88%_14%,rgba(255,255,255,0.07),transparent_24%),linear-gradient(180deg,#050505_0%,#000_58%)]" />
+      <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,0.65)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.65)_1px,transparent_1px)] [background-size:44px_44px]" />
+
+      <section className="relative">
+        <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-8 sm:py-24 lg:px-10">
           <Link
             href="/"
-            className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-white/55 transition hover:text-white"
+            className="mb-8 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.06] hover:text-white"
           >
             <ArrowLeft size={16} />
             Back to Moodies
           </Link>
 
-          <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-end">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-              <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.08] shadow-2xl shadow-black/30 sm:h-32 sm:w-32">
-                {avatar ? (
-                  <img
-                    src={avatar}
-                    alt={displayName}
-                    className="h-full w-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-3xl font-black text-white/70">
-                    {initials || "M"}
-                  </div>
-                )}
-              </div>
+          <div className="relative overflow-hidden border-b border-white/10 pb-8 sm:pb-10">
+            <div className="pointer-events-none absolute right-0 top-0 hidden h-72 w-72 opacity-20 lg:block">
+              <Image src={MASCOT_SRC} alt="" fill sizes="288px" className="object-contain" priority />
+            </div>
 
-              <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#ff8a78]">
-                  <span className="inline-flex items-center gap-2">
-                    <Image src={LOGO_SRC} alt="" width={18} height={18} className="h-4 w-4 object-contain" />
-                    Public profile
-                  </span>
-                </p>
-                <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-5xl">
-                  {displayName}
-                </h1>
-                {visiblePersona && (
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-2 rounded-lg border border-[#e94f37]/35 bg-[#e94f37]/15 px-3 py-1.5 text-sm font-bold text-white">
-                      <Sparkles size={15} className="text-[#ff8a78]" />
-                      {visiblePersona.title}
+            <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-end">
+                <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.08] shadow-2xl shadow-black/30 ring-2 ring-[#e94f37]/40 sm:h-32 sm:w-32 lg:h-36 lg:w-36">
+                  {avatar ? (
+                    <img
+                      src={avatar}
+                      alt={displayName}
+                      className="h-full w-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-[#e94f37] text-3xl font-black text-white">
+                      {initials || "M"}
+                    </div>
+                  )}
+                </div>
+
+                <div className="min-w-0 pb-1">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#ff8a78]">
+                      <Image src={LOGO_SRC} alt="" width={18} height={18} className="h-4 w-4 object-contain" />
+                      Public Profile
                     </span>
-                    <span className={`text-sm font-semibold ${visiblePersona.tone}`}>
-                      {visiblePersona.signal}
+                    <span className="rounded-lg bg-[#e94f37]/20 px-3 py-1.5 text-xs font-bold uppercase text-[#ff8a78]">
+                      {visiblePersona?.title ?? "Moodies user"}
                     </span>
                   </div>
-                )}
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/55">
-                  <span>@{profile.user.username}</span>
+                  <h1 className="break-words text-4xl font-black tracking-tight sm:text-6xl">
+                    {displayName}
+                  </h1>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/55">
+                    <span>@{profile.user.username}</span>
+                    <span className="text-white/18">/</span>
+                    <span>{visiblePersona?.signal ?? "Public taste profile"}</span>
+                    <span className="text-white/18">/</span>
+                    <span>{visibleDisclosureCount}/{disclosureItems.length} sections shared</span>
+                  </div>
                   {profile.user.createdAt && (
-                    <span className="inline-flex items-center gap-1.5">
+                    <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-white/45">
                       <Calendar size={14} />
-                      Joined{" "}
-                      {new Date(profile.user.createdAt).toLocaleDateString()}
-                    </span>
+                      Joined {new Date(profile.user.createdAt).toLocaleDateString()}
+                    </p>
                   )}
                 </div>
               </div>
-            </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/30 p-5 backdrop-blur">
-              <div className="pointer-events-none absolute -bottom-8 -right-4 h-28 w-28 opacity-20">
-                <Image src={MASCOT_SRC} alt="" fill sizes="112px" className="object-contain" />
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[#e94f37]/15 text-[#ff8a78]">
-                  <Eye size={18} />
+              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] p-4 backdrop-blur">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/70 to-transparent" />
+                <div className="flex items-start gap-3">
+                  <div className="relative h-20 w-20 flex-shrink-0 rounded-2xl bg-[#e94f37]/10">
+                    <Image src={MASCOT_SRC} alt="Moodies mascot" fill sizes="80px" className="object-contain p-1" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8a78]">Taste read</p>
+                    <p className="mt-1 text-lg font-black text-white">{visiblePersona?.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-white/48">{visiblePersona?.description}</p>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full bg-[#e94f37]" style={{ width: `${publicScore}%` }} />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-white">Taste read</p>
-                  <p className="mt-1 text-sm leading-6 text-white/60">
-                    {visiblePersona?.description}
-                  </p>
-                </div>
+                {ownProfile && (
+                  <Link
+                    href="/profile"
+                    className="mt-5 inline-flex w-full items-center justify-center rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.10]"
+                  >
+                    Edit my profile
+                  </Link>
+                )}
               </div>
-              {ownProfile && (
-                <Link
-                  href="/profile"
-                  className="mt-5 inline-flex w-full items-center justify-center rounded-lg border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.10]"
-                >
-                  Edit my profile
-                </Link>
-              )}
             </div>
           </div>
 
-          {disclosure.reviews && (
-            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatTile
-                label="Reviews"
-                value={profile.stats.totalReviews}
-                icon={<Star size={18} />}
-              />
-              <StatTile
-                label="Movies"
-                value={profile.stats.movieReviews}
-                icon={<Film size={18} />}
-              />
-              <StatTile
-                label="TV shows"
-                value={profile.stats.tvReviews}
-                icon={<Tv size={18} />}
-              />
-              <StatTile
-                label="Avg rating"
-                value={
-                  profile.stats.averageRating
-                    ? (profile.stats.averageRating / 2).toFixed(1)
-                    : "0.0"
-                }
-                icon={<Star size={18} />}
-              />
-            </div>
-          )}
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatTile label="Reviews" value={disclosure.reviews ? profile.stats.totalReviews : "Hidden"} icon={<Star size={18} />} />
+            <StatTile label="Shared lists" value={sharedListCount} icon={<Bookmark size={18} />} />
+            <StatTile label="Badges" value={disclosure.badges ? profile.achievements.length || earnedBadges.length : "Hidden"} icon={<Medal size={18} />} />
+            <StatTile
+              label="Avg rating"
+              value={
+                disclosure.reviews && profile.stats.averageRating
+                  ? (profile.stats.averageRating / 2).toFixed(1)
+                  : disclosure.reviews
+                    ? "0.0"
+                    : "Hidden"
+              }
+              icon={<Star size={18} />}
+            />
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-8 sm:px-14">
+      <section className="relative mx-auto max-w-7xl px-4 py-8 sm:px-8 lg:px-10">
+        <div className="mb-6 grid gap-3 md:grid-cols-3">
+          <PublicInsightCard
+            icon={<Sparkles size={18} />}
+            label="Profile pulse"
+            title={visiblePersona?.title ?? "Public viewer"}
+            detail={visiblePersona?.signal ?? "Public taste profile"}
+          />
+          <PublicInsightCard
+            icon={<Medal size={18} />}
+            label="Featured badge"
+            title={featuredAchievement?.badge?.badgeName ?? featuredAchievement?.achievement.title ?? "No shared badge yet"}
+            detail={featuredAchievement?.badge?.rarity ?? "Badge visibility follows this user's settings"}
+          />
+          <PublicInsightCard
+            icon={<Eye size={18} />}
+            label="Disclosure"
+            title={`${visibleDisclosureCount}/${disclosureItems.length} sections visible`}
+            detail="Only shared profile areas are shown here"
+          />
+        </div>
+
         <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
           <aside className="space-y-4">
             {disclosure.reviews && (
@@ -813,6 +848,36 @@ export default function PublicProfilePage() {
   );
 }
 
+function PublicInsightCard({
+  icon,
+  label,
+  title,
+  detail,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition hover:border-[#e94f37]/30 hover:bg-white/[0.055]">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:via-[#e94f37]/60" />
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[#e94f37]/14 text-[#ff8a78]">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/32">
+            {label}
+          </p>
+          <h3 className="mt-1 truncate text-base font-black text-white">{title}</h3>
+          <p className="mt-1 text-xs leading-5 text-white/45">{detail}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatTile({
   label,
   value,
@@ -823,7 +888,8 @@ function StatTile({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.05] p-4">
+    <div className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] p-4 transition hover:-translate-y-0.5 hover:border-[#e94f37]/25 hover:bg-white/[0.055]">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
       <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-[#e94f37]/15 text-[#ff8a78]">
         {icon}
       </div>
@@ -837,7 +903,7 @@ function StatTile({
 
 function InsightMini({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+    <div className="rounded-xl border border-white/10 bg-white/[0.035] p-4">
       <p className="text-xl font-black text-white">{value}</p>
       <p className="mt-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-white/35">
         {label}

@@ -247,13 +247,15 @@ export class AuthService {
     const [
       achievements,
       user,
-      moodLogs,
+      moodLogCount,
+      distinctMoodRows,
       moodTotal,
       reviewCount,
       watchlist,
       liked,
       quizCount,
       unlockedCount,
+      existingProgressRows,
     ] = await Promise.all([
       this.prismaService.achievement.findMany({
         where: { active: true },
@@ -270,9 +272,11 @@ export class AuthService {
           preferredLanguages: true,
         },
       }),
+      this.prismaService.moodLog.count({ where: { userId } }),
       this.prismaService.moodLog.findMany({
         where: { userId },
         select: { moodId: true },
+        distinct: ['moodId'],
       }),
       this.prismaService.mood.count({ where: { isActive: true } }),
       this.prismaService.review.count({ where: { userId } }),
@@ -280,19 +284,20 @@ export class AuthService {
       this.prismaService.likedList.findUnique({ where: { userId } }),
       this.prismaService.quiz.count({ where: { userId } }),
       this.prismaService.userAchievement.count({ where: { userId, unlocked: true } }),
+      this.prismaService.userAchievement.findMany({ where: { userId } }),
     ]);
 
-    const distinctMoods = new Set(moodLogs.map((log) => log.moodId)).size;
+    const distinctMoods = distinctMoodRows.length;
     const savedCount = (watchlist?.movieId.length ?? 0) + (watchlist?.seriesId.length ?? 0);
     const likedCount = (liked?.movieId.length ?? 0) + (liked?.seriesId.length ?? 0);
     const profileBasic = user?.name && user?.username ? 1 : 0;
     const profileStyled =
       user?.avatarUrl && (user.preferredGenres.length > 0 || user.preferredLanguages.length > 0) ? 1 : 0;
-    const fullIdentity = profileBasic && profileStyled && quizCount > 0 && moodLogs.length > 0 ? 1 : 0;
+    const fullIdentity = profileBasic && profileStyled && quizCount > 0 && moodLogCount > 0 ? 1 : 0;
 
     const progressFor = (target: string, required: number | null) => {
       switch (target) {
-        case 'mood_selections': return moodLogs.length;
+        case 'mood_selections': return moodLogCount;
         case 'distinct_moods': return distinctMoods;
         case 'all_moods': return moodTotal > 0 ? Math.min(distinctMoods, moodTotal) : 0;
         case 'reviews': return reviewCount;
@@ -307,42 +312,87 @@ export class AuthService {
       }
     };
 
-    const rows: Array<{ achievement: any; badge: any; progress: any }> = [];
-    for (const achievement of achievements) {
+    const existingProgressByAchievement = new Map(
+      existingProgressRows.map((progress) => [progress.achievementId, progress])
+    );
+    const computedRows = achievements.map((achievement) => {
       const required = achievement.requiredCount ?? (achievement.requirementTarget === 'all_moods' ? moodTotal : 1);
       const currentProgress = progressFor(achievement.requirementTarget, required);
       const completionPercentage = required > 0 ? Math.min(100, Math.round((currentProgress / required) * 100)) : 0;
       const shouldUnlock = completionPercentage >= 100;
-      const existing = await this.prismaService.userAchievement.findUnique({
-        where: { userId_achievementId: { userId, achievementId: achievement.id } },
-      });
-      const progress = await this.prismaService.userAchievement.upsert({
-        where: { userId_achievementId: { userId, achievementId: achievement.id } },
-        update: {
-          currentProgress,
-          completionPercentage,
-          unlocked: existing?.unlocked || shouldUnlock,
-          unlockedAt: existing?.unlockedAt ?? (shouldUnlock ? new Date() : null),
-          relatedActivityRef: achievement.requirementTarget,
-        },
-        create: {
-          userId,
-          achievementId: achievement.id,
-          currentProgress,
-          completionPercentage,
-          unlocked: shouldUnlock,
-          unlockedAt: shouldUnlock ? new Date() : null,
-          relatedActivityRef: achievement.requirementTarget,
-        },
-      });
-      rows.push({
+      const existing = existingProgressByAchievement.get(achievement.id);
+      const progress = {
+        id: existing?.id,
+        userId,
+        achievementId: achievement.id,
+        currentProgress,
+        completionPercentage,
+        unlocked: existing?.unlocked || shouldUnlock,
+        unlockedAt: existing?.unlockedAt ?? (shouldUnlock ? new Date() : null),
+        relatedActivityRef: achievement.requirementTarget,
+        createdAt: existing?.createdAt,
+        updatedAt: existing?.updatedAt,
+      };
+
+      return {
         achievement,
         badge: achievement.badge,
         progress,
+        existing,
+      };
+    });
+
+    const writes = computedRows.flatMap(({ achievement, progress, existing }) => {
+      const data = {
+        currentProgress: progress.currentProgress,
+        completionPercentage: progress.completionPercentage,
+        unlocked: progress.unlocked,
+        unlockedAt: progress.unlockedAt,
+        relatedActivityRef: achievement.requirementTarget,
+      };
+
+      if (existing) {
+        const unchanged =
+          existing.currentProgress === progress.currentProgress &&
+          existing.completionPercentage === progress.completionPercentage &&
+          existing.unlocked === progress.unlocked &&
+          (existing.unlockedAt?.getTime() ?? null) === (progress.unlockedAt?.getTime() ?? null) &&
+          existing.relatedActivityRef === achievement.requirementTarget;
+
+        return unchanged
+          ? []
+          : [this.prismaService.userAchievement.update({
+            where: { userId_achievementId: { userId, achievementId: achievement.id } },
+            data,
+          })];
+      }
+
+      return [this.prismaService.userAchievement.upsert({
+        where: { userId_achievementId: { userId, achievementId: achievement.id } },
+        update: data,
+        create: {
+          userId,
+          achievementId: achievement.id,
+          currentProgress: progress.currentProgress,
+          completionPercentage: progress.completionPercentage,
+          unlocked: progress.unlocked,
+          unlockedAt: progress.unlockedAt,
+          relatedActivityRef: achievement.requirementTarget,
+        },
+      })];
+    });
+
+    if (writes.length > 0) {
+      void this.prismaService.$transaction(writes).catch((error) => {
+        console.error('[achievements] Failed to persist achievement progress', error);
       });
     }
 
-    return rows;
+    return computedRows.map(({ achievement, badge, progress }) => ({
+      achievement,
+      badge,
+      progress,
+    }));
   }
 
 }

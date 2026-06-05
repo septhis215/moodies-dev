@@ -389,14 +389,6 @@ export class ReviewService {
             addedAt: true,
           },
         },
-        Badge: {
-          select: {
-            id: true,
-            badgeType: true,
-            awardedAt: true,
-          },
-          orderBy: { awardedAt: 'desc' },
-        },
         userAchievements: {
           where: { unlocked: true },
           include: {
@@ -434,7 +426,6 @@ export class ReviewService {
     const liked = disclosure.liked
       ? (user.LikedList ?? { movieId: [], seriesId: [], addedAt: null })
       : { movieId: [], seriesId: [], addedAt: null };
-    const badges = disclosure.badges ? user.Badge : [];
     const achievements = disclosure.badges
       ? user.userAchievements.map((progress) => ({
           achievement: {
@@ -454,6 +445,15 @@ export class ReviewService {
           badge: progress.achievement.badge,
           progress,
         }))
+      : [];
+    const badges = disclosure.badges
+      ? achievements
+          .filter((row) => row.badge)
+          .map((row) => ({
+            id: row.badge!.id,
+            badgeType: row.badge!.badgeName,
+            awardedAt: row.progress.unlockedAt ?? row.progress.updatedAt,
+          }))
       : [];
 
     const publicWhere = {
