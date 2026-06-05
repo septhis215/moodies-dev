@@ -1,10 +1,11 @@
 'use client';
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Volume2, VolumeX, Heart, Bookmark, Star, ExternalLink,
-  Sparkles, Search, X, Pause, Play, User
+  Calendar, Clapperboard, ExternalLink,
+  Sparkles, Search, Star, User, X
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -32,10 +33,35 @@ interface VideoItem {
     type: string;
     site: string;
   };
-  videos: any[];
+  videos: unknown[];
 }
 
+type FeedContentLike = Partial<VideoItem> & {
+  type?: string;
+  number_of_seasons?: number;
+};
+
 type Category = 'all' | 'upcoming';
+
+const feedTabs: Array<{
+  value: Category;
+  label: string;
+  shortLabel: string;
+  icon: ReactNode;
+}> = [
+  {
+    value: 'all',
+    label: 'All Videos',
+    shortLabel: 'All',
+    icon: <Clapperboard className="h-4 w-4" />,
+  },
+  {
+    value: 'upcoming',
+    label: 'Upcoming',
+    shortLabel: 'Soon',
+    icon: <Calendar className="h-4 w-4" />,
+  },
+];
 
 export default function VideoFeedPage() {
   const router = useRouter();
@@ -51,7 +77,7 @@ export default function VideoFeedPage() {
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set());
+  const [, setFetchedPages] = useState<Set<number>>(new Set());
   const fetchedPagesRef = useRef<Set<number>>(new Set());
   const [hasMore, setHasMore] = useState(true);
   const [activeCategory, setActiveCategory] = useState<Category>('all');
@@ -127,7 +153,7 @@ export default function VideoFeedPage() {
     }
   }, [currentVideo, inWatchlist, watchType, isTogglingWatchlist, addToWatchlist, removeFromWatchlist]);
 
-  const getContentType = (item: any): "movie" | "tv" => {
+  const getContentType = (item: FeedContentLike): "movie" | "tv" => {
     if (item.media_type) return item.media_type;
     if (item.type === "movies" || item.type === "movie") return "movie";
     if (item.type === "tv") return "tv";
@@ -259,6 +285,8 @@ export default function VideoFeedPage() {
     setPanelOpen(false);
     isFetchingRef.current = false;
     setTimeout(() => fetchMoreVideos(true), 100);
+  // This reset should only run when the selected feed changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
 
   useEffect(() => {
@@ -280,7 +308,7 @@ export default function VideoFeedPage() {
     try { localStorage.setItem('videoMuted', String(muted)); } catch { }
   }, [muted]);
 
-  const sendYouTubeCommand = (iframe: HTMLIFrameElement | undefined | null, func: string, args: any[] = []) => {
+  const sendYouTubeCommand = (iframe: HTMLIFrameElement | undefined | null, func: string, args: unknown[] = []) => {
     if (!iframe) return;
     try { iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*'); } catch { }
   };
@@ -301,7 +329,7 @@ export default function VideoFeedPage() {
       const t = window.setTimeout(() => sendYouTubeCommand(iframe, muted ? 'mute' : 'unMute'), 250);
       return () => clearTimeout(t);
     }
-  }, [currentVideo?.id, muted]);
+  }, [currentVideo, currentVideo?.id, muted]);
 
   const handleScroll = useCallback((e: WheelEvent) => {
     if (panelRef.current?.contains(e.target as Node)) return;
@@ -312,26 +340,26 @@ export default function VideoFeedPage() {
   }, [currentIndex, videos.length]);
 
   const touchStartY = useRef(0);
-  const handleTouchStart = (e: TouchEvent) => { touchStartY.current = e.touches[0].clientY; };
-  const handleTouchEnd = (e: TouchEvent) => {
+  const handleTouchStart = useCallback((e: TouchEvent) => { touchStartY.current = e.touches[0].clientY; }, []);
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
     const diff = touchStartY.current - e.changedTouches[0].clientY;
     if (Math.abs(diff) < 50) return;
     if (diff > 0 && currentIndex < videos.length - 1) { setCurrentIndex(prev => prev + 1); setPanelOpen(false); }
     else if (diff < 0 && currentIndex > 0) { setCurrentIndex(prev => prev - 1); setPanelOpen(false); }
-  };
+  }, [currentIndex, videos.length]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     container.addEventListener('wheel', handleScroll, { passive: false });
-    container.addEventListener('touchstart', handleTouchStart as any);
-    container.addEventListener('touchend', handleTouchEnd as any);
+    container.addEventListener('touchstart', handleTouchStart as EventListener);
+    container.addEventListener('touchend', handleTouchEnd as EventListener);
     return () => {
       container.removeEventListener('wheel', handleScroll);
-      container.removeEventListener('touchstart', handleTouchStart as any);
-      container.removeEventListener('touchend', handleTouchEnd as any);
+      container.removeEventListener('touchstart', handleTouchStart as EventListener);
+      container.removeEventListener('touchend', handleTouchEnd as EventListener);
     };
-  }, [handleScroll]);
+  }, [handleScroll, handleTouchStart, handleTouchEnd]);
 
   useEffect(() => {
     if (!currentVideo) return;
@@ -341,7 +369,7 @@ export default function VideoFeedPage() {
       if (iframe) { sendYouTubeCommand(iframe, 'playVideo', []); if (!muted) sendYouTubeCommand(iframe, 'unMute', []); }
     }, 350);
     return () => clearTimeout(t);
-  }, [currentVideo?.id, muted]);
+  }, [currentVideo, currentVideo?.id, muted]);
 
   useEffect(() => {
     if (!currentVideo) return;
@@ -352,15 +380,15 @@ export default function VideoFeedPage() {
       if (iframe) { sendYouTubeCommand(iframe, 'unMute', []); sendYouTubeCommand(iframe, 'playVideo', []); }
     };
     window.addEventListener('click', onFirstGesture, { once: true, passive: true });
-    return () => { try { window.removeEventListener('click', onFirstGesture as any); } catch { } };
-  }, [currentVideo?.id]);
+    return () => { try { window.removeEventListener('click', onFirstGesture); } catch { } };
+  }, [currentVideo, currentVideo?.id]);
 
   const iframeSrc = useMemo(() => {
     if (!currentVideo?.primary_video?.key) return '';
     const key = currentVideo.primary_video.key;
     const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
     return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=1&origin=${origin}`;
-  }, [currentVideo?.id, currentVideo?.primary_video?.key]);
+  }, [currentVideo?.primary_video?.key]);
 
   const togglePlayPause = () => {
     if (!currentVideo) return;
@@ -371,6 +399,11 @@ export default function VideoFeedPage() {
   };
 
   const videoTitle = currentVideo?.title || currentVideo?.name || '';
+  const currentPoster = currentVideo?.poster_path ? `https://image.tmdb.org/t/p/w342${currentVideo.poster_path}` : null;
+  const currentBackdrop = currentVideo?.backdrop_path ? `https://image.tmdb.org/t/p/w780${currentVideo.backdrop_path}` : currentPoster;
+  const currentYear = currentVideo?.release_date || currentVideo?.first_air_date
+    ? new Date(currentVideo.release_date ?? currentVideo.first_air_date!).getFullYear()
+    : null;
 
   return (
     <div ref={containerRef} className="fixed inset-0 w-full bg-black overflow-hidden">
@@ -380,56 +413,75 @@ export default function VideoFeedPage() {
         initial={{ y: -56, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.45, ease: 'easeOut' }}
-        className="fixed top-0 left-0 right-0 z-50 h-22 flex items-center px-4 md:px-6
-                   bg-gradient-to-b from-black/80 via-black/40 to-transparent"
+        className="pointer-events-none fixed left-0 right-0 top-0 z-50 px-3 pt-3 sm:px-5"
       >
-        <Link href="/" className="flex items-center gap-2 mr-4 shrink-0 select-none">
-          <Image src="/images/moodies-transparent.png" alt="logo" width={80} height={80} className="rounded-md" />
-          {/* <span className="text-white font-semibold text-sm tracking-wide">Moodies</span> */}
-        </Link>
-
-        <div className="flex-1 flex justify-center">
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-white/8 backdrop-blur-md border border-white/10">
-            {(['all', 'upcoming'] as Category[]).map(cat => (
-              <motion.button
-                key={cat}
-                whileTap={{ scale: 0.96 }}
-                onClick={() => setActiveCategory(cat)}
-                className={`relative px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors duration-200
-                  ${activeCategory === cat ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
-              >
-                {activeCategory === cat && (
-                  <motion.span
-                    layoutId="pill"
-                    className="absolute inset-0 rounded-lg bg-gradient-to-r from-red-500 to-orange-500 shadow-md shadow-red-600/40"
-                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                  />
-                )}
-                <span className="relative z-10 capitalize">
-                  {cat === 'all' ? 'All Videos' : 'Upcoming'}
-                </span>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1 ml-4 shrink-0">
-          <Link href="/search" prefetch>
-            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
-              className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all">
-              <Search className="w-5 h-5" />
-            </motion.button>
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+          <Link href="/" className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20 shadow-xl shadow-black/20 backdrop-blur-md transition hover:bg-black/35 sm:h-11 sm:w-11">
+            <Image src="/images/moodies-transparent.png" alt="Moodies" width={30} height={30} className="h-7 w-7 object-contain sm:h-8 sm:w-8" />
           </Link>
-          <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
-            onClick={() => router.push('/profile')}
-            className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all">
-            <User className="w-5 h-5" />
-          </motion.button>
+
+          <div className="flex min-w-0 justify-center">
+            <div className="pointer-events-auto grid w-full max-w-[21rem] grid-cols-2 gap-1 rounded-full border border-white/10 bg-black/20 p-1 shadow-xl shadow-black/20 backdrop-blur-md transition-colors hover:bg-black/30 sm:max-w-[24rem]">
+              {feedTabs.map(tab => (
+                <motion.button
+                  key={tab.value}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => setActiveCategory(tab.value)}
+                  className={cn(
+                    "relative min-h-9 overflow-hidden rounded-full px-2 py-1.5 text-left transition-colors duration-200 sm:min-h-10 sm:px-3",
+                    activeCategory === tab.value ? "text-white" : "text-white/55 hover:bg-white/[0.04] hover:text-white/85",
+                  )}
+                >
+                  {activeCategory === tab.value && (
+                    <motion.span
+                      layoutId="pill"
+                      className="absolute inset-0 rounded-full bg-white/18 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)]"
+                      transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center justify-center gap-2 sm:justify-start">
+                    <span className={cn("hidden text-white/70 sm:block", activeCategory === tab.value && "text-[#ff8a78]")}>
+                      {tab.icon}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-center text-xs font-black sm:text-left">
+                        <span className="sm:hidden">{tab.shortLabel}</span>
+                        <span className="hidden sm:inline">{tab.label}</span>
+                      </span>
+                    </span>
+                  </span>
+                </motion.button>
+              ))}
+            </div>
+          </div>
+
+          <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-black/20 p-1 shadow-xl shadow-black/20 backdrop-blur-md transition-colors hover:bg-black/30">
+            <Link href="/search" prefetch>
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.93 }}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white sm:h-9 sm:w-9"
+                aria-label="Search"
+              >
+                <Search className="h-4 w-4 sm:h-5 sm:w-5" />
+              </motion.button>
+            </Link>
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.93 }}
+              onClick={() => router.push('/profile')}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white sm:h-9 sm:w-9"
+              aria-label="Profile"
+            >
+              <User className="h-4 w-4 sm:h-5 sm:w-5" />
+            </motion.button>
+          </div>
         </div>
       </motion.nav>
 
       {/* ── MAIN VIDEO AREA ─────────────────────────────────────── */}
-      <div className="relative w-full h-screen bg-black flex items-center justify-center overflow-hidden">
+      <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-black">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
         <AnimatePresence mode="wait">
           {currentVideo && (
             <motion.div
@@ -475,13 +527,13 @@ export default function VideoFeedPage() {
                 className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none"
               >
                 {/* Layer 1 — tall ambient scrim: fades video into dark over a large area */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/68 via-black/22 to-transparent" />
 
                 {/* Layer 2 — tight bottom vignette: ensures the very bottom edge is fully dark */}
-                <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/42 to-transparent" />
 
                 {/* Content */}
-                <div className="relative px-4 md:px-7 pt-32 pb-5 pr-20 sm:pr-24 md:pr-28">
+                <div className="relative px-4 pb-4 pr-20 pt-20 sm:pr-24 md:px-7 md:pr-28">
                   <h2
                     className="text-white font-bold text-xl md:text-2xl leading-tight line-clamp-2 mb-2"
                     style={{ textShadow: '0 1px 12px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8)' }}
@@ -537,7 +589,7 @@ export default function VideoFeedPage() {
           {loading && (
             <motion.div
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20"
+              className="absolute bottom-28 left-1/2 z-30 -translate-x-1/2 sm:bottom-24"
             >
               <div className="flex items-center gap-2.5 px-4 py-2.5 bg-black/60 backdrop-blur-xl rounded-full border border-white/15 shadow-xl">
                 <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -550,8 +602,8 @@ export default function VideoFeedPage() {
         {/* ── EMPTY STATE ─────────────────────────────────────────── */}
         {!loading && videos.length === 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
+            className="absolute inset-0 flex items-center justify-center px-6">
+            <div className="rounded-2xl border border-white/10 bg-black/45 p-8 text-center shadow-2xl shadow-black/40 backdrop-blur-xl">
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 280, damping: 22 }}
                 className="w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-red-600/40">
@@ -565,19 +617,19 @@ export default function VideoFeedPage() {
 
         {/* ── SCROLL HINT ─────────────────────────────────────────── */}
         <AnimatePresence>
-          {showScrollHint && videos.length > 1 && (
+          {showScrollHint && videos.length > 1 && !panelOpen && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 0.55, y: 0 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
-              className="absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none z-40"
+              className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-0.5 pointer-events-none sm:bottom-5 max-[760px]:hidden"
             >
               <motion.div animate={{ y: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}>
-                <svg className="w-5 h-7 text-white/50" viewBox="0 0 24 40" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg className="w-4 h-6 text-white/42" viewBox="0 0 24 40" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="2" y="2" width="20" height="36" rx="10" />
                   <circle cx="12" cy="10" r="2.5" fill="currentColor" />
                 </svg>
               </motion.div>
-              <span className="text-[10px] text-white/40 tracking-widest uppercase">Scroll</span>
+              <span className="text-[9px] text-white/35 tracking-widest uppercase">Scroll</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -587,124 +639,155 @@ export default function VideoFeedPage() {
       <AnimatePresence>
         {panelOpen && currentVideo && (
           <motion.div
-            initial={{ x: '100%', opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: '100%', opacity: 0 }}
+            initial={{ x: 28, opacity: 0, scale: 0.98 }}
+            animate={{ x: 0, opacity: 1, scale: 1 }}
+            exit={{ x: 28, opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="fixed inset-y-0 right-0 w-full md:w-96 z-[100]
-                       bg-gradient-to-b from-black/95 via-neutral-950/95 to-black/95
-                       backdrop-blur-2xl border-l border-white/8
-                       flex flex-col shadow-2xl"
+            className="fixed inset-x-3 bottom-3 top-16 z-[100] flex overflow-hidden rounded-3xl
+                       border border-white/12 bg-black/58 shadow-2xl shadow-black/50
+                       backdrop-blur-2xl md:inset-y-4 md:left-auto md:right-4 md:w-[25rem]"
           >
-            <div className="flex items-center justify-between px-6 py-4 pt-16 border-b border-white/8">
-              <h3 className="text-white font-bold text-sm tracking-wide uppercase">Details</h3>
-              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.93 }}
-                onClick={() => setPanelOpen(false)}
-                className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-all">
-                <X className="w-5 h-5" />
-              </motion.button>
-            </div>
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.06] via-transparent to-black/30" />
+            {currentBackdrop && (
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-cover bg-center opacity-28 blur-sm"
+                style={{ backgroundImage: `url(${currentBackdrop})` }}
+              />
+            )}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-52 bg-gradient-to-b from-black/20 via-black/72 to-transparent" />
 
-            <div ref={panelRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-              <div>
-                <h2 className="text-white font-bold text-xl leading-snug mb-3">
-                  {currentVideo.title || currentVideo.name}
-                </h2>
-                <div className="flex items-center gap-2 flex-wrap">
+            <div ref={panelRef} className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-black/40 px-4 py-3 backdrop-blur-2xl sm:px-5">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-[#ff6f5c] shadow-[0_0_14px_rgba(255,111,92,0.75)]" />
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/70">Details</h3>
+                </div>
+                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
+                  onClick={() => setPanelOpen(false)}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition-all hover:bg-white/12 hover:text-white"
+                  aria-label="Close details">
+                  <X className="h-4 w-4" />
+                </motion.button>
+              </div>
+
+              <div className="space-y-5 px-4 pb-5 pt-4 sm:px-5">
+                <div className="flex gap-4">
+                  <div
+                    className="h-32 w-[5.5rem] shrink-0 rounded-2xl border border-white/12 bg-white/[0.06] bg-cover bg-center shadow-xl shadow-black/30"
+                    style={currentPoster ? { backgroundImage: `url(${currentPoster})` } : undefined}
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex-1 pt-1">
+                    <h2 className="mb-3 line-clamp-3 text-xl font-black leading-tight text-white">
+                      {currentVideo.title || currentVideo.name}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {currentYear && Number.isFinite(currentYear) && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.08] px-2.5 py-1 text-xs font-bold text-white/70">
+                          <Calendar className="h-3 w-3" />
+                          {currentYear}
+                        </span>
+                      )}
+                      {currentVideo.genres?.slice(0, 2).map(genre => (
+                        <span key={genre} className="rounded-full border border-white/12 bg-white/[0.08] px-2.5 py-1 text-xs font-bold text-white/70">
+                          {genre}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
                   {Number.isFinite(Number(currentVideo.vote_average)) && (() => {
                     const va = Number(currentVideo.vote_average);
                     const isUpcomingItem = va === 0;
                     return (
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border text-xs font-bold
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold
                         ${isUpcomingItem
                           ? 'bg-indigo-500/25 text-indigo-200 border-indigo-400/35'
                           : 'bg-amber-500/25 text-amber-200 border-amber-400/35'}`}>
-                        {!isUpcomingItem && <Star className="w-3 h-3 text-amber-300" fill="currentColor" />}
+                        {!isUpcomingItem && <Star className="h-3 w-3 text-amber-300" fill="currentColor" />}
                         {isUpcomingItem ? 'Upcoming' : va.toFixed(1)}
                       </span>
                     );
                   })()}
-                  <span className="px-2.5 py-1 rounded-lg border text-xs font-bold uppercase bg-white/8 text-white/70 border-white/15">
+                  <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-xs font-bold uppercase text-white/70">
                     {currentVideo.media_type}
                   </span>
                   {currentVideo.primary_video?.type && (
-                    <span className="px-2.5 py-1 rounded-lg border text-xs font-bold uppercase bg-red-500/15 text-red-300 border-red-400/25">
+                    <span className="rounded-full border border-red-400/25 bg-red-500/15 px-2.5 py-1 text-xs font-bold uppercase text-red-300">
                       {currentVideo.primary_video.type}
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="h-px bg-white/8" />
-
-              <div>
-                <h4 className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <span className="w-0.5 h-3.5 rounded-full bg-gradient-to-b from-red-500 to-orange-500 inline-block" />
+              <div className="mx-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-lg shadow-black/15 sm:mx-5">
+                <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
+                  <span className="inline-block h-3.5 w-0.5 rounded-full bg-gradient-to-b from-red-500 to-orange-500" />
                   Overview
                 </h4>
-                <p className={`text-white/70 text-sm leading-relaxed transition-all duration-300 ${expanded ? '' : 'line-clamp-4'}`}>
+                <p className={`text-sm leading-relaxed text-white/[0.72] transition-all duration-300 ${expanded ? '' : 'line-clamp-5'}`}>
                   {currentVideo.overview}
                 </p>
-                {currentVideo.overview?.length > 150 && (
+                {currentVideo.overview?.length > 190 && (
                   <button onClick={() => setExpanded(!expanded)}
-                    className="mt-2 text-red-400 text-xs font-semibold hover:text-red-300 transition-colors">
+                    className="mt-3 text-xs font-bold text-red-300 transition-colors hover:text-red-200">
                     {expanded ? 'Show less' : 'Read more'}
                   </button>
                 )}
               </div>
 
-              <div className="h-px bg-white/8" />
-
-              <div>
-                <h4 className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
-                  <span className="w-0.5 h-3.5 rounded-full bg-gradient-to-b from-red-500 to-orange-500 inline-block" />
+              <div className="mx-4 mt-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4 sm:mx-5">
+                <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
+                  <span className="inline-block h-3.5 w-0.5 rounded-full bg-gradient-to-b from-red-500 to-orange-500" />
                   Info
                 </h4>
                 <div className="grid grid-cols-2 gap-2.5">
-                  <div className="col-span-2 p-3.5 rounded-xl bg-white/5 border border-white/8">
-                    <div className="text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-1">Type</div>
-                    <div className="text-white font-bold text-sm uppercase">{currentVideo.media_type}</div>
+                  <div className="col-span-2 rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Type</div>
+                    <div className="text-sm font-bold uppercase text-white">{currentVideo.media_type}</div>
                   </div>
-                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/8">
-                    <div className="text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-1">Video</div>
-                    <div className="text-white font-bold text-sm uppercase">{currentVideo.primary_video?.type || '—'}</div>
+                  <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Video</div>
+                    <div className="text-sm font-bold uppercase text-white">{currentVideo.primary_video?.type || '—'}</div>
                   </div>
                   {(currentVideo.release_date || currentVideo.first_air_date) && (
-                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/8">
-                      <div className="text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-1">Released</div>
-                      <div className="text-white font-bold text-sm">
+                    <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
+                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Released</div>
+                      <div className="text-sm font-bold text-white">
                         {new Date(currentVideo.release_date ?? currentVideo.first_air_date!).toLocaleDateString()}
                       </div>
                     </div>
                   )}
                   {currentVideo.original_language && (
-                    <div className="p-3.5 rounded-xl bg-white/5 border border-white/8">
-                      <div className="text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-1">Language</div>
-                      <div className="text-white font-bold text-sm uppercase">{currentVideo.original_language}</div>
+                    <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
+                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Language</div>
+                      <div className="text-sm font-bold uppercase text-white">{currentVideo.original_language}</div>
                     </div>
                   )}
                 </div>
               </div>
-            </div>
 
-            <div className="px-5 py-4 border-t border-white/8">
-              {href ? (
-                <Link href={href} prefetch shallow={false}>
-                  <motion.span whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3
-                               bg-gradient-to-r from-red-500 to-orange-500
-                               rounded-xl text-white font-bold text-sm
-                               shadow-md shadow-red-600/30 hover:shadow-red-600/50 transition-shadow">
-                    <ExternalLink className="w-4 h-4" />
+              <div className="sticky bottom-0 mt-auto border-t border-white/10 bg-black/45 px-4 py-4 backdrop-blur-2xl sm:px-5">
+                {href ? (
+                  <Link href={href} prefetch shallow={false}>
+                    <motion.span whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl
+                                 bg-gradient-to-r from-red-500 to-orange-500 px-4 py-3
+                                 text-sm font-bold text-white shadow-md shadow-red-600/30
+                                 transition-shadow hover:shadow-red-600/50">
+                      <ExternalLink className="h-4 w-4" />
+                      View Full Details
+                    </motion.span>
+                  </Link>
+                ) : (
+                  <div className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold text-white/30">
+                    <ExternalLink className="h-4 w-4" />
                     View Full Details
-                  </motion.span>
-                </Link>
-              ) : (
-                <div className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/5 text-white/30 text-sm font-semibold">
-                  <ExternalLink className="w-4 h-4" />
-                  View Full Details
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
