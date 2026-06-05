@@ -7,6 +7,7 @@ import {
   Calendar,
   Clapperboard,
   ExternalLink,
+  RefreshCw,
   Sparkles,
   Search,
   Star,
@@ -39,7 +40,13 @@ interface VideoItem {
     name: string;
     type: string;
     site: string;
+    video_type?: string;
+    video_type_label?: string;
   };
+  video_key?: string;
+  video_name?: string;
+  video_type?: string;
+  video_type_label?: string;
   videos: unknown[];
 }
 
@@ -49,6 +56,7 @@ type FeedContentLike = Partial<VideoItem> & {
 };
 
 type Category = "all" | "upcoming";
+type LoadingMode = "idle" | "initial" | "more" | "refresh";
 
 const feedTabs: Array<{
   value: Category;
@@ -84,7 +92,7 @@ export default function VideoFeedPage() {
   const [expanded, setExpanded] = useState(false);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loadingMode, setLoadingMode] = useState<LoadingMode>("idle");
   const [hasMore, setHasMore] = useState(true);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<Category>("all");
@@ -96,6 +104,7 @@ export default function VideoFeedPage() {
   const retryCountRef = useRef(0);
   const fetchAbortRef = useRef<AbortController | null>(null);
   const retryTimerRef = useRef<number | null>(null);
+  const fetchGenerationRef = useRef(0);
   const viewerIdRef = useRef<string>("");
   const reportedViewsRef = useRef<Set<string>>(new Set());
 
@@ -128,8 +137,9 @@ export default function VideoFeedPage() {
 
   const panelRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRefs = useRef<Map<number, HTMLIFrameElement>>(new Map());
+  const videoRefs = useRef<Map<string, HTMLIFrameElement>>(new Map());
   const firstUserGestureRef = useRef(false);
+  const [videoReady, setVideoReady] = useState(false);
 
   const currentVideo = videos[currentIndex];
   const [showScrollHint, setShowScrollHint] = useState(true);
@@ -234,22 +244,31 @@ export default function VideoFeedPage() {
 
   const getVideoIdentity = useCallback(
     (video: VideoItem) => {
-      return `${video.media_type || getContentType(video)}:${video.id}`;
+      const videoKey = video.video_key || video.primary_video?.key || "primary";
+      return `${video.media_type || getContentType(video)}:${video.id}:${videoKey}`;
     },
     [getContentType],
   );
+  const currentVideoIdentity = currentVideo
+    ? getVideoIdentity(currentVideo)
+    : "";
+  const loading = loadingMode !== "idle";
 
   const fetchMoreVideos = useCallback(
-    async (isInitial = false) => {
+    async (
+      isInitial = false,
+      mode: LoadingMode = isInitial ? "initial" : "more",
+    ) => {
       if (isFetchingRef.current) return;
       if (!isInitial && !hasMore) return;
       isFetchingRef.current = true;
-      setLoading(true);
+      setLoadingMode(mode);
       setFeedError(null);
 
       fetchAbortRef.current?.abort();
       const controller = new AbortController();
       fetchAbortRef.current = controller;
+      const requestGeneration = fetchGenerationRef.current;
 
       try {
         const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -266,20 +285,32 @@ export default function VideoFeedPage() {
         const res = await fetch(endpoint, { signal: controller.signal });
         if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
         const data = await res.json();
+        if (requestGeneration !== fetchGenerationRef.current) return;
         const results = Array.isArray(data) ? data : data.results || [];
 
         if (results.length > 0) {
-          const uniqueVideos = results.filter((video: VideoItem) => {
-            if (!video.primary_video?.key) return false;
+          const uniqueVideos: VideoItem[] = [];
+          for (const video of results as VideoItem[]) {
+            if (!video.primary_video?.key) continue;
             const identity = getVideoIdentity(video);
-            if (seenVideoIdsRef.current.has(identity)) return false;
+            if (seenVideoIdsRef.current.has(identity)) continue;
             seenVideoIdsRef.current.add(identity);
-            return true;
-          });
+            uniqueVideos.push(video);
+          }
 
           if (uniqueVideos.length > 0) {
             retryCountRef.current = 0;
-            setVideos((prev) => [...prev, ...uniqueVideos]);
+            setVideos((prev) => {
+              const prevIds = new Set(
+                prev.map((video) => getVideoIdentity(video)),
+              );
+              return [
+                ...prev,
+                ...uniqueVideos.filter(
+                  (video) => !prevIds.has(getVideoIdentity(video)),
+                ),
+              ];
+            });
             nextPageRef.current = Number(data.nextPage) || currentPage + 1;
             const backendHasMore =
               data.hasMore !== undefined
@@ -293,7 +324,7 @@ export default function VideoFeedPage() {
               retryCountRef.current += 1;
               nextPageRef.current = Number(data.nextPage) || currentPage + 1;
               isFetchingRef.current = false;
-              setLoading(false);
+              setLoadingMode("idle");
               retryTimerRef.current = window.setTimeout(
                 () => fetchMoreVideos(false),
                 180,
@@ -312,7 +343,9 @@ export default function VideoFeedPage() {
         setFeedError("Could not load this feed. Please try again.");
         setHasMore(videos.length > 0);
       } finally {
-        setLoading(false);
+        if (requestGeneration === fetchGenerationRef.current) {
+          setLoadingMode("idle");
+        }
         isFetchingRef.current = false;
         if (fetchAbortRef.current === controller) fetchAbortRef.current = null;
       }
@@ -335,14 +368,48 @@ export default function VideoFeedPage() {
           const newVideos = prev.slice(keepFrom);
           prev
             .slice(0, keepFrom)
-            .forEach((video) => videoRefs.current.delete(video.id));
+            .forEach((video) =>
+              videoRefs.current.delete(getVideoIdentity(video)),
+            );
           return newVideos;
         });
         indexOffsetRef.current += keepFrom;
         setCurrentIndex((prev) => prev - keepFrom);
       }
     }
-  }, [currentIndex, videos.length, CLEANUP_THRESHOLD, WINDOW_SIZE]);
+  }, [
+    currentIndex,
+    videos.length,
+    CLEANUP_THRESHOLD,
+    WINDOW_SIZE,
+    getVideoIdentity,
+  ]);
+
+  const resetFeed = useCallback(
+    (mode: LoadingMode = "initial") => {
+      fetchGenerationRef.current += 1;
+      fetchAbortRef.current?.abort();
+      if (retryTimerRef.current) window.clearTimeout(retryTimerRef.current);
+      videoRefs.current.clear();
+      setVideoReady(false);
+      setVideos([]);
+      setCurrentIndex(0);
+      indexOffsetRef.current = 0;
+      seenVideoIdsRef.current = new Set();
+      nextPageRef.current = 1;
+      sessionSaltRef.current = Math.floor(Math.random() * 500);
+      retryCountRef.current = 0;
+      reportedViewsRef.current = new Set();
+      setFeedError(null);
+      setHasMore(true);
+      setPanelOpen(false);
+      setExpanded(false);
+      isFetchingRef.current = false;
+      const timer = window.setTimeout(() => fetchMoreVideos(true, mode), 80);
+      return () => window.clearTimeout(timer);
+    },
+    [fetchMoreVideos],
+  );
 
   useEffect(() => {
     const distanceFromEnd = videos.length - currentIndex - 1;
@@ -366,23 +433,9 @@ export default function VideoFeedPage() {
   }, [currentIndex, cleanupOldVideos]);
 
   useEffect(() => {
-    setVideos([]);
-    setCurrentIndex(0);
-    indexOffsetRef.current = 0;
-    seenVideoIdsRef.current = new Set();
-    nextPageRef.current = 1;
-    sessionSaltRef.current = Math.floor(Math.random() * 500); // re-randomise on category switch too
-    retryCountRef.current = 0;
-    reportedViewsRef.current = new Set();
-    setFeedError(null);
-    setHasMore(true);
-    setPanelOpen(false);
-    isFetchingRef.current = false;
-    fetchAbortRef.current?.abort();
-    if (retryTimerRef.current) window.clearTimeout(retryTimerRef.current);
-    const timer = window.setTimeout(() => fetchMoreVideos(true), 80);
+    const cleanup = resetFeed("initial");
     return () => {
-      window.clearTimeout(timer);
+      cleanup?.();
       fetchAbortRef.current?.abort();
       if (retryTimerRef.current) window.clearTimeout(retryTimerRef.current);
     };
@@ -404,13 +457,14 @@ export default function VideoFeedPage() {
   useEffect(() => {
     setPanelOpen(false);
     setExpanded(false);
+    setVideoReady(false);
   }, [currentIndex]);
 
   useEffect(() => {
     if (!currentVideo?.id || !currentVideo.primary_video?.key) return;
     if (!viewerIdRef.current) return;
 
-    const identity = `${getVideoIdentity(currentVideo)}:${currentVideo.primary_video.key}`;
+    const identity = getVideoIdentity(currentVideo);
     if (reportedViewsRef.current.has(identity)) return;
 
     const timer = window.setTimeout(() => {
@@ -463,16 +517,16 @@ export default function VideoFeedPage() {
     setMuted((prev) => {
       const next = !prev;
       const iframe = currentVideo
-        ? videoRefs.current.get(currentVideo.id)
+        ? videoRefs.current.get(currentVideoIdentity)
         : undefined;
       if (iframe) sendYouTubeCommand(iframe, next ? "mute" : "unMute");
       return next;
     });
-  }, [currentVideo]);
+  }, [currentVideo, currentVideoIdentity]);
 
   useEffect(() => {
     if (!currentVideo) return;
-    const iframe = videoRefs.current.get(currentVideo.id);
+    const iframe = videoRefs.current.get(currentVideoIdentity);
     if (iframe) {
       const t = window.setTimeout(
         () => sendYouTubeCommand(iframe, muted ? "mute" : "unMute"),
@@ -480,7 +534,7 @@ export default function VideoFeedPage() {
       );
       return () => clearTimeout(t);
     }
-  }, [currentVideo, currentVideo?.id, muted]);
+  }, [currentVideo, currentVideo?.id, currentVideoIdentity, muted]);
 
   const handleScroll = useCallback(
     (e: WheelEvent) => {
@@ -490,12 +544,14 @@ export default function VideoFeedPage() {
       if (e.deltaY > 0 && currentIndex < videos.length - 1) {
         setCurrentIndex((i) => i + 1);
         setPanelOpen(false);
+      } else if (e.deltaY > 0 && hasMore && !isFetchingRef.current) {
+        fetchMoreVideos(false);
       } else if (e.deltaY < 0 && currentIndex > 0) {
         setCurrentIndex((i) => i - 1);
         setPanelOpen(false);
       }
     },
-    [currentIndex, videos.length],
+    [currentIndex, videos.length, hasMore, fetchMoreVideos],
   );
 
   const touchStartY = useRef(0);
@@ -509,12 +565,14 @@ export default function VideoFeedPage() {
       if (diff > 0 && currentIndex < videos.length - 1) {
         setCurrentIndex((prev) => prev + 1);
         setPanelOpen(false);
+      } else if (diff > 0 && hasMore && !isFetchingRef.current) {
+        fetchMoreVideos(false);
       } else if (diff < 0 && currentIndex > 0) {
         setCurrentIndex((prev) => prev - 1);
         setPanelOpen(false);
       }
     },
-    [currentIndex, videos.length],
+    [currentIndex, videos.length, hasMore, fetchMoreVideos],
   );
 
   useEffect(() => {
@@ -540,21 +598,21 @@ export default function VideoFeedPage() {
     if (!currentVideo) return;
     setIsPlaying(true);
     const t = window.setTimeout(() => {
-      const iframe = videoRefs.current.get(currentVideo.id);
+      const iframe = videoRefs.current.get(currentVideoIdentity);
       if (iframe) {
         sendYouTubeCommand(iframe, "playVideo", []);
         if (!muted) sendYouTubeCommand(iframe, "unMute", []);
       }
     }, 350);
     return () => clearTimeout(t);
-  }, [currentVideo, currentVideo?.id, muted]);
+  }, [currentVideo, currentVideo?.id, currentVideoIdentity, muted]);
 
   useEffect(() => {
     if (!currentVideo) return;
     const onFirstGesture = () => {
       if (firstUserGestureRef.current) return;
       firstUserGestureRef.current = true;
-      const iframe = videoRefs.current.get(currentVideo.id);
+      const iframe = videoRefs.current.get(currentVideoIdentity);
       if (iframe) {
         sendYouTubeCommand(iframe, "unMute", []);
         sendYouTubeCommand(iframe, "playVideo", []);
@@ -569,7 +627,7 @@ export default function VideoFeedPage() {
         window.removeEventListener("click", onFirstGesture);
       } catch {}
     };
-  }, [currentVideo, currentVideo?.id]);
+  }, [currentVideo, currentVideo?.id, currentVideoIdentity]);
 
   const iframeSrc = useMemo(() => {
     if (!currentVideo?.primary_video?.key) return "";
@@ -583,7 +641,7 @@ export default function VideoFeedPage() {
 
   const togglePlayPause = () => {
     if (!currentVideo) return;
-    const iframe = videoRefs.current.get(currentVideo.id);
+    const iframe = videoRefs.current.get(currentVideoIdentity);
     if (!iframe) return;
     if (isPlaying) {
       sendYouTubeCommand(iframe, "pauseVideo", []);
@@ -618,6 +676,13 @@ export default function VideoFeedPage() {
           year: "numeric",
         })
       : null;
+  const currentVideoTypeLabel =
+    currentVideo?.video_type_label ||
+    currentVideo?.primary_video?.video_type_label ||
+    currentVideo?.video_type ||
+    currentVideo?.primary_video?.video_type ||
+    currentVideo?.primary_video?.type ||
+    "Video";
 
   return (
     <div
@@ -692,6 +757,21 @@ export default function VideoFeedPage() {
           </div>
 
           <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-black/20 p-1 shadow-xl shadow-black/20 backdrop-blur-md transition-colors hover:bg-black/30">
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.93 }}
+              onClick={() => resetFeed("refresh")}
+              disabled={loading}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
+              aria-label="Refresh feed"
+            >
+              <RefreshCw
+                className={cn(
+                  "h-4 w-4 sm:h-5 sm:w-5",
+                  loadingMode === "refresh" && "animate-spin",
+                )}
+              />
+            </motion.button>
             <Link href="/search" prefetch>
               <motion.button
                 whileHover={{ scale: 1.08 }}
@@ -721,7 +801,7 @@ export default function VideoFeedPage() {
         <AnimatePresence mode="wait">
           {currentVideo && (
             <motion.div
-              key={currentVideo.id}
+              key={`${currentVideoIdentity}:${currentVideo.primary_video.key}`}
               initial={{ opacity: 0, scale: 1.03 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
@@ -731,21 +811,35 @@ export default function VideoFeedPage() {
               {/* Video iframe */}
               <div className="relative flex h-full w-full items-center justify-center bg-black">
                 <div className="absolute inset-0 overflow-hidden bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),0_24px_80px_rgba(0,0,0,0.45)] md:inset-5 md:rounded-2xl">
+                  {currentBackdrop && (
+                    <div
+                      className={cn(
+                        "absolute inset-0 bg-cover bg-center opacity-70 blur-sm scale-105 transition-opacity duration-500",
+                        videoReady && "opacity-0",
+                      )}
+                      style={{ backgroundImage: `url(${currentBackdrop})` }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {!videoReady && (
+                    <div className="absolute left-1/2 top-1/2 z-20 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
+                  )}
                   <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.10),transparent_58%)] mix-blend-screen" />
                   <iframe
                     ref={(el) => {
                       if (el && currentVideo)
-                        videoRefs.current.set(currentVideo.id, el);
+                        videoRefs.current.set(currentVideoIdentity, el);
                     }}
                     title={videoTitle || `video-${currentVideo.id}`}
                     src={iframeSrc}
-                    className="absolute left-1/2 top-1/2 h-[calc(100%+160px)] min-h-[calc(56.25vw+160px)] w-[calc(100%+284px)] min-w-[calc(177.78vh+284px)] -translate-x-1/2 -translate-y-1/2 bg-black brightness-[1.14] contrast-[1.08] saturate-[1.12]"
+                    className="absolute left-1/2 top-1/2 h-[min(56.25vw,calc(100vh-9rem))] w-[min(100vw,calc((100vh-9rem)*1.7778))] -translate-x-1/2 -translate-y-1/2 bg-black brightness-[1.14] contrast-[1.08] saturate-[1.12] md:h-[calc(100%+180px)] md:min-h-[calc(56.25vw+180px)] md:w-[calc(100%+284px)] md:min-w-[calc(177.78vh+284px)]"
                     allow="autoplay; encrypted-media; picture-in-picture"
                     style={{ border: "none", pointerEvents: "none" }}
                     onLoad={(e) => {
                       const iframe = e.currentTarget as HTMLIFrameElement;
                       if (currentVideo)
-                        videoRefs.current.set(currentVideo.id, iframe);
+                        videoRefs.current.set(currentVideoIdentity, iframe);
+                      setVideoReady(true);
                       setTimeout(() => {
                         sendYouTubeCommand(iframe, "playVideo", []);
                         sendYouTubeCommand(
@@ -828,7 +922,7 @@ export default function VideoFeedPage() {
                       )}
 
                     <span className="px-2 py-0.5 rounded-md text-xs font-bold uppercase border bg-red-500/20 text-red-300 border-red-400/30">
-                      {currentVideo.primary_video.type}
+                      {currentVideoTypeLabel}
                     </span>
                   </div>
                 </div>
@@ -863,7 +957,11 @@ export default function VideoFeedPage() {
               <div className="flex items-center gap-2.5 px-4 py-2.5 bg-black/60 backdrop-blur-xl rounded-full border border-white/15 shadow-xl">
                 <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 <span className="text-white/80 text-xs font-semibold tracking-wide">
-                  Loading more
+                  {loadingMode === "refresh"
+                    ? "Refreshing"
+                    : videos.length === 0
+                      ? "Loading"
+                      : "Loading more"}
                 </span>
               </div>
             </motion.div>
@@ -883,7 +981,11 @@ export default function VideoFeedPage() {
                 {feedError}
               </p>
               <button
-                onClick={() => fetchMoreVideos(videos.length === 0)}
+                onClick={() =>
+                  videos.length === 0
+                    ? resetFeed("refresh")
+                    : fetchMoreVideos(false)
+                }
                 className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/15"
               >
                 Try again
@@ -1057,9 +1159,9 @@ export default function VideoFeedPage() {
                   <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-xs font-bold uppercase text-white/70">
                     {currentVideo.media_type}
                   </span>
-                  {currentVideo.primary_video?.type && (
+                  {currentVideoTypeLabel && (
                     <span className="rounded-full border border-red-400/25 bg-red-500/15 px-2.5 py-1 text-xs font-bold uppercase text-red-300">
-                      {currentVideo.primary_video.type}
+                      {currentVideoTypeLabel}
                     </span>
                   )}
                 </div>
@@ -1104,7 +1206,7 @@ export default function VideoFeedPage() {
                       Video
                     </div>
                     <div className="text-sm font-bold uppercase text-white">
-                      {currentVideo.primary_video?.type || "—"}
+                      {currentVideoTypeLabel}
                     </div>
                   </div>
                   {(currentVideo.release_date ||

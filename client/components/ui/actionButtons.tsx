@@ -1,6 +1,14 @@
 import { cloneElement } from "react";
 import { motion } from "framer-motion";
-import { Play, Pause, Heart, Bookmark, Volume2, VolumeX, Info } from "lucide-react";
+import {
+  Play,
+  Pause,
+  Heart,
+  Bookmark,
+  Volume2,
+  VolumeX,
+  Info,
+} from "lucide-react";
 
 export default function ActionButtons({
   isPlaying,
@@ -76,7 +84,7 @@ export default function ActionButtons({
   ];
 
   return (
-    <div className="absolute right-3 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-2 sm:right-5 md:right-7 max-[760px]:gap-1.5 max-[680px]:top-[54%]">
+    <div className="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[52%] z-30 flex -translate-y-1/2 flex-col items-center gap-2 max-[420px]:right-2 max-[420px]:top-[49%] max-[420px]:gap-1.5 sm:right-5 sm:top-1/2 sm:gap-2.5 md:right-7 xl:right-9 xl:gap-3 2xl:right-12 2xl:gap-3.5 min-[1800px]:right-16 min-[1800px]:gap-4 min-[2200px]:right-[5.5rem] min-[2200px]:gap-5">
       {buttons.map((btn, idx) => (
         <motion.button
           key={idx}
@@ -87,24 +95,28 @@ export default function ActionButtons({
           whileTap={{ scale: 0.93 }}
           onClick={btn.onClick}
           aria-label={btn.label}
-          className="group flex flex-col items-center gap-1 max-[760px]:gap-0.5"
+          className="group flex flex-col items-center gap-1 max-[420px]:gap-0.5 2xl:gap-1.5 min-[1800px]:gap-2"
         >
           <div
             className={`
               relative flex items-center justify-center rounded-full border
               backdrop-blur-md transition-all duration-300 shadow-lg
-              w-11 h-11 sm:w-12 sm:h-12 max-[760px]:w-10 max-[760px]:h-10
-              ${btn.active
-                ? `bg-gradient-to-br ${btn.activeColor} shadow-black/40`
-                : "bg-black/50 border-white/15 group-hover:border-white/35 group-hover:bg-black/60"
+              h-11 w-11 max-[420px]:h-10 max-[420px]:w-10 max-[360px]:h-9 max-[360px]:w-9 sm:h-12 sm:w-12 md:h-[3.25rem] md:w-[3.25rem] xl:h-14 xl:w-14 2xl:h-16 2xl:w-16 min-[1800px]:h-[4.5rem] min-[1800px]:w-[4.5rem] min-[2200px]:h-20 min-[2200px]:w-20
+              ${
+                btn.active
+                  ? `bg-gradient-to-br ${btn.activeColor} shadow-black/40`
+                  : "bg-black/50 border-white/15 group-hover:border-white/35 group-hover:bg-black/60"
               }
             `}
           >
             {btn.icon &&
               cloneElement(btn.icon as React.ReactElement, {
                 className: [
-                  "transition-transform duration-200 group-hover:scale-110 w-4 h-4 sm:w-5 sm:h-5 max-[760px]:w-4 max-[760px]:h-4",
-                  btn.iconClass ?? (btn.active ? "text-white" : "text-white/80 group-hover:text-white"),
+                  "h-4 w-4 transition-transform duration-200 group-hover:scale-110 max-[360px]:h-3.5 max-[360px]:w-3.5 sm:h-5 sm:w-5 xl:h-5.5 xl:w-5.5 2xl:h-6 2xl:w-6 min-[1800px]:h-7 min-[1800px]:w-7 min-[2200px]:h-8 min-[2200px]:w-8",
+                  btn.iconClass ??
+                    (btn.active
+                      ? "text-white"
+                      : "text-white/80 group-hover:text-white"),
                 ].join(" "),
               })}
 
@@ -117,7 +129,7 @@ export default function ActionButtons({
           </div>
 
           <span
-            className={`text-[10px] font-semibold tracking-wide transition-colors duration-200 select-none max-[760px]:text-[9px]
+            className={`text-[10px] font-semibold tracking-wide transition-colors duration-200 select-none max-[420px]:text-[9px] max-[360px]:text-[8px] sm:text-[10px] xl:text-[11px] 2xl:text-xs min-[1800px]:text-[13px] min-[2200px]:text-sm
               ${btn.active ? "text-white" : "text-white/55 group-hover:text-white/80"}`}
           >
             {btn.label}
