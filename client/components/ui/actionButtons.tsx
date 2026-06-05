@@ -76,7 +76,7 @@ export default function ActionButtons({
   ];
 
   return (
-    <div className="absolute right-4 bottom-28 sm:right-5 sm:bottom-32 md:right-7 md:bottom-36 flex flex-col gap-2 z-30">
+    <div className="absolute right-3 top-1/2 z-30 flex -translate-y-1/2 flex-col gap-2 sm:right-5 md:right-7 max-[760px]:gap-1.5 max-[680px]:top-[54%]">
       {buttons.map((btn, idx) => (
         <motion.button
           key={idx}
@@ -87,13 +87,13 @@ export default function ActionButtons({
           whileTap={{ scale: 0.93 }}
           onClick={btn.onClick}
           aria-label={btn.label}
-          className="group flex flex-col items-center gap-1"
+          className="group flex flex-col items-center gap-1 max-[760px]:gap-0.5"
         >
           <div
             className={`
               relative flex items-center justify-center rounded-full border
               backdrop-blur-md transition-all duration-300 shadow-lg
-              w-11 h-11 sm:w-12 sm:h-12
+              w-11 h-11 sm:w-12 sm:h-12 max-[760px]:w-10 max-[760px]:h-10
               ${btn.active
                 ? `bg-gradient-to-br ${btn.activeColor} shadow-black/40`
                 : "bg-black/50 border-white/15 group-hover:border-white/35 group-hover:bg-black/60"
@@ -103,7 +103,7 @@ export default function ActionButtons({
             {btn.icon &&
               cloneElement(btn.icon as React.ReactElement, {
                 className: [
-                  "transition-transform duration-200 group-hover:scale-110 w-4 h-4 sm:w-5 sm:h-5",
+                  "transition-transform duration-200 group-hover:scale-110 w-4 h-4 sm:w-5 sm:h-5 max-[760px]:w-4 max-[760px]:h-4",
                   btn.iconClass ?? (btn.active ? "text-white" : "text-white/80 group-hover:text-white"),
                 ].join(" "),
               })}
@@ -117,7 +117,7 @@ export default function ActionButtons({
           </div>
 
           <span
-            className={`text-[10px] font-semibold tracking-wide transition-colors duration-200 select-none
+            className={`text-[10px] font-semibold tracking-wide transition-colors duration-200 select-none max-[760px]:text-[9px]
               ${btn.active ? "text-white" : "text-white/55 group-hover:text-white/80"}`}
           >
             {btn.label}

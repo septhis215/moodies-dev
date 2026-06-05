@@ -124,6 +124,7 @@ export function NavbarComponent() {
       { label: "Movie Matcher", path: "/movies#moods" },
       { label: "TV Matcher", path: "/tv#moods" },
       { label: "Personality Quiz", path: "/quiz" },
+      { label: "Moodies Feed", path: "/feed" },
     ],
 
     "/collection": [
