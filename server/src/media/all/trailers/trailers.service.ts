@@ -68,7 +68,6 @@ export class TrailersService {
                         availableVideos.filter(v => !/red\s*band/i.test(v.name))
                     );
 
-                    scoredVideos.forEach(v => console.log(v.name, v.score));
                     const bestVideo = scoredVideos[0];
 
                     return {

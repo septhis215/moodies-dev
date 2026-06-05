@@ -1,10 +1,21 @@
-import { Controller, Get, Param, ParseIntPipe, Query, Post, Body, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Query,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AllService } from './all.service';
 import { JwtGuard } from 'src/auth/guard';
 
 @Controller('all')
 export class AllController {
-  constructor(private readonly allService: AllService) { }
+  constructor(private readonly allService: AllService) {}
 
   @Get('trending/day')
   async getTrendingAllDay() {
@@ -71,7 +82,7 @@ export class AllController {
   @Get('search/suggestions')
   async getSearchSuggestions(
     @Query('q') query: string,
-    @Query('limit') limit?: string
+    @Query('limit') limit?: string,
   ) {
     if (!query || query.trim().length < 2) {
       return [];
@@ -91,7 +102,7 @@ export class AllController {
   async getRecommendations(
     @Param('type') type: 'movie' | 'tv',
     @Param('id', ParseIntPipe) id: number,
-    @Query('limit') limit?: string
+    @Query('limit') limit?: string,
   ) {
     // Validate type parameter
     if (type !== 'movie' && type !== 'tv') {
@@ -108,7 +119,7 @@ export class AllController {
   async getItemRecommendations(
     @Param('type') type: 'movie' | 'tv',
     @Param('id', ParseIntPipe) id: number,
-    @Query('limit') limit?: string
+    @Query('limit') limit?: string,
   ) {
     if (type !== 'movie' && type !== 'tv') {
       throw new Error('Type must be either "movie" or "tv"');
@@ -121,7 +132,9 @@ export class AllController {
   // NEW: Batch trailer endpoint for multiple items
   // Frontend can request trailers for multiple items at once
   @Post('batch/trailers')
-  async getBatchTrailers(@Body() items: { type: 'movie' | 'tv', id: number }[]) {
+  async getBatchTrailers(
+    @Body() items: { type: 'movie' | 'tv'; id: number }[],
+  ) {
     // Validate input
     if (!Array.isArray(items) || items.length === 0) {
       throw new Error('Items array is required and must not be empty');
@@ -129,8 +142,14 @@ export class AllController {
 
     // Validate each item
     for (const item of items) {
-      if (!item.type || !item.id || (item.type !== 'movie' && item.type !== 'tv')) {
-        throw new Error('Each item must have valid type ("movie" or "tv") and id');
+      if (
+        !item.type ||
+        !item.id ||
+        (item.type !== 'movie' && item.type !== 'tv')
+      ) {
+        throw new Error(
+          'Each item must have valid type ("movie" or "tv") and id',
+        );
       }
     }
 
@@ -150,10 +169,16 @@ export class AllController {
       timestamp: new Date().toISOString(),
       service: 'AllService',
       endpoints: [
-        'featured', 'trending', 'trailers', 'favorites',
-        'koreaTrending', 'peoples', 'trending-reviews',
-        'upcoming-trailers', 'recommendations'
-      ]
+        'featured',
+        'trending',
+        'trailers',
+        'favorites',
+        'koreaTrending',
+        'peoples',
+        'trending-reviews',
+        'upcoming-trailers',
+        'recommendations',
+      ],
     };
   }
 
@@ -162,8 +187,9 @@ export class AllController {
   async getCacheStatus() {
     // This would require adding cache status methods to your service
     return {
-      message: 'Cache status endpoint - implement cache metrics in service if needed',
-      timestamp: new Date().toISOString()
+      message:
+        'Cache status endpoint - implement cache metrics in service if needed',
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -174,21 +200,23 @@ export class AllController {
     const parsedLimit = limit ? parseInt(limit, 20) : 20;
 
     // Execute all requests in parallel for faster response
-    const [featured, trending, trailers, koreaTrending, reviews] = await Promise.allSettled([
-      this.allService.getFeatured(parsedLimit),
-      this.allService.getTrending(parsedLimit),
-      this.allService.getTrailers(parsedLimit),
-      this.allService.getKoreaTrending(parsedLimit),
-      this.allService.getTrendingReviews(Math.min(parsedLimit, 20)) // Limit reviews to 10 max
-    ]);
+    const [featured, trending, trailers, koreaTrending, reviews] =
+      await Promise.allSettled([
+        this.allService.getFeatured(parsedLimit),
+        this.allService.getTrending(parsedLimit),
+        this.allService.getTrailers(parsedLimit),
+        this.allService.getKoreaTrending(parsedLimit),
+        this.allService.getTrendingReviews(Math.min(parsedLimit, 20)), // Limit reviews to 10 max
+      ]);
 
     return {
       featured: featured.status === 'fulfilled' ? featured.value : [],
       trending: trending.status === 'fulfilled' ? trending.value : [],
       trailers: trailers.status === 'fulfilled' ? trailers.value : [],
-      koreaTrending: koreaTrending.status === 'fulfilled' ? koreaTrending.value : [],
+      koreaTrending:
+        koreaTrending.status === 'fulfilled' ? koreaTrending.value : [],
       reviews: reviews.status === 'fulfilled' ? reviews.value : [],
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -197,14 +225,15 @@ export class AllController {
   async getByGenre(
     @Param('genreId', ParseIntPipe) genreId: number,
     @Query('type') type?: 'movie' | 'tv',
-    @Query('limit') limit?: string
+    @Query('limit') limit?: string,
   ) {
     // This would require implementing genre-based filtering in your service
     return {
-      message: 'Genre-based filtering endpoint - implement in service if needed',
+      message:
+        'Genre-based filtering endpoint - implement in service if needed',
       genreId,
       type,
-      limit: limit ? parseInt(limit, 10) : 25
+      limit: limit ? parseInt(limit, 10) : 25,
     };
   }
 
@@ -225,14 +254,19 @@ export class AllController {
   async getUpcomingTrailersFeed(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('viewerId') viewerId?: string,
   ) {
     const pageNum = page ? parseInt(page, 10) : 1;
     const limitNum = limit ? parseInt(limit, 30) : 30;
 
-    const response = await this.allService.getUpcomingFeeds(pageNum, limitNum);
+    const response = await this.allService.getUpcomingFeeds(
+      pageNum,
+      limitNum,
+      viewerId,
+    );
 
     // Format the results - handle both enriched and non-enriched data
-    const formatted = response.results.map(item => {
+    const formatted = response.results.map((item) => {
       // Get the correct title
       const title = item.title || item.name || 'Untitled';
 
@@ -256,7 +290,7 @@ export class AllController {
         media_type: item.media_type,
         // Use enriched video data if available
         primary_video: item.primary_video || null,
-        videos: item.videos || []
+        videos: item.videos || [],
       };
     });
 
@@ -264,7 +298,9 @@ export class AllController {
       results: formatted,
       page: response.page,
       total_pages: response.total_pages,
-      hasMore: response.hasMore
+      hasMore: response.hasMore,
+      nextPage:
+        response.nextPage ?? (response.hasMore ? response.page + 1 : null),
     };
   }
 
@@ -274,10 +310,44 @@ export class AllController {
     @Query('salt') salt: string,
     @Query('page') page?: string,
     @Query('mediaType') mediaType?: 'movie' | 'tv',
-
+    @Query('limit') limit?: string,
+    @Query('viewerId') viewerId?: string,
   ) {
     const pageNum = page ? parseInt(page, 10) : 1;
-    return await this.allService.getVideoFeed(Number(salt) || 0, pageNum, mediaType);
+    const limitNum = limit ? parseInt(limit, 10) : 18;
+    return await this.allService.getVideoFeed(
+      Number(salt) || 0,
+      pageNum,
+      mediaType,
+      limitNum,
+      viewerId,
+    );
+  }
+
+  @Post('video-feed/viewed')
+  async recordVideoFeedViewed(
+    @Body()
+    body: {
+      viewerId?: string;
+      mediaType?: 'movie' | 'tv';
+      id?: number;
+      videoKey?: string;
+    },
+  ) {
+    if (
+      !body?.viewerId ||
+      !body?.id ||
+      (body.mediaType !== 'movie' && body.mediaType !== 'tv')
+    ) {
+      return { ok: false };
+    }
+
+    return this.allService.recordVideoFeedViewed(
+      body.viewerId,
+      body.mediaType,
+      Number(body.id),
+      body.videoKey,
+    );
   }
 
   @Get('movie/:id/videos')

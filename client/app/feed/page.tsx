@@ -1,18 +1,25 @@
-'use client';
+"use client";
 import { cn } from "@/lib/utils";
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import type { ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import type { ReactNode } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Calendar, Clapperboard, ExternalLink,
-  Sparkles, Search, Star, User, X
-} from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import ActionButtons from '@/components/ui/actionButtons';
+  Calendar,
+  Clapperboard,
+  ExternalLink,
+  Sparkles,
+  Search,
+  Star,
+  User,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import ActionButtons from "@/components/ui/actionButtons";
 import Image from "next/image";
-import { useWatchlist } from '@/hooks/useWatchlist';
-import { useLiked } from '@/hooks/useLiked';
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { useLiked } from "@/hooks/useLiked";
+import { useAuth } from "@/app/context/AuthProvider";
 
 interface VideoItem {
   id: number;
@@ -26,7 +33,7 @@ interface VideoItem {
   original_language?: string;
   genres?: string[];
   vote_average: number;
-  media_type: 'movie' | 'tv';
+  media_type: "movie" | "tv";
   primary_video: {
     key: string;
     name: string;
@@ -41,7 +48,7 @@ type FeedContentLike = Partial<VideoItem> & {
   number_of_seasons?: number;
 };
 
-type Category = 'all' | 'upcoming';
+type Category = "all" | "upcoming";
 
 const feedTabs: Array<{
   value: Category;
@@ -50,21 +57,22 @@ const feedTabs: Array<{
   icon: ReactNode;
 }> = [
   {
-    value: 'all',
-    label: 'All Videos',
-    shortLabel: 'All',
+    value: "all",
+    label: "All Videos",
+    shortLabel: "All",
     icon: <Clapperboard className="h-4 w-4" />,
   },
   {
-    value: 'upcoming',
-    label: 'Upcoming',
-    shortLabel: 'Soon',
+    value: "upcoming",
+    label: "Upcoming",
+    shortLabel: "Soon",
     icon: <Calendar className="h-4 w-4" />,
   },
 ];
 
 export default function VideoFeedPage() {
   const router = useRouter();
+  const { user } = useAuth();
 
   // Configuration constants
   const PREFETCH_THRESHOLD = 5;
@@ -77,31 +85,46 @@ export default function VideoFeedPage() {
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [, setFetchedPages] = useState<Set<number>>(new Set());
-  const fetchedPagesRef = useRef<Set<number>>(new Set());
   const [hasMore, setHasMore] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<Category>('all');
+  const [feedError, setFeedError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<Category>("all");
   const isFetchingRef = useRef(false);
   const nextPageRef = useRef(1);
   const sessionSaltRef = useRef(Math.floor(Math.random() * 500)); // random 0-499 per tab session
-  const seenVideoIdsRef = useRef<Set<number>>(new Set());
+  const seenVideoIdsRef = useRef<Set<string>>(new Set());
   const indexOffsetRef = useRef(0);
   const retryCountRef = useRef(0);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  const retryTimerRef = useRef<number | null>(null);
+  const viewerIdRef = useRef<string>("");
+  const reportedViewsRef = useRef<Set<string>>(new Set());
 
   const [muted, setMuted] = useState<boolean>(() => {
     try {
-      const s = typeof window !== 'undefined' ? localStorage.getItem('videoMuted') : null;
-      return s === null ? true : s === 'true';
+      const s =
+        typeof window !== "undefined"
+          ? localStorage.getItem("videoMuted")
+          : null;
+      return s === null ? true : s === "true";
     } catch {
       return true;
     }
   });
 
   const [panelOpen, setPanelOpen] = useState(false);
-  const { isLiked, like: addToLiked, unlike: removeFromLiked, ready: likedReady } = useLiked();
+  const {
+    isLiked,
+    like: addToLiked,
+    unlike: removeFromLiked,
+    ready: likedReady,
+  } = useLiked();
   const [isPlaying, setIsPlaying] = useState(true);
   const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
-  const { isInWatchlist, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
+  const {
+    isInWatchlist,
+    add: addToWatchlist,
+    remove: removeFromWatchlist,
+  } = useWatchlist();
 
   const panelRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -111,16 +134,45 @@ export default function VideoFeedPage() {
   const currentVideo = videos[currentIndex];
   const [showScrollHint, setShowScrollHint] = useState(true);
 
-  const watchType = currentVideo?.media_type === 'tv' ? 'series' : 'movie';
-  const inWatchlist = currentVideo ? isInWatchlist(String(currentVideo.id), watchType) : false;
-  const likeType = currentVideo?.media_type === 'tv' ? 'series' : 'movie';
-  const liked = currentVideo ? isLiked(String(currentVideo.id), likeType) : false;
+  useEffect(() => {
+    if (user?.id) {
+      viewerIdRef.current = `user:${user.id}`;
+      return;
+    }
+
+    try {
+      const storageKey = "moodiesFeedViewerId";
+      const existing = localStorage.getItem(storageKey);
+      if (existing) {
+        viewerIdRef.current = existing;
+        return;
+      }
+      const created = `anon:${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+      localStorage.setItem(storageKey, created);
+      viewerIdRef.current = created;
+    } catch {
+      if (!viewerIdRef.current) {
+        viewerIdRef.current = `session:${Math.random().toString(36).slice(2)}`;
+      }
+    }
+  }, [user?.id]);
+
+  const watchType = currentVideo?.media_type === "tv" ? "series" : "movie";
+  const inWatchlist = currentVideo
+    ? isInWatchlist(String(currentVideo.id), watchType)
+    : false;
+  const likeType = currentVideo?.media_type === "tv" ? "series" : "movie";
+  const liked = currentVideo
+    ? isLiked(String(currentVideo.id), likeType)
+    : false;
 
   const handleLikeToggle = useCallback(async () => {
     if (!currentVideo || !likedReady) return;
     const meta = {
       title: currentVideo.title || currentVideo.name,
-      posterUrl: currentVideo.poster_path ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}` : null,
+      posterUrl: currentVideo.poster_path
+        ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}`
+        : null,
       duration: 3000,
     };
     if (liked) await removeFromLiked(String(currentVideo.id), likeType, meta);
@@ -134,137 +186,179 @@ export default function VideoFeedPage() {
       if (inWatchlist) {
         await removeFromWatchlist(String(currentVideo.id), watchType, {
           title: currentVideo.title || currentVideo.name,
-          posterUrl: currentVideo.poster_path ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}` : null,
-          variant: 'info',
+          posterUrl: currentVideo.poster_path
+            ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}`
+            : null,
+          variant: "info",
           duration: 3500,
         });
       } else {
         await addToWatchlist(String(currentVideo.id), watchType, {
           title: currentVideo.title || currentVideo.name,
-          posterUrl: currentVideo.poster_path ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}` : null,
-          variant: 'success',
+          posterUrl: currentVideo.poster_path
+            ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}`
+            : null,
+          variant: "success",
           duration: 3500,
         });
       }
     } catch (error) {
-      console.error('Failed to toggle watchlist:', error);
+      console.error("Failed to toggle watchlist:", error);
     } finally {
       setIsTogglingWatchlist(false);
     }
-  }, [currentVideo, inWatchlist, watchType, isTogglingWatchlist, addToWatchlist, removeFromWatchlist]);
+  }, [
+    currentVideo,
+    inWatchlist,
+    watchType,
+    isTogglingWatchlist,
+    addToWatchlist,
+    removeFromWatchlist,
+  ]);
 
-  const getContentType = (item: FeedContentLike): "movie" | "tv" => {
-    if (item.media_type) return item.media_type;
-    if (item.type === "movies" || item.type === "movie") return "movie";
-    if (item.type === "tv") return "tv";
-    if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
-    return "movie";
-  };
+  const getContentType = useCallback(
+    (item: FeedContentLike): "movie" | "tv" => {
+      if (item.media_type) return item.media_type;
+      if (item.type === "movies" || item.type === "movie") return "movie";
+      if (item.type === "tv") return "tv";
+      if (item.number_of_seasons || item.first_air_date || item.name)
+        return "tv";
+      return "movie";
+    },
+    [],
+  );
 
   const href = currentVideo
-    ? `/${getContentType(currentVideo) === 'tv' ? 'tv' : 'movies'}/${currentVideo.id}`
+    ? `/${getContentType(currentVideo) === "tv" ? "tv" : "movies"}/${currentVideo.id}`
     : undefined;
 
-  const fetchMoreVideos = useCallback(async (isInitial = false) => {
-    if (isFetchingRef.current) return;
-    if (!isInitial && !hasMore) return;
-    isFetchingRef.current = true;
-    setLoading(true);
-    try {
-      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-      const limit = isInitial ? INITIAL_FETCH_SIZE : PREFETCH_SIZE;
-      let endpoint: string;
-      let currentPage = 1;
+  const getVideoIdentity = useCallback(
+    (video: VideoItem) => {
+      return `${video.media_type || getContentType(video)}:${video.id}`;
+    },
+    [getContentType],
+  );
 
-      if (activeCategory === 'upcoming') {
-        currentPage = nextPageRef.current;
-        endpoint = `${base}/all/upcoming-trailers-feed?page=${currentPage}&limit=${limit}&salt=${sessionSaltRef.current}`;
-        // The salt is random per browser session (tab open). Backend uses it to
-        // vary the shuffle seed, so the same page number produces different ordering
-        // for different users/sessions. No backend schema changes needed — it's
-        // just a seed input.
-      } else {
-        let randomPage: number;
-        let attempts = 0;
-        do {
-          randomPage = Math.floor(Math.random() * 20) + 1;
-          attempts++;
-        } while (fetchedPagesRef.current.has(randomPage) && attempts < 50);
-        if (attempts >= 50) { setHasMore(false); isFetchingRef.current = false; setLoading(false); return; }
-        currentPage = randomPage;
-        endpoint = `${base}/all/video-feed?page=${randomPage}`;
-        setFetchedPages(prev => {
-          const next = new Set(prev);
-          next.add(randomPage);
-          fetchedPagesRef.current = new Set(next);
-          return next;
-        });
-      }
+  const fetchMoreVideos = useCallback(
+    async (isInitial = false) => {
+      if (isFetchingRef.current) return;
+      if (!isInitial && !hasMore) return;
+      isFetchingRef.current = true;
+      setLoading(true);
+      setFeedError(null);
 
-      const res = await fetch(endpoint);
-      if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
-      const data = await res.json();
-      const results = Array.isArray(data) ? data : (data.results || []);
+      fetchAbortRef.current?.abort();
+      const controller = new AbortController();
+      fetchAbortRef.current = controller;
 
-      if (results.length > 0) {
-        const uniqueVideos = results.filter((video: VideoItem) => {
-          if (!video.primary_video?.key) return false;
-          if (seenVideoIdsRef.current.has(video.id)) return false;
-          seenVideoIdsRef.current.add(video.id);
-          return true;
-        });
-        if (uniqueVideos.length > 0) {
-          retryCountRef.current = 0;
-          const videosToAdd = activeCategory === 'upcoming'
-            ? uniqueVideos
-            : [...uniqueVideos].sort(() => Math.random() - 0.5);
-          setVideos(prev => [...prev, ...videosToAdd]);
-          if (activeCategory === 'upcoming') nextPageRef.current += 1;
-          if (activeCategory === 'all') { setHasMore(fetchedPagesRef.current.size < 100); }
-          else {
-            const backendHasMore = data.hasMore !== undefined ? data.hasMore : uniqueVideos.length >= Math.floor(limit * 0.7);
-            setHasMore(backendHasMore);
+      try {
+        const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        const limit = isInitial ? INITIAL_FETCH_SIZE : PREFETCH_SIZE;
+        const currentPage = nextPageRef.current;
+        const viewerParam = viewerIdRef.current
+          ? `&viewerId=${encodeURIComponent(viewerIdRef.current)}`
+          : "";
+        const endpoint =
+          activeCategory === "upcoming"
+            ? `${base}/all/upcoming-trailers-feed?page=${currentPage}&limit=${limit}${viewerParam}`
+            : `${base}/all/video-feed?page=${currentPage}&limit=${limit}&salt=${sessionSaltRef.current}${viewerParam}`;
+
+        const res = await fetch(endpoint, { signal: controller.signal });
+        if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
+        const data = await res.json();
+        const results = Array.isArray(data) ? data : data.results || [];
+
+        if (results.length > 0) {
+          const uniqueVideos = results.filter((video: VideoItem) => {
+            if (!video.primary_video?.key) return false;
+            const identity = getVideoIdentity(video);
+            if (seenVideoIdsRef.current.has(identity)) return false;
+            seenVideoIdsRef.current.add(identity);
+            return true;
+          });
+
+          if (uniqueVideos.length > 0) {
+            retryCountRef.current = 0;
+            setVideos((prev) => [...prev, ...uniqueVideos]);
+            nextPageRef.current = Number(data.nextPage) || currentPage + 1;
+            const backendHasMore =
+              data.hasMore !== undefined
+                ? data.hasMore
+                : uniqueVideos.length >= Math.floor(limit * 0.7);
+            setHasMore(Boolean(backendHasMore));
+          } else {
+            const backendHasMore =
+              data.hasMore !== undefined ? data.hasMore : currentPage < 100;
+            if (retryCountRef.current < 2 && backendHasMore) {
+              retryCountRef.current += 1;
+              nextPageRef.current = Number(data.nextPage) || currentPage + 1;
+              isFetchingRef.current = false;
+              setLoading(false);
+              retryTimerRef.current = window.setTimeout(
+                () => fetchMoreVideos(false),
+                180,
+              );
+              return;
+            }
+            setHasMore(false);
           }
         } else {
-          if (retryCountRef.current < 3) {
-            retryCountRef.current += 1;
-            if (activeCategory === 'upcoming') nextPageRef.current += 1;
-            isFetchingRef.current = false;
-            setLoading(false);
-            setTimeout(() => fetchMoreVideos(false), 200);
-            return;
-          } else { setHasMore(false); }
+          setHasMore(false);
         }
-      } else { setHasMore(false); }
-    } catch (error) {
-      console.error('Error fetching videos:', error);
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-      isFetchingRef.current = false;
-    }
-  }, [activeCategory, hasMore, INITIAL_FETCH_SIZE, PREFETCH_SIZE]);
-
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
+        console.error("Error fetching videos:", error);
+        setFeedError("Could not load this feed. Please try again.");
+        setHasMore(videos.length > 0);
+      } finally {
+        setLoading(false);
+        isFetchingRef.current = false;
+        if (fetchAbortRef.current === controller) fetchAbortRef.current = null;
+      }
+    },
+    [
+      activeCategory,
+      hasMore,
+      INITIAL_FETCH_SIZE,
+      PREFETCH_SIZE,
+      videos.length,
+      getVideoIdentity,
+    ],
+  );
   const cleanupOldVideos = useCallback(() => {
     const videosAhead = videos.length - currentIndex;
     if (currentIndex > CLEANUP_THRESHOLD && videosAhead > WINDOW_SIZE / 2) {
       const keepFrom = Math.max(0, currentIndex - 2);
       if (keepFrom > 0) {
-        setVideos(prev => {
+        setVideos((prev) => {
           const newVideos = prev.slice(keepFrom);
-          prev.slice(0, keepFrom).forEach(video => videoRefs.current.delete(video.id));
+          prev
+            .slice(0, keepFrom)
+            .forEach((video) => videoRefs.current.delete(video.id));
           return newVideos;
         });
         indexOffsetRef.current += keepFrom;
-        setCurrentIndex(prev => prev - keepFrom);
+        setCurrentIndex((prev) => prev - keepFrom);
       }
     }
   }, [currentIndex, videos.length, CLEANUP_THRESHOLD, WINDOW_SIZE]);
 
   useEffect(() => {
     const distanceFromEnd = videos.length - currentIndex - 1;
-    if (distanceFromEnd <= PREFETCH_THRESHOLD && hasMore && !isFetchingRef.current) fetchMoreVideos(false);
-  }, [currentIndex, videos.length, hasMore, PREFETCH_THRESHOLD, fetchMoreVideos]);
+    if (
+      distanceFromEnd <= PREFETCH_THRESHOLD &&
+      hasMore &&
+      !isFetchingRef.current
+    )
+      fetchMoreVideos(false);
+  }, [
+    currentIndex,
+    videos.length,
+    hasMore,
+    PREFETCH_THRESHOLD,
+    fetchMoreVideos,
+  ]);
 
   useEffect(() => {
     const timer = setTimeout(() => cleanupOldVideos(), 500);
@@ -276,26 +370,34 @@ export default function VideoFeedPage() {
     setCurrentIndex(0);
     indexOffsetRef.current = 0;
     seenVideoIdsRef.current = new Set();
-    setFetchedPages(new Set());
-    fetchedPagesRef.current = new Set();
     nextPageRef.current = 1;
     sessionSaltRef.current = Math.floor(Math.random() * 500); // re-randomise on category switch too
     retryCountRef.current = 0;
+    reportedViewsRef.current = new Set();
+    setFeedError(null);
     setHasMore(true);
     setPanelOpen(false);
     isFetchingRef.current = false;
-    setTimeout(() => fetchMoreVideos(true), 100);
-  // This reset should only run when the selected feed changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchAbortRef.current?.abort();
+    if (retryTimerRef.current) window.clearTimeout(retryTimerRef.current);
+    const timer = window.setTimeout(() => fetchMoreVideos(true), 80);
+    return () => {
+      window.clearTimeout(timer);
+      fetchAbortRef.current?.abort();
+      if (retryTimerRef.current) window.clearTimeout(retryTimerRef.current);
+    };
+    // This reset should only run when the selected feed changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (containerRef.current) setShowScrollHint(containerRef.current.scrollTop <= 50);
+      if (containerRef.current)
+        setShowScrollHint(containerRef.current.scrollTop <= 50);
     };
     const container = containerRef.current;
-    if (container) container.addEventListener('scroll', handleScroll);
-    return () => container?.removeEventListener('scroll', handleScroll);
+    if (container) container.addEventListener("scroll", handleScroll);
+    return () => container?.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Close panel when video changes
@@ -305,19 +407,65 @@ export default function VideoFeedPage() {
   }, [currentIndex]);
 
   useEffect(() => {
-    try { localStorage.setItem('videoMuted', String(muted)); } catch { }
+    if (!currentVideo?.id || !currentVideo.primary_video?.key) return;
+    if (!viewerIdRef.current) return;
+
+    const identity = `${getVideoIdentity(currentVideo)}:${currentVideo.primary_video.key}`;
+    if (reportedViewsRef.current.has(identity)) return;
+
+    const timer = window.setTimeout(() => {
+      reportedViewsRef.current.add(identity);
+      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      void fetch(`${base}/all/video-feed/viewed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          viewerId: viewerIdRef.current,
+          mediaType: currentVideo.media_type,
+          id: currentVideo.id,
+          videoKey: currentVideo.primary_video.key,
+        }),
+        keepalive: true,
+      }).catch(() => {
+        reportedViewsRef.current.delete(identity);
+      });
+    }, 1800);
+
+    return () => window.clearTimeout(timer);
+  }, [
+    currentVideo,
+    currentVideo?.id,
+    currentVideo?.primary_video?.key,
+    getVideoIdentity,
+  ]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("videoMuted", String(muted));
+    } catch {}
   }, [muted]);
 
-  const sendYouTubeCommand = (iframe: HTMLIFrameElement | undefined | null, func: string, args: unknown[] = []) => {
+  const sendYouTubeCommand = (
+    iframe: HTMLIFrameElement | undefined | null,
+    func: string,
+    args: unknown[] = [],
+  ) => {
     if (!iframe) return;
-    try { iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*'); } catch { }
+    try {
+      iframe.contentWindow?.postMessage(
+        JSON.stringify({ event: "command", func, args }),
+        "*",
+      );
+    } catch {}
   };
 
   const toggleMute = useCallback(() => {
-    setMuted(prev => {
+    setMuted((prev) => {
       const next = !prev;
-      const iframe = currentVideo ? videoRefs.current.get(currentVideo.id) : undefined;
-      if (iframe) sendYouTubeCommand(iframe, next ? 'mute' : 'unMute');
+      const iframe = currentVideo
+        ? videoRefs.current.get(currentVideo.id)
+        : undefined;
+      if (iframe) sendYouTubeCommand(iframe, next ? "mute" : "unMute");
       return next;
     });
   }, [currentVideo]);
@@ -326,38 +474,65 @@ export default function VideoFeedPage() {
     if (!currentVideo) return;
     const iframe = videoRefs.current.get(currentVideo.id);
     if (iframe) {
-      const t = window.setTimeout(() => sendYouTubeCommand(iframe, muted ? 'mute' : 'unMute'), 250);
+      const t = window.setTimeout(
+        () => sendYouTubeCommand(iframe, muted ? "mute" : "unMute"),
+        250,
+      );
       return () => clearTimeout(t);
     }
   }, [currentVideo, currentVideo?.id, muted]);
 
-  const handleScroll = useCallback((e: WheelEvent) => {
-    if (panelRef.current?.contains(e.target as Node)) return;
-    e.preventDefault();
-    if (Math.abs(e.deltaY) < 50) return;
-    if (e.deltaY > 0 && currentIndex < videos.length - 1) { setCurrentIndex(i => i + 1); setPanelOpen(false); }
-    else if (e.deltaY < 0 && currentIndex > 0) { setCurrentIndex(i => i - 1); setPanelOpen(false); }
-  }, [currentIndex, videos.length]);
+  const handleScroll = useCallback(
+    (e: WheelEvent) => {
+      if (panelRef.current?.contains(e.target as Node)) return;
+      e.preventDefault();
+      if (Math.abs(e.deltaY) < 50) return;
+      if (e.deltaY > 0 && currentIndex < videos.length - 1) {
+        setCurrentIndex((i) => i + 1);
+        setPanelOpen(false);
+      } else if (e.deltaY < 0 && currentIndex > 0) {
+        setCurrentIndex((i) => i - 1);
+        setPanelOpen(false);
+      }
+    },
+    [currentIndex, videos.length],
+  );
 
   const touchStartY = useRef(0);
-  const handleTouchStart = useCallback((e: TouchEvent) => { touchStartY.current = e.touches[0].clientY; }, []);
-  const handleTouchEnd = useCallback((e: TouchEvent) => {
-    const diff = touchStartY.current - e.changedTouches[0].clientY;
-    if (Math.abs(diff) < 50) return;
-    if (diff > 0 && currentIndex < videos.length - 1) { setCurrentIndex(prev => prev + 1); setPanelOpen(false); }
-    else if (diff < 0 && currentIndex > 0) { setCurrentIndex(prev => prev - 1); setPanelOpen(false); }
-  }, [currentIndex, videos.length]);
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+  const handleTouchEnd = useCallback(
+    (e: TouchEvent) => {
+      const diff = touchStartY.current - e.changedTouches[0].clientY;
+      if (Math.abs(diff) < 50) return;
+      if (diff > 0 && currentIndex < videos.length - 1) {
+        setCurrentIndex((prev) => prev + 1);
+        setPanelOpen(false);
+      } else if (diff < 0 && currentIndex > 0) {
+        setCurrentIndex((prev) => prev - 1);
+        setPanelOpen(false);
+      }
+    },
+    [currentIndex, videos.length],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    container.addEventListener('wheel', handleScroll, { passive: false });
-    container.addEventListener('touchstart', handleTouchStart as EventListener);
-    container.addEventListener('touchend', handleTouchEnd as EventListener);
+    container.addEventListener("wheel", handleScroll, { passive: false });
+    container.addEventListener("touchstart", handleTouchStart as EventListener);
+    container.addEventListener("touchend", handleTouchEnd as EventListener);
     return () => {
-      container.removeEventListener('wheel', handleScroll);
-      container.removeEventListener('touchstart', handleTouchStart as EventListener);
-      container.removeEventListener('touchend', handleTouchEnd as EventListener);
+      container.removeEventListener("wheel", handleScroll);
+      container.removeEventListener(
+        "touchstart",
+        handleTouchStart as EventListener,
+      );
+      container.removeEventListener(
+        "touchend",
+        handleTouchEnd as EventListener,
+      );
     };
   }, [handleScroll, handleTouchStart, handleTouchEnd]);
 
@@ -366,7 +541,10 @@ export default function VideoFeedPage() {
     setIsPlaying(true);
     const t = window.setTimeout(() => {
       const iframe = videoRefs.current.get(currentVideo.id);
-      if (iframe) { sendYouTubeCommand(iframe, 'playVideo', []); if (!muted) sendYouTubeCommand(iframe, 'unMute', []); }
+      if (iframe) {
+        sendYouTubeCommand(iframe, "playVideo", []);
+        if (!muted) sendYouTubeCommand(iframe, "unMute", []);
+      }
     }, 350);
     return () => clearTimeout(t);
   }, [currentVideo, currentVideo?.id, muted]);
@@ -377,70 +555,128 @@ export default function VideoFeedPage() {
       if (firstUserGestureRef.current) return;
       firstUserGestureRef.current = true;
       const iframe = videoRefs.current.get(currentVideo.id);
-      if (iframe) { sendYouTubeCommand(iframe, 'unMute', []); sendYouTubeCommand(iframe, 'playVideo', []); }
+      if (iframe) {
+        sendYouTubeCommand(iframe, "unMute", []);
+        sendYouTubeCommand(iframe, "playVideo", []);
+      }
     };
-    window.addEventListener('click', onFirstGesture, { once: true, passive: true });
-    return () => { try { window.removeEventListener('click', onFirstGesture); } catch { } };
+    window.addEventListener("click", onFirstGesture, {
+      once: true,
+      passive: true,
+    });
+    return () => {
+      try {
+        window.removeEventListener("click", onFirstGesture);
+      } catch {}
+    };
   }, [currentVideo, currentVideo?.id]);
 
   const iframeSrc = useMemo(() => {
-    if (!currentVideo?.primary_video?.key) return '';
+    if (!currentVideo?.primary_video?.key) return "";
     const key = currentVideo.primary_video.key;
-    const origin = typeof window !== 'undefined' ? encodeURIComponent(window.location.origin) : '';
-    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=1&origin=${origin}`;
+    const origin =
+      typeof window !== "undefined"
+        ? encodeURIComponent(window.location.origin)
+        : "";
+    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=1&origin=${origin}`;
   }, [currentVideo?.primary_video?.key]);
 
   const togglePlayPause = () => {
     if (!currentVideo) return;
     const iframe = videoRefs.current.get(currentVideo.id);
     if (!iframe) return;
-    if (isPlaying) { sendYouTubeCommand(iframe, 'pauseVideo', []); setIsPlaying(false); }
-    else { sendYouTubeCommand(iframe, 'playVideo', []); if (!muted) sendYouTubeCommand(iframe, 'unMute', []); setIsPlaying(true); }
+    if (isPlaying) {
+      sendYouTubeCommand(iframe, "pauseVideo", []);
+      setIsPlaying(false);
+    } else {
+      sendYouTubeCommand(iframe, "playVideo", []);
+      if (!muted) sendYouTubeCommand(iframe, "unMute", []);
+      setIsPlaying(true);
+    }
   };
 
-  const videoTitle = currentVideo?.title || currentVideo?.name || '';
-  const currentPoster = currentVideo?.poster_path ? `https://image.tmdb.org/t/p/w342${currentVideo.poster_path}` : null;
-  const currentBackdrop = currentVideo?.backdrop_path ? `https://image.tmdb.org/t/p/w780${currentVideo.backdrop_path}` : currentPoster;
-  const currentYear = currentVideo?.release_date || currentVideo?.first_air_date
-    ? new Date(currentVideo.release_date ?? currentVideo.first_air_date!).getFullYear()
+  const videoTitle = currentVideo?.title || currentVideo?.name || "";
+  const currentPoster = currentVideo?.poster_path
+    ? `https://image.tmdb.org/t/p/w342${currentVideo.poster_path}`
     : null;
+  const currentBackdrop = currentVideo?.backdrop_path
+    ? `https://image.tmdb.org/t/p/w780${currentVideo.backdrop_path}`
+    : currentPoster;
+  const currentYear =
+    currentVideo?.release_date || currentVideo?.first_air_date
+      ? new Date(
+          currentVideo.release_date ?? currentVideo.first_air_date!,
+        ).getFullYear()
+      : null;
+  const currentReleaseDateLabel =
+    currentVideo?.release_date || currentVideo?.first_air_date
+      ? new Date(
+          currentVideo.release_date ?? currentVideo.first_air_date!,
+        ).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : null;
 
   return (
-    <div ref={containerRef} className="fixed inset-0 w-full bg-black overflow-hidden">
-
+    <div
+      ref={containerRef}
+      className="fixed inset-0 w-full bg-black overflow-hidden"
+    >
       {/* ── TOP NAVBAR ──────────────────────────────────────────── */}
       <motion.nav
         initial={{ y: -56, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.45, ease: 'easeOut' }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
         className="pointer-events-none fixed left-0 right-0 top-0 z-50 px-3 pt-3 sm:px-5"
       >
         <div className="mx-auto grid w-full max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
-          <Link href="/" className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20 shadow-xl shadow-black/20 backdrop-blur-md transition hover:bg-black/35 sm:h-11 sm:w-11">
-            <Image src="/images/moodies-transparent.png" alt="Moodies" width={30} height={30} className="h-7 w-7 object-contain sm:h-8 sm:w-8" />
+          <Link
+            href="/"
+            className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20 shadow-xl shadow-black/20 backdrop-blur-md transition hover:bg-black/35 sm:h-11 sm:w-11"
+          >
+            <Image
+              src="/images/moodies-transparent.png"
+              alt="Moodies"
+              width={30}
+              height={30}
+              className="h-7 w-7 object-contain sm:h-8 sm:w-8"
+            />
           </Link>
 
           <div className="flex min-w-0 justify-center">
             <div className="pointer-events-auto grid w-full max-w-[21rem] grid-cols-2 gap-1 rounded-full border border-white/10 bg-black/20 p-1 shadow-xl shadow-black/20 backdrop-blur-md transition-colors hover:bg-black/30 sm:max-w-[24rem]">
-              {feedTabs.map(tab => (
+              {feedTabs.map((tab) => (
                 <motion.button
                   key={tab.value}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => setActiveCategory(tab.value)}
                   className={cn(
                     "relative min-h-9 overflow-hidden rounded-full px-2 py-1.5 text-left transition-colors duration-200 sm:min-h-10 sm:px-3",
-                    activeCategory === tab.value ? "text-white" : "text-white/55 hover:bg-white/[0.04] hover:text-white/85",
+                    activeCategory === tab.value
+                      ? "text-white"
+                      : "text-white/55 hover:bg-white/[0.04] hover:text-white/85",
                   )}
                 >
                   {activeCategory === tab.value && (
                     <motion.span
                       layoutId="pill"
                       className="absolute inset-0 rounded-full bg-white/18 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)]"
-                      transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 34,
+                      }}
                     />
                   )}
                   <span className="relative z-10 flex items-center justify-center gap-2 sm:justify-start">
-                    <span className={cn("hidden text-white/70 sm:block", activeCategory === tab.value && "text-[#ff8a78]")}>
+                    <span
+                      className={cn(
+                        "hidden text-white/70 sm:block",
+                        activeCategory === tab.value && "text-[#ff8a78]",
+                      )}
+                    >
                       {tab.icon}
                     </span>
                     <span className="min-w-0">
@@ -469,7 +705,7 @@ export default function VideoFeedPage() {
             <motion.button
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.93 }}
-              onClick={() => router.push('/profile')}
+              onClick={() => router.push("/profile")}
               className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white sm:h-9 sm:w-9"
               aria-label="Profile"
             >
@@ -489,28 +725,38 @@ export default function VideoFeedPage() {
               initial={{ opacity: 0, scale: 1.03 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
-              transition={{ duration: 0.28, ease: 'easeOut' }}
+              transition={{ duration: 0.28, ease: "easeOut" }}
               className="absolute inset-0 flex"
             >
               {/* Video iframe */}
-              <div className="relative w-full h-full flex items-center justify-center">
-                <iframe
-                  ref={el => { if (el && currentVideo) videoRefs.current.set(currentVideo.id, el); }}
-                  title={videoTitle || `video-${currentVideo.id}`}
-                  src={iframeSrc}
-                  className="absolute top-1/2 left-1/2 min-w-full min-h-full -translate-x-1/2 -translate-y-1/2 bg-black"
-                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                  allowFullScreen
-                  style={{ border: 'none', pointerEvents: 'none' }}
-                  onLoad={e => {
-                    const iframe = e.currentTarget as HTMLIFrameElement;
-                    if (currentVideo) videoRefs.current.set(currentVideo.id, iframe);
-                    setTimeout(() => {
-                      sendYouTubeCommand(iframe, 'playVideo', []);
-                      sendYouTubeCommand(iframe, muted ? 'mute' : 'unMute', []);
-                    }, 300);
-                  }}
-                />
+              <div className="relative flex h-full w-full items-center justify-center bg-black">
+                <div className="absolute inset-0 overflow-hidden bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),0_24px_80px_rgba(0,0,0,0.45)] md:inset-5 md:rounded-2xl">
+                  <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.10),transparent_58%)] mix-blend-screen" />
+                  <iframe
+                    ref={(el) => {
+                      if (el && currentVideo)
+                        videoRefs.current.set(currentVideo.id, el);
+                    }}
+                    title={videoTitle || `video-${currentVideo.id}`}
+                    src={iframeSrc}
+                    className="absolute left-1/2 top-1/2 h-[calc(100%+160px)] min-h-[calc(56.25vw+160px)] w-[calc(100%+284px)] min-w-[calc(177.78vh+284px)] -translate-x-1/2 -translate-y-1/2 bg-black brightness-[1.14] contrast-[1.08] saturate-[1.12]"
+                    allow="autoplay; encrypted-media; picture-in-picture"
+                    style={{ border: "none", pointerEvents: "none" }}
+                    onLoad={(e) => {
+                      const iframe = e.currentTarget as HTMLIFrameElement;
+                      if (currentVideo)
+                        videoRefs.current.set(currentVideo.id, iframe);
+                      setTimeout(() => {
+                        sendYouTubeCommand(iframe, "playVideo", []);
+                        sendYouTubeCommand(
+                          iframe,
+                          muted ? "mute" : "unMute",
+                          [],
+                        );
+                      }, 300);
+                    }}
+                  />
+                </div>
               </div>
 
               {/*
@@ -523,42 +769,63 @@ export default function VideoFeedPage() {
                 key={`titlebar-${currentVideo.id}`}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: 'easeOut' }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
                 className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none"
               >
                 {/* Layer 1 — tall ambient scrim: fades video into dark over a large area */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/68 via-black/22 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/58 via-black/14 to-transparent" />
 
                 {/* Layer 2 — tight bottom vignette: ensures the very bottom edge is fully dark */}
-                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/42 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/34 to-transparent" />
 
                 {/* Content */}
                 <div className="relative px-4 pb-4 pr-20 pt-20 sm:pr-24 md:px-7 md:pr-28">
                   <h2
                     className="text-white font-bold text-xl md:text-2xl leading-tight line-clamp-2 mb-2"
-                    style={{ textShadow: '0 1px 12px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8)' }}
+                    style={{
+                      textShadow:
+                        "0 1px 12px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8)",
+                    }}
                   >
                     {videoTitle}
                   </h2>
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* Rating / Upcoming badge */}
-                    {Number.isFinite(Number(currentVideo.vote_average)) && (() => {
-                      const va = Number(currentVideo.vote_average);
-                      const isUpcomingItem = va === 0;
-                      return (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold border
-                          ${isUpcomingItem
-                            ? 'bg-indigo-500/30 text-indigo-200 border-indigo-400/40'
-                            : 'bg-amber-500/30 text-amber-200 border-amber-400/40'}`}>
-                          {!isUpcomingItem && <Star className="w-3 h-3 text-amber-300" fill="currentColor" />}
-                          {isUpcomingItem ? 'Upcoming' : va.toFixed(1)}
-                        </span>
-                      );
-                    })()}
+                    {Number.isFinite(Number(currentVideo.vote_average)) &&
+                      (() => {
+                        const va = Number(currentVideo.vote_average);
+                        const isUpcomingItem = va === 0;
+                        return (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold border
+                          ${
+                            isUpcomingItem
+                              ? "bg-indigo-500/30 text-indigo-200 border-indigo-400/40"
+                              : "bg-amber-500/30 text-amber-200 border-amber-400/40"
+                          }`}
+                          >
+                            {!isUpcomingItem && (
+                              <Star
+                                className="w-3 h-3 text-amber-300"
+                                fill="currentColor"
+                              />
+                            )}
+                            {isUpcomingItem ? "Upcoming" : va.toFixed(1)}
+                          </span>
+                        );
+                      })()}
 
                     <span className="px-2 py-0.5 rounded-md text-xs font-bold uppercase border bg-white/10 text-white/80 border-white/20">
                       {currentVideo.media_type}
                     </span>
+
+                    {activeCategory === "upcoming" &&
+                      currentReleaseDateLabel && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold border bg-emerald-500/20 text-emerald-200 border-emerald-400/30">
+                          <Calendar className="w-3 h-3" />
+                          {currentReleaseDateLabel}
+                        </span>
+                      )}
 
                     <span className="px-2 py-0.5 rounded-md text-xs font-bold uppercase border bg-red-500/20 text-red-300 border-red-400/30">
                       {currentVideo.primary_video.type}
@@ -578,7 +845,7 @@ export default function VideoFeedPage() {
                 onLike={handleLikeToggle}
                 setSaved={handleWatchlistToggle}
                 toggleMute={toggleMute}
-                onInfo={() => setPanelOpen(p => !p)}
+                onInfo={() => setPanelOpen((p) => !p)}
               />
             </motion.div>
           )}
@@ -588,29 +855,63 @@ export default function VideoFeedPage() {
         <AnimatePresence>
           {loading && (
             <motion.div
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
               className="absolute bottom-28 left-1/2 z-30 -translate-x-1/2 sm:bottom-24"
             >
               <div className="flex items-center gap-2.5 px-4 py-2.5 bg-black/60 backdrop-blur-xl rounded-full border border-white/15 shadow-xl">
                 <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span className="text-white/80 text-xs font-semibold tracking-wide">Loading more</span>
+                <span className="text-white/80 text-xs font-semibold tracking-wide">
+                  Loading more
+                </span>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* ── EMPTY STATE ─────────────────────────────────────────── */}
-        {!loading && videos.length === 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="absolute inset-0 flex items-center justify-center px-6">
+        <AnimatePresence>
+          {feedError && !loading && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="absolute bottom-28 left-1/2 z-40 w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-red-400/25 bg-black/70 p-4 text-center shadow-2xl shadow-black/40 backdrop-blur-xl"
+            >
+              <p className="mb-3 text-sm font-semibold text-white/80">
+                {feedError}
+              </p>
+              <button
+                onClick={() => fetchMoreVideos(videos.length === 0)}
+                className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/15"
+              >
+                Try again
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {!loading && !feedError && videos.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 flex items-center justify-center px-6"
+          >
             <div className="rounded-2xl border border-white/10 bg-black/45 p-8 text-center shadow-2xl shadow-black/40 backdrop-blur-xl">
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-red-600/40">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 280, damping: 22 }}
+                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-red-600/40"
+              >
                 <Sparkles className="w-9 h-9 text-white" />
               </motion.div>
-              <p className="text-white text-xl font-bold mb-2">Nothing here yet</p>
-              <p className="text-white/50 text-sm">Check back soon for new content.</p>
+              <p className="text-white text-xl font-bold mb-2">
+                Nothing here yet
+              </p>
+              <p className="text-white/50 text-sm">
+                Check back soon for new content.
+              </p>
             </div>
           </motion.div>
         )}
@@ -619,17 +920,34 @@ export default function VideoFeedPage() {
         <AnimatePresence>
           {showScrollHint && videos.length > 1 && !panelOpen && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 0.55, y: 0 }} exit={{ opacity: 0 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 0.55, y: 0 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
               className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-0.5 pointer-events-none sm:bottom-5 max-[760px]:hidden"
             >
-              <motion.div animate={{ y: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}>
-                <svg className="w-4 h-6 text-white/42" viewBox="0 0 24 40" fill="none" stroke="currentColor" strokeWidth="2">
+              <motion.div
+                animate={{ y: [0, 4, 0] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 1.6,
+                  ease: "easeInOut",
+                }}
+              >
+                <svg
+                  className="w-4 h-6 text-white/42"
+                  viewBox="0 0 24 40"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <rect x="2" y="2" width="20" height="36" rx="10" />
                   <circle cx="12" cy="10" r="2.5" fill="currentColor" />
                 </svg>
               </motion.div>
-              <span className="text-[9px] text-white/35 tracking-widest uppercase">Scroll</span>
+              <span className="text-[9px] text-white/35 tracking-widest uppercase">
+                Scroll
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -642,7 +960,7 @@ export default function VideoFeedPage() {
             initial={{ x: 28, opacity: 0, scale: 0.98 }}
             animate={{ x: 0, opacity: 1, scale: 1 }}
             exit={{ x: 28, opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
             className="fixed inset-x-3 bottom-3 top-16 z-[100] flex overflow-hidden rounded-3xl
                        border border-white/12 bg-black/58 shadow-2xl shadow-black/50
                        backdrop-blur-2xl md:inset-y-4 md:left-auto md:right-4 md:w-[25rem]"
@@ -656,16 +974,24 @@ export default function VideoFeedPage() {
             )}
             <div className="pointer-events-none absolute inset-x-0 top-0 h-52 bg-gradient-to-b from-black/20 via-black/72 to-transparent" />
 
-            <div ref={panelRef} className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+            <div
+              ref={panelRef}
+              className="relative flex min-h-0 flex-1 flex-col overflow-y-auto"
+            >
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-black/40 px-4 py-3 backdrop-blur-2xl sm:px-5">
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-[#ff6f5c] shadow-[0_0_14px_rgba(255,111,92,0.75)]" />
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/70">Details</h3>
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/70">
+                    Details
+                  </h3>
                 </div>
-                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
+                <motion.button
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.93 }}
                   onClick={() => setPanelOpen(false)}
                   className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition-all hover:bg-white/12 hover:text-white"
-                  aria-label="Close details">
+                  aria-label="Close details"
+                >
                   <X className="h-4 w-4" />
                 </motion.button>
               </div>
@@ -674,7 +1000,11 @@ export default function VideoFeedPage() {
                 <div className="flex gap-4">
                   <div
                     className="h-32 w-[5.5rem] shrink-0 rounded-2xl border border-white/12 bg-white/[0.06] bg-cover bg-center shadow-xl shadow-black/30"
-                    style={currentPoster ? { backgroundImage: `url(${currentPoster})` } : undefined}
+                    style={
+                      currentPoster
+                        ? { backgroundImage: `url(${currentPoster})` }
+                        : undefined
+                    }
                     aria-hidden="true"
                   />
                   <div className="min-w-0 flex-1 pt-1">
@@ -688,8 +1018,11 @@ export default function VideoFeedPage() {
                           {currentYear}
                         </span>
                       )}
-                      {currentVideo.genres?.slice(0, 2).map(genre => (
-                        <span key={genre} className="rounded-full border border-white/12 bg-white/[0.08] px-2.5 py-1 text-xs font-bold text-white/70">
+                      {currentVideo.genres?.slice(0, 2).map((genre) => (
+                        <span
+                          key={genre}
+                          className="rounded-full border border-white/12 bg-white/[0.08] px-2.5 py-1 text-xs font-bold text-white/70"
+                        >
                           {genre}
                         </span>
                       ))}
@@ -698,19 +1031,29 @@ export default function VideoFeedPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  {Number.isFinite(Number(currentVideo.vote_average)) && (() => {
-                    const va = Number(currentVideo.vote_average);
-                    const isUpcomingItem = va === 0;
-                    return (
-                      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold
-                        ${isUpcomingItem
-                          ? 'bg-indigo-500/25 text-indigo-200 border-indigo-400/35'
-                          : 'bg-amber-500/25 text-amber-200 border-amber-400/35'}`}>
-                        {!isUpcomingItem && <Star className="h-3 w-3 text-amber-300" fill="currentColor" />}
-                        {isUpcomingItem ? 'Upcoming' : va.toFixed(1)}
-                      </span>
-                    );
-                  })()}
+                  {Number.isFinite(Number(currentVideo.vote_average)) &&
+                    (() => {
+                      const va = Number(currentVideo.vote_average);
+                      const isUpcomingItem = va === 0;
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold
+                        ${
+                          isUpcomingItem
+                            ? "bg-indigo-500/25 text-indigo-200 border-indigo-400/35"
+                            : "bg-amber-500/25 text-amber-200 border-amber-400/35"
+                        }`}
+                        >
+                          {!isUpcomingItem && (
+                            <Star
+                              className="h-3 w-3 text-amber-300"
+                              fill="currentColor"
+                            />
+                          )}
+                          {isUpcomingItem ? "Upcoming" : va.toFixed(1)}
+                        </span>
+                      );
+                    })()}
                   <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-xs font-bold uppercase text-white/70">
                     {currentVideo.media_type}
                   </span>
@@ -727,13 +1070,17 @@ export default function VideoFeedPage() {
                   <span className="inline-block h-3.5 w-0.5 rounded-full bg-gradient-to-b from-red-500 to-orange-500" />
                   Overview
                 </h4>
-                <p className={`text-sm leading-relaxed text-white/[0.72] transition-all duration-300 ${expanded ? '' : 'line-clamp-5'}`}>
+                <p
+                  className={`text-sm leading-relaxed text-white/[0.72] transition-all duration-300 ${expanded ? "" : "line-clamp-5"}`}
+                >
                   {currentVideo.overview}
                 </p>
                 {currentVideo.overview?.length > 190 && (
-                  <button onClick={() => setExpanded(!expanded)}
-                    className="mt-3 text-xs font-bold text-red-300 transition-colors hover:text-red-200">
-                    {expanded ? 'Show less' : 'Read more'}
+                  <button
+                    onClick={() => setExpanded(!expanded)}
+                    className="mt-3 text-xs font-bold text-red-300 transition-colors hover:text-red-200"
+                  >
+                    {expanded ? "Show less" : "Read more"}
                   </button>
                 )}
               </div>
@@ -745,25 +1092,43 @@ export default function VideoFeedPage() {
                 </h4>
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="col-span-2 rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
-                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Type</div>
-                    <div className="text-sm font-bold uppercase text-white">{currentVideo.media_type}</div>
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                      Type
+                    </div>
+                    <div className="text-sm font-bold uppercase text-white">
+                      {currentVideo.media_type}
+                    </div>
                   </div>
                   <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
-                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Video</div>
-                    <div className="text-sm font-bold uppercase text-white">{currentVideo.primary_video?.type || '—'}</div>
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                      Video
+                    </div>
+                    <div className="text-sm font-bold uppercase text-white">
+                      {currentVideo.primary_video?.type || "—"}
+                    </div>
                   </div>
-                  {(currentVideo.release_date || currentVideo.first_air_date) && (
+                  {(currentVideo.release_date ||
+                    currentVideo.first_air_date) && (
                     <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
-                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Released</div>
+                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                        Released
+                      </div>
                       <div className="text-sm font-bold text-white">
-                        {new Date(currentVideo.release_date ?? currentVideo.first_air_date!).toLocaleDateString()}
+                        {new Date(
+                          currentVideo.release_date ??
+                            currentVideo.first_air_date!,
+                        ).toLocaleDateString()}
                       </div>
                     </div>
                   )}
                   {currentVideo.original_language && (
                     <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
-                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">Language</div>
-                      <div className="text-sm font-bold uppercase text-white">{currentVideo.original_language}</div>
+                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                        Language
+                      </div>
+                      <div className="text-sm font-bold uppercase text-white">
+                        {currentVideo.original_language}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -772,11 +1137,14 @@ export default function VideoFeedPage() {
               <div className="sticky bottom-0 mt-auto border-t border-white/10 bg-black/45 px-4 py-4 backdrop-blur-2xl sm:px-5">
                 {href ? (
                   <Link href={href} prefetch shallow={false}>
-                    <motion.span whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    <motion.span
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
                       className="flex w-full items-center justify-center gap-2 rounded-2xl
                                  bg-gradient-to-r from-red-500 to-orange-500 px-4 py-3
                                  text-sm font-bold text-white shadow-md shadow-red-600/30
-                                 transition-shadow hover:shadow-red-600/50">
+                                 transition-shadow hover:shadow-red-600/50"
+                    >
                       <ExternalLink className="h-4 w-4" />
                       View Full Details
                     </motion.span>

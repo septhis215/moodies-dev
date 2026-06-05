@@ -9,6 +9,7 @@ import { TrendingService } from './trending/trending.service';
 import { TrailersService } from './trailers/trailers.service';
 import { UpcomingFeedService } from './trailers/upcoming-feed.service';
 import { VideoFeedService } from './feed/video-feed.service';
+import { FeedUtilsService } from './feed/feed-utils.service';
 import { VideoScoringService } from './videos/video-scoring.service';
 import { PeopleService } from './people/people.service';
 import { SearchService } from './search/search.service';
@@ -17,23 +18,24 @@ import { ImagesService } from './images/images.service';
 import { AllController } from './all.controller';
 
 @Module({
-    imports: [ConfigModule],
-    providers: [
-        AllService,
-        TmdbClientService,
-        ContentFilterService,
-        RecommendationsService,
-        TrendingService,
-        TrailersService,
-        UpcomingFeedService,
-        VideoFeedService,
-        VideoScoringService,
-        PeopleService,
-        SearchService,
-        ReviewsService,
-        ImagesService,
-    ],
-    controllers: [AllController],
-    exports: [AllService],
+  imports: [ConfigModule],
+  providers: [
+    AllService,
+    TmdbClientService,
+    ContentFilterService,
+    RecommendationsService,
+    TrendingService,
+    TrailersService,
+    UpcomingFeedService,
+    VideoFeedService,
+    FeedUtilsService,
+    VideoScoringService,
+    PeopleService,
+    SearchService,
+    ReviewsService,
+    ImagesService,
+  ],
+  controllers: [AllController],
+  exports: [AllService],
 })
 export class AllModule {}
