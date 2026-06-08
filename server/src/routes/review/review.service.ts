@@ -11,12 +11,13 @@ import { ModerationDecisionService } from '../moderation/moderation-decision.ser
 import { ProfanityFilterService } from '../moderation/profanity-filter.service';
 import { ToxicityAnalysisService } from '../moderation/toxicity-analysis.service';
 import { UserService } from './../user/user.service';
-import { ReviewStatus } from '@prisma/client';
+import { MediaType, ReviewStatus } from '@prisma/client';
 import {
   ReviewEntity,
   ReviewReplyEntity,
   ReviewWithRepliesEntity,
 } from './entities';
+import { TmdbClientService } from 'src/media/all/client/tmdb-client.service';
 
 @Injectable()
 export class ReviewService {
@@ -26,6 +27,7 @@ export class ReviewService {
     private toxicityService: ToxicityAnalysisService,
     private moderationDecision: ModerationDecisionService,
     private userService: UserService,
+    private tmdbClient: TmdbClientService,
   ) {}
 
   async createReview(userId: string, dto: CreateReviewDto) {
@@ -86,8 +88,14 @@ export class ReviewService {
         data: { reviewCount: { increment: 1 } },
       }),
       this.prisma.mediaStat.upsert({
-        where: { tmdbId_mediaType: { tmdbId: dto.tmdbId, mediaType: dto.mediaType } },
-        create: { tmdbId: dto.tmdbId, mediaType: dto.mediaType, reviewCount: 1 },
+        where: {
+          tmdbId_mediaType: { tmdbId: dto.tmdbId, mediaType: dto.mediaType },
+        },
+        create: {
+          tmdbId: dto.tmdbId,
+          mediaType: dto.mediaType,
+          reviewCount: 1,
+        },
         update: { reviewCount: { increment: 1 } },
       }),
     ]);
@@ -207,6 +215,177 @@ export class ReviewService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async getMovieCriticsCorner(limit = 6) {
+    const safeLimit = Math.max(1, Math.min(Number(limit) || 6, 24));
+    const poolSize = Math.max(safeLimit * 4, 24);
+
+    const reviews = await this.prisma.review.findMany({
+      where: {
+        mediaType: MediaType.MOVIE,
+        status: { in: [ReviewStatus.PUBLISHED, ReviewStatus.FLAGGED] },
+        content: { not: '' },
+      },
+      take: poolSize,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    const randomizedReviews = reviews
+      .sort(() => Math.random() - 0.5)
+      .slice(0, safeLimit);
+
+    if (randomizedReviews.length === 0) return [];
+
+    const cachedDetails = await this.prisma.mediaDetail.findMany({
+      where: {
+        mediaType: MediaType.MOVIE,
+        tmdbId: { in: randomizedReviews.map((review) => review.tmdbId) },
+      },
+    });
+    const detailsByTmdbId = new Map(
+      cachedDetails.map((detail) => [detail.tmdbId, detail]),
+    );
+
+    return Promise.all(
+      randomizedReviews.map(async (review) => {
+        const publicReview = new ReviewEntity(review).toPublic();
+        const cachedDetail = detailsByTmdbId.get(review.tmdbId);
+        const cachedPayload = cachedDetail?.payload as
+          | {
+              info?: {
+                title?: string | null;
+                original_title?: string | null;
+                poster_path?: string | null;
+                backdrop_path?: string | null;
+                release_date?: string | null;
+              };
+            }
+          | undefined;
+        const cachedInfo = cachedPayload?.info;
+        const fallbackMovie = cachedDetail
+          ? null
+          : await this.tmdbClient
+              .tmdb(`movie/${review.tmdbId}?language=en-US`)
+              .catch(() => null);
+
+        return {
+          ...publicReview,
+          movie: {
+            id: review.tmdbId,
+            title:
+              cachedDetail?.title ||
+              cachedInfo?.title ||
+              cachedInfo?.original_title ||
+              fallbackMovie?.title ||
+              fallbackMovie?.original_title ||
+              `Movie #${review.tmdbId}`,
+            posterPath:
+              cachedInfo?.poster_path ?? fallbackMovie?.poster_path ?? null,
+            backdropPath:
+              cachedInfo?.backdrop_path ?? fallbackMovie?.backdrop_path ?? null,
+            releaseDate:
+              cachedInfo?.release_date ?? fallbackMovie?.release_date ?? null,
+          },
+        };
+      }),
+    );
+  }
+
+  async getCommunityPicks(limit = 18) {
+    const safeLimit = Math.max(1, Math.min(Number(limit) || 18, 36));
+    const poolSize = Math.max(safeLimit * 4, 36);
+
+    const reviews = await this.prisma.review.findMany({
+      where: {
+        status: { in: [ReviewStatus.PUBLISHED, ReviewStatus.FLAGGED] },
+        content: { not: '' },
+      },
+      take: poolSize,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    const randomizedReviews = reviews
+      .sort(() => Math.random() - 0.5)
+      .slice(0, safeLimit);
+
+    const cachedDetails = await this.prisma.mediaDetail.findMany({
+      where: {
+        OR: randomizedReviews.map((review) => ({
+          tmdbId: review.tmdbId,
+          mediaType: review.mediaType,
+        })),
+      },
+    });
+    const detailsByKey = new Map(
+      cachedDetails.map((detail) => [
+        `${detail.mediaType}:${detail.tmdbId}`,
+        detail,
+      ]),
+    );
+
+    return randomizedReviews.map((review) => {
+      const publicReview = new ReviewEntity(review).toPublic();
+      const detail = detailsByKey.get(`${review.mediaType}:${review.tmdbId}`);
+      const payload = detail?.payload as
+        | {
+            info?: {
+              title?: string | null;
+              name?: string | null;
+              original_title?: string | null;
+              original_name?: string | null;
+              poster_path?: string | null;
+              backdrop_path?: string | null;
+              release_date?: string | null;
+              first_air_date?: string | null;
+            };
+          }
+        | undefined;
+      const info = payload?.info;
+      const title =
+        detail?.title ||
+        info?.title ||
+        info?.name ||
+        info?.original_title ||
+        info?.original_name ||
+        `${review.mediaType === MediaType.TV ? 'TV' : 'Movie'} #${review.tmdbId}`;
+
+      return {
+        ...publicReview,
+        media: {
+          id: review.tmdbId,
+          type: review.mediaType,
+          title,
+          posterPath: info?.poster_path ?? null,
+          backdropPath: info?.backdrop_path ?? null,
+          releaseDate: info?.release_date ?? info?.first_air_date ?? null,
+        },
+      };
+    });
   }
 
   async getMediaReviews(
@@ -336,7 +515,7 @@ export class ReviewService {
         tmdbId,
         mediaType: mediaType as any,
         status: ReviewStatus.PUBLISHED,
-        affectsRating: true, 
+        affectsRating: true,
       },
       select: {
         rating: true,
@@ -512,13 +691,28 @@ export class ReviewService {
               }))
             : []),
           ...(disclosure.watchlist && watchlist.addedAt
-            ? [{ type: 'watchlist', label: 'Updated watchlist', createdAt: watchlist.addedAt }]
+            ? [
+                {
+                  type: 'watchlist',
+                  label: 'Updated watchlist',
+                  createdAt: watchlist.addedAt,
+                },
+              ]
             : []),
           ...(disclosure.liked && liked.addedAt
-            ? [{ type: 'liked', label: 'Updated liked titles', createdAt: liked.addedAt }]
+            ? [
+                {
+                  type: 'liked',
+                  label: 'Updated liked titles',
+                  createdAt: liked.addedAt,
+                },
+              ]
             : []),
         ]
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          )
           .slice(0, 5)
       : [];
 

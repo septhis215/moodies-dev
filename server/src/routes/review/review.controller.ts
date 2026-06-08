@@ -42,6 +42,16 @@ export class ReviewController {
     return this.reviewsService.getReviews(query);
   }
 
+  @Get('critics-corner/movies')
+  getMovieCriticsCorner(@Query('limit') limit?: number) {
+    return this.reviewsService.getMovieCriticsCorner(limit);
+  }
+
+  @Get('community-picks')
+  getCommunityPicks(@Query('limit') limit?: number) {
+    return this.reviewsService.getCommunityPicks(limit);
+  }
+
   @Get('users/:userId/profile')
   getPublicUserProfile(
     @Param('userId') userId: string,

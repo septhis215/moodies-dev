@@ -5,6 +5,26 @@ import MoviesHomePageClient from "./MovieHomePageClient";
 
 const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
 
+type DbCriticReview = {
+  id: string;
+  tmdbId: number;
+  rating?: number;
+  content?: string;
+  movie?: {
+    id: number;
+    title?: string | null;
+    posterPath?: string | null;
+    backdropPath?: string | null;
+    releaseDate?: string | null;
+  };
+  user?: {
+    id: string;
+    username: string;
+    name?: string | null;
+    avatarUrl?: string | null;
+  };
+};
+
 async function fetchWithFallback<T>(endpoint: string, fallback: T): Promise<T> {
   try {
     const res = await fetch(`${BASE_URL}${endpoint}`, {
@@ -61,7 +81,10 @@ async function fetchMovieTrailers() {
 }
 
 async function fetchNewMovieTrailers() {
-  return fetchWithFallback<All[]>("/movies/upcoming-trailers?months=6&perMonth=18&maxPagesPerMonth=5", []);
+  return fetchWithFallback<All[]>(
+    "/movies/upcoming-trailers?months=6&perMonth=18&maxPagesPerMonth=5",
+    [],
+  );
 }
 
 async function fetchKoreanMovies() {
@@ -69,10 +92,29 @@ async function fetchKoreanMovies() {
 }
 
 async function fetchMovieReviews() {
-  return fetchWithFallback<ReviewItem[]>(
-    "/movies/trending-reviews?limit=10",
-    []
+  const reviews = await fetchWithFallback<DbCriticReview[]>(
+    "/reviews/critics-corner/movies?limit=12",
+    [],
   );
+
+  return reviews.map((review) => {
+    const displayName =
+      review.user?.name || review.user?.username || "Moodies critic";
+
+    return {
+      quote: review.content || "No review available",
+      name: displayName,
+      title: review.movie?.title || `Movie #${review.tmdbId}`,
+      avatar: review.user?.avatarUrl || "",
+      rating: review.rating,
+      user: review.user,
+      tmdbId: review.tmdbId,
+      movieTitle: review.movie?.title || `Movie #${review.tmdbId}`,
+      moviePoster: review.movie?.posterPath || null,
+      movieBackdrop: review.movie?.backdropPath || null,
+      movieYear: review.movie?.releaseDate?.split("-")[0] || null,
+    };
+  }) satisfies ReviewItem[];
 }
 // Add to your page.tsx server component
 async function fetchAnimatedMovies() {
@@ -94,7 +136,7 @@ async function fetchAwardWinners() {
 async function fetchNewReleases() {
   const result = await fetchWithFallback<{ data: All[] } | All[]>(
     "/movies/new-releases?page=1&limit=30",
-    { data: [] }
+    { data: [] },
   );
 
   if (Array.isArray(result)) {
@@ -146,27 +188,20 @@ export default async function MoviesHomePage() {
     fetchNewMovieTrailers(),
   ]);
 
-  const [
-    trendingMovies,
-    popularMovies,
-    movieTrailers,
-    movieReviews,
-    koreanMovies,
-  ] = bulkData
+  const [trendingMovies, popularMovies, movieTrailers, koreanMovies] = bulkData
     ? [
-      bulkData.featured || [],
-      bulkData.trending || [],
-      bulkData.trailers || [],
-      bulkData.reviews || [],
-      bulkData.koreaTrending || [],
-    ]
+        bulkData.featured || [],
+        bulkData.trending || [],
+        bulkData.trailers || [],
+        bulkData.koreaTrending || [],
+      ]
     : await Promise.all([
-      fetchTrendingMovies(),
-      fetchPopularMovies(),
-      fetchMovieTrailers(),
-      fetchMovieReviews(),
-      fetchKoreanMovies(),
-    ]);
+        fetchTrendingMovies(),
+        fetchPopularMovies(),
+        fetchMovieTrailers(),
+        fetchKoreanMovies(),
+      ]);
+  const movieReviews = await fetchMovieReviews();
 
   return (
     <MoviesHomePageClient
