@@ -504,8 +504,8 @@ export default function PublicProfilePage() {
 
   return (
     <main className="min-h-screen bg-black pb-8 text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_16%_0%,rgba(233,79,55,0.18),transparent_32%),radial-gradient(circle_at_88%_14%,rgba(255,255,255,0.07),transparent_24%),linear-gradient(180deg,#050505_0%,#000_58%)]" />
-      <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,0.65)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.65)_1px,transparent_1px)] [background-size:44px_44px]" />
+      {/* <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_16%_0%,rgba(233,79,55,0.18),transparent_32%),radial-gradient(circle_at_88%_14%,rgba(255,255,255,0.07),transparent_24%),linear-gradient(180deg,#050505_0%,#000_58%)]" />
+      <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,0.65)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.65)_1px,transparent_1px)] [background-size:44px_44px]" /> */}
 
       <section className="relative">
         <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-8 sm:py-24 lg:px-10">
@@ -614,7 +614,7 @@ export default function PublicProfilePage() {
         </div>
       </section>
 
-      <section className="relative mx-auto max-w-7xl px-4 py-8 sm:px-8 lg:px-10">
+      <section className="relative mx-auto max-w-7xl px-4 sm:px-8 lg:px-10">
         <div className="mb-6 grid gap-3 md:grid-cols-3">
           <PublicInsightCard
             icon={<Sparkles size={18} />}

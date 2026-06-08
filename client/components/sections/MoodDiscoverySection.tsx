@@ -148,7 +148,7 @@ export default function MoodDiscoverySection({ variant = "full" }: MoodDiscovery
 
           <div className="relative min-h-[220px] overflow-hidden rounded-xl border border-white/10 bg-black/40 sm:min-h-[260px]">
             <Image
-              src="/images/moodies-mascot.png"
+              src={activeCard.image}
               alt="Moodies mascot"
               fill
               sizes="(max-width: 1024px) 100vw, 420px"
