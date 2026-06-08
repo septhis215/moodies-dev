@@ -70,10 +70,10 @@ function Chip({ label, active, onClick }: ChipProps) {
       type="button"
       onClick={onClick}
       className={[
-        "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 whitespace-nowrap select-none cursor-pointer",
+        "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-150 whitespace-nowrap select-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[rgb(233,79,55)]/35",
         active
-          ? "bg-[rgb(233,79,55)] text-white border-[rgb(233,79,55)] shadow-[0_2px_10px_rgba(233,79,55,0.3)]"
-          : "bg-white/[0.04] text-white/50 border-white/10 hover:bg-white/[0.08] hover:text-white/85 hover:border-white/20",
+          ? "border-[rgb(233,79,55)] bg-[rgb(233,79,55)] text-white shadow-[0_8px_22px_rgba(233,79,55,0.24)]"
+          : "border-white/10 bg-white/[0.045] text-white/56 hover:border-white/20 hover:bg-white/[0.08] hover:text-white/88",
       ].join(" ")}
     >
       {label}
@@ -84,7 +84,7 @@ function Chip({ label, active, onClick }: ChipProps) {
 // ── Section label ─────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[0.62rem] font-bold tracking-[0.14em] uppercase text-white/30 mb-3">
+    <p className="mb-3 text-[0.66rem] font-bold uppercase tracking-[0.16em] text-white/36">
       {children}
     </p>
   );
@@ -110,7 +110,7 @@ function SubmitButton({
       disabled={disabled}
       onClick={onClick}
       className={[
-        "px-6 py-2.5 rounded-lg font-bold text-sm text-white transition-all duration-200",
+        "h-11 rounded-xl px-6 text-sm font-bold text-white transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-[rgb(233,79,55)]/20",
         "font-['Bebas_Neue'] tracking-widest",
         disabled
           ? "bg-white/[0.07] text-white/20 cursor-not-allowed shadow-none"
@@ -141,7 +141,7 @@ function AgeSlider({ value, onChange }: AgeSliderProps) {
         onChange={(e) => onChange(Number(e.target.value))}
         className="ob-range w-full"
       />
-      <div className="flex justify-between mt-1.5 text-[0.6rem] text-white/20">
+      <div className="mt-2 flex justify-between text-[0.62rem] text-white/25">
         {["1", "25", "50", "75", "100"].map((v) => (
           <span key={v}>{v}</span>
         ))}
@@ -268,8 +268,14 @@ export default function OnboardingPage() {
         await new Promise((r) => setTimeout(r, 800));
         window.location.href = "/";
       }
-    } catch (err: any) {
-      toast(err.message || "An error occurred", "error", 4000, "Error", null);
+    } catch (err: unknown) {
+      toast(
+        err instanceof Error ? err.message : "An error occurred",
+        "error",
+        4000,
+        "Error",
+        null,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -292,25 +298,27 @@ export default function OnboardingPage() {
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
         .ob-range {
           appearance: none; -webkit-appearance: none;
-          height: 6px; border-radius: 9999px;
-          background: rgba(233,79,55,0.18);
+          height: 8px; border-radius: 9999px;
+          background: linear-gradient(90deg, rgba(233,79,55,0.65), rgba(233,79,55,0.18));
           outline: none; cursor: pointer;
+          border: 1px solid rgba(255,255,255,0.08);
         }
         .ob-range::-webkit-slider-thumb {
-          appearance: none; width: 20px; height: 20px;
+          appearance: none; width: 22px; height: 22px;
           border-radius: 50%; background: rgb(233,79,55);
-          box-shadow: 0 0 0 3px rgba(233,79,55,0.22);
+          border: 3px solid rgba(255,255,255,0.88);
+          box-shadow: 0 0 0 4px rgba(233,79,55,0.22), 0 8px 24px rgba(0,0,0,0.35);
           transition: transform 0.15s;
         }
         .ob-range::-webkit-slider-thumb:hover { transform: scale(1.15); }
         .ob-range::-moz-range-thumb {
-          width: 20px; height: 20px; border-radius: 50%;
-          background: rgb(233,79,55); border: none;
-          box-shadow: 0 0 0 3px rgba(233,79,55,0.22);
+          width: 22px; height: 22px; border-radius: 50%;
+          background: rgb(233,79,55); border: 3px solid rgba(255,255,255,0.88);
+          box-shadow: 0 0 0 4px rgba(233,79,55,0.22), 0 8px 24px rgba(0,0,0,0.35);
         }
-        .ob-scroll::-webkit-scrollbar { width: 3px; }
+        .ob-scroll::-webkit-scrollbar { width: 4px; }
         .ob-scroll::-webkit-scrollbar-track { background: transparent; }
-        .ob-scroll::-webkit-scrollbar-thumb { background: rgba(233,79,55,0.35); border-radius: 99px; }
+        .ob-scroll::-webkit-scrollbar-thumb { background: rgba(233,79,55,0.38); border-radius: 99px; }
         .ob-fadein { animation: obFadeUp 0.45s cubic-bezier(0.16,1,0.3,1) both; }
         @keyframes obFadeUp {
           from { opacity: 0; transform: translateY(16px); }
@@ -326,36 +334,37 @@ export default function OnboardingPage() {
       {/* ═══════════════════════════════════════════════
           DESKTOP (≥ 768px) — horizontal 3-column card
       ═══════════════════════════════════════════════ */}
-      <div className="ob-fadein hidden md:flex flex-col w-full max-w-[860px] mx-auto py-8 font-['DM_Sans']">
+      <div className="ob-fadein hidden w-full max-w-[920px] flex-col mx-auto font-['DM_Sans'] md:flex">
         {/* Header */}
-        <div className="mb-7">
-          <h1 className="font-['Bebas_Neue'] text-[2.4rem] tracking-[0.03em] leading-none text-[rgb(233,79,55)]">
+        <div className="mb-5 lg:mb-6">
+          <h1 className="font-['Bebas_Neue'] text-[2.2rem] leading-none tracking-[0.03em] text-[rgb(233,79,55)] lg:text-[2.45rem]">
             Set up your profile
           </h1>
-          <div className="w-8 h-0.5 bg-[rgb(233,79,55)] mt-2.5 mb-1.5" />
-          <p className="text-[0.8rem] text-white/40 font-light">
-            Personalize your experience · Change anytime in Settings
+          <div className="mt-2.5 mb-2 h-0.5 w-12 rounded-full bg-[rgb(233,79,55)] shadow-[0_0_20px_rgba(233,79,55,0.55)]" />
+          <p className="text-sm leading-5 text-white/52">
+            Personalize your experience. Change it anytime in Settings.
           </p>
         </div>
 
         {/* 3-column card */}
         <div
-          className="rounded-2xl border border-white/[0.07] border-t-white/[0.12] overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.5)]"
+          className="overflow-hidden rounded-3xl border border-white/12 border-t-white/18 shadow-[0_24px_80px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.06)]"
           style={{
+            height: "min(470px, calc(100dvh - 200px))",
             backgroundImage:
-              "radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(rgba(14,14,14,0.92), rgba(14,14,14,0.92))",
-            backgroundSize: "20px 20px, 100% 100%",
+              "radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), radial-gradient(circle at 20% 0%, rgba(233,79,55,0.13), transparent 38%), linear-gradient(rgba(12,12,12,0.94), rgba(12,12,12,0.94))",
+            backgroundSize: "20px 20px, 100% 100%, 100% 100%",
           }}
         >
-          <div className="grid grid-cols-3">
+          <div className="grid h-[calc(100%-76px)] min-h-0 grid-cols-3">
             {/* Col 1 — Age */}
-            <div className="flex flex-col p-6 border-r border-white/[0.06]">
+            <div className="flex flex-col border-r border-white/[0.07] p-5 lg:p-6">
               <SectionLabel>Your Age</SectionLabel>
-              <div className="mb-4">
-                <div className="font-['Bebas_Neue'] text-[4rem] leading-none text-[rgb(233,79,55)] tracking-[0.04em]">
+              <div className="mb-5">
+                <div className="font-['Bebas_Neue'] text-[4.6rem] leading-none tracking-[0.04em] text-[rgb(233,79,55)] lg:text-[5.2rem]">
                   {age}
                 </div>
-                <div className="text-[0.63rem] text-white/25 tracking-[0.14em] uppercase mt-0.5">
+                <div className="mt-1 text-[0.66rem] uppercase tracking-[0.16em] text-white/32">
                   years old
                 </div>
               </div>
@@ -365,20 +374,20 @@ export default function OnboardingPage() {
             </div>
 
             {/* Col 2 — Genres */}
-            <div className="flex flex-col p-6 border-r border-white/[0.06]">
+            <div className="flex min-h-0 flex-col border-r border-white/[0.07] p-5 lg:p-6">
               <div className="flex items-center justify-between mb-3">
                 <SectionLabel>Preferred Genres</SectionLabel>
                 {genres.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setGenres([])}
-                    className="text-[0.68rem] text-blue-400 hover:text-blue-300 transition-colors cursor-pointer bg-transparent border-none p-0"
+                    className="bg-transparent p-0 text-[0.72rem] font-medium text-amber-300 transition-colors hover:text-amber-200"
                   >
                     Clear
                   </button>
                 )}
               </div>
-              <div className="ob-scroll flex flex-wrap gap-1.5 overflow-y-auto flex-1 pr-0.5">
+              <div className="ob-scroll flex flex-1 flex-wrap content-start gap-1.5 overflow-y-auto pr-1">
                 {GENRE_OPTIONS.map((g) => (
                   <Chip
                     key={g}
@@ -391,20 +400,20 @@ export default function OnboardingPage() {
             </div>
 
             {/* Col 3 — Languages */}
-            <div className="flex flex-col p-6">
+            <div className="flex min-h-0 flex-col p-5 lg:p-6">
               <div className="flex items-center justify-between mb-3">
                 <SectionLabel>Preferred Languages</SectionLabel>
                 {languages.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setLanguages([])}
-                    className="text-[0.68rem] text-blue-400 hover:text-blue-300 transition-colors cursor-pointer bg-transparent border-none p-0"
+                    className="bg-transparent p-0 text-[0.72rem] font-medium text-amber-300 transition-colors hover:text-amber-200"
                   >
                     Clear
                   </button>
                 )}
               </div>
-              <div className="ob-scroll flex flex-wrap gap-1.5 overflow-y-auto flex-1 pr-0.5">
+              <div className="ob-scroll flex flex-1 flex-wrap content-start gap-1.5 overflow-y-auto pr-1">
                 {LANGUAGE_OPTIONS.map((l) => (
                   <Chip
                     key={l}
@@ -418,8 +427,8 @@ export default function OnboardingPage() {
           </div>
 
           {/* Card footer */}
-          <div className="border-t border-white/[0.07] px-6 py-4 flex items-center justify-between gap-4">
-            <div className="flex gap-6 text-[0.72rem] text-white/30">
+          <div className="flex items-center justify-between gap-4 border-t border-white/[0.08] px-5 py-4 lg:px-6">
+            <div className="flex gap-6 text-[0.78rem] text-white/42">
               <span>
                 <strong className="text-[rgb(233,79,55)] font-bold">
                   {genres.length}
@@ -438,7 +447,7 @@ export default function OnboardingPage() {
               onClick={handleSubmit}
               className="min-w-[180px] text-center"
             >
-              {processingLabel ? "Processing…" : "Save & Enter Moodies"}
+              {processingLabel ? "Processing..." : "Save & Enter Moodies"}
             </SubmitButton>
           </div>
         </div>
@@ -448,20 +457,20 @@ export default function OnboardingPage() {
           MOBILE (< 768px) — 3-step vertical wizard
       ═══════════════════════════════════════════════ */}
       <div
-        className="ob-fadein flex md:hidden flex-col min-h-dvh bg-[#0a0a0a] relative font-['DM_Sans']"
+        className="ob-fadein relative flex min-h-full flex-col bg-[#090909] font-['DM_Sans'] md:hidden"
         style={{
           backgroundImage:
-            "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)",
-          backgroundSize: "24px 24px",
+            "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), radial-gradient(circle at 50% 0%, rgba(233,79,55,0.16), transparent 42%)",
+          backgroundSize: "24px 24px, 100% 100%",
         }}
       >
         {/* Top red accent line */}
-        <div className="fixed top-0 left-0 right-0 h-0.5 bg-[rgb(233,79,55)] opacity-70 z-50" />
+        <div className="absolute left-0 right-0 top-0 z-50 h-0.5 bg-[rgb(233,79,55)] opacity-80" />
 
         {/* Top bar */}
-        <div className="flex items-center justify-between px-5 pt-5 flex-shrink-0">
-          <div className="flex items-center gap-2 font-['Bebas_Neue'] text-xl tracking-widest text-white">
-            <div className="w-2 h-2 rounded-full bg-[rgb(233,79,55)]" />
+        <div className="flex flex-shrink-0 items-center justify-between px-5 pt-5">
+          <div className="flex items-center gap-2 font-['Bebas_Neue'] text-xl tracking-[0.22em] text-white">
+            <div className="h-2 w-2 rounded-full bg-[rgb(233,79,55)] shadow-[0_0_16px_rgba(233,79,55,0.65)]" />
             Moodies
           </div>
           <div className="flex gap-1.5">
@@ -469,12 +478,12 @@ export default function OnboardingPage() {
               <div
                 key={s}
                 className={[
-                  "h-[3px] rounded-full transition-all duration-300",
+                  "h-1 rounded-full transition-all duration-300",
                   i < mobileStepIndex
-                    ? "w-[26px] bg-[rgba(233,79,55,0.4)]"
+                    ? "w-7 bg-[rgba(233,79,55,0.42)]"
                     : i === mobileStepIndex
-                      ? "w-[38px] bg-[rgb(233,79,55)]"
-                      : "w-[26px] bg-white/10",
+                      ? "w-10 bg-[rgb(233,79,55)] shadow-[0_0_14px_rgba(233,79,55,0.35)]"
+                      : "w-7 bg-white/10",
                 ].join(" ")}
               />
             ))}
@@ -482,30 +491,30 @@ export default function OnboardingPage() {
         </div>
 
         {/* Step content */}
-        <div className="flex-1 flex flex-col px-5 pt-8 pb-4 overflow-y-auto min-h-0">
+        <div className="ob-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-4 pt-7">
           {/* Step 1 — Age */}
           {mobileStep === "age" && (
-            <div className="ob-stepin flex flex-col flex-1">
-              <p className="text-[0.58rem] font-bold tracking-[0.2em] uppercase text-[rgb(233,79,55)] mb-1.5">
+            <div className="ob-stepin flex flex-1 flex-col">
+              <p className="mb-2 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-[rgb(233,79,55)]">
                 Step 1 of 3
               </p>
-              <h2 className="font-['Bebas_Neue'] text-[2.2rem] leading-none text-white mb-1.5">
+              <h2 className="mb-2 font-['Bebas_Neue'] text-[2.35rem] leading-none tracking-[0.02em] text-white">
                 How old
                 <br />
                 are you?
               </h2>
-              <p className="text-[0.72rem] text-white/38 font-light mb-7">
+              <p className="mb-7 text-sm leading-5 text-white/48">
                 Helps us match content ratings to you.
               </p>
-              <div className="text-center py-6">
-                <div className="font-['Bebas_Neue'] text-[7rem] leading-none text-[rgb(233,79,55)] tracking-[0.04em]">
+              <div className="rounded-3xl border border-white/10 bg-white/[0.04] py-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <div className="font-['Bebas_Neue'] text-[6.4rem] leading-none tracking-[0.04em] text-[rgb(233,79,55)]">
                   {age}
                 </div>
-                <div className="text-[0.65rem] text-white/25 tracking-[0.16em] uppercase mt-1">
+                <div className="mt-1 text-[0.68rem] uppercase tracking-[0.16em] text-white/32">
                   years old
                 </div>
               </div>
-              <div className="mt-auto">
+              <div className="mt-auto pt-7">
                 <AgeSlider value={age} onChange={setAge} />
               </div>
             </div>
@@ -513,19 +522,19 @@ export default function OnboardingPage() {
 
           {/* Step 2 — Genres */}
           {mobileStep === "genres" && (
-            <div className="ob-stepin flex flex-col flex-1">
-              <p className="text-[0.58rem] font-bold tracking-[0.2em] uppercase text-[rgb(233,79,55)] mb-1.5">
+            <div className="ob-stepin flex flex-1 flex-col">
+              <p className="mb-2 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-[rgb(233,79,55)]">
                 Step 2 of 3
               </p>
-              <h2 className="font-['Bebas_Neue'] text-[2.2rem] leading-none text-white mb-1.5">
+              <h2 className="mb-2 font-['Bebas_Neue'] text-[2.35rem] leading-none tracking-[0.02em] text-white">
                 What do
                 <br />
                 you watch?
               </h2>
-              <p className="text-[0.72rem] text-white/38 font-light mb-4">
+              <p className="mb-4 text-sm leading-5 text-white/48">
                 Pick as many genres as you like.
               </p>
-              <div className="flex items-center gap-2 text-[0.7rem] text-white/30 mb-3">
+              <div className="mb-3 flex items-center gap-2 text-[0.75rem] text-white/42">
                 <strong className="text-[rgb(233,79,55)] font-bold">
                   {genres.length}
                 </strong>{" "}
@@ -534,13 +543,13 @@ export default function OnboardingPage() {
                   <button
                     type="button"
                     onClick={() => setGenres([])}
-                    className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer bg-transparent border-none p-0 text-[0.68rem]"
+                    className="bg-transparent p-0 text-[0.72rem] font-medium text-amber-300 transition-colors hover:text-amber-200"
                   >
-                    · Clear
+                    Clear
                   </button>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pb-2">
                 {GENRE_OPTIONS.map((g) => (
                   <Chip
                     key={g}
@@ -555,19 +564,19 @@ export default function OnboardingPage() {
 
           {/* Step 3 — Languages */}
           {mobileStep === "languages" && (
-            <div className="ob-stepin flex flex-col flex-1">
-              <p className="text-[0.58rem] font-bold tracking-[0.2em] uppercase text-[rgb(233,79,55)] mb-1.5">
+            <div className="ob-stepin flex flex-1 flex-col">
+              <p className="mb-2 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-[rgb(233,79,55)]">
                 Step 3 of 3
               </p>
-              <h2 className="font-['Bebas_Neue'] text-[2.2rem] leading-none text-white mb-1.5">
+              <h2 className="mb-2 font-['Bebas_Neue'] text-[2.35rem] leading-none tracking-[0.02em] text-white">
                 Preferred
                 <br />
                 languages?
               </h2>
-              <p className="text-[0.72rem] text-white/38 font-light mb-4">
-                We'll prioritize content in these languages.
+              <p className="mb-4 text-sm leading-5 text-white/48">
+                We will prioritize content in these languages.
               </p>
-              <div className="flex items-center gap-2 text-[0.7rem] text-white/30 mb-3">
+              <div className="mb-3 flex items-center gap-2 text-[0.75rem] text-white/42">
                 <strong className="text-[rgb(233,79,55)] font-bold">
                   {languages.length}
                 </strong>{" "}
@@ -576,13 +585,13 @@ export default function OnboardingPage() {
                   <button
                     type="button"
                     onClick={() => setLanguages([])}
-                    className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer bg-transparent border-none p-0 text-[0.68rem]"
+                    className="bg-transparent p-0 text-[0.72rem] font-medium text-amber-300 transition-colors hover:text-amber-200"
                   >
-                    · Clear
+                    Clear
                   </button>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pb-2">
                 {LANGUAGE_OPTIONS.map((l) => (
                   <Chip
                     key={l}
@@ -597,15 +606,15 @@ export default function OnboardingPage() {
         </div>
 
         {/* Footer nav */}
-        <div className="px-5 pb-8 pt-3 flex-shrink-0">
+        <div className="flex-shrink-0 border-t border-white/10 bg-black/28 px-5 pb-5 pt-3 backdrop-blur">
           <div className="flex gap-2.5">
             {mobileStepIndex > 0 && (
               <button
                 type="button"
                 onClick={() => setMobileStep(STEPS[mobileStepIndex - 1])}
-                className="px-4 py-3 rounded-lg border border-white/10 bg-transparent text-white/40 text-sm font-medium hover:border-white/22 hover:text-white/70 transition-all cursor-pointer"
+                className="h-11 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-sm font-semibold text-white/48 transition-all hover:border-white/22 hover:text-white/78"
               >
-                ← Back
+                Back
               </button>
             )}
             {mobileStep !== "languages" ? (
@@ -614,13 +623,13 @@ export default function OnboardingPage() {
                 disabled={!canAdvanceMobile}
                 onClick={() => setMobileStep(STEPS[mobileStepIndex + 1])}
                 className={[
-                  "flex-1 py-3 rounded-lg font-['Bebas_Neue'] text-[0.95rem] tracking-widest transition-all",
+                  "h-11 flex-1 rounded-xl font-['Bebas_Neue'] text-[0.95rem] tracking-widest transition-all",
                   canAdvanceMobile
                     ? "bg-[rgb(233,79,55)] text-white shadow-[0_4px_16px_rgba(233,79,55,0.28)] hover:bg-[rgb(215,65,42)] active:scale-[0.98] cursor-pointer"
                     : "bg-white/[0.07] text-white/20 cursor-not-allowed",
                 ].join(" ")}
               >
-                Continue →
+                Continue
               </button>
             ) : (
               <button
@@ -628,13 +637,13 @@ export default function OnboardingPage() {
                 disabled={!canSubmit || isSubmitting || authLoading}
                 onClick={handleSubmit}
                 className={[
-                  "flex-1 py-3 rounded-lg font-['Bebas_Neue'] text-[0.95rem] tracking-widest transition-all",
+                  "h-11 flex-1 rounded-xl font-['Bebas_Neue'] text-[0.95rem] tracking-widest transition-all",
                   canSubmit && !isSubmitting && !authLoading
                     ? "bg-[rgb(233,79,55)] text-white shadow-[0_4px_16px_rgba(233,79,55,0.28)] hover:bg-[rgb(215,65,42)] active:scale-[0.98] cursor-pointer"
                     : "bg-white/[0.07] text-white/20 cursor-not-allowed",
                 ].join(" ")}
               >
-                {processingLabel ? "Processing…" : "Finish Setup"}
+                {processingLabel ? "Processing..." : "Finish Setup"}
               </button>
             )}
           </div>

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
 type Slide = {
@@ -10,6 +11,14 @@ type Slide = {
   kind?: "movie" | "tv";
 };
 type Props = { slides: Slide[]; rotationMs?: number };
+type IdleWindow = Window &
+  typeof globalThis & {
+    requestIdleCallback?: (
+      cb: () => void,
+      opts?: { timeout: number },
+    ) => number;
+    cancelIdleCallback?: (handle: number) => void;
+  };
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -19,6 +28,8 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
   const [idx, setIdx] = useState(0);
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [trailerKeys, setTrailerKeys] = useState<Record<number, string>>({});
+  const pathname = usePathname();
+  const isLogin = pathname.includes("/auth/login");
 
   // Rotation — shares the same cadence as the poster.
   useEffect(() => {
@@ -76,18 +87,15 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
       }
     };
 
-    const ric = (window as any).requestIdleCallback as
-      | ((cb: () => void, opts?: { timeout: number }) => number)
-      | undefined;
+    const idleWindow = window as IdleWindow;
+    const ric = idleWindow.requestIdleCallback;
     const handle = ric
       ? ric(() => start(), { timeout: 2500 })
       : window.setTimeout(start, 1200);
 
     return () => {
       cancelled = true;
-      const cancelRic = (window as any).cancelIdleCallback as
-        | ((h: number) => void)
-        | undefined;
+      const cancelRic = idleWindow.cancelIdleCallback;
       if (ric && cancelRic) cancelRic(handle as number);
       else window.clearTimeout(handle as number);
     };
@@ -104,7 +112,7 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
         <motion.div
           key={current.backdrop}
           initial={{ opacity: 0 }}
-          animate={{ opacity: 0.7 }}
+          animate={{ opacity: isLogin ? 0.82 : 0.7 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 1 }}
           className="absolute inset-0"
@@ -127,7 +135,7 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
           <motion.div
             key={currentKey}
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.7 }}
+            animate={{ opacity: isLogin ? 0.88 : 0.7 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.2, delay: 0.6 }}
             className="absolute inset-0 overflow-hidden"
@@ -146,8 +154,16 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
       </AnimatePresence>
 
       {/* Cinematic overlays — sit above everything and mask any residual chrome */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/00 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/00 via-black/00 to-transparent" />
+      <div
+        className={`absolute inset-0 bg-gradient-to-t ${
+          isLogin ? "from-black/55" : "from-black"
+        } via-black/00 to-transparent`}
+      />
+      <div
+        className={`absolute inset-0 bg-gradient-to-r ${
+          isLogin ? "from-black/10" : "from-black/00"
+        } via-black/00 to-transparent`}
+      />
     </div>
   );
 }
