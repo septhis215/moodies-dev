@@ -20,8 +20,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       ignoreExpiration: false,
       secretOrKey: secret,
     });
-
-    console.log('[JwtStrategy] JWT_SECRET =', configService.get('JWT_SECRET'));
+    // Never log the JWT secret (or any secret) — logs are frequently shipped to
+    // third parties and persisted far longer than the app process.
   }
 
   // can be used for user testing

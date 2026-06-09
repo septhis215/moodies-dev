@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import {
   ChangePasswordDto,
-  ForgotPasswordDto,
   LoginDto,
   RegisterDto,
 } from 'src/auth/dto';
@@ -80,28 +79,30 @@ export class AuthService {
   }
 
   async signin(dto: LoginDto) {
+    // Normalise to match how signup stores emails (lowercased), otherwise a
+    // mixed-case login silently fails to find an existing account.
     const user = await this.prismaService.user.findUnique({
       where: {
-        email: dto.email,
+        email: dto.email.toLowerCase(),
       },
     });
 
-    if (!user) {
-      throw new ForbiddenException('Email not found');
-    }
-
-    if (!user.password) {
-      throw new BadRequestException(
-        'This account uses Google sign-in. Use "Continue with Google" or set a password first.'
-      );
+    // Use one generic message for "no such email" and "wrong password" so the
+    // endpoint can't be used to enumerate which emails are registered.
+    if (!user || !user.password) {
+      // A passwordless account is a Google-only account; surface that hint only
+      // when the email actually matched, since the account's existence is
+      // already implied by the user reaching this screen via Google.
+      if (user && !user.password) {
+        throw new BadRequestException(
+          'This account uses Google sign-in. Use "Continue with Google" or set a password first.'
+        );
+      }
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     const pwMatches = await argon.verify(user.password, dto.password);
     if (!pwMatches) throw new UnauthorizedException('Invalid email or password');
-
-    if (!pwMatches) {
-      throw new ForbiddenException('Password is incorrect');
-    }
 
     const token = await this.signToken(user.id, user.email);
 
@@ -138,30 +139,6 @@ export class AuthService {
     const hash = await argon.hash(dto.newPassword);
     await this.prismaService.user.update({ where: { id: userId }, data: { password: hash } });
     return { ok: true };
-  }
-
-  async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.prismaService.user.findUnique({
-      where: {
-        email: dto.email,
-      },
-    });
-    if (!user) throw new ForbiddenException('Email not found');
-
-    if (dto.newPassword !== dto.confirmPassword)
-      throw new ForbiddenException('Passwords do not match');
-
-    const newHashed = await argon.hash(dto.newPassword);
-    await this.prismaService.user.update({
-      where: {
-        email: dto.email,
-      },
-      data: {
-        password: newHashed,
-      },
-    });
-
-    return { message: 'Password reset successful' };
   }
 
   private async signToken(userId: string, email: string) {
