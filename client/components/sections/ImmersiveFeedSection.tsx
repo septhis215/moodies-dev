@@ -34,7 +34,7 @@ export default function ImmersiveFeedSection() {
 
   return (
     <section
-      className="relative mx-auto max-w-7xl overflow-hidden bg-black px-4 py-12 sm:px-6 sm:py-16 lg:px-8"
+      className="relative mx-auto max-w-7xl overflow-hidden bg-black px-4 sm:px-6 sm:py-12 lg:px-8"
     >
       <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch">
         <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/80 p-5 shadow-2xl shadow-black/30 sm:p-7 lg:p-8">

@@ -1,23 +1,23 @@
 "use client";
-import { useEffect, useState } from "react";
-import type { All } from "@/types/all";
+
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
+  Bookmark,
+  BookmarkCheck,
   ChevronRight,
   Film,
-  Tv,
+  Info,
+  Languages,
   Play,
   Plus,
   Star,
-  Info,
-  Sparkles,
-  Heart,
-  Clapperboard,
+  Tv,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import type { All } from "@/types/all";
+import { tmdbImage } from "@/lib/tmdb";
 import { useWatchlist } from "@/hooks/useWatchlist";
-import { Bookmark, BookmarkCheck } from "lucide-react";
 import { sGet } from "@/utils/secureStorage";
 
 interface MoodiesMixProps {
@@ -32,21 +32,32 @@ type FavoriteContent = Omit<Partial<All>, "type"> & {
   type?: All["type"] | "movies";
 };
 
-async function fetchFavorites(token: string): Promise<All[]> {
-  const base = process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
+type TasteSignal = {
+  topGenres: string[];
+  topCountries: string[];
+  averageRating: number | null;
+};
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
+async function fetchFavorites(
+  token: string,
+  endpoint?: string,
+): Promise<All[]> {
   try {
-    const res = await fetch(`${base}/all/favorites`, {
+    const res = await fetch(endpoint || `${API_BASE}/all/favorites`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       next: { revalidate: 60 },
     });
+
     if (!res.ok) {
       console.error("Favorites fetch failed:", res.status, res.statusText);
       return [];
     }
+
     return (await res.json()) as All[];
   } catch (err) {
     console.error("Failed to fetch favorites:", err);
@@ -54,29 +65,135 @@ async function fetchFavorites(token: string): Promise<All[]> {
   }
 }
 
+function getContentType(item: FavoriteContent): "movie" | "tv" {
+  if (item.media_type) return item.media_type;
+  if (item.type === "movies" || item.type === "movie") return "movie";
+  if (item.type === "tv") return "tv";
+  if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
+  return "movie";
+}
+
+function getTitle(item: All) {
+  return item.title || item.name || "Untitled pick";
+}
+
+function getYear(item: All) {
+  return (
+    item.year ||
+    item.release_date?.split("-")[0] ||
+    item.first_air_date?.split("-")[0] ||
+    null
+  );
+}
+
+function getBackdrop(item: All) {
+  return (
+    tmdbImage(item.backdrop_path || item.poster_path, "w1280") ||
+    "/placeholder-backdrop.svg"
+  );
+}
+
+function getPoster(item: All, size: "w154" | "w342" | "w500" = "w342") {
+  return (
+    tmdbImage(item.poster_path || item.backdrop_path, size) ||
+    "/placeholder-poster.svg"
+  );
+}
+
+function countValues(values: string[]) {
+  return values.reduce<Record<string, number>>((acc, value) => {
+    acc[value] = (acc[value] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function topValues(values: string[], limit: number) {
+  return Object.entries(countValues(values))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([value]) => value);
+}
+
+function buildTasteSignal(items: All[]): TasteSignal {
+  const genres = items.flatMap((item) => item.genres || []);
+  const countries = items.flatMap((item) => item.origin_country || []);
+  const ratings = items
+    .map((item) => item.vote_average)
+    .filter((rating): rating is number => typeof rating === "number");
+
+  return {
+    topGenres: topValues(genres, 4),
+    topCountries: topValues(countries, 3),
+    averageRating: ratings.length
+      ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+      : null,
+  };
+}
+
+function getMatchScore(item: All, signal: TasteSignal, saved: boolean) {
+  let score = 78;
+
+  if (saved) score += 8;
+  if (item.genres?.some((genre) => signal.topGenres.includes(genre)))
+    score += 8;
+  if (
+    item.origin_country?.some((country) =>
+      signal.topCountries.includes(country),
+    )
+  ) {
+    score += 4;
+  }
+  if (typeof item.vote_average === "number" && item.vote_average >= 7.5) {
+    score += 4;
+  }
+
+  return Math.min(score, 98);
+}
+
+function getShortReason(item: All, signal: TasteSignal, saved: boolean) {
+  const matchedGenre = item.genres?.find((genre) =>
+    signal.topGenres.includes(genre),
+  );
+  const matchedCountry = item.origin_country?.find((country) =>
+    signal.topCountries.includes(country),
+  );
+
+  if (saved) return "From your saved list";
+  if (matchedGenre) return `Matches ${matchedGenre}`;
+  if (matchedCountry) return `${matchedCountry} preference`;
+  if (typeof item.vote_average === "number" && item.vote_average >= 7.5) {
+    return "Highly rated nearby";
+  }
+  return "Expands your taste";
+}
+
+function toWatchType(item: All): "movie" | "series" {
+  return getContentType(item) === "tv" ? "series" : "movie";
+}
+
 export default function MoodiesMix({
   data,
-  title = "Your Moodies Mix",
-  subtitle = "A playlist of your personal faves, because your taste deserves the spotlight.",
+  title = "Your curated picks",
+  subtitle = "A compact Moodies shelf shaped by your genres, saves, languages, and recent taste signals.",
+  endpoint,
 }: MoodiesMixProps) {
   const [items, setItems] = useState<All[]>(data || []);
   const [loading, setLoading] = useState(!data);
   const [offset, setOffset] = useState(0);
-  const [wlLoading, setWlLoading] = useState(false);
-
+  const [loadingStates, setLoadingStates] = useState<Record<number, boolean>>(
+    {},
+  );
   const [token, setToken] = useState<string | null>(null);
 
   const router = useRouter();
   const { add, remove, isInWatchlist } = useWatchlist();
 
   useEffect(() => {
-    const t = sGet("authToken") ?? "";
-    setToken(t);
+    setToken(sGet("authToken") ?? "");
   }, []);
 
   const isAuthenticated = token !== null && token !== "";
 
-  // Fetch favorites only when we have a confirmed token
   useEffect(() => {
     if (data) {
       setItems(data);
@@ -84,20 +201,18 @@ export default function MoodiesMix({
       return;
     }
 
-    // Still resolving token — wait
     if (token === null) return;
 
-    // Guest — nothing to fetch
     if (!isAuthenticated) {
       setLoading(false);
       return;
     }
 
-    // Authenticated — safe to fetch
     const load = async () => {
       setLoading(true);
+
       try {
-        const result = await fetchFavorites(token);
+        const result = await fetchFavorites(token, endpoint);
         setItems(Array.isArray(result) ? result : []);
       } catch {
         setItems([]);
@@ -105,515 +220,473 @@ export default function MoodiesMix({
         setLoading(false);
       }
     };
-    load();
-  }, [data, token, isAuthenticated]);
 
-  const getContentType = (item: FavoriteContent): "movie" | "tv" => {
-    if (item.media_type) return item.media_type;
-    if (item.type === "movies" || item.type === "movie") return "movie";
-    if (item.type === "tv") return "tv";
-    if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
-    return "movie";
-  };
+    load();
+  }, [data, endpoint, token, isAuthenticated]);
+
+  const ordered = useMemo(
+    () => items.map((_, index) => items[(offset + index) % items.length]),
+    [items, offset],
+  );
+
+  const tasteSignal = useMemo(() => buildTasteSignal(items), [items]);
+  const primary = ordered[0];
 
   const handleClick = (item: All) => {
     const type = getContentType(item);
     router.push(`/${type === "tv" ? "tv" : "movies"}/${item.id}`);
   };
 
-  const scoreColor = (s: number) =>
-    s >= 7 ? "text-green-400" : s >= 5 ? "text-yellow-400" : "text-red-400";
+  const toggleWatchlist = async (item: All) => {
+    if (!item?.id) return;
 
-  const scoreBg = (s: number) =>
-    s >= 7 ? "bg-green-400/10" : s >= 5 ? "bg-yellow-400/10" : "bg-red-400/10";
+    setLoadingStates((prev) => ({ ...prev, [item.id]: true }));
+
+    try {
+      const title = getTitle(item);
+      const posterUrl = getPoster(item, "w154");
+      const saved = isInWatchlist(String(item.id), toWatchType(item));
+
+      if (saved) {
+        await remove(String(item.id), toWatchType(item), { title, posterUrl });
+      } else {
+        await add(String(item.id), toWatchType(item), { title, posterUrl });
+      }
+    } catch (error) {
+      console.error("Watchlist toggle failed:", error);
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, [item.id]: false }));
+    }
+  };
 
   if (token === null) return null;
 
   if (!isAuthenticated) {
     return (
-      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-10 lg:px-8 xl:max-w-7xl">
-        <div className="mb-5">
-          <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#e94f37]">
-            Recommended for you
-          </p>
-          <h2
-            className="bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-2xl lg:text-3xl"
-            style={{
-              backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            {title}
-          </h2>
-        </div>
-
-        {/* Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="relative flex w-full items-stretch overflow-hidden rounded-xl border border-white/10 bg-[#090909] shadow-2xl shadow-black/30 sm:min-h-[286px] sm:rounded-2xl"
-        >
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,rgba(233,79,55,0.22),transparent_30%),radial-gradient(circle_at_78%_20%,rgba(245,158,11,0.16),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.06),transparent_34%)]" />
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff8b78]/60 to-transparent" />
-            <div className="absolute -right-12 top-8 h-40 w-40 rounded-full border border-[#e94f37]/20" />
-            <div className="absolute -right-5 top-20 h-24 w-24 rounded-full border border-white/10" />
-            <div className="absolute bottom-0 right-0 hidden h-full w-[46%] bg-[linear-gradient(90deg,transparent,rgba(233,79,55,0.08))] sm:block" />
-          </div>
-
-          <div className="absolute inset-0 bg-gradient-to-br from-[#090909] via-[#090909]/90 to-[#090909]/55 pointer-events-none sm:bg-gradient-to-r sm:from-[#090909] sm:via-[#090909]/78 sm:to-[#090909]/20" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
-
-          <div className="relative z-10 flex w-full flex-col justify-center px-4 py-6 sm:max-w-[58%] sm:px-10 sm:py-8">
-
-            {/* Headline */}
-            <h3 className="mb-2 max-w-[13ch] text-2xl font-extrabold leading-tight text-white sm:text-3xl lg:text-[2.25rem]">
-              Movies picked{" "}
-              <span className="bg-gradient-to-r from-[#ff8b78] to-[#f59e0b] bg-clip-text text-transparent">
-                just for you
-              </span>
-            </h3>
-
-            {/* Subline */}
-            <p className="mb-5 max-w-md text-sm leading-6 text-white/60">
-              Sign in to unlock a cinematic mix shaped by your favorite moods,
-              genres, and saved titles.
-            </p>
-
-            <div className="mb-5 flex flex-wrap gap-2">
-              {["Cozy", "Thrilling", "Funny", "Epic"].map((mood, i) => (
-                <span
-                  key={mood}
-                  className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold text-white/75"
-                  style={{
-                    boxShadow:
-                      i === 1
-                        ? "inset 0 0 0 1px rgba(233,79,55,0.28)"
-                        : undefined,
-                  }}
-                >
-                  {mood}
-                </span>
-              ))}
-            </div>
-
-            {/* Perks */}
-            <ul className="mb-6 flex flex-col gap-2">
-              {[
-                "Daily picks tuned to your watch history",
-                "Mood-aware movie routes for any night",
-                "One tap to save and keep watching later",
-              ].map((perk) => (
-                <li
-                  key={perk}
-                  className="flex items-center gap-2.5 text-xs text-white/60"
-                >
-                  <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[#e94f37]/15">
-                    <span className="h-[5px] w-[5px] rounded-full bg-[#e94f37]" />
-                  </span>
-                  {perk}
-                </li>
-              ))}
-            </ul>
-
-            {/* CTAs */}
-            <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
-              <button
-                onClick={() => router.push("/auth/login")}
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#e94f37] px-4 py-3 text-xs font-bold text-white transition-all hover:bg-[#ff5a42] active:scale-[0.98] sm:rounded-xl sm:px-5 sm:py-2.5 sm:text-sm"
-              >
-                <Play size={13} className="fill-white" />
-                Sign in free
-              </button>
-              <button
-                onClick={() => router.push("/auth/signup")}
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.08] px-4 py-3 text-xs font-semibold text-white/80 transition-all hover:bg-white/[0.14] active:scale-[0.98] sm:rounded-xl sm:px-5 sm:py-2.5 sm:text-sm"
-              >
-                <Plus size={13} />
-                Create account
-              </button>
-            </div>
-          </div>
-
-          {/* ── Right: poster stack (hidden on very small screens) ── */}
-          <div className="absolute bottom-0 right-3 top-0 z-10 hidden items-center justify-center sm:flex lg:right-10">
-            <div className="relative h-[238px] w-[248px]">
-              {/* Back poster */}
-              <div
-                className="absolute h-[172px] w-[116px] overflow-hidden rounded-xl border border-white/15 shadow-2xl shadow-black/45"
-                style={{
-                  right: 4,
-                  top: 32,
-                  transform: "rotate(8deg)",
-                  zIndex: 1,
-                  background: "linear-gradient(145deg,#30140f,#b14332)",
-                }}
-              >
-                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),transparent_36%),linear-gradient(to_top,rgba(0,0,0,0.7),transparent_55%)]" />
-                <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-black/35 text-white ring-1 ring-white/15">
-                  <Heart size={15} />
-                </div>
-                <div className="absolute bottom-3 left-3 right-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/45">
-                    Mood
-                  </p>
-                  <p className="mt-1 truncate text-sm font-black text-white">
-                    Cozy
-                  </p>
-                </div>
-              </div>
-              {/* Middle poster */}
-              <div
-                className="absolute h-[172px] w-[116px] overflow-hidden rounded-xl border border-white/15 shadow-2xl shadow-black/45"
-                style={{
-                  left: 12,
-                  top: 40,
-                  transform: "rotate(-6deg)",
-                  zIndex: 2,
-                  background: "linear-gradient(145deg,#111827,#0f766e)",
-                }}
-              >
-                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),transparent_36%),linear-gradient(to_top,rgba(0,0,0,0.7),transparent_55%)]" />
-                <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-black/35 text-white ring-1 ring-white/15">
-                  <Film size={15} />
-                </div>
-                <div className="absolute bottom-3 left-3 right-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/45">
-                    Mood
-                  </p>
-                  <p className="mt-1 truncate text-sm font-black text-white">
-                    Thrill
-                  </p>
-                </div>
-              </div>
-              {/* Front poster — highlighted */}
-              <div
-                className="absolute h-[172px] w-[116px] overflow-hidden rounded-xl border border-[#e94f37]/45 shadow-2xl shadow-black/55"
-                style={{
-                  left: 64,
-                  top: 4,
-                  transform: "rotate(1deg)",
-                  zIndex: 3,
-                  background:
-                    "linear-gradient(145deg,#240b08,#e94f37 62%,#f59e0b)",
-                }}
-              >
-                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.2),transparent_36%),linear-gradient(to_top,rgba(0,0,0,0.68),transparent_55%)]" />
-                <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg bg-black/35 text-white ring-1 ring-white/15">
-                  <Clapperboard size={15} />
-                </div>
-                <div className="absolute bottom-3 left-3 right-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/55">
-                    Mood
-                  </p>
-                  <p className="mt-1 truncate text-sm font-black text-white">
-                    Your mix
-                  </p>
-                </div>
-              </div>
-              {/* Floating badge */}
-              <div className="absolute bottom-8 left-0 z-20 flex items-center gap-2 rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-white shadow-2xl shadow-black/50 backdrop-blur">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#e94f37]">
-                  <Star size={14} className="fill-white" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">
-                    Match ready
-                  </p>
-                  <p className="text-xs font-black">1,000+ titles</p>
-                </div>
-              </div>
-              <div className="absolute bottom-0 right-4 z-20 rounded-full border border-[#e94f37]/35 bg-[#e94f37]/15 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#ff8b78]">
-                Members only
-              </div>
-            </div>
-          </div>
-        </motion.div>
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <CuratedGuestPanel routerPush={router.push} />
       </section>
     );
   }
 
-  // ─── State: authenticated, loading ──────────────────────────────────────────
   if (loading) {
+    return <FavoriteLoadingState />;
+  }
+
+  if (!primary || items.length === 0) {
     return (
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-4">
-          <p className="text-xs font-bold tracking-widest text-[#e94f37] uppercase mb-1">
-            Recommended for you
-          </p>
-          <div className="h-7 w-48 bg-zinc-800 rounded animate-pulse" />
-        </div>
-        <div className="mb-3 h-[360px] w-full animate-pulse rounded-xl bg-zinc-900 sm:h-[340px] sm:rounded-2xl" />
-        <div className="flex gap-3 overflow-hidden">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="h-[96px] w-[116px] flex-shrink-0 animate-pulse rounded-xl bg-zinc-900 sm:h-[110px] sm:w-[130px]"
-            />
-          ))}
-        </div>
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <EmptyTasteState routerPush={router.push} />
       </section>
     );
   }
 
-  // ─── State: authenticated, no favourites ────────────────────────────────────
-  if (items.length === 0) return null;
-
-  // ─── State: authenticated, has favourites ───────────────────────────────────
-  const ordered = items.map((_, i) => items[(offset + i) % items.length]);
-  const primary = ordered[0];
-
-  const backdropUrl = primary.backdrop_path
-    ? `https://image.tmdb.org/t/p/w1280${primary.backdrop_path}`
-    : primary.poster_path
-      ? `https://image.tmdb.org/t/p/w780${primary.poster_path}`
-      : "/placeholder-backdrop.svg";
-
-  const currentKind = getContentType(primary);
-  const toHookType = (k: "movie" | "tv"): "movie" | "series" =>
-    k === "tv" ? "series" : "movie";
-  const currentInWatchlist = primary?.id
-    ? isInWatchlist(String(primary.id), toHookType(currentKind))
-    : false;
-
-  const toggleWatchlist = async () => {
-    if (!primary?.id) return;
-    setWlLoading(true);
-    try {
-      const title = primary.title ?? primary.name ?? null;
-      const posterUrl = primary.poster_path
-        ? `https://image.tmdb.org/t/p/w154${primary.poster_path}`
-        : primary.backdrop_path
-          ? `https://image.tmdb.org/t/p/w154${primary.backdrop_path}`
-          : "/placeholder-poster.svg";
-
-      if (currentInWatchlist) {
-        await remove(String(primary.id), toHookType(currentKind), {
-          title,
-          posterUrl,
-        });
-      } else {
-        await add(String(primary.id), toHookType(currentKind), {
-          title,
-          posterUrl,
-        });
-      }
-    } catch (e) {
-      console.error("Watchlist toggle failed:", e);
-    } finally {
-      setWlLoading(false);
-    }
-  };
+  const primarySaved = isInWatchlist(String(primary.id), toWatchType(primary));
+  const primaryMatch = getMatchScore(primary, tasteSignal, primarySaved);
+  const visibleCards = ordered.slice(1, 7);
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-10 lg:px-8 xl:max-w-7xl">
-      {/* Header */}
-      <div className="mb-5">
-        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-[#e94f37]">
-          Recommended for you
-        </p>
-        <h2
-          className="bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-2xl lg:text-3xl"
-          style={{
-            backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
-        >
-          {title}
-        </h2>
-        {subtitle && (
-          <p className="mt-2 max-w-[34ch] text-sm leading-5 text-gray-500 sm:max-w-none">
-            {subtitle}
+    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="mb-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
+            For your taste
           </p>
-        )}
-      </div>
-
-      {/* Hero banner */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={`hero-${primary.id}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.4 }}
-          className="group relative min-h-[430px] w-full cursor-pointer overflow-hidden rounded-xl border border-white/10 sm:aspect-[16/8] sm:min-h-0 sm:max-h-[260px] sm:rounded-2xl lg:max-h-[300px]"
-          onClick={() => handleClick(primary)}
-        >
-          <Image
-            src={backdropUrl}
-            alt={primary.title}
-            fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-transparent sm:bg-gradient-to-r sm:from-black/70 sm:via-black/30 sm:to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-
-          <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 lg:p-8">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="flex items-center gap-1 bg-[#e94f37]/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wide">
-                {getContentType(primary) === "tv" ? (
-                  <Tv size={10} />
-                ) : (
-                  <Film size={10} />
-                )}
-                {getContentType(primary) === "tv" ? "Series" : "Movie"}
-              </span>
-              {typeof primary.vote_average === "number" && (
-                <span
-                  className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md ${scoreColor(primary.vote_average)} ${scoreBg(primary.vote_average)}`}
-                >
-                  <Star size={10} className="fill-current" />
-                  {primary.vote_average.toFixed(1)}
-                </span>
-              )}
-            </div>
-
-            <h3 className="mb-2 max-w-lg text-2xl font-extrabold leading-tight text-white sm:text-2xl lg:text-3xl">
-              {primary.title}
-            </h3>
-
-            <div className="mb-3 flex flex-wrap gap-2">
-              {(primary.release_date || primary.first_air_date) && (
-                <span className="text-[11px] bg-[#e94f37]/20 text-[#e94f37] font-semibold px-2 py-0.5 rounded-full">
-                  {
-                    (
-                      primary.release_date ||
-                      primary.first_air_date ||
-                      ""
-                    ).split("-")[0]
-                  }
-                </span>
-              )}
-              {primary.genres?.slice(0, 3).map((g) => (
-                <span
-                  key={g}
-                  className="text-[11px] bg-white/10 text-gray-300 font-medium px-2 py-0.5 rounded-full"
-                >
-                  {g}
-                </span>
-              ))}
-            </div>
-
-            {primary.overview && (
-              <p className="mb-4 line-clamp-3 max-w-md text-sm leading-6 text-gray-300 sm:line-clamp-2 sm:max-w-lg">
-                {primary.overview}
-              </p>
-            )}
-
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              <button
-                className="flex items-center justify-center gap-1 rounded-lg bg-[#e94f37] px-3 py-3 text-[11px] font-bold text-white transition-colors hover:bg-[#ff5a42] sm:px-4 sm:py-2.5 sm:text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleClick(primary);
-                }}
-              >
-                <Info size={12} />
-                More Info
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleWatchlist();
-                }}
-                disabled={wlLoading}
-                className={`flex items-center justify-center gap-1 rounded-lg border px-3 py-3 text-[11px] font-bold transition-colors sm:px-4 sm:py-2.5 sm:text-xs ${
-                  currentInWatchlist
-                    ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-                    : "bg-white/10 border-white/20 text-white hover:bg-white/20"
-                }`}
-              >
-                {wlLoading ? (
-                  <span className="w-3.5 h-3.5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
-                ) : currentInWatchlist ? (
-                  <>
-                    <BookmarkCheck size={12} /> Added
-                  </>
-                ) : (
-                  <>
-                    <Bookmark size={12} /> My List
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Queue strip */}
-      <div className="scrollbar-hide mt-3 flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3.5 [&::-webkit-scrollbar]:hidden">
-        {ordered.map((item, i) => {
-          const isActive = i === 0;
-          const thumb = item.backdrop_path
-            ? `https://image.tmdb.org/t/p/w185${item.backdrop_path}`
-            : "/placeholder-backdrop.svg";
-
-          return (
-            <motion.div
-              key={`${item.id}-${(offset + i) % items.length}`}
-              layout
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setOffset((offset + i) % items.length)}
-              className={`w-[116px] flex-shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 transition-all sm:w-[130px] sm:rounded-xl ${isActive ? "border-[#e94f37]" : "border-transparent hover:border-white/20"}`}
-            >
-              <div className="relative h-[68px] w-full sm:h-[76px]">
-                <Image
-                  src={thumb}
-                  alt={item.title}
-                  fill
-                  sizes="64px"
-                  className="object-cover"
-                />
-                {isActive && (
-                  <div className="absolute inset-0 bg-[#e94f37]/20" />
-                )}
-              </div>
-              <div className="bg-zinc-900 px-2 py-1.5">
-                <p className="text-[11px] font-semibold text-white truncate">
-                  {item.title}
-                </p>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-[10px] text-gray-500">
-                    {item.year || (item.release_date || "").split("-")[0]}
-                  </span>
-                  {typeof item.vote_average === "number" && (
-                    <span
-                      className={`text-[10px] font-bold ${scoreColor(item.vote_average)}`}
-                    >
-                      {item.vote_average.toFixed(1)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Footer row */}
-      <div className="mt-3 flex items-center justify-between">
-        <div className="flex gap-1">
-          {items.map((_, i) => (
-            <div
-              key={i}
-              className={`h-1 rounded-full transition-all duration-300 ${i === offset ? "w-5 bg-[#e94f37]" : "w-1 bg-white/15"}`}
-            />
-          ))}
+          <h2 className="text-xl font-black tracking-normal text-[#e94f37] sm:text-2xl lg:text-3xl">
+            {title}
+          </h2>
+          {subtitle ? (
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-white/50">
+              {subtitle}
+            </p>
+          ) : null}
         </div>
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={() => setOffset((prev) => (prev + 1) % items.length)}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white transition-all hover:bg-white/10"
-        >
-          Up next
-          <ChevronRight size={14} className="text-[#e94f37]" />
-        </motion.button>
+
+        <div className="flex flex-col items-end gap-3">
+          {/* <TasteSummary signal={tasteSignal} count={items.length} /> */}
+          <button
+            type="button"
+            onClick={() => setOffset((prev) => (prev + 1) % items.length)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-xs font-black text-white/78 transition hover:bg-white/[0.1]"
+          >
+            Refresh the mix
+            <ChevronRight className="h-4 w-4 text-[#e94f37]" />
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-2.5 sm:p-3">
+        <div className="grid gap-3 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)]">
+          <article className="group grid overflow-hidden rounded-xl border border-white/10 bg-[#0c0c0d] sm:grid-cols-[170px_minmax(0,1fr)] lg:grid-cols-1">
+            <button
+              type="button"
+              onClick={() => handleClick(primary)}
+              className="relative min-h-[174px] overflow-hidden bg-zinc-900 sm:min-h-full lg:h-[168px]"
+              aria-label={`Open ${getTitle(primary)}`}
+            >
+              <Image
+                src={getBackdrop(primary)}
+                alt={getTitle(primary)}
+                fill
+                sizes="(max-width: 1024px) 100vw, 45vw"
+                className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/24 to-transparent" />
+              <div className="absolute left-3 top-3 rounded-full bg-black/64 px-2.5 py-1 text-[11px] font-black text-white">
+                {primaryMatch}% match
+              </div>
+            </button>
+
+            <div className="p-3.5 lg:p-4">
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                <ContentTypeBadge item={primary} />
+                {getYear(primary) ? (
+                  <span className="rounded-full bg-white/[0.07] px-2.5 py-1 text-[11px] font-bold text-white/58">
+                    {getYear(primary)}
+                  </span>
+                ) : null}
+                {typeof primary.vote_average === "number" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#f6b73c]/10 px-2.5 py-1 text-[11px] font-bold text-[#ffd78a]">
+                    <Star className="h-3 w-3 fill-current" />
+                    {primary.vote_average.toFixed(1)}
+                  </span>
+                ) : null}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleClick(primary)}
+                className="line-clamp-2 text-left text-lg font-black leading-tight text-white transition group-hover:text-[#ff9b8a] sm:text-xl"
+              >
+                {getTitle(primary)}
+              </button>
+
+              <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/54">
+                {getShortReason(primary, tasteSignal, primarySaved)}
+              </p>
+
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {primary.genres?.slice(0, 3).map((genre) => (
+                  <span
+                    key={genre}
+                    className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-white/54"
+                  >
+                    {genre}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleClick(primary)}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#e94f37] px-4 py-2 text-xs font-black text-white transition hover:bg-[#ff5a42]"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                  Details
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleWatchlist(primary)}
+                  disabled={loadingStates[primary.id]}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-white/12 bg-white/[0.06] px-4 py-2 text-xs font-black text-white/78 transition hover:bg-white/[0.1]"
+                >
+                  {loadingStates[primary.id] ? (
+                    <span className="h-3.5 w-3.5 rounded-full border-2 border-white/60 border-t-transparent motion-safe:animate-spin" />
+                  ) : primarySaved ? (
+                    <BookmarkCheck className="h-3.5 w-3.5" />
+                  ) : (
+                    <Bookmark className="h-3.5 w-3.5" />
+                  )}
+                  {primarySaved ? "Saved" : "Save"}
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <div className="grid gap-2.5 sm:grid-cols-2 xl:gap-3">
+            {visibleCards.map((item, index) => {
+              const saved = isInWatchlist(String(item.id), toWatchType(item));
+              return (
+                <PersonalPickCard
+                  key={`${item.id}-${index}`}
+                  item={item}
+                  signal={tasteSignal}
+                  saved={saved}
+                  loading={!!loadingStates[item.id]}
+                  onOpen={() => handleClick(item)}
+                  onToggle={() => toggleWatchlist(item)}
+                />
+              );
+            })}
+          </div>
+        </div>
       </div>
     </section>
+  );
+}
+
+function TasteSummary({
+  signal,
+  count,
+}: {
+  signal: TasteSignal;
+  count: number;
+}) {
+  const labels = [
+    ...signal.topGenres.slice(0, 2),
+    ...signal.topCountries.slice(0, 1),
+  ];
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3 sm:min-w-[260px]">
+      <div className="flex items-center gap-3">
+        <div className="h-9 w-1.5 shrink-0 rounded-full bg-[#e94f37]" />
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#ff9b8a]">
+            Taste profile
+          </p>
+          <p className="mt-0.5 text-xs font-semibold text-white/58">
+            Based on {count} favorite{count === 1 ? "" : "s"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {(labels.length ? labels : ["Popular", "Highly rated"]).map((label) => (
+          <span
+            key={label}
+            className="rounded-full bg-black/24 px-2 py-1 text-[10px] font-bold text-white/56"
+          >
+            {label}
+          </span>
+        ))}
+        {signal.averageRating ? (
+          <span className="rounded-full bg-[#f6b73c]/10 px-2 py-1 text-[10px] font-bold text-[#ffd78a]">
+            Avg {signal.averageRating.toFixed(1)}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ContentTypeBadge({ item }: { item: All }) {
+  const type = getContentType(item);
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-[#e94f37]/10 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#ff9b8a]">
+      {type === "tv" ? (
+        <Tv className="h-3 w-3" />
+      ) : (
+        <Film className="h-3 w-3" />
+      )}
+      {type === "tv" ? "Series" : "Movie"}
+    </span>
+  );
+}
+
+function PersonalPickCard({
+  item,
+  signal,
+  saved,
+  loading,
+  onOpen,
+  onToggle,
+}: {
+  item: All;
+  signal: TasteSignal;
+  saved: boolean;
+  loading: boolean;
+  onOpen: () => void;
+  onToggle: () => void;
+}) {
+  const match = getMatchScore(item, signal, saved);
+  const shortReason = getShortReason(item, signal, saved);
+
+  return (
+    <article className="group grid grid-cols-[58px_minmax(0,1fr)] gap-2.5 rounded-xl border border-white/10 bg-[#101012] p-2 transition hover:border-[#e94f37]/30 hover:bg-white/[0.055] sm:grid-cols-[64px_minmax(0,1fr)]">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="relative aspect-[2/3] overflow-hidden rounded-lg bg-zinc-900"
+        aria-label={`Open ${getTitle(item)}`}
+      >
+        <Image
+          src={getPoster(item, "w342")}
+          alt={getTitle(item)}
+          fill
+          sizes="120px"
+          className="object-cover transition duration-500 group-hover:scale-105"
+        />
+        <div className="absolute left-1 top-1 rounded-full bg-black/72 px-1.5 py-0.5 text-[8px] font-black text-white">
+          {match}%
+        </div>
+      </button>
+
+      <div className="min-w-0">
+        <div className="mb-1 flex items-center gap-1 overflow-hidden">
+          <ContentTypeBadge item={item} />
+          {item.origin_country?.[0] ? (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/[0.055] px-1.5 py-0.5 text-[9px] font-bold text-white/50">
+              <Languages className="h-2.5 w-2.5" />
+              {item.origin_country[0]}
+            </span>
+          ) : null}
+        </div>
+
+        <button
+          type="button"
+          onClick={onOpen}
+          className="line-clamp-2 text-left text-[13px] font-black leading-tight text-white transition group-hover:text-[#ff9b8a] sm:text-sm"
+        >
+          {getTitle(item)}
+        </button>
+
+        <p className="mt-1 line-clamp-1 text-[10px] font-semibold leading-4 text-[#ff9b8a]/76">
+          {shortReason}
+        </p>
+
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap gap-1">
+            {item.genres?.slice(0, 1).map((genre) => (
+              <span
+                key={genre}
+                className="truncate rounded-full bg-black/24 px-1.5 py-0.5 text-[9px] font-semibold text-white/42"
+              >
+                {genre}
+              </span>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={onToggle}
+            disabled={loading}
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/10 bg-black/24 text-white/64 transition hover:bg-white/10 hover:text-white"
+            aria-label={saved ? "Remove from watchlist" : "Save to watchlist"}
+          >
+            {loading ? (
+              <span className="h-3 w-3 rounded-full border-2 border-white/60 border-t-transparent motion-safe:animate-spin" />
+            ) : saved ? (
+              <BookmarkCheck className="h-3.5 w-3.5 text-emerald-300" />
+            ) : (
+              <Bookmark className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function FavoriteLoadingState() {
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+      <div className="mb-4 flex flex-col gap-2">
+        <div className="h-4 w-28 animate-pulse rounded-full bg-[#e94f37]/16" />
+        <div className="h-7 w-64 max-w-full animate-pulse rounded bg-zinc-900" />
+        <div className="h-4 w-full max-w-lg animate-pulse rounded bg-zinc-900/80" />
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-3">
+        <div className="grid gap-3 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)]">
+          <div className="h-[300px] animate-pulse rounded-xl bg-zinc-900" />
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {[...Array(6)].map((_, index) => (
+              <div
+                key={index}
+                className="h-[92px] animate-pulse rounded-xl bg-zinc-900"
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CuratedGuestPanel({
+  routerPush,
+}: {
+  routerPush: (href: string) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#0b0b0c] p-4 sm:p-5">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div>
+          <p className="mb-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#e94f37]">
+            Popular picks to learn your taste
+          </p>
+          <h2 className="max-w-2xl text-xl font-black leading-tight text-white sm:text-2xl">
+            Sign in for a quieter, more personal mix.
+          </h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-white/56">
+            Sign in to unlock recommendations shaped by your favorite genres,
+            saved titles, and languages.
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {["Trending now", "Highly rated", "Easy starters"].map((label) => (
+              <span
+                key={label}
+                className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold text-white/54"
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <button
+            type="button"
+            onClick={() => routerPush("/auth/login")}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#e94f37] px-4 py-2 text-xs font-black text-white transition hover:bg-[#ff5a42]"
+          >
+            <Play className="h-3.5 w-3.5 fill-white" />
+            Sign in
+          </button>
+          <button
+            type="button"
+            onClick={() => routerPush("/auth/signup")}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-white/12 bg-white/[0.06] px-4 py-2 text-xs font-black text-white/78 transition hover:bg-white/[0.1]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Create
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyTasteState({
+  routerPush,
+}: {
+  routerPush: (href: string) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-[#0a0a0b] p-4 sm:p-5">
+      <div className="max-w-2xl">
+        <p className="mb-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#e94f37]">
+          Popular picks to help us learn your taste
+        </p>
+        <h2 className="text-xl font-black text-white sm:text-2xl">
+          Your personal mix is almost ready.
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-white/58">
+          Save or favorite a few titles and Moodies will turn them into a
+          sharper recommendation lane with genre, language, and mood reasoning.
+        </p>
+        <button
+          type="button"
+          onClick={() => routerPush("/moods/explore")}
+          className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#e94f37] px-4 py-2 text-xs font-black text-white transition hover:bg-[#ff5a42]"
+        >
+          Explore moods
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
   );
 }
