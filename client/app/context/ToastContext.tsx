@@ -1,12 +1,21 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import Toast from "@/components/ui/Toast";
+
+type ToastVariant = "info" | "success" | "warning" | "error";
 
 type ToastItem = {
   id: string;
   message: string;
-  variant?: "info" | "success" | "warning" | "error";
+  variant?: ToastVariant;
   duration?: number;
   title?: string | null;
   posterUrl?: string | null;
@@ -14,15 +23,27 @@ type ToastItem = {
   createdAt: number;
 };
 
-const ToastContext = createContext({
+type ToastContextValue = {
   toast: (
     message: string,
-    variant?: "info" | "success" | "warning" | "error",
+    variant?: ToastVariant,
     duration?: number,
     title?: string | null,
     posterUrl?: string | null,
-    imageSize?: { width: number; height: number }
-  ) => {},
+    imageSize?: { width: number; height: number },
+  ) => void;
+};
+
+declare global {
+  interface Window {
+    showToast?: ToastContextValue["toast"];
+  }
+}
+
+const MAX_VISIBLE_TOASTS = 3;
+
+const ToastContext = createContext<ToastContextValue>({
+  toast: () => {},
 });
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -31,67 +52,88 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const toast = useCallback(
     (
       message: string,
-      variant: "info" | "success" | "warning" | "error" = "info",
+      variant: ToastVariant = "info",
       duration: number = 3500,
       title: string | null = null,
       posterUrl: string | null = null,
-      imageSize?: { width: number; height: number }
+      imageSize?: { width: number; height: number },
     ) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       const createdAt = performance.now();
 
-      setToasts((s) => [
-        ...s,
-        {
-          id,
-          message,
-          variant,
-          duration,
-          title,
-          posterUrl,
-          imageSize,
-          createdAt,
-        },
-      ]);
+      setToasts((s) =>
+        [
+          ...s,
+          {
+            id,
+            message,
+            variant,
+            duration,
+            title,
+            posterUrl,
+            imageSize,
+            createdAt,
+          },
+        ].slice(-MAX_VISIBLE_TOASTS),
+      );
     },
-    []
+    [],
   );
+
   const remove = useCallback((id: string) => {
     setToasts((s) => s.filter((t) => t.id !== id));
   }, []);
 
+  const value = useMemo(() => ({ toast }), [toast]);
+
+  useEffect(() => {
+    window.showToast = toast;
+
+    return () => {
+      if (window.showToast === toast) {
+        delete window.showToast;
+      }
+    };
+  }, [toast]);
+
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={value}>
       {children}
-      <div
-        style={{
-          position: "fixed",
-          top: 16,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 9999,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          pointerEvents: "none",
-          gap: 12,
-          padding: "0 16px",
-          maxWidth: "90vw",
-        }}
-        aria-live="polite"
-        aria-atomic="false"
-      >
+      <style>{`
+        .m-toast-viewport {
+          position: fixed;
+          top: 76px;
+          right: 20px;
+          z-index: 9999;
+          display: flex;
+          width: min(392px, calc(100vw - 28px));
+          max-height: calc(100dvh - 96px);
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 10px;
+          pointer-events: none;
+        }
+
+        .m-toast-shell {
+          width: 100%;
+          pointer-events: auto;
+        }
+
+        @media (max-width: 640px) {
+          .m-toast-viewport {
+            top: auto;
+            right: 10px;
+            bottom: calc(12px + env(safe-area-inset-bottom));
+            left: 10px;
+            width: auto;
+            max-height: min(50dvh, 300px);
+            align-items: stretch;
+          }
+        }
+      `}</style>
+      <div className="m-toast-viewport" aria-live="polite" aria-atomic="false">
         {toasts.map((t) => (
-          <div
-            key={t.id}
-            style={{
-              pointerEvents: "auto",
-              width: "100%",
-              maxWidth: 640,
-              display: "flex",
-              justifyContent: "center",
-            }}
-          >
+          <div key={t.id} className="m-toast-shell">
             <Toast
               message={t.message}
               variant={t.variant}
