@@ -1,28 +1,72 @@
 // src/components/Hero/HeroCarousel.tsx
 "use client";
-import React, { useEffect, useState } from "react";
+
+import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import {
+  Bookmark,
+  BookmarkCheck,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Film,
+  Info,
+  Star,
+  Tv,
+} from "lucide-react";
 import type { All } from "@/types/all";
 import { tmdbImage } from "@/lib/tmdb";
 import useCarousel from "@/hooks/useCarousel";
-import HeroThumbnail from "./heroThumbnail";
-import {
-  IconClock,
-  IconInfoCircle,
-  IconPlus,
-  IconTags,
-} from "@tabler/icons-react";
-import "./hero.css";
-import { Film, Tv, Bookmark, BookmarkCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import HeroThumbnail from "./heroThumbnail";
+import "./hero.css";
 
 type Props = { all: All[]; cycleMs?: number };
+type ContentKind = "movie" | "tv";
+type HookType = "movie" | "series";
 
 function getThumbnailWindow<T>(items: T[], index: number, windowSize = 5): T[] {
   const half = Math.floor(windowSize / 2);
   const start = Math.max(0, Math.min(index - half, items.length - windowSize));
   return items.slice(start, start + windowSize);
+}
+
+function getContentType(item: Partial<All>): ContentKind {
+  if (item.type === "tv") return "tv";
+  if (item.type === "movie") return "movie";
+  if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
+  return "movie";
+}
+
+function toHookType(kind: ContentKind): HookType {
+  return kind === "tv" ? "series" : "movie";
+}
+
+function getTitle(item: All) {
+  return item.title || item.name || "Featured title";
+}
+
+function getReleaseDate(item: All) {
+  return item.release_date || item.first_air_date || null;
+}
+
+function formatReleaseDate(value: string | null | undefined) {
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getOverview(item: All, maxLength: number) {
+  const overview = item.overview || "Discover why this title is trending now.";
+  if (overview.length <= maxLength) return overview;
+  return `${overview.slice(0, maxLength).trim()}...`;
 }
 
 export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
@@ -32,106 +76,55 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
   });
 
   const [mounted, setMounted] = useState(false);
-  const [thumbnailWindowSize, setThumbnailWindowSize] = useState(5); // default to desktop size
-
-  const router = useRouter();
-
-  const getContentType = (item: Partial<All>): "movie" | "tv" => {
-    if ((item as any).media_type) return (item as any).media_type;
-    if ((item as any).type === "movies" || (item as any).type === "movie")
-      return "movie";
-    if ((item as any).type === "tv") return "tv";
-    if (
-      (item as any).number_of_seasons ||
-      (item as any).first_air_date ||
-      (item as any).name
-    )
-      return "tv";
-    return "movie";
-  };
-
-  const handleClick = async (movie: All) => {
-    const contentType = getContentType(movie);
-    const routePath = contentType === "tv" ? "tv" : "movies";
-    const href = `/${routePath}/${movie.id}`;
-    router.push(href);
-  };
-
-  const { add, remove, isInWatchlist, ready } = useWatchlist();
+  const [thumbnailWindowSize, setThumbnailWindowSize] = useState(5);
   const [wlLoading, setWlLoading] = useState(false);
 
+  const router = useRouter();
+  const { add, remove, isInWatchlist, ready } = useWatchlist();
+
   const current = all[index];
-  type HookType = "movie" | "series";
-  const toHookType = (k: "movie" | "tv"): HookType =>
-    k === "tv" ? "series" : "movie";
-  const currentKind: "movie" | "tv" = current
-    ? getContentType(current)
-    : "movie";
+  const currentKind = current ? getContentType(current) : "movie";
   const currentInWatchlist = current?.id
     ? isInWatchlist(String(current.id), toHookType(currentKind))
     : false;
 
-  const toggleWatchlist = async () => {
-    if (!current?.id) return;
-    if (!ready) {
-      router.push("/auth/login");
-      return;
-    }
-    setWlLoading(true);
-    try {
-      const title = (current?.title || (current as any).name) ?? null;
-      const posterUrl =
-        tmdbImage(current.poster_path ?? current.backdrop_path, "w154") ?? null;
+  const thumbnailWindow = useMemo(
+    () => getThumbnailWindow(all, index, thumbnailWindowSize),
+    [all, index, thumbnailWindowSize],
+  );
 
-      if (currentInWatchlist) {
-        await remove(String(current.id), toHookType(currentKind), {
-          title,
-          posterUrl,
-        });
-      } else {
-        await add(String(current.id), toHookType(currentKind), {
-          title,
-          posterUrl,
-        });
-      }
-    } catch (e) {
-      console.error("Watchlist toggle failed:", e);
-    } finally {
-      setWlLoading(false);
-    }
-  };
-
-  // preload current + next (use browser Image object; not next/image)
   useEffect(() => {
     if (!all || all.length === 0) return;
-    const indices = [index, (index + 1) % all.length];
-    indices.forEach((i) => {
-      const m = all[i];
-      if (!m) return;
-      const b =
-        tmdbImage(m.backdrop_path, "w1280") ||
-        tmdbImage(m.poster_path, "w1280");
-      const p = tmdbImage(m.poster_path, "w342");
-      if (b) {
+
+    [index, (index + 1) % all.length].forEach((i) => {
+      const item = all[i];
+      if (!item) return;
+
+      const backdrop =
+        tmdbImage(item.backdrop_path, "w1280") ||
+        tmdbImage(item.poster_path, "w1280");
+      const poster = tmdbImage(item.poster_path, "w342");
+
+      if (backdrop) {
         const img = new window.Image();
-        img.src = b;
+        img.src = backdrop;
       }
-      if (p) {
+
+      if (poster) {
         const img = new window.Image();
-        img.src = p;
+        img.src = poster;
       }
     });
   }, [index, all]);
 
-  // Handle window-dependent sizing after mount to avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
 
     const updateThumbnailSize = () => {
       if (window.innerWidth <= 640) {
-        setThumbnailWindowSize(3);
-      } else if (window.innerWidth <= 1024) {
         setThumbnailWindowSize(4);
+      } else if (window.innerWidth <= 1024) {
+        setThumbnailWindowSize(5);
       } else {
         setThumbnailWindowSize(5);
       }
@@ -142,343 +135,240 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
     return () => window.removeEventListener("resize", updateThumbnailSize);
   }, []);
 
-  if (!all || all.length === 0) {
+  if (!all || all.length === 0 || !current) {
     return (
-      <section className="h-[60vh] flex items-center justify-center bg-gray-900 text-white">
-        No featured all
+      <section className="flex h-[60vh] min-h-[420px] items-center justify-center bg-[#09090a] px-6 text-center text-white">
+        <p className="text-sm font-semibold text-white/70">
+          Featured titles are loading.
+        </p>
       </section>
     );
   }
 
-  // Use state-based thumbnail window size (set in useEffect after mount)
-  const thumbnailWindow = getThumbnailWindow(
-    all,
-    index,
-    thumbnailWindowSize
-  );
+  const currentTitle = getTitle(current);
+  const releaseDate = formatReleaseDate(getReleaseDate(current));
+  const rating =
+    typeof current.vote_average === "number" && current.vote_average > 0
+      ? current.vote_average.toFixed(1)
+      : null;
+  const backdropSrc =
+    tmdbImage(current.backdrop_path || current.poster_path, "w1280") ??
+    "/placeholder-backdrop.svg";
+  const progress = all.length > 0 ? ((index + 1) / all.length) * 100 : 0;
 
-  const goToList = () => {
-    router.push("/watchlist");
+  const goToDetails = () => {
+    const routePath = currentKind === "tv" ? "tv" : "movies";
+    router.push(`/${routePath}/${current.id}`);
+  };
+
+  const goToSlide = (nextIndex: number) => {
+    setIndex((nextIndex + all.length) % all.length);
+  };
+
+  const toggleWatchlist = async () => {
+    if (!current?.id) return;
+
+    if (!ready) {
+      router.push("/auth/login");
+      return;
+    }
+
+    setWlLoading(true);
+
+    try {
+      const posterUrl =
+        tmdbImage(current.poster_path ?? current.backdrop_path, "w154") ?? null;
+
+      if (currentInWatchlist) {
+        await remove(String(current.id), toHookType(currentKind), {
+          title: currentTitle,
+          posterUrl,
+        });
+      } else {
+        await add(String(current.id), toHookType(currentKind), {
+          title: currentTitle,
+          posterUrl,
+        });
+      }
+    } catch (error) {
+      console.error("Watchlist toggle failed:", error);
+    } finally {
+      setWlLoading(false);
+    }
   };
 
   return (
     <section
-      className="relative w-full overflow-hidden 
-        h-[68svh] sm:h-[80vh] lg:h-screen
-        min-h-[540px] max-h-[1200px]"
+      className="relative isolate h-[72svh] min-h-[540px] w-full overflow-hidden bg-[#080808] text-white sm:h-[82vh] lg:h-screen lg:max-h-[1100px]"
       onMouseEnter={pause}
       onMouseLeave={resume}
       aria-roledescription="carousel"
+      aria-label="Featured Moodies titles"
     >
-      {/* Stacked background images */}
-      <div className="absolute center inset-0">
-        {all.map((m, i) => {
-          const active = i === index;
-          // Use consistent image size to avoid hydration mismatch
-          // w1280 is a good balance for all screen sizes
-          const src =
-            tmdbImage(m.backdrop_path || m.poster_path, "w1280") ??
-            "/placeholder-backdrop.svg";
-
-          return (
-            <div
-              key={m.id}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${active ? "opacity-100" : "opacity-0 pointer-events-none"
-                }`}
-              aria-hidden={!active}
-            >
-              <Image
-                src={src}
-                alt=""
-                fill
-            sizes="100vw"
-                priority={active}
-                aria-hidden
-                className="w-full h-full object-cover object-center"
-                style={{
-                  filter: "brightness(1.2) contrast(1.15) saturate(1.15)",
-                  objectPosition: "center 50%",
-                }}
-              />
-
-              {/* Softer edge shading for text readability */}
-              <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-black/50" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-transparent" />
-
-              {/* Center spotlight effect */}
-              <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.08)_35%,transparent_80%)] mix-blend-lighten" />
-            </div>
-          );
-        })}
-
-        {/* Responsive gradient overlays */}
-        {/* Mobile gradient - stronger bottom fade for readability */}
-        <div
-          className="absolute inset-0 pointer-events-none sm:hidden"
-          style={{
-            background:
-              "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.2) 100%)",
-          }}
+      <div className="absolute inset-0">
+        <Image
+          key={current.id}
+          src={backdropSrc}
+          alt=""
+          fill
+          sizes="100vw"
+          priority
+          aria-hidden
+          className="hero-backdrop-image object-cover object-center"
         />
-
-        {/* Tablet/Desktop gradient */}
-        <div
-          className="absolute inset-0 pointer-events-none hidden sm:block"
-          style={{
-            background:
-              "radial-gradient(ellipse at bottom left, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.1) 100%)",
-          }}
-        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.88)_0%,rgba(0,0,0,0.66)_34%,rgba(0,0,0,0.24)_68%,rgba(0,0,0,0.48)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18)_0%,rgba(0,0,0,0.18)_48%,rgba(0,0,0,0.92)_100%)]" />
       </div>
 
-      {/* Content Container */}
-      <div className="absolute inset-0 z-20 flex flex-col max-w-7xl mx-auto">
-        {/* Main Content Area */}
-        <div className="flex-1 flex items-end">
-          <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 pb-4 sm:pb-6 lg:pb-8">
-            {/* Mobile/Tablet Layout - Stack content vertically */}
-            <div className="lg:hidden">
-              {/* Content */}
-              <div className="mb-6 text-white">
-                {/* Title */}
-                <h1
-                  className="mb-3 line-clamp-2 text-3xl font-black leading-tight tracking-tight drop-shadow-2xl sm:text-3xl md:text-4xl"
-                >
-                  {all[index].title}
-                </h1>
+      <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col justify-end px-4 pb-5 pt-24 sm:px-6 sm:pb-7 lg:px-8 lg:pb-9 xl:px-12">
+        <div className="grid items-end gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-8 xl:gap-10">
+          <div className="max-w-2xl xl:max-w-3xl">
+            <div className="mb-2.5 flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e94f37]/40 bg-[#e94f37]/18 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-[#ffb2a5] sm:text-[10px] lg:text-[11px]">
+                {currentKind === "tv" ? (
+                  <Tv className="h-3 w-3 lg:h-3.5 lg:w-3.5" />
+                ) : (
+                  <Film className="h-3 w-3 lg:h-3.5 lg:w-3.5" />
+                )}
+                {currentKind === "tv" ? "Series" : "Movie"}
+              </span>
 
-                {/* Pills */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {/* Genres - show fewer on mobile */}
-                  {all[index]?.genres?.slice(0, 2).map((genre) => (
-                    <span
-                      key={genre}
-                      className="flex items-center gap-1 text-white font-medium 
-                        px-2 py-1 rounded-full bg-[#e94f37]/90 shadow-sm 
-                        text-xs sm:text-sm"
-                    >
-                      <IconTags size={12} />
-                      {genre}
-                    </span>
-                  ))}
+              {rating ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-black/35 px-2.5 py-1 text-[10px] font-bold text-white/88 sm:text-xs">
+                  <Star className="h-3 w-3 fill-[#f6b73c] text-[#f6b73c] sm:h-3.5 sm:w-3.5" />
+                  {rating}
+                </span>
+              ) : null}
 
-                  {/* Release Date */}
-                  {all[index].release_date && (
-                    <div
-                      className="flex items-center gap-1 text-gray-200 font-medium 
-                      px-2 py-1 rounded-full bg-gray-800/60 shadow-sm 
-                      text-xs sm:text-sm"
-                    >
-                      <IconClock size={12} />
-                      <span>
-                        {new Date(all[index].release_date).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            year: "numeric",
-                          }
-                        )}
-                      </span>
-                    </div>
-                  )}
-                  <div
-                    className={[
-                      "flex items-center gap-1 px-2 py-1 rounded-full font-medium text-xs shadow-sm backdrop-blur-md border",
-                      all[index].type === "tv"
-                        ? "bg-blue-500/90 text-white border-blue-400/50"
-                        : "bg-purple-500/90 text-white border-purple-400/50",
-                    ].join(" ")}
-                  >
-                    {all[index].type === "tv" ? (
-                      <Tv size={12} />
-                    ) : (
-                      <Film size={12} />
-                    )}
-                    {all[index].type === "tv" ? "Series" : "Movie"}
-                  </div>
-                </div>
-
-                {/* Overview - shorter on mobile */}
-                <p className="mb-4 line-clamp-3 text-sm leading-6 text-gray-200/90 drop-shadow-lg sm:line-clamp-2 sm:text-base">
-                  {all[index].overview.slice(0, 120) +
-                    (all[index].overview.length > 120 ? "..." : "")}
-                </p>
-
-                {/* Buttons */}
-                <div className="mb-6 grid grid-cols-2 gap-3 sm:flex sm:flex-row">
-                  <button
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-pink-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-red-950/30 transition-all duration-200 hover:from-red-700 hover:to-pink-700"
-                    onClick={() => handleClick(all[index])}
-                  >
-                    <IconInfoCircle className="h-4 w-4" />
-                    More Info
-                  </button>
-                  <button
-                    onClick={toggleWatchlist}
-                    disabled={wlLoading}
-                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-bold backdrop-blur-md transition-all duration-200
-                      ${currentInWatchlist
-                        ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-                        : "bg-white/10 border-white/20 text-white hover:bg-white/20"
-                      }`}
-                    title={
-                      currentInWatchlist
-                        ? "Remove from My List"
-                        : "Add to My List"
-                    }
-                  >
-                    {wlLoading ? (
-                      <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
-                    ) : currentInWatchlist ? (
-                      <>
-                        <BookmarkCheck className="w-4 h-4" />
-                        Added
-                      </>
-                    ) : (
-                      <>
-                        <Bookmark className="w-4 h-4" />
-                        My List
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
+              {releaseDate ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-black/35 px-2.5 py-1 text-[10px] font-bold text-white/78 sm:text-xs">
+                  <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  {releaseDate}
+                </span>
+              ) : null}
             </div>
 
-            {/* Desktop Layout - Side by side */}
-            <div className="hidden lg:flex justify-between items-end gap-8 xl:gap-12">
-              {/* Left: Content */}
-              <div className="flex-1 text-white max-w-2xl xl:max-w-3xl">
-                {/* Title */}
-                <h1
-                  className="font-bold leading-tight drop-shadow-2xl 
-                  text-3xl xl:text-4xl 2xl:text-5xl  line-clamp-3
-                  tracking-tight mb-4"
+            <h1 className="max-w-3xl text-balance text-[clamp(1.85rem,4.8vw,4.35rem)] font-black leading-[0.96] tracking-normal text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.48)] xl:text-[clamp(2.35rem,4.2vw,4.8rem)]">
+              {currentTitle}
+            </h1>
+
+            <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
+              {current.genres?.slice(0, 3).map((genre) => (
+                <span
+                  key={genre}
+                  className="rounded-full border border-white/12 bg-white/[0.09] px-2.5 py-1 text-[10px] font-semibold text-white/78 backdrop-blur-sm sm:text-xs"
                 >
-                  {all[index].title}
-                </h1>
+                  {genre}
+                </span>
+              ))}
+            </div>
 
-                {/* Pills */}
-                <div className="flex gap-3 mb-5">
-                  {all[index]?.genres?.slice(0, 3).map((genre) => (
-                    <span
-                      key={genre}
-                      className="flex-shrink-0 flex items-center gap-1 text-white font-medium 
-                 px-2 py-1 rounded-full bg-[#e94f37]/90 shadow-sm text-sm"
-                    >
-                      <IconTags size={14} />
-                      {genre}
-                    </span>
-                  ))}
+            <p className="mt-3 max-w-xl text-xs leading-5 text-white/76 sm:mt-4 sm:text-sm sm:leading-6 lg:mt-4 lg:max-w-2xl lg:text-[15px] lg:leading-7 xl:text-base">
+              {getOverview(current, 180)}
+            </p>
 
-                  {all[index].release_date && (
-                    <span
-                      className="flex-shrink-0 flex items-center gap-1 text-gray-200 font-medium 
-                 px-1.5 py-1 rounded-full bg-gray-800/60 shadow-sm text-sm"
-                    >
-                      <IconClock size={14} />
-                      {new Date(all[index].release_date).toLocaleDateString(
-                        "en-US",
-                        {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        }
-                      )}
-                    </span>
-                  )}
-                  <div
-                    className={[
-                      "flex items-center gap-1 px-2 py-1 rounded-full font-medium text-xs shadow-sm backdrop-blur-md border",
-                      all[index].type === "tv"
-                        ? "bg-blue-500/90 text-white border-blue-400/50"
-                        : "bg-purple-500/90 text-white border-purple-400/50",
-                    ].join(" ")}
-                  >
-                    {all[index].type === "tv" ? (
-                      <Tv size={12} />
-                    ) : (
-                      <Film size={12} />
-                    )}
-                    {all[index].type === "tv" ? "Series" : "Movie"}
-                  </div>
-                </div>
+            <div className="mt-4 grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap sm:gap-3 lg:mt-6">
+              <button
+                type="button"
+                onClick={goToDetails}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#e94f37] px-4 py-2.5 text-xs font-black text-white shadow-[0_12px_32px_rgba(233,79,55,0.28)] transition hover:bg-[#d9412b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff9c8d] sm:min-h-11 sm:px-5 sm:text-sm"
+              >
+                <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Details
+              </button>
 
-                {/* Overview */}
-                <p
-                  className="text-base xl:text-lg text-gray-200/90 drop-shadow-lg 
-                  max-w-2xl line-clamp-2 mb-6"
-                >
-                  {all[index].overview.slice(0, 180) +
-                    (all[index].overview.length > 180 ? "..." : "")}
-                </p>
-
-                {/* Buttons */}
-                <div className="flex flex-wrap gap-4">
-                  <button
-                    className="px-6 xl:px-8 py-3 xl:py-4 
-                    text-base xl:text-lg font-semibold
-                    bg-gradient-to-r from-[#e94f37] to-pink-600 text-white 
-                    rounded-lg shadow-lg shadow-red-900/40
-                    hover:from-red-700 hover:to-pink-700 transition-all duration-200
-                    flex items-center gap-2 cursor-pointer"
-                    onClick={() => handleClick(all[index])}
-                  >
-                    <IconInfoCircle className="w-5 h-5 xl:w-6 xl:h-6" /> More
-                    Info
-                  </button>
-
-                  <button
-                    onClick={toggleWatchlist}
-                    disabled={wlLoading}
-                    className={`px-6 xl:px-8 py-3 xl:py-4 text-base xl:text-lg font-medium rounded-lg backdrop-blur-md transition-all duration-200 flex items-center gap-2 cursor-pointer border
-                      ${currentInWatchlist
-                        ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-                        : "bg-white/10 border-white/20 text-white hover:bg-white/20"
-                      }`}
-                    title={
-                      currentInWatchlist
-                        ? "Remove from My List"
-                        : "Add to My List"
-                    }
-                  >
-                    {wlLoading ? (
-                      <span className="w-4 h-4 xl:w-5 xl:h-5 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
-                    ) : currentInWatchlist ? (
-                      <>
-                        <BookmarkCheck className="w-5 h-5 xl:w-6 xl:h-6" />
-                        Added
-                      </>
-                    ) : (
-                      <>
-                        <Bookmark className="w-5 h-5 xl:w-6 xl:h-6" />
-                        My List
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Right: Thumbnails */}
-              <div className="flex-shrink-0">
-                <div className="flex gap-3 xl:gap-4">
-                  {mounted && thumbnailWindow.map((m) => {
-                    const i = all.findIndex((g) => g.id === m.id);
-                    return (
-                      <HeroThumbnail
-                        key={m.id}
-                        all={m}
-                        active={i === index}
-                        onClick={() => setIndex(i)}
-                        width={110} // Standard desktop size
-                        height={160}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={toggleWatchlist}
+                disabled={wlLoading}
+                className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-11 sm:px-5 sm:text-sm ${
+                  currentInWatchlist
+                    ? "border-emerald-300/45 bg-emerald-400/18 text-emerald-100 hover:bg-emerald-400/24 focus-visible:outline-emerald-200"
+                    : "border-white/18 bg-white/10 text-white hover:bg-white/16 focus-visible:outline-white/70"
+                }`}
+              >
+                {wlLoading ? (
+                  <span className="h-3.5 w-3.5 rounded-full border-2 border-white/70 border-t-transparent motion-safe:animate-spin sm:h-4 sm:w-4" />
+                ) : currentInWatchlist ? (
+                  <BookmarkCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                ) : (
+                  <Bookmark className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                )}
+                {currentInWatchlist ? "Saved" : "My List"}
+              </button>
             </div>
           </div>
+
+          <div className="hidden min-w-[392px] flex-col items-end gap-3 lg:flex xl:min-w-[420px] xl:gap-4">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => goToSlide(index - 1)}
+                className="grid h-9 w-9 place-items-center rounded-full border border-white/14 bg-black/34 text-white/78 transition hover:bg-white/12 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70 xl:h-10 xl:w-10"
+                aria-label="Previous featured title"
+              >
+                <ChevronLeft className="h-4 w-4 xl:h-5 xl:w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => goToSlide(index + 1)}
+                className="grid h-9 w-9 place-items-center rounded-full border border-white/14 bg-black/34 text-white/78 transition hover:bg-white/12 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70 xl:h-10 xl:w-10"
+                aria-label="Next featured title"
+              >
+                <ChevronRight className="h-4 w-4 xl:h-5 xl:w-5" />
+              </button>
+            </div>
+
+            <div className="flex gap-3 xl:gap-4">
+              {mounted &&
+                thumbnailWindow.map((item) => {
+                  const slideIndex = all.findIndex(
+                    (entry) => entry.id === item.id,
+                  );
+                  return (
+                    <HeroThumbnail
+                      key={item.id}
+                      all={item}
+                      active={slideIndex === index}
+                      onClick={() => goToSlide(slideIndex)}
+                      width={96}
+                      height={138}
+                    />
+                  );
+                })}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center gap-3 lg:hidden">
+          <button
+            type="button"
+            onClick={() => goToSlide(index - 1)}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/14 bg-black/38 text-white/78 sm:h-10 sm:w-10"
+            aria-label="Previous featured title"
+          >
+            <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+          </button>
+
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/12">
+            <div
+              className="h-full rounded-full bg-[#e94f37] transition-[width] duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+
+          <span className="min-w-9 text-center text-[11px] font-bold text-white/62 sm:min-w-10 sm:text-xs">
+            {index + 1}/{all.length}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => goToSlide(index + 1)}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/14 bg-black/38 text-white/78 sm:h-10 sm:w-10"
+            aria-label="Next featured title"
+          >
+            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+          </button>
         </div>
       </div>
     </section>

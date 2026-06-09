@@ -1,8 +1,36 @@
 /* src/components/Hero/hero.css */
 :root {
-  --hero-gradient: linear-gradient(90deg, rgba(6,6,7,0.78) 6%, rgba(6,6,7,0.45) 28%, rgba(0,0,0,0.0) 60%);
+  --hero-gradient: linear-gradient(
+    90deg,
+    rgba(6, 6, 7, 0.78) 6%,
+    rgba(6, 6, 7, 0.45) 28%,
+    rgba(0, 0, 0, 0) 60%
+  );
 }
 
 .hero-backdrop {
   background: var(--hero-gradient);
+}
+
+.hero-backdrop-image {
+  animation: heroBackdropIn 420ms ease-out both;
+  filter: brightness(1.08) contrast(1.1) saturate(1.08);
+}
+
+@keyframes heroBackdropIn {
+  from {
+    opacity: 0.84;
+    transform: scale(1.012);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-backdrop-image {
+    animation: none;
+  }
 }
