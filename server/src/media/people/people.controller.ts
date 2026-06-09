@@ -3,7 +3,7 @@ import { PeopleService } from './people.service';
 
 @Controller('people')
 export class PeopleController {
-  constructor(private readonly peopleService: PeopleService) { }
+  constructor(private readonly peopleService: PeopleService) {}
 
   @Get('trending/:type')
   async getTrending(@Param('type') type: string) {
@@ -21,6 +21,11 @@ export class PeopleController {
     @Query('page', ParseIntPipe) page: number = 1,
   ) {
     return this.peopleService.searchPeople(query, page);
+  }
+
+  @Get(':id/videos')
+  async getRelatedVideos(@Param('id', ParseIntPipe) id: number) {
+    return this.peopleService.getRelatedVideos(id);
   }
 
   @Get(':id')

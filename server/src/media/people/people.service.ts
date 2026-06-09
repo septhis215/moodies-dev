@@ -4,6 +4,10 @@ import { TMDBService } from 'src/external-apis/services/tmdb.service';
 @Injectable()
 export class PeopleService {
   private creditCache = new Map<string, any>();
+  private relatedVideoCache = new Map<
+    string,
+    { expires: number; data: any[] }
+  >();
 
   constructor(private readonly tmdbService: TMDBService) {}
 
@@ -18,25 +22,37 @@ export class PeopleService {
 
   async getPersonDetails(id: number) {
     const details = await this.tmdb(
-      `person/${id}?append_to_response=images,combined_credits,external_ids,movie_credits,tv_credits,tagged_images`
+      `person/${id}?append_to_response=images,combined_credits,external_ids,movie_credits,tv_credits,tagged_images`,
     );
 
     // Remove duplicates from combined credits
     if (details.combined_credits) {
-      details.combined_credits.cast = this.removeDuplicateCredits(details.combined_credits.cast || []);
-      details.combined_credits.crew = this.removeDuplicateCredits(details.combined_credits.crew || []);
+      details.combined_credits.cast = this.removeDuplicateCredits(
+        details.combined_credits.cast || [],
+      );
+      details.combined_credits.crew = this.removeDuplicateCredits(
+        details.combined_credits.crew || [],
+      );
     }
 
     // Remove duplicates from movie credits
     if (details.movie_credits) {
-      details.movie_credits.cast = this.removeDuplicateCredits(details.movie_credits.cast || []);
-      details.movie_credits.crew = this.removeDuplicateCredits(details.movie_credits.crew || []);
+      details.movie_credits.cast = this.removeDuplicateCredits(
+        details.movie_credits.cast || [],
+      );
+      details.movie_credits.crew = this.removeDuplicateCredits(
+        details.movie_credits.crew || [],
+      );
     }
 
     // Remove duplicates from TV credits
     if (details.tv_credits) {
-      details.tv_credits.cast = this.removeDuplicateCredits(details.tv_credits.cast || []);
-      details.tv_credits.crew = this.removeDuplicateCredits(details.tv_credits.crew || []);
+      details.tv_credits.cast = this.removeDuplicateCredits(
+        details.tv_credits.cast || [],
+      );
+      details.tv_credits.crew = this.removeDuplicateCredits(
+        details.tv_credits.crew || [],
+      );
     }
 
     return details;
@@ -50,7 +66,8 @@ export class PeopleService {
     const seen = new Map<string, any>();
 
     for (const credit of credits) {
-      const key = `${credit.id}_${credit.title || credit.name || ''}`.toLowerCase();
+      const key =
+        `${credit.id}_${credit.title || credit.name || ''}`.toLowerCase();
 
       if (!seen.has(key)) {
         seen.set(key, credit);
@@ -89,7 +106,7 @@ export class PeopleService {
     return {
       ...credits,
       cast: this.removeDuplicateCredits(credits.cast || []),
-      crew: this.removeDuplicateCredits(credits.crew || [])
+      crew: this.removeDuplicateCredits(credits.crew || []),
     };
   }
 
@@ -98,7 +115,7 @@ export class PeopleService {
     return {
       ...credits,
       cast: this.removeDuplicateCredits(credits.cast || []),
-      crew: this.removeDuplicateCredits(credits.crew || [])
+      crew: this.removeDuplicateCredits(credits.crew || []),
     };
   }
 
@@ -111,7 +128,9 @@ export class PeopleService {
   }
 
   async searchPeople(query: string, page: number = 1) {
-    return await this.tmdb(`search/person?query=${encodeURIComponent(query)}&page=${page}`);
+    return await this.tmdb(
+      `search/person?query=${encodeURIComponent(query)}&page=${page}`,
+    );
   }
 
   async getPopular(page: number = 1) {
@@ -124,11 +143,15 @@ export class PeopleService {
   }
 
   async searchMovie(query: string, page = 1) {
-    return this.tmdb(`search/movie?query=${encodeURIComponent(query)}&page=${page}`);
+    return this.tmdb(
+      `search/movie?query=${encodeURIComponent(query)}&page=${page}`,
+    );
   }
 
   async searchTv(query: string, page = 1) {
-    return this.tmdb(`search/tv?query=${encodeURIComponent(query)}&page=${page}`);
+    return this.tmdb(
+      `search/tv?query=${encodeURIComponent(query)}&page=${page}`,
+    );
   }
 
   private async getTrendingPeople() {
@@ -138,7 +161,8 @@ export class PeopleService {
   private isNameSimilar(a?: string, b?: string) {
     if (!a || !b) return false;
     const norm = (s: string) =>
-      s.toLowerCase()
+      s
+        .toLowerCase()
         .replace(/[^a-z0-9\s]/g, ' ')
         .split(/\s+/)
         .filter(Boolean);
@@ -146,7 +170,7 @@ export class PeopleService {
     const tb = norm(b);
     if (ta.length === 0 || tb.length === 0) return false;
     const setA = new Set(ta);
-    const intersect = tb.filter(t => setA.has(t)).length;
+    const intersect = tb.filter((t) => setA.has(t)).length;
     const ratio = intersect / Math.max(ta.length, tb.length);
     return ratio >= 0.6;
   }
@@ -167,19 +191,26 @@ export class PeopleService {
 
     for (const c of credits) {
       (c.genre_ids || []).forEach((g: number) =>
-        genreFrequency.set(g, (genreFrequency.get(g) || 0) + 1)
+        genreFrequency.set(g, (genreFrequency.get(g) || 0) + 1),
       );
       if (c.id) titleIds.add(c.id);
     }
 
     const coStars = new Map<number, number>();
-    const candidateMap = new Map<number, { id: number; name?: string; source?: string }>();
+    const candidateMap = new Map<
+      number,
+      { id: number; name?: string; source?: string }
+    >();
 
     if (nationality) {
       const regionPeople = await this.searchPeopleByNationality(nationality);
       for (const p of regionPeople || []) {
         if (p.id !== id && !candidateMap.has(p.id)) {
-          candidateMap.set(p.id, { id: p.id, name: p.name, source: 'regional-search' });
+          candidateMap.set(p.id, {
+            id: p.id,
+            name: p.name,
+            source: 'regional-search',
+          });
         }
       }
     }
@@ -190,8 +221,11 @@ export class PeopleService {
 
       for (let i = 0; i < titleArray.length; i += titleBatchSize) {
         const batch = titleArray.slice(i, i + titleBatchSize);
-        const creditPromises = batch.map(tid => {
-          const mediaType = credits.find(c => c.id === tid)?.media_type === 'tv' ? 'tv' : 'movie';
+        const creditPromises = batch.map((tid) => {
+          const mediaType =
+            credits.find((c) => c.id === tid)?.media_type === 'tv'
+              ? 'tv'
+              : 'movie';
           return this.getTitleCreditsCached(tid, mediaType);
         });
 
@@ -202,7 +236,11 @@ export class PeopleService {
               if (!castMember || castMember.id === id) continue;
               coStars.set(castMember.id, (coStars.get(castMember.id) || 0) + 1);
               if (!candidateMap.has(castMember.id)) {
-                candidateMap.set(castMember.id, { id: castMember.id, name: castMember.name, source: 'title-cast' });
+                candidateMap.set(castMember.id, {
+                  id: castMember.id,
+                  name: castMember.name,
+                  source: 'title-cast',
+                });
               }
             }
           }
@@ -254,21 +292,33 @@ export class PeopleService {
       const trending = await this.getTrendingPeople();
       for (const t of trending.results || []) {
         if (t.id !== id && !candidateMap.has(t.id)) {
-          candidateMap.set(t.id, { id: t.id, name: t.name, source: 'trending' });
+          candidateMap.set(t.id, {
+            id: t.id,
+            name: t.name,
+            source: 'trending',
+          });
         }
       }
     }
 
-    const candidateIds = Array.from(candidateMap.keys()).filter(cid => cid !== id);
+    const candidateIds = Array.from(candidateMap.keys()).filter(
+      (cid) => cid !== id,
+    );
     const detailsById = new Map<number, any>();
     const detailBatchSize = 15;
 
-    for (const chunk of this.chunkArray(candidateIds.slice(0, 200), detailBatchSize)) {
-      const detailsSettled = await Promise.allSettled(chunk.map(cid => this.getPersonDetails(cid)));
+    for (const chunk of this.chunkArray(
+      candidateIds.slice(0, 200),
+      detailBatchSize,
+    )) {
+      const detailsSettled = await Promise.allSettled(
+        chunk.map((cid) => this.getPersonDetails(cid)),
+      );
       for (let i = 0; i < chunk.length; i++) {
         const cid = chunk[i];
         const res = detailsSettled[i];
-        if (res.status === 'fulfilled' && res.value) detailsById.set(cid, res.value);
+        if (res.status === 'fulfilled' && res.value)
+          detailsById.set(cid, res.value);
       }
     }
 
@@ -284,17 +334,20 @@ export class PeopleService {
         (c.genre_ids || []).forEach((g: number) => candGenreSet.add(g));
       });
 
-      const sharedGenres = [...originalGenres].filter(g => candGenreSet.has(g)).length;
+      const sharedGenres = [...originalGenres].filter((g) =>
+        candGenreSet.has(g),
+      ).length;
       const coStarCount = coStars.get(cid) || 0;
       const theirNationality = this.extractNationality(d.place_of_birth);
-      const sameNationality = theirNationality && nationality && theirNationality === nationality;
+      const sameNationality =
+        theirNationality && nationality && theirNationality === nationality;
       const pop = d.popularity || 0;
 
       const popBoost = Math.pow(Math.log10(pop + 1), 2.5) * 10;
 
       let score = 0;
       score += sameNationality ? 12 : 0;
-      score += (d.known_for_department === person.known_for_department) ? 3 : 0;
+      score += d.known_for_department === person.known_for_department ? 3 : 0;
       score += sharedGenres * 0.5;
       score += coStarCount * 1.0;
       score += popBoost;
@@ -311,11 +364,11 @@ export class PeopleService {
 
   async searchPeopleByNationality(nation: string) {
     const keywords: Record<string, string[]> = {
-      korea: ["korean", "south korea", "republic of korea"],
-      japan: ["japan", "japanese"],
-      usa: ["american", "usa", "united states"],
-      china: ["chinese", "china"],
-      india: ["indian", "india"],
+      korea: ['korean', 'south korea', 'republic of korea'],
+      japan: ['japan', 'japanese'],
+      usa: ['american', 'usa', 'united states'],
+      china: ['chinese', 'china'],
+      india: ['indian', 'india'],
     };
 
     const terms = keywords[nation.toLowerCase()] || [nation];
@@ -331,12 +384,15 @@ export class PeopleService {
 
   private extractNationality(place?: string): string | null {
     if (!place) return null;
-    const parts = place.split(',').map(p => p.trim());
+    const parts = place.split(',').map((p) => p.trim());
     const country = parts[parts.length - 1];
     return country || null;
   }
 
-  private async getTitleCreditsCached(id: number, mediaType: 'movie' | 'tv' = 'movie') {
+  private async getTitleCreditsCached(
+    id: number,
+    mediaType: 'movie' | 'tv' = 'movie',
+  ) {
     const key = `${mediaType}_${id}`;
     if (this.creditCache.has(key)) return this.creditCache.get(key);
 
@@ -345,38 +401,210 @@ export class PeopleService {
     return details;
   }
 
+  private getCreditDate(credit: any): string {
+    return credit?.release_date || credit?.first_air_date || '';
+  }
+
+  private getCreditTitle(credit: any): string {
+    return credit?.title || credit?.name || 'Untitled';
+  }
+
+  private getReleaseYear(credit: any): number | null {
+    const date = this.getCreditDate(credit);
+    return date ? new Date(date).getFullYear() : null;
+  }
+
+  private normalizeRelatedVideoType(video: any): string {
+    const rawType = String(video?.type || '').trim();
+    const name = String(video?.name || '').toLowerCase();
+
+    if (rawType === 'Trailer') return 'Trailer';
+    if (rawType === 'Teaser') return 'Teaser';
+    if (rawType === 'Clip') return 'Clip';
+    if (rawType === 'Featurette') return 'Featurette';
+    if (rawType === 'Behind the Scenes') return 'Behind the Scenes';
+    if (name.includes('official preview') || name.includes('preview'))
+      return 'Official Preview';
+    return rawType || 'Video';
+  }
+
+  private isUsefulRelatedVideo(video: any): boolean {
+    if (!video?.key || video.site !== 'YouTube') return false;
+
+    const type = this.normalizeRelatedVideoType(video);
+    return [
+      'Trailer',
+      'Teaser',
+      'Clip',
+      'Featurette',
+      'Behind the Scenes',
+      'Official Preview',
+    ].includes(type);
+  }
+
+  private getRelatedVideoScore(video: any, credit: any): number {
+    const type = this.normalizeRelatedVideoType(video);
+    let score = 0;
+
+    if (video.official) score += 100;
+    if (type === 'Trailer') score += 80;
+    else if (type === 'Teaser') score += 70;
+    else if (type === 'Clip') score += 45;
+    else if (type === 'Featurette') score += 35;
+    else if (type === 'Behind the Scenes') score += 30;
+    else if (type === 'Official Preview') score += 25;
+
+    score += Math.min(Number(credit?.vote_average || 0) * 4, 40);
+    score += Math.min(Math.log10(Number(credit?.popularity || 0) + 1) * 12, 36);
+
+    const year = this.getReleaseYear(credit);
+    if (year) score += Math.max(0, Math.min(20, year - 2000));
+
+    if (video.size >= 1080) score += 8;
+    else if (video.size >= 720) score += 5;
+
+    return score;
+  }
+
+  async getRelatedVideos(id: number) {
+    const cacheKey = `person-related-videos:${id}`;
+    const cached = this.relatedVideoCache.get(cacheKey);
+    if (cached && cached.expires > Date.now()) return cached.data;
+
+    const person = await this.getPersonDetails(id);
+    const credits = this.removeDuplicateCredits(
+      person.combined_credits?.cast || [],
+    )
+      .filter(
+        (credit: any) =>
+          credit?.id &&
+          (credit.media_type === 'movie' || credit.media_type === 'tv'),
+      )
+      .sort((a: any, b: any) => {
+        const scoreA =
+          Number(a.vote_average || 0) * 8 +
+          Math.log10(Number(a.popularity || 0) + 1) * 10 +
+          (a.poster_path || a.backdrop_path ? 8 : 0) +
+          (this.getReleaseYear(a) || 0) / 200;
+        const scoreB =
+          Number(b.vote_average || 0) * 8 +
+          Math.log10(Number(b.popularity || 0) + 1) * 10 +
+          (b.poster_path || b.backdrop_path ? 8 : 0) +
+          (this.getReleaseYear(b) || 0) / 200;
+        return scoreB - scoreA;
+      })
+      .slice(0, 16);
+
+    const settled = await Promise.allSettled(
+      credits.map(async (credit: any) => {
+        const mediaType = credit.media_type === 'tv' ? 'tv' : 'movie';
+        const videoData = await this.tmdb(
+          `${mediaType}/${credit.id}/videos?language=en-US`,
+        );
+        const videos = Array.isArray(videoData?.results)
+          ? videoData.results
+          : [];
+
+        return videos
+          .filter((video: any) => this.isUsefulRelatedVideo(video))
+          .map((video: any) => {
+            const videoType = this.normalizeRelatedVideoType(video);
+            return {
+              id: `${mediaType}-${credit.id}-${video.key}`,
+              media_id: credit.id,
+              media_type: mediaType,
+              media_title: this.getCreditTitle(credit),
+              media_poster_path: credit.poster_path || null,
+              media_backdrop_path: credit.backdrop_path || null,
+              media_vote_average: credit.vote_average || null,
+              release_year: this.getReleaseYear(credit),
+              role: credit.character || credit.job || null,
+              video_id: video.id || null,
+              video_key: video.key,
+              youtube_url: `https://www.youtube.com/watch?v=${video.key}`,
+              thumbnail_url: `https://img.youtube.com/vi/${video.key}/hqdefault.jpg`,
+              video_title: video.name || videoType,
+              video_type: videoType,
+              official: Boolean(video.official),
+              published_at: video.published_at || null,
+              score: this.getRelatedVideoScore(video, credit),
+            };
+          });
+      }),
+    );
+
+    const deduped = new Map<string, any>();
+    for (const result of settled) {
+      if (result.status !== 'fulfilled') continue;
+
+      for (const video of result.value) {
+        const key = [
+          video.video_key,
+          video.media_type,
+          video.media_id,
+          String(video.video_title || '')
+            .toLowerCase()
+            .trim(),
+        ].join(':');
+
+        const existing = deduped.get(key);
+        if (!existing || video.score > existing.score) deduped.set(key, video);
+      }
+    }
+
+    const data = Array.from(deduped.values())
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 24)
+      .map(({ score, ...video }) => video);
+
+    this.relatedVideoCache.set(cacheKey, {
+      expires: Date.now() + 1000 * 60 * 60,
+      data,
+    });
+
+    return data;
+  }
+
   async getUpcomingProjects(id: number) {
     const movieCredits = await this.getMovieCredits(id);
     const tvCredits = await this.getTvCredits(id);
 
     const today = new Date().toISOString().split('T')[0];
 
-    const upcomingMovies = (movieCredits.cast
-      ?.filter(movie => !movie.release_date || movie.release_date > today)
-      .sort((a, b) => {
-        if (!a.release_date && !b.release_date) return 0;
-        if (!a.release_date) return 1;
-        if (!b.release_date) return -1;
-        return new Date(a.release_date).getTime() - new Date(b.release_date).getTime();
-      })
-      .slice(0, 10) || [])
-      .map(movie => ({ ...movie, media_type: "movie" }));
+    const upcomingMovies = (
+      movieCredits.cast
+        ?.filter((movie) => !movie.release_date || movie.release_date > today)
+        .sort((a, b) => {
+          if (!a.release_date && !b.release_date) return 0;
+          if (!a.release_date) return 1;
+          if (!b.release_date) return -1;
+          return (
+            new Date(a.release_date).getTime() -
+            new Date(b.release_date).getTime()
+          );
+        })
+        .slice(0, 10) || []
+    ).map((movie) => ({ ...movie, media_type: 'movie' }));
 
-    const upcomingTV = (tvCredits.cast
-      ?.filter(show => !show.first_air_date || show.first_air_date > today)
-      .sort((a, b) => {
-        if (!a.first_air_date && !b.first_air_date) return 0;
-        if (!a.first_air_date) return 1;
-        if (!b.first_air_date) return -1;
-        return new Date(a.first_air_date).getTime() - new Date(b.first_air_date).getTime();
-      })
-      .slice(0, 10) || [])
-      .map(show => ({ ...show, media_type: "tv" }));
+    const upcomingTV = (
+      tvCredits.cast
+        ?.filter((show) => !show.first_air_date || show.first_air_date > today)
+        .sort((a, b) => {
+          if (!a.first_air_date && !b.first_air_date) return 0;
+          if (!a.first_air_date) return 1;
+          if (!b.first_air_date) return -1;
+          return (
+            new Date(a.first_air_date).getTime() -
+            new Date(b.first_air_date).getTime()
+          );
+        })
+        .slice(0, 10) || []
+    ).map((show) => ({ ...show, media_type: 'tv' }));
 
     return {
       movies: upcomingMovies,
       tv: upcomingTV,
-      total: upcomingMovies.length + upcomingTV.length
+      total: upcomingMovies.length + upcomingTV.length,
     };
   }
 
@@ -384,18 +612,29 @@ export class PeopleService {
     const person = await this.getPersonDetails(id);
     const credits = person.combined_credits?.cast || [];
 
-    const collaborators = new Map<number, { name: string; count: number; projects: string[]; profile_path: string }>();
+    const collaborators = new Map<
+      number,
+      { name: string; count: number; projects: string[]; profile_path: string }
+    >();
 
     for (const credit of credits.slice(0, 50)) {
       try {
         const mediaType = credit.media_type === 'tv' ? 'tv' : 'movie';
-        const titleCredits = await this.getTitleCreditsCached(credit.id, mediaType);
+        const titleCredits = await this.getTitleCreditsCached(
+          credit.id,
+          mediaType,
+        );
 
         if (titleCredits?.cast) {
           for (const cast of titleCredits.cast.slice(0, 10)) {
             if (cast.id !== id) {
               if (!collaborators.has(cast.id)) {
-                collaborators.set(cast.id, { name: cast.name, count: 0, projects: [], profile_path: cast.profile_path || '' });
+                collaborators.set(cast.id, {
+                  name: cast.name,
+                  count: 0,
+                  projects: [],
+                  profile_path: cast.profile_path || '',
+                });
               }
               const collab = collaborators.get(cast.id);
               if (!collab) continue;

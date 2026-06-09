@@ -1,97 +1,93 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { useWatchlist } from "@/hooks/useWatchlist";
-import { useState, useEffect, use } from "react";
-import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Calendar,
-  MapPin,
-  Award,
-  Film,
-  Tv,
-  Instagram,
-  Twitter,
-  Facebook,
-  Star,
-  ChevronDown,
-  ChevronUp,
-  Camera,
-  Users,
-  Trophy,
-  X,
-  ExternalLink,
-  Play,
-  Heart,
-  Sparkles,
-  ChevronRight,
-  ChevronLeft,
-  Clock,
-  Zap,
-  TrendingUp,
-  Clapperboard,
-  Layers,
-  PieChart,
-  Info,
-  Share2,
-  BookmarkCheck,
-  Plus,
-  Car,
-} from "lucide-react";
-import Link from "next/link";
+
 import AppLoading from "@/components/ui/AppLoading";
-import { All } from "@/types/all";
+import RatingBadge from "@/components/ui/rating-badge";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import {
+  BookmarkCheck,
+  Briefcase,
+  Calendar,
+  Camera,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Clapperboard,
+  ExternalLink,
+  Facebook,
+  Film,
+  Globe,
+  Instagram,
+  Layers,
+  MapPin,
+  Play,
+  Plus,
+  SearchX,
+  Sparkles,
+  Star,
+  Tv,
+  Users,
+  X,
+} from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useMemo, useState } from "react";
+
+interface Credit {
+  id: number;
+  title?: string;
+  name?: string;
+  character?: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  vote_average?: number;
+  release_date?: string;
+  first_air_date?: string;
+  media_type: "movie" | "tv" | string;
+  genre_ids?: number[];
+}
 
 interface Person {
   id: number;
   name: string;
-  biography: string;
-  birthday: string;
+  biography?: string;
+  birthday?: string;
   deathday?: string;
-  place_of_birth: string;
-  profile_path: string;
-  known_for_department: string;
-  popularity: number;
-  gender: number;
+  place_of_birth?: string;
+  profile_path?: string | null;
+  known_for_department?: string;
+  popularity?: number;
+  gender?: number;
   also_known_as?: string[];
   homepage?: string;
-  external_ids: {
-    instagram_id: string;
-    twitter_id: string;
-    facebook_id: string;
-    imdb_id: string;
+  external_ids?: {
+    instagram_id?: string;
+    twitter_id?: string;
+    facebook_id?: string;
+    imdb_id?: string;
   };
-  images: {
-    profiles: Array<{
+  images?: {
+    profiles?: Array<{
       file_path: string;
-      vote_average: number;
-      aspect_ratio: number;
+      vote_average?: number;
+      aspect_ratio?: number;
     }>;
   };
-  combined_credits: {
-    cast: Array<{
-      id: number;
-      title?: string;
-      name?: string;
-      character: string;
-      poster_path: string;
-      vote_average: number;
-      release_date?: string;
-      first_air_date?: string;
-      media_type: string;
-      genre_ids?: number[];
-    }>;
+  combined_credits?: {
+    cast?: Credit[];
   };
-  tagged_images: {
-    results: Array<{
+  tagged_images?: {
+    results?: Array<{
       file_path: string;
-      vote_average: number;
+      vote_average?: number;
       media?: {
         id: number;
         title?: string;
         name?: string;
         media_type: "movie" | "tv";
-        vote_average: number;
+        vote_average?: number;
       };
     }>;
   };
@@ -100,80 +96,569 @@ interface Person {
 interface SimilarPerson {
   id: number;
   name: string;
-  profile_path: string;
-  known_for_department: string;
-  popularity: number;
+  profile_path?: string | null;
+  known_for_department?: string;
+  popularity?: number;
 }
 
-interface UpcomingProject {
-  id: number;
-  title?: string;
-  name?: string;
-  poster_path: string;
-  release_date?: string;
-  first_air_date?: string;
-  character?: string;
-  media_type?: string;
-}
 interface Timeline {
-  debut: { title: string; year: number; character: string; rating: number };
-  breakout: { title: string; year: number; character: string; rating: number };
-  recent: { title: string; year: number; character: string; rating: number };
-  decades: Array<{
+  debut?: { title: string; year: number; character?: string; rating?: number };
+  breakout?: {
+    title: string;
+    year: number;
+    character?: string;
+    rating?: number;
+  };
+  recent?: { title: string; year: number; character?: string; rating?: number };
+  decades?: Array<{
     period: string;
     count: number;
-    avgRating: string;
-    topWork: any;
+    avgRating?: string;
+    topWork?: Credit;
   }>;
-  totalYears: number;
+  totalYears?: number;
 }
 
 interface Collaboration {
   id: number;
   name: string;
   count: number;
-  projects: string[];
-  profile_path: string;
-
+  projects?: string[];
+  profile_path?: string | null;
 }
+
+interface RelatedVideo {
+  id: string;
+  media_id: number;
+  media_type: "movie" | "tv";
+  media_title: string;
+  media_poster_path?: string | null;
+  media_backdrop_path?: string | null;
+  media_vote_average?: number | null;
+  release_year?: number | null;
+  role?: string | null;
+  video_id?: string | null;
+  video_key: string;
+  youtube_url: string;
+  thumbnail_url: string;
+  video_title: string;
+  video_type: string;
+  official: boolean;
+  published_at?: string | null;
+}
+
+type FilmographyTab = "all" | "movies" | "tv";
+type SortMode = "notable" | "latest" | "rating" | "oldest";
+type CareerMoment = { label: string; value: string; detail: string };
+type VideoFilter =
+  | "all"
+  | "movie"
+  | "tv"
+  | "trailer"
+  | "teaser"
+  | "clip"
+  | "behind";
+
+const genreMap: Record<number, string> = {
+  28: "Action",
+  12: "Adventure",
+  16: "Animation",
+  35: "Comedy",
+  80: "Crime",
+  99: "Documentary",
+  18: "Drama",
+  10751: "Family",
+  14: "Fantasy",
+  36: "History",
+  27: "Horror",
+  10402: "Music",
+  9648: "Mystery",
+  10749: "Romance",
+  878: "Sci-Fi",
+  10770: "TV Movie",
+  53: "Thriller",
+  10752: "War",
+  37: "Western",
+  10759: "Action & Adventure",
+  10762: "Kids",
+  10763: "News",
+  10764: "Reality",
+  10765: "Sci-Fi & Fantasy",
+  10766: "Soap",
+  10767: "Talk",
+  10768: "War & Politics",
+};
+
+const getImageUrl = (path?: string | null, size = "original") =>
+  path
+    ? `https://image.tmdb.org/t/p/${size}${path}`
+    : "/placeholder-backdrop.svg";
+
+const getPosterUrl = (path?: string | null, size = "w500") =>
+  path
+    ? `https://image.tmdb.org/t/p/${size}${path}`
+    : "/placeholder-poster.svg";
+
+const getProfileUrl = (path?: string | null, size = "w500") =>
+  path
+    ? `https://image.tmdb.org/t/p/${size}${path}`
+    : "/placeholder-person.svg";
+
+const getTitle = (credit?: Credit) =>
+  credit?.title || credit?.name || "Untitled";
+const getDate = (credit?: Credit) =>
+  credit?.release_date || credit?.first_air_date || "";
+const getYear = (credit?: Credit) => {
+  const date = getDate(credit);
+  return date ? new Date(date).getFullYear() : null;
+};
+const getHref = (credit: Credit) =>
+  `/${credit.media_type === "tv" ? "tv" : "movies"}/${credit.id}`;
+const hasReleased = (credit: Credit) => {
+  const date = getDate(credit);
+  return date ? new Date(date) <= new Date() : false;
+};
+const formatDate = (date?: string) =>
+  date
+    ? new Date(date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "Unknown";
+
+function calculateAge(birthday?: string, deathday?: string) {
+  if (!birthday) return null;
+  const start = new Date(birthday);
+  const end = deathday ? new Date(deathday) : new Date();
+  let age = end.getFullYear() - start.getFullYear();
+  const monthDiff = end.getMonth() - start.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && end.getDate() < start.getDate()))
+    age -= 1;
+  return age;
+}
+
+function SectionHeader({
+  icon: Icon,
+  title,
+  subtitle,
+  action,
+}: {
+  icon: React.ElementType;
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e94f37]/20 bg-[#e94f37]/15">
+          <Icon className="h-5 w-5 text-[#e94f37]" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+            {title}
+          </h2>
+          {subtitle && (
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-zinc-400">
+              {subtitle}
+            </p>
+          )}
+        </div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  title,
+  text,
+}: {
+  icon: React.ElementType;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/70 p-6 text-center">
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-900 text-zinc-500">
+        <Icon className="h-5 w-5" />
+      </div>
+      <h3 className="font-semibold text-white">{title}</h3>
+      <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500">{text}</p>
+    </div>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ElementType;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+        <Icon className="h-3.5 w-3.5 text-[#e94f37]" />
+        {label}
+      </div>
+      <div className="mt-1 text-xl font-black text-white">{value}</div>
+    </div>
+  );
+}
+
+function SpotlightWorkCard({
+  label,
+  credit,
+}: {
+  label: string;
+  credit?: Credit;
+}) {
+  if (!credit) {
+    return (
+      <div className="rounded-2xl border border-dashed border-zinc-800 bg-black/25 p-3 text-sm text-zinc-500">
+        {label} is not available yet.
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={getHref(credit)}
+      className="group flex min-h-[108px] gap-3 rounded-2xl border border-zinc-800 bg-black/35 p-3 transition hover:-translate-y-0.5 hover:border-[#e94f37]/70 hover:bg-zinc-950/80"
+    >
+      <div className="relative h-[92px] w-16 shrink-0 overflow-hidden rounded-xl bg-zinc-900">
+        <Image
+          src={getPosterUrl(credit.poster_path, "w342")}
+          alt={getTitle(credit)}
+          fill
+          sizes="64px"
+          className="object-cover transition duration-500 group-hover:scale-105"
+        />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+            {label}
+          </p>
+          <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-snug text-white transition group-hover:text-[#e94f37]">
+            {getTitle(credit)}
+          </h3>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-zinc-500">
+            {getYear(credit) || "TBA"}
+          </span>
+          <RatingBadge
+            rating={credit.vote_average}
+            variant="colored"
+            size="sm"
+          />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function WorkCard({
+  credit,
+  compact = false,
+  onWatchlistToggle,
+  inWatchlist,
+  isLoading,
+}: {
+  credit: Credit;
+  compact?: boolean;
+  onWatchlistToggle?: (credit: Credit) => void;
+  inWatchlist?: boolean;
+  isLoading?: boolean;
+}) {
+  const year = getYear(credit);
+
+  return (
+    <div className="group h-full">
+      <Link href={getHref(credit)} className="block h-full">
+        <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-xl shadow-black/20 transition duration-300 group-hover:-translate-y-1 group-hover:border-[#e94f37]/60">
+          <div className="relative aspect-[2/3]">
+            <Image
+              src={getPosterUrl(credit.poster_path)}
+              alt={getTitle(credit)}
+              fill
+              sizes={
+                compact
+                  ? "(max-width: 768px) 42vw, 170px"
+                  : "(max-width: 768px) 50vw, 220px"
+              }
+              className="object-cover transition duration-500 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80" />
+            <div className="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-200 backdrop-blur">
+              {credit.media_type === "tv" ? "TV" : "Movie"}
+            </div>
+            <RatingBadge
+              rating={credit.vote_average}
+              variant="colored"
+              size="sm"
+              className="absolute right-2 top-2 backdrop-blur"
+            />
+            {onWatchlistToggle && (
+              <button
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onWatchlistToggle(credit);
+                }}
+                disabled={isLoading}
+                className={`absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full shadow-lg transition hover:scale-105 ${
+                  inWatchlist
+                    ? "bg-emerald-500 text-white"
+                    : "bg-white text-black"
+                } ${isLoading ? "cursor-not-allowed opacity-70" : ""}`}
+                title={
+                  inWatchlist ? "Remove from watchlist" : "Add to watchlist"
+                }
+              >
+                {isLoading ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : inWatchlist ? (
+                  <BookmarkCheck className="h-4 w-4" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="mt-3">
+          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-white transition group-hover:text-[#e94f37]">
+            {getTitle(credit)}
+          </h3>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+            <span>{year || "TBA"}</span>
+            {credit.character && (
+              <>
+                <span className="text-zinc-700">|</span>
+                <span className="line-clamp-1">as {credit.character}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </Link>
+    </div>
+  );
+}
+
+function VideoCard({
+  video,
+  onPlay,
+}: {
+  video: RelatedVideo;
+  onPlay: (video: RelatedVideo) => void;
+}) {
+  return (
+    <button
+      onClick={() => onPlay(video)}
+      className="group overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/70 text-left shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:border-[#e94f37]/70 hover:bg-zinc-900"
+    >
+      <div className="relative aspect-video overflow-hidden bg-zinc-950">
+        <Image
+          src={
+            video.thumbnail_url ||
+            getImageUrl(video.media_backdrop_path, "w780")
+          }
+          alt={video.video_title}
+          fill
+          sizes="(max-width: 768px) 92vw, 360px"
+          className="object-cover transition duration-500 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+          <span className="rounded-full bg-[#e94f37] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-black">
+            {video.video_type}
+          </span>
+          <span className="rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur">
+            {video.media_type === "tv" ? "TV" : "Movie"}
+          </span>
+        </div>
+        {video.official && (
+          <span className="absolute right-3 top-3 rounded-full bg-emerald-500/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+            Official
+          </span>
+        )}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/95 text-black shadow-2xl transition group-hover:scale-110">
+            <Play className="h-5 w-5 fill-current" />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div>
+          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-white group-hover:text-[#e94f37]">
+            {video.video_title}
+          </h3>
+          <p className="mt-1 line-clamp-1 text-xs font-semibold text-zinc-400">
+            {video.media_title}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 text-xs text-zinc-500">
+            <span>{video.release_year || "TBA"}</span>
+            {video.role && (
+              <>
+                <span className="mx-1.5 text-zinc-700">|</span>
+                <span className="line-clamp-1 inline">as {video.role}</span>
+              </>
+            )}
+          </div>
+          <RatingBadge
+            rating={video.media_vote_average}
+            variant="colored"
+            size="sm"
+          />
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function PersonCard({ person }: { person: SimilarPerson }) {
+  return (
+    <Link
+      href={`/celeb/${person.id}`}
+      className="group block min-w-[138px] sm:min-w-0"
+    >
+      <div className="relative aspect-[2/3] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 transition group-hover:-translate-y-1 group-hover:border-[#e94f37]/60">
+        <Image
+          src={getProfileUrl(person.profile_path, "w342")}
+          alt={person.name}
+          fill
+          sizes="(max-width: 640px) 42vw, 190px"
+          className="object-cover transition duration-500 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+      </div>
+      <h3 className="mt-3 line-clamp-2 text-sm font-bold text-white transition group-hover:text-[#e94f37]">
+        {person.name}
+      </h3>
+      <p className="mt-1 text-xs text-zinc-500">
+        {person.known_for_department || "Entertainment"}
+      </p>
+    </Link>
+  );
+}
+
+function ExternalProfileLinks({ person }: { person: Person }) {
+  const links = [
+    person.external_ids?.instagram_id && {
+      label: "Instagram",
+      href: `https://instagram.com/${person.external_ids.instagram_id}`,
+      icon: Instagram,
+    },
+    person.external_ids?.twitter_id && {
+      label: "X",
+      href: `https://twitter.com/${person.external_ids.twitter_id}`,
+      icon: ExternalLink,
+    },
+    person.external_ids?.facebook_id && {
+      label: "Facebook",
+      href: `https://facebook.com/${person.external_ids.facebook_id}`,
+      icon: Facebook,
+    },
+    person.external_ids?.imdb_id && {
+      label: "IMDb",
+      href: `https://www.imdb.com/name/${person.external_ids.imdb_id}`,
+      icon: Star,
+    },
+    person.homepage && {
+      label: "Website",
+      href: person.homepage,
+      icon: Globe,
+    },
+  ].filter(Boolean) as Array<{
+    label: string;
+    href: string;
+    icon: React.ElementType;
+  }>;
+
+  if (links.length === 0) {
+    return (
+      <a
+        href={`https://www.google.com/search?q=${encodeURIComponent(person.name)}`}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm font-semibold text-zinc-300 transition hover:border-[#e94f37] hover:bg-[#e94f37] hover:text-black"
+      >
+        <ExternalLink className="h-4 w-4" />
+        Search web profile
+      </a>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {links.slice(0, 4).map(({ label, href, icon: Icon }) => (
+        <a
+          key={label}
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs font-semibold text-zinc-300 transition hover:border-[#e94f37] hover:bg-[#e94f37] hover:text-black"
+        >
+          <Icon className="h-4 w-4" />
+          {label}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export default function CelebrityDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const resolvedParams = use(params);
+  const router = useRouter();
+  const { add, remove, isInWatchlist, ready } = useWatchlist();
   const [person, setPerson] = useState<Person | null>(null);
   const [timeline, setTimeline] = useState<Timeline | null>(null);
   const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
+  const [similarPeople, setSimilarPeople] = useState<SimilarPerson[]>([]);
+  const [upcomingProjects, setUpcomingProjects] = useState<Credit[]>([]);
+  const [relatedVideos, setRelatedVideos] = useState<RelatedVideo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<"all" | "movies" | "tv">(
-    "all"
-  );
+  const [videosLoading, setVideosLoading] = useState(true);
+  const [videosError, setVideosError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState<FilmographyTab>("all");
+  const [sortMode, setSortMode] = useState<SortMode>("notable");
+  const [videoFilter, setVideoFilter] = useState<VideoFilter>("all");
   const [bioExpanded, setBioExpanded] = useState(false);
   const [showAllCredits, setShowAllCredits] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [similarPeople, setSimilarPeople] = useState<SimilarPerson[]>([]);
-  const [upcomingProjects, setUpcomingProjects] = useState<any[]>([]);
-  const router = useRouter();
-  const { add, remove, isInWatchlist, ready } = useWatchlist();
-  const [watchlistStates, setWatchlistStates] = useState<
-    Record<string | number, boolean>
-  >({});
+  const [selectedVideo, setSelectedVideo] = useState<RelatedVideo | null>(null);
+  const [galleryPage, setGalleryPage] = useState(0);
+  const [similarStartIndex, setSimilarStartIndex] = useState(0);
   const [loadingStates, setLoadingStates] = useState<
     Record<string | number, boolean>
   >({});
-  const getImageUrl = (path?: string | null) =>
-    path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder-backdrop.svg";
-  const getPosterUrl = (path?: string | null) =>
-    path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
-  const [galleryPage, setGalleryPage] = useState(0);
-  const [showGalleryGrid, setShowGalleryGrid] = useState(false);
+
   useEffect(() => {
     const fetchPerson = async () => {
+      setLoading(true);
+      setError(null);
+      setVideosLoading(true);
+      setVideosError(null);
+      setRelatedVideos([]);
       try {
         const base =
           process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
-
         const [personRes, similarRes, upcomingRes, timelineRes, collabRes] =
           await Promise.all([
             fetch(`${base}/people/${resolvedParams.id}`),
@@ -183,20 +668,53 @@ export default function CelebrityDetailPage({
             fetch(`${base}/people/${resolvedParams.id}/collaborations`),
           ]);
 
+        if (!personRes.ok)
+          throw new Error("Unable to load this celebrity profile.");
+
         const personData = await personRes.json();
+        const [similarData, upcomingData, timelineData, collabData] =
+          await Promise.all([
+            similarRes.ok ? similarRes.json() : [],
+            upcomingRes.ok ? upcomingRes.json() : { movies: [], tv: [] },
+            timelineRes.ok ? timelineRes.json() : null,
+            collabRes.ok ? collabRes.json() : [],
+          ]);
+
         setPerson(personData);
-        setSimilarPeople(await similarRes.json());
-
-        const upData = await upcomingRes.json();
-        setUpcomingProjects([...upData.movies, ...upData.tv]);
-
-        const timelineData = await timelineRes.json();
+        setSimilarPeople(Array.isArray(similarData) ? similarData : []);
+        setUpcomingProjects([
+          ...(upcomingData?.movies || []),
+          ...(upcomingData?.tv || []),
+        ]);
         setTimeline(timelineData);
+        setCollaborations(Array.isArray(collabData) ? collabData : []);
 
-        const collabData = await collabRes.json();
-        setCollaborations(collabData);
-      } catch (error) {
-        console.error("Error fetching celebrity:", error);
+        fetch(`${base}/people/${resolvedParams.id}/videos`)
+          .then(async (videoRes) => {
+            if (!videoRes.ok) {
+              throw new Error("Related videos are unavailable right now.");
+            }
+            const videoData = await videoRes.json();
+            setRelatedVideos(Array.isArray(videoData) ? videoData : []);
+          })
+          .catch((videoError) => {
+            console.error("Error fetching celebrity videos:", videoError);
+            setVideosError(
+              videoError instanceof Error
+                ? videoError.message
+                : "Related videos are unavailable right now.",
+            );
+          })
+          .finally(() => setVideosLoading(false));
+      } catch (fetchError) {
+        console.error("Error fetching celebrity:", fetchError);
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Something went wrong while loading this profile.",
+        );
+        setPerson(null);
+        setVideosLoading(false);
       } finally {
         setLoading(false);
       }
@@ -205,1036 +723,1139 @@ export default function CelebrityDetailPage({
     fetchPerson();
   }, [resolvedParams.id]);
 
-  if (loading) {
-    return <AppLoading />;
-  }
+  const credits = useMemo(() => person?.combined_credits?.cast || [], [person]);
+  const movieCredits = useMemo(
+    () => credits.filter((credit) => credit.media_type === "movie"),
+    [credits],
+  );
+  const tvCredits = useMemo(
+    () => credits.filter((credit) => credit.media_type === "tv"),
+    [credits],
+  );
+  const releasedCredits = useMemo(() => credits.filter(hasReleased), [credits]);
+  const topRatedWorks = useMemo(
+    () =>
+      [...releasedCredits]
+        .filter((credit) => (credit.vote_average || 0) > 0)
+        .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0)),
+    [releasedCredits],
+  );
+  const notableWorks = useMemo(
+    () =>
+      [...releasedCredits].sort((a, b) => {
+        const ratingDelta = (b.vote_average || 0) - (a.vote_average || 0);
+        if (Math.abs(ratingDelta) > 0.5) return ratingDelta;
+        return (getYear(b) || 0) - (getYear(a) || 0);
+      }),
+    [releasedCredits],
+  );
+  const latestWork = useMemo(
+    () =>
+      [...releasedCredits].sort((a, b) =>
+        getDate(b) > getDate(a) ? 1 : -1,
+      )[0],
+    [releasedCredits],
+  );
+
+  const filteredCredits = useMemo(() => {
+    const byTab =
+      selectedTab === "movies"
+        ? movieCredits
+        : selectedTab === "tv"
+          ? tvCredits
+          : credits;
+
+    return [...byTab].sort((a, b) => {
+      if (sortMode === "rating")
+        return (b.vote_average || 0) - (a.vote_average || 0);
+      if (sortMode === "oldest")
+        return (getYear(a) || 9999) - (getYear(b) || 9999);
+      if (sortMode === "latest") return getDate(b) > getDate(a) ? 1 : -1;
+      const notableDelta = (b.vote_average || 0) - (a.vote_average || 0);
+      if (Math.abs(notableDelta) > 0.5) return notableDelta;
+      return (getYear(b) || 0) - (getYear(a) || 0);
+    });
+  }, [credits, movieCredits, selectedTab, sortMode, tvCredits]);
+
+  const filteredVideos = useMemo(() => {
+    return relatedVideos.filter((video) => {
+      if (videoFilter === "all") return true;
+      if (videoFilter === "movie" || videoFilter === "tv") {
+        return video.media_type === videoFilter;
+      }
+
+      const type = video.video_type.toLowerCase();
+      if (videoFilter === "trailer") return type === "trailer";
+      if (videoFilter === "teaser") return type === "teaser";
+      if (videoFilter === "clip") return type === "clip";
+      if (videoFilter === "behind") {
+        return (
+          type === "behind the scenes" ||
+          type === "featurette" ||
+          type === "official preview"
+        );
+      }
+
+      return true;
+    });
+  }, [relatedVideos, videoFilter]);
+
+  if (loading) return <AppLoading />;
 
   if (!person) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#1a1a2e] to-[#0a0a0a] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] flex items-center justify-center mx-auto mb-4">
-            <Users className="w-10 h-10 text-white" />
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-black via-zinc-950 to-black px-4 text-white">
+        <div className="max-w-md rounded-3xl border border-zinc-800 bg-zinc-900/70 p-8 text-center shadow-2xl">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#e94f37]/15">
+            <SearchX className="h-8 w-8 text-[#e94f37]" />
           </div>
-          <h2 className="text-white text-2xl font-bold mb-2">
-            Celebrity not found
-          </h2>
-          <p className="text-gray-400">This profile doesn't exist</p>
+          <h2 className="text-2xl font-bold">Celebrity not found</h2>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+            {error ||
+              "This profile is unavailable or the data provider did not return enough information."}
+          </p>
+          <button
+            onClick={() => router.back()}
+            className="mt-6 rounded-full bg-[#e94f37] px-5 py-2.5 text-sm font-bold text-black transition hover:bg-[#ff6b58]"
+          >
+            Go back
+          </button>
         </div>
       </div>
     );
   }
-  const getContentType = (item: any): "movie" | "tv" => {
-    if (item.media_type) return item.media_type;
-    if (item.type === "movies" || item.type === "movie") return "movie";
-    if (item.type === "tv") return "tv";
-    if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
-    return "movie";
-  };
 
-  const TVCard = ({
-    show,
-    size = "default",
-  }: {
-    show?: All;
-    size?: "default" | "large" | "wide";
-  }) => {
-    if (!show) return null;
-    const isWide = size === "wide";
-    const isLarge = size === "large";
-
-    // Make sure these are being read from parent scope
-    const inWL = isInWatchlist(String(show.id), "series");
-    const isLoading = loadingStates[show.id] || false;
-
-    return (
-      <div className="group relative h-full">
-        <Link href={`/${getContentType(show) === 'tv' ? 'tv' : 'movies'}/${show.id}`} className="block h-full">
-          <div
-            className={`relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 ${isWide ? "aspect-video" : "aspect-[2/3]"
-              }`}
-          >
-            <Image
-              src={
-                isWide
-                  ? getImageUrl(show.backdrop_path)
-                  : getPosterUrl(show.poster_path)
-              }
-              alt={show.title || show.name || ""}
-              fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-              className="group-hover:scale-110 transition-transform duration-700 object-cover"
-            />
-
-            {/* Gradient overlay for depth */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-            <div className="absolute top-3 right-3 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-lg ring-1 ring-white/10">
-              <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-              {show.vote_average && show.vote_average > 0
-                ? show.vote_average.toFixed(1)
-                : "New"}
-            </div>
-
-            {/* Hover overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <div className="flex justify-center gap-2 mb-3">
-                  <button
-                    onClick={async (e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (!ready) {
-                        router.push("/auth/login");
-                        return;
-                      }
-                      const itemId = show.id;
-                      setLoadingStates((prev) => ({ ...prev, [itemId]: true }));
-                      try {
-                        const title = show?.title ?? show?.name ?? null;
-                        const posterUrl = show?.poster_path
-                          ? getPosterUrl(show.poster_path)
-                          : null;
-                        if (inWL) {
-                          await remove(String(show.id), "series", {
-                            title,
-                            posterUrl,
-                          });
-                        } else {
-                          await add(String(show.id), "series", {
-                            title,
-                            posterUrl,
-                          });
-                        }
-                      } catch (err) {
-                        console.error("toggle watchlist error", err);
-                      } finally {
-                        setLoadingStates((prev) => ({
-                          ...prev,
-                          [itemId]: false,
-                        }));
-                      }
-                    }}
-                    disabled={isLoading}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl
-                                          ${inWL
-                        ? "bg-emerald-500 ring-emerald-300/40 text-white"
-                        : "bg-white text-black"
-                      }
-                                          ${isLoading
-                        ? "opacity-70 cursor-not-allowed"
-                        : ""
-                      }`}
-                    title={inWL ? "Remove from List" : "Add to List"}
-                  >
-                    {isLoading ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : inWL ? (
-                      <BookmarkCheck className="w-5 h-5 text-white" />
-                    ) : (
-                      <Plus className="w-5 h-5 text-black" />
-                    )}
-                  </button>
-
-                  <button
-                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
-                    title="More Info"
-                  >
-                    <Info className="w-5 h-5 text-black" />
-                  </button>
-
-
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3 px-1">
-            <h4 className="font-bold text-sm sm:text-base line-clamp-2 group-hover:text-[#e94f37] transition-colors leading-tight text-white">
-              {show.title || show.name}
-            </h4>
-            <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-400">
-              {show.first_air_date && (
-                <span className="font-semibold">
-                  {show.first_air_date.split("-")[0]}
-                </span>
-              )}
-              {show.number_of_seasons && (
-                <>
-                  <span>•</span>
-                  <span className="font-semibold">
-                    {show.number_of_seasons} Season
-                    {show.number_of_seasons > 1 ? "s" : ""}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-        </Link>
-      </div>
-    );
-  };
-
-
-
-
-  const Carousel = ({ items }: { items: any[] }) => {
-    const [startIndex, setStartIndex] = useState(0);
-    const [itemsPerView, setItemsPerView] = useState(6);
-    const [isMobile, setIsMobile] = useState(false);
-
-    useEffect(() => {
-      const check = () => setIsMobile(window.innerWidth < 640);
-      check();
-      window.addEventListener("resize", check);
-      return () => window.removeEventListener("resize", check);
-    }, []);
-
-    useEffect(() => {
-      const updateLayout = () => {
-        const w = window.innerWidth;
-        if (w < 640) setItemsPerView(2);
-        else if (w < 768) setItemsPerView(3);
-        else if (w < 1024) setItemsPerView(4);
-        else if (w < 1280) setItemsPerView(5);
-        else setItemsPerView(6);
-      };
-
-      updateLayout();
-      window.addEventListener("resize", updateLayout);
-      return () => window.removeEventListener("resize", updateLayout);
-    }, []);
-
-    const canScrollLeft = startIndex > 0;
-    const canScrollRight = startIndex < items.length - itemsPerView;
-
-    const scrollLeft = () => {
-      setStartIndex((prev) => Math.max(0, prev - itemsPerView));
-    };
-
-    const scrollRight = () => {
-      setStartIndex((prev) =>
-        Math.min(items.length - itemsPerView, prev + itemsPerView)
-      );
-    };
-
-    const visibleItems = isMobile
-      ? items
-      : items.slice(startIndex, startIndex + itemsPerView);
-
-    return (
-      <div className="relative group/carousel">
-        {!isMobile && canScrollLeft && (
-          <button
-            onClick={scrollLeft}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-        )}
-
-        {!isMobile && canScrollRight && (
-          <button
-            onClick={scrollRight}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
-            aria-label="Scroll right"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-        )}
-
-        <div
-          className={
-            isMobile
-              ? "flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide"
-              : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5"
-          }
-        >
-          {visibleItems.map((person, idx) => (
-            <motion.div
-              key={person.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: idx * 0.03 }}
-              className={isMobile ? "min-w-[140px] snap-start" : "group cursor-pointer"}
-            >
-              <Link href={`/celeb/${person.id}`}>
-                <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-[#111] mb-3 group-hover:ring-2 group-hover:ring-[#e94f37] transition-all">
-                  <Image
-                    src={person.profile_path ? `https://image.tmdb.org/t/p/w342${person.profile_path}` : "/placeholder-person.svg"}
-                    alt={person.name}
-                    fill
-            sizes="(max-width: 768px) 50vw, 342px"
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                </div>
-
-                <h3 className="text-white font-semibold text-sm text-center line-clamp-2 mb-1">
-                  {person.name}
-                </h3>
-                <p className="text-gray-500 text-xs text-center">
-                  {person.known_for_department}
-                </p>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-
-      </div>
-    );
-  };
-
-  const movieCredits =
-    person.combined_credits?.cast
-      .filter((c) => c.media_type === "movie")
-      .sort((a, b) => b.vote_average - a.vote_average) || [];
-  const tvCredits =
-    person.combined_credits?.cast
-      .filter((c) => c.media_type === "tv")
-      .sort((a, b) => b.vote_average - a.vote_average) || [];
-  const allCredits = [...movieCredits, ...tvCredits].sort(
-    (a, b) => b.vote_average - a.vote_average
+  const age = calculateAge(person.birthday, person.deathday);
+  const profiles = person.images?.profiles || [];
+  const hasExternalLinks = Boolean(
+    person.external_ids?.instagram_id ||
+    person.external_ids?.twitter_id ||
+    person.external_ids?.facebook_id ||
+    person.external_ids?.imdb_id ||
+    person.homepage,
   );
-
-  const displayCredits =
-    selectedTab === "all"
-      ? allCredits
-      : selectedTab === "movies"
-        ? movieCredits
-        : tvCredits;
-  const getCreditDate = (credit: any) =>
-    credit.release_date || credit.first_air_date || "";
-
-  // Sort displayCredits by date descending (latest first)
-  const sortedCredits = [...displayCredits].sort((a, b) => {
-    const dateA = getCreditDate(a);
-    const dateB = getCreditDate(b);
-    if (!dateA && !dateB) return 0;
-    if (!dateA) return 1;
-    if (!dateB) return -1;
-    return new Date(dateB).getTime() - new Date(dateA).getTime();
-  });
+  const genreEntries = Object.entries(
+    credits.reduce<Record<string, number>>((acc, credit) => {
+      credit.genre_ids?.forEach((genreId) => {
+        const genre = genreMap[genreId] || "Other";
+        acc[genre] = (acc[genre] || 0) + 1;
+      });
+      return acc;
+    }, {}),
+  ).sort((a, b) => b[1] - a[1]);
+  const topGenres = genreEntries.slice(0, 5);
+  const totalGenreWorks = genreEntries.reduce(
+    (total, [, count]) => total + count,
+    0,
+  );
+  const heroBackdrop = getImageUrl(
+    notableWorks.find((credit) => credit.backdrop_path)?.backdrop_path ||
+      latestWork?.poster_path,
+  );
+  const knownForSummary = [
+    person.known_for_department &&
+      `${person.known_for_department.toLowerCase()} work`,
+    topGenres[0]?.[0] && `${topGenres[0][0].toLowerCase()} titles`,
+    topRatedWorks[0] && getTitle(topRatedWorks[0]),
+  ].filter(Boolean);
   const visibleCredits = showAllCredits
-    ? sortedCredits
-    : sortedCredits.slice(0, 12);
-
-  const age = person.birthday
-    ? new Date().getFullYear() - new Date(person.birthday).getFullYear()
-    : null;
-  const shouldTruncateBio = person.biography && person.biography.length > 400;
-  const displayBio =
-    shouldTruncateBio && !bioExpanded
-      ? person.biography.slice(0, 400) + "..."
-      : person.biography;
-
-  const backdropImage =
-    visibleCredits.find((credit) => credit.poster_path)?.poster_path || null;
-
-  // Genre mapping
-  const genreMap: Record<number, string> = {
-    28: "Action",
-    12: "Adventure",
-    16: "Animation",
-    35: "Comedy",
-    80: "Crime",
-    99: "Documentary",
-    18: "Drama",
-    10751: "Family",
-    14: "Fantasy",
-    36: "History",
-    27: "Horror",
-    10402: "Music",
-    9648: "Mystery",
-    10749: "Romance",
-    878: "Sci-Fi",
-    10770: "TV Movie",
-    53: "Thriller",
-    10752: "War",
-    37: "Western",
-    10759: "Action & Adventure",
-    10762: "Kids",
-    10763: "News",
-    10764: "Reality",
-    10765: "Sci-Fi & Fantasy",
-    10766: "Soap",
-    10767: "Talk",
-    10768: "War & Politics",
-  };
-
-  // Calculate genre stats
-  const genreStats: Record<string, number> = {};
-  allCredits.forEach((credit) => {
-    credit.genre_ids?.forEach((genreId) => {
-      const genreName = genreMap[genreId] || "Other";
-      genreStats[genreName] = (genreStats[genreName] || 0) + 1;
-    });
-  });
-
-  const topGenres = Object.entries(genreStats)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-
-  const totalGenreWorks = Object.values(genreStats).reduce((a, b) => a + b, 0);
-
-  const SectionHeader = ({ icon: Icon, title }: { icon: any; title: string }) => (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="w-10 h-10 rounded-xl bg-[#e94f37]/20 flex items-center justify-center">
-        <Icon className="w-5 h-5 text-[#e94f37]" />
-      </div>
-      <h2 className="text-xl sm:text-2xl font-bold">{title}</h2>
-    </div>
+    ? filteredCredits
+    : filteredCredits.slice(0, 12);
+  const galleryItems =
+    profiles.length > 0
+      ? profiles
+      : person.profile_path
+        ? [{ file_path: person.profile_path }]
+        : [];
+  const galleryPages = Math.max(1, Math.ceil(galleryItems.length / 8));
+  const currentGalleryItems = galleryItems.slice(
+    galleryPage * 8,
+    galleryPage * 8 + 8,
   );
+  const similarCarouselItems = similarPeople.slice(
+    similarStartIndex,
+    similarStartIndex + 6,
+  );
+  const canScrollSimilarLeft = similarStartIndex > 0;
+  const canScrollSimilarRight =
+    similarStartIndex + 6 < Math.min(similarPeople.length, 12);
+  const careerMoments: CareerMoment[] = [
+    timeline?.debut && {
+      label: "Debut",
+      value: timeline.debut.title,
+      detail: String(timeline.debut.year),
+    },
+    timeline?.breakout && {
+      label: "Breakout",
+      value: timeline.breakout.title,
+      detail: String(timeline.breakout.year),
+    },
+    timeline?.recent && {
+      label: "Recent",
+      value: timeline.recent.title,
+      detail: String(timeline.recent.year),
+    },
+  ].filter((item): item is CareerMoment => Boolean(item));
+
+  const toggleWatchlist = async (credit: Credit) => {
+    if (!ready) {
+      router.push("/auth/login");
+      return;
+    }
+
+    const itemType = credit.media_type === "tv" ? "series" : "movie";
+    const itemId = credit.id;
+    setLoadingStates((prev) => ({ ...prev, [itemId]: true }));
+
+    try {
+      const title = getTitle(credit);
+      const posterUrl = credit.poster_path
+        ? getPosterUrl(credit.poster_path)
+        : null;
+      if (isInWatchlist(String(itemId), itemType)) {
+        await remove(String(itemId), itemType, { title, posterUrl });
+      } else {
+        await add(String(itemId), itemType, { title, posterUrl });
+      }
+    } catch (watchlistError) {
+      console.error("toggle watchlist error", watchlistError);
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-zinc-950 to-black text-white">
-      {/* Container */}
-      {/* Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-30 pb-20">
-        {/* Hero Section - Redesigned */}
-        <header className="relative">
-          {/* Top Info Bar */}
-          <div className="mb-6">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-2">
-              {person?.name}
-            </h1>
-            <p className="text-zinc-400 text-lg">
-              {person?.known_for_department}
-              {person?.also_known_as && person.also_known_as.length > 0 && (
-                <span className="text-zinc-600 ml-2">• {person.also_known_as[0]}</span>
-              )}
-            </p>
-          </div>
+    <div className="min-h-screen overflow-hidden bg-gradient-to-b from-black via-zinc-950 to-black text-white">
+      <div className="relative">
+        <div className="absolute inset-x-0 top-0 h-[460px] opacity-35">
+          <Image
+            src={heroBackdrop}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover blur-sm"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/75 to-black" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-black/90" />
+        </div>
 
-          {/* Main Content Grid - Equal Height Columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left: Profile Photos - 3 columns */}
-            <div className="lg:col-span-3 space-y-3">
-              {/* Main Profile Image */}
-              <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800 shadow-xl group">
-                <img
-                  src={person?.profile_path ? `https://image.tmdb.org/t/p/w500${person.profile_path}` : "/placeholder-person.svg"}
-                  alt={person?.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        <main className="relative mx-auto max-w-7xl px-4 pb-20 pt-24 sm:px-6 lg:pt-28">
+          <header className="grid gap-4 rounded-[2rem] border border-white/10 bg-black/45 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-5 lg:grid-cols-[190px_minmax(0,1fr)_300px] xl:grid-cols-[210px_minmax(0,1fr)_320px]">
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 sm:grid-cols-[150px_minmax(0,1fr)] lg:block"
+            >
+              <button
+                onClick={() =>
+                  setSelectedImage(
+                    getProfileUrl(person.profile_path, "original"),
+                  )
+                }
+                className="group relative block aspect-[3/4] w-full overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-xl shadow-black/40"
+              >
+                <Image
+                  src={getProfileUrl(person.profile_path)}
+                  alt={person.name}
+                  fill
+                  priority
+                  sizes="(max-width: 640px) 110px, (max-width: 1024px) 150px, 210px"
+                  className="object-cover transition duration-700 group-hover:scale-105"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                <div className="absolute bottom-3 left-3 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
+                  View portrait
+                </div>
+              </button>
 
-                {/* Badge overlay */}
-                {person?.known_for_department && (
-                  <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                    <span className="text-xs font-semibold text-[#e94f37]">
-                      {person.known_for_department}
-                    </span>
+              <div className="grid grid-cols-2 gap-2 self-start lg:mt-3 lg:grid-cols-3">
+                {profiles.slice(1, 4).map((image, index) => (
+                  <button
+                    key={`${image.file_path}-${index}`}
+                    onClick={() =>
+                      setSelectedImage(getImageUrl(image.file_path))
+                    }
+                    className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-zinc-900 transition hover:border-[#e94f37]"
+                  >
+                    <Image
+                      src={getProfileUrl(image.file_path, "w185")}
+                      alt={`${person.name} portrait ${index + 2}`}
+                      fill
+                      sizes="110px"
+                      className="object-cover"
+                    />
+                  </button>
+                ))}
+                {profiles.length <= 1 && (
+                  <div className="col-span-2 rounded-xl border border-dashed border-zinc-800 bg-zinc-950/70 p-3 text-xs text-zinc-500 lg:col-span-3">
+                    More portraits will appear when available.
                   </div>
                 )}
               </div>
+            </motion.div>
 
-              {/* Additional Photos Grid */}
-              {person?.images?.profiles && person.images.profiles.length > 1 && (
-                <div className="grid grid-cols-2 gap-3">
-                  {person.images.profiles.slice(1, 3).map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedImage(`https://image.tmdb.org/t/p/original${img.file_path}`)}
-                      className="relative aspect-[3/4] rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-[#e94f37] transition-all group"
-                    >
-                      <img
-                        src={img.file_path ? `https://image.tmdb.org/t/p/w342${img.file_path}` : '/placeholder-person.svg'}
-                        alt={`${person.name} photo ${idx + 2}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ExternalLink className="w-5 h-5 text-white" />
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="min-w-0"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-[#e94f37]/30 bg-[#e94f37]/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#ff7a67]">
+                  {person.known_for_department || "Celebrity"}
+                </span>
+                {topGenres[0] && (
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-300">
+                    {topGenres[0][0]} identity
+                  </span>
+                )}
+              </div>
+
+              <h1 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl">
+                {person.name}
+              </h1>
+              {person.also_known_as?.[0] && (
+                <p className="mt-1 text-sm text-zinc-500">
+                  Also known as {person.also_known_as[0]}
+                </p>
               )}
-            </div>
 
-            {/* Middle: Works Showcase - 5 columns */}
-            <div className="lg:col-span-5 space-y-5">
-              {/* Section Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#e94f37]/20 flex items-center justify-center">
-                    <Film className="w-4 h-4 text-[#e94f37]" />
-                  </div>
-                  <h2 className="text-lg font-bold text-white">Recent Works</h2>
-                </div>
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-300 sm:text-base">
+                {knownForSummary.length > 0
+                  ? `${person.name} is known for ${knownForSummary.join(", ")}. Explore the career highlights, collaborators, and standout credits below.`
+                  : `${person.name}'s profile is ready to explore, with credits and related recommendations gathered from Moodies data.`}
+              </p>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <MiniStat
+                  label="Projects"
+                  value={credits.length}
+                  icon={Briefcase}
+                />
+                <MiniStat
+                  label="Movies"
+                  value={movieCredits.length}
+                  icon={Film}
+                />
+                <MiniStat label="TV" value={tvCredits.length} icon={Tv} />
+                <MiniStat
+                  label="Score"
+                  value={Math.round(person.popularity || 0)}
+                  icon={Sparkles}
+                />
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
                 <a
                   href="#filmography"
-                  className="text-xs text-zinc-500 hover:text-[#e94f37] transition flex items-center gap-1"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#e94f37] px-4 py-2 text-sm font-bold text-black transition hover:bg-[#ff6b58]"
                 >
-                  View All
-                  <ChevronRight className="w-3 h-3" />
+                  <Clapperboard className="h-4 w-4" />
+                  Filmography
+                </a>
+                <a
+                  href="#biography"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[#e94f37]/60 hover:text-white"
+                >
+                  <Sparkles className="h-4 w-4 text-[#e94f37]" />
+                  Biography
+                </a>
+                <a
+                  href="#gallery"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[#e94f37]/60 hover:text-white"
+                >
+                  <Sparkles className="h-4 w-4 text-[#e94f37]" />
+                  Photos
+                </a>
+                <a
+                  href="#genre-identity"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[#e94f37]/60 hover:text-white"
+                >
+                  <Sparkles className="h-4 w-4 text-[#e94f37]" />
+                  Genres
                 </a>
               </div>
+            </motion.div>
 
-              {/* Works Grid - Smaller cards */}
-              <div className="grid grid-cols-4 gap-3">
-                {(() => {
-                  const recentWorks = sortedCredits
-                    .filter(c => c.poster_path)
-                    .slice(0, 4);
-
-                  return recentWorks.map((work, idx) => (
-                    <Link
-                      key={work.id}
-                      href={`/${work.media_type === 'tv' ? 'tv' : 'movies'}/${work.id}`}
-                      className="group relative rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-[#e94f37] transition-all"
-                    >
-                      <div className="aspect-[2/3] relative">
-                        <img
-                          src={getPosterUrl(work.poster_path)}
-                          alt={work.title || work.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-
-                        {/* Rating badge */}
-                        {work.vote_average > 0 && (
-                          <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 flex items-center gap-1">
-                            <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
-                            <span className="text-[9px] font-bold text-white">
-                              {work.vote_average.toFixed(1)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Info overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="absolute bottom-0 left-0 right-0 p-2">
-                            <p className="text-[10px] font-semibold text-white line-clamp-2 mb-1">
-                              {work.title || work.name}
-                            </p>
-                            <div className="text-[9px] text-zinc-400">
-                              {work.release_date || work.first_air_date
-                                ? new Date((work.release_date || work.first_air_date)!).getFullYear()
-                                : 'TBA'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ));
-                })()}
-              </div>
-
-              {/* Stats Row */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Movies Count */}
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 hover:border-[#e94f37]/50 transition">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Film className="w-4 h-4 text-[#e94f37]" />
-                    <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Movies</span>
-                  </div>
-                  <div className="text-2xl font-bold text-white">
-                    {movieCredits?.length ?? 0}
-                  </div>
-                </div>
-
-                {/* TV Shows Count */}
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 hover:border-[#e94f37]/50 transition">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Tv className="w-4 h-4 text-[#e94f37]" />
-                    <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">TV Shows</span>
-                  </div>
-                  <div className="text-2xl font-bold text-white">
-                    {tvCredits?.length ?? 0}
-                  </div>
-                </div>
-              </div>
-
-              {/* BIOGRAPHY */}
-              {person?.biography && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-[#e94f37]/20 flex items-center justify-center">
-                      <Sparkles className="w-4 h-4 text-[#e94f37]" />
+            <motion.aside
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1"
+            >
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                      <Calendar className="h-3.5 w-3.5 text-[#e94f37]" />
+                      {person.deathday ? "Lived" : "Age"}
                     </div>
-                    <h2 className="text-lg font-bold text-white">Biography</h2>
-                  </div>
-
-                  <div className="relative bg-zinc-900/50 border border-zinc-800 rounded-xl p-5">
-                    <p
-                      className={`text-sm text-zinc-300 leading-relaxed transition-all duration-300 ${bioExpanded ? "" : "line-clamp-4"
-                        }`}
-                    >
-                      {person.biography}
+                    <p className="text-lg font-black text-white">
+                      {age !== null ? age : "Unknown"}
                     </p>
-
-                    {/* fade overlay when collapsed */}
-                    {!bioExpanded && person.biography.length > 300 && (
-                      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-zinc-900/50 to-transparent rounded-b-xl" />
-                    )}
-
-                    {/* toggle */}
-                    {person.biography.length > 300 && (
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          onClick={() => setBioExpanded(!bioExpanded)}
-                          className="text-xs font-semibold text-[#e94f37] hover:underline"
-                        >
-                          {bioExpanded ? "Show less" : "Read more"}
-                        </button>
-                      </div>
-                    )}
+                    <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">
+                      {formatDate(person.birthday)}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                      <MapPin className="h-3.5 w-3.5 text-[#e94f37]" />
+                      Born
+                    </div>
+                    <p className="line-clamp-1 text-lg font-black text-white">
+                      {person.place_of_birth
+                        ? person.place_of_birth.split(",")[0]
+                        : "Unknown"}
+                    </p>
+                    <p className="mt-0.5 line-clamp-1 text-xs text-zinc-500">
+                      {person.place_of_birth || "Birthplace unavailable"}
+                    </p>
                   </div>
                 </div>
+              </div>
+
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    External profiles
+                  </span>
+                  <ExternalLink className="h-4 w-4 text-[#e94f37]" />
+                </div>
+                <ExternalProfileLinks person={person} />
+                {!hasExternalLinks && (
+                  <p className="mt-3 text-xs text-zinc-500">
+                    No official social links were returned.
+                  </p>
+                )}
+              </div>
+
+              <div className="sm:col-span-2 lg:col-span-1">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                  <SpotlightWorkCard label="Latest work" credit={latestWork} />
+                </div>
+              </div>
+            </motion.aside>
+          </header>
+
+          <section
+            id="biography"
+            className="mt-10 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]"
+          >
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/55 p-5 sm:p-7">
+              <SectionHeader
+                icon={Sparkles}
+                title="Biography"
+                subtitle="A readable snapshot of background, career shape, and public profile."
+              />
+              {person.biography ? (
+                <div className="relative mt-5">
+                  <p
+                    className={`whitespace-pre-line text-sm leading-8 text-zinc-300 sm:text-base ${bioExpanded ? "" : "line-clamp-6"}`}
+                  >
+                    {person.biography}
+                  </p>
+                  {!bioExpanded && person.biography.length > 520 && (
+                    <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-zinc-900 to-transparent" />
+                  )}
+                  {person.biography.length > 520 && (
+                    <button
+                      onClick={() => setBioExpanded((value) => !value)}
+                      className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#e94f37]/40 px-4 py-2 text-sm font-bold text-[#ff7a67] transition hover:bg-[#e94f37] hover:text-black"
+                    >
+                      {bioExpanded ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                      {bioExpanded ? "Show less" : "Read more"}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={SearchX}
+                  title="No biography yet"
+                  text="Moodies did not receive a biography from TMDB, so this page leans on credits, genres, and related people instead."
+                />
               )}
             </div>
 
-            {/* Right: Info Cards - 4 columns */}
-            <div className="lg:col-span-4 space-y-4">
-              {/* Age & Birthday Card */}
-              {person?.birthday && (
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 hover:border-[#e94f37]/50 transition">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Age</span>
-                    <Calendar className="w-4 h-4 text-[#e94f37]" />
+            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/55 p-5 sm:p-7">
+              <SectionHeader icon={Layers} title="Career Snapshot" />
+              <div className="mt-5 space-y-4">
+                {careerMoments.map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-2xl border border-zinc-800 bg-black/25 p-4"
+                  >
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                      {item.label}
+                    </p>
+                    <p className="mt-1 line-clamp-2 font-bold text-white">
+                      {item.value}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">{item.detail}</p>
                   </div>
-                  <div className="text-3xl font-bold mb-1">{age} years</div>
-                  <div className="text-sm text-zinc-400">
-                    {new Date(person.birthday).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
+                ))}
+                {careerMoments.length === 0 && (
+                  <EmptyState
+                    icon={Clapperboard}
+                    title="Timeline building"
+                    text="Career milestones will appear once the timeline endpoint has enough data."
+                  />
+                )}
+              </div>
+            </div>
+          </section>
+
+          {notableWorks.length > 0 && (
+            <section className="mt-16 space-y-5">
+              <SectionHeader
+                icon={Star}
+                title="Known For"
+                subtitle="A quick path into the works that best explain this celebrity's screen identity."
+                action={
+                  <a
+                    href="#filmography"
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-zinc-400 transition hover:text-[#e94f37]"
+                  >
+                    Full filmography <ChevronRight className="h-4 w-4" />
+                  </a>
+                }
+              />
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                {notableWorks.slice(0, 5).map((credit) => (
+                  <WorkCard
+                    key={`${credit.media_type}-${credit.id}`}
+                    credit={credit}
+                    compact
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="mt-16 space-y-5">
+            <SectionHeader
+              icon={Play}
+              title="Related Videos"
+              subtitle="Trailers, teasers, clips, featurettes, and official previews from works this celebrity appears in."
+              action={
+                relatedVideos.length > 0 && (
+                  <div className="flex max-w-full overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-1">
+                    {[
+                      ["all", `All ${relatedVideos.length}`],
+                      [
+                        "movie",
+                        `Movies ${relatedVideos.filter((video) => video.media_type === "movie").length}`,
+                      ],
+                      [
+                        "tv",
+                        `TV ${relatedVideos.filter((video) => video.media_type === "tv").length}`,
+                      ],
+                      [
+                        "trailer",
+                        `Trailers ${relatedVideos.filter((video) => video.video_type === "Trailer").length}`,
+                      ],
+                      [
+                        "teaser",
+                        `Teasers ${relatedVideos.filter((video) => video.video_type === "Teaser").length}`,
+                      ],
+                      [
+                        "clip",
+                        `Clips ${relatedVideos.filter((video) => video.video_type === "Clip").length}`,
+                      ],
+                      ["behind", "BTS"],
+                    ].map(([value, label]) => (
+                      <button
+                        key={value}
+                        onClick={() => setVideoFilter(value as VideoFilter)}
+                        className={`whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition sm:text-sm ${
+                          videoFilter === value
+                            ? "bg-[#e94f37] text-black"
+                            : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )
+              }
+            />
+
+            {videosLoading ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/70"
+                  >
+                    <div className="aspect-video animate-pulse bg-zinc-800" />
+                    <div className="space-y-3 p-4">
+                      <div className="h-4 w-4/5 animate-pulse rounded bg-zinc-800" />
+                      <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : videosError ? (
+              <EmptyState
+                icon={Play}
+                title="Videos could not load"
+                text={videosError}
+              />
+            ) : filteredVideos.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredVideos.slice(0, 9).map((video) => (
+                  <VideoCard
+                    key={video.id}
+                    video={video}
+                    onPlay={setSelectedVideo}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Play}
+                title="No related videos found"
+                text={
+                  relatedVideos.length > 0
+                    ? "No videos match this filter yet. Try All, Movies, or TV."
+                    : "Moodies could not find trailers, teasers, clips, or official previews connected to this celebrity's known works."
+                }
+              />
+            )}
+          </section>
+
+          <section
+            id="genre-identity"
+            className="mt-14 grid gap-4 lg:grid-cols-[0.82fr_1.18fr]"
+          >
+            <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/55 p-4 sm:p-5">
+              <SectionHeader
+                icon={Layers}
+                title="Genre Identity"
+                subtitle="The strongest genre signals across known credits."
+              />
+              {topGenres.length > 0 ? (
+                <div className="mt-4 grid gap-4 sm:grid-cols-[116px_minmax(0,1fr)]">
+                  <div className="relative mx-auto flex h-28 w-28 items-center justify-center rounded-full border border-[#e94f37]/25 bg-[#e94f37]/10 shadow-xl shadow-[#e94f37]/10">
+                    <div
+                      className="absolute inset-2.5 rounded-full"
+                      style={{
+                        background: `conic-gradient(#e94f37 0deg ${Math.round(
+                          ((topGenres[0]?.[1] || 0) /
+                            Math.max(totalGenreWorks, 1)) *
+                            360,
+                        )}deg, rgba(63,63,70,.75) 0deg)`,
+                      }}
+                    />
+                    <div className="relative flex h-20 w-20 flex-col items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-center">
+                      <span className="text-xl font-black text-white">
+                        {Math.round(
+                          ((topGenres[0]?.[1] || 0) /
+                            Math.max(totalGenreWorks, 1)) *
+                            100,
+                        )}
+                        %
+                      </span>
+                      <span className="mt-0.5 max-w-16 truncate text-[10px] font-bold uppercase tracking-wider text-[#ff7a67]">
+                        {topGenres[0]?.[0]}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {topGenres.slice(0, 3).map(([genre, count], index) => {
+                      const pct =
+                        totalGenreWorks > 0
+                          ? Math.round((count / totalGenreWorks) * 100)
+                          : 0;
+                      return (
+                        <div
+                          key={genre}
+                          className="rounded-xl border border-zinc-800 bg-black/25 p-2.5 transition hover:border-[#e94f37]/50"
+                        >
+                          <div className="mb-1.5 flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#e94f37]/15 text-[10px] font-black text-[#ff7a67]">
+                                {index + 1}
+                              </span>
+                              <span className="truncate text-xs font-bold text-white sm:text-sm">
+                                {genre}
+                              </span>
+                            </div>
+                            <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-bold text-zinc-300">
+                              {pct}%
+                            </span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-[#e94f37] via-[#ff7a67] to-[#ffb36b]"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <p className="mt-1 text-[11px] text-zinc-500">
+                            {count} genre-tagged credits
+                          </p>
+                        </div>
+                      );
                     })}
                   </div>
                 </div>
-              )}
-
-              {/* Latest Work Card */}
-              {(() => {
-                const latestWork = sortedCredits.filter(c =>
-                  c.poster_path &&
-                  (c.release_date || c.first_air_date) &&
-                  new Date((c.release_date || c.first_air_date)!) <= new Date()
-                )[0];
-
-                return latestWork ? (
-                  <Link
-                    href={`/${latestWork.media_type === 'tv' ? 'tv' : 'movies'}/${latestWork.id}`}
-                    className="block bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 hover:border-[#e94f37] transition group"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Latest</span>
-                      <Sparkles className="w-4 h-4 text-[#e94f37]" />
-                    </div>
-                    <div className="flex gap-3">
-                      <div className="w-16 h-20 rounded-lg overflow-hidden bg-zinc-800 flex-shrink-0">
-                        <img
-                          src={getPosterUrl(latestWork.poster_path)}
-                          alt={latestWork.title || latestWork.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-white mb-1 line-clamp-2 group-hover:text-[#e94f37] transition">
-                          {latestWork.title || latestWork.name}
-                        </h3>
-                        <p className="text-xs text-zinc-500">
-                          {new Date(latestWork.release_date || latestWork.first_air_date).getFullYear()}
-                        </p>
-                        {latestWork.vote_average > 0 && (
-                          <div className="flex items-center gap-1 mt-2">
-                            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                            <span className="text-xs text-zinc-400">{latestWork.vote_average.toFixed(1)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                ) : null;
-              })()}
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 text-center hover:border-[#e94f37]/50 transition">
-                  <div className="text-2xl font-bold text-[#e94f37] mb-1">{allCredits?.length ?? 0}</div>
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Projects</div>
-                </div>
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 text-center hover:border-[#e94f37]/50 transition">
-                  <div className="text-2xl font-bold text-[#e94f37] mb-1">
-                    {allCredits?.filter(c => c.vote_average >= 7)?.length ?? 0}
-                  </div>
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Top Rated</div>
-                </div>
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 text-center hover:border-[#e94f37]/50 transition">
-                  <div className="text-2xl font-bold text-[#e94f37] mb-1">
-                    {Math.round(person?.popularity ?? 0)}
-                  </div>
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Score</div>
-                </div>
-              </div>
-
-              {/* Location */}
-              {person?.place_of_birth && (
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 hover:border-[#e94f37]/50 transition">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Born</span>
-                    <MapPin className="w-4 h-4 text-[#e94f37]" />
-                  </div>
-                  <div className="text-sm text-zinc-300 leading-relaxed">
-                    {person.place_of_birth}
-                  </div>
-                </div>
-              )}
-
-              {/* Social Links */}
-              <div className="flex items-center gap-2">
-                {person?.external_ids?.instagram_id && (
-                  <a
-                    href={`https://instagram.com/${person.external_ids.instagram_id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex-1 flex items-center justify-center gap-2 bg-zinc-900/50 border border-zinc-800 rounded-lg px-4 py-2.5 hover:bg-[#e94f37] hover:border-[#e94f37] hover:text-black transition group"
-                  >
-                    <Instagram className="w-4 h-4" />
-                    <span className="text-xs font-semibold">Instagram</span>
-                  </a>
-                )}
-                {person?.external_ids?.twitter_id && (
-                  <a
-                    href={`https://twitter.com/${person.external_ids.twitter_id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex-1 flex items-center justify-center gap-2 bg-zinc-900/50 border border-zinc-800 rounded-lg px-4 py-2.5 hover:bg-[#e94f37] hover:border-[#e94f37] hover:text-black transition group"
-                  >
-                    <Twitter className="w-4 h-4" />
-                    <span className="text-xs font-semibold">Twitter</span>
-                  </a>
-                )}
-                {person?.external_ids?.imdb_id && (
-                  <a
-                    href={`https://www.imdb.com/name/${person.external_ids.imdb_id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex-1 flex items-center justify-center gap-2 bg-zinc-900/50 border border-zinc-800 rounded-lg px-4 py-2.5 hover:bg-[#e94f37] hover:border-[#e94f37] hover:text-black transition group"
-                  >
-                    <Star className="w-4 h-4" />
-                    <span className="text-xs font-semibold">IMDb</span>
-                  </a>
-                )}
-              </div>
-
-              {/* More on Web Button */}
-              <a
-                href={`https://www.google.com/search?q=${encodeURIComponent(person?.name || "")}`}
-                target="_blank"
-                rel="noreferrer"
-                className="block w-full bg-zinc-900/50 border border-zinc-800 rounded-lg px-4 py-3 hover:bg-[#e94f37] hover:border-[#e94f37] hover:text-black transition group text-center"
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <ExternalLink className="w-4 h-4" />
-                  <span className="text-sm font-semibold">More on Web</span>
-                </div>
-              </a>
-            </div>
-          </div>
-        </header>
-
-        {/* Divider accent */}
-        <div className="my-10 h-px bg-zinc-800" />
-
-        {collaborations?.length > 0 && (
-          <section className="space-y-4 mt-20">
-            <SectionHeader icon={Users} title="Frequent Collaborators" />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {collaborations.slice(0, 6).map((c) => (
-                <div
-                  key={c.id}
-                  className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 hover:border-[#e94f37]/50 transition"
-                >
-                  {/* Collaborator Header */}
-                  <div className="flex items-center gap-3 mb-3 pb-3 border-b border-zinc-800">
-                    <Link href={`/celeb/${c.id}`}>
-                      <div className="w-12 h-12 rounded-full overflow-hidden bg-zinc-800 hover:ring-2 hover:ring-[#e94f37] transition">
-                        <img
-                          src={c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : '/placeholder-person.svg'}
-                          alt={c.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    </Link>
-
-                    <div className="flex-1 min-w-0">
-                      <Link href={`/celeb/${c.id}`}>
-                        <h3 className="font-semibold text-white hover:text-[#e94f37] transition truncate">
-                          {c.name}
-                        </h3>
-                      </Link>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <Film className="w-3 h-3 text-[#e94f37]" />
-                        <span className="text-xs text-zinc-500">{c.count} collaborations</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Project Links */}
-                  {c.projects && c.projects.length > 0 && (
-                    <div className="space-y-1.5">
-                      {c.projects.map((projectName, idx) => {
-                        // Find the actual project to get the link
-                        const project = allCredits.find(credit =>
-                          (credit.title || credit.name)?.toLowerCase() === projectName.toLowerCase()
-                        );
-
-                        return project ? (
-                          <Link
-                            key={idx}
-                            href={`/${project.media_type === 'tv' ? 'tv' : 'movies'}/${project.id}`}
-                            className="flex items-center gap-2 text-sm text-zinc-400 hover:text-[#e94f37] transition group"
-                          >
-                            <div className="w-1 h-1 rounded-full bg-zinc-700 group-hover:bg-[#e94f37] transition" />
-                            <span className="truncate">{projectName}</span>
-                            {project.release_date || project.first_air_date ? (
-                              <span className="text-xs text-zinc-600 ml-auto">
-                                {new Date(project.release_date || project.first_air_date).getFullYear()}
-                              </span>
-                            ) : null}
-                          </Link>
-                        ) : (
-                          <div key={idx} className="flex items-center gap-2 text-sm text-zinc-500">
-                            <div className="w-1 h-1 rounded-full bg-zinc-700" />
-                            <span className="truncate">{projectName}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-
-        {/* Career Stats */}
-        <section className="mt-20 space-y-4">
-          <SectionHeader icon={Trophy} title="Career Stats" />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center hover:border-[#e94f37] transition">
-              <div className="text-3xl font-bold">{movieCredits?.length ?? 0}</div>
-              <div className="text-xs text-zinc-400 mt-1">Feature Films</div>
-            </div>
-
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center hover:border-[#e94f37] transition">
-              <div className="text-3xl font-bold">{tvCredits?.length ?? 0}</div>
-              <div className="text-xs text-zinc-400 mt-1">TV Productions</div>
-            </div>
-
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center hover:border-[#e94f37] transition">
-              <div className="text-3xl font-bold">{allCredits?.filter?.((c) => c.vote_average >= 7)?.length ?? 0}</div>
-              <div className="text-xs text-zinc-400 mt-1">Highly Rated</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Genre Breakdown */}
-        {Object.keys(genreStats || {}).length > 0 && (
-          <section className="mt-20 space-y-4">
-            <SectionHeader icon={PieChart} title="Genre Breakdown" />
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {/* bars */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4">
-                {topGenres.map(([genre, count]) => {
-                  const pct = Math.round((count / totalGenreWorks) * 100);
-                  return (
-                    <div key={genre}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>{genre}</span>
-                        <span className="text-zinc-400">{pct}%</span>
-                      </div>
-                      <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-[#e94f37] to-orange-400"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* summary */}
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col justify-center">
-                <div className="flex items-center gap-3 mb-4">
-                  <Layers className="w-5 h-5 text-[#e94f37]" />
-                  <span className="text-sm text-zinc-400">Most Frequent Genre</span>
-                </div>
-                <div className="text-2xl font-bold">{topGenres[0]?.[0]}</div>
-                <div className="text-sm text-zinc-400 mt-1">
-                  {topGenres[0]?.[1]} projects
-                </div>
-              </div>
-            </div>
-
-          </section>
-        )}
-
-        {/* Photo Gallery - Smaller Aspect Ratio */}
-        {person?.images?.profiles?.length > 0 && (
-          <section className="space-y-4 mt-20">
-            <div className="flex items-center justify-between">
-              <SectionHeader icon={Camera} title="Photo Gallery" />
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setGalleryPage(Math.max(0, galleryPage - 1))}
-                  disabled={galleryPage === 0}
-                  className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-[#e94f37] disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5 text-zinc-400" />
-                </button>
-                <span className="text-xs text-zinc-500">
-                  {galleryPage + 1} / {Math.ceil(person.images.profiles.length / 6)}
-                </span>
-                <button
-                  onClick={() => setGalleryPage(Math.min(Math.ceil(person.images.profiles.length / 6) - 1, galleryPage + 1))}
-                  disabled={galleryPage >= Math.ceil(person.images.profiles.length / 6) - 1}
-                  className="w-7 h-7 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-[#e94f37] disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center"
-                >
-                  <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
-                </button>
-              </div>
-            </div>
-
-            {/* Grid Carousel - 4 columns, smaller aspect ratio */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-              {person.images.profiles.slice(galleryPage * 6, (galleryPage + 1) * 6).map((img, idx) => (
-                <button
-                  key={galleryPage * 8 + idx}
-                  onClick={() => setSelectedImage?.(`https://image.tmdb.org/t/p/original${img.file_path}`)}
-                  className="group relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 hover:border-[#e94f37] transition"
-                >
-                  <img
-                    src={img.file_path ? `https://image.tmdb.org/t/p/w500${img.file_path}` : '/placeholder-person.svg'}
-                    alt={`${person.name} photo ${galleryPage * 6 + idx + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-
-                  {/* Overlay on hover */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                        <ExternalLink className="w-3.5 h-3.5 text-white" />
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Page Indicators */}
-            <div className="flex justify-center gap-1.5">
-              {[...Array(Math.ceil(person.images.profiles.length / 6))].map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setGalleryPage(idx)}
-                  className={`transition-all rounded-full ${idx === galleryPage
-                    ? 'w-6 h-1.5 bg-[#e94f37]'
-                    : 'w-1.5 h-1.5 bg-zinc-700 hover:bg-zinc-600'
-                    }`}
+              ) : (
+                <EmptyState
+                  icon={Layers}
+                  title="No genre pattern yet"
+                  text="Genre data was not included with these credits."
                 />
-              ))}
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/55 p-4 sm:p-5">
+              <SectionHeader
+                icon={Users}
+                title="Frequent Collaborators"
+                subtitle="Repeated creative pairings, with shared projects at a glance."
+              />
+              {collaborations.length > 0 ? (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {collaborations.slice(0, 4).map((collab) => (
+                    <div
+                      key={collab.id}
+                      className="group rounded-xl border border-zinc-800 bg-black/25 p-3 transition hover:-translate-y-0.5 hover:border-[#e94f37]/60 hover:bg-zinc-950/80"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/celeb/${collab.id}`}
+                          className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-zinc-800"
+                        >
+                          <Image
+                            src={getProfileUrl(collab.profile_path, "w185")}
+                            alt={collab.name}
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                          />
+                        </Link>
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            href={`/celeb/${collab.id}`}
+                            className="line-clamp-1 font-bold text-white transition hover:text-[#e94f37]"
+                          >
+                            {collab.name}
+                          </Link>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="rounded-full bg-[#e94f37]/15 px-2 py-0.5 text-[11px] font-bold text-[#ff7a67]">
+                              {collab.count} shared
+                            </span>
+                            <Link
+                              href={`/celeb/${collab.id}`}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-zinc-500 transition group-hover:text-zinc-300"
+                            >
+                              Profile <ChevronRight className="h-3 w-3" />
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                      {collab.projects && collab.projects.length > 0 && (
+                        <div className="mt-2.5 space-y-1.5">
+                          {collab.projects.slice(0, 2).map((project) => (
+                            <div
+                              key={project}
+                              className="flex items-center gap-2 rounded-lg bg-zinc-900/70 px-2.5 py-1.5 text-xs text-zinc-400"
+                            >
+                              <Film className="h-3 w-3 shrink-0 text-[#e94f37]" />
+                              <span className="line-clamp-1">{project}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  icon={Users}
+                  title="No collaborators listed"
+                  text="Collaboration data is unavailable for this profile right now."
+                />
+              )}
             </div>
           </section>
-        )}
-        {/* Similar People */}
-        {similarPeople?.length > 0 && (
-          <section className="mt-20 space-y-4">
-            <SectionHeader icon={Sparkles} title="You May Also Like" />
 
+          {upcomingProjects.length > 0 && (
+            <section className="mt-16 space-y-5">
+              <SectionHeader
+                icon={Calendar}
+                title="Upcoming Projects"
+                subtitle="Future releases and announced credits when available."
+              />
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                {upcomingProjects.slice(0, 6).map((credit) => (
+                  <WorkCard
+                    key={`upcoming-${credit.media_type}-${credit.id}`}
+                    credit={credit}
+                    compact
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
-            <Carousel items={similarPeople} />
-
+          <section className="mt-16 space-y-5">
+            <SectionHeader
+              icon={Camera}
+              title="Photo Gallery"
+              subtitle="Portraits and profile imagery from TMDB."
+              action={
+                galleryItems.length > 8 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        setGalleryPage((page) => Math.max(0, page - 1))
+                      }
+                      disabled={galleryPage === 0}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition hover:border-[#e94f37] disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Previous gallery page"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <span className="text-xs font-semibold text-zinc-500">
+                      {galleryPage + 1} / {galleryPages}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setGalleryPage((page) =>
+                          Math.min(galleryPages - 1, page + 1),
+                        )
+                      }
+                      disabled={galleryPage >= galleryPages - 1}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition hover:border-[#e94f37] disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Next gallery page"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )
+              }
+            />
+            {galleryItems.length > 0 ? (
+              <div
+                id="gallery"
+                className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8"
+              >
+                {currentGalleryItems.map((image, index) => (
+                  <button
+                    key={`${image.file_path}-${index}`}
+                    onClick={() =>
+                      setSelectedImage(getImageUrl(image.file_path))
+                    }
+                    className="group relative aspect-[2/3] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 transition hover:-translate-y-1 hover:border-[#e94f37]/70"
+                  >
+                    <Image
+                      src={getProfileUrl(image.file_path)}
+                      alt={`${person.name} photo ${index + 1}`}
+                      fill
+                      sizes="(max-width: 640px) 45vw, 150px"
+                      className="object-cover transition duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/45">
+                      <ExternalLink className="h-5 w-5 opacity-0 transition group-hover:opacity-100" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Camera}
+                title="No gallery images"
+                text="This profile does not include additional images yet."
+              />
+            )}
           </section>
-        )}
 
-        {/* FILMOGRAPHY */}
-        <section className="mt-20" id="filmography">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
-            <SectionHeader icon={Clapperboard} title="Filmography" />
+          <section
+            className="mt-[4.5rem] rounded-3xl border border-zinc-800 bg-zinc-900/45 p-4 shadow-2xl shadow-black/20 sm:p-6 lg:p-7"
+            id="filmography"
+          >
+            <div className="space-y-6">
+              <SectionHeader
+                icon={Clapperboard}
+                title="Filmography"
+                subtitle={`${filteredCredits.length} credits shown. Filter by format, then sort by what matters most.`}
+              />
 
-            {/* Tabs */}
-            <div className="flex w-full sm:w-auto overflow-x-auto sm:overflow-visible">
-              <div className="flex gap-2 bg-zinc-900 border border-zinc-800 rounded-xl p-1 min-w-max">
-                <button
-                  className={`px-4 py-2 text-sm rounded-lg font-semibold whitespace-nowrap ${selectedTab === "all"
-                    ? "bg-[#e94f37] text-black"
-                    : "text-zinc-300"
-                    }`}
-                  onClick={() => {
-                    setSelectedTab("all");
-                    setShowAllCredits(false);
-                  }}
-                >
-                  All ({allCredits?.length ?? 0})
-                </button>
-
-                <button
-                  className={`px-4 py-2 text-sm rounded-lg font-semibold whitespace-nowrap ${selectedTab === "movies"
-                    ? "bg-[#e94f37] text-black"
-                    : "text-zinc-300"
-                    }`}
-                  onClick={() => {
-                    setSelectedTab("movies");
-                    setShowAllCredits(false);
-                  }}
-                >
-                  Movies ({movieCredits?.length ?? 0})
-                </button>
-
-                <button
-                  className={`px-4 py-2 text-sm rounded-lg font-semibold whitespace-nowrap ${selectedTab === "tv"
-                    ? "bg-[#e94f37] text-black"
-                    : "text-zinc-300"
-                    }`}
-                  onClick={() => {
-                    setSelectedTab("tv");
-                    setShowAllCredits(false);
-                  }}
-                >
-                  TV ({tvCredits?.length ?? 0})
-                </button>
+              <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-black/25 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-1">
+                  {[
+                    ["all", `All ${credits.length}`],
+                    ["movies", `Movies ${movieCredits.length}`],
+                    ["tv", `TV ${tvCredits.length}`],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setSelectedTab(value as FilmographyTab);
+                        setShowAllCredits(false);
+                      }}
+                      className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+                        selectedTab === value
+                          ? "bg-[#e94f37] text-black shadow-lg shadow-[#e94f37]/20"
+                          : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="hidden text-xs font-semibold uppercase tracking-wider text-zinc-500 sm:inline">
+                    Sort
+                  </span>
+                  <select
+                    value={sortMode}
+                    onChange={(event) =>
+                      setSortMode(event.target.value as SortMode)
+                    }
+                    className="min-h-11 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-2 text-sm font-semibold text-zinc-200 outline-none transition focus:border-[#e94f37] sm:w-[180px]"
+                  >
+                    <option value="notable">Most notable</option>
+                    <option value="latest">Latest first</option>
+                    <option value="rating">Highest rated</option>
+                    <option value="oldest">Oldest first</option>
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
+            {visibleCredits.length > 0 ? (
+              <div className="mt-7 space-y-8">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                  {visibleCredits.map((credit) => {
+                    const itemType =
+                      credit.media_type === "tv" ? "series" : "movie";
+                    return (
+                      <WorkCard
+                        key={`${credit.media_type}-${credit.id}`}
+                        credit={credit}
+                        onWatchlistToggle={toggleWatchlist}
+                        inWatchlist={isInWatchlist(String(credit.id), itemType)}
+                        isLoading={loadingStates[credit.id]}
+                      />
+                    );
+                  })}
+                </div>
+                {filteredCredits.length > 12 && (
+                  <div className="text-center">
+                    <button
+                      onClick={() => setShowAllCredits((value) => !value)}
+                      className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#e94f37] px-6 py-3 text-sm font-bold text-black transition hover:bg-[#ff6b58]"
+                    >
+                      {showAllCredits ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                      {showAllCredits
+                        ? "Show fewer credits"
+                        : `View all ${filteredCredits.length} credits`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Clapperboard}
+                title="No credits found"
+                text="There are no credits for the selected filter yet."
+              />
+            )}
+          </section>
 
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {visibleCredits.slice(0, displayCredits.length).map((show, idx) => (
-              <TVCard key={show.id} show={show} />
-            ))}
-          </div>
-
-          {/* view all / collapse */}
-          {displayCredits.length > 12 && (
-            <div className="mt-8 text-center">
-              <button onClick={() => setShowAllCredits(!showAllCredits)} className="px-6 py-3 rounded-full bg-[#e94f37] text-black font-semibold">
-                {showAllCredits ? "Show Less" : `View All (${displayCredits.length})`}
-              </button>
-            </div>
-          )}
-        </section>
+          <section className="mt-16 space-y-5">
+            <SectionHeader
+              icon={Sparkles}
+              title="You May Also Like"
+              subtitle="Similar people to keep exploring across Moodies."
+              action={
+                similarPeople.length > 6 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        setSimilarStartIndex((index) => Math.max(0, index - 6))
+                      }
+                      disabled={!canScrollSimilarLeft}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition hover:border-[#e94f37] disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Previous similar celebrities"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        setSimilarStartIndex((index) =>
+                          Math.min(
+                            Math.max(0, Math.min(similarPeople.length, 12) - 6),
+                            index + 6,
+                          ),
+                        )
+                      }
+                      disabled={!canScrollSimilarRight}
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition hover:border-[#e94f37] disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Next similar celebrities"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )
+              }
+            />
+            {similarPeople.length > 0 ? (
+              <div className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/35 p-4">
+                <AnimatePresence mode="popLayout">
+                  <motion.div
+                    key={similarStartIndex}
+                    initial={{ opacity: 0, x: 24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -24 }}
+                    transition={{ duration: 0.25 }}
+                    className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+                  >
+                    {similarCarouselItems.map((similar) => (
+                      <PersonCard key={similar.id} person={similar} />
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
+                {similarPeople.length > 6 && (
+                  <div className="mt-4 flex justify-center gap-1.5">
+                    {Array.from({
+                      length: Math.ceil(Math.min(similarPeople.length, 12) / 6),
+                    }).map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSimilarStartIndex(index * 6)}
+                        className={`h-1.5 rounded-full transition ${
+                          similarStartIndex / 6 === index
+                            ? "w-7 bg-[#e94f37]"
+                            : "w-1.5 bg-zinc-700 hover:bg-zinc-500"
+                        }`}
+                        aria-label={`Show similar celebrities page ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <EmptyState
+                icon={Users}
+                title="No similar people yet"
+                text="Moodies could not find related celebrity profiles for this person."
+              />
+            )}
+          </section>
+        </main>
       </div>
 
-      {/* Simple image modal - inline minimal */}
-      {
-        selectedImage && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4" onClick={() => setSelectedImage(null)}>
-            <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
-              <button onClick={() => setSelectedImage(null)} className="absolute -top-4 -right-4 bg-zinc-900 border border-zinc-800 rounded-full w-10 h-10 flex items-center justify-center">✕</button>
-              <img src={selectedImage} alt="full" style={{ width: "100%", height: "auto", maxHeight: "80vh", objectFit: "contain" }} />
-            </div>
-          </div>
-        )
-      }
-    </div >
+      <AnimatePresence>
+        {selectedVideo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur"
+            onClick={() => setSelectedVideo(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              className="relative w-full max-w-5xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                onClick={() => setSelectedVideo(null)}
+                className="absolute -right-2 -top-12 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-zinc-900 text-white transition hover:border-[#e94f37]"
+                aria-label="Close video"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
+                <div className="aspect-video bg-black">
+                  <iframe
+                    src={`https://www.youtube.com/embed/${selectedVideo.video_key}?autoplay=1&rel=0`}
+                    title={selectedVideo.video_title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="h-full w-full"
+                  />
+                </div>
+                <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[#ff7a67]">
+                      {selectedVideo.video_type} |{" "}
+                      {selectedVideo.media_type === "tv" ? "TV" : "Movie"}
+                    </p>
+                    <h3 className="mt-1 line-clamp-1 font-bold text-white">
+                      {selectedVideo.video_title}
+                    </h3>
+                    <p className="mt-1 line-clamp-1 text-sm text-zinc-400">
+                      {selectedVideo.media_title}
+                      {selectedVideo.release_year
+                        ? ` (${selectedVideo.release_year})`
+                        : ""}
+                    </p>
+                  </div>
+                  <a
+                    href={selectedVideo.youtube_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#e94f37] px-4 py-2 text-sm font-bold text-black transition hover:bg-[#ff6b58]"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Open YouTube
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
 
+        {selectedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur"
+            onClick={() => setSelectedImage(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              className="relative max-h-[86vh] w-full max-w-4xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute -right-2 -top-12 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-zinc-900 text-white transition hover:border-[#e94f37]"
+                aria-label="Close image"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div className="relative h-[80vh] w-full">
+                <Image
+                  src={selectedImage}
+                  alt={`${person.name} enlarged`}
+                  fill
+                  sizes="(max-width: 1024px) 94vw, 896px"
+                  className="rounded-2xl object-contain"
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
