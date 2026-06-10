@@ -139,25 +139,24 @@ interface RelatedVideo {
   role?: string | null;
   video_id?: string | null;
   video_key: string;
+  video_source?: string;
   youtube_url: string;
   thumbnail_url: string;
   video_title: string;
   video_type: string;
   official: boolean;
+  celebrity_relevance_score?: number;
+  relevance_label?: string;
+  relevance_reason?: string;
   published_at?: string | null;
 }
 
 type FilmographyTab = "all" | "movies" | "tv";
 type SortMode = "notable" | "latest" | "rating" | "oldest";
 type CareerMoment = { label: string; value: string; detail: string };
-type VideoFilter =
-  | "all"
-  | "movie"
-  | "tv"
-  | "trailer"
-  | "teaser"
-  | "clip"
-  | "behind";
+type VideoFilter = "all" | "trailer" | "clip" | "feature" | "show";
+
+const RELATED_VIDEO_PAGE_SIZE = 4;
 
 const genreMap: Record<number, string> = {
   28: "Action",
@@ -252,7 +251,7 @@ function SectionHeader({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e94f37]/20 bg-[#e94f37]/15">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e94f37]/20 bg-white/[0.04] shadow-lg shadow-black/20 backdrop-blur">
           <Icon className="h-5 w-5 text-[#e94f37]" />
         </div>
         <div>
@@ -329,7 +328,7 @@ function SpotlightWorkCard({
   return (
     <Link
       href={getHref(credit)}
-      className="group flex min-h-[108px] gap-3 rounded-2xl border border-zinc-800 bg-black/35 p-3 transition hover:-translate-y-0.5 hover:border-[#e94f37]/70 hover:bg-zinc-950/80"
+      className="group flex min-h-[108px] gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 shadow-lg shadow-black/20 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/[0.07]"
     >
       <div className="relative h-[92px] w-16 shrink-0 overflow-hidden rounded-xl bg-zinc-900">
         <Image
@@ -345,7 +344,7 @@ function SpotlightWorkCard({
           <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
             {label}
           </p>
-          <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-snug text-white transition group-hover:text-[#e94f37]">
+          <h3 className="mt-1 line-clamp-2 text-sm font-bold leading-snug text-white transition group-hover:text-zinc-200">
             {getTitle(credit)}
           </h3>
         </div>
@@ -382,7 +381,7 @@ function WorkCard({
   return (
     <div className="group h-full">
       <Link href={getHref(credit)} className="block h-full">
-        <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-xl shadow-black/20 transition duration-300 group-hover:-translate-y-1 group-hover:border-[#e94f37]/60">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] shadow-xl shadow-black/20 backdrop-blur transition duration-300 group-hover:-translate-y-1 group-hover:border-white/30">
           <div className="relative aspect-[2/3]">
             <Image
               src={getPosterUrl(credit.poster_path)}
@@ -434,7 +433,7 @@ function WorkCard({
           </div>
         </div>
         <div className="mt-3">
-          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-white transition group-hover:text-[#e94f37]">
+          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-white transition group-hover:text-zinc-200">
             {getTitle(credit)}
           </h3>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
@@ -462,7 +461,7 @@ function VideoCard({
   return (
     <button
       onClick={() => onPlay(video)}
-      className="group overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/70 text-left shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:border-[#e94f37]/70 hover:bg-zinc-900"
+      className="group cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] text-left shadow-lg shadow-black/20 backdrop-blur transition hover:-translate-y-0.5 hover:border-[#e94f37]/50 hover:bg-white/[0.07]"
     >
       <div className="relative aspect-video overflow-hidden bg-zinc-950">
         <Image
@@ -476,38 +475,43 @@ function VideoCard({
           className="object-cover transition duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-          <span className="rounded-full bg-[#e94f37] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-black">
+        <div className="absolute left-2 top-2 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-[#e94f37] px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-black">
             {video.video_type}
           </span>
-          <span className="rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur">
+          <span className="rounded-full bg-black/70 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur">
             {video.media_type === "tv" ? "TV" : "Movie"}
           </span>
         </div>
         {video.official && (
-          <span className="absolute right-3 top-3 rounded-full bg-emerald-500/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+          <span className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-black">
             Official
           </span>
         )}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/95 text-black shadow-2xl transition group-hover:scale-110">
-            <Play className="h-5 w-5 fill-current" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-black shadow-2xl transition group-hover:scale-110">
+            <Play className="h-4 w-4 fill-current" />
           </div>
         </div>
       </div>
 
-      <div className="space-y-3 p-4">
+      <div className="space-y-2.5 p-3">
         <div>
-          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-white group-hover:text-[#e94f37]">
+          <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-zinc-300">
+              {video.relevance_label || "Relevant credit"}
+            </span>
+          </div>
+          <h3 className="line-clamp-2 text-[13px] font-bold leading-snug text-white group-hover:text-zinc-200">
             {video.video_title}
           </h3>
-          <p className="mt-1 line-clamp-1 text-xs font-semibold text-zinc-400">
+          <p className="mt-1 line-clamp-1 text-[11px] font-semibold text-zinc-400">
             {video.media_title}
           </p>
         </div>
 
         <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 text-xs text-zinc-500">
+          <div className="min-w-0 text-[11px] text-zinc-500">
             <span>{video.release_year || "TBA"}</span>
             {video.role && (
               <>
@@ -533,7 +537,7 @@ function PersonCard({ person }: { person: SimilarPerson }) {
       href={`/celeb/${person.id}`}
       className="group block min-w-[138px] sm:min-w-0"
     >
-      <div className="relative aspect-[2/3] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 transition group-hover:-translate-y-1 group-hover:border-[#e94f37]/60">
+      <div className="relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition group-hover:-translate-y-1 group-hover:border-white/30">
         <Image
           src={getProfileUrl(person.profile_path, "w342")}
           alt={person.name}
@@ -543,7 +547,7 @@ function PersonCard({ person }: { person: SimilarPerson }) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
       </div>
-      <h3 className="mt-3 line-clamp-2 text-sm font-bold text-white transition group-hover:text-[#e94f37]">
+      <h3 className="mt-3 line-clamp-2 text-sm font-bold text-white transition group-hover:text-zinc-200">
         {person.name}
       </h3>
       <p className="mt-1 text-xs text-zinc-500">
@@ -592,7 +596,7 @@ function ExternalProfileLinks({ person }: { person: Person }) {
         href={`https://www.google.com/search?q=${encodeURIComponent(person.name)}`}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm font-semibold text-zinc-300 transition hover:border-[#e94f37] hover:bg-[#e94f37] hover:text-black"
+        className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-zinc-300 transition hover:border-white/30 hover:bg-white hover:text-black"
       >
         <ExternalLink className="h-4 w-4" />
         Search web profile
@@ -608,7 +612,7 @@ function ExternalProfileLinks({ person }: { person: Person }) {
           href={href}
           target="_blank"
           rel="noreferrer"
-          className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs font-semibold text-zinc-300 transition hover:border-[#e94f37] hover:bg-[#e94f37] hover:text-black"
+          className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-zinc-300 transition hover:border-white/30 hover:bg-white hover:text-black"
         >
           <Icon className="h-4 w-4" />
           {label}
@@ -644,6 +648,7 @@ export default function CelebrityDetailPage({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<RelatedVideo | null>(null);
   const [galleryPage, setGalleryPage] = useState(0);
+  const [videoStartIndex, setVideoStartIndex] = useState(0);
   const [similarStartIndex, setSimilarStartIndex] = useState(0);
   const [loadingStates, setLoadingStates] = useState<
     Record<string | number, boolean>
@@ -780,25 +785,52 @@ export default function CelebrityDetailPage({
   const filteredVideos = useMemo(() => {
     return relatedVideos.filter((video) => {
       if (videoFilter === "all") return true;
-      if (videoFilter === "movie" || videoFilter === "tv") {
-        return video.media_type === videoFilter;
-      }
 
       const type = video.video_type.toLowerCase();
-      if (videoFilter === "trailer") return type === "trailer";
-      if (videoFilter === "teaser") return type === "teaser";
+      if (videoFilter === "trailer") {
+        return type === "trailer" || type === "teaser";
+      }
       if (videoFilter === "clip") return type === "clip";
-      if (videoFilter === "behind") {
+      if (videoFilter === "feature") {
         return (
+          type === "interview" ||
           type === "behind the scenes" ||
           type === "featurette" ||
           type === "official preview"
+        );
+      }
+      if (videoFilter === "show") {
+        return (
+          video.media_type === "tv" ||
+          type === "variety appearance" ||
+          video.relevance_label === "Variety Appearance" ||
+          video.relevance_label === "Show Appearance"
         );
       }
 
       return true;
     });
   }, [relatedVideos, videoFilter]);
+  const visibleVideos = filteredVideos.slice(
+    videoStartIndex,
+    videoStartIndex + RELATED_VIDEO_PAGE_SIZE,
+  );
+  const canScrollVideosLeft = videoStartIndex > 0;
+  const canScrollVideosRight =
+    videoStartIndex + RELATED_VIDEO_PAGE_SIZE < filteredVideos.length;
+  const videoPageCount = Math.ceil(
+    filteredVideos.length / RELATED_VIDEO_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    const lastPageStart = Math.max(
+      0,
+      Math.floor((filteredVideos.length - 1) / RELATED_VIDEO_PAGE_SIZE) *
+        RELATED_VIDEO_PAGE_SIZE,
+    );
+
+    setVideoStartIndex((index) => Math.min(index, lastPageStart));
+  }, [filteredVideos.length]);
 
   if (loading) return <AppLoading />;
 
@@ -806,8 +838,8 @@ export default function CelebrityDetailPage({
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-black via-zinc-950 to-black px-4 text-white">
         <div className="max-w-md rounded-3xl border border-zinc-800 bg-zinc-900/70 p-8 text-center shadow-2xl">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#e94f37]/15">
-            <SearchX className="h-8 w-8 text-[#e94f37]" />
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
+            <SearchX className="h-8 w-8 text-white" />
           </div>
           <h2 className="text-2xl font-bold">Celebrity not found</h2>
           <p className="mt-2 text-sm leading-relaxed text-zinc-400">
@@ -976,7 +1008,7 @@ export default function CelebrityDetailPage({
                     onClick={() =>
                       setSelectedImage(getImageUrl(image.file_path))
                     }
-                    className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-zinc-900 transition hover:border-[#e94f37]"
+                    className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-zinc-900 transition hover:border-white/30"
                   >
                     <Image
                       src={getProfileUrl(image.file_path, "w185")}
@@ -1002,7 +1034,7 @@ export default function CelebrityDetailPage({
               className="min-w-0"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-[#e94f37]/30 bg-[#e94f37]/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#ff7a67]">
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
                   {person.known_for_department || "Celebrity"}
                 </span>
                 {topGenres[0] && (
@@ -1056,23 +1088,23 @@ export default function CelebrityDetailPage({
                 </a>
                 <a
                   href="#biography"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[#e94f37]/60 hover:text-white"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
                 >
-                  <Sparkles className="h-4 w-4 text-[#e94f37]" />
+                  <Sparkles className="h-4 w-4 text-zinc-300" />
                   Biography
                 </a>
                 <a
                   href="#gallery"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[#e94f37]/60 hover:text-white"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
                 >
-                  <Sparkles className="h-4 w-4 text-[#e94f37]" />
+                  <Sparkles className="h-4 w-4 text-zinc-300" />
                   Photos
                 </a>
                 <a
                   href="#genre-identity"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-[#e94f37]/60 hover:text-white"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
                 >
-                  <Sparkles className="h-4 w-4 text-[#e94f37]" />
+                  <Sparkles className="h-4 w-4 text-zinc-300" />
                   Genres
                 </a>
               </div>
@@ -1088,7 +1120,7 @@ export default function CelebrityDetailPage({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                      <Calendar className="h-3.5 w-3.5 text-[#e94f37]" />
+                      <Calendar className="h-3.5 w-3.5 text-zinc-300" />
                       {person.deathday ? "Lived" : "Age"}
                     </div>
                     <p className="text-lg font-black text-white">
@@ -1100,7 +1132,7 @@ export default function CelebrityDetailPage({
                   </div>
                   <div>
                     <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                      <MapPin className="h-3.5 w-3.5 text-[#e94f37]" />
+                      <MapPin className="h-3.5 w-3.5 text-zinc-300" />
                       Born
                     </div>
                     <p className="line-clamp-1 text-lg font-black text-white">
@@ -1120,7 +1152,7 @@ export default function CelebrityDetailPage({
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                     External profiles
                   </span>
-                  <ExternalLink className="h-4 w-4 text-[#e94f37]" />
+                  <ExternalLink className="h-4 w-4 text-zinc-300" />
                 </div>
                 <ExternalProfileLinks person={person} />
                 {!hasExternalLinks && (
@@ -1161,7 +1193,7 @@ export default function CelebrityDetailPage({
                   {person.biography.length > 520 && (
                     <button
                       onClick={() => setBioExpanded((value) => !value)}
-                      className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#e94f37]/40 px-4 py-2 text-sm font-bold text-[#ff7a67] transition hover:bg-[#e94f37] hover:text-black"
+                      className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white hover:text-black"
                     >
                       {bioExpanded ? (
                         <ChevronUp className="h-4 w-4" />
@@ -1218,7 +1250,7 @@ export default function CelebrityDetailPage({
                 action={
                   <a
                     href="#filmography"
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-zinc-400 transition hover:text-[#e94f37]"
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-zinc-400 transition hover:text-white"
                   >
                     Full filmography <ChevronRight className="h-4 w-4" />
                   </a>
@@ -1240,41 +1272,27 @@ export default function CelebrityDetailPage({
             <SectionHeader
               icon={Play}
               title="Related Videos"
-              subtitle="Trailers, teasers, clips, featurettes, and official previews from works this celebrity appears in."
+              subtitle="Trailers, clips, interviews, and show appearances tied to meaningful credits."
               action={
                 relatedVideos.length > 0 && (
-                  <div className="flex max-w-full overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-900 p-1">
+                  <div className="flex max-w-full overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.04] p-1 backdrop-blur">
                     {[
                       ["all", `All ${relatedVideos.length}`],
-                      [
-                        "movie",
-                        `Movies ${relatedVideos.filter((video) => video.media_type === "movie").length}`,
-                      ],
-                      [
-                        "tv",
-                        `TV ${relatedVideos.filter((video) => video.media_type === "tv").length}`,
-                      ],
-                      [
-                        "trailer",
-                        `Trailers ${relatedVideos.filter((video) => video.video_type === "Trailer").length}`,
-                      ],
-                      [
-                        "teaser",
-                        `Teasers ${relatedVideos.filter((video) => video.video_type === "Teaser").length}`,
-                      ],
-                      [
-                        "clip",
-                        `Clips ${relatedVideos.filter((video) => video.video_type === "Clip").length}`,
-                      ],
-                      ["behind", "BTS"],
+                      ["trailer", "Trailers"],
+                      ["clip", "Clips"],
+                      ["feature", "Features"],
+                      ["show", "Shows"],
                     ].map(([value, label]) => (
                       <button
                         key={value}
-                        onClick={() => setVideoFilter(value as VideoFilter)}
-                        className={`whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition sm:text-sm ${
+                        onClick={() => {
+                          setVideoFilter(value as VideoFilter);
+                          setVideoStartIndex(0);
+                        }}
+                        className={`cursor-pointer whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition sm:text-sm ${
                           videoFilter === value
-                            ? "bg-[#e94f37] text-black"
-                            : "text-zinc-400 hover:text-white"
+                            ? "bg-[#e94f37] text-black shadow-lg shadow-[#e94f37]/15"
+                            : "text-zinc-400 hover:bg-white/5 hover:text-white"
                         }`}
                       >
                         {label}
@@ -1286,14 +1304,14 @@ export default function CelebrityDetailPage({
             />
 
             {videosLoading ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {Array.from({ length: 3 }).map((_, index) => (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, index) => (
                   <div
                     key={index}
-                    className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/70"
+                    className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]"
                   >
                     <div className="aspect-video animate-pulse bg-zinc-800" />
-                    <div className="space-y-3 p-4">
+                    <div className="space-y-2.5 p-3">
                       <div className="h-4 w-4/5 animate-pulse rounded bg-zinc-800" />
                       <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800" />
                     </div>
@@ -1306,15 +1324,87 @@ export default function CelebrityDetailPage({
                 title="Videos could not load"
                 text={videosError}
               />
-            ) : filteredVideos.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredVideos.slice(0, 9).map((video) => (
-                  <VideoCard
-                    key={video.id}
-                    video={video}
-                    onPlay={setSelectedVideo}
-                  />
-                ))}
+            ) : visibleVideos.length > 0 ? (
+              <div className="space-y-4">
+                <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.025] p-3 backdrop-blur">
+                  <AnimatePresence mode="popLayout">
+                    <motion.div
+                      key={`${videoFilter}-${videoStartIndex}`}
+                      initial={{ opacity: 0, x: 24 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -24 }}
+                      transition={{ duration: 0.25 }}
+                      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                    >
+                      {visibleVideos.map((video) => (
+                        <VideoCard
+                          key={video.id}
+                          video={video}
+                          onPlay={setSelectedVideo}
+                        />
+                      ))}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                {videoPageCount > 1 && (
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      onClick={() =>
+                        setVideoStartIndex((index) =>
+                          Math.max(0, index - RELATED_VIDEO_PAGE_SIZE),
+                        )
+                      }
+                      disabled={!canScrollVideosLeft}
+                      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Previous related videos"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+
+                    <div className="flex min-w-[96px] items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 backdrop-blur">
+                      {Array.from({ length: videoPageCount }).map(
+                        (_, index) => (
+                          <button
+                            key={index}
+                            onClick={() =>
+                              setVideoStartIndex(
+                                index * RELATED_VIDEO_PAGE_SIZE,
+                              )
+                            }
+                            className={`h-1.5 cursor-pointer rounded-full transition ${
+                              Math.floor(
+                                videoStartIndex / RELATED_VIDEO_PAGE_SIZE,
+                              ) === index
+                                ? "w-7 bg-[#e94f37]"
+                                : "w-1.5 bg-zinc-700 hover:bg-zinc-500"
+                            }`}
+                            aria-label={`Show related videos page ${index + 1}`}
+                          />
+                        ),
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() =>
+                        setVideoStartIndex((index) =>
+                          Math.min(
+                            Math.max(
+                              0,
+                              filteredVideos.length - RELATED_VIDEO_PAGE_SIZE,
+                            ),
+                            index + RELATED_VIDEO_PAGE_SIZE,
+                          ),
+                        )
+                      }
+                      disabled={!canScrollVideosRight}
+                      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Next related videos"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <EmptyState
@@ -1322,7 +1412,7 @@ export default function CelebrityDetailPage({
                 title="No related videos found"
                 text={
                   relatedVideos.length > 0
-                    ? "No videos match this filter yet. Try All, Movies, or TV."
+                    ? "No videos match this filter yet. Try All or another video group."
                     : "Moodies could not find trailers, teasers, clips, or official previews connected to this celebrity's known works."
                 }
               />
@@ -1341,11 +1431,11 @@ export default function CelebrityDetailPage({
               />
               {topGenres.length > 0 ? (
                 <div className="mt-4 grid gap-4 sm:grid-cols-[116px_minmax(0,1fr)]">
-                  <div className="relative mx-auto flex h-28 w-28 items-center justify-center rounded-full border border-[#e94f37]/25 bg-[#e94f37]/10 shadow-xl shadow-[#e94f37]/10">
+                  <div className="relative mx-auto flex h-28 w-28 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] shadow-xl shadow-black/20">
                     <div
                       className="absolute inset-2.5 rounded-full"
                       style={{
-                        background: `conic-gradient(#e94f37 0deg ${Math.round(
+                        background: `conic-gradient(#f5f5f5 0deg ${Math.round(
                           ((topGenres[0]?.[1] || 0) /
                             Math.max(totalGenreWorks, 1)) *
                             360,
@@ -1361,7 +1451,7 @@ export default function CelebrityDetailPage({
                         )}
                         %
                       </span>
-                      <span className="mt-0.5 max-w-16 truncate text-[10px] font-bold uppercase tracking-wider text-[#ff7a67]">
+                      <span className="mt-0.5 max-w-16 truncate text-[10px] font-bold uppercase tracking-wider text-zinc-300">
                         {topGenres[0]?.[0]}
                       </span>
                     </div>
@@ -1376,11 +1466,11 @@ export default function CelebrityDetailPage({
                       return (
                         <div
                           key={genre}
-                          className="rounded-xl border border-zinc-800 bg-black/25 p-2.5 transition hover:border-[#e94f37]/50"
+                          className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5 transition hover:border-white/25 hover:bg-white/[0.06]"
                         >
                           <div className="mb-1.5 flex items-center justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-2">
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#e94f37]/15 text-[10px] font-black text-[#ff7a67]">
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/10 text-[10px] font-black text-zinc-200">
                                 {index + 1}
                               </span>
                               <span className="truncate text-xs font-bold text-white sm:text-sm">
@@ -1393,7 +1483,7 @@ export default function CelebrityDetailPage({
                           </div>
                           <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
                             <div
-                              className="h-full rounded-full bg-gradient-to-r from-[#e94f37] via-[#ff7a67] to-[#ffb36b]"
+                              className="h-full rounded-full bg-gradient-to-r from-white via-zinc-300 to-zinc-500"
                               style={{ width: `${pct}%` }}
                             />
                           </div>
@@ -1425,7 +1515,7 @@ export default function CelebrityDetailPage({
                   {collaborations.slice(0, 4).map((collab) => (
                     <div
                       key={collab.id}
-                      className="group rounded-xl border border-zinc-800 bg-black/25 p-3 transition hover:-translate-y-0.5 hover:border-[#e94f37]/60 hover:bg-zinc-950/80"
+                      className="group rounded-xl border border-white/10 bg-white/[0.03] p-3 transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06]"
                     >
                       <div className="flex items-center gap-3">
                         <Link
@@ -1443,12 +1533,12 @@ export default function CelebrityDetailPage({
                         <div className="min-w-0 flex-1">
                           <Link
                             href={`/celeb/${collab.id}`}
-                            className="line-clamp-1 font-bold text-white transition hover:text-[#e94f37]"
+                            className="line-clamp-1 font-bold text-white transition hover:text-zinc-200"
                           >
                             {collab.name}
                           </Link>
                           <div className="mt-1 flex items-center gap-2">
-                            <span className="rounded-full bg-[#e94f37]/15 px-2 py-0.5 text-[11px] font-bold text-[#ff7a67]">
+                            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-bold text-zinc-300">
                               {collab.count} shared
                             </span>
                             <Link
@@ -1467,7 +1557,7 @@ export default function CelebrityDetailPage({
                               key={project}
                               className="flex items-center gap-2 rounded-lg bg-zinc-900/70 px-2.5 py-1.5 text-xs text-zinc-400"
                             >
-                              <Film className="h-3 w-3 shrink-0 text-[#e94f37]" />
+                              <Film className="h-3 w-3 shrink-0 text-zinc-300" />
                               <span className="line-clamp-1">{project}</span>
                             </div>
                           ))}
@@ -1518,7 +1608,7 @@ export default function CelebrityDetailPage({
                         setGalleryPage((page) => Math.max(0, page - 1))
                       }
                       disabled={galleryPage === 0}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition hover:border-[#e94f37] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                       aria-label="Previous gallery page"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -1533,7 +1623,7 @@ export default function CelebrityDetailPage({
                         )
                       }
                       disabled={galleryPage >= galleryPages - 1}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition hover:border-[#e94f37] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                       aria-label="Next gallery page"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -1553,7 +1643,7 @@ export default function CelebrityDetailPage({
                     onClick={() =>
                       setSelectedImage(getImageUrl(image.file_path))
                     }
-                    className="group relative aspect-[2/3] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 transition hover:-translate-y-1 hover:border-[#e94f37]/70"
+                    className="group relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:-translate-y-1 hover:border-white/30"
                   >
                     <Image
                       src={getProfileUrl(image.file_path)}
@@ -1603,7 +1693,7 @@ export default function CelebrityDetailPage({
                       }}
                       className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold transition ${
                         selectedTab === value
-                          ? "bg-[#e94f37] text-black shadow-lg shadow-[#e94f37]/20"
+                          ? "bg-[#e94f37] text-black shadow-lg shadow-[#e94f37]/15"
                           : "text-zinc-400 hover:bg-white/5 hover:text-white"
                       }`}
                     >
@@ -1620,7 +1710,7 @@ export default function CelebrityDetailPage({
                     onChange={(event) =>
                       setSortMode(event.target.value as SortMode)
                     }
-                    className="min-h-11 w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-2 text-sm font-semibold text-zinc-200 outline-none transition focus:border-[#e94f37] sm:w-[180px]"
+                    className="min-h-11 w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-2 text-sm font-semibold text-zinc-200 outline-none transition focus:border-white/40 sm:w-[180px]"
                   >
                     <option value="notable">Most notable</option>
                     <option value="latest">Latest first</option>
@@ -1687,7 +1777,7 @@ export default function CelebrityDetailPage({
                         setSimilarStartIndex((index) => Math.max(0, index - 6))
                       }
                       disabled={!canScrollSimilarLeft}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition hover:border-[#e94f37] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                       aria-label="Previous similar celebrities"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -1702,7 +1792,7 @@ export default function CelebrityDetailPage({
                         )
                       }
                       disabled={!canScrollSimilarRight}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-400 transition hover:border-[#e94f37] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                       aria-label="Next similar celebrities"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -1763,25 +1853,42 @@ export default function CelebrityDetailPage({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/90 p-3 backdrop-blur-md sm:p-6"
             onClick={() => setSelectedVideo(null)}
           >
             <motion.div
               initial={{ scale: 0.96, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.96, opacity: 0 }}
-              className="relative w-full max-w-5xl"
+              className="relative w-full max-w-5xl pt-12 sm:pt-0"
               onClick={(event) => event.stopPropagation()}
             >
-              <button
-                onClick={() => setSelectedVideo(null)}
-                className="absolute -right-2 -top-12 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-zinc-900 text-white transition hover:border-[#e94f37]"
-                aria-label="Close video"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <div className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 shadow-2xl">
-                <div className="aspect-video bg-black">
+              <div className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl shadow-black/60 ring-1 ring-white/5 sm:rounded-3xl">
+                <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-[#e94f37] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-black">
+                        {selectedVideo.video_type}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-200">
+                        {selectedVideo.media_type === "tv" ? "TV" : "Movie"}
+                      </span>
+                      {selectedVideo.official && (
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-200">
+                          Official
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setSelectedVideo(null)}
+                      className="flex cursor-pointer h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-xl shadow-black/40 backdrop-blur transition hover:border-white/40 hover:bg-white/20"
+                      aria-label="Close video"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="aspect-video max-h-[80dvh] min-h-0 w-full shrink bg-black">
                   <iframe
                     src={`https://www.youtube.com/embed/${selectedVideo.video_key}?autoplay=1&rel=0`}
                     title={selectedVideo.video_title}
@@ -1789,32 +1896,6 @@ export default function CelebrityDetailPage({
                     allowFullScreen
                     className="h-full w-full"
                   />
-                </div>
-                <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-[#ff7a67]">
-                      {selectedVideo.video_type} |{" "}
-                      {selectedVideo.media_type === "tv" ? "TV" : "Movie"}
-                    </p>
-                    <h3 className="mt-1 line-clamp-1 font-bold text-white">
-                      {selectedVideo.video_title}
-                    </h3>
-                    <p className="mt-1 line-clamp-1 text-sm text-zinc-400">
-                      {selectedVideo.media_title}
-                      {selectedVideo.release_year
-                        ? ` (${selectedVideo.release_year})`
-                        : ""}
-                    </p>
-                  </div>
-                  <a
-                    href={selectedVideo.youtube_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#e94f37] px-4 py-2 text-sm font-bold text-black transition hover:bg-[#ff6b58]"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Open YouTube
-                  </a>
                 </div>
               </div>
             </motion.div>
@@ -1838,7 +1919,7 @@ export default function CelebrityDetailPage({
             >
               <button
                 onClick={() => setSelectedImage(null)}
-                className="absolute -right-2 -top-12 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-zinc-900 text-white transition hover:border-[#e94f37]"
+                className="absolute -right-2 -top-12 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-zinc-900 text-white transition hover:border-white/30"
                 aria-label="Close image"
               >
                 <X className="h-5 w-5" />

@@ -423,8 +423,17 @@ export class PeopleService {
     if (rawType === 'Clip') return 'Clip';
     if (rawType === 'Featurette') return 'Featurette';
     if (rawType === 'Behind the Scenes') return 'Behind the Scenes';
+    if (rawType === 'Interview' || name.includes('interview'))
+      return 'Interview';
     if (name.includes('official preview') || name.includes('preview'))
       return 'Official Preview';
+    if (
+      name.includes('talk show') ||
+      name.includes('variety') ||
+      name.includes('appearance') ||
+      name.includes('segment')
+    )
+      return 'Variety Appearance';
     return rawType || 'Video';
   }
 
@@ -438,27 +447,263 @@ export class PeopleService {
       'Clip',
       'Featurette',
       'Behind the Scenes',
+      'Interview',
       'Official Preview',
+      'Variety Appearance',
     ].includes(type);
   }
 
-  private getRelatedVideoScore(video: any, credit: any): number {
+  private normalizeSearchText(value?: string): string {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private hasMeaningfulRoleReference(role?: string): boolean {
+    const normalized = this.normalizeSearchText(role);
+    if (!normalized || normalized.length < 3) return false;
+    return ![
+      'self',
+      'himself',
+      'herself',
+      'themself',
+      'guest',
+      'cameo',
+      'contestant',
+      'participant',
+    ].some((term) => normalized === term || normalized.includes(`${term} `));
+  }
+
+  private getRoleCategory(credit: any): string {
+    const role = this.normalizeSearchText(
+      credit?.character || credit?.job || '',
+    );
+    if (/(host|presenter|mc|emcee|panelist|mentor|judge)/.test(role))
+      return 'host';
+    if (/(main cast|regular|recurring|comedian|performer|member)/.test(role))
+      return 'regular';
+    if (/(guest|cameo|special appearance)/.test(role)) return 'guest';
+    if (/(contestant|participant)/.test(role)) return 'participant';
+    if (/(archive footage|uncredited)/.test(role)) return 'weak';
+    if (/(self|himself|herself|themself)/.test(role)) return 'self';
+    return role ? 'character' : 'unknown';
+  }
+
+  private isWeakCelebrityCredit(credit: any): boolean {
+    return ['guest', 'participant', 'weak'].includes(
+      this.getRoleCategory(credit),
+    );
+  }
+
+  private isNonScriptedTvCredit(credit: any): boolean {
+    if (credit?.media_type !== 'tv') return false;
+    const strictGenres = new Set([10763, 10764, 10767]);
+    return (credit.genre_ids || []).some((genreId: number) =>
+      strictGenres.has(genreId),
+    );
+  }
+
+  private isStrongNonScriptedCredit(credit: any, knownFor: boolean): boolean {
+    if (!this.isNonScriptedTvCredit(credit)) return false;
+    const episodeCount = Number(credit?.episode_count || 0);
+    const roleCategory = this.getRoleCategory(credit);
+    const order = Number.isFinite(credit?.order) ? Number(credit.order) : null;
+
+    return (
+      knownFor ||
+      ['host', 'regular'].includes(roleCategory) ||
+      episodeCount >= 8 ||
+      (episodeCount >= 4 && order !== null && order <= 8)
+    );
+  }
+
+  private isKnownForCredit(credit: any, knownForTitles: Set<string>): boolean {
+    const title = this.normalizeSearchText(this.getCreditTitle(credit));
+    return knownForTitles.has(title);
+  }
+
+  private getPersonReferenceScore(
+    video: any,
+    person: any,
+    credit: any,
+  ): number {
+    const videoName = this.normalizeSearchText(video?.name);
+    const names = [person?.name, ...(person?.also_known_as || [])]
+      .map((name) => this.normalizeSearchText(name))
+      .filter((name) => name.length >= 4);
+
+    const nameHit = names.some((name) => videoName.includes(name));
+    if (nameHit) return 70;
+
+    const role = credit?.character || credit?.job || '';
+    if (
+      this.hasMeaningfulRoleReference(role) &&
+      videoName.includes(this.normalizeSearchText(role))
+    ) {
+      return 45;
+    }
+
+    return 0;
+  }
+
+  private getCreditRelevanceScore(
+    credit: any,
+    knownForTitles: Set<string>,
+  ): number {
+    let score = 0;
+    const mediaType = credit?.media_type === 'tv' ? 'tv' : 'movie';
+    const order = Number.isFinite(credit?.order) ? Number(credit.order) : null;
+    const episodeCount = Number(credit?.episode_count || 0);
+    const year = this.getReleaseYear(credit);
+    const knownFor = this.isKnownForCredit(credit, knownForTitles);
+    const roleCategory = this.getRoleCategory(credit);
+
+    if (knownFor) score += 45;
+
+    if (order !== null) {
+      if (order <= 3) score += 42;
+      else if (order <= 8) score += 30;
+      else if (order <= 15) score += 12;
+      else score -= 8;
+    } else if (mediaType === 'movie') {
+      score += 14;
+    }
+
+    if (mediaType === 'tv') {
+      if (episodeCount >= 30) score += 40;
+      else if (episodeCount >= 12) score += 30;
+      else if (episodeCount >= 6) score += 18;
+      else if (episodeCount >= 3) score += 8;
+      else if (episodeCount > 0) score -= 26;
+    }
+
+    if (this.isNonScriptedTvCredit(credit)) {
+      if (this.isStrongNonScriptedCredit(credit, knownFor)) score += 34;
+      else score -= 16;
+    }
+
+    if (roleCategory === 'host') score += 30;
+    else if (roleCategory === 'regular') score += 24;
+    else if (roleCategory === 'self' && episodeCount >= 6) score += 12;
+    else if (roleCategory === 'guest' && episodeCount <= 2) score -= 24;
+    else if (roleCategory === 'participant' && episodeCount <= 2) score -= 18;
+
+    if (this.hasMeaningfulRoleReference(credit?.character || credit?.job)) {
+      score += 10;
+    }
+
+    if (
+      this.isWeakCelebrityCredit(credit) &&
+      !knownFor &&
+      !this.isStrongNonScriptedCredit(credit, knownFor)
+    )
+      score -= 24;
+
+    score += Math.min(Number(credit?.vote_average || 0) * 2.5, 25);
+    score += Math.min(Math.log10(Number(credit?.popularity || 0) + 1) * 10, 32);
+    if (credit?.poster_path || credit?.backdrop_path) score += 5;
+    if (year) score += Math.max(0, Math.min(8, year - 2016));
+
+    return score;
+  }
+
+  private getRelevanceLabel(
+    credit: any,
+    directReferenceScore: number,
+    baseRelevance: number,
+    knownFor: boolean,
+  ): string {
+    if (directReferenceScore >= 70) return 'Featured Work';
+    if (directReferenceScore >= 45) return 'Featured Role';
+    if (knownFor) return 'Known For';
+
+    const order = Number.isFinite(credit?.order) ? Number(credit.order) : null;
+    const episodeCount = Number(credit?.episode_count || 0);
+    const roleCategory = this.getRoleCategory(credit);
+    if (this.isNonScriptedTvCredit(credit)) {
+      if (['host', 'regular'].includes(roleCategory) || episodeCount >= 8) {
+        return 'Variety Appearance';
+      }
+      return 'Show Appearance';
+    }
+    if ((order !== null && order <= 8) || episodeCount >= 12) {
+      return 'Featured Work';
+    }
+
+    if (baseRelevance >= 70) return 'Featured Work';
+    return 'Related Work';
+  }
+
+  private shouldIncludeRelatedVideo(
+    credit: any,
+    video: any,
+    person: any,
+    knownForTitles: Set<string>,
+    baseRelevance: number,
+    directReferenceScore: number,
+  ): boolean {
+    const mediaType = credit?.media_type === 'tv' ? 'tv' : 'movie';
+    const episodeCount = Number(credit?.episode_count || 0);
+    const order = Number.isFinite(credit?.order) ? Number(credit.order) : null;
+    const knownFor = this.isKnownForCredit(credit, knownForTitles);
+    const directlyAboutCelebrity = directReferenceScore > 0;
+    const strongNonScripted = this.isStrongNonScriptedCredit(credit, knownFor);
+
+    if (!this.isUsefulRelatedVideo(video)) return false;
+
+    if (
+      mediaType === 'tv' &&
+      episodeCount > 0 &&
+      episodeCount <= 2 &&
+      !knownFor &&
+      !directlyAboutCelebrity &&
+      !strongNonScripted
+    ) {
+      return false;
+    }
+
+    if (
+      this.isNonScriptedTvCredit(credit) &&
+      !directlyAboutCelebrity &&
+      !knownFor &&
+      !strongNonScripted &&
+      (episodeCount < 6 || (order !== null && order > 10))
+    ) {
+      return false;
+    }
+
+    if (
+      this.isWeakCelebrityCredit(credit) &&
+      !directlyAboutCelebrity &&
+      !knownFor &&
+      !strongNonScripted
+    ) {
+      return false;
+    }
+
+    return (
+      baseRelevance >= 38 ||
+      knownFor ||
+      directlyAboutCelebrity ||
+      strongNonScripted
+    );
+  }
+
+  private getRelatedVideoQualityScore(video: any): number {
     const type = this.normalizeRelatedVideoType(video);
     let score = 0;
 
-    if (video.official) score += 100;
+    if (video.official) score += 35;
     if (type === 'Trailer') score += 80;
     else if (type === 'Teaser') score += 70;
     else if (type === 'Clip') score += 45;
     else if (type === 'Featurette') score += 35;
     else if (type === 'Behind the Scenes') score += 30;
+    else if (type === 'Interview') score += 42;
     else if (type === 'Official Preview') score += 25;
-
-    score += Math.min(Number(credit?.vote_average || 0) * 4, 40);
-    score += Math.min(Math.log10(Number(credit?.popularity || 0) + 1) * 12, 36);
-
-    const year = this.getReleaseYear(credit);
-    if (year) score += Math.max(0, Math.min(20, year - 2000));
+    else if (type === 'Variety Appearance') score += 38;
 
     if (video.size >= 1080) score += 8;
     else if (video.size >= 720) score += 5;
@@ -472,6 +717,23 @@ export class PeopleService {
     if (cached && cached.expires > Date.now()) return cached.data;
 
     const person = await this.getPersonDetails(id);
+    const knownForTitles = new Set(
+      [
+        ...(person.known_for || []),
+        ...(person.combined_credits?.cast || [])
+          .filter((credit: any) => Number(credit?.vote_average || 0) >= 7.5)
+          .sort(
+            (a: any, b: any) =>
+              Number(b?.vote_average || 0) - Number(a?.vote_average || 0),
+          )
+          .slice(0, 5),
+      ]
+        .map((credit: any) =>
+          this.normalizeSearchText(this.getCreditTitle(credit)),
+        )
+        .filter(Boolean),
+    );
+
     const credits = this.removeDuplicateCredits(
       person.combined_credits?.cast || [],
     )
@@ -480,58 +742,94 @@ export class PeopleService {
           credit?.id &&
           (credit.media_type === 'movie' || credit.media_type === 'tv'),
       )
+      .map((credit: any) => ({
+        ...credit,
+        celebrity_relevance_score: this.getCreditRelevanceScore(
+          credit,
+          knownForTitles,
+        ),
+      }))
+      .filter((credit: any) => credit.celebrity_relevance_score >= 28)
       .sort((a: any, b: any) => {
-        const scoreA =
-          Number(a.vote_average || 0) * 8 +
-          Math.log10(Number(a.popularity || 0) + 1) * 10 +
-          (a.poster_path || a.backdrop_path ? 8 : 0) +
-          (this.getReleaseYear(a) || 0) / 200;
-        const scoreB =
-          Number(b.vote_average || 0) * 8 +
-          Math.log10(Number(b.popularity || 0) + 1) * 10 +
-          (b.poster_path || b.backdrop_path ? 8 : 0) +
-          (this.getReleaseYear(b) || 0) / 200;
-        return scoreB - scoreA;
+        return b.celebrity_relevance_score - a.celebrity_relevance_score;
       })
-      .slice(0, 16);
+      .slice(0, 14);
 
-    const settled = await Promise.allSettled(
-      credits.map(async (credit: any) => {
-        const mediaType = credit.media_type === 'tv' ? 'tv' : 'movie';
-        const videoData = await this.tmdb(
-          `${mediaType}/${credit.id}/videos?language=en-US`,
-        );
-        const videos = Array.isArray(videoData?.results)
-          ? videoData.results
-          : [];
+    const settled: PromiseSettledResult<any[]>[] = [];
+    for (const chunk of this.chunkArray(credits, 5)) {
+      const chunkResults = await Promise.allSettled(
+        chunk.map(async (credit: any) => {
+          const mediaType = credit.media_type === 'tv' ? 'tv' : 'movie';
+          const videoData = await this.tmdb(
+            `${mediaType}/${credit.id}/videos?language=en-US`,
+          );
+          const videos = Array.isArray(videoData?.results)
+            ? videoData.results
+            : [];
 
-        return videos
-          .filter((video: any) => this.isUsefulRelatedVideo(video))
-          .map((video: any) => {
-            const videoType = this.normalizeRelatedVideoType(video);
-            return {
-              id: `${mediaType}-${credit.id}-${video.key}`,
-              media_id: credit.id,
-              media_type: mediaType,
-              media_title: this.getCreditTitle(credit),
-              media_poster_path: credit.poster_path || null,
-              media_backdrop_path: credit.backdrop_path || null,
-              media_vote_average: credit.vote_average || null,
-              release_year: this.getReleaseYear(credit),
-              role: credit.character || credit.job || null,
-              video_id: video.id || null,
-              video_key: video.key,
-              youtube_url: `https://www.youtube.com/watch?v=${video.key}`,
-              thumbnail_url: `https://img.youtube.com/vi/${video.key}/hqdefault.jpg`,
-              video_title: video.name || videoType,
-              video_type: videoType,
-              official: Boolean(video.official),
-              published_at: video.published_at || null,
-              score: this.getRelatedVideoScore(video, credit),
-            };
-          });
-      }),
-    );
+          return videos
+            .filter((video: any) => {
+              const directReferenceScore = this.getPersonReferenceScore(
+                video,
+                person,
+                credit,
+              );
+              return this.shouldIncludeRelatedVideo(
+                credit,
+                video,
+                person,
+                knownForTitles,
+                credit.celebrity_relevance_score,
+                directReferenceScore,
+              );
+            })
+            .map((video: any) => {
+              const videoType = this.normalizeRelatedVideoType(video);
+              const directReferenceScore = this.getPersonReferenceScore(
+                video,
+                person,
+                credit,
+              );
+              const knownFor = this.isKnownForCredit(credit, knownForTitles);
+              const celebrityRelevanceScore =
+                credit.celebrity_relevance_score + directReferenceScore;
+              const videoQualityScore = this.getRelatedVideoQualityScore(video);
+              const relevanceLabel = this.getRelevanceLabel(
+                credit,
+                directReferenceScore,
+                credit.celebrity_relevance_score,
+                knownFor,
+              );
+
+              return {
+                id: `${mediaType}-${credit.id}-${video.key}`,
+                media_id: credit.id,
+                media_type: mediaType,
+                media_title: this.getCreditTitle(credit),
+                media_poster_path: credit.poster_path || null,
+                media_backdrop_path: credit.backdrop_path || null,
+                media_vote_average: credit.vote_average || null,
+                release_year: this.getReleaseYear(credit),
+                role: credit.character || credit.job || null,
+                video_id: video.id || null,
+                video_key: video.key,
+                video_source: video.site || 'YouTube',
+                youtube_url: `https://www.youtube.com/watch?v=${video.key}`,
+                thumbnail_url: `https://img.youtube.com/vi/${video.key}/hqdefault.jpg`,
+                video_title: video.name || videoType,
+                video_type: videoType,
+                official: Boolean(video.official),
+                published_at: video.published_at || null,
+                celebrity_relevance_score: Math.round(celebrityRelevanceScore),
+                relevance_label: relevanceLabel,
+                relevance_reason: `${relevanceLabel} for ${this.getCreditTitle(credit)}`,
+                score: celebrityRelevanceScore * 4 + videoQualityScore,
+              };
+            });
+        }),
+      );
+      settled.push(...chunkResults);
+    }
 
     const deduped = new Map<string, any>();
     for (const result of settled) {
@@ -542,6 +840,7 @@ export class PeopleService {
           video.video_key,
           video.media_type,
           video.media_id,
+          video.video_source,
           String(video.video_title || '')
             .toLowerCase()
             .trim(),
