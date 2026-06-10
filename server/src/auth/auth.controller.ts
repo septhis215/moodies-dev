@@ -22,16 +22,12 @@ import * as User2 from '@prisma/client';
 import * as argon from 'argon2';
 import { JwtGuard } from './guard';
 import { AuthGuard } from '@nestjs/passport';
-import { PrismaClient } from '@prisma/client';
 import { sendVerificationCode } from '../utils/mailer';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import type { Response as ExpressResponse } from 'express';
 import { UpdateProfileDto } from './dto';
-
-
-
-const prisma = new PrismaClient();
+import { randomInt } from 'node:crypto';
 
 @Controller('auth')
 export class AuthController {
@@ -44,7 +40,7 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   @Post('signup')
   signup(@Body() dto: authDto.RegisterDto) {
-    console.log(dto);
+    // Do not log `dto` — it contains the plaintext password.
     return this.authService.signup(dto);
   }
 
@@ -64,11 +60,11 @@ export class AuthController {
     return this.authService.changePassword(user.id, dto);
   }
 
-  @HttpCode(HttpStatus.OK)
-  @Post('forgot-password')
-  forgotPassword(@Body() dto: authDto.ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto);
-  }
+  // NOTE: The old `POST /auth/forgot-password` endpoint was removed. It reset a
+  // user's password given only an email + new password, with no proof of
+  // ownership — a trivial account-takeover vector. Password recovery now goes
+  // exclusively through the verified flow: request-reset → verify-code →
+  // reset-password (see below), which the client already uses.
 
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtGuard)
@@ -124,11 +120,17 @@ export class AuthController {
   async setPassword(@Body() body: { token: string; password: string }) {
     const { token, password } = body;
 
+    // These endpoints take an inline body rather than a validated DTO, so the
+    // global ValidationPipe does not enforce password strength here — check it.
+    if (typeof password !== 'string' || password.length < 8 || password.length > 100) {
+      throw new BadRequestException('Password must be between 8 and 100 characters');
+    }
+
     let payload: any;
     try {
       payload = this.jwt.verify(token);
     } catch (e: any) {
-      throw new UnauthorizedException(e.message);
+      throw new UnauthorizedException('Invalid or expired token');
     }
     if (payload?.mode !== 'set') throw new UnauthorizedException('Invalid mode');
 
@@ -170,7 +172,7 @@ export class AuthController {
     try {
       payload = this.jwt.verify(token);
     } catch (e: any) {
-      throw new UnauthorizedException(e.message);
+      throw new UnauthorizedException('Invalid or expired token');
     }
     if (payload?.mode !== 'verify') throw new UnauthorizedException('Invalid mode');
 
@@ -192,28 +194,33 @@ export class AuthController {
 
   @Post('request-reset')
   async requestReset(@Body('email') email: string) {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = String(email ?? '').toLowerCase().trim();
+    const user = await this.PrismaService.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
+      // Generic response — never reveal whether the email is registered.
       return { success: true, message: 'If this email exists, a code was sent.' };
     }
 
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // crypto.randomInt is cryptographically secure; Math.random is predictable
+    // and unacceptable for a security token.
+    const code = String(randomInt(100000, 1000000));
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    await prisma.emailVerification.create({
-      data: { email, code, expiresAt },
+    await this.PrismaService.emailVerification.create({
+      data: { email: normalizedEmail, code, expiresAt },
     });
 
-    await sendVerificationCode(email, code);
-    return { success: true, message: 'Verification code sent to email.' };
+    await sendVerificationCode(normalizedEmail, code);
+    return { success: true, message: 'If this email exists, a code was sent.' };
   }
 
   @Post('verify-code')
   async verifyCode(@Body('email') email: string, @Body('code') code: string) {
+    const normalizedEmail = String(email ?? '').toLowerCase().trim();
     // Atomically flip an unused, unexpired code to verified. Doing the match and
     // the write in one statement prevents two concurrent verifies from racing.
-    const { count } = await prisma.emailVerification.updateMany({
-      where: { email, code, verified: false, expiresAt: { gt: new Date() } },
+    const { count } = await this.PrismaService.emailVerification.updateMany({
+      where: { email: normalizedEmail, code, verified: false, expiresAt: { gt: new Date() } },
       data: { verified: true },
     });
 
@@ -222,8 +229,8 @@ export class AuthController {
     }
 
     // Nothing flipped — figure out why for a helpful message.
-    const record = await prisma.emailVerification.findFirst({
-      where: { email, code },
+    const record = await this.PrismaService.emailVerification.findFirst({
+      where: { email: normalizedEmail, code },
       orderBy: { createdAt: 'desc' },
     });
     if (!record) return { success: false, message: 'Invalid verification code.' };
@@ -236,12 +243,17 @@ export class AuthController {
     @Body('email') email: string,
     @Body('newPassword') newPassword: string,
   ) {
+    // Inline body (no DTO) — enforce password strength explicitly.
+    if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 100) {
+      throw new BadRequestException('Password must be between 8 and 100 characters');
+    }
+    const normalizedEmail = String(email ?? '').toLowerCase().trim();
     const hash = await argon.hash(newPassword);
 
     // Atomically consume the verified token first, so it can't be replayed by a
     // concurrent reset. Only proceed to set the password if we actually consumed one.
-    const { count } = await prisma.emailVerification.updateMany({
-      where: { email, verified: true },
+    const { count } = await this.PrismaService.emailVerification.updateMany({
+      where: { email: normalizedEmail, verified: true },
       data: { verified: false },
     });
 
@@ -249,8 +261,8 @@ export class AuthController {
       return { success: false, message: 'Email not verified for password reset.' };
     }
 
-    await prisma.user.update({
-      where: { email },
+    await this.PrismaService.user.update({
+      where: { email: normalizedEmail },
       data: { password: hash },
     });
 
@@ -453,9 +465,6 @@ export class AuthController {
     @Req() req,
     @Body() body: { age?: number; preferredGenres?: string[]; preferredLanguages?: string[] }
   ) {
-
-    console.log('[preferences] req.user =', req.user);
-
     const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
     if (!userId) {
       throw new UnauthorizedException('Invalid token (no user id).');

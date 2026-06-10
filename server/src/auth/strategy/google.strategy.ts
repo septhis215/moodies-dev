@@ -9,7 +9,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     super({
       clientID: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      callbackURL: 'http://localhost:4000/auth/google/callback',
+      // Must be env-driven — a hardcoded localhost callback breaks (and is unsafe
+      // to assume in) any non-local deployment.
+      callbackURL:
+        process.env.GOOGLE_CALLBACK_URL ??
+        'http://localhost:4000/auth/google/callback',
       scope: [
         'openid',
         'profile',
