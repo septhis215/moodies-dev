@@ -42,6 +42,9 @@ export class AllService implements OnModuleInit {
   getKoreaTrending(limit = 30) {
     return this.trendingService.getKoreaTrending(limit);
   }
+  getFootballStories(options?: Parameters<TrendingService['getFootballStories']>[0]) {
+    return this.trendingService.getFootballStories(options);
+  }
   getFavorites(userId: string, limit = 30) {
     return this.trendingService.getFavorites(userId, limit);
   }

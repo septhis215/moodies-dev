@@ -62,6 +62,27 @@ export class AllController {
     return this.allService.getKoreaTrending(parsedLimit);
   }
 
+  @Get('football-stories')
+  async footballStories(
+    @Query('limit') limit?: string,
+    @Query('page') page?: string,
+    @Query('language') language?: string,
+    @Query('region') region?: string,
+    @Query('rankingMode') rankingMode?: 'world-cup-docs' | 'popular' | 'recent',
+    @Query('forceRefresh') forceRefresh?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 18;
+    const parsedPage = page ? parseInt(page, 10) : 1;
+    return this.allService.getFootballStories({
+      limit: parsedLimit,
+      page: parsedPage,
+      language,
+      region,
+      rankingMode,
+      forceRefresh: forceRefresh === 'true',
+    });
+  }
+
   @Get('peoples')
   async peoples(@Query('limit') limit?: string) {
     const parsedLimit = limit ? parseInt(limit, 20) : 25;

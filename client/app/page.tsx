@@ -11,6 +11,7 @@ import CommunityPicks from '@/components/sections/CommunityPicks';
 import { UpcomingTrailers } from '@/components/sections/UpcomingTrailers';
 import MoodDiscoverySection from '@/components/sections/MoodDiscoverySection';
 import ImmersiveFeedSection from '@/components/sections/ImmersiveFeedSection';
+import FootballStoriesSection from '@/components/sections/FootballStoriesSection';
 import Link from 'next/link';
 import { Clapperboard, Heart, MessageCircle, Tv } from 'lucide-react';
 
@@ -60,6 +61,7 @@ export default async function LandingPage() {
       <TrendingSection />
       <PremiereHighlights />
       <FavoritesSection />
+      <FootballStoriesSection />
       <ImmersiveFeedSection />
       <KoreaTrendingSection />
       <MoodDiscoverySection variant="teaser" />

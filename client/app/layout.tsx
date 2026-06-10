@@ -24,9 +24,27 @@ export const metadata: Metadata = {
   description:
     "Discover trending movies, series, and personalized recommendations on Moodies.",
   icons: {
-    icon: "/images/logo-c.png",
-    shortcut: "/images/logo-c.png",
-    apple: "/images/logo-c.png",
+    icon: [
+      {
+        url: "/images/logo-c.png",
+        type: "image/png",
+        sizes: "500x500",
+      },
+    ],
+    shortcut: [
+      {
+        url: "/images/logo-c.png",
+        type: "image/png",
+        sizes: "500x500",
+      },
+    ],
+    apple: [
+      {
+        url: "/images/logo-c.png",
+        type: "image/png",
+        sizes: "500x500",
+      },
+    ],
   },
 };
 

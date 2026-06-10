@@ -7,6 +7,15 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { TmdbAll } from '../types/tmdb.types';
 import { CACHE_TTL, shuffleArray, getRecentDate } from '../utils/helpers';
 
+type FootballStoriesOptions = {
+    limit?: number;
+    page?: number;
+    language?: string;
+    region?: string;
+    rankingMode?: 'world-cup-docs' | 'popular' | 'recent';
+    forceRefresh?: boolean;
+};
+
 @Injectable()
 export class TrendingService {
     private readonly logger = new Logger(TrendingService.name);
@@ -242,6 +251,368 @@ export class TrendingService {
         } catch (err) {
             this.logger.error('Failed to fetch koreaTrending', err as any);
             return [];
+        }
+    }
+
+    async getFootballStories(options: FootballStoriesOptions = {}): Promise<TmdbAll[]> {
+        const safeLimit = Math.max(1, Math.min(options.limit ?? 18, 30));
+        const safePage = Math.max(1, Math.min(options.page ?? 1, 5));
+        const language = options.language ?? 'en-US';
+        const region = options.region ?? 'US';
+        const rankingMode = options.rankingMode ?? 'world-cup-docs';
+        const cacheScope = [
+            'world-cup-football-docs',
+            `region:${region}`,
+            `language:${language}`,
+            `page:${safePage}`,
+            `limit:${safeLimit}`,
+            `rank:${rankingMode}`,
+        ].join(':');
+        const finalCacheKey = `${cacheScope}:ranked`;
+        const rawCacheKey = `${cacheScope}:raw`;
+        const lastGoodCacheKey = `${cacheScope}:last-good`;
+        const freshTtl = 60 * 60 * 8;
+        const lastGoodTtl = CACHE_TTL.BASIC_DATA * 14;
+
+        const parseCachedItems = (cached: string | null): TmdbAll[] | null => {
+            if (!cached) return null;
+            try {
+                const parsed = JSON.parse(cached) as TmdbAll[];
+                return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+            } catch {
+                return null;
+            }
+        };
+
+        if (!options.forceRefresh) {
+            const cached = parseCachedItems(await this.redisService.get(finalCacheKey));
+            if (cached) return cached.slice(0, safeLimit);
+        }
+
+        const lastGood = parseCachedItems(await this.redisService.get(lastGoodCacheKey));
+
+        if (!this.client.token) {
+            this.logger.warn('TMDB_API_KEY not set; returning last cached footballStories if available');
+            return lastGood?.slice(0, safeLimit) ?? [];
+        }
+
+        const seedItems: Array<{ id: number; type: 'movie' | 'tv'; label: string; main?: boolean }> = [
+            { id: 239730, type: 'tv', label: 'Captains of the World', main: true },
+            { id: 135934, type: 'tv', label: 'All or Nothing: Arsenal', main: true },
+            { id: 155533, type: 'tv', label: 'Neymar: The Perfect Chaos', main: true },
+            { id: 233629, type: 'tv', label: 'Beckham' },
+            { id: 235929, type: 'tv', label: 'Messi Meets America' },
+        ];
+
+        const worldCupTerms = [
+            'world cup',
+            'fifa world cup',
+            'road to world cup',
+            'qatar 2022',
+            'russia 2018',
+            'brazil 2014',
+            'national team',
+            'captains',
+            'tournament',
+            'championship',
+        ];
+        const docTerms = [
+            'documentary',
+            'docuseries',
+            'docu-series',
+            'behind the scenes',
+            'behind-the-scenes',
+            'all or nothing',
+            'history',
+            'journey',
+            'series',
+            'limited series',
+        ];
+        const footballTerms = [
+            'football',
+            'soccer',
+            'club',
+            'arsenal',
+            'brazil',
+            'argentina',
+            'neymar',
+            'messi',
+            'ronaldo',
+            'player',
+            'players',
+            'team',
+            'coach',
+            'league',
+        ];
+        const looseRejectTerms = [
+            'american football',
+            'rugby',
+            'basketball',
+            'baseball',
+            'hockey',
+            'wrestling',
+            'boxing',
+            'romance',
+            'horror',
+        ];
+
+        type RawFootballItem = {
+            id: number;
+            title?: string;
+            name?: string;
+            overview?: string;
+            poster_path?: string | null;
+            backdrop_path?: string | null;
+            release_date?: string | null;
+            first_air_date?: string | null;
+            vote_average?: number;
+            vote_count?: number;
+            popularity?: number;
+            origin_country?: string[];
+            genre_ids?: number[];
+            media_type?: 'movie' | 'tv' | string;
+            original_language?: string;
+            _query?: string;
+            _queryPriority?: number;
+            _source?: string;
+        };
+
+        const getHaystack = (raw: RawFootballItem) =>
+            `${raw.title ?? raw.name ?? ''} ${raw.overview ?? ''}`.toLowerCase();
+
+        const normalizeTitle = (value: string) =>
+            value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+        const detailMatchesAnchor = (details: RawFootballItem, anchorLabel: string) => {
+            const actual = normalizeTitle(details.title ?? details.name ?? '');
+            const expected = normalizeTitle(anchorLabel);
+            return actual === expected || actual.includes(expected) || expected.includes(actual);
+        };
+
+        const hasAny = (haystack: string, terms: string[]) =>
+            terms.some((term) => haystack.includes(term));
+
+        const countMatches = (haystack: string, terms: string[]) =>
+            terms.reduce((count, term) => count + (haystack.includes(term) ? 1 : 0), 0);
+
+        const getYear = (raw: RawFootballItem) => {
+            const date = raw.release_date ?? raw.first_air_date;
+            return date ? Number(date.slice(0, 4)) || null : null;
+        };
+
+        const isDocumentaryGenre = (raw: RawFootballItem) =>
+            (raw.genre_ids ?? []).includes(99);
+
+        const isRelevantFootballDoc = (raw: RawFootballItem) => {
+            const haystack = getHaystack(raw);
+            if (looseRejectTerms.some((term) => haystack.includes(term))) return false;
+            if (!raw.poster_path && !raw.backdrop_path) return false;
+
+            const worldCupMatch = hasAny(haystack, worldCupTerms);
+            const docMatch = hasAny(haystack, docTerms) || isDocumentaryGenre(raw);
+            const footballMatch = hasAny(haystack, footballTerms);
+            const competitionMatch = hasAny(haystack, [
+                'premier league',
+                'champions league',
+                'copa',
+                'uefa',
+                'club',
+                'national team',
+                'tournament',
+                'championship',
+            ]);
+
+            return worldCupMatch || (docMatch && (footballMatch || competitionMatch));
+        };
+
+        const scoreItem = (raw: RawFootballItem) => {
+            const haystack = getHaystack(raw);
+            const year = getYear(raw);
+            const currentYear = new Date().getFullYear();
+            const age = year ? Math.max(currentYear - year, 0) : 12;
+            const recencyScore =
+                rankingMode === 'recent'
+                    ? Math.max(0, 32 - age * 3)
+                    : Math.max(0, 18 - age);
+
+            return (
+                countMatches(haystack, worldCupTerms) * 36 +
+                countMatches(haystack, docTerms) * 24 +
+                countMatches(haystack, footballTerms) * 12 +
+                (isDocumentaryGenre(raw) ? 34 : 0) +
+                (raw.media_type === 'tv' ? 18 : 6) +
+                ((raw._queryPriority ?? 0) * 14) +
+                Math.min(raw.vote_average ?? 0, 10) * 4 +
+                Math.log((raw.vote_count ?? 0) + 1) * 3 +
+                Math.min(raw.popularity ?? 0, 180) * (rankingMode === 'popular' ? 0.38 : 0.24) +
+                recencyScore
+            );
+        };
+
+        try {
+            const cachedRaw = options.forceRefresh ? null : parseCachedItems(await this.redisService.get(rawCacheKey));
+            let rawItems: RawFootballItem[] = cachedRaw as RawFootballItem[] | null ?? [];
+
+            if (rawItems.length === 0) {
+                const rawMap = new Map<string, RawFootballItem>();
+                const pushCandidate = (
+                    item: RawFootballItem,
+                    type: 'movie' | 'tv',
+                    source: string,
+                    queryPriority: number,
+                ) => {
+                    if (!item?.id) return;
+                    const key = `${type}:${item.id}`;
+                    const candidate: RawFootballItem = {
+                        ...item,
+                        media_type: type,
+                        _source: source,
+                        _query: source,
+                        _queryPriority: queryPriority,
+                    };
+                    const current = rawMap.get(key);
+                    if (!current || scoreItem(candidate) > scoreItem(current)) {
+                        rawMap.set(key, candidate);
+                    }
+                };
+
+                const seedTasks = seedItems.flatMap((seed) => [
+                    async () => {
+                        const details = await this.client.tmdb(
+                            `${this.client.baseUrl}/${seed.type}/${seed.id}?language=${encodeURIComponent(language)}`,
+                        );
+                        if (details && detailMatchesAnchor(details, seed.label)) {
+                            pushCandidate(details, seed.type, `seed:${seed.label}`, seed.main ? 6 : 5);
+                        }
+                        return null;
+                    },
+                    async () => {
+                        const recs = await this.recommendationsService.getSmartRecommendations(seed.type, seed.id, 8, 1);
+                        recs.forEach((item) => pushCandidate(item as RawFootballItem, item.type ?? seed.type, `smart-rec:${seed.label}`, 4));
+                        return null;
+                    },
+                    async () => {
+                        const similar = await this.client.tmdb(
+                            `${this.client.baseUrl}/${seed.type}/${seed.id}/similar?language=${encodeURIComponent(language)}&page=1`,
+                        );
+                        (similar?.results ?? []).forEach((item: RawFootballItem) => pushCandidate(item, seed.type, `similar:${seed.label}`, 3));
+                        return null;
+                    },
+                    async () => {
+                        const recs = await this.client.tmdb(
+                            `${this.client.baseUrl}/${seed.type}/${seed.id}/recommendations?language=${encodeURIComponent(language)}&page=1`,
+                        );
+                        (recs?.results ?? []).forEach((item: RawFootballItem) => pushCandidate(item, seed.type, `tmdb-rec:${seed.label}`, 3));
+                        return null;
+                    },
+                ]);
+
+                await this.client.withConcurrencyLimit(seedTasks, 5);
+
+                const discoverUrls: Array<{ url: string; type: 'movie' | 'tv'; source: string; priority: number }> = [];
+                const documentaryGenre = 99;
+                const discoverSorts =
+                    rankingMode === 'recent'
+                        ? ['first_air_date.desc', 'popularity.desc', 'vote_average.desc']
+                        : rankingMode === 'popular'
+                            ? ['popularity.desc', 'vote_average.desc', 'first_air_date.desc']
+                            : ['popularity.desc', 'vote_average.desc', 'first_air_date.desc'];
+
+                for (const sort of discoverSorts) {
+                    const movieSort = sort === 'first_air_date.desc' ? 'primary_release_date.desc' : sort;
+                    discoverUrls.push({
+                        type: 'movie',
+                        source: `discover-doc-movie:${movieSort}`,
+                        priority: 2,
+                        url: `${this.client.baseUrl}/discover/movie?language=${encodeURIComponent(language)}&region=${encodeURIComponent(region)}&include_adult=false&with_genres=${documentaryGenre}&sort_by=${movieSort}&vote_count.gte=5&page=${safePage}`,
+                    });
+                    discoverUrls.push({
+                        type: 'tv',
+                        source: `discover-doc-tv:${sort}`,
+                        priority: 2,
+                        url: `${this.client.baseUrl}/discover/tv?language=${encodeURIComponent(language)}&include_adult=false&with_genres=${documentaryGenre}&sort_by=${sort}&vote_count.gte=5&page=${safePage}`,
+                    });
+                }
+
+                const discoverTasks = discoverUrls.map((entry) => async () => {
+                    const data = await this.client.tmdb(entry.url);
+                    (data?.results ?? []).forEach((item: RawFootballItem) => {
+                        pushCandidate(item, entry.type, entry.source, entry.priority);
+                    });
+                    return null;
+                });
+
+                await this.client.withConcurrencyLimit(discoverTasks, 4);
+
+                if (rawMap.size < safeLimit) {
+                    const fallbackSeeds = Array.from(rawMap.values())
+                        .filter(isRelevantFootballDoc)
+                        .sort((a, b) => scoreItem(b) - scoreItem(a))
+                        .slice(0, 4);
+                    const fallbackTasks = fallbackSeeds.flatMap((seed) => {
+                        const seedType = seed.media_type === 'tv' ? 'tv' : 'movie';
+                        return [
+                            async () => {
+                                const recs = await this.recommendationsService.getSmartRecommendations(seedType, seed.id, 6, 1);
+                                recs.forEach((item) => pushCandidate(item as RawFootballItem, item.type ?? seedType, `gap-smart:${seed.id}`, 2));
+                                return null;
+                            },
+                            async () => {
+                                const similar = await this.client.tmdb(
+                                    `${this.client.baseUrl}/${seedType}/${seed.id}/similar?language=${encodeURIComponent(language)}&page=1`,
+                                );
+                                (similar?.results ?? []).forEach((item: RawFootballItem) => pushCandidate(item, seedType, `gap-similar:${seed.id}`, 1));
+                                return null;
+                            }
+                        ];
+                    });
+                    await this.client.withConcurrencyLimit(fallbackTasks, 3);
+                }
+
+                rawItems = Array.from(rawMap.values());
+                if (rawItems.length > 0) {
+                    await this.redisService.set(rawCacheKey, JSON.stringify(rawItems), freshTtl);
+                }
+            }
+
+            const ranked = rawItems
+                .filter(isRelevantFootballDoc)
+                .map((raw) => {
+                    const type = raw.media_type === 'tv' ? 'tv' : 'movie';
+                    const mapped: TmdbAll & { _score: number } = {
+                        id: raw.id,
+                        title: raw.title ?? raw.name ?? 'Untitled',
+                        overview: raw.overview ?? '',
+                        poster_path: raw.poster_path ?? null,
+                        backdrop_path: raw.backdrop_path ?? null,
+                        release_date: raw.release_date ?? raw.first_air_date ?? null,
+                        vote_average: raw.vote_average ?? 0,
+                        vote_count: raw.vote_count ?? 0,
+                        popularity: raw.popularity ?? 0,
+                        origin_country: raw.origin_country ?? [],
+                        original_language: raw.original_language ?? 'en',
+                        genres: raw.genre_ids?.map((id: number) => this.client.genreMap[id] || 'Unknown') ?? [],
+                        type,
+                        recommendations: [],
+                        _score: scoreItem(raw),
+                    };
+                    return mapped;
+                })
+                .sort((a, b) => b._score - a._score)
+                .slice(0, safeLimit)
+                .map(({ _score, ...item }) => item);
+
+            if (ranked.length > 0) {
+                await this.redisService.set(finalCacheKey, JSON.stringify(ranked), freshTtl);
+                await this.redisService.set(lastGoodCacheKey, JSON.stringify(ranked), lastGoodTtl);
+                this.recommendationsService.populateRecommendationsBackground(ranked, finalCacheKey);
+                return ranked;
+            }
+
+            return lastGood?.slice(0, safeLimit) ?? [];
+        } catch (err) {
+            this.logger.error('Failed to fetch footballStories', err as any);
+            return lastGood?.slice(0, safeLimit) ?? [];
         }
     }
 
