@@ -54,7 +54,7 @@ export class TMDBService {
         private readonly rateLimiter: TmdbRateLimiterService,
         private readonly redis: RedisService,
     ) {
-        this.baseUrl = this.configService.get<string>('TMDB_BASE') ?? 'https://api.themoviedb.org/3';
+        this.baseUrl = (this.configService.get<string>('TMDB_BASE') ?? 'https://api.themoviedb.org/3').replace(/\/$/, '');
         this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
     }
 
@@ -115,9 +115,13 @@ export class TMDBService {
                     );
                     return response.data;
                 } catch (err: any) {
-                    this.logger.error(
-                        `TMDB request failed: ${normalizedEndpoint} — ${err?.response?.status} ${err?.response?.data?.status_message ?? err.message}`,
-                    );
+                    const status = err?.response?.status;
+                    const msg = `TMDB request failed: ${normalizedEndpoint} — ${status} ${err?.response?.data?.status_message ?? err.message}`;
+                    if (status === 404) {
+                        this.logger.warn(msg);
+                    } else {
+                        this.logger.error(msg);
+                    }
                     throw err;
                 }
             });

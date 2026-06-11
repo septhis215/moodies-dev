@@ -22,6 +22,7 @@ import { WatchlistModule } from './watchlist/watchlist.module';
 import { ReviewModule } from './routes/review/review.module';
 import { ModerationModule } from './routes/moderation/moderation.module';
 import { LikedModule } from './liked/liked.module';
+import { MediaStatsModule } from './media-stats/media-stats.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 
 @Module({
@@ -38,6 +39,7 @@ import { RateLimitGuard } from './common/guards/rate-limit.guard';
     PrismaModule,
     WatchlistModule,
     LikedModule,
+    MediaStatsModule,
     RedisModule,
     MoviesModule,
     TvModule,

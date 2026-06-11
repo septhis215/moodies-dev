@@ -18,8 +18,8 @@ export class TmdbClientService {
         // baseUrl is exposed for sibling services that pre-build full URLs
         // before passing them into tmdb(). request() tolerates absolute URLs.
         this.baseUrl =
-            this.configService.get<string>('TMDB_BASE') ??
-            'https://api.themoviedb.org/3';
+            (this.configService.get<string>('TMDB_BASE') ??
+            'https://api.themoviedb.org/3').replace(/\/$/, '');
         // token kept as a "is TMDB configured?" guard for consumers.
         this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
     }

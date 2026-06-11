@@ -1,6 +1,7 @@
 import React from "react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
+import type { CommunityPulseData } from "@/types/communityPulse";
 import MoviesHomePageClient from "./MovieHomePageClient";
 
 const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
@@ -133,6 +134,13 @@ async function fetchAwardWinners() {
   return fetchWithFallback<All[]>("/movies/award-winners?limit=25", []);
 }
 
+async function fetchCommunityPulse(): Promise<CommunityPulseData> {
+  return fetchWithFallback<CommunityPulseData>(
+    "/media-stats/community-pulse?mediaType=movie&limit=5",
+    { mostLiked: [], mostReviewed: [], mostSaved: [] },
+  );
+}
+
 async function fetchNewReleases() {
   const result = await fetchWithFallback<{ data: All[] } | All[]>(
     "/movies/new-releases?page=1&limit=30",
@@ -177,6 +185,7 @@ export default async function MoviesHomePage() {
     moods,
     newReleaseMovies,
     newMovieTrailers,
+    communityPulse,
   ] = await Promise.all([
     fetchTopRatedMovies(),
     fetchAnimatedMovies(),
@@ -186,6 +195,7 @@ export default async function MoviesHomePage() {
     fetchMoods(),
     fetchNewReleases(),
     fetchNewMovieTrailers(),
+    fetchCommunityPulse(),
   ]);
 
   const [trendingMovies, popularMovies, movieTrailers, koreanMovies] = bulkData
@@ -218,6 +228,7 @@ export default async function MoviesHomePage() {
       actionMovies={actionMovies}
       moods={moods}
       newReleaseMovies={newReleaseMovies}
+      communityPulse={communityPulse}
     />
   );
 }
