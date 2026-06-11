@@ -39,6 +39,10 @@ export default function SignupPage() {
       setErr("Please agree to the Terms & Conditions.");
       return;
     }
+    if (password.length < 8) {
+      setErr("Password must be at least 8 characters.");
+      return;
+    }
 
     setLoading(true);
     sessionStorage.setItem(
