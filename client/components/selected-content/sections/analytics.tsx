@@ -1,17 +1,8 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Users2,
-  Building2,
-  Globe2,
-  TrendingUp,
-} from "lucide-react";
+import React from "react";
 import { motion } from "framer-motion";
+import { DollarSign, TrendingUp, Star, BarChart2 } from "lucide-react";
 
 export type MovieDetailsData = {
   info: {
@@ -64,15 +55,14 @@ export type MovieDetailsData = {
   raw?: any;
 };
 
-// TV API data structure (matching your updated TvService)
 export type TvDetailsData = {
   info: {
     id: number;
     title: string;
     original_title?: string;
     overview: string;
-    release_date: string; // maps to first_air_date
-    runtime: number; // normalized from episode_run_time
+    release_date: string;
+    runtime: number;
     budget: number;
     revenue: number;
     vote_average: number;
@@ -93,9 +83,8 @@ export type TvDetailsData = {
     adult: boolean;
     created_by?: Array<{ id: number; name: string }>;
     content_type: "tv";
-    director?: string; // creator name
+    director?: string;
     content_rating?: string;
-    // TV-specific fields
     number_of_seasons?: number;
     number_of_episodes?: number;
     episode_run_time?: number[];
@@ -115,9 +104,7 @@ export type TvDetailsData = {
     crew: Array<{
       id: number;
       name: string;
-      jobs: {
-        job: string;
-      };
+      jobs: { job: string };
       department: string;
       profile_path?: string;
     }>;
@@ -136,38 +123,60 @@ interface DetailsProp {
 export default function Analytics({ data }: DetailsProp) {
   const { info } = data;
 
-  const formatCurrency = (amount: number) => {
-    if (!amount) return "$0";
-    if (amount >= 1e9) return `$${(amount / 1e9).toFixed(1)}B`;
-    if (amount >= 1e6) return `$${(amount / 1e6).toFixed(1)}M`;
-    if (amount >= 1e3) return `$${(amount / 1e3).toFixed(1)}K`;
-    return `$${amount.toLocaleString()}`;
+  const fmt = (n: number) => {
+    if (!n || n === 0) return "—";
+    if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+    if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+    if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+    return `$${n.toLocaleString()}`;
   };
 
-  // Analytics color helpers (data-sheet style)
-  const getRevenueColor = (budget: number, revenue: number) => {
-    if (!budget) return "text-yellow-300";
-    const ratio = revenue / budget;
-    if (ratio >= 1.2) return "text-green-400";
-    if (ratio >= 0.8) return "text-yellow-300";
-    return "text-red-400";
-  };
+  const roi = info.budget > 0 ? info.revenue / info.budget : 0;
+  const revenueRatioPct =
+    info.budget > 0 ? Math.min(100, (info.revenue / info.budget) * 100) : 0;
+  const ratingPct = (info.vote_average / 10) * 100;
 
-  const getRatingColor = (rating: number) => {
-    if (rating >= 7.5) return "text-green-400";
-    if (rating >= 5) return "text-yellow-300";
-    return "text-red-400";
-  };
+  const perfLabel =
+    roi >= 2.5
+      ? "Blockbuster"
+      : roi >= 1.5
+        ? "Strong Hit"
+        : roi >= 1.0
+          ? "Profitable"
+          : roi > 0
+            ? "Underperformed"
+            : "—";
+  const perfColor =
+    roi >= 1.5
+      ? "#4ade80"
+      : roi >= 1.0
+        ? "#86efac"
+        : roi > 0
+          ? "#f87171"
+          : "#475569";
 
-  const roi = info.budget ? info.revenue / Math.max(1, info.budget) : 0;
+  const ratingLabel =
+    info.vote_average >= 8
+      ? "Acclaimed"
+      : info.vote_average >= 7
+        ? "Well Received"
+        : info.vote_average >= 5.5
+          ? "Mixed Reviews"
+          : "Poor Reception";
+  const ratingColor =
+    info.vote_average >= 7
+      ? "#4ade80"
+      : info.vote_average >= 5.5
+        ? "#facc15"
+        : "#f87171";
+
+  const hasBoxOffice = info.budget > 0 || info.revenue > 0;
 
   return (
-    <section>
-      <div className="mb-6">
+    <section className="space-y-5">
+      <div>
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-          {info.content_type === "movie"
-            ? "Film Analytics"
-            : "Series Analytics"}
+          {info.content_type === "movie" ? "Film Analytics" : "Series Analytics"}
         </h2>
         <p className="text-slate-400 text-sm">
           {info.content_type === "movie"
@@ -175,154 +184,327 @@ export default function Analytics({ data }: DetailsProp) {
             : "Production details & audience metrics"}
         </p>
       </div>
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Left column: KPI highlights */}
-        <div className="col-span-1 xl:col-span-1 space-y-4">
-          <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-            <div className="text-xs text-slate-400">Budget</div>
-            <div className="text-2xl font-semibold text-slate-100">
-              {formatCurrency(info.budget)}
-            </div>
-          </div>
 
-          <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-            <div className="text-xs text-slate-400">Revenue</div>
-            <div
-              className={`text-2xl font-semibold ${getRevenueColor(
-                info.budget,
-                info.revenue
-              )}`}
-            >
-              {formatCurrency(info.revenue)}
-            </div>
-            <div className="text-xs text-slate-400">
-              ROI: {roi ? `${roi.toFixed(2)}x` : "—"}
-            </div>
+      {/* KPI strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Budget */}
+        <div className="relative p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.06] transition-colors duration-200 overflow-hidden">
+          <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-sky-400/40 to-transparent" />
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] uppercase tracking-widest text-white/30 font-semibold">
+              Budget
+            </span>
+            <DollarSign size={13} className="text-sky-400/40" />
           </div>
+          <div className="text-2xl font-bold text-white leading-none">
+            {fmt(info.budget)}
+          </div>
+          <div className="text-[11px] text-white/25 mt-1">Production cost</div>
+        </div>
 
-          <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-            <div className="text-xs text-slate-400">Audience Rating</div>
-            <span
-              className={`text-2xl font-semibold ${getRatingColor(
-                info.vote_average
-              )}`}
-            >
+        {/* Revenue */}
+        <div className="relative p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.06] transition-colors duration-200 overflow-hidden">
+          <div
+            className="pointer-events-none absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent to-transparent"
+            style={{
+              background: `linear-gradient(to bottom, transparent, ${perfColor}60, transparent)`,
+            }}
+          />
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] uppercase tracking-widest text-white/30 font-semibold">
+              Revenue
+            </span>
+            <TrendingUp size={13} style={{ color: `${perfColor}60` }} />
+          </div>
+          <div className="text-2xl font-bold text-white leading-none">
+            {fmt(info.revenue)}
+          </div>
+          <div className="flex items-center gap-1.5 mt-1">
+            {roi > 0 && (
+              <span
+                className="text-[11px] font-semibold"
+                style={{ color: perfColor }}
+              >
+                {roi.toFixed(1)}x ROI
+              </span>
+            )}
+            {roi > 0 && (
+              <span className="text-[10px] text-white/20">· {perfLabel}</span>
+            )}
+            {!hasBoxOffice && (
+              <span className="text-[11px] text-white/25">No data available</span>
+            )}
+          </div>
+        </div>
+
+        {/* Audience Score */}
+        <div className="relative p-4 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.06] transition-colors duration-200 overflow-hidden">
+          <div
+            className="pointer-events-none absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent to-transparent"
+            style={{
+              background: `linear-gradient(to bottom, transparent, ${ratingColor}60, transparent)`,
+            }}
+          />
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] uppercase tracking-widest text-white/30 font-semibold">
+              Audience Score
+            </span>
+            <Star size={13} style={{ color: `${ratingColor}60` }} />
+          </div>
+          <div className="flex items-baseline gap-1 leading-none">
+            <span className="text-2xl font-bold" style={{ color: ratingColor }}>
               {info.vote_average.toFixed(1)}
             </span>
-            <span className={`text-1.5xl font-semibold`}> / 10</span>
-            <div className="text-xs text-slate-400">
-              {info.vote_count.toLocaleString()} votes
-            </div>
+            <span className="text-sm text-white/25">/ 10</span>
+          </div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span
+              className="text-[11px] font-semibold"
+              style={{ color: ratingColor }}
+            >
+              {ratingLabel}
+            </span>
+            <span className="text-[10px] text-white/20">
+              · {info.vote_count.toLocaleString()} votes
+            </span>
           </div>
         </div>
+      </div>
 
-        {/* Middle column: performance visuals */}
-        <div className="col-span-1 xl:col-span-1 space-y-4">
-          {/* Revenue vs Budget */}
-          <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-            <div className="text-sm text-slate-300 mb-2">Revenue vs Budget</div>
-            <div className="relative h-3 bg-white/6 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{
-                  width: `${
-                    info.budget > 0
-                      ? Math.min(100, (info.revenue / info.budget) * 100)
-                      : 0
-                  }%`,
-                }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className="absolute top-0 left-0 h-full bg-green-500"
-              />
+      {/* Performance panels */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Box Office */}
+        <div className="p-5 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm font-semibold text-white">Box Office</p>
+              <p className="text-[11px] text-white/30 mt-0.5">
+                Revenue vs production budget
+              </p>
             </div>
-            <div className="text-xs text-slate-400 mt-1">
-              {roi >= 1.2
-                ? "Strong performance"
-                : roi >= 0.8
-                ? "Average"
-                : "Underperforming"}
-            </div>
+            <BarChart2 size={15} className="text-white/15" />
           </div>
 
-          {/* Rating bar */}
-          <div className="p-5 rounded-2xl bg-white/06 border border-white/10 shadow-sm">
-            <div className="text-sm text-slate-300 mb-2">
-              Rating Distribution
-            </div>
-            <div className="h-3 bg-white/6 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${(info.vote_average / 10) * 100}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-                className={`h-full ${
-                  info.vote_average < 5
-                    ? "bg-red-500"
-                    : info.vote_average < 7
-                    ? "bg-yellow-400"
-                    : "bg-green-500"
-                }`}
-              />
-            </div>
-            <div className="text-xs text-slate-400 mt-1">
-              {info.vote_average >= 7.5
-                ? "Well received"
-                : info.vote_average >= 5
-                ? "Mixed reception"
-                : "Poor reception"}
-            </div>
-          </div>
-        </div>
+          {hasBoxOffice ? (
+            <div className="space-y-3.5">
+              <div>
+                <div className="flex justify-between text-[11px] mb-1.5">
+                  <span className="text-white/40">Budget</span>
+                  <span className="text-white/60 font-medium">
+                    {fmt(info.budget)}
+                  </span>
+                </div>
+                <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+                  <div className="h-full w-full bg-sky-400/40 rounded-full" />
+                </div>
+              </div>
 
-        {/* Right column: quick insights */}
-        <div className="col-span-1 xl:col-span-1">
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-800/70 to-slate-900/70 border border-white/12 shadow-md">
-            <h3 className="text-sm font-medium text-slate-100 mb-3">
-              Quick Insights
-            </h3>
-            <ul className="list-disc list-inside text-sm text-slate-300 space-y-2">
-              <li>
-                ROI: {roi ? `${roi.toFixed(2)}x` : "—"} (
-                {roi >= 1 ? "Profitable" : "Loss"})
-              </li>
-              <li>
-                Audience sentiment:{" "}
-                <span
-                  className={`${
-                    info.vote_average >= 7.5
-                      ? "text-green-400"
-                      : info.vote_average >= 5
-                      ? "text-yellow-300"
-                      : "text-red-400"
-                  }`}
-                >
-                  {info.vote_average >= 7.5
-                    ? "Positive"
-                    : info.vote_average >= 5
-                    ? "Neutral"
-                    : "Negative"}
+              <div>
+                <div className="flex justify-between text-[11px] mb-1.5">
+                  <span className="text-white/40">Revenue</span>
+                  <span
+                    className="font-medium"
+                    style={{ color: perfColor }}
+                  >
+                    {fmt(info.revenue)}
+                  </span>
+                </div>
+                <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${revenueRatioPct}%` }}
+                    transition={{ duration: 1.2, ease: "easeOut" }}
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: perfColor }}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between">
+                <span className="text-[11px] text-white/25">
+                  Performance tier
                 </span>
-              </li>
-              <li>
-                {info.production_companies?.length
-                  ? `${info.production_companies.length} production partner(s)`
-                  : "No studio info"}
-              </li>
-              <li>
-                Top genres:{" "}
-                {info.genres
-                  ?.map((g) => g.name)
-                  .slice(0, 2)
-                  .join(", ") || "—"}
-              </li>
-            </ul>
-            <div className="mt-4 text-xs text-slate-400">
-              <strong className="text-slate-100">Tip:</strong> Bars & colors
-              indicate performance tiers — green = strong, yellow = average, red
-              = weak.
+                {roi > 0 ? (
+                  <span
+                    className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full border"
+                    style={{
+                      color: perfColor,
+                      borderColor: `${perfColor}30`,
+                      background: `${perfColor}12`,
+                    }}
+                  >
+                    {perfLabel}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-white/20">—</span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="text-2xl opacity-20 mb-2">💰</div>
+              <p className="text-xs text-white/25">
+                Box office data not available
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Audience Reception */}
+        <div className="p-5 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm font-semibold text-white">
+                Audience Reception
+              </p>
+              <p className="text-[11px] text-white/30 mt-0.5">
+                Community ratings & sentiment
+              </p>
+            </div>
+            <Star size={15} className="text-white/15" />
+          </div>
+
+          <div className="flex items-center gap-5 mb-4">
+            <RatingArcViz rating={info.vote_average} color={ratingColor} />
+            <div>
+              <div className="flex items-baseline gap-1.5">
+                <span
+                  className="text-3xl font-bold text-white"
+                  style={{ color: ratingColor }}
+                >
+                  {info.vote_average.toFixed(1)}
+                </span>
+                <span className="text-sm text-white/25">/ 10</span>
+              </div>
+              <div className="text-[11px] text-white/35 mt-0.5">
+                {info.vote_count.toLocaleString()} total votes
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex justify-between text-[11px] mb-1.5">
+              <span className="text-white/40">Score</span>
+              <span className="font-medium" style={{ color: ratingColor }}>
+                {ratingLabel}
+              </span>
+            </div>
+            <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${ratingPct}%` }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                className="h-full rounded-full"
+                style={{ backgroundColor: ratingColor }}
+              />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Quick Insights */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <InsightPill
+          label="ROI"
+          value={roi > 0 ? `${roi.toFixed(1)}x` : "—"}
+          sub={roi >= 1 ? "Profitable" : roi > 0 ? "Net loss" : "N/A"}
+          color={roi >= 1 ? "#4ade80" : roi > 0 ? "#f87171" : "#475569"}
+        />
+        <InsightPill
+          label="Sentiment"
+          value={ratingLabel.split(" ")[0]}
+          sub="Based on rating"
+          color={ratingColor}
+        />
+        <InsightPill
+          label="Studios"
+          value={`${info.production_companies?.length ?? 0}`}
+          sub="Production partner(s)"
+          color="#94a3b8"
+        />
+        <InsightPill
+          label="Top Genres"
+          value={
+            info.genres?.slice(0, 2).map((g) => g.name).join(" · ") || "—"
+          }
+          sub="Primary categories"
+          color="#94a3b8"
+          compact
+        />
+      </div>
     </section>
+  );
+}
+
+function InsightPill({
+  label,
+  value,
+  sub,
+  color,
+  compact,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  color: string;
+  compact?: boolean;
+}) {
+  return (
+    <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:bg-white/[0.05] transition-colors duration-200">
+      <div className="text-[9px] uppercase tracking-widest text-white/25 mb-1.5 font-semibold">
+        {label}
+      </div>
+      <div
+        className={`font-bold truncate leading-tight ${compact ? "text-xs" : "text-sm"}`}
+        style={{ color }}
+      >
+        {value}
+      </div>
+      <div className="text-[10px] text-white/20 mt-0.5 truncate">{sub}</div>
+    </div>
+  );
+}
+
+function RatingArcViz({
+  rating,
+  color,
+}: {
+  rating: number;
+  color: string;
+}) {
+  const size = 60,
+    r = 23,
+    circ = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(10, rating));
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="rgba(255,255,255,0.06)"
+          strokeWidth="3"
+        />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          initial={{ strokeDashoffset: circ }}
+          animate={{ strokeDashoffset: circ * (1 - clamped / 10) }}
+          transition={{ duration: 1.2, ease: "easeOut" }}
+          style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+        {clamped.toFixed(1)}
+      </span>
+    </div>
   );
 }
