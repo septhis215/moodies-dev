@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
+import type { CommunityPulseData, CommunityPulseItem } from "@/types/communityPulse";
 import {
   Star,
   Info,
@@ -26,6 +27,7 @@ import MoodRecommendationsSection from "@/components/sections/MoodRecommendation
 import { useScrollToHash } from "@/hooks/useScrollToHash";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { fmtCount } from "@/utils/mediaStatsClient";
 import { Carousel } from "@/components/ui/Carousel";
 import {
   Tooltip,
@@ -37,13 +39,13 @@ export default function TVHomePageClient({
   trendingTV,
   popularTV,
   topRatedTV,
-  TVTrailer,
   NewTVTrailer,
   KoreanTV,
   newReleaseTV,
   airingToday = [],
   airingThisWeek = [],
   moods,
+  communityPulse,
 }: {
   trendingTV: All[];
   popularTV: All[];
@@ -56,6 +58,7 @@ export default function TVHomePageClient({
   airingToday?: All[];
   airingThisWeek?: All[];
   moods?: unknown[];
+  communityPulse?: CommunityPulseData;
 }) {
   const router = useRouter();
   const { add, remove, isInWatchlist, ready } = useWatchlist();
@@ -68,28 +71,6 @@ export default function TVHomePageClient({
     path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder-backdrop.svg";
   const getPosterUrl = (path?: string | null) =>
     path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
-  const seededValue = (seed: string | number, salt: string, min: number, range: number) => {
-    const input = `${seed}-${salt}`;
-    let hash = 0;
-    for (let i = 0; i < input.length; i++) {
-      hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
-    }
-    return min + (hash % range);
-  };
-  const getMockStats = (item: All) => ({
-    likes: Math.max(
-      Math.floor((item.vote_average || 0) * 700),
-      seededValue(item.id, "likes", 1000, 5000)
-    ),
-    reviews: Math.max(
-      Math.floor((item.vote_average || 0) * 300),
-      seededValue(item.id, "reviews", 500, 2000)
-    ),
-    saves: Math.max(
-      Math.floor((item.popularity || 0) * 100),
-      seededValue(item.id, "saves", 800, 3000)
-    ),
-  });
   useScrollToHash(100);
 
   // Keep `featured` derived from heroShows so it's always in sync
@@ -822,7 +803,7 @@ export default function TVHomePageClient({
                   key: "most-liked",
                   title: "Most Liked",
                   subtitle: "Top rated by users",
-                  data: popularTV,
+                  data: communityPulse?.mostLiked ?? [],
                   icon: <ThumbsUp className="w-5 h-5" />,
                   color: "emerald",
                 },
@@ -830,7 +811,7 @@ export default function TVHomePageClient({
                   key: "most-reviewed",
                   title: "Most Reviews",
                   subtitle: "Highly discussed series",
-                  data: TVTrailer,
+                  data: communityPulse?.mostReviewed ?? [],
                   icon: <MessageSquare className="w-5 h-5" />,
                   color: "blue",
                 },
@@ -838,7 +819,7 @@ export default function TVHomePageClient({
                   key: "most-saved",
                   title: "Most Saved",
                   subtitle: "Popular watchlist picks",
-                  data: trendingTV,
+                  data: communityPulse?.mostSaved ?? [],
                   icon: <Bookmark className="w-5 h-5" />,
                   color: "amber",
                 },
@@ -888,18 +869,12 @@ export default function TVHomePageClient({
                   {/* Top 3 items (larger visuals) */}
                   <div className="space-y-3">
                     {(sec.data || []).slice(0, 3).map((m) => {
-                      const mockStats = getMockStats(m);
-
                       const getStatText = () => {
                         if (sec.key === "most-liked")
-                          return `${(mockStats.likes / 1000).toFixed(
-                            1
-                          )}K likes`;
+                          return `${fmtCount(m.likeCount)} likes`;
                         if (sec.key === "most-reviewed")
-                          return `${(mockStats.reviews / 1000).toFixed(
-                            1
-                          )}K reviews`;
-                        return `${(mockStats.saves / 1000).toFixed(1)}K saves`;
+                          return `${fmtCount(m.reviewCount)} reviews`;
+                        return `${fmtCount(m.savedCount)} saves`;
                       };
 
                       return (
@@ -931,8 +906,8 @@ export default function TVHomePageClient({
 
                               <div className="text-right text-[11px] text-gray-400">
                                 <div>
-                                  {m.first_air_date
-                                    ? m.first_air_date.split("-")[0]
+                                  {m.release_date
+                                    ? m.release_date.split("-")[0]
                                     : "TBA"}
                                 </div>
                               </div>
@@ -973,37 +948,12 @@ export default function TVHomePageClient({
                           : "text-amber-400"
                         }`}
                     >
-                      {/* simple summarized metric */}
                       {sec.key === "most-liked" &&
-                        `${(
-                          ((sec.data || [])
-                            .slice(0, 3)
-                            .reduce(
-                              (acc, m) => acc + (m.vote_average || 0),
-                              0
-                            ) *
-                            0.7) /
-                          1000
-                        ).toFixed(0)}K+`}
+                        `${fmtCount((sec.data || []).slice(0, 3).reduce((acc, m) => acc + m.likeCount, 0))}+`}
                       {sec.key === "most-reviewed" &&
-                        `${(
-                          ((sec.data || [])
-                            .slice(0, 3)
-                            .reduce(
-                              (acc, m) => acc + (m.vote_average || 0),
-                              0
-                            ) *
-                            0.3) /
-                          1000
-                        ).toFixed(0)}K+`}
+                        `${fmtCount((sec.data || []).slice(0, 3).reduce((acc, m) => acc + m.reviewCount, 0))}+`}
                       {sec.key === "most-saved" &&
-                        `${(
-                          ((sec.data || [])
-                            .slice(0, 3)
-                            .reduce((acc, m) => acc + (m.popularity || 0), 0) *
-                            100) /
-                          1000
-                        ).toFixed(0)}K+`}
+                        `${fmtCount((sec.data || []).slice(0, 3).reduce((acc, m) => acc + m.savedCount, 0))}+`}
                     </div>
                   </div>
                 </article>
@@ -1019,7 +969,7 @@ export default function TVHomePageClient({
               {
                 title: "Most Liked",
                 subtitle: "Top rated by users",
-                data: popularTV,
+                data: communityPulse?.mostLiked ?? [],
                 icon: <ThumbsUp className="w-4 h-4 sm:w-5 sm:h-5" />,
                 gradient: "from-emerald-950/40 to-emerald-950/20",
                 border: "border-emerald-500/30",
@@ -1031,7 +981,7 @@ export default function TVHomePageClient({
               {
                 title: "Most Reviews",
                 subtitle: "Highly discussed series",
-                data: TVTrailer,
+                data: communityPulse?.mostReviewed ?? [],
                 icon: <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />,
                 gradient: "from-blue-950/40 to-blue-950/20",
                 border: "border-blue-500/30",
@@ -1045,7 +995,7 @@ export default function TVHomePageClient({
               {
                 title: "Most Saved",
                 subtitle: "Popular watchlist picks",
-                data: trendingTV,
+                data: communityPulse?.mostSaved ?? [],
                 icon: <Bookmark className="w-4 h-4 sm:w-5 sm:h-5" />,
                 gradient: "from-amber-950/40 to-amber-950/20",
                 border: "border-amber-500/30",
@@ -1081,17 +1031,10 @@ export default function TVHomePageClient({
                 {/* tv List */}
                 <div className="space-y-3 sm:space-y-4">
                   {section.data.slice(0, 5).map((m, i) => {
-                    // Generate mock stats based on movie data
-                    const mockStats = getMockStats(m);
-
-                    const getStat = () => {
-                      if (idx === 0)
-                        return `${(mockStats.likes / 1000).toFixed(1)}K likes`;
-                      if (idx === 1)
-                        return `${(mockStats.reviews / 1000).toFixed(
-                          1
-                        )}K reviews`;
-                      return `${(mockStats.saves / 1000).toFixed(1)}K saves`;
+                    const getStatLabel = () => {
+                      if (idx === 0) return `${fmtCount(m.likeCount)} likes`;
+                      if (idx === 1) return `${fmtCount(m.reviewCount)} reviews`;
+                      return `${fmtCount(m.savedCount)} saves`;
                     };
 
                     return (
@@ -1138,7 +1081,7 @@ export default function TVHomePageClient({
                             </div>
                             <span className="text-gray-500">•</span>
                             <span className="text-gray-400 font-semibold">
-                              {m.first_air_date?.split("-")[0]}
+                              {m.release_date?.split("-")[0]}
                             </span>
                           </div>
                           {/* Supporting Stat */}
@@ -1147,7 +1090,7 @@ export default function TVHomePageClient({
                           >
                             {section.statIcon}
                             <span className="text-[10px] sm:text-xs font-bold">
-                              {getStat()}
+                              {getStatLabel()}
                             </span>
                           </div>
                         </div>
@@ -1166,35 +1109,11 @@ export default function TVHomePageClient({
                     </span>
                     <span className={`font-bold ${section.textColor}`}>
                       {idx === 0 &&
-                        `${(
-                          (section.data
-                            .slice(0, 5)
-                            .reduce(
-                              (acc, m) => acc + (m.vote_average || 0),
-                              0
-                            ) *
-                            0.7) /
-                          1000
-                        ).toFixed(0)}K+`}
+                        `${fmtCount(section.data.slice(0, 5).reduce((acc, m) => acc + m.likeCount, 0))}+`}
                       {idx === 1 &&
-                        `${(
-                          (section.data
-                            .slice(0, 5)
-                            .reduce(
-                              (acc, m) => acc + (m.vote_average || 0),
-                              0
-                            ) *
-                            0.3) /
-                          1000
-                        ).toFixed(0)}K+`}
+                        `${fmtCount(section.data.slice(0, 5).reduce((acc, m) => acc + m.reviewCount, 0))}+`}
                       {idx === 2 &&
-                        `${(
-                          (section.data
-                            .slice(0, 5)
-                            .reduce((acc, m) => acc + (m.popularity || 0), 0) *
-                            100) /
-                          1000
-                        ).toFixed(0)}K+`}
+                        `${fmtCount(section.data.slice(0, 5).reduce((acc, m) => acc + m.savedCount, 0))}+`}
                     </span>
                   </div>
                 </div>
