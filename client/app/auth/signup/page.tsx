@@ -40,6 +40,11 @@ export default function SignupPage() {
       return;
     }
 
+    if (password.length < 8) {
+      setErr("Password must be at least 8 characters.");
+      return;
+    }
+
     setLoading(true);
     sessionStorage.setItem(
       "pendingSignup",

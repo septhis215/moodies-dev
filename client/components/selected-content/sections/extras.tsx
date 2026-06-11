@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Building2, Globe2, TrendingUp } from "lucide-react";
+import { Building2, ChevronDown, ChevronUp } from "lucide-react";
 import { motion } from "framer-motion";
 
 export type MovieDetailsData = {
@@ -57,15 +57,14 @@ export type MovieDetailsData = {
   raw?: any;
 };
 
-// TV API data structure (matching your updated TvService)
 export type TvDetailsData = {
   info: {
     id: number;
     title: string;
     original_title?: string;
     overview: string;
-    release_date: string; // maps to first_air_date
-    runtime: number; // normalized from episode_run_time
+    release_date: string;
+    runtime: number;
     budget: number;
     revenue: number;
     vote_average: number;
@@ -86,9 +85,8 @@ export type TvDetailsData = {
     adult: boolean;
     created_by?: Array<{ id: number; name: string }>;
     content_type: "tv";
-    director?: string; // creator name
+    director?: string;
     content_rating?: string;
-    // TV-specific fields
     number_of_seasons?: number;
     number_of_episodes?: number;
     episode_run_time?: number[];
@@ -108,9 +106,7 @@ export type TvDetailsData = {
     crew: Array<{
       id: number;
       name: string;
-      jobs: {
-        job: string;
-      };
+      jobs: { job: string };
       department: string;
       profile_path?: string;
     }>;
@@ -127,6 +123,18 @@ interface DetailsProp {
   contentId?: string;
 }
 
+/* role → accent color mapping */
+function roleColor(role: string): string {
+  const r = role.toLowerCase();
+  if (r.includes("director")) return "#e94f37";
+  if (r.includes("produc")) return "#f59e0b";
+  if (r.includes("writ") || r.includes("story") || r.includes("screenplay"))
+    return "#38bdf8";
+  if (r.includes("music") || r.includes("composer")) return "#a78bfa";
+  if (r.includes("photograph")) return "#34d399";
+  return "#94a3b8";
+}
+
 export default function ExtraDetails({ data, contentId }: DetailsProp) {
   const [providerSearch, setProviderSearch] = useState("");
   const INITIAL_CAST = 12;
@@ -135,15 +143,12 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
 
   const { info, credits, providers } = data;
 
-  // Providers aggregation (unchanged)
   const allProviders = useMemo(() => {
     const map = new Map<
       string,
       { provider_name: string; logo_path?: string }
     >();
-
     if (!providers?.results) return [];
-
     Object.values(providers.results).forEach((countryEntry) => {
       ["flatrate", "rent", "buy"].forEach((key) => {
         const list = (countryEntry as any)[key] as
@@ -164,7 +169,6 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
         });
       });
     });
-
     return Array.from(map.values()).sort((a, b) =>
       a.provider_name.localeCompare(b.provider_name),
     );
@@ -189,19 +193,14 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
       "Original Music Composer",
       "Director of Photography",
     ];
-
     return keyJobs
       .map((job) => {
         const people = credits.crew.filter((person) => {
-          if ("job" in person && person.job) {
-            return person.job === job;
-          }
-          if ("jobs" in person && Array.isArray(person.jobs)) {
+          if ("job" in person && person.job) return person.job === job;
+          if ("jobs" in person && Array.isArray(person.jobs))
             return person.jobs.some((j: any) => j.job === job);
-          }
           return false;
         });
-
         return { job, people };
       })
       .filter((item) => item.people.length > 0);
@@ -209,69 +208,89 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
 
   const resolvedContentType: "movie" | "tv" =
     (info as any)?.content_type === "tv" ? "tv" : "movie";
-
   const basePath = resolvedContentType === "tv" ? "tv" : "movies";
   const viewAllHref = contentId ? `/${basePath}/${contentId}/credits` : "#";
 
+  /* Flatten crew into individual credit cards */
+  const creditCards = getKeyCrewMembers().flatMap(({ job, people }) =>
+    people.map((person) => ({ ...person, role: job })),
+  );
+
   return (
     <>
-      {/* Featured Cast */}
+      {/* ═══════════════════════════════════════════════════
+          FEATURED CAST — Cinema roster with numbered stills
+          ═══════════════════════════════════════════════════ */}
       <section>
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
               Featured Cast
             </h2>
-            <p className="text-slate-400 text-sm">The faces behind the story</p>
+            <p className="text-slate-400 text-sm mt-0.5">
+              The faces behind the story
+            </p>
           </div>
           <Link
             href={viewAllHref}
-            className="inline-block text-xs px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.08] text-slate-200 transition-colors duration-150"
+            className="text-xs px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.09] text-slate-200 transition-colors duration-150"
           >
             View all →
           </Link>
         </div>
 
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
-          {credits.cast
-            .slice(0, castLimit)
-            .map((actor, i) => (
-              <Link
-                key={actor.id}
-                href={`/celeb/${actor.id}`}
-                className="group block relative aspect-[3/4] rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.07] hover:border-[#e94f37]/40 transition-all duration-300"
-              >
-                <Image
-                  src={
-                    actor.profile_path
-                      ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
-                      : "/placeholder-person.svg"
-                  }
-                  alt={actor.name}
-                  fill
-                  sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 17vw"
-                  className="object-cover grayscale-[40%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#e94f37]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <span className="absolute top-2 right-2 text-[9px] font-mono text-white/20 group-hover:text-white/50 transition-colors duration-300 leading-none select-none">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5">
+          {credits.cast.slice(0, castLimit).map((actor, i) => (
+            <Link
+              key={actor.id}
+              href={`/celeb/${actor.id}`}
+              className="group block relative aspect-[3/4] rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.07] hover:border-[#e94f37]/45 transition-all duration-300 hover:scale-[1.025] hover:shadow-lg hover:shadow-black/40"
+            >
+              {/* Photo */}
+              <Image
+                src={
+                  actor.profile_path
+                    ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
+                    : "/placeholder-person.svg"
+                }
+                alt={actor.name}
+                fill
+                sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 17vw"
+                className="object-cover transition-all duration-500 group-hover:scale-[1.07]"
+              />
+
+              {/* Base gradient */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/15 to-transparent" />
+
+              {/* Red tint on hover */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#e94f37]/18 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+
+              {/* Number stamp — top left */}
+              <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-black/55 backdrop-blur-sm border border-white/[0.08] group-hover:border-[#e94f37]/35 transition-colors duration-300">
+                <span className="text-[9px] font-mono text-white/25 group-hover:text-[#e94f37]/65 transition-colors duration-300 leading-none tabular-nums">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <div className="absolute bottom-0 left-0 right-0 p-2">
+              </div>
+
+              {/* Info panel — slides up from bottom */}
+              <div className="absolute bottom-0 left-0 right-0 translate-y-[4px] group-hover:translate-y-0 transition-transform duration-300 ease-out">
+                <div className="px-2.5 pb-2.5 pt-6 bg-gradient-to-t from-black/98 to-transparent">
                   <p className="text-white text-[11px] font-semibold leading-tight truncate">
                     {actor.name}
                   </p>
-                  <p className="text-white/40 text-[10px] truncate italic mt-0.5 group-hover:text-white/60 transition-colors duration-300">
+                  <p className="text-[#e94f37]/65 text-[10px] truncate italic mt-0.5 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 delay-75">
                     {actor.character}
                   </p>
                 </div>
-              </Link>
-            ))}
+              </div>
+            </Link>
+          ))}
         </div>
 
+        {/* Load more / collapse */}
         {credits.cast.length > INITIAL_CAST && (
-          <div className="mt-4 flex items-center gap-3">
-            <div className="flex-1 h-px bg-white/[0.06]" />
+          <div className="mt-5 flex items-center gap-3">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
             {castLimit < credits.cast.length && (
               <button
                 onClick={() =>
@@ -279,153 +298,175 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
                     Math.min(v + CAST_STEP, credits.cast.length),
                   )
                 }
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors duration-200 px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-[#e94f37]/30"
+                className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white px-5 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] hover:border-[#e94f37]/30 transition-all duration-200"
               >
-                {`Show ${Math.min(CAST_STEP, credits.cast.length - castLimit)} more`}
-                <span className="text-white/20">
-                  · {credits.cast.length - castLimit} remaining
+                <ChevronDown size={11} />
+                {Math.min(CAST_STEP, credits.cast.length - castLimit)} more
+                <span className="text-white/20 font-mono text-[10px]">
+                  · {credits.cast.length - castLimit} left
                 </span>
               </button>
             )}
             {castLimit > INITIAL_CAST && (
               <button
                 onClick={() => setCastLimit(INITIAL_CAST)}
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors duration-200 px-4 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-[#e94f37]/30"
+                className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white px-5 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] hover:border-[#e94f37]/30 transition-all duration-200"
               >
+                <ChevronUp size={11} />
                 Collapse
               </button>
             )}
-            <div className="flex-1 h-px bg-white/[0.06]" />
+            <div className="flex-1 h-px bg-gradient-to-l from-transparent via-white/[0.07] to-transparent" />
           </div>
         )}
       </section>
 
-      <hr className="border-white/8" />
+      <hr className="border-white/[0.06]" />
 
       <section className="space-y-12">
-        {/* Key Personnel — dossier style */}
-        {getKeyCrewMembers().some((item) => item.people?.length) && (
+        {/* ═══════════════════════════════════════════════════
+            KEY PERSONNEL — Individual role-color credit cards
+            ═══════════════════════════════════════════════════ */}
+        {creditCards.length > 0 && (
           <div>
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
                   Key Personnel
                 </h2>
-                <p className="text-slate-400 text-sm">
+                <p className="text-slate-400 text-sm mt-0.5">
                   The creative visionaries behind the film
                 </p>
               </div>
               <Link
                 href={viewAllHref}
-                className="inline-block text-xs px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.08] text-slate-200 transition-colors duration-150"
+                className="text-xs px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.09] text-slate-200 transition-colors duration-150"
               >
                 View all →
               </Link>
             </div>
 
-            <div className="relative rounded-xl overflow-hidden border border-white/[0.07]">
-              {/* Left gradient accent bar */}
-              <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-transparent via-[#e94f37]/50 to-transparent" />
-
-              <div className="divide-y divide-white/[0.04]">
-                {getKeyCrewMembers().map((item, idx) => {
-                  const shown = item.people.slice(0, 5);
-                  const extra = item.people.length - 5;
-                  return (
-                    <div
-                      key={item.job}
-                      className="group relative flex items-start gap-4 sm:gap-6 pl-5 sm:pl-7 pr-5 py-3.5 transition-colors duration-200 hover:bg-white/[0.025]"
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+              {creditCards.map((person, idx) => {
+                const color = roleColor(person.role);
+                return (
+                  <motion.div
+                    key={`${person.id}-${person.role}-${idx}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-40px" }}
+                    transition={{ delay: idx * 0.04, duration: 0.3 }}
+                  >
+                    <Link
+                      href={`/celeb/${person.id}`}
+                      className="group relative flex flex-col gap-2.5 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:bg-white/[0.06] hover:border-white/[0.13] transition-all duration-200 overflow-hidden block"
                     >
-                      {/* Red scan-line sweep on hover */}
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#e94f37]/[0.04] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      {/* Left accent on hover */}
+                      <div
+                        className="pointer-events-none absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{
+                          background: `linear-gradient(to bottom, transparent, ${color}80, transparent)`,
+                        }}
+                      />
 
-                      {/* Index */}
-                      <span className="mt-0.5 w-5 shrink-0 text-right text-[10px] font-mono text-white/10 transition-colors duration-200 group-hover:text-[#e94f37]/60">
-                        {String(idx + 1).padStart(2, "0")}
-                      </span>
-
-                      {/* Role label */}
-                      <span className="mt-0.5 w-28 sm:w-36 shrink-0 text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.14em] text-white/20 transition-colors duration-200 group-hover:text-white/35 leading-relaxed">
-                        {item.job}
-                      </span>
-
-                      {/* People */}
-                      <div className="flex-1 flex flex-wrap gap-x-4 gap-y-2 min-w-0">
-                        {shown.map((person) => (
-                          <div key={person.id} className="inline-flex items-center gap-2">
-                            <div className="w-[22px] h-[22px] shrink-0 rounded-full overflow-hidden ring-1 ring-white/[0.08] bg-white/[0.05]">
-                              <Image
-                                src={
-                                  person.profile_path
-                                    ? `https://image.tmdb.org/t/p/w45${person.profile_path}`
-                                    : "/placeholder-person.svg"
-                                }
-                                alt={person.name}
-                                width={22}
-                                height={22}
-                                className="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-all duration-300"
-                              />
-                            </div>
-                            <span className="text-xs text-white/45 whitespace-nowrap transition-colors duration-200 group-hover:text-white/75">
-                              {person.name}
-                            </span>
-                          </div>
-                        ))}
-                        {extra > 0 && (
-                          <span className="self-center text-[10px] font-mono text-white/20">
-                            +{extra}
-                          </span>
-                        )}
+                      {/* Role badge */}
+                      <div className="flex items-center min-w-0">
+                        <span
+                          className="inline-block text-[9px] font-semibold uppercase tracking-[0.14em] px-2 py-0.5 rounded-full truncate max-w-full"
+                          style={{
+                            color,
+                            background: `${color}14`,
+                            border: `1px solid ${color}28`,
+                          }}
+                        >
+                          {person.role}
+                        </span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+
+                      {/* Avatar + name row */}
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-white/[0.05] ring-1 ring-white/[0.08] group-hover:ring-white/[0.16] transition-all duration-200">
+                          <Image
+                            src={
+                              person.profile_path
+                                ? `https://image.tmdb.org/t/p/w45${person.profile_path}`
+                                : "/placeholder-person.svg"
+                            }
+                            alt={person.name}
+                            width={40}
+                            height={40}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                        <p className="text-[12px] font-semibold text-white/75 group-hover:text-white transition-colors duration-200 leading-tight line-clamp-2">
+                          {person.name}
+                        </p>
+                      </div>
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Studio Partners */}
+        {/* ═══════════════════════════════════════════════════
+            STUDIO PARTNERS — Premium numbered logo showcase
+            ═══════════════════════════════════════════════════ */}
         {info.production_companies?.length > 0 && (
-          <div className="relative">
+          <div>
             <div className="mb-6">
               <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
                 Studio Partners
               </h2>
-              <p className="text-slate-400 text-sm">
+              <p className="text-slate-400 text-sm mt-0.5">
                 In collaboration with industry leaders
               </p>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {info.production_companies.map((company) => (
+              {info.production_companies.map((company, idx) => (
                 <div
                   key={company.id}
-                  className="flex flex-col items-center justify-center gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:bg-white/[0.06] hover:border-[#e94f37]/25 transition-all duration-200 min-h-[100px]"
+                  className="group relative flex flex-col rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.07] hover:border-[#e94f37]/30 hover:bg-white/[0.05] transition-all duration-300"
                 >
-                  {company.logo_path ? (
-                    <div className="relative w-full h-16 flex-shrink-0">
-                      <Image
-                        src={`https://image.tmdb.org/t/p/w300${company.logo_path}`}
-                        alt={company.name}
-                        fill
-                        style={{
-                          objectFit: "contain",
-                          filter: "brightness(0) invert(1)",
-                          opacity: 0.65,
-                        }}
-                        sizes="160px"
+                  {/* Number stamp */}
+                  <span className="absolute top-2.5 left-3 text-[9px] font-mono text-white/15 group-hover:text-[#e94f37]/50 transition-colors duration-300 select-none z-10">
+                    {String(idx + 1).padStart(2, "0")}
+                  </span>
+
+                  {/* Logo area */}
+                  <div className="relative flex items-center justify-center h-[88px] px-6 pt-6 pb-3">
+                    {company.logo_path ? (
+                      <div className="relative w-full h-full opacity-40 group-hover:opacity-85 transition-opacity duration-300">
+                        <Image
+                          src={`https://image.tmdb.org/t/p/w300${company.logo_path}`}
+                          alt={company.name}
+                          fill
+                          sizes="180px"
+                          style={{
+                            objectFit: "contain",
+                            filter: "brightness(0) invert(1)",
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <Building2
+                        size={32}
+                        className="text-white/15 group-hover:text-white/30 transition-colors duration-300"
                       />
-                    </div>
-                  ) : (
-                    <Building2
-                      size={40}
-                      className="text-white/20 flex-shrink-0"
-                    />
-                  )}
-                  <p className="text-[11px] text-white/40 text-center leading-snug line-clamp-2">
-                    {company.name}
-                  </p>
+                    )}
+                  </div>
+
+                  {/* Name footer */}
+                  <div className="px-3 py-2.5 border-t border-white/[0.05]">
+                    <p className="text-[10px] font-mono text-white/25 group-hover:text-white/50 transition-colors duration-300 text-center truncate tracking-wide">
+                      {company.name}
+                    </p>
+                  </div>
+
+                  {/* Bottom red line on hover */}
+                  <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/0 to-transparent group-hover:via-[#e94f37]/45 transition-all duration-300" />
                 </div>
               ))}
             </div>
@@ -433,9 +474,9 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
         )}
       </section>
 
-      <hr className="border-white/8" />
+      <hr className="border-white/[0.06]" />
 
-      {/* Global Distribution: Passport stamp style */}
+      {/* Global Distribution — unchanged */}
       <section>
         <div className="mb-6">
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
@@ -521,7 +562,6 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
   );
 }
 
-// small fallback icon for providers with no logo
 function GlobeIconFallback() {
   return (
     <svg
