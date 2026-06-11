@@ -36,6 +36,21 @@ export class CategoryController {
     return this.categoryService.getKoreaTrending(page, limit);
   }
 
+  @Get('world-cup-docs')
+  async worldCupDocs(
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 25,
+    @Query('rankingMode') rankingMode?: 'world-cup-docs' | 'popular' | 'recent',
+    @Query('language') language?: string,
+    @Query('region') region?: string,
+  ) {
+    return this.categoryService.getWorldCupDocs(page, limit, {
+      rankingMode,
+      language,
+      region,
+    });
+  }
+
   @Get('coming-soon')
   async comingSoon(
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,

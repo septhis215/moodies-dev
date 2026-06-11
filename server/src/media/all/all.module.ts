@@ -16,6 +16,8 @@ import { SearchService } from './search/search.service';
 import { ReviewsService } from './reviews/reviews.service';
 import { ImagesService } from './images/images.service';
 import { AllController } from './all.controller';
+import { TvTmdbClientService } from '../tv/client/tv-tmdb-client.service';
+import { TvRecommendationsService } from '../tv/recommendations/tv-recommendations.service';
 
 @Module({
   imports: [ConfigModule],
@@ -34,6 +36,8 @@ import { AllController } from './all.controller';
     SearchService,
     ReviewsService,
     ImagesService,
+    TvTmdbClientService,
+    TvRecommendationsService,
   ],
   controllers: [AllController],
   exports: [AllService],

@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TMDBService } from 'src/external-apis/services/tmdb.service';
 import { RedisService } from 'src/redis/redis.service';
+import { AllService } from '../all/all.service';
 
 export type TmdbAll = {
   id: number;
@@ -53,6 +54,7 @@ export class CategoryService {
     private readonly tmdbService: TMDBService,
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
+    private readonly allService: AllService,
   ) {
     // Kept only as a "is TMDB configured?" guard for internal checks.
     this.token = this.configService.get<string>('TMDB_API_KEY') ?? '';
@@ -623,6 +625,63 @@ export class CategoryService {
     } catch (err) {
       this.logger.error('Failed to fetch koreaTrending', err as any);
       return { data: [], total: 0, page: 1, totalPages: 0 };
+    }
+  }
+
+  async getWorldCupDocs(
+    page: number = 1,
+    limit: number = 25,
+    options: {
+      rankingMode?: 'world-cup-docs' | 'popular' | 'recent';
+      language?: string;
+      region?: string;
+    } = {},
+    skipCache = false,
+  ): Promise<{
+    data: TmdbAll[];
+    total: number;
+    page: number;
+    totalPages: number;
+  }> {
+    const safeLimit = Math.max(1, Math.min(limit, 25));
+    const totalPages = 4;
+    const safePage = Math.max(1, Math.min(page, totalPages));
+    const rankingMode = options.rankingMode ?? 'world-cup-docs';
+    const language = options.language ?? 'en-US';
+    const region = options.region ?? 'US';
+    const total = safeLimit * totalPages;
+
+    if (!skipCache) {
+      return this.cachedCategory(
+        `category:worldCupDocs:${safePage}:${safeLimit}:${rankingMode}:${language}:${region}`,
+        () =>
+          this.getWorldCupDocs(
+            safePage,
+            safeLimit,
+            { rankingMode, language, region },
+            true,
+          ),
+      );
+    }
+
+    try {
+      const data = await this.allService.getFootballStories({
+        page: safePage,
+        limit: safeLimit,
+        rankingMode,
+        language,
+        region,
+      });
+
+      return {
+        data: data.slice(0, safeLimit) as TmdbAll[],
+        total,
+        page: safePage,
+        totalPages,
+      };
+    } catch (err) {
+      this.logger.error('Failed to fetch worldCupDocs', err as any);
+      return { data: [], total: 0, page: safePage, totalPages: 0 };
     }
   }
 

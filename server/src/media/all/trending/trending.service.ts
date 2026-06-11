@@ -6,6 +6,7 @@ import { RecommendationsService } from '../recommendations/recommendations.servi
 import { PrismaService } from 'src/prisma/prisma.service';
 import { TmdbAll } from '../types/tmdb.types';
 import { CACHE_TTL, shuffleArray, getRecentDate } from '../utils/helpers';
+import { TvRecommendationsService } from 'src/media/tv/recommendations/tv-recommendations.service';
 
 type FootballStoriesOptions = {
     limit?: number;
@@ -25,6 +26,7 @@ export class TrendingService {
         private readonly redisService: RedisService,
         private readonly filterService: ContentFilterService,
         private readonly recommendationsService: RecommendationsService,
+        private readonly tvRecommendationsService: TvRecommendationsService,
         private readonly prismaService: PrismaService,
     ) { }
 
@@ -255,8 +257,11 @@ export class TrendingService {
     }
 
     async getFootballStories(options: FootballStoriesOptions = {}): Promise<TmdbAll[]> {
-        const safeLimit = Math.max(1, Math.min(options.limit ?? 18, 30));
+        const safeLimit = Math.max(1, Math.min(options.limit ?? 18, 60));
         const safePage = Math.max(1, Math.min(options.page ?? 1, 5));
+        const pageOffset = (safePage - 1) * safeLimit;
+        const maxCollectionSize = 125;
+        const requiredResultCount = Math.min(maxCollectionSize, safeLimit * safePage);
         const language = options.language ?? 'en-US';
         const region = options.region ?? 'US';
         const rankingMode = options.rankingMode ?? 'world-cup-docs';
@@ -264,11 +269,9 @@ export class TrendingService {
             'world-cup-football-docs',
             `region:${region}`,
             `language:${language}`,
-            `page:${safePage}`,
-            `limit:${safeLimit}`,
             `rank:${rankingMode}`,
         ].join(':');
-        const finalCacheKey = `${cacheScope}:ranked`;
+        const finalCacheKey = `${cacheScope}:ranked:v2`;
         const rawCacheKey = `${cacheScope}:raw`;
         const lastGoodCacheKey = `${cacheScope}:last-good`;
         const freshTtl = 60 * 60 * 8;
@@ -284,24 +287,57 @@ export class TrendingService {
             }
         };
 
+        const getCachedJson = async <T>(key: string): Promise<T | null> => {
+            try {
+                const cached = await this.redisService.get(key);
+                return cached ? JSON.parse(cached) as T : null;
+            } catch {
+                return null;
+            }
+        };
+
+        const setCachedJson = async (key: string, value: unknown, ttl = freshTtl) => {
+            try {
+                await this.redisService.set(key, JSON.stringify(value), ttl);
+            } catch {
+                // Cache failures should not block the curated shelf.
+            }
+        };
+
+        const getOrFetchJson = async <T>(key: string, fetcher: () => Promise<T>, ttl = freshTtl): Promise<T> => {
+            if (!options.forceRefresh) {
+                const cached = await getCachedJson<T>(key);
+                if (cached !== null) return cached;
+            }
+            const fresh = await fetcher();
+            if (fresh !== null && fresh !== undefined) {
+                await setCachedJson(key, fresh, ttl);
+            }
+            return fresh;
+        };
+
         if (!options.forceRefresh) {
             const cached = parseCachedItems(await this.redisService.get(finalCacheKey));
-            if (cached) return cached.slice(0, safeLimit);
+            if (cached) return cached.slice(pageOffset, pageOffset + safeLimit);
         }
 
         const lastGood = parseCachedItems(await this.redisService.get(lastGoodCacheKey));
 
         if (!this.client.token) {
             this.logger.warn('TMDB_API_KEY not set; returning last cached footballStories if available');
-            return lastGood?.slice(0, safeLimit) ?? [];
+            return lastGood?.slice(pageOffset, pageOffset + safeLimit) ?? [];
         }
 
-        const seedItems: Array<{ id: number; type: 'movie' | 'tv'; label: string; main?: boolean }> = [
-            { id: 239730, type: 'tv', label: 'Captains of the World', main: true },
-            { id: 135934, type: 'tv', label: 'All or Nothing: Arsenal', main: true },
-            { id: 155533, type: 'tv', label: 'Neymar: The Perfect Chaos', main: true },
-            { id: 233629, type: 'tv', label: 'Beckham' },
-            { id: 235929, type: 'tv', label: 'Messi Meets America' },
+        const seedItems: Array<{ id: number; type: 'tv'; label: string }> = [
+            { id: 132376, type: 'tv', label: 'All or Nothing: Arsenal' },
+            { id: 235345, type: 'tv', label: 'Beckham' },
+            { id: 242238, type: 'tv', label: 'Captains of the World' },
+            { id: 153519, type: 'tv', label: 'Neymar: The Perfect Chaos' },
+        ];
+        const personSeedItems: Array<{ id: number; label: string }> = [
+            { id: 1141894, label: 'Cristiano Ronaldo' },
+            { id: 2013564, label: 'Pep Guardiola' },
+            { id: 229915, label: 'Thierry Henry' },
         ];
 
         const worldCupTerms = [
@@ -338,6 +374,13 @@ export class TrendingService {
             'neymar',
             'messi',
             'ronaldo',
+            'cristiano ronaldo',
+            'pep',
+            'guardiola',
+            'pep guardiola',
+            'thierry',
+            'henry',
+            'thierry henry',
             'player',
             'players',
             'team',
@@ -375,19 +418,13 @@ export class TrendingService {
             _query?: string;
             _queryPriority?: number;
             _source?: string;
+            _anchor?: boolean;
+            character?: string;
+            job?: string;
         };
 
         const getHaystack = (raw: RawFootballItem) =>
             `${raw.title ?? raw.name ?? ''} ${raw.overview ?? ''}`.toLowerCase();
-
-        const normalizeTitle = (value: string) =>
-            value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-
-        const detailMatchesAnchor = (details: RawFootballItem, anchorLabel: string) => {
-            const actual = normalizeTitle(details.title ?? details.name ?? '');
-            const expected = normalizeTitle(anchorLabel);
-            return actual === expected || actual.includes(expected) || expected.includes(actual);
-        };
 
         const hasAny = (haystack: string, terms: string[]) =>
             terms.some((term) => haystack.includes(term));
@@ -405,6 +442,7 @@ export class TrendingService {
 
         const isRelevantFootballDoc = (raw: RawFootballItem) => {
             const haystack = getHaystack(raw);
+            if (raw._anchor) return true;
             if (looseRejectTerms.some((term) => haystack.includes(term))) return false;
             if (!raw.poster_path && !raw.backdrop_path) return false;
 
@@ -423,6 +461,14 @@ export class TrendingService {
             ]);
 
             return worldCupMatch || (docMatch && (footballMatch || competitionMatch));
+        };
+
+        const isBackupFootballDoc = (raw: RawFootballItem) => {
+            const haystack = getHaystack(raw);
+            if (looseRejectTerms.some((term) => haystack.includes(term))) return false;
+            if (!raw.poster_path && !raw.backdrop_path) return false;
+            if (raw._source?.startsWith('seed:') || raw._source?.startsWith('tv-smart-rec:')) return true;
+            return isDocumentaryGenre(raw) && (hasAny(haystack, footballTerms) || hasAny(haystack, docTerms));
         };
 
         const scoreItem = (raw: RawFootballItem) => {
@@ -460,6 +506,7 @@ export class TrendingService {
                     type: 'movie' | 'tv',
                     source: string,
                     queryPriority: number,
+                    anchor = false,
                 ) => {
                     if (!item?.id) return;
                     const key = `${type}:${item.id}`;
@@ -469,6 +516,7 @@ export class TrendingService {
                         _source: source,
                         _query: source,
                         _queryPriority: queryPriority,
+                        _anchor: anchor,
                     };
                     const current = rawMap.get(key);
                     if (!current || scoreItem(candidate) > scoreItem(current)) {
@@ -478,29 +526,49 @@ export class TrendingService {
 
                 const seedTasks = seedItems.flatMap((seed) => [
                     async () => {
-                        const details = await this.client.tmdb(
-                            `${this.client.baseUrl}/${seed.type}/${seed.id}?language=${encodeURIComponent(language)}`,
+                        const details = await getOrFetchJson<RawFootballItem | null>(
+                            `${cacheScope}:anchor:${seed.type}:${seed.id}:details`,
+                            () => this.client.tmdb(
+                                `${this.client.baseUrl}/${seed.type}/${seed.id}?language=${encodeURIComponent(language)}`,
+                            ),
                         );
-                        if (details && detailMatchesAnchor(details, seed.label)) {
-                            pushCandidate(details, seed.type, `seed:${seed.label}`, seed.main ? 6 : 5);
+                        if (details) {
+                            pushCandidate(details, seed.type, `seed:${seed.label}`, 10, true);
                         }
                         return null;
                     },
                     async () => {
-                        const recs = await this.recommendationsService.getSmartRecommendations(seed.type, seed.id, 8, 1);
+                        const recs = await getOrFetchJson<TmdbAll[]>(
+                            `${cacheScope}:anchor:${seed.type}:${seed.id}:tv-smart-rec`,
+                            () => this.tvRecommendationsService.getSmartRecommendationsTv(seed.id, 16, 1) as Promise<TmdbAll[]>,
+                        );
+                        recs.forEach((item) => pushCandidate(item as RawFootballItem, 'tv', `tv-smart-rec:${seed.label}`, 5));
+                        return null;
+                    },
+                    async () => {
+                        const recs = await getOrFetchJson<TmdbAll[]>(
+                            `${cacheScope}:anchor:${seed.type}:${seed.id}:all-smart-rec`,
+                            () => this.recommendationsService.getSmartRecommendations(seed.type, seed.id, 12, 1),
+                        );
                         recs.forEach((item) => pushCandidate(item as RawFootballItem, item.type ?? seed.type, `smart-rec:${seed.label}`, 4));
                         return null;
                     },
                     async () => {
-                        const similar = await this.client.tmdb(
-                            `${this.client.baseUrl}/${seed.type}/${seed.id}/similar?language=${encodeURIComponent(language)}&page=1`,
+                        const similar = await getOrFetchJson<{ results?: RawFootballItem[] } | null>(
+                            `${cacheScope}:anchor:${seed.type}:${seed.id}:similar`,
+                            () => this.client.tmdb(
+                                `${this.client.baseUrl}/${seed.type}/${seed.id}/similar?language=${encodeURIComponent(language)}&page=1`,
+                            ),
                         );
                         (similar?.results ?? []).forEach((item: RawFootballItem) => pushCandidate(item, seed.type, `similar:${seed.label}`, 3));
                         return null;
                     },
                     async () => {
-                        const recs = await this.client.tmdb(
-                            `${this.client.baseUrl}/${seed.type}/${seed.id}/recommendations?language=${encodeURIComponent(language)}&page=1`,
+                        const recs = await getOrFetchJson<{ results?: RawFootballItem[] } | null>(
+                            `${cacheScope}:anchor:${seed.type}:${seed.id}:tmdb-rec`,
+                            () => this.client.tmdb(
+                                `${this.client.baseUrl}/${seed.type}/${seed.id}/recommendations?language=${encodeURIComponent(language)}&page=1`,
+                            ),
                         );
                         (recs?.results ?? []).forEach((item: RawFootballItem) => pushCandidate(item, seed.type, `tmdb-rec:${seed.label}`, 3));
                         return null;
@@ -508,6 +576,92 @@ export class TrendingService {
                 ]);
 
                 await this.client.withConcurrencyLimit(seedTasks, 5);
+
+                const getCreditType = (item: RawFootballItem): 'movie' | 'tv' | null => {
+                    if (item.media_type === 'movie' || item.media_type === 'tv') return item.media_type;
+                    if (item.first_air_date) return 'tv';
+                    if (item.release_date) return 'movie';
+                    return null;
+                };
+
+                const personTasks = personSeedItems.map((person) => async () => {
+                    const details = await getOrFetchJson<any | null>(
+                        `${cacheScope}:person:${person.id}:filmography`,
+                        () => this.client.tmdb(
+                            `${this.client.baseUrl}/person/${person.id}?language=${encodeURIComponent(language)}&append_to_response=combined_credits,movie_credits,tv_credits`,
+                        ),
+                    );
+                    if (!details) return null;
+
+                    const credits: RawFootballItem[] = [
+                        ...(details.combined_credits?.cast ?? []),
+                        ...(details.combined_credits?.crew ?? []),
+                        ...(details.movie_credits?.cast ?? []).map((item: RawFootballItem) => ({ ...item, media_type: 'movie' })),
+                        ...(details.movie_credits?.crew ?? []).map((item: RawFootballItem) => ({ ...item, media_type: 'movie' })),
+                        ...(details.tv_credits?.cast ?? []).map((item: RawFootballItem) => ({ ...item, media_type: 'tv' })),
+                        ...(details.tv_credits?.crew ?? []).map((item: RawFootballItem) => ({ ...item, media_type: 'tv' })),
+                    ];
+
+                    const uniqueCredits = Array.from(
+                        new Map(
+                            credits
+                                .filter((credit) => credit?.id && getCreditType(credit))
+                                .map((credit) => [`${getCreditType(credit)}:${credit.id}`, credit]),
+                        ).values(),
+                    )
+                        .sort((a, b) => scoreItem(b) - scoreItem(a))
+                        .slice(0, 18);
+
+                    uniqueCredits.forEach((credit) => {
+                        const creditType = getCreditType(credit);
+                        if (!creditType) return;
+                        pushCandidate(
+                            credit,
+                            creditType,
+                            `person-filmography:${person.label}`,
+                            4,
+                        );
+                    });
+
+                    return null;
+                });
+
+                await this.client.withConcurrencyLimit(personTasks, 3);
+
+                const personSeedCredits = Array.from(rawMap.values())
+                    .filter((item) => item._source?.startsWith('person-filmography:'))
+                    .filter((item) => isRelevantFootballDoc(item) || isBackupFootballDoc(item))
+                    .sort((a, b) => scoreItem(b) - scoreItem(a))
+                    .slice(0, 8);
+
+                const personRecommendationTasks = personSeedCredits.flatMap((seed) => {
+                    const seedType = getCreditType(seed);
+                    if (!seedType) return [];
+                    return [
+                        async () => {
+                            const recs = await getOrFetchJson<TmdbAll[]>(
+                                `${cacheScope}:person-credit:${seedType}:${seed.id}:smart-rec`,
+                                () => seedType === 'tv'
+                                    ? this.tvRecommendationsService.getSmartRecommendationsTv(seed.id, 12, 1) as Promise<TmdbAll[]>
+                                    : this.recommendationsService.getSmartRecommendations(seedType, seed.id, 10, 1),
+                            );
+                            recs.forEach((item) => pushCandidate(item as RawFootballItem, item.type ?? seedType, `person-credit-smart:${seed.id}`, 2));
+                            return null;
+                        },
+                        async () => {
+                            const similar = await getOrFetchJson<{ results?: RawFootballItem[] } | null>(
+                                `${cacheScope}:person-credit:${seedType}:${seed.id}:similar`,
+                                () => this.client.tmdb(
+                                    `${this.client.baseUrl}/${seedType}/${seed.id}/similar?language=${encodeURIComponent(language)}&page=1`,
+                                ),
+                            );
+                            (similar?.results ?? []).forEach((item: RawFootballItem) => pushCandidate(item, seedType, `person-credit-similar:${seed.id}`, 1));
+                            return null;
+                        },
+                    ];
+                });
+
+                await this.client.withConcurrencyLimit(personRecommendationTasks, 4);
 
                 const discoverUrls: Array<{ url: string; type: 'movie' | 'tv'; source: string; priority: number }> = [];
                 const documentaryGenre = 99;
@@ -518,24 +672,31 @@ export class TrendingService {
                             ? ['popularity.desc', 'vote_average.desc', 'first_air_date.desc']
                             : ['popularity.desc', 'vote_average.desc', 'first_air_date.desc'];
 
+                const discoveryPageCount = Math.min(5, Math.max(3, safePage + 2));
+                const discoveryPages = Array.from({ length: discoveryPageCount }, (_, index) => index + 1);
                 for (const sort of discoverSorts) {
-                    const movieSort = sort === 'first_air_date.desc' ? 'primary_release_date.desc' : sort;
-                    discoverUrls.push({
-                        type: 'movie',
-                        source: `discover-doc-movie:${movieSort}`,
-                        priority: 2,
-                        url: `${this.client.baseUrl}/discover/movie?language=${encodeURIComponent(language)}&region=${encodeURIComponent(region)}&include_adult=false&with_genres=${documentaryGenre}&sort_by=${movieSort}&vote_count.gte=5&page=${safePage}`,
-                    });
-                    discoverUrls.push({
-                        type: 'tv',
-                        source: `discover-doc-tv:${sort}`,
-                        priority: 2,
-                        url: `${this.client.baseUrl}/discover/tv?language=${encodeURIComponent(language)}&include_adult=false&with_genres=${documentaryGenre}&sort_by=${sort}&vote_count.gte=5&page=${safePage}`,
-                    });
+                    for (const page of discoveryPages) {
+                        const movieSort = sort === 'first_air_date.desc' ? 'primary_release_date.desc' : sort;
+                        discoverUrls.push({
+                            type: 'movie',
+                            source: `discover-doc-movie:${movieSort}:p${page}`,
+                            priority: 2,
+                            url: `${this.client.baseUrl}/discover/movie?language=${encodeURIComponent(language)}&region=${encodeURIComponent(region)}&include_adult=false&with_genres=${documentaryGenre}&sort_by=${movieSort}&vote_count.gte=5&page=${page}`,
+                        });
+                        discoverUrls.push({
+                            type: 'tv',
+                            source: `discover-doc-tv:${sort}:p${page}`,
+                            priority: 2,
+                            url: `${this.client.baseUrl}/discover/tv?language=${encodeURIComponent(language)}&include_adult=false&with_genres=${documentaryGenre}&sort_by=${sort}&vote_count.gte=5&page=${page}`,
+                        });
+                    }
                 }
 
                 const discoverTasks = discoverUrls.map((entry) => async () => {
-                    const data = await this.client.tmdb(entry.url);
+                    const data = await getOrFetchJson<{ results?: RawFootballItem[] } | null>(
+                        `${cacheScope}:${entry.source}`,
+                        () => this.client.tmdb(entry.url),
+                    );
                     (data?.results ?? []).forEach((item: RawFootballItem) => {
                         pushCandidate(item, entry.type, entry.source, entry.priority);
                     });
@@ -544,7 +705,7 @@ export class TrendingService {
 
                 await this.client.withConcurrencyLimit(discoverTasks, 4);
 
-                if (rawMap.size < safeLimit) {
+                if (rawMap.size < requiredResultCount) {
                     const fallbackSeeds = Array.from(rawMap.values())
                         .filter(isRelevantFootballDoc)
                         .sort((a, b) => scoreItem(b) - scoreItem(a))
@@ -553,13 +714,21 @@ export class TrendingService {
                         const seedType = seed.media_type === 'tv' ? 'tv' : 'movie';
                         return [
                             async () => {
-                                const recs = await this.recommendationsService.getSmartRecommendations(seedType, seed.id, 6, 1);
+                                const recs = await getOrFetchJson<TmdbAll[]>(
+                                    `${cacheScope}:gap:${seedType}:${seed.id}:smart-rec`,
+                                    () => seedType === 'tv'
+                                        ? this.tvRecommendationsService.getSmartRecommendationsTv(seed.id, 12, 1) as Promise<TmdbAll[]>
+                                        : this.recommendationsService.getSmartRecommendations(seedType, seed.id, 10, 1),
+                                );
                                 recs.forEach((item) => pushCandidate(item as RawFootballItem, item.type ?? seedType, `gap-smart:${seed.id}`, 2));
                                 return null;
                             },
                             async () => {
-                                const similar = await this.client.tmdb(
-                                    `${this.client.baseUrl}/${seedType}/${seed.id}/similar?language=${encodeURIComponent(language)}&page=1`,
+                                const similar = await getOrFetchJson<{ results?: RawFootballItem[] } | null>(
+                                    `${cacheScope}:gap:${seedType}:${seed.id}:similar`,
+                                    () => this.client.tmdb(
+                                        `${this.client.baseUrl}/${seedType}/${seed.id}/similar?language=${encodeURIComponent(language)}&page=1`,
+                                    ),
                                 );
                                 (similar?.results ?? []).forEach((item: RawFootballItem) => pushCandidate(item, seedType, `gap-similar:${seed.id}`, 1));
                                 return null;
@@ -575,8 +744,7 @@ export class TrendingService {
                 }
             }
 
-            const ranked = rawItems
-                .filter(isRelevantFootballDoc)
+            const scoredItems = rawItems
                 .map((raw) => {
                     const type = raw.media_type === 'tv' ? 'tv' : 'movie';
                     const mapped: TmdbAll & { _score: number } = {
@@ -598,21 +766,30 @@ export class TrendingService {
                     };
                     return mapped;
                 })
-                .sort((a, b) => b._score - a._score)
-                .slice(0, safeLimit)
+                .sort((a, b) => b._score - a._score);
+
+            const anchorIds = new Set(seedItems.map((seed) => seed.id));
+            const anchors = scoredItems.filter((item) => item.type === 'tv' && anchorIds.has(item.id));
+            const anchorKeys = new Set(anchors.map((item) => `${item.type}:${item.id}`));
+            const primary = scoredItems.filter((item) => !anchorKeys.has(`${item.type}:${item.id}`) && isRelevantFootballDoc(item));
+            const primaryKeys = new Set([...anchorKeys, ...primary.map((item) => `${item.type}:${item.id}`)]);
+            const backups = scoredItems.filter((item) => !primaryKeys.has(`${item.type}:${item.id}`) && isBackupFootballDoc(item));
+            const ranked = [...anchors, ...primary, ...backups]
+                .slice(0, maxCollectionSize)
                 .map(({ _score, ...item }) => item);
+            const pageItems = ranked.slice(pageOffset, pageOffset + safeLimit);
 
             if (ranked.length > 0) {
                 await this.redisService.set(finalCacheKey, JSON.stringify(ranked), freshTtl);
                 await this.redisService.set(lastGoodCacheKey, JSON.stringify(ranked), lastGoodTtl);
                 this.recommendationsService.populateRecommendationsBackground(ranked, finalCacheKey);
-                return ranked;
+                return pageItems;
             }
 
-            return lastGood?.slice(0, safeLimit) ?? [];
+            return lastGood?.slice(pageOffset, pageOffset + safeLimit) ?? [];
         } catch (err) {
             this.logger.error('Failed to fetch footballStories', err as any);
-            return lastGood?.slice(0, safeLimit) ?? [];
+            return lastGood?.slice(pageOffset, pageOffset + safeLimit) ?? [];
         }
     }
 
