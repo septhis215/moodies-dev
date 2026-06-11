@@ -1,6 +1,7 @@
 import React from 'react';
 import type { All } from '@/types/all';
 import type { ReviewItem } from '@/components/sections/CommunityPicks';
+import type { CommunityPulseData } from '@/types/communityPulse';
 import TVHomePageClient from './TVHomePageClient';
 const BASE_URL = process.env.NEST_API_URL || 'http://localhost:4000';
 
@@ -83,6 +84,13 @@ async function fetchAiringToday() {
 }
 
 // NEW: Fetch airing this week
+async function fetchCommunityPulse(): Promise<CommunityPulseData> {
+    return fetchWithFallback<CommunityPulseData>(
+        '/media-stats/community-pulse?mediaType=tv&limit=5',
+        { mostLiked: [], mostReviewed: [], mostSaved: [] },
+    );
+}
+
 async function fetchAiringThisWeek() {
     return fetchWithFallback<All[]>('/tv/airing/week?limit=20', []);
 }
@@ -178,10 +186,11 @@ export default async function TVHomePage() {
     }
 
     // Always fetch these separately for more control
-    const [NewTVTrailer, AiringToday, AiringThisWeek] = await Promise.all([
+    const [NewTVTrailer, AiringToday, AiringThisWeek, communityPulse] = await Promise.all([
         fetchNewTVTrailers(),
         fetchAiringToday(),
         fetchAiringThisWeek(),
+        fetchCommunityPulse(),
     ]);
 
     return (
@@ -197,6 +206,7 @@ export default async function TVHomePage() {
             airingToday={AiringToday}
             airingThisWeek={AiringThisWeek}
             moods={moods}
+            communityPulse={communityPulse}
         />
     );
 }

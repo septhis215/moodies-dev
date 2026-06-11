@@ -6,7 +6,9 @@ import Link from "next/link";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiked } from "@/hooks/useLiked";
 import { useRouter } from "next/navigation";
-import { Bookmark, BookmarkCheck } from "lucide-react";
+import { Bookmark, BookmarkCheck, Heart, BookmarkIcon, MessageSquare } from "lucide-react";
+import { useMediaStats } from "@/hooks/useMediaStats";
+import { fmtCount } from "@/utils/mediaStatsClient";
 
 export type Content = {
   id: number;
@@ -521,6 +523,23 @@ export function HeroContentCard({
   }, [content, data, reviewStats]);
 
   const watchType = contentType === "tv" ? "series" : "movie";
+  const mediaStatType = contentType === "tv" ? "tv" : "movie";
+  const { getStat } = useMediaStats(
+    contentId ? [{ id: contentId, type: mediaStatType }] : [],
+  );
+  const engagementStat = contentId ? getStat(contentId, mediaStatType) : { likeCount: 0, savedCount: 0, reviewCount: 0 };
+
+  const [likeDelta, setLikeDelta] = useState(0);
+  const [savedDelta, setSavedDelta] = useState(0);
+
+  useEffect(() => {
+    setLikeDelta(0);
+    setSavedDelta(0);
+  }, [contentId]);
+
+  const liveLikeCount = engagementStat.likeCount + likeDelta;
+  const liveSavedCount = engagementStat.savedCount + savedDelta;
+
   const inWatchlist = contentId
     ? isInWatchlist(String(contentId), watchType)
     : false;
@@ -544,8 +563,13 @@ export function HeroContentCard({
         variant: "info" as const,
         duration: 3500,
       };
-      if (inWatchlist) await remove(String(contentId), watchType, opts);
-      else await add(String(contentId), watchType, opts);
+      if (inWatchlist) {
+        await remove(String(contentId), watchType, opts);
+        setSavedDelta((d) => d - 1);
+      } else {
+        await add(String(contentId), watchType, opts);
+        setSavedDelta((d) => d + 1);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -566,8 +590,13 @@ export function HeroContentCard({
         posterUrl: mappedContent.poster,
         duration: 3500,
       };
-      if (inLiked) await removeFromLiked(String(contentId), watchType, opts);
-      else await addToLiked(String(contentId), watchType, opts);
+      if (inLiked) {
+        await removeFromLiked(String(contentId), watchType, opts);
+        setLikeDelta((d) => d - 1);
+      } else {
+        await addToLiked(String(contentId), watchType, opts);
+        setLikeDelta((d) => d + 1);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -989,6 +1018,41 @@ export function HeroContentCard({
                     {g}
                   </span>
                 ))}
+              </div>
+            )}
+
+            {/* Engagement stats */}
+            {(liveLikeCount > 0 || liveSavedCount > 0 || engagementStat.reviewCount > 0) && (
+              <div className="hero-meta" style={s.metaRow}>
+                {liveLikeCount > 0 && (
+                  <div style={s.metaItem}>
+                    <Heart
+                      size={13}
+                      style={{ color: "#f472b6", flexShrink: 0 }}
+                      fill="#f472b6"
+                    />
+                    <span>{fmtCount(liveLikeCount)} likes</span>
+                  </div>
+                )}
+                {liveSavedCount > 0 && (
+                  <div style={s.metaItem}>
+                    <BookmarkIcon
+                      size={13}
+                      style={{ color: "#34d399", flexShrink: 0 }}
+                      fill="#34d399"
+                    />
+                    <span>{fmtCount(liveSavedCount)} saves</span>
+                  </div>
+                )}
+                {engagementStat.reviewCount > 0 && (
+                  <div style={s.metaItem}>
+                    <MessageSquare
+                      size={13}
+                      style={{ color: "#60a5fa", flexShrink: 0 }}
+                    />
+                    <span>{fmtCount(engagementStat.reviewCount)} reviews</span>
+                  </div>
+                )}
               </div>
             )}
 

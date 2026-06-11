@@ -61,8 +61,11 @@ export class FeedUtilsService {
   }
 
   getMediaType(item: any): FeedMediaType {
-    if (item.media_type === 'movie' || item.type === 'movie' || item.title)
-      return 'movie';
+    // Explicit type fields take priority — covers both raw TMDB and already-normalized items
+    if (item.media_type === 'tv' || item.type === 'tv') return 'tv';
+    if (item.media_type === 'movie' || item.type === 'movie') return 'movie';
+    // Raw TMDB heuristic: movies carry `title`, TV shows carry `name`
+    if (item.title) return 'movie';
     return 'tv';
   }
 

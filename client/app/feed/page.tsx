@@ -167,17 +167,34 @@ export default function VideoFeedPage() {
     }
   }, [user?.id]);
 
-  const watchType = currentVideo?.media_type === "tv" ? "series" : "movie";
+  const getContentType = useCallback(
+    (item: FeedContentLike): "movie" | "tv" => {
+      if (item.media_type) return item.media_type;
+      if (item.type === "movies" || item.type === "movie") return "movie";
+      if (item.type === "tv") return "tv";
+      if (item.number_of_seasons || item.first_air_date || item.name)
+        return "tv";
+      return "movie";
+    },
+    [],
+  );
+
+  const currentContentType = currentVideo ? getContentType(currentVideo) : "movie";
+  const watchType = currentContentType === "tv" ? "series" : "movie";
   const inWatchlist = currentVideo
     ? isInWatchlist(String(currentVideo.id), watchType)
     : false;
-  const likeType = currentVideo?.media_type === "tv" ? "series" : "movie";
+  const likeType = currentContentType === "tv" ? "series" : "movie";
   const liked = currentVideo
     ? isLiked(String(currentVideo.id), likeType)
     : false;
 
   const handleLikeToggle = useCallback(async () => {
-    if (!currentVideo || !likedReady) return;
+    if (!currentVideo) return;
+    if (!likedReady) {
+      router.push("/auth/login");
+      return;
+    }
     const meta = {
       title: currentVideo.title || currentVideo.name,
       posterUrl: currentVideo.poster_path
@@ -191,6 +208,10 @@ export default function VideoFeedPage() {
 
   const handleWatchlistToggle = useCallback(async () => {
     if (!currentVideo || isTogglingWatchlist) return;
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
     setIsTogglingWatchlist(true);
     try {
       if (inWatchlist) {
@@ -224,19 +245,9 @@ export default function VideoFeedPage() {
     isTogglingWatchlist,
     addToWatchlist,
     removeFromWatchlist,
+    user,
+    router,
   ]);
-
-  const getContentType = useCallback(
-    (item: FeedContentLike): "movie" | "tv" => {
-      if (item.media_type) return item.media_type;
-      if (item.type === "movies" || item.type === "movie") return "movie";
-      if (item.type === "tv") return "tv";
-      if (item.number_of_seasons || item.first_air_date || item.name)
-        return "tv";
-      return "movie";
-    },
-    [],
-  );
 
   const href = currentVideo
     ? `/${getContentType(currentVideo) === "tv" ? "tv" : "movies"}/${currentVideo.id}`
@@ -475,7 +486,7 @@ export default function VideoFeedPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           viewerId: viewerIdRef.current,
-          mediaType: currentVideo.media_type,
+          mediaType: getContentType(currentVideo),
           id: currentVideo.id,
           videoKey: currentVideo.primary_video.key,
         }),
@@ -910,7 +921,7 @@ export default function VideoFeedPage() {
                       })()}
 
                     <span className="px-2 py-0.5 rounded-md text-xs font-bold uppercase border bg-white/10 text-white/80 border-white/20">
-                      {currentVideo.media_type}
+                      {currentContentType}
                     </span>
 
                     {activeCategory === "upcoming" &&
@@ -1157,7 +1168,7 @@ export default function VideoFeedPage() {
                       );
                     })()}
                   <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-xs font-bold uppercase text-white/70">
-                    {currentVideo.media_type}
+                    {currentContentType}
                   </span>
                   {currentVideoTypeLabel && (
                     <span className="rounded-full border border-red-400/25 bg-red-500/15 px-2.5 py-1 text-xs font-bold uppercase text-red-300">
@@ -1198,7 +1209,7 @@ export default function VideoFeedPage() {
                       Type
                     </div>
                     <div className="text-sm font-bold uppercase text-white">
-                      {currentVideo.media_type}
+                      {currentContentType}
                     </div>
                   </div>
                   <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
