@@ -33,7 +33,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { use, useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 
 interface Credit {
   id: number;
@@ -43,6 +43,7 @@ interface Credit {
   poster_path?: string | null;
   backdrop_path?: string | null;
   vote_average?: number;
+  popularity?: number;
   release_date?: string;
   first_air_date?: string;
   media_type: "movie" | "tv" | string;
@@ -631,13 +632,15 @@ export default function CelebrityDetailPage({
   const router = useRouter();
   const { add, remove, isInWatchlist, ready } = useWatchlist();
   const [person, setPerson] = useState<Person | null>(null);
-  const [timeline, setTimeline] = useState<Timeline | null>(null);
   const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
   const [similarPeople, setSimilarPeople] = useState<SimilarPerson[]>([]);
   const [upcomingProjects, setUpcomingProjects] = useState<Credit[]>([]);
   const [relatedVideos, setRelatedVideos] = useState<RelatedVideo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [videosLoading, setVideosLoading] = useState(true);
+  const [videosLoading, setVideosLoading] = useState(false);
+  const [collaborationsLoading, setCollaborationsLoading] = useState(false);
+  const [similarLoading, setSimilarLoading] = useState(false);
+  const [upcomingLoading, setUpcomingLoading] = useState(false);
   const [videosError, setVideosError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<FilmographyTab>("all");
@@ -650,68 +653,114 @@ export default function CelebrityDetailPage({
   const [galleryPage, setGalleryPage] = useState(0);
   const [videoStartIndex, setVideoStartIndex] = useState(0);
   const [similarStartIndex, setSimilarStartIndex] = useState(0);
+  const [shouldLoadVideos, setShouldLoadVideos] = useState(false);
+  const relatedVideosSectionRef = useRef<HTMLElement | null>(null);
   const [loadingStates, setLoadingStates] = useState<
     Record<string | number, boolean>
   >({});
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchPerson = async () => {
       setLoading(true);
       setError(null);
-      setVideosLoading(true);
       setVideosError(null);
+      setPerson(null);
       setRelatedVideos([]);
+      setShouldLoadVideos(false);
+      setVideosLoading(false);
+      setCollaborationsLoading(false);
+      setSimilarLoading(false);
+      setUpcomingLoading(false);
+      setCollaborations([]);
+      setSimilarPeople([]);
+      setUpcomingProjects([]);
       try {
         const base =
           process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
-        const [personRes, similarRes, upcomingRes, timelineRes, collabRes] =
-          await Promise.all([
-            fetch(`${base}/people/${resolvedParams.id}`),
-            fetch(`${base}/people/${resolvedParams.id}/similar`),
-            fetch(`${base}/people/${resolvedParams.id}/upcoming`),
-            fetch(`${base}/people/${resolvedParams.id}/timeline`),
-            fetch(`${base}/people/${resolvedParams.id}/collaborations`),
-          ]);
+        const personRes = await fetch(`${base}/people/${resolvedParams.id}`, {
+          signal: controller.signal,
+        });
 
         if (!personRes.ok)
           throw new Error("Unable to load this celebrity profile.");
 
         const personData = await personRes.json();
-        const [similarData, upcomingData, timelineData, collabData] =
-          await Promise.all([
-            similarRes.ok ? similarRes.json() : [],
-            upcomingRes.ok ? upcomingRes.json() : { movies: [], tv: [] },
-            timelineRes.ok ? timelineRes.json() : null,
-            collabRes.ok ? collabRes.json() : [],
-          ]);
+        if (controller.signal.aborted) return;
 
         setPerson(personData);
-        setSimilarPeople(Array.isArray(similarData) ? similarData : []);
-        setUpcomingProjects([
-          ...(upcomingData?.movies || []),
-          ...(upcomingData?.tv || []),
-        ]);
-        setTimeline(timelineData);
-        setCollaborations(Array.isArray(collabData) ? collabData : []);
+        setLoading(false);
 
-        fetch(`${base}/people/${resolvedParams.id}/videos`)
-          .then(async (videoRes) => {
-            if (!videoRes.ok) {
-              throw new Error("Related videos are unavailable right now.");
+        setSimilarLoading(true);
+        fetch(`${base}/people/${resolvedParams.id}/similar`, {
+          signal: controller.signal,
+        })
+          .then(async (similarRes) => (similarRes.ok ? similarRes.json() : []))
+          .then((similarData) => {
+            if (!controller.signal.aborted) {
+              setSimilarPeople(Array.isArray(similarData) ? similarData : []);
             }
-            const videoData = await videoRes.json();
-            setRelatedVideos(Array.isArray(videoData) ? videoData : []);
           })
-          .catch((videoError) => {
-            console.error("Error fetching celebrity videos:", videoError);
-            setVideosError(
-              videoError instanceof Error
-                ? videoError.message
-                : "Related videos are unavailable right now.",
-            );
+          .catch((sectionError) => {
+            if (!controller.signal.aborted) {
+              console.error(
+                "Error fetching similar celebrities:",
+                sectionError,
+              );
+              setSimilarPeople([]);
+            }
           })
-          .finally(() => setVideosLoading(false));
+          .finally(() => {
+            if (!controller.signal.aborted) setSimilarLoading(false);
+          });
+
+        setUpcomingLoading(true);
+        fetch(`${base}/people/${resolvedParams.id}/upcoming`, {
+          signal: controller.signal,
+        })
+          .then(async (upcomingRes) =>
+            upcomingRes.ok ? upcomingRes.json() : { movies: [], tv: [] },
+          )
+          .then((upcomingData) => {
+            if (!controller.signal.aborted) {
+              setUpcomingProjects([
+                ...(upcomingData?.movies || []),
+                ...(upcomingData?.tv || []),
+              ]);
+            }
+          })
+          .catch((sectionError) => {
+            if (!controller.signal.aborted) {
+              console.error("Error fetching upcoming projects:", sectionError);
+              setUpcomingProjects([]);
+            }
+          })
+          .finally(() => {
+            if (!controller.signal.aborted) setUpcomingLoading(false);
+          });
+
+        setCollaborationsLoading(true);
+        fetch(`${base}/people/${resolvedParams.id}/collaborations`, {
+          signal: controller.signal,
+        })
+          .then(async (collabRes) => (collabRes.ok ? collabRes.json() : []))
+          .then((collabData) => {
+            if (!controller.signal.aborted) {
+              setCollaborations(Array.isArray(collabData) ? collabData : []);
+            }
+          })
+          .catch((sectionError) => {
+            if (!controller.signal.aborted) {
+              console.error("Error fetching collaborations:", sectionError);
+              setCollaborations([]);
+            }
+          })
+          .finally(() => {
+            if (!controller.signal.aborted) setCollaborationsLoading(false);
+          });
       } catch (fetchError) {
+        if (controller.signal.aborted) return;
         console.error("Error fetching celebrity:", fetchError);
         setError(
           fetchError instanceof Error
@@ -721,12 +770,74 @@ export default function CelebrityDetailPage({
         setPerson(null);
         setVideosLoading(false);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
     fetchPerson();
+
+    return () => controller.abort();
   }, [resolvedParams.id]);
+
+  useEffect(() => {
+    if (!person) return;
+
+    const section = relatedVideosSectionRef.current;
+    if (!section || !("IntersectionObserver" in window)) {
+      setShouldLoadVideos(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoadVideos(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "600px 0px" },
+    );
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [person, resolvedParams.id]);
+
+  useEffect(() => {
+    if (!person || !shouldLoadVideos) return;
+
+    const controller = new AbortController();
+    const base =
+      process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
+
+    setVideosLoading(true);
+    setVideosError(null);
+    fetch(`${base}/people/${resolvedParams.id}/videos`, {
+      signal: controller.signal,
+    })
+      .then(async (videoRes) => {
+        if (!videoRes.ok) {
+          throw new Error("Related videos are unavailable right now.");
+        }
+        const videoData = await videoRes.json();
+        if (!controller.signal.aborted) {
+          setRelatedVideos(Array.isArray(videoData) ? videoData : []);
+        }
+      })
+      .catch((videoError) => {
+        if (controller.signal.aborted) return;
+        console.error("Error fetching celebrity videos:", videoError);
+        setVideosError(
+          videoError instanceof Error
+            ? videoError.message
+            : "Related videos are unavailable right now.",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setVideosLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [person, resolvedParams.id, shouldLoadVideos]);
 
   const credits = useMemo(() => person?.combined_credits?.cast || [], [person]);
   const movieCredits = useMemo(
@@ -761,6 +872,30 @@ export default function CelebrityDetailPage({
       )[0],
     [releasedCredits],
   );
+  const timeline = useMemo<Timeline | null>(() => {
+    const datedCredits = releasedCredits.filter((credit) => getYear(credit));
+    if (datedCredits.length === 0) return null;
+
+    const debut = [...datedCredits].sort(
+      (a, b) => (getYear(a) || 9999) - (getYear(b) || 9999),
+    )[0];
+    const breakout = [...datedCredits].sort((a, b) => {
+      const ratingDelta = (b.vote_average || 0) - (a.vote_average || 0);
+      if (Math.abs(ratingDelta) > 0.4) return ratingDelta;
+      return (b.popularity || 0) - (a.popularity || 0);
+    })[0];
+
+    return {
+      debut: { title: getTitle(debut), year: getYear(debut) || 0 },
+      breakout: {
+        title: getTitle(breakout),
+        year: getYear(breakout) || 0,
+      },
+      recent: latestWork
+        ? { title: getTitle(latestWork), year: getYear(latestWork) || 0 }
+        : undefined,
+    };
+  }, [latestWork, releasedCredits]);
 
   const filteredCredits = useMemo(() => {
     const byTab =
@@ -1268,7 +1403,7 @@ export default function CelebrityDetailPage({
             </section>
           )}
 
-          <section className="mt-16 space-y-5">
+          <section ref={relatedVideosSectionRef} className="mt-16 space-y-5">
             <SectionHeader
               icon={Play}
               title="Related Videos"
@@ -1303,7 +1438,7 @@ export default function CelebrityDetailPage({
               }
             />
 
-            {videosLoading ? (
+            {!shouldLoadVideos || videosLoading ? (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div
@@ -1510,7 +1645,25 @@ export default function CelebrityDetailPage({
                 title="Frequent Collaborators"
                 subtitle="Repeated creative pairings, with shared projects at a glance."
               />
-              {collaborations.length > 0 ? (
+              {collaborationsLoading ? (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 animate-pulse rounded-xl bg-zinc-800" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 w-2/3 animate-pulse rounded bg-zinc-800" />
+                          <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800" />
+                        </div>
+                      </div>
+                      <div className="mt-3 h-8 animate-pulse rounded-lg bg-zinc-800/80" />
+                    </div>
+                  ))}
+                </div>
+              ) : collaborations.length > 0 ? (
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {collaborations.slice(0, 4).map((collab) => (
                     <div
@@ -1576,22 +1729,34 @@ export default function CelebrityDetailPage({
             </div>
           </section>
 
-          {upcomingProjects.length > 0 && (
+          {(upcomingLoading || upcomingProjects.length > 0) && (
             <section className="mt-16 space-y-5">
               <SectionHeader
                 icon={Calendar}
                 title="Upcoming Projects"
                 subtitle="Future releases and announced credits when available."
               />
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                {upcomingProjects.slice(0, 6).map((credit) => (
-                  <WorkCard
-                    key={`upcoming-${credit.media_type}-${credit.id}`}
-                    credit={credit}
-                    compact
-                  />
-                ))}
-              </div>
+              {upcomingLoading ? (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="space-y-3">
+                      <div className="aspect-[2/3] animate-pulse rounded-2xl bg-zinc-800" />
+                      <div className="h-4 w-4/5 animate-pulse rounded bg-zinc-800" />
+                      <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                  {upcomingProjects.slice(0, 6).map((credit) => (
+                    <WorkCard
+                      key={`upcoming-${credit.media_type}-${credit.id}`}
+                      credit={credit}
+                      compact
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
@@ -1801,7 +1966,19 @@ export default function CelebrityDetailPage({
                 )
               }
             />
-            {similarPeople.length > 0 ? (
+            {similarLoading ? (
+              <div className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/35 p-4">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <div key={index} className="space-y-3">
+                      <div className="aspect-[2/3] animate-pulse rounded-2xl bg-zinc-800" />
+                      <div className="h-4 w-4/5 animate-pulse rounded bg-zinc-800" />
+                      <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : similarPeople.length > 0 ? (
               <div className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/35 p-4">
                 <AnimatePresence mode="popLayout">
                   <motion.div
