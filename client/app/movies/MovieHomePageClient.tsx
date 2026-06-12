@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
-import type { CommunityPulseData, CommunityPulseItem } from "@/types/communityPulse";
+import type { CommunityPulseData } from "@/types/communityPulse";
 import {
   Star,
   Info,
@@ -16,11 +16,9 @@ import {
   Award,
   Ticket,
   MessageSquare,
-  Users,
   Sparkles,
   Zap,
   BookmarkCheck,
-  ThumbsUp,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,8 +28,8 @@ import MoodRecommendationsSection from "@/components/sections/MoodRecommendation
 import { useScrollToHash } from "@/hooks/useScrollToHash";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
-import { fmtCount } from "@/utils/mediaStatsClient";
 import { Carousel } from "@/components/ui/Carousel";
+import { CommunityPulseSection } from "@/components/sections/CommunityPulseSection";
 import RatingBadge from "@/components/ui/rating-badge";
 import {
   Tooltip,
@@ -526,72 +524,147 @@ export default function MoviesHomePageClient({
         {popularMovies.length > 0 && (
           <section
             id="popular-movies"
-            className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
+            className="relative overflow-hidden rounded-3xl border border-white/10 bg-neutral-950/75 p-4 shadow-2xl shadow-black/30 sm:p-6"
           >
-            <div className="relative flex items-center justify-between mb-10">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-amber-500 blur-xl opacity-50" />
-                  <Ticket className="relative w-9 h-9 text-amber-400" />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(245,158,11,0.075),transparent_34%),radial-gradient(circle_at_86%_8%,rgba(233,79,55,0.075),transparent_24%),radial-gradient(circle_at_12%_92%,rgba(255,255,255,0.045),transparent_28%)]" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/10" />
+
+            <div className="relative mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-300 shadow-xl shadow-black/20 sm:h-12 sm:w-12">
+                  <Ticket className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
 
-                <h2 className="text-3xl sm:text-4xl font-black text-white">
-                  Box Office Hits
-                </h2>
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">
+                    Crowd magnets
+                  </p>
+                  <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl lg:text-4xl">
+                    Box Office Hits
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-zinc-400">
+                    Big-screen picks pulling the strongest attention right now.
+                  </p>
+                </div>
               </div>
 
               <Link
                 href="/movies/box-office"
-                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group shrink-0 mt-1"
+                className="group inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-2 text-xs font-bold text-zinc-300 transition-colors hover:border-[#e94f37]/40 hover:text-white"
               >
                 View All
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {popularMovies.slice(0, 4).map((movie, idx) => (
-                <Link key={movie.id} href={`/movies/${movie.id}`}>
-                  <div className="group relative h-72 rounded-3xl overflow-hidden bg-zinc-900 ring-1 ring-white/10 shadow-2xl">
-                    {movie.backdrop_path && (
-                      <>
-                        <Image
-                          src={getImageUrl(movie.backdrop_path)}
-                          alt={movie.title || ""}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 50vw"
-                          className="object-cover group-hover:scale-105 transition-transform duration-700"
+            <div className="relative grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)] lg:gap-5">
+              {popularMovies[0] && (
+                <Link href={`/movies/${popularMovies[0].id}`} className="group">
+                  <div className="relative min-h-[420px] overflow-hidden rounded-3xl border border-amber-300/15 bg-zinc-950 ring-1 ring-white/10 shadow-2xl shadow-black/30">
+                    <Image
+                      src={getImageUrl(
+                        popularMovies[0].backdrop_path ||
+                          popularMovies[0].poster_path,
+                      )}
+                      alt={popularMovies[0].title || ""}
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 58vw"
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/72 to-black/15" />
+                    <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.54),transparent_58%),radial-gradient(circle_at_18%_18%,rgba(245,158,11,0.2),transparent_30%)]" />
+                    <div className="absolute inset-x-0 top-0 h-px bg-amber-200/25" />
+
+                    <div className="absolute left-5 top-5 flex items-center gap-2 rounded-2xl border border-amber-300/30 bg-black/55 px-3 py-2 text-amber-200 shadow-xl shadow-black/30 backdrop-blur">
+                      <Ticket className="h-4 w-4" />
+                      <span className="text-xs font-black uppercase tracking-[0.14em]">
+                        Box office leader
+                      </span>
+                    </div>
+
+                    <div className="absolute right-5 top-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/35 bg-black/70 text-2xl font-black text-amber-200 shadow-xl shadow-black/35 backdrop-blur transition-transform duration-300 group-hover:scale-105">
+                      #1
+                    </div>
+
+                    <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <RatingBadge
+                          rating={popularMovies[0].vote_average}
+                          variant="colored"
+                          size="md"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
-                      </>
-                    )}
-
-                    <div className="absolute inset-0 p-8 flex flex-col justify-end">
-                      <div className="text-8xl font-black text-white/80 absolute top-6 right-6">
-                        #{idx + 1}
-                      </div>
-
-                      <h3 className="text-3xl font-black mb-3 group-hover:text-[#e94f37] transition-colors text-white">
-                        {movie.title}
-                      </h3>
-
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-1.5 ">
-                          <RatingBadge
-                            rating={movie.vote_average}
-                            variant="minimal"
-                            size="md"
-                          />
-                        </div>
-
-                        <span className="text-gray-300 font-semibold">
-                          {movie.release_date?.split("-")[0]}
+                        <span className="rounded-full border border-white/10 bg-white/[0.08] px-3 py-1.5 text-xs font-bold text-zinc-200">
+                          {popularMovies[0].release_date?.split("-")[0] ||
+                            "TBA"}
                         </span>
                       </div>
+
+                      <h3 className="max-w-3xl text-3xl font-black leading-tight text-white transition-colors group-hover:text-[#ff8b78] sm:text-5xl">
+                        {popularMovies[0].title}
+                      </h3>
+
+                      {popularMovies[0].overview && (
+                        <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-zinc-300 line-clamp-2 sm:text-base">
+                          {popularMovies[0].overview}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </Link>
-              ))}
+              )}
+
+              <div className="rounded-3xl border border-white/10 bg-black/25 p-3 ring-1 ring-white/[0.04] sm:p-4">
+                <div className="mb-3 flex items-center justify-between px-1">
+                  <span className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-500">
+                    Ranked hits
+                  </span>
+                  <span className="text-xs font-bold text-amber-300">
+                    Top {Math.min(popularMovies.length, 4)}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {popularMovies.slice(1, 4).map((movie, idx) => (
+                    <Link
+                      key={movie.id}
+                      href={`/movies/${movie.id}`}
+                      className="group grid grid-cols-[2.75rem_4.75rem_minmax(0,1fr)] gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-2.5 transition-all hover:border-amber-300/30 hover:bg-white/[0.06] sm:grid-cols-[3rem_5.25rem_minmax(0,1fr)]"
+                    >
+                      <div className="flex items-start justify-center pt-1">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-300/25 bg-amber-300/10 text-sm font-black text-amber-200 transition-transform duration-300 group-hover:scale-105">
+                          #{idx + 2}
+                        </span>
+                      </div>
+
+                      <div className="relative h-24 overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10 sm:h-28">
+                        <Image
+                          src={getPosterUrl(movie.poster_path)}
+                          alt={movie.title || ""}
+                          fill
+                          sizes="84px"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      </div>
+
+                      <div className="min-w-0 py-1">
+                        <h3 className="line-clamp-2 text-sm font-black leading-tight text-white transition-colors group-hover:text-[#ff8b78] sm:text-base">
+                          {movie.title}
+                        </h3>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <RatingBadge
+                            rating={movie.vote_average}
+                            variant="minimal"
+                            size="sm"
+                          />
+                          <span className="text-xs font-semibold text-zinc-500">
+                            {movie.release_date?.split("-")[0] || "TBA"}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </div>
           </section>
         )}
@@ -645,10 +718,7 @@ export default function MoviesHomePageClient({
                     )}
 
                     <div className="absolute bottom-0 left-0 right-0 p-8 lg:p-10">
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-500 rounded-xl text-sm font-black mb-4 shadow-lg">
-                        <Sparkles className="w-4 h-4" />
-                        NEW RELEASE
-                      </div>
+                     
 
                       <h3 className="text-4xl font-black mb-4 line-clamp-2 text-white">
                         {newReleaseMovies[0].title}
@@ -799,353 +869,7 @@ export default function MoviesHomePageClient({
           </section>
         )}
 
-        <section className="relative">
-          {/* Header (shared) */}
-          <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-purple-500 blur-xl opacity-50" />
-              <Users className="relative w-7 h-7 sm:w-8 sm:h-8 text-purple-400" />
-            </div>
-            <div>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">
-                Community Pulse
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">
-                What the community loves right now
-              </p>
-            </div>
-          </div>
-
-          {/* =========================
-       MOBILE: Large swipeable cards
-       ========================= */}
-          <div className="md:hidden">
-            <div className="overflow-x-auto  pb-4 snap-x snap-mandatory touch-pan-x flex gap-4">
-              {[
-                {
-                  key: "most-liked",
-                  title: "Most Liked",
-                  subtitle: "Top rated by users",
-                  data: communityPulse?.mostLiked ?? [],
-                  icon: <ThumbsUp className="w-5 h-5" />,
-                  color: "emerald",
-                },
-                {
-                  key: "most-reviewed",
-                  title: "Most Reviews",
-                  subtitle: "Highly discussed films",
-                  data: communityPulse?.mostReviewed ?? [],
-                  icon: <MessageSquare className="w-5 h-5" />,
-                  color: "blue",
-                },
-                {
-                  key: "most-saved",
-                  title: "Most Saved",
-                  subtitle: "Popular watchlist picks",
-                  data: communityPulse?.mostSaved ?? [],
-                  icon: <Bookmark className="w-5 h-5" />,
-                  color: "amber",
-                },
-              ].map((sec) => (
-                <article
-                  key={sec.key}
-                  className={`snap-center min-w-[86%] sm:min-w-[72%] rounded-2xl p-4 bg-gradient-to-br from-zinc-900/70 to-zinc-950/80 ring-1 ring-white/6 shadow-lg`}
-                  aria-label={sec.title}
-                >
-                  {/* Card header */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-11 h-11 rounded-lg flex items-center justify-center ${
-                          sec.color === "emerald"
-                            ? "bg-emerald-500/20 text-emerald-400 ring-1 ring-white/10"
-                            : sec.color === "blue"
-                              ? "bg-blue-500/20 text-blue-400 ring-1 ring-white/10"
-                              : "bg-amber-500/20 text-amber-400 ring-1 ring-white/10"
-                        }`}
-                      >
-                        {sec.icon}
-                      </div>
-                      <div>
-                        <h3 className="font-black text-lg text-white">
-                          {sec.title}
-                        </h3>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {sec.subtitle}
-                        </p>
-                      </div>
-                    </div>
-
-                    <Link
-                      href={
-                        sec.key === "most-liked"
-                          ? "/discover/most-liked"
-                          : sec.key === "most-reviewed"
-                            ? "/discover/most-reviewed"
-                            : "/discover/most-saved"
-                      }
-                      className="text-xs font-semibold text-gray-300 hover:text-white"
-                    >
-                      View All
-                    </Link>
-                  </div>
-
-                  {/* Top 3 items (larger visuals) */}
-                  <div className="space-y-3">
-                    {(sec.data || []).slice(0, 3).map((m) => {
-                      const getStatText = () => {
-                        if (sec.key === "most-liked")
-                          return `${fmtCount(m.likeCount)} likes`;
-                        if (sec.key === "most-reviewed")
-                          return `${fmtCount(m.reviewCount)} reviews`;
-                        return `${fmtCount(m.savedCount)} saves`;
-                      };
-
-                      return (
-                        <Link
-                          key={m.id}
-                          href={`/movies/${m.id}`}
-                          className="flex items-center gap-3 group"
-                        >
-                          <div className="relative w-16 aspect-[2/3] sm:w-18 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-white/10 shadow-md">
-                            {m.poster_path ? (
-                              <Image
-                                src={getPosterUrl(m.poster_path)}
-                                alt={m.title}
-                                fill
-                                sizes="(max-width: 640px) 64px"
-                                className="object-cover"
-                              />
-                            ) : (
-                              <div className="bg-zinc-800 w-full h-full" />
-                            )}
-                          </div>
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <h4 className="font-bold text-sm leading-tight line-clamp-2 text-white">
-                                {m.title}
-                              </h4>
-
-                              <div className="text-right text-[11px] text-gray-400">
-                                <div>
-                                  {m.release_date
-                                    ? m.release_date.split("-")[0]
-                                    : "TBA"}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 mt-2 text-xs">
-                              <div className="flex items-center gap-1">
-                                <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                                <span className="font-bold text-white text-sm">
-                                  {m.vote_average && m.vote_average > 0
-                                    ? m.vote_average.toFixed(1)
-                                    : "New"}
-                                </span>
-                              </div>
-
-                              <span className="text-gray-500">•</span>
-
-                              <div className="text-[12px] text-gray-400 font-semibold">
-                                {getStatText()}
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-
-                  {/* Card footer summary */}
-                  <div className="mt-4 pt-3 border-t border-white/6 flex items-center justify-between">
-                    <div className="text-xs text-gray-400">
-                      Total engagement
-                    </div>
-                    <div
-                      className={`text-sm font-bold ${
-                        sec.color === "emerald"
-                          ? "text-emerald-400"
-                          : sec.color === "blue"
-                            ? "text-blue-400"
-                            : "text-amber-400"
-                      }`}
-                    >
-                      {sec.key === "most-liked" &&
-                        `${fmtCount((sec.data || []).slice(0, 3).reduce((acc, m) => acc + m.likeCount, 0))}+`}
-                      {sec.key === "most-reviewed" &&
-                        `${fmtCount((sec.data || []).slice(0, 3).reduce((acc, m) => acc + m.reviewCount, 0))}+`}
-                      {sec.key === "most-saved" &&
-                        `${fmtCount((sec.data || []).slice(0, 3).reduce((acc, m) => acc + m.savedCount, 0))}+`}
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          {/* =========================
-       DESKTOP: original grid (kept intact)
-       ========================= */}
-          <div className="hidden md:grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
-            {[
-              {
-                title: "Most Liked",
-                subtitle: "Top rated by users",
-                data: communityPulse?.mostLiked ?? [],
-                icon: <ThumbsUp className="w-4 h-4 sm:w-5 sm:h-5" />,
-                gradient: "from-emerald-950/40 to-emerald-950/20",
-                border: "border-emerald-500/30",
-                iconBg: "bg-emerald-500/20",
-                textColor: "text-emerald-400",
-                hoverColor: "group-hover:text-emerald-400",
-                statIcon: <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />,
-              },
-              {
-                title: "Most Reviews",
-                subtitle: "Highly discussed films",
-                data: communityPulse?.mostReviewed ?? [],
-                icon: <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />,
-                gradient: "from-blue-950/40 to-blue-950/20",
-                border: "border-blue-500/30",
-                iconBg: "bg-blue-500/20",
-                textColor: "text-blue-400",
-                hoverColor: "group-hover:text-blue-400",
-                statIcon: (
-                  <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                ),
-              },
-              {
-                title: "Most Saved",
-                subtitle: "Popular watchlist picks",
-                data: communityPulse?.mostSaved ?? [],
-                icon: <Bookmark className="w-4 h-4 sm:w-5 sm:h-5" />,
-                gradient: "from-amber-950/40 to-amber-950/20",
-                border: "border-amber-500/30",
-                iconBg: "bg-amber-500/20",
-                textColor: "text-amber-400",
-                hoverColor: "group-hover:text-amber-400",
-                statIcon: <Bookmark className="w-3 h-3 sm:w-3.5 sm:h-3.5" />,
-              },
-            ].map((section, idx) => (
-              <div
-                key={idx}
-                className={`bg-gradient-to-br ${section.gradient} border ${section.border} rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 backdrop-blur-sm ring-1 ring-white/5 shadow-xl`}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between mb-5 sm:mb-6">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div
-                      className={`w-9 h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 ${section.iconBg} rounded-lg sm:rounded-xl flex items-center justify-center ${section.textColor} ring-1 ring-white/10 shadow-lg`}
-                    >
-                      {section.icon}
-                    </div>
-                    <div>
-                      <h3 className="font-black text-base sm:text-lg text-white">
-                        {section.title}
-                      </h3>
-                      <p className="text-[10px] sm:text-xs text-gray-400 font-medium mt-0.5">
-                        {section.subtitle}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Movies List */}
-                <div className="space-y-3 sm:space-y-4">
-                  {section.data.slice(0, 5).map((m, i) => {
-                    const getStatLabel = () => {
-                      if (idx === 0) return `${fmtCount(m.likeCount)} likes`;
-                      if (idx === 1) return `${fmtCount(m.reviewCount)} reviews`;
-                      return `${fmtCount(m.savedCount)} saves`;
-                    };
-
-                    return (
-                      <Link
-                        key={m.id}
-                        href={`/movies/${m.id}`}
-                        className="flex items-center gap-2 sm:gap-3 group"
-                      >
-                        {/* Rank Number */}
-                        <span
-                          className={`text-2xl sm:text-3xl font-black ${section.textColor} opacity-30 w-6 sm:w-8 flex-shrink-0`}
-                        >
-                          {i + 1}
-                        </span>
-
-                        {/* Poster */}
-                        <div className="relative w-12 h-16 sm:w-14 sm:h-20 rounded-md sm:rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-white/10 shadow-lg">
-                          {m.poster_path && (
-                            <Image
-                              src={getPosterUrl(m.poster_path)}
-                              alt=""
-                              fill
-                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                              className="object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
-                          )}
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div
-                            className={`font-bold text-xs sm:text-sm text-white line-clamp-2 mb-1 ${section.hoverColor} transition-colors`}
-                          >
-                            {m.title}
-                          </div>
-                          <div className="flex items-center gap-2 text-[10px] sm:text-xs">
-                            <div className="flex items-center gap-0.5 sm:gap-1">
-                              <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-400 fill-yellow-400" />
-                              <span className="font-bold text-white">
-                                {m.vote_average && m.vote_average > 0
-                                  ? m.vote_average.toFixed(1)
-                                  : "New"}
-                              </span>
-                            </div>
-                            <span className="text-gray-500">•</span>
-                            <span className="text-gray-400 font-semibold">
-                              {m.release_date?.split("-")[0]}
-                            </span>
-                          </div>
-                          {/* Supporting Stat */}
-                          <div
-                            className={`flex items-center gap-1 mt-1.5 sm:mt-2 ${section.textColor}`}
-                          >
-                            {section.statIcon}
-                            <span className="text-[10px] sm:text-xs font-bold">
-                              {getStatLabel()}
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-
-                {/* Footer Stats Summary */}
-                <div
-                  className={`mt-5 sm:mt-6 pt-4 sm:pt-5 border-t ${section.border}`}
-                >
-                  <div className="flex items-center justify-between text-[10px] sm:text-xs">
-                    <span className="text-gray-400 font-medium">
-                      Total engagement
-                    </span>
-                    <span className={`font-bold ${section.textColor}`}>
-                      {idx === 0 &&
-                        `${fmtCount(section.data.reduce((acc, m) => acc + m.likeCount, 0))}+`}
-                      {idx === 1 &&
-                        `${fmtCount(section.data.reduce((acc, m) => acc + m.reviewCount, 0))}+`}
-                      {idx === 2 &&
-                        `${fmtCount(section.data.reduce((acc, m) => acc + m.savedCount, 0))}+`}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <CommunityPulseSection data={communityPulse} mediaType="movie" />
 
         {/* Coming Soon */}
         {newMovieTrailers.length > 0 && (
@@ -1334,12 +1058,12 @@ export default function MoviesHomePageClient({
                           {actionMovies[0].title}
                         </h3>
                         <div className="flex items-center gap-2 mt-2">
-                          <div className="flex items-center gap-1 px-2 py-1 bg-amber-500/20 rounded-full text-xs font-bold">
-                            <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                            {actionMovies[0].vote_average &&
-                            actionMovies[0].vote_average > 0
-                              ? actionMovies[0].vote_average.toFixed(1)
-                              : "New"}
+                          <div className="flex items-center gap-1 rounded-full text-xs font-bold">
+                            <RatingBadge
+                              rating={actionMovies[0].vote_average}
+                              variant="colored"
+                              size="sm"
+                            />
                           </div>
                           <span className="text-gray-400 text-xs">
                             {actionMovies[0].release_date?.split("-")[0]}
@@ -1373,14 +1097,12 @@ export default function MoviesHomePageClient({
                         <h4 className="font-bold text-md line-clamp-2 text-white group-hover:text-zinc-300 transition-colors">
                           {movie.title}
                         </h4>
-                        <div className="flex items-center gap-1.5 text-[13px] text-gray-400 mt-1">
-                          <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                          <span className="font-semibold text-white">
-                            {movie.vote_average && movie.vote_average > 0
-                              ? movie.vote_average.toFixed(1)
-                              : "New"}
-                          </span>
-                          <span>•</span>
+                        <div className="flex items-center gap-1.5 text-[13px] text-gray-400 mt-2">
+                          <RatingBadge
+                            rating={movie.vote_average}
+                            variant="colored"
+                            size="sm"
+                          />
                           <span>{movie.release_date?.split("-")[0]}</span>
                         </div>
                       </div>
@@ -1510,7 +1232,6 @@ export default function MoviesHomePageClient({
             id="indie-movies"
             className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/60 to-black backdrop-blur-sm border border-slate-700/30 ring-1 ring-white/5 shadow-xl"
           >
-            {/* Subtle gradient */}
             <div className="absolute top-0 right-0 w-80 sm:w-96 lg:w-[500px] h-80 sm:h-96 lg:h-[500px] bg-gradient-to-bl from-slate-700/10 to-transparent rounded-full blur-3xl" />
 
             <div className="relative p-5 sm:p-6 lg:p-8">
@@ -1533,7 +1254,6 @@ export default function MoviesHomePageClient({
                   </div>
                 </div>
 
-                {/* View All */}
                 <Link
                   href="/movies/indie"
                   className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group shrink-0 mt-1"
