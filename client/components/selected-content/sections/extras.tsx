@@ -266,19 +266,15 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
               <div className="absolute inset-0 bg-gradient-to-t from-[#e94f37]/18 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
 
               {/* Number stamp — top left */}
-              <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-black/55 backdrop-blur-sm border border-white/[0.08] group-hover:border-[#e94f37]/35 transition-colors duration-300">
-                <span className="text-[9px] font-mono text-white/25 group-hover:text-[#e94f37]/65 transition-colors duration-300 leading-none tabular-nums">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-              </div>
+             
 
               {/* Info panel — slides up from bottom */}
               <div className="absolute bottom-0 left-0 right-0 translate-y-[4px] group-hover:translate-y-0 transition-transform duration-300 ease-out">
                 <div className="px-2.5 pb-2.5 pt-6 bg-gradient-to-t from-black/98 to-transparent">
-                  <p className="text-white text-[11px] font-semibold leading-tight truncate">
+                  <p className="text-white text-[13px] font-semibold leading-tight truncate">
                     {actor.name}
                   </p>
-                  <p className="text-[#e94f37]/65 text-[10px] truncate italic mt-0.5 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 delay-75">
+                  <p className="text-[#e94f37]/75 text-[11.5px] truncate italic mt-0.5 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 delay-75">
                     {actor.character}
                   </p>
                 </div>

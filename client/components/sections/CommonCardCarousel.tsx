@@ -10,6 +10,7 @@ import { useWatchlist } from "@/hooks/useWatchlist";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Bookmark, BookmarkCheck } from "lucide-react";
+import RatingBadge from "../ui/rating-badge";
 
 interface CommonCardCarouselProps {
   title: string;
@@ -107,9 +108,8 @@ export default function CommonCardCarousel({
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
             {/* Rating Badge */}
-            <div className="absolute top-3 right-3 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-lg ring-1 ring-white/10">
-              <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-              {show.vote_average?.toFixed(1)}
+            <div className="absolute top-3 right-3 text-white font-bold flex items-center ">
+              <RatingBadge rating={show.vote_average} size="sm"/>
             </div>
 
             {/* Hover overlay */}

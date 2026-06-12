@@ -1,5 +1,6 @@
 // app/movies/[id]/reviews/page.tsx
 import AllReviews from "@/components/selected-content/extended/allReviews";
+import { ReviewsPageUnavailable } from "@/components/selected-content/extended/reviewsPageStates";
 import type { Metadata } from "next";
 
 type Props = {
@@ -51,7 +52,7 @@ async function fetchReviews(id: string) {
         pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
       };
     return res.json();
-  } catch (err) {
+  } catch {
     return {
       reviews: [],
       topMoods: [],
@@ -69,7 +70,7 @@ async function fetchReviewStats(id: string, mediaType: string) {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -83,9 +84,8 @@ export async function generateMetadata({
   return { title: `Reviews for ${id}` };
 }
 
-export default async function ReviewsPage({ params, searchParams }: Props) {
+export default async function ReviewsPage({ params }: Props) {
   const { id } = await params;
-  const resolvedSearchParams = await searchParams;
 
   const base = process.env.NEST_API_URL ?? "http://localhost:4000";
 
@@ -95,14 +95,10 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
 
   if (!res.ok) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-8 bg-black text-white">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold">Reviews not available</h2>
-          <p className="mt-2 text-gray-400">
-            Could not fetch reviews for this movie.
-          </p>
-        </div>
-      </main>
+      <ReviewsPageUnavailable
+        message="Could not fetch reviews for this movie."
+        backHref={`/movies/${id}`}
+      />
     );
   }
 
@@ -130,9 +126,11 @@ export default async function ReviewsPage({ params, searchParams }: Props) {
     moodEmojis: r.moodEmojis || [],
     replies:
       r.replies?.map((reply) => ({
+        id: reply.id,
         content: reply.content,
         created_at: reply.createdAt,
         user: {
+          id: reply.user?.id,
           username: reply.user?.username || "Anonymous",
           avatar_path: reply.user?.avatarUrl,
         },
