@@ -216,8 +216,8 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           aria-hidden
           className="hero-backdrop-image object-cover object-center"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.88)_0%,rgba(0,0,0,0.66)_34%,rgba(0,0,0,0.24)_68%,rgba(0,0,0,0.48)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18)_0%,rgba(0,0,0,0.18)_48%,rgba(0,0,0,0.92)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.78)_0%,rgba(0,0,0,0.16)_68%,rgba(0,0,0,0.36)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.12)_48%,rgba(0,0,0,0.82)_100%)]" />
       </div>
 
       <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col justify-end px-4 pb-5 pt-24 sm:px-6 sm:pb-7 lg:px-8 lg:pb-9 xl:px-12">
@@ -248,7 +248,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
               ) : null}
             </div>
 
-            <h1 className="max-w-3xl text-balance text-[clamp(1.85rem,4.8vw,4.35rem)] font-black leading-[0.96] tracking-normal text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.48)] xl:text-[clamp(2.35rem,4.2vw,4.8rem)]">
+            <h1 className="max-w-3xl text-balance text-[clamp(1.65rem,4.6vw,4rem)] font-black leading-[0.96] tracking-normal text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.48)] xl:text-[clamp(2.35rem,4.2vw,4.8rem)]">
               {currentTitle}
             </h1>
 

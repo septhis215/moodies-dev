@@ -93,15 +93,15 @@ export default function ImmersiveFeedSection() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(233,79,55,0.24),transparent_42%)]" />
 
           <div className="absolute inset-x-8 top-8 bottom-8 overflow-hidden rounded-[2rem] border border-white/15 bg-black shadow-2xl shadow-black/50 sm:inset-x-14 lg:inset-x-16">
-            <div className="relative h-full">
+            <div className="absolute inset-0 flex items-center justify-center">
               <Image
-                src="/images/moods/thrilling.png"
+                src="/images/mascot-feed.png"
                 alt="Thrilling mood preview"
                 fill
-                sizes="(max-width: 1024px) 70vw, 360px"
-                className="object-contain object-center opacity-90"
+                sizes="(max-width: 1024px) 80vw, 400px"
+                className="object-contain object-center opacity-100"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-black/20" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-black/10 opacity-70" />
 
               <div className="absolute left-4 right-4 top-4 flex items-center justify-between">
                 <span className="rounded-full bg-black/50 px-3 py-1 text-[11px] font-semibold text-white ring-1 ring-white/10 backdrop-blur-md">
@@ -113,11 +113,11 @@ export default function ImmersiveFeedSection() {
               </div>
 
               <div className="absolute bottom-5 left-4 right-4">
-                <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ff8b78]">
+                <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#ff8b78]">
                   <Film className="h-3.5 w-3.5" />
                   Trailer preview
                 </div>
-                <h3 className="text-2xl font-black leading-tight text-white">
+                <h3 className="text-xl font-black leading-tight text-white">
                   Swipe until the vibe clicks.
                 </h3>
                 <p className="mt-2 text-sm leading-5 text-gray-300">

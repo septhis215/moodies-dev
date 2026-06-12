@@ -251,19 +251,16 @@ export default function FootballStoriesSection() {
               <div className="relative hidden overflow-hidden rounded-lg border border-white/10 bg-black/30 shadow-xl shadow-black/30 lg:block">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_8%,rgba(255,255,255,0.28),transparent_28%),linear-gradient(180deg,rgba(255,214,89,0.12),transparent_48%)]" />
                 <div className="absolute inset-x-4 bottom-8 h-px bg-white/15" />
-                <div className="absolute bottom-7 left-1/2 h-12 w-12 -translate-x-1/2 rounded-full border-[4px] border-white bg-black shadow-2xl before:absolute before:left-1/2 before:top-0 before:h-full before:w-0.5 before:-translate-x-1/2 before:bg-white after:absolute after:left-0 after:top-1/2 after:h-0.5 after:w-full after:-translate-y-1/2 after:bg-white" />
                 <motion.div
                   aria-hidden="true"
-                  className="absolute bottom-11 left-1/2 h-32 w-32 -translate-x-1/2"
+                  className="absolute bottom-11 left-1/2 h-48 w-48 -translate-x-1/2"
                   animate={{ y: [0, -7, 0], rotate: [-2, 2, -2] }}
                   transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <div className="absolute left-5 top-8 z-10 h-6 w-24 -rotate-12 rounded-full bg-[#e94f37] shadow-lg shadow-black/30 after:absolute after:right-2 after:top-full after:h-4 after:w-2 after:bg-yellow-300" />
                   <Image
-                    src="/images/moodies-mascot.png"
+                    src="/images/mascot-worldcup.png"
                     alt="Moodies mascot celebrating on a football pitch"
                     fill
-                    sizes="128px"
                     className="object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.65)]"
                   />
                 </motion.div>
