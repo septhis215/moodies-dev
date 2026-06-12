@@ -2,7 +2,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -78,6 +78,7 @@ interface TrendingTerm {
 }
 
 type SearchSort = "relevance" | "rating" | "date" | "popularity";
+type SearchStatus = "idle" | "loading" | "success" | "empty" | "error";
 
 type TrailerItem = {
   id: number;
@@ -101,6 +102,18 @@ interface SearchResponse {
   total_pages: number;
   page: number;
   best_match?: SearchResult;
+  status?: "success" | "empty" | "partial" | "error";
+  is_partial?: boolean;
+  query?: string;
+  request_id?: string;
+  cached?: boolean;
+  completed_at?: string;
+  error?: string;
+  sources?: Array<{
+    source: string;
+    status: "fulfilled" | "rejected" | "timeout";
+    error?: string;
+  }>;
   applied_filters?: {
     type?: string;
     sort?: string;
@@ -176,11 +189,16 @@ export default function SearchResultsPage() {
 
   const [results, setResults] = useState<SearchResult[]>([]);
   const [bestMatch, setBestMatch] = useState<SearchResult | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [searchStatus, setSearchStatus] = useState<SearchStatus>(
+    query.trim() ? "loading" : "idle"
+  );
   const [error, setError] = useState<string | null>(null);
   const [totalResults, setTotalResults] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
+  const [completedSearchKey, setCompletedSearchKey] = useState<string | null>(null);
+  const latestSearchKeyRef = useRef<string>("");
+  const requestSequenceRef = useRef(0);
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
   const availableCountries = COUNTRY_OPTIONS;
 
@@ -264,6 +282,35 @@ export default function SearchResultsPage() {
 
   // Trailer modal state
   const [selectedTrailer, setSelectedTrailer] = useState<TrailerItem | null>(null);
+
+  const buildSearchKey = useMemo(
+    () =>
+      [
+        query.trim(),
+        currentPage,
+        appliedFilterType,
+        appliedSortBy,
+        appliedSelectedGenres.join("|"),
+        appliedSelectedCountries.join("|"),
+        appliedYearRange.join("-"),
+        appliedRatingRange.join("-"),
+        appliedIncludeAdult,
+      ].join("::"),
+    [
+      query,
+      currentPage,
+      appliedFilterType,
+      appliedSortBy,
+      appliedSelectedGenres,
+      appliedSelectedCountries,
+      appliedYearRange,
+      appliedRatingRange,
+      appliedIncludeAdult,
+    ]
+  );
+
+  const loading = searchStatus === "loading";
+  const hasCompletedCurrentSearch = completedSearchKey === buildSearchKey;
 
   // Convert SearchResult to All type for TrailerModal
   const convertToTrailerData = (item: SearchResult): TrailerItem => {
@@ -369,6 +416,8 @@ export default function SearchResultsPage() {
   }, [currentPage]);
 
   useEffect(() => {
+    latestSearchKeyRef.current = buildSearchKey;
+
     // Condition: don't fetch if user hasn't typed AND hasn't applied filters
     const noQueryAndNoFilters =
       !query.trim() &&
@@ -386,14 +435,19 @@ export default function SearchResultsPage() {
       setBestMatch(null);
       setTotalResults(0);
       setTotalPages(0);
-      setLoading(false);
+      setCompletedSearchKey(null);
+      setSearchStatus("idle");
+      setError(null);
       return;
     }
 
     const controller = new AbortController();
+    const requestId = ++requestSequenceRef.current;
+    setSearchStatus("loading");
+    setError(null);
 
     const fetchResults = async () => {
-      setLoading(true);
+      setSearchStatus("loading");
       setError(null);
 
       try {
@@ -428,48 +482,69 @@ export default function SearchResultsPage() {
         if (!response.ok) throw new Error("Search failed");
 
         const data: SearchResponse = await response.json();
+        if (
+          controller.signal.aborted ||
+          requestId !== requestSequenceRef.current ||
+          latestSearchKeyRef.current !== buildSearchKey
+        ) {
+          return;
+        }
+
+        if (data.status === "error") {
+          setResults([]);
+          setBestMatch(null);
+          setTotalResults(0);
+          setTotalPages(0);
+          setCompletedSearchKey(buildSearchKey);
+          setError(data.error || "Failed to search. Please try again.");
+          setSearchStatus("error");
+          return;
+        }
+
         const nextResults = data.results || [];
-        const hasAppliedAdvancedFilters =
-          appliedSelectedGenres.length > 0 ||
-          appliedSelectedCountries.length > 0 ||
-          appliedYearRange[0] !== MIN_FILTER_YEAR ||
-          appliedYearRange[1] !== MAX_FILTER_YEAR ||
-          appliedRatingRange[0] !== 0 ||
-          appliedRatingRange[1] !== 10 ||
-          appliedIncludeAdult;
         const apiTotalResults = data.total_results || 0;
         const apiTotalPages =
           data.total_pages || Math.ceil(apiTotalResults / SEARCH_PAGE_SIZE);
-        const shouldUseFilteredPageCount =
-          hasAppliedAdvancedFilters &&
-          appliedFilterType === "all";
-        const nextTotalResults = shouldUseFilteredPageCount
-          ? nextResults.length
-          : apiTotalResults;
-        const nextTotalPages = shouldUseFilteredPageCount
-          ? nextResults.length > 0
-            ? 1
-            : 0
-          : apiTotalPages;
 
         setResults(nextResults);
         setBestMatch(data.best_match || null);
-        setTotalResults(nextTotalResults);
-        setTotalPages(nextTotalPages);
+        setTotalResults(apiTotalResults);
+        setTotalPages(apiTotalPages);
+        setCompletedSearchKey(buildSearchKey);
+        setSearchStatus(nextResults.length > 0 ? "success" : "empty");
       } catch (err: unknown) {
         if (!(err instanceof DOMException) || err.name !== "AbortError") {
+          if (
+            requestId !== requestSequenceRef.current ||
+            latestSearchKeyRef.current !== buildSearchKey
+          ) {
+            return;
+          }
           setError("Failed to search. Please try again.");
+          setCompletedSearchKey(buildSearchKey);
+          setSearchStatus("error");
           console.error("Search error:", err);
         }
       } finally {
-        setLoading(false);
+        if (
+          !controller.signal.aborted &&
+          requestId === requestSequenceRef.current &&
+          latestSearchKeyRef.current === buildSearchKey
+        ) {
+          setSearchStatus((status) => (status === "loading" ? "empty" : status));
+        }
       }
     };
 
-    fetchResults();
+    const debounceMs = currentPage === 1 ? 180 : 0;
+    const timeoutId = window.setTimeout(fetchResults, debounceMs);
 
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [
+    buildSearchKey,
     query,
     currentPage,
     appliedFilterType,
@@ -1033,7 +1108,7 @@ export default function SearchResultsPage() {
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent mb-2 break-words">
               Search results for &quot;{query}&quot;
             </h1>
-            {!loading && (
+            {hasCompletedCurrentSearch && searchStatus !== "error" && (
               <p className="text-gray-400 text-sm sm:text-md flex items-center gap-2">
                 <span>{totalResults.toLocaleString()} results found</span>
                 {hasActiveFilters && (
@@ -1436,7 +1511,7 @@ export default function SearchResultsPage() {
         )}
 
         {/* Error */}
-        {error && (
+        {searchStatus === "error" && error && hasCompletedCurrentSearch && (
           <div className="text-center py-12">
             <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 max-w-md mx-auto">
               <X className="mx-auto mb-3 h-14 w-14 text-red-400" />
@@ -1450,9 +1525,9 @@ export default function SearchResultsPage() {
         )}
 
         {/* Results */}
-        {!loading && !error && (
+        {hasCompletedCurrentSearch && searchStatus !== "loading" && !error && (
           <>
-            {results.length === 0 ? (
+            {searchStatus === "empty" ? (
               <div className="text-center py-12">
                 <div className="bg-gray-800/30 border border-gray-700 rounded-2xl p-8 max-w-lg mx-auto">
                   <Search className="mx-auto mb-4 h-16 w-16 text-gray-500" />

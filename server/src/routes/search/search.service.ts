@@ -18,6 +18,9 @@ export interface SearchFilters {
     regex_search?: boolean;
 }
 
+type SearchApiStatus = 'success' | 'empty' | 'partial' | 'error';
+type SourceStatus = 'fulfilled' | 'rejected' | 'timeout';
+
 @Injectable()
 export class SearchService implements OnModuleInit {
     private readonly logger = new Logger(SearchService.name);
@@ -25,6 +28,10 @@ export class SearchService implements OnModuleInit {
     private genreMap: Record<number, string> = {};
     private genreIdMap: Record<string, number> = {};
     private countryMap: Record<string, string> = {};
+    private readonly searchCache = new Map<string, { expiresAt: number; value: any }>();
+    private readonly inFlightSearches = new Map<string, Promise<any>>();
+    private readonly searchCacheTtlMs = 2 * 60 * 1000;
+    private readonly tmdbTimeoutMs = 6500;
 
     private readonly countryList = [
         { code: 'US', name: 'United States' },
@@ -88,6 +95,86 @@ export class SearchService implements OnModuleInit {
 
     private async tmdb(endpoint: string, params?: any) {
         return this.tmdbService.request(endpoint, { params });
+    }
+
+    private buildCacheKey(filters: SearchFilters) {
+        return JSON.stringify({
+            query: filters.query?.trim().toLowerCase() ?? '',
+            page: filters.page ?? 1,
+            type: filters.type ?? 'all',
+            sort: filters.sort ?? 'relevance',
+            year_min: filters.year_min ?? null,
+            year_max: filters.year_max ?? null,
+            rating_min: filters.rating_min ?? null,
+            rating_max: filters.rating_max ?? null,
+            genres: filters.genres ?? null,
+            countries: filters.countries ?? null,
+            include_adult: filters.include_adult ?? false,
+            regex_search: filters.regex_search ?? false,
+        });
+    }
+
+    private cloneResponse(value: any) {
+        return JSON.parse(JSON.stringify(value));
+    }
+
+    private getCachedSearch(cacheKey: string) {
+        const cached = this.searchCache.get(cacheKey);
+        if (!cached) return null;
+
+        if (cached.expiresAt <= Date.now()) {
+            this.searchCache.delete(cacheKey);
+            return null;
+        }
+
+        return {
+            ...this.cloneResponse(cached.value),
+            cached: true,
+        };
+    }
+
+    private setCachedSearch(cacheKey: string, value: any) {
+        if (this.searchCache.size > 200) {
+            const firstKey = this.searchCache.keys().next().value;
+            if (firstKey) this.searchCache.delete(firstKey);
+        }
+
+        this.searchCache.set(cacheKey, {
+            expiresAt: Date.now() + this.searchCacheTtlMs,
+            value: this.cloneResponse(value),
+        });
+    }
+
+    private async tmdbSettled(source: string, endpoint: string, params: any) {
+        let timeoutId: NodeJS.Timeout | undefined;
+
+        try {
+            const timeout = new Promise<never>((_, reject) => {
+                timeoutId = setTimeout(() => {
+                    const error = new Error(`${source} timed out`);
+                    error.name = 'TimeoutError';
+                    reject(error);
+                }, this.tmdbTimeoutMs);
+            });
+
+            const data = await Promise.race([this.tmdb(endpoint, params), timeout]);
+            return {
+                source,
+                status: 'fulfilled' as SourceStatus,
+                data,
+            };
+        } catch (error: any) {
+            const status: SourceStatus = error?.name === 'TimeoutError' ? 'timeout' : 'rejected';
+            this.logger.warn(`Search source ${source} failed: ${error?.message ?? error}`);
+            return {
+                source,
+                status,
+                error: error?.message ?? 'Search source failed',
+                data: null,
+            };
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId);
+        }
     }
 
     private normalizeResult(m: any, type?: 'movie' | 'tv' | 'person') {
@@ -303,11 +390,16 @@ export class SearchService implements OnModuleInit {
 
         if (page > 25) {
             return {
+                status: 'empty',
+                is_partial: false,
+                cached: false,
+                completed_at: new Date().toISOString(),
                 page: 25,
                 total_results: 500,
                 total_pages: 25,
                 results: [],
                 best_match: null,
+                sources: [],
                 applied_filters: filters,
             };
         }
@@ -316,31 +408,92 @@ export class SearchService implements OnModuleInit {
             throw new HttpException('Query cannot be empty', HttpStatus.BAD_REQUEST);
         }
 
+        const cacheKey = this.buildCacheKey({ ...filters, page: safePage });
+        const cached = this.getCachedSearch(cacheKey);
+        if (cached) return cached;
+
+        const inFlight = this.inFlightSearches.get(cacheKey);
+        if (inFlight) {
+            const value = await inFlight;
+            return {
+                ...this.cloneResponse(value),
+                cached: true,
+            };
+        }
+
+        const searchPromise = this.performSearch(filters, safePage, page, type, regex_search, cacheKey);
+        this.inFlightSearches.set(cacheKey, searchPromise);
+
+        try {
+            return await searchPromise;
+        } finally {
+            this.inFlightSearches.delete(cacheKey);
+        }
+    }
+
+    private async performSearch(
+        filters: SearchFilters,
+        safePage: number,
+        page: number,
+        type: 'all' | 'movie' | 'tv' | 'person',
+        regex_search: boolean,
+        cacheKey: string,
+    ) {
+        const query = filters.query;
+        const sources: Array<{ source: string; status: SourceStatus; error?: string }> = [];
+
         try {
             let results: any[] = [];
             let totalResults = 0;
-            const totalPages = 25;
+            let totalPages = 0;
 
             const searchRegex = this.createSearchRegex(query, regex_search);
             const searchQuery = regex_search ? '' : query;
 
-            // Use /search/multi for 'all' type to get movies, TV shows, and people in one request
+            // Search each supported type for "all"; /search/multi can under-report
+            // title-heavy queries and collapse pagination to a handful of results.
             if (type === 'all') {
-                const multiParams = {
+                const sharedParams = {
                     query: searchQuery || query,
                     language: 'en-US',
                     include_adult: filters.include_adult || false,
                     page: safePage,
                 };
 
-                const multiRes = await this.tmdb('/search/multi', multiParams);
+                const [movieSource, tvSource, personSource] = await Promise.all([
+                    this.tmdbSettled('movie', '/search/movie', sharedParams),
+                    this.tmdbSettled('tv', '/search/tv', sharedParams),
+                    this.tmdbSettled('person', '/search/person', sharedParams),
+                ]);
 
-                totalResults = Math.min(multiRes.total_results || 0, 500);
+                [movieSource, tvSource, personSource].forEach(source =>
+                    sources.push({
+                        source: source.source,
+                        status: source.status,
+                        error: source.error,
+                    })
+                );
 
-                // Normalize all results based on their media_type
-                results = multiRes.results
-                    .filter((item: any) => item.media_type === 'movie' || item.media_type === 'tv' || item.media_type === 'person')
-                    .map((item: any) => this.normalizeResult(item));
+                totalResults = Math.min(
+                    (movieSource.data?.total_results || 0) +
+                    (tvSource.data?.total_results || 0) +
+                    (personSource.data?.total_results || 0),
+                    500
+                );
+                totalPages = Math.min(
+                    Math.max(
+                        movieSource.data?.total_pages || 0,
+                        tvSource.data?.total_pages || 0,
+                        personSource.data?.total_pages || 0,
+                    ),
+                    25
+                );
+
+                results = [
+                    ...(movieSource.data?.results ?? []).map((m: any) => this.normalizeResult(m, 'movie')),
+                    ...(tvSource.data?.results ?? []).map((t: any) => this.normalizeResult(t, 'tv')),
+                    ...(personSource.data?.results ?? []).map((p: any) => this.normalizeResult(p, 'person')),
+                ];
 
                 if (regex_search && searchRegex) {
                     results = results.filter((item: any) => {
@@ -366,10 +519,17 @@ export class SearchService implements OnModuleInit {
                     page: safePage,
                 } : movieParams;
 
-                const movieRes = await this.tmdb(movieEndpoint, finalMovieParams);
+                const movieSource = await this.tmdbSettled('movie', movieEndpoint, finalMovieParams);
+                sources.push({
+                    source: movieSource.source,
+                    status: movieSource.status,
+                    error: movieSource.error,
+                });
+                const movieRes = movieSource.data;
 
-                totalResults = Math.min(movieRes.total_results || 0, 500);
-                results = movieRes.results.map((m: any) => this.normalizeResult(m, 'movie'));
+                totalResults = Math.min(movieRes?.total_results || 0, 500);
+                totalPages = Math.min(movieRes?.total_pages || 0, 25);
+                results = (movieRes?.results ?? []).map((m: any) => this.normalizeResult(m, 'movie'));
 
                 if (regex_search && searchRegex) {
                     results = results.filter((movie: any) =>
@@ -392,10 +552,17 @@ export class SearchService implements OnModuleInit {
                     page: safePage,
                 } : tvParams;
 
-                const tvRes = await this.tmdb(tvEndpoint, finalTvParams);
+                const tvSource = await this.tmdbSettled('tv', tvEndpoint, finalTvParams);
+                sources.push({
+                    source: tvSource.source,
+                    status: tvSource.status,
+                    error: tvSource.error,
+                });
+                const tvRes = tvSource.data;
 
-                totalResults = Math.min(tvRes.total_results || 0, 500);
-                results = tvRes.results.map((t: any) => this.normalizeResult(t, 'tv'));
+                totalResults = Math.min(tvRes?.total_results || 0, 500);
+                totalPages = Math.min(tvRes?.total_pages || 0, 25);
+                results = (tvRes?.results ?? []).map((t: any) => this.normalizeResult(t, 'tv'));
 
                 if (regex_search && searchRegex) {
                     results = results.filter((show: any) =>
@@ -412,10 +579,17 @@ export class SearchService implements OnModuleInit {
                     page: safePage,
                 };
 
-                const personRes = await this.tmdb('/search/person', personParams);
+                const personSource = await this.tmdbSettled('person', '/search/person', personParams);
+                sources.push({
+                    source: personSource.source,
+                    status: personSource.status,
+                    error: personSource.error,
+                });
+                const personRes = personSource.data;
 
-                totalResults = Math.min(personRes.total_results || 0, 500);
-                results = personRes.results.map((p: any) => this.normalizeResult(p, 'person'));
+                totalResults = Math.min(personRes?.total_results || 0, 500);
+                totalPages = Math.min(personRes?.total_pages || 0, 25);
+                results = (personRes?.results ?? []).map((p: any) => this.normalizeResult(p, 'person'));
 
                 if (regex_search && searchRegex) {
                     results = results.filter((person: any) =>
@@ -424,23 +598,36 @@ export class SearchService implements OnModuleInit {
                 }
             }
 
-            results = this.applyClientSideFilters(results, filters, searchRegex);
+            results = this.dedupeResults(this.applyClientSideFilters(results, filters, searchRegex));
+            if (totalPages === 0 && totalResults > 0) {
+                totalPages = Math.min(Math.ceil(totalResults / 20), 25);
+            }
 
             let bestMatch = this.findBestMatch(results, query, searchRegex);
 
-            if (bestMatch && bestMatch.type !== 'person' && bestMatch.media_type !== 'person') {
-                const trailerKey = await this.fetchTrailer(bestMatch.id, bestMatch.type);
-                bestMatch.trailer_key = trailerKey;
-            }
-
             results = this.sortResults(results, filters.sort || 'relevance');
+            const failedSources = sources.filter(source => source.status !== 'fulfilled');
+            const hasFulfilledSource = sources.some(source => source.status === 'fulfilled');
+            const responseStatus: SearchApiStatus = failedSources.length > 0
+                ? hasFulfilledSource
+                    ? 'partial'
+                    : 'error'
+                : results.length > 0
+                    ? 'success'
+                    : 'empty';
 
-            return {
+            const response = {
+                status: responseStatus,
+                is_partial: responseStatus === 'partial',
+                cached: false,
+                completed_at: new Date().toISOString(),
+                query,
                 page,
                 total_results: totalResults,
                 total_pages: totalPages,
                 results: results.slice(0, 20),
                 best_match: bestMatch,
+                sources,
                 applied_filters: {
                     type: filters.type,
                     sort: filters.sort,
@@ -457,13 +644,40 @@ export class SearchService implements OnModuleInit {
                     regex_search: filters.regex_search,
                 },
             };
+
+            if (responseStatus !== 'error') {
+                this.setCachedSearch(cacheKey, response);
+            }
+
+            return response;
         } catch (error) {
             this.logger.error('TMDB search error:', error.response?.data || error.message);
-            throw new HttpException(
-                'Failed to fetch data from TMDB',
-                HttpStatus.BAD_GATEWAY,
-            );
+            return {
+                status: 'error',
+                is_partial: false,
+                cached: false,
+                completed_at: new Date().toISOString(),
+                query,
+                page,
+                total_results: 0,
+                total_pages: 0,
+                results: [],
+                best_match: null,
+                sources,
+                error: 'Failed to fetch search data',
+                applied_filters: filters,
+            };
         }
+    }
+
+    private dedupeResults(results: any[]) {
+        const seen = new Set<string>();
+        return results.filter((item) => {
+            const key = `${item.type || item.media_type}:${item.id}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
     }
 
     private async fetchTrailer(id: number, type: 'movie' | 'tv'): Promise<string | null> {
