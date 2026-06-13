@@ -5,7 +5,7 @@ import type { All } from "@/types/all";
 
 // Default fetch function for backwards compatibility
 async function fetchTrending() {
-    const base = process.env.NEST_API_URL || 'http://localhost:4000';
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     const res = await fetch(`${base}/all/trending`, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const json = await res.json();
@@ -43,7 +43,7 @@ export default function TrendingSection({
                 let result: All[];
                 
                 if (endpoint) {
-                    const base = process.env.NEST_API_URL || 'http://localhost:4000';
+                    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
                     const res = await fetch(`${base}${endpoint}`, { next: { revalidate: 60 } });
                     if (!res.ok) throw new Error('Failed to fetch');
                     result = await res.json();

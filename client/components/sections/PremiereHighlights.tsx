@@ -10,7 +10,7 @@ import Link from "next/link";
 const TrailerModal = dynamic(() => import("./TrailerModal"), { ssr: false });
 
 async function fetchPremiereTrailers(): Promise<All[]> {
-  const base = process.env.NEST_API_URL || "http://localhost:4000";
+  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   try {
     const res = await fetch(`${base}/all/trailers`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -25,7 +25,7 @@ async function fetchRecommendations(
   type: "movie" | "tv",
   id: number
 ): Promise<All[]> {
-  const base = process.env.NEST_API_URL || "http://localhost:4000";
+  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   try {
     const res = await fetch(`${base}/all/recommendations/${type}/${id}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -88,7 +88,7 @@ export default function PremiereHighlights({
         setError(null);
         let result: All[];
         if (endpoint) {
-          const base = process.env.NEST_API_URL || "http://localhost:4000";
+          const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
           const res = await fetch(`${base}${endpoint}`);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           result = await res.json();

@@ -37,7 +37,7 @@ export interface Person {
 type KnownForWork = Person["known_for"][number];
 
 async function fetchPeople() {
-  const base = process.env.NEST_API_URL || "http://localhost:4000";
+  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   const res = await fetch(`${base}/all/peoples`, { next: { revalidate: 60 } });
   if (!res.ok) return [];
   const json = await res.json();

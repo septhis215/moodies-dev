@@ -39,7 +39,7 @@ type TasteSignal = {
 };
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 async function fetchFavorites(
   token: string,
   endpoint?: string,
