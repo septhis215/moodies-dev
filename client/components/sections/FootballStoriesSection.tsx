@@ -72,7 +72,7 @@ export default function FootballStoriesSection() {
       try {
         setLoading(true);
         setHasError(false);
-        const base = process.env.NEST_API_URL || "http://localhost:4000";
+        const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
         const res = await fetch(`${base}/all/football-stories?limit=25&rankingMode=world-cup-docs&language=en-US&region=US`, {
           next: { revalidate: 60 },
         });

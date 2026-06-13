@@ -200,7 +200,7 @@ export default function CommunityPicks({
       try {
         setLoading(true);
         const base =
-          process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
         const path = endpoint || "/reviews/community-picks?limit=18";
         const res = await fetch(`${base}${path}`, {
           next: { revalidate: 60 },

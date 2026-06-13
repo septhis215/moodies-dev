@@ -19,7 +19,7 @@ import Link from "next/link";
 const TrailerModal = dynamic(() => import("./TrailerModal"), { ssr: false });
 
 async function fetchUpcomingTrailers(): Promise<All[]> {
-  const base = process.env.NEST_API_URL || "http://localhost:4000";
+  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   try {
     const res = await fetch(`${base}/all/upcoming-trailers`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -35,7 +35,7 @@ async function fetchRecommendations(
   id: number
 ): Promise<All[]> {
   if (!type || !id) return [];
-  const base = process.env.NEST_API_URL || "http://localhost:4000";
+  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   try {
     const res = await fetch(`${base}/all/${type}/${id}/recommendations`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -102,7 +102,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
 
         let result: All[];
         if (endpoint) {
-          const base = process.env.NEST_API_URL || "http://localhost:4000";
+          const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
           const res = await fetch(`${base}${endpoint}`);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           result = await res.json();
