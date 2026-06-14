@@ -24,6 +24,8 @@ import { ModerationModule } from './routes/moderation/moderation.module';
 import { LikedModule } from './liked/liked.module';
 import { MediaStatsModule } from './media-stats/media-stats.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -53,11 +55,12 @@ import { RateLimitGuard } from './common/guards/rate-limit.guard';
     ModerationModule,
   ],
   providers: [
+    AppService,
     {
       provide: APP_GUARD,
       useClass: RateLimitGuard,
     },
   ],
-  controllers: [SearchController, MoodsController],
+  controllers: [AppController, SearchController, MoodsController],
 })
 export class AppModule {}

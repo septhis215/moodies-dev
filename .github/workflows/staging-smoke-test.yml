@@ -1,0 +1,39 @@
+name: Staging deploy verification
+
+# Runs after every push to trunk (and on demand from the Actions tab). Polls the
+# staging /health endpoint until it reports the commit you just pushed — so a green
+# check means THIS exact code is live on staging, without opening Railway.
+on:
+  push:
+    branches: [trunk]
+  workflow_dispatch:
+
+env:
+  # Staging backend base URL. Update here if the Railway domain changes.
+  API_URL: https://dev-moodies.up.railway.app
+
+jobs:
+  verify-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Railway to start the new deploy
+        run: sleep 60
+
+      - name: Wait until /health reports the pushed commit
+        run: |
+          expected="${{ github.sha }}"
+          url="${API_URL}/health"
+          echo "Waiting for $url to report commit $expected"
+          for i in $(seq 1 30); do
+            body=$(curl -s --max-time 30 "$url" || echo "")
+            deployed=$(echo "$body" | jq -r '.commit // empty' 2>/dev/null)
+            echo "Attempt $i/30 → deployed commit: ${deployed:-<none>}"
+            if [ "$deployed" = "$expected" ]; then
+              echo "✅ Staging is serving commit $expected"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "❌ Staging did not report commit $expected within the timeout"
+          echo "   Last /health response: $body"
+          exit 1
