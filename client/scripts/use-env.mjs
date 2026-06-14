@@ -12,8 +12,8 @@ import { writeFileSync, rmSync } from "node:fs";
 // `null` = no override (fall back to .env.development → http://localhost:4000).
 const ENVIRONMENTS = {
   local: null,
-  staging: "https://moodies-staging-production.up.railway.app",
-  prod: "https://moodies-production.up.railway.app", // TODO: set real prod domain
+  staging: "https://dev-moodies.up.railway.app",
+  prod: "", // TODO: set real prod domain
 };
 
 const name = process.argv[2];
