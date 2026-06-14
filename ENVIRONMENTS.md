@@ -1,4 +1,4 @@
-# Environment & Deployment Guide
+# Environment & Deployment Guide 2.0
 
 How the frontend/backend connect across **local**, **staging**, and **prod**, and what
 you need to do after pulling this branch.
