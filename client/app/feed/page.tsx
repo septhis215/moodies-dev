@@ -140,6 +140,7 @@ export default function VideoFeedPage() {
   const videoRefs = useRef<Map<string, HTMLIFrameElement>>(new Map());
   const firstUserGestureRef = useRef(false);
   const [videoReady, setVideoReady] = useState(false);
+  const [feedVisible, setFeedVisible] = useState(true);
 
   const currentVideo = videos[currentIndex];
   const [showScrollHint, setShowScrollHint] = useState(true);
@@ -524,13 +525,47 @@ export default function VideoFeedPage() {
     } catch {}
   };
 
+  const pauseInactiveVideos = useCallback(
+    (activeIdentity?: string) => {
+      videoRefs.current.forEach((iframe, identity) => {
+        if (identity !== activeIdentity) sendYouTubeCommand(iframe, "pauseVideo", []);
+      });
+    },
+    [],
+  );
+
+  const playActiveVideo = useCallback(() => {
+    if (!currentVideo || !feedVisible) return;
+    const iframe = videoRefs.current.get(currentVideoIdentity);
+    if (!iframe) return;
+
+    pauseInactiveVideos(currentVideoIdentity);
+    sendYouTubeCommand(iframe, "mute", []);
+    sendYouTubeCommand(iframe, "playVideo", []);
+    if (firstUserGestureRef.current && !muted) {
+      sendYouTubeCommand(iframe, "unMute", []);
+    }
+    setIsPlaying(true);
+  }, [
+    currentVideo,
+    currentVideoIdentity,
+    feedVisible,
+    muted,
+    pauseInactiveVideos,
+  ]);
+
   const toggleMute = useCallback(() => {
+    firstUserGestureRef.current = true;
     setMuted((prev) => {
       const next = !prev;
       const iframe = currentVideo
         ? videoRefs.current.get(currentVideoIdentity)
         : undefined;
-      if (iframe) sendYouTubeCommand(iframe, next ? "mute" : "unMute");
+      if (iframe) {
+        sendYouTubeCommand(iframe, next ? "mute" : "unMute");
+        sendYouTubeCommand(iframe, "playVideo", []);
+        setIsPlaying(true);
+      }
       return next;
     });
   }, [currentVideo, currentVideoIdentity]);
@@ -540,7 +575,10 @@ export default function VideoFeedPage() {
     const iframe = videoRefs.current.get(currentVideoIdentity);
     if (iframe) {
       const t = window.setTimeout(
-        () => sendYouTubeCommand(iframe, muted ? "mute" : "unMute"),
+        () => {
+          if (muted) sendYouTubeCommand(iframe, "mute");
+          else if (firstUserGestureRef.current) sendYouTubeCommand(iframe, "unMute");
+        },
         250,
       );
       return () => clearTimeout(t);
@@ -607,16 +645,65 @@ export default function VideoFeedPage() {
 
   useEffect(() => {
     if (!currentVideo) return;
-    setIsPlaying(true);
+    const activeIframe = videoRefs.current.get(currentVideoIdentity);
+    pauseInactiveVideos(currentVideoIdentity);
+    setIsPlaying(feedVisible);
     const t = window.setTimeout(() => {
-      const iframe = videoRefs.current.get(currentVideoIdentity);
-      if (iframe) {
-        sendYouTubeCommand(iframe, "playVideo", []);
-        if (!muted) sendYouTubeCommand(iframe, "unMute", []);
-      }
+      playActiveVideo();
     }, 350);
-    return () => clearTimeout(t);
-  }, [currentVideo, currentVideo?.id, currentVideoIdentity, muted]);
+    return () => {
+      clearTimeout(t);
+      sendYouTubeCommand(activeIframe, "pauseVideo", []);
+    };
+  }, [
+    currentVideo,
+    currentVideo?.id,
+    currentVideoIdentity,
+    feedVisible,
+    pauseInactiveVideos,
+    playActiveVideo,
+  ]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const visible = document.visibilityState === "visible";
+      setFeedVisible(visible);
+      const iframe = currentVideo
+        ? videoRefs.current.get(currentVideoIdentity)
+        : undefined;
+      if (!visible) {
+        videoRefs.current.forEach((videoIframe) =>
+          sendYouTubeCommand(videoIframe, "pauseVideo", []),
+        );
+        setIsPlaying(false);
+        return;
+      }
+      if (iframe) window.setTimeout(() => playActiveVideo(), 180);
+    };
+
+    const handleBlur = () => {
+      setFeedVisible(false);
+      videoRefs.current.forEach((iframe) =>
+        sendYouTubeCommand(iframe, "pauseVideo", []),
+      );
+      setIsPlaying(false);
+    };
+
+    const handleFocus = () => {
+      setFeedVisible(true);
+      window.setTimeout(() => playActiveVideo(), 180);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [currentVideo, currentVideoIdentity, playActiveVideo]);
 
   useEffect(() => {
     if (!currentVideo) return;
@@ -625,20 +712,26 @@ export default function VideoFeedPage() {
       firstUserGestureRef.current = true;
       const iframe = videoRefs.current.get(currentVideoIdentity);
       if (iframe) {
-        sendYouTubeCommand(iframe, "unMute", []);
+        if (!muted) sendYouTubeCommand(iframe, "unMute", []);
         sendYouTubeCommand(iframe, "playVideo", []);
+        setIsPlaying(true);
       }
     };
     window.addEventListener("click", onFirstGesture, {
       once: true,
       passive: true,
     });
+    window.addEventListener("touchend", onFirstGesture, {
+      once: true,
+      passive: true,
+    });
     return () => {
       try {
         window.removeEventListener("click", onFirstGesture);
+        window.removeEventListener("touchend", onFirstGesture);
       } catch {}
     };
-  }, [currentVideo, currentVideo?.id, currentVideoIdentity]);
+  }, [currentVideo, currentVideo?.id, currentVideoIdentity, muted]);
 
   const iframeSrc = useMemo(() => {
     if (!currentVideo?.primary_video?.key) return "";
@@ -654,13 +747,12 @@ export default function VideoFeedPage() {
     if (!currentVideo) return;
     const iframe = videoRefs.current.get(currentVideoIdentity);
     if (!iframe) return;
+    firstUserGestureRef.current = true;
     if (isPlaying) {
       sendYouTubeCommand(iframe, "pauseVideo", []);
       setIsPlaying(false);
     } else {
-      sendYouTubeCommand(iframe, "playVideo", []);
-      if (!muted) sendYouTubeCommand(iframe, "unMute", []);
-      setIsPlaying(true);
+      playActiveVideo();
     }
   };
 
@@ -698,7 +790,7 @@ export default function VideoFeedPage() {
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 w-full bg-black overflow-hidden"
+      className="fixed inset-0 h-[100svh] w-full touch-none overflow-hidden overscroll-none bg-black"
     >
       {/* ── TOP NAVBAR ──────────────────────────────────────────── */}
       <motion.nav
@@ -807,7 +899,7 @@ export default function VideoFeedPage() {
       </motion.nav>
 
       {/* ── MAIN VIDEO AREA ─────────────────────────────────────── */}
-      <div className="relative flex h-screen w-full items-center justify-center overflow-hidden bg-black">
+      <div className="relative flex h-[100svh] w-full items-center justify-center overflow-hidden bg-black">
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
         <AnimatePresence mode="wait">
           {currentVideo && (
@@ -817,11 +909,11 @@ export default function VideoFeedPage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.97 }}
               transition={{ duration: 0.28, ease: "easeOut" }}
-              className="absolute inset-0 flex"
+              className="absolute inset-0 flex items-center justify-center"
             >
               {/* Video iframe */}
-              <div className="relative flex h-full w-full items-center justify-center bg-black">
-                <div className="absolute inset-0 overflow-hidden bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),0_24px_80px_rgba(0,0,0,0.45)] md:inset-5 md:rounded-2xl">
+              <div className="relative flex h-full w-full items-center justify-center bg-black lg:px-5 lg:py-5">
+                <div className="relative h-full w-full overflow-hidden bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),0_24px_80px_rgba(0,0,0,0.45)] lg:aspect-video lg:h-auto lg:max-h-[calc(100svh-2.5rem)] lg:w-[min(calc(100vw-2.5rem),calc((100svh-2.5rem)*1.7778))] lg:max-w-none lg:rounded-2xl">
                   {currentBackdrop && (
                     <div
                       className={cn(
@@ -832,19 +924,34 @@ export default function VideoFeedPage() {
                       aria-hidden="true"
                     />
                   )}
+                  {!currentBackdrop && (
+                    <div
+                      className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(233,79,55,0.22),transparent_38%),linear-gradient(180deg,#111_0%,#020202_65%,#000_100%)]"
+                      aria-hidden="true"
+                    />
+                  )}
                   {!videoReady && (
-                    <div className="absolute left-1/2 top-1/2 z-20 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
+                    <div className="absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
+                      <div className="h-9 w-9 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
+                      <span className="rounded-full border border-white/10 bg-black/45 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/55 backdrop-blur">
+                        Loading video
+                      </span>
+                    </div>
                   )}
                   <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.10),transparent_58%)] mix-blend-screen" />
                   <iframe
                     ref={(el) => {
-                      if (el && currentVideo)
+                      if (el && currentVideo) {
                         videoRefs.current.set(currentVideoIdentity, el);
+                      } else {
+                        videoRefs.current.delete(currentVideoIdentity);
+                      }
                     }}
                     title={videoTitle || `video-${currentVideo.id}`}
                     src={iframeSrc}
-                    className="absolute left-1/2 top-1/2 h-[min(56.25vw,calc(100vh-9rem))] w-[min(100vw,calc((100vh-9rem)*1.7778))] -translate-x-1/2 -translate-y-1/2 bg-black brightness-[1.14] contrast-[1.08] saturate-[1.12] md:h-[calc(100%+180px)] md:min-h-[calc(56.25vw+180px)] md:w-[calc(100%+284px)] md:min-w-[calc(177.78vh+284px)]"
+                    className="absolute left-1/2 top-1/2 h-full min-h-full w-[177.78svh] min-w-full max-w-none -translate-x-1/2 -translate-y-1/2 bg-black brightness-[1.14] contrast-[1.08] saturate-[1.12] lg:h-[calc(100%+180px)] lg:min-h-[calc(56.25vw+180px)] lg:w-[calc(100%+284px)] lg:min-w-[calc(177.78vh+284px)]"
                     allow="autoplay; encrypted-media; picture-in-picture"
+                    referrerPolicy="strict-origin-when-cross-origin"
                     style={{ border: "none", pointerEvents: "none" }}
                     onLoad={(e) => {
                       const iframe = e.currentTarget as HTMLIFrameElement;
@@ -852,12 +959,7 @@ export default function VideoFeedPage() {
                         videoRefs.current.set(currentVideoIdentity, iframe);
                       setVideoReady(true);
                       setTimeout(() => {
-                        sendYouTubeCommand(iframe, "playVideo", []);
-                        sendYouTubeCommand(
-                          iframe,
-                          muted ? "mute" : "unMute",
-                          [],
-                        );
+                        playActiveVideo();
                       }, 300);
                     }}
                   />
@@ -875,18 +977,18 @@ export default function VideoFeedPage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: "easeOut" }}
-                className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none"
+                className="pointer-events-none absolute bottom-0 left-0 right-0 z-20"
               >
                 {/* Layer 1 — tall ambient scrim: fades video into dark over a large area */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/58 via-black/14 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/68 via-black/18 to-transparent lg:from-black/58 lg:via-black/14" />
 
                 {/* Layer 2 — tight bottom vignette: ensures the very bottom edge is fully dark */}
-                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/34 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-black/44 to-transparent lg:h-20 lg:from-black/34" />
 
                 {/* Content */}
-                <div className="relative px-4 pb-4 pr-20 pt-20 sm:pr-24 md:px-7 md:pr-28">
+                <div className="relative px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pr-20 pt-24 sm:pr-24 lg:px-7 lg:pb-4 lg:pr-28 lg:pt-20">
                   <h2
-                    className="text-white font-bold text-xl md:text-2xl leading-tight line-clamp-2 mb-2"
+                    className="mb-2 line-clamp-2 text-xl font-bold leading-tight text-white lg:text-2xl"
                     style={{
                       textShadow:
                         "0 1px 12px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8)",
