@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function MoodsExplorePage() {
   return (
-    <main className="min-h-screen bg-black pt-14 text-white sm:pt-16">
+    <main className="min-h-screen bg-black text-white sm:pt-16">
       <MoodDiscoverySection />
     </main>
   );

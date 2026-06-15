@@ -105,7 +105,7 @@ export default function CommonCardCarousel({
             />
 
             {/* Gradient overlay for depth */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" />
 
             {/* Rating Badge */}
             <div className="absolute top-3 right-3 text-white font-bold flex items-center ">
@@ -113,7 +113,7 @@ export default function CommonCardCarousel({
             </div>
 
             {/* Hover overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300">
               <div className="absolute bottom-0 left-0 right-0 p-4">
                 <div className="flex justify-center gap-2 mb-3">
                   <button
@@ -122,7 +122,7 @@ export default function CommonCardCarousel({
                       handleWatchlistToggle(show, e);
                     }}
                     disabled={loadingStates[show.id]}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${hookIsIn(String(show.id), toWatchType(show))
+                    className={`min-h-11 min-w-11 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${hookIsIn(String(show.id), toWatchType(show))
                       ? "bg-green-500 text-white"
                       : "bg-white text-black"
                       }`}
@@ -144,7 +144,7 @@ export default function CommonCardCarousel({
                   </button>
 
                   <button
-                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl"
+                    className="hidden min-h-11 min-w-11 rounded-full bg-white sm:flex sm:h-10 sm:w-10 items-center justify-center hover:scale-110 transition-transform shadow-xl"
                     title="More Info"
                   >
                     <Info className="w-5 h-5 text-black" />

@@ -305,16 +305,16 @@ export default function AllReviews({
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-transparent" />
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10">
+        <div className="relative z-10 mx-auto max-w-7xl px-4 pb-8 pt-6 sm:px-6 sm:pb-10 lg:px-8">
           <Link
             href={`/${basePath}/${id}`}
-            className="inline-flex items-center gap-1.5 text-white/40 hover:text-white transition-colors text-sm mb-8"
+            className="mb-6 inline-flex min-h-11 items-center gap-1.5 text-sm text-white/40 transition-colors hover:text-white sm:mb-8"
           >
             <ArrowLeft size={15} />
             Back to {info.title}
           </Link>
 
-          <div className="flex gap-5 sm:gap-8 items-start">
+          <div className="flex items-start gap-4 sm:gap-8">
             <div className="flex-shrink-0 w-20 sm:w-28 md:w-36 rounded-xl overflow-hidden shadow-2xl border border-white/[0.08]">
               <Image
                 src={
@@ -352,7 +352,7 @@ export default function AllReviews({
                     {info.number_of_episodes} Episodes
                   </span>
                 )}
-                <div className="h-3 w-px bg-white/20" />
+                <div className="hidden h-3 w-px bg-white/20 sm:block" />
                 {info.genres.slice(0, 3).map((g) => (
                   <span
                     key={g.id}
@@ -429,7 +429,7 @@ export default function AllReviews({
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3 flex-wrap">
           {/* Search */}
-          <div className="relative flex-1 min-w-[160px] max-w-xs">
+          <div className="relative min-w-full flex-1 sm:min-w-[160px] sm:max-w-xs">
             <Search
               size={13}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-white/45"
@@ -439,17 +439,17 @@ export default function AllReviews({
               placeholder="Search reviews…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 text-xs bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder-white/45 outline-none focus:border-[#e94f37]/35 transition-colors"
+              className="min-h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2 pl-8 pr-3 text-xs text-white outline-none transition-colors placeholder-white/45 focus:border-[#e94f37]/35"
             />
           </div>
 
           {/* Sort pills — individual card tiles */}
-          <div className="flex items-center gap-1.5">
+          <div className="-mx-1 flex max-w-full items-center gap-1.5 overflow-x-auto px-1 mobile-native-scroll sm:mx-0 sm:overflow-visible sm:px-0">
             {(["latest", "highest", "popularity"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setSortBy(s)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer capitalize border ${
+                className={`min-h-10 shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium capitalize transition-all duration-150 cursor-pointer ${
                   sortBy === s
                     ? "bg-[#e94f37]/[0.12] border-[#e94f37]/50 text-[#e94f37]"
                     : "bg-white/[0.04] border-white/[0.08] text-white/55 hover:text-white/80 hover:bg-white/[0.07] hover:border-white/[0.15]"
@@ -483,7 +483,7 @@ export default function AllReviews({
               }
               setWriteModalOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/[0.04] border border-[#e94f37]/40 text-[#e94f37] text-xs font-semibold hover:bg-[#e94f37]/[0.10] hover:border-[#e94f37]/70 active:scale-95 transition-all cursor-pointer"
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-[#e94f37]/40 bg-white/[0.04] px-3.5 py-1.5 text-xs font-semibold text-[#e94f37] transition-all hover:border-[#e94f37]/70 hover:bg-[#e94f37]/[0.10] active:scale-95 cursor-pointer"
           >
             <PenSquare size={11} strokeWidth={2.5} />
             Write a Review
@@ -872,7 +872,7 @@ export default function AllReviews({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                className="fixed inset-0 z-[1000] flex items-end justify-center p-3 sm:items-center sm:p-4"
                 style={{
                   background: "rgba(8, 10, 22, 0.90)",
                   backdropFilter: "blur(20px)",
@@ -885,14 +885,14 @@ export default function AllReviews({
                   exit={{ opacity: 0, scale: 0.97, y: 14 }}
                   transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                   onClick={(e) => e.stopPropagation()}
-                  className="relative w-full max-w-lg rounded-2xl overflow-hidden bg-white/[0.04] border border-white/[0.09]"
+                  className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.04]"
                   style={{
                     boxShadow:
                       "0 32px 72px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)",
                   }}
                 >
                   {/* Header — quote glyph + title + close */}
-                  <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.07]">
+                  <div className="flex items-center justify-between border-b border-white/[0.07] px-4 pb-4 pt-4 sm:px-5 sm:pt-5">
                     <div className="flex items-center gap-3">
                       <svg
                         className="w-7 h-7 opacity-[0.09] flex-shrink-0"
@@ -913,13 +913,13 @@ export default function AllReviews({
                     </div>
                     <button
                       onClick={() => setWriteModalOpen(false)}
-                      className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.08] hover:border-white/[0.16] text-white/40 hover:text-white transition-all cursor-pointer"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05] text-white/40 transition-all hover:border-white/[0.16] hover:bg-white/[0.10] hover:text-white cursor-pointer sm:h-7 sm:w-7"
                     >
                       <X size={13} />
                     </button>
                   </div>
 
-                  <div className="max-h-[80svh] overflow-y-auto scrollbar-none">
+                  <div className="max-h-[82svh] overflow-y-auto mobile-native-scroll scrollbar-none">
                     {!isAuthenticated ? (
                       <div className="flex flex-col items-center justify-center py-12 px-6 text-center gap-4">
                         <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl">

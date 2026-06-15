@@ -24,6 +24,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     !NAVBAR_HIDDEN_PREFIXES.some((p) => pathname.startsWith(p)) &&
     !NAVBAR_HIDDEN_SEGMENTS.some((s) => pathname.includes(s));
 
+  const mainClassName = shouldShowNavbar
+    ? "min-h-screen bg-black pt-[var(--mobile-nav-safe)] lg:pt-0"
+    : "min-h-screen bg-black";
+
   return (
     <>
       {shouldShowNavbar && (
@@ -31,7 +35,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <NavbarComponent />
         </Suspense>
       )}
-      <main>{children}</main>
+      <main className={mainClassName}>{children}</main>
     </>
   );
 }

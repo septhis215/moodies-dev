@@ -20,7 +20,6 @@ interface Props {
 export default function AuthLayoutClient({ slides, children }: Props) {
   const pathname = usePathname();
   const isOnboarding = pathname.includes("onboarding");
-  const isSignup = pathname.includes("/auth/signup");
   void slides;
 
   if (isOnboarding) {
@@ -44,10 +43,8 @@ export default function AuthLayoutClient({ slides, children }: Props) {
       />
 
       <div
-        className={`relative flex min-h-[100dvh] w-full ${
-          isSignup ? "overflow-hidden" : "overflow-y-auto"
-        }
-                   border-l border-white/12 bg-black/58 px-5 py-5
+        className={`relative flex min-h-[100dvh] w-full overflow-y-auto
+                   border-l border-white/12 bg-black/58 px-4 py-4
                    shadow-[-28px_0_90px_-40px_rgba(0,0,0,0.95)]
                    backdrop-blur-xl sm:px-8 sm:py-6 lg:px-12`}
       >
@@ -57,7 +54,7 @@ export default function AuthLayoutClient({ slides, children }: Props) {
                      bg-[radial-gradient(72%_48%_at_50%_12%,rgba(233,79,55,0.18),transparent_72%)]"
         />
 
-        <div className="relative mx-auto flex min-h-full w-full max-w-md items-center">
+        <div className="relative mx-auto flex min-h-full w-full max-w-md items-center py-3 sm:py-0">
           {children}
         </div>
       </div>

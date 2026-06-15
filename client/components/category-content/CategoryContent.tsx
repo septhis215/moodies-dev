@@ -151,7 +151,7 @@ export function CategoryContent({
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto w-full max-w-7xl px-6 sm:px-12 py-16">
+      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-8 sm:py-16 lg:px-12">
         {isPending && (
           <div
             className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md overflow-hidden"
@@ -172,9 +172,9 @@ export function CategoryContent({
             <section className="space-y-6">
               <section className="space-y-6">
                 {/* Header — matches watchlist/liked style */}
-                <div className="mt-10 mb-12 relative overflow-hidden">
+                <div className="mb-8 mt-2 relative overflow-hidden sm:mb-12 sm:mt-10">
                   {/* Ghost watermark */}
-                  <span className="absolute -top-4 left-0 text-[5rem] sm:text-[8rem] font-black text-white/[0.03] leading-none select-none pointer-events-none tracking-tight whitespace-nowrap">
+                  <span className="absolute -top-3 left-0 text-[3.6rem] sm:text-[8rem] font-black text-white/[0.03] leading-none select-none pointer-events-none tracking-tight whitespace-nowrap">
                     {title.toUpperCase()}
                   </span>
 
@@ -185,27 +185,27 @@ export function CategoryContent({
                         Featured Collection
                       </span>
                     </div>
-                    <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-white leading-none">
+                    <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-none">
                       {title}
                     </h1>
                     {subtitle && (
-                      <p className="mt-3 text-sm text-white/40 font-medium tracking-wide">
+                      <p className="mt-3 max-w-2xl text-sm leading-6 text-white/45 font-medium tracking-wide">
                         {subtitle}
                       </p>
                     )}
                   </div>
 
                   {/* Gradient rule */}
-                  <div className="mt-8 h-px bg-gradient-to-r from-[rgb(233,79,55)]/30 via-white/[0.06] to-transparent" />
+                  <div className="mt-6 h-px bg-gradient-to-r from-[rgb(233,79,55)]/30 via-white/[0.06] to-transparent sm:mt-8" />
                 </div>
               </section>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
                 {topThree.map((item, idx) => (
                   <Link
                     key={item.id}
                     href={getDetailUrl(item)}
-                    className="group relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 ring-1 ring-white/10 shadow-2xl hover:ring-[#e94f37]/60 transition-all duration-500 flex flex-col"
+                    className="group relative rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 ring-1 ring-white/10 shadow-2xl hover:ring-[#e94f37]/60 transition-all duration-500 flex flex-col"
                   >
                     {/* Rank Badge */}
                     <div className="absolute top-3 left-3 z-20">
@@ -256,14 +256,14 @@ export function CategoryContent({
                     </div>
 
                     {/* Content */}
-                    <div className="p-6 flex flex-col">
+                    <div className="p-4 sm:p-6 flex flex-col">
                       {/* Title - Fixed height with line clamp */}
-                      <h3 className="text-2xl font-black line-clamp-2 min-h-[2.5rem] group-hover:text-[#ff6b58] transition-colors">
+                      <h3 className="text-xl sm:text-2xl font-black line-clamp-2 sm:min-h-[2.5rem] group-hover:text-[#ff6b58] transition-colors">
                         {getTitle(item)}
                       </h3>
 
                       {/* Description - Fixed height with line clamp */}
-                      <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed min-h-[4.5rem] mt-3">
+                      <p className="text-sm text-gray-400 line-clamp-2 sm:line-clamp-3 leading-relaxed sm:min-h-[4.5rem] mt-2 sm:mt-3">
                         {item.overview || "No description available"}
                       </p>
 
@@ -328,13 +328,13 @@ export function CategoryContent({
 
           {/* Rest of Items Grid */}
           {restItems.length > 0 && (
-            <section className="space-y-6 mt-10">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+            <section className="space-y-6 mt-8 sm:mt-10">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                 {restItems.map((item) => (
                   <Link
                     key={item.id}
                     href={getDetailUrl(item)}
-                    className="group relative rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 hover:ring-[#ff6b58]/50 transition-all duration-300 cursor-pointer"
+                    className="group relative rounded-lg sm:rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 hover:ring-[#ff6b58]/50 transition-all duration-300 cursor-pointer"
                   >
                     {/* Poster */}
                     <div className="relative aspect-[2/3] overflow-hidden">
@@ -381,7 +381,7 @@ export function CategoryContent({
                     </div>
 
                     {/* Info */}
-                    <div className="p-3">
+                    <div className="p-2.5 sm:p-3">
                       <h4 className="font-bold text-sm line-clamp-2 mb-2 group-hover:text-[#ff6b58] transition-colors">
                         {getTitle(item)}
                       </h4>
@@ -412,17 +412,17 @@ export function CategoryContent({
 
         {/* Pagination Controls - Simplified Version */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-4 py-8">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 py-8">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1 || isPending}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition-all flex items-center gap-2"
+              className="min-h-11 px-3 sm:px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition-all flex items-center gap-2"
             >
               <ChevronLeft className="w-5 h-5" />
               Previous
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex max-w-full items-center gap-2 overflow-x-auto mobile-native-scroll px-1">
               {/* Show first 3 pages or pages around current page */}
               {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                 // Calculate which page number to show
@@ -443,7 +443,7 @@ export function CategoryContent({
                     key={pageNum}
                     onClick={() => handlePageChange(pageNum)}
                     disabled={isPending}
-                    className={`w-10 h-10 rounded-lg font-bold transition-all disabled:cursor-not-allowed ${pageNum === currentPage
+                    className={`h-10 w-10 shrink-0 rounded-lg font-bold transition-all disabled:cursor-not-allowed ${pageNum === currentPage
                       ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white"
                       : "bg-white/10 hover:bg-white/20"
                       } ${isPending ? "opacity-50" : ""}`}
@@ -462,7 +462,7 @@ export function CategoryContent({
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages || isPending}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition-all flex items-center gap-2"
+              className="min-h-11 px-3 sm:px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition-all flex items-center gap-2"
             >
               Next
               <ChevronRight className="w-5 h-5" />

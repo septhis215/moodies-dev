@@ -833,12 +833,13 @@ export function HeroContentCard({
     @media (max-width: 520px) {
       .hero-layout {
         grid-template-columns: 1fr !important;
-        padding-top: 5rem !important;
+        min-height: auto !important;
+        padding: 1.25rem 1rem 2rem !important;
       }
       .hero-poster-col {
         padding-right: 0 !important;
         align-items: center !important;
-        max-width: 200px;
+        max-width: 168px;
         margin: 0 auto;
       }
       .hero-info-col {
@@ -849,9 +850,35 @@ export function HeroContentCard({
         padding-top: 1.25rem;
         align-items: center;
         text-align: center;
+        gap: 0.8rem !important;
       }
       .hero-eyebrow, .hero-genres, .hero-meta, .hero-actions, .hero-credits {
         justify-content: center !important;
+      }
+      .hero-credits,
+      .hero-meta {
+        display: none !important;
+      }
+      .hero-genres span:nth-child(n + 4) {
+        display: none !important;
+      }
+      .hero-info-col h1 {
+        font-size: 2rem !important;
+        line-height: 1.05 !important;
+      }
+      .hero-actions {
+        width: 100%;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.6rem !important;
+      }
+      .hero-actions > button,
+      .hero-actions > a,
+      .hero-actions > a > button {
+        width: 100% !important;
+        min-height: 2.75rem !important;
+        justify-content: center !important;
+        padding-inline: 0.75rem !important;
       }
     }
   `;

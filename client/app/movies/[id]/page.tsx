@@ -159,25 +159,25 @@ export default async function MoviePage({
       />
 
       <div className="min-h-screen bg-black text-slate-100">
-        <div className="max-w-7xl mx-auto px-6 py-16 space-y-14">
+        <div className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:space-y-14 sm:px-6 sm:py-16">
           <ImageVideoCarousel
             posters={images.posters}
             backdrops={images.backdrops}
             videos={videos.videos}
           />
 
-          <hr className="border-white/8 my-14" />
+          <hr className="my-8 border-white/8 sm:my-14" />
 
           <MovieDetails data={data} contentId={id} />
 
-          <hr className="border-white/8 my-14" />
+          <hr className="my-8 border-white/8 sm:my-14" />
           <ReviewsSection
             reviews={reviews.reviews}
             contentId={id}
             contentType="movie"
           />
 
-          <hr className="border-white/8 my-14" />
+          <hr className="my-8 border-white/8 sm:my-14" />
           <CommonCardCarousel
             title="Something Similar"
             subtitle="Films you may also enjoy"

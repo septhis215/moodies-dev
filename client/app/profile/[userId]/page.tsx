@@ -508,10 +508,10 @@ export default function PublicProfilePage() {
       <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,0.65)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.65)_1px,transparent_1px)] [background-size:44px_44px]" /> */}
 
       <section className="relative">
-        <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-8 sm:py-24 lg:px-10">
+        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-8 sm:py-24 lg:px-10">
           <Link
             href="/"
-            className="mb-8 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.06] hover:text-white"
+            className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.06] hover:text-white sm:mb-8"
           >
             <ArrowLeft size={16} />
             Back to Moodies
@@ -522,8 +522,8 @@ export default function PublicProfilePage() {
               <Image src={MASCOT_SRC} alt="" fill sizes="288px" className="object-contain" priority />
             </div>
 
-            <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-end">
+            <div className="relative grid gap-6 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-6">
                 <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.08] shadow-2xl shadow-black/30 ring-2 ring-[#e94f37]/40 sm:h-32 sm:w-32 lg:h-36 lg:w-36">
                   {avatar ? (
                     <img
@@ -549,10 +549,10 @@ export default function PublicProfilePage() {
                       {visiblePersona?.title ?? "Moodies user"}
                     </span>
                   </div>
-                  <h1 className="break-words text-4xl font-black tracking-tight sm:text-6xl">
+                  <h1 className="break-words text-3xl font-black tracking-tight sm:text-6xl">
                     {displayName}
                   </h1>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/55">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm leading-6 text-white/55">
                     <span>@{profile.user.username}</span>
                     <span className="text-white/18">/</span>
                     <span>{visiblePersona?.signal ?? "Public taste profile"}</span>
@@ -586,7 +586,7 @@ export default function PublicProfilePage() {
                 {ownProfile && (
                   <Link
                     href="/profile"
-                    className="mt-5 inline-flex w-full items-center justify-center rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.10]"
+                    className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/[0.10]"
                   >
                     Edit my profile
                   </Link>

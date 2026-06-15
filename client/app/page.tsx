@@ -36,7 +36,7 @@ export default async function LandingPage() {
   return (
     <main className="bg-black min-h-screen overflow-x-hidden">
       <HeroCarousel all={all} />
-      <section className="mx-auto -mt-5 max-w-7xl px-4 sm:hidden">
+      <section className="mx-auto -mt-4 max-w-7xl px-4 sm:hidden">
         <div className="relative z-30 grid grid-cols-2 gap-3 rounded-lg border border-white/10 bg-zinc-950/95 p-3 shadow-2xl shadow-black/60">
           {mobileActions.map((action) => {
             const Icon = action.icon;

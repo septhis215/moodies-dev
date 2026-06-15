@@ -15,6 +15,12 @@ type Person = {
   job?: string;
   department?: string;
   order?: number;
+  roles?: Array<{ character?: string | null }>;
+};
+
+type ContentInfo = {
+  content_type: string;
+  title: string;
 };
 
 export default function AllCredits({
@@ -24,7 +30,7 @@ export default function AllCredits({
   highlight,
 }: {
   credits: { cast?: Person[]; crew?: Person[] };
-  info?: any;
+  info: ContentInfo;
   id?: string;
   highlight?: string | null;
 }) {
@@ -42,8 +48,8 @@ export default function AllCredits({
         order: typeof p.order === "number" ? p.order : i + 1,
         character:
           p.character ??
-          (Array.isArray((p as any).roles) && (p as any).roles.length > 0
-            ? (p as any).roles.map((r: any) => r.character).join(", ")
+          (Array.isArray(p.roles) && p.roles.length > 0
+            ? p.roles.map((r) => r.character).filter(Boolean).join(", ")
             : undefined),
       })),
     [cast],
@@ -106,11 +112,11 @@ export default function AllCredits({
 
   return (
     <div className="min-h-screen bg-black text-slate-100">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-8">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:space-y-8 sm:px-6 sm:py-10">
         {/* ── Back nav ── */}
         <Link
           href={`/${contentType(info.content_type)}/${id}`}
-          className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors group"
+          className="group inline-flex min-h-11 items-center gap-2 text-sm text-white/50 transition-colors hover:text-white"
         >
           <ArrowLeft
             size={16}
@@ -120,7 +126,7 @@ export default function AllCredits({
         </Link>
 
         {/* ── Page header ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
               Full Cast & Crew
@@ -129,14 +135,14 @@ export default function AllCredits({
           </div>
 
           {/* Controls cluster */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             {/* Tab toggle */}
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-white/[0.04] border border-white/[0.07]">
+            <div className="flex min-h-11 items-center gap-1 rounded-lg border border-white/[0.07] bg-white/[0.04] p-1">
               {(["cast", "crew"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
-                  className={`px-4 py-1.5 rounded-md text-xs font-semibold capitalize transition-all duration-200 cursor-pointer ${
+                  className={`min-h-9 rounded-md px-4 py-1.5 text-xs font-semibold capitalize transition-all duration-200 cursor-pointer ${
                     tab === t
                       ? "bg-[#e94f37] text-white"
                       : "text-slate-400 hover:text-white"
@@ -151,7 +157,7 @@ export default function AllCredits({
             <div className="hidden sm:block h-5 w-px bg-white/[0.1]" />
 
             {/* Search */}
-            <div className="relative">
+            <div className="relative min-w-[min(100%,14rem)] flex-1 sm:flex-none">
               <Search
                 size={12}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none"
@@ -160,7 +166,7 @@ export default function AllCredits({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search name or role…"
-                className="pl-8 pr-3 py-2 text-xs rounded-lg bg-white/[0.05] border border-white/[0.07] text-white placeholder-white/25 outline-none focus:border-[#e94f37]/40 transition-colors w-48 sm:w-56"
+                className="min-h-11 w-full rounded-lg border border-white/[0.07] bg-white/[0.05] py-2 pl-8 pr-3 text-xs text-white outline-none transition-colors placeholder-white/25 focus:border-[#e94f37]/40 sm:w-56"
               />
             </div>
 
@@ -168,7 +174,7 @@ export default function AllCredits({
             {tab === "cast" && (
               <CustomSelect
                 value={sortBy}
-                onChange={(v: any) => setSortBy(v)}
+                onChange={(v) => setSortBy(v as "order" | "name")}
                 options={[
                   { label: "Billing order", value: "order" },
                   { label: "Name A–Z", value: "name" },
@@ -188,7 +194,7 @@ export default function AllCredits({
           </p>
 
           {tab === "crew" && departmentAnchors.length > 0 && (
-            <div className="hidden sm:flex items-center gap-2 overflow-x-auto scrollbar-none">
+            <div className="hidden items-center gap-2 overflow-x-auto mobile-native-scroll scrollbar-none sm:flex">
               <span className="text-[11px] text-white/25 flex-shrink-0">
                 Jump:
               </span>

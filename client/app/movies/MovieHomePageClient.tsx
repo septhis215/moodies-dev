@@ -335,10 +335,10 @@ export default function MoviesHomePageClient({
       <section className="relative w-full text-white overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-28 pb-16 relative z-20">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-10 sm:pt-28 sm:pb-16 relative z-20">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-12 md:gap-6 items-stretch">
             {/* LEFT mosaic */}
-            <div className="md:col-span-7 col-span-1 rounded-3xl overflow-hidden bg-neutral-950/80 backdrop-blur-xl p-5 sm:p-6 flex flex-col ring-1 ring-white/10 shadow-2xl shadow-black/40">
+            <div className="md:col-span-7 col-span-1 rounded-2xl sm:rounded-3xl overflow-hidden bg-neutral-950/80 backdrop-blur-xl p-4 sm:p-6 flex flex-col ring-1 ring-white/10 shadow-2xl shadow-black/40">
               <div className="h-1 -mx-5 -mt-5 mb-5 bg-gradient-to-r from-[#e94f37] via-[#ff7a66] to-[#f59e0b] sm:-mx-6 sm:-mt-6" />
               <div className="mb-6">
                 <div className="flex items-center gap-3 mb-2">
@@ -349,7 +349,7 @@ export default function MoviesHomePageClient({
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
                       Moodies cinema
                     </p>
-                    <h1 className="text-4xl sm:text-5xl font-black leading-tight tracking-tight bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+                    <h1 className="text-3xl sm:text-5xl font-black leading-tight tracking-tight bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
                       Movies Hub
                     </h1>
                   </div>
@@ -360,8 +360,8 @@ export default function MoviesHomePageClient({
                 </p>
               </div>
 
-              <div className="relative flex-1 min-h-[460px] w-full rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black/40">
-                <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 p-3">
+              <div className="relative flex-1 min-h-[300px] sm:min-h-[460px] w-full rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black/40">
+                <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 p-2.5 sm:p-3">
                   {Array.from({ length: 18 }).map((_, i) => {
                     const s =
                       heroMovies[(heroIndex + i) % heroMovies.length] || {};
@@ -408,7 +408,7 @@ export default function MoviesHomePageClient({
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -20 }}
                   transition={{ duration: 0.5, ease: "easeInOut" }}
-                  className="relative flex flex-col w-full rounded-3xl bg-neutral-950/90 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl shadow-black/40 overflow-hidden"
+                    className="relative flex flex-col w-full rounded-2xl sm:rounded-3xl bg-neutral-950/90 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl shadow-black/40 overflow-hidden"
                 >
                   {featured?.backdrop_path && (
                     <div className="absolute inset-0 -z-10">
@@ -424,7 +424,7 @@ export default function MoviesHomePageClient({
                     </div>
                   )}
 
-                  <div className="relative w-full h-64 sm:h-80 rounded-t-3xl overflow-hidden">
+                  <div className="relative w-full h-52 sm:h-80 rounded-t-2xl sm:rounded-t-3xl overflow-hidden">
                     {featured?.backdrop_path ? (
                       <>
                         <Image
@@ -442,7 +442,7 @@ export default function MoviesHomePageClient({
                     )}
                   </div>
 
-                  <div className="relative p-6 sm:p-8 flex flex-col flex-1">
+                  <div className="relative p-4 sm:p-8 flex flex-col flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-4">
                       <span className="px-4 py-2 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white rounded-full text-xs font-black uppercase tracking-wider shadow-lg">
                         Mood spotlight
@@ -494,17 +494,17 @@ export default function MoviesHomePageClient({
                       </button>
                     </div>
 
-                    <h2 className="text-3xl sm:text-4xl font-black mb-4 leading-tight line-clamp-2 text-white">
+                    <h2 className="text-2xl sm:text-4xl font-black mb-3 sm:mb-4 leading-tight line-clamp-2 text-white">
                       {featured?.title || "—"}
                     </h2>
 
-                    <p className="text-sm sm:text-base text-gray-300 line-clamp-3 mb-6 leading-relaxed">
+                    <p className="text-sm sm:text-base text-gray-300 line-clamp-2 sm:line-clamp-3 mb-5 sm:mb-6 leading-relaxed">
                       {featured?.overview || "No description available"}
                     </p>
 
-                    <div className="flex gap-3 mt-auto pt-6 border-t border-white/10">
+                    <div className="flex gap-3 mt-auto pt-4 sm:pt-6 border-t border-white/10">
                       <Link href={`/movies/${featured?.id}`} className="flex-1">
-                        <button className="w-full px-6 py-4 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d4452f] hover:to-[#e94f37] text-white rounded-2xl font-bold transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg shadow-[#e94f37]/30 cursor-pointer">
+                        <button className="w-full min-h-12 px-5 py-3 sm:px-6 sm:py-4 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d4452f] hover:to-[#e94f37] text-white rounded-xl sm:rounded-2xl font-bold transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg shadow-[#e94f37]/30 cursor-pointer">
                           <Info className="w-5 h-5" />
                           View Details
                         </button>
@@ -519,7 +519,7 @@ export default function MoviesHomePageClient({
       </section>
 
       {/* Content */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 space-y-20">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-12 sm:space-y-20">
         {/* Box Office */}
         {popularMovies.length > 0 && (
           <section

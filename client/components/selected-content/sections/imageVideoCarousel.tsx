@@ -239,7 +239,7 @@ export default function ImageVideoCarousel({
 
     /* Lightbox */
     .ivc-lightbox {
-      position: fixed; inset: 0; z-index: 50;
+      position: fixed; inset: 0; z-index: 99999;
       background: rgba(0,0,0,0.94);
       backdrop-filter: blur(16px);
       display: flex; align-items: center; justify-content: center;
@@ -283,6 +283,43 @@ export default function ImageVideoCarousel({
       display: flex; align-items: center; justify-content: center;
       background: rgba(0,0,0,0.3);
       color: #fff;
+    }
+
+    @media (max-width: 640px) {
+      .ivc-tabs {
+        max-width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      .ivc-tabs::-webkit-scrollbar { display: none; }
+      .ivc-tab {
+        min-height: 2.5rem;
+        flex: 0 0 auto;
+      }
+      .ivc-main-inner {
+        aspect-ratio: 16 / 10 !important;
+        max-height: none !important;
+      }
+      .ivc-nav-btn {
+        width: 40px;
+        height: 40px;
+      }
+      .ivc-badge {
+        display: none;
+      }
+      .ivc-lightbox {
+        padding: 0.75rem;
+      }
+      .ivc-lightbox-inner {
+        max-height: calc(100svh - 1.5rem);
+      }
+      .ivc-lightbox-close {
+        top: 0.5rem;
+        right: 0.5rem;
+        z-index: 3;
+        background: rgba(0,0,0,0.7);
+      }
     }
   `;
 

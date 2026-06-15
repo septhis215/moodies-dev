@@ -1015,20 +1015,20 @@ export default function SearchResultsPage() {
     return (
       <div className="min-h-screen bg-black text-white">
         {/* Added px-4 for horizontal padding */}
-        <div className="container mx-auto px-4 pt-20 pb-10">
+        <div className="container mx-auto px-4 pb-10 pt-6 sm:pt-20">
           {/* Added px-4 for extra horizontal padding */}
           <div className="max-w-7xl mx-auto">
             {/* Content is centered and constrained */}
             {/* Header Section */}
-            <div className="text-center mb-10">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-800/50 rounded-full mb-6 border border-gray-700">
-                <Search className="h-8 w-8 text-gray-400" />
+            <div className="mb-8 text-center sm:mb-10">
+              <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full border border-gray-700 bg-gray-800/50 sm:mb-6 sm:h-16 sm:w-16">
+                <Search className="h-7 w-7 text-gray-400 sm:h-8 sm:w-8" />
               </div>
 
-              <h1 className="text-4xl font-bold text-white mb-2">
+              <h1 className="mb-2 text-3xl font-bold text-white sm:text-4xl">
                 Start Your Search
               </h1>
-              <p className="text-gray-400 text-md">
+              <p className="text-sm text-gray-400 sm:text-base">
                 Discover movies and TV shows you&apos;ll love
               </p>
             </div>
@@ -1038,7 +1038,7 @@ export default function SearchResultsPage() {
                 ref={searchInputRef}
                 type="text"
                 placeholder="Search for movies, series..."
-                className="w-full bg-gray-800/50 backdrop-blur-sm placeholder:text-gray-500 text-white rounded-full px-6 py-4 text-lg outline-none border border-gray-700 focus:border-[#e94f37] focus:ring-1 focus:ring-[#e94f37] transition-all"
+                className="min-h-12 w-full rounded-full border border-gray-700 bg-gray-800/50 px-5 py-3.5 text-base text-white outline-none backdrop-blur-sm transition-all placeholder:text-gray-500 focus:border-[#e94f37] focus:ring-1 focus:ring-[#e94f37] sm:px-6 sm:py-4 sm:text-lg"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     const value = (e.target as HTMLInputElement).value.trim();
@@ -1056,7 +1056,7 @@ export default function SearchResultsPage() {
                     router.push(`/search?q=${encodeURIComponent(value)}`);
                   }
                 }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-[#e94f37] hover:bg-[#e94f37]/90 rounded-full p-2.5 transition-colors"
+                className="absolute right-2 top-1/2 grid min-h-10 min-w-10 -translate-y-1/2 place-items-center rounded-full bg-[#e94f37] p-2.5 transition-colors hover:bg-[#e94f37]/90 sm:right-3"
               >
                 <Search className="h-5 w-5 text-white" />
               </button>
@@ -1073,14 +1073,14 @@ export default function SearchResultsPage() {
                   <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-700 border-t-[#e94f37]"></div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3">
                   {trendingTerms.map((term, index) => (
                     <button
                       key={term.id || term.title}
                       onClick={() =>
                         router.push(`/${term.media_type}/${term.id}`)
                       }
-                      className="bg-gray-800/50 hover:bg-gray-800 border border-gray-700 hover:border-[#e94f37]/50 rounded-lg px-4 py-3 text-sm font-medium text-gray-300 hover:text-white transition-all text-left"
+                      className="min-h-12 rounded-lg border border-gray-700 bg-gray-800/50 px-4 py-3 text-left text-sm font-medium text-gray-300 transition-all hover:border-[#e94f37]/50 hover:bg-gray-800 hover:text-white"
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-[#e94f37] font-semibold mr-1">
@@ -1101,7 +1101,7 @@ export default function SearchResultsPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8 pt-32 pb-10">
+      <div className="mx-auto max-w-7xl px-4 pb-10 pt-6 sm:px-6 sm:pt-32 lg:px-8">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
           <div className="w-full sm:w-auto text-left sm:text-left">
@@ -1150,12 +1150,12 @@ export default function SearchResultsPage() {
               />
             </Button>
 
-            <div className="flex gap-2 mt-2 sm:mt-0">
+            <div className="mt-2 flex max-w-full gap-2 overflow-x-auto pb-1 mobile-native-scroll sm:mt-0 sm:overflow-visible sm:pb-0">
               {(["all", "movie", "tv", "person"] as const).map((type) => (
                 <Badge
                   key={type}
                   variant={filterType === type ? "default" : "outline"}
-                  className={`cursor-pointer transition-all duration-200 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 ${filterType === type
+                  className={`min-h-10 shrink-0 cursor-pointer transition-all duration-200 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg flex items-center gap-2 ${filterType === type
                     ? FILTER_CHIP_ACTIVE
                     : FILTER_CHIP
                     }`}
@@ -1196,7 +1196,7 @@ export default function SearchResultsPage() {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.28 }}
-              className="mb-6 rounded-2xl border border-white/10 bg-[#101010]/95 p-4 sm:p-5 shadow-sm"
+              className="mb-6 max-h-[72svh] overflow-y-auto rounded-2xl border border-white/10 bg-[#101010]/95 p-3 shadow-sm mobile-native-scroll sm:max-h-none sm:p-5"
             >
               <div className="mb-5 flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -1376,7 +1376,7 @@ export default function SearchResultsPage() {
                       </Badge>
                     )}
                   </label>
-                  <div className="grid max-h-52 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4">
+                  <div className="grid max-h-52 grid-cols-2 gap-2 overflow-y-auto pr-1 mobile-native-scroll min-[430px]:grid-cols-3 sm:grid-cols-4">
                     {availableGenres.map((genre) => {
                       const isSelected = selectedGenres.includes(genre);
                       return (
@@ -1405,7 +1405,7 @@ export default function SearchResultsPage() {
                       </Badge>
                     )}
                   </label>
-                  <div className="grid max-h-52 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
+                  <div className="grid max-h-52 grid-cols-1 gap-2 overflow-y-auto pr-1 mobile-native-scroll min-[430px]:grid-cols-2 sm:grid-cols-3">
                     {availableCountries.map((country) => {
                       const isSelected = selectedCountries.includes(country.code);
                       return (

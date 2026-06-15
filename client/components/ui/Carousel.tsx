@@ -74,14 +74,14 @@ export const Carousel = ({ items, CardComponent }: CarouselProps) => {
             <div
                 className={
                     isMobile
-                        ? "flex gap-4 overflow-x-auto  scrollbar-hide"
+                        ? "-mx-1 flex gap-3 overflow-x-auto px-1 pb-3 mobile-native-scroll"
                         : "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5"
                 }
             >
                 {visibleItems.map(item => (
                     <div
                         key={item.id}
-                        className={isMobile ? "flex-shrink-0 w-[140px] sm:w-[160px] md:w-[180px]" : ""}
+                        className={isMobile ? "w-[42vw] min-w-[148px] max-w-[180px] flex-shrink-0" : ""}
                     >
                         <CardComponent show={item} />
                     </div>

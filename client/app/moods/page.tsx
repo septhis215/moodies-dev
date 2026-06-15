@@ -415,7 +415,7 @@ export default function MoodDiscoveryWheel() {
   const highRatedCount = recommendations.filter((item) => Number(item.voteAverage ?? 0) >= 7).length;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-black px-4 pb-10 pt-48 text-white sm:px-6 sm:pt-32 lg:px-8">
+    <main className="min-h-screen overflow-hidden bg-black px-4 pb-10 pt-6 text-white sm:px-6 sm:pt-32 lg:px-8">
       <section className="relative border-b border-white/10">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(233,79,55,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.07),transparent_30%),linear-gradient(180deg,#060606_0%,#000_72%)]" />
         <div className="mx-auto max-w-7xl">
@@ -430,7 +430,7 @@ export default function MoodDiscoveryWheel() {
               </p>
             </div>
 
-            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
+            <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0">
               {moodClusters.map((cluster) => {
                 const isActive = cluster.id === activeClusterId;
                 return (
@@ -480,7 +480,7 @@ export default function MoodDiscoveryWheel() {
               <div className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
                 Related moods
               </div>
-              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-1 [&::-webkit-scrollbar]:hidden">
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-1">
                 {activeMoods.map((mood) => {
                   const isSelected = mood.id === selectedMoodId;
                   return (
@@ -796,7 +796,7 @@ export default function MoodDiscoveryWheel() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="max-h-[620px] space-y-3 overflow-y-auto pr-1"
+                  className="max-h-[620px] space-y-3 overflow-y-auto pr-1 mobile-native-scroll"
                 >
                   {recommendations.map((rec, index) => (
                     <motion.a

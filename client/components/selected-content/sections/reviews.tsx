@@ -206,7 +206,7 @@ export default function ReviewsSection({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="md:hidden bg-white/[0.04] text-white/70 rounded-xl px-3 py-1.5 text-xs border border-white/[0.09] outline-none cursor-pointer"
+              className="min-h-10 bg-white/[0.04] text-white/70 rounded-xl px-3 py-1.5 text-xs border border-white/[0.09] outline-none cursor-pointer md:hidden"
             >
               <option value="latest">Latest</option>
               <option value="highest">Highest</option>
@@ -215,7 +215,7 @@ export default function ReviewsSection({
 
             <button
               onClick={openModal}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/[0.04] border border-[#e94f37]/40 text-[#e94f37] text-xs font-semibold hover:bg-[#e94f37]/[0.10] hover:border-[#e94f37]/70 active:scale-95 transition-all duration-150 cursor-pointer"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-[#e94f37]/40 bg-white/[0.04] px-3.5 py-1.5 text-xs font-semibold text-[#e94f37] transition-all duration-150 hover:border-[#e94f37]/70 hover:bg-[#e94f37]/[0.10] active:scale-95 cursor-pointer"
             >
               <PenSquare size={11} strokeWidth={2.5} />
               Write a Review
@@ -431,7 +431,7 @@ function ReviewModal({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[1000] flex items-end justify-center p-3 sm:items-center sm:p-4"
       style={{ background: "rgba(8, 10, 22, 0.90)", backdropFilter: "blur(20px)" }}
       onClick={onClose}
     >

@@ -1107,7 +1107,7 @@ export default function CelebrityDetailPage({
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-black/90" />
         </div>
 
-        <main className="relative mx-auto max-w-7xl px-4 pb-20 pt-24 sm:px-6 lg:pt-28">
+        <main className="relative mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 sm:pb-20 sm:pt-24 lg:pt-28">
           <header className="grid gap-4 rounded-[2rem] border border-white/10 bg-black/45 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-5 lg:grid-cols-[190px_minmax(0,1fr)_300px] xl:grid-cols-[210px_minmax(0,1fr)_320px]">
             <motion.div
               initial={{ opacity: 0, y: 18 }}
@@ -2030,14 +2030,14 @@ export default function CelebrityDetailPage({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/90 p-3 backdrop-blur-md sm:p-6"
+            className="fixed inset-0 z-[1000] flex items-end justify-center overflow-hidden bg-black/90 p-3 backdrop-blur-md sm:items-center sm:p-6"
             onClick={() => setSelectedVideo(null)}
           >
             <motion.div
               initial={{ scale: 0.96, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.96, opacity: 0 }}
-              className="relative w-full max-w-5xl pt-12 sm:pt-0"
+              className="relative w-full max-w-5xl sm:pt-0"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl shadow-black/60 ring-1 ring-white/5 sm:rounded-3xl">
@@ -2084,14 +2084,14 @@ export default function CelebrityDetailPage({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur"
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 p-3 backdrop-blur sm:p-4"
             onClick={() => setSelectedImage(null)}
           >
             <motion.div
               initial={{ scale: 0.96, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.96, opacity: 0 }}
-              className="relative max-h-[86vh] w-full max-w-4xl"
+              className="relative max-h-[86svh] w-full max-w-4xl"
               onClick={(event) => event.stopPropagation()}
             >
               <button
@@ -2101,7 +2101,7 @@ export default function CelebrityDetailPage({
               >
                 <X className="h-5 w-5" />
               </button>
-              <div className="relative h-[80vh] w-full">
+              <div className="relative h-[78svh] w-full sm:h-[80vh]">
                 <Image
                   src={selectedImage}
                   alt={`${person.name} enlarged`}

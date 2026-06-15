@@ -394,7 +394,7 @@ export default function WatchlistPage() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto w-full max-w-7xl px-6 sm:px-12 py-16">
+      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-8 sm:py-16 lg:px-12">
         {/* Header */}
         <div className="mt-10 mb-12 relative overflow-hidden">
           {/* Ghost watermark */}
@@ -681,7 +681,7 @@ function FilterBar({
       </button>
 
       {open && (
-        <div className="mt-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.07] grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="mt-3 grid grid-cols-1 gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 sm:grid-cols-4 sm:gap-4 sm:p-4">
           <FilterInput
             label="Year from"
             value={yearMin}
@@ -717,7 +717,7 @@ function FilterBar({
             placeholder="0 – 10"
           />
           {hasActiveFilters && (
-            <div className="col-span-2 sm:col-span-4 flex justify-end pt-1">
+            <div className="sm:col-span-4 flex justify-end pt-1">
               <button
                 onClick={() => {
                   onYearMin("");
@@ -778,7 +778,7 @@ function ViewMore({ onClick, count }: { onClick: () => void; count: number }) {
     <div className="mt-8 flex justify-center">
       <button
         onClick={onClick}
-        className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white/[0.05] border border-white/[0.1] text-white/60 text-sm font-medium hover:bg-white/[0.08] hover:text-white/90 hover:border-white/[0.2] transition-all"
+        className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.05] px-4 py-2.5 text-sm font-medium text-white/60 transition-all hover:border-white/[0.2] hover:bg-white/[0.08] hover:text-white/90 sm:px-6"
       >
         <span>View {count} more</span>
         <svg
@@ -837,7 +837,7 @@ function Section({
 
 function Grid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {children}
     </div>
   );

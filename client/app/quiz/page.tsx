@@ -443,7 +443,7 @@ export default function MovieQuizPage() {
     };
 
     return (
-        <main className="relative min-h-screen overflow-hidden bg-black px-4 pb-10 pt-28 text-white sm:px-6 sm:pt-32 lg:px-8">
+        <main className="relative min-h-screen overflow-hidden bg-black px-4 pb-10 pt-6 text-white sm:px-6 sm:pt-32 lg:px-8">
             <div className="pointer-events-none absolute inset-0">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(233,79,55,0.18),transparent_32%),radial-gradient(circle_at_88%_18%,rgba(34,211,238,0.10),transparent_28%),linear-gradient(180deg,#050505_0%,#000_70%)]" />
                 <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(255,255,255,0.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:42px_42px]" />
@@ -463,10 +463,10 @@ export default function MovieQuizPage() {
                                 <MoodMascot name="happy" size="xs" />
                                 Personality quiz
                             </div>
-                            <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl">
+                            <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-tight text-white sm:text-6xl">
                                 Let Moodies read the room before you pick.
                             </h1>
-                            <p className="mt-5 max-w-2xl text-base leading-7 text-zinc-400 sm:text-lg">
+                            <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-400 sm:mt-5 sm:text-lg sm:leading-7">
                                 Answer five quick prompts and the mascot will build a viewing profile from your mood,
                                 genre appetite, and movie-versus-series energy.
                             </p>
@@ -780,7 +780,7 @@ export default function MovieQuizPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+                        className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center sm:p-4"
                         onClick={() => setSelectedMovie(null)}
                     >
                         <motion.div
@@ -789,7 +789,7 @@ export default function MovieQuizPage() {
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: 18, scale: 0.98 }}
                             transition={{ type: "spring", stiffness: 320, damping: 30 }}
-                            className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl"
+                            className="relative flex max-h-[88svh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl sm:max-h-[92vh]"
                             onClick={(event) => event.stopPropagation()}
                             role="dialog"
                             aria-modal="true"
@@ -819,7 +819,7 @@ export default function MovieQuizPage() {
                                 </button>
                             </div>
 
-                            <div className="-mt-20 grid min-h-0 gap-6 overflow-y-auto p-5 sm:grid-cols-[180px_minmax(0,1fr)] sm:p-7">
+                            <div className="-mt-14 grid min-h-0 gap-5 overflow-y-auto p-4 mobile-native-scroll sm:-mt-20 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-6 sm:p-7">
                                 <Link href={getDetailUrl(selectedMovie)} className="relative z-10 mx-auto block w-36 overflow-hidden rounded-lg shadow-2xl sm:mx-0 sm:w-full">
                                     <Image
                                         src={getPosterSrc(selectedMovie)}
@@ -830,7 +830,7 @@ export default function MovieQuizPage() {
                                     />
                                 </Link>
 
-                                <div className="relative z-10 min-w-0 pt-16 sm:pt-20">
+                                <div className="relative z-10 min-w-0 pt-12 sm:pt-20">
                                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                         <div className="min-w-0">
                                             <h2 id="movie-title" className="text-3xl font-black leading-tight text-white sm:text-4xl">

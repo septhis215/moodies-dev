@@ -568,14 +568,14 @@ export default function ProfilePage() {
         <main className="min-h-screen bg-black text-white pb-8">
             <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(233,79,55,0.18),transparent_32%),radial-gradient(circle_at_88%_12%,rgba(255,255,255,0.07),transparent_24%),linear-gradient(180deg,#050505_0%,#000_58%)]" />
             <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,0.65)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.65)_1px,transparent_1px)] [background-size:44px_44px]" />
-            <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-8 sm:py-24 lg:px-10">
+            <div className="relative mx-auto w-full max-w-7xl px-4 py-8 sm:px-8 sm:py-24 lg:px-10">
                 <section className="relative mb-6 overflow-hidden border-b border-white/10 pb-8 sm:mb-8 sm:pb-10">
                     <div className="pointer-events-none absolute right-0 top-0 hidden h-72 w-72 opacity-20 sm:block">
                         <Image src={MASCOT_SRC} alt="" fill sizes="288px" className="object-contain" priority />
                     </div>
 
-                    <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
-                        <div className="flex flex-col gap-5 sm:flex-row sm:items-end">
+                    <div className="relative grid gap-6 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-5">
                             <motion.div
                                 initial={{ scale: 0.92, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
@@ -613,7 +613,7 @@ export default function ProfilePage() {
                                         </span>
                                     )}
                                 </div>
-                                <h1 className="break-words text-4xl font-black tracking-tight sm:text-6xl">
+                                <h1 className="break-words text-3xl font-black tracking-tight sm:text-6xl">
                                     {user?.name || user?.username || "Your Profile"}
                                 </h1>
                                 <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/55">
@@ -623,7 +623,7 @@ export default function ProfilePage() {
                                     <span className="text-white/18">/</span>
                                     <span>{profileCompletion}% complete</span>
                                 </div>
-                                <p className="mt-4 max-w-2xl text-sm leading-6 text-white/58 sm:text-base">
+                                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58 sm:mt-4 sm:text-base">
                                     A living read of what you save, rate, and return to, tuned for mood-first discovery.
                                 </p>
                             </div>
@@ -646,7 +646,7 @@ export default function ProfilePage() {
                             </div>
                             <div className="mt-4 grid grid-cols-3 gap-2">
                                 <button
-                                    className="inline-flex h-10 items-center justify-center rounded-xl bg-[#e94f37] text-sm font-semibold text-white transition hover:bg-[#ff5746]"
+                                    className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#e94f37] text-sm font-semibold text-white transition hover:bg-[#ff5746]"
                                     onClick={() => {
                                         setProfileName(user?.name ?? user?.username ?? "");
                                         setProfileUsername(user?.username ?? "");
@@ -657,11 +657,11 @@ export default function ProfilePage() {
                                 >
                                     <Settings className="h-4 w-4" />
                                 </button>
-                                <Link href="/settings" className="inline-flex h-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/[0.08] hover:text-white" title="Settings">
+                                <Link href="/settings" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/[0.08] hover:text-white" title="Settings">
                                     <Shield className="h-4 w-4" />
                                 </Link>
                                 <button
-                                    className="inline-flex h-10 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/5 text-red-300 transition hover:bg-red-500/10"
+                                    className="inline-flex min-h-11 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/5 text-red-300 transition hover:bg-red-500/10"
                                     onClick={logoutSilent}
                                     title="Log out"
                                 >
@@ -754,7 +754,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Tabs – comfortable & touch-friendly */}
-                <div className="mb-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.035] p-1.5 sm:mb-8 sm:gap-2">
+                <div className="mb-6 flex gap-1.5 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.035] p-1.5 mobile-native-scroll sm:mb-8 sm:gap-2">
                     {(["profile", "watchlist", "reviews"] as const).map((t) => (
                         <button
                             key={t}
@@ -1382,14 +1382,14 @@ export default function ProfilePage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                            className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/80 p-3 backdrop-blur-sm sm:items-center sm:p-4"
                             onClick={() => setMobileFilterOpen(false)}
                         >
                             <motion.div
                                 initial={{ y: "100%" }}
                                 animate={{ y: 0 }}
                                 exit={{ y: "100%" }}
-                                className="w-full max-w-lg bg-zinc-900 rounded-t-2xl sm:rounded-2xl p-6 border border-white/10"
+                                className="max-h-[86svh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-white/10 bg-zinc-900 p-5 mobile-native-scroll sm:rounded-2xl sm:p-6"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <div className="flex items-center justify-between mb-6">

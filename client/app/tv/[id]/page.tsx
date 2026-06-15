@@ -195,29 +195,29 @@ export default async function TvPage({
       />
 
       <div className="min-h-screen bg-black text-slate-100">
-        <div className="max-w-7xl mx-auto px-6 py-10 space-y-14">
+        <div className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:space-y-14 sm:px-6">
           {/* Seasons / Episodes — placed above details as requested */}
 
           <TvSeasonsEpisodes seasons={seasonsProp} />
 
-          <hr className="border-white/8 my-14" />
+          <hr className="my-8 border-white/8 sm:my-14" />
           <ImageVideoCarousel
             posters={images.posters}
             backdrops={images.backdrops}
             videos={videos.videos}
           />
 
-          <hr className="border-white/8 my-14" />
+          <hr className="my-8 border-white/8 sm:my-14" />
           <ExtraDetails data={data} contentId={id} />
 
-          <hr className="border-white/8 my-14" />
+          <hr className="my-8 border-white/8 sm:my-14" />
           <ReviewsSection
             reviews={reviews.reviews}
             contentId={id}
             contentType="tv"
           />
 
-          <hr className="border-white/8 my-14" />
+          <hr className="my-8 border-white/8 sm:my-14" />
           <CommonCardCarousel
             title="Something Similar"
             subtitle="TV shows you may also enjoy"

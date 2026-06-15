@@ -181,16 +181,16 @@ export default function CelebSection() {
 
   if (loading) {
     return (
-      <section className="relative w-full px-6 py-16 mx-auto">
+      <section className="relative mx-auto w-full px-4 py-12 sm:px-6 sm:py-16">
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse space-y-8">
             <div className="space-y-4">
               <div className="h-8 bg-gray-700 rounded-lg w-64"></div>
-              <div className="h-4 bg-gray-800 rounded w-96"></div>
+              <div className="h-4 w-full max-w-96 rounded bg-gray-800"></div>
             </div>
             <div className="flex gap-6 overflow-hidden">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex-shrink-0 w-72 h-96 bg-gray-800 rounded-2xl"></div>
+                <div key={i} className="h-80 w-[72vw] max-w-72 flex-shrink-0 rounded-2xl bg-gray-800 sm:h-96"></div>
               ))}
             </div>
           </div>
@@ -201,7 +201,7 @@ export default function CelebSection() {
 
   if (error) {
     return (
-      <section className="relative w-full px-6 py-16 mx-auto">
+      <section className="relative mx-auto w-full px-4 py-12 sm:px-6 sm:py-16">
         <div className="max-w-7xl mx-auto text-center">
           <div className="p-8 bg-gray-800/50 rounded-2xl border border-gray-700">
             <p className="text-gray-400 text-lg mb-4">{error}</p>
@@ -217,7 +217,7 @@ export default function CelebSection() {
   if (!celebs.length) return null;
 
   return (
-    <section id="celebs" className="relative w-full py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+    <section id="celebs" className="relative mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-32">
       <div className="mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10">
           <h2
@@ -238,18 +238,18 @@ export default function CelebSection() {
 
         <div className="relative group/carousel">
           {canScrollLeft && (
-            <button onClick={scrollLeft} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-50 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10" aria-label="Previous celebrities">
+            <button onClick={scrollLeft} className="absolute left-0 top-1/2 z-50 hidden h-12 w-12 -translate-x-4 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] opacity-0 shadow-2xl ring-2 ring-white/10 transition-all hover:scale-110 group-hover/carousel:opacity-100 md:flex" aria-label="Previous celebrities">
               <ChevronLeft className="w-6 h-6" />
             </button>
           )}
 
           {canScrollRight && (
-            <button onClick={scrollRight} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-50 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10" aria-label="Next celebrities">
+            <button onClick={scrollRight} className="absolute right-0 top-1/2 z-50 hidden h-12 w-12 translate-x-4 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] opacity-0 shadow-2xl ring-2 ring-white/10 transition-all hover:scale-110 group-hover/carousel:opacity-100 md:flex" aria-label="Next celebrities">
               <ChevronRight className="w-6 h-6" />
             </button>
           )}
 
-          <motion.div ref={containerRef} className="flex gap-6 overflow-x-auto scroll-smooth scrollbar-hide pb-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }} style={{ WebkitOverflowScrolling: "touch" }}>
+          <motion.div ref={containerRef} className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-3 mobile-native-scroll sm:mx-0 sm:gap-6 sm:px-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }} style={{ WebkitOverflowScrolling: "touch" }}>
             {celebs.map((celeb) => {
               const notableWorks = celeb.known_for?.slice(0, 2) ?? [];
 
