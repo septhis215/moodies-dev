@@ -868,7 +868,7 @@ export function NavbarComponent() {
 
       {/* MOBILE NAV */}
       <MobileNav visible>
-        <MobileNavHeader className="w-full px-4">
+        <MobileNavHeader className="w-full px-1">
           <div className="flex items-center">
             <NavbarLogo className="mr-0" />
           </div>

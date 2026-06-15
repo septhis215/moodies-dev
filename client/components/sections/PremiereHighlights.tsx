@@ -64,6 +64,7 @@ export default function PremiereHighlights({
   const uniqueTrailers = Array.from(
     new Map(trailers.map((item) => [item.id, item])).values()
   );
+  const mobileItems = uniqueTrailers;
 
   useEffect(() => {
     const updateLayout = () => {
@@ -216,7 +217,7 @@ export default function PremiereHighlights({
         {canScrollLeft && (
           <button
             onClick={scrollLeft}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 z-50 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-md hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all opacity-0 group-hover/carousel:opacity-100 shadow-xl border border-white/20"
+            className="absolute left-0 top-1/2 z-50 hidden h-12 w-12 -translate-x-6 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white opacity-0 shadow-xl backdrop-blur-md transition-all hover:bg-white/20 group-hover/carousel:opacity-100 lg:flex"
             aria-label="Previous"
           >
             <ChevronLeft className="w-6 h-6" />
@@ -226,12 +227,85 @@ export default function PremiereHighlights({
         {canScrollRight && (
           <button
             onClick={scrollRight}
-            className="absolute  right-0 top-1/2 translate-x-6 -translate-y-1/2 z-50 w-12 h-12 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-all opacity-0 group-hover/carousel:opacity-100 shadow-2xl ring-2 ring-white/10"
+            className="absolute right-0 top-1/2 z-50 hidden h-12 w-12 translate-x-6 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] opacity-0 shadow-2xl ring-2 ring-white/10 backdrop-blur-sm transition-all hover:scale-110 group-hover/carousel:opacity-100 lg:flex"
             aria-label="Next"
           >
             <ChevronRight className="w-6 h-6" />
           </button>
         )}
+
+        <div
+          className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-3 [overscroll-behavior-x:contain] [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:hidden [&::-webkit-scrollbar]:hidden"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          {mobileItems.map((item, index) => (
+            <div
+              key={item.id}
+              className="relative w-[82vw] max-w-[360px] flex-[0_0_auto] cursor-pointer group sm:w-[46vw]"
+              onClick={() => handleSelectTrailer(item)}
+            >
+              <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-gray-900 shadow-2xl">
+                <Image
+                  src={
+                    item.backdrop_path
+                      ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
+                      : "/placeholder-backdrop.svg"
+                  }
+                  alt={item.title}
+                  fill
+                  sizes="(max-width: 640px) 82vw, 46vw"
+                  className="object-cover"
+                  priority={index === 0}
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent" />
+
+                <div className="absolute left-3 right-3 top-3 z-20 flex items-start justify-between gap-2">
+                  <div
+                    className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-medium shadow-lg backdrop-blur-md ${
+                      item.type === "tv"
+                        ? "border-blue-400/50 bg-blue-500/90 text-white"
+                        : "border-purple-400/50 bg-purple-500/90 text-white"
+                    }`}
+                  >
+                    {item.type === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                    {item.type === "tv" ? "Series" : "Movie"}
+                  </div>
+
+                  {item.vote_average && item.vote_average > 0 && (
+                    <div className="flex items-center gap-1 rounded-lg border border-white/10 bg-black/60 px-2 py-1 text-xs font-medium text-white backdrop-blur-md">
+                      <Star size={12} fill="white" />
+                      <span>{item.vote_average.toFixed(1) ?? "New"}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="absolute inset-0 z-10 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-2xl backdrop-blur-sm">
+                    <Play size={18} className="ml-0.5 text-black" fill="black" />
+                  </div>
+                </div>
+
+                <div className="absolute bottom-0 left-0 right-0 z-10 p-4">
+                  <h3 className="mb-1.5 line-clamp-2 text-base font-bold text-white">
+                    {item.title}
+                  </h3>
+
+                  <div className="flex min-w-0 items-center gap-2 text-xs text-gray-300">
+                    {item.release_date && (
+                      <span className="shrink-0 font-medium">
+                        {new Date(item.release_date).getFullYear()}
+                      </span>
+                    )}
+                    {item.genres && item.genres.length > 0 && (
+                      <span className="truncate">{item.genres.slice(0, 2).join(", ")}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
 
         <motion.div
           drag="x"
@@ -244,7 +318,7 @@ export default function PremiereHighlights({
               else if (swipe < 0 && canScrollRight) scrollRight();
             }
           }}
-          className="grid grid-cols-1 gap-4 touch-pan-y lg:grid-cols-3 lg:gap-6"
+          className="hidden touch-pan-y grid-cols-1 gap-4 lg:grid lg:grid-cols-3 lg:gap-6"
         >
           {" "}
           <AnimatePresence mode="popLayout">

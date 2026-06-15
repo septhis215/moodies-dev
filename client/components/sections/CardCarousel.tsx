@@ -461,7 +461,7 @@ export default function CardCarousel<T extends MovieLike>({
                                 onClick={(e) => handleWatchlistToggle(movie, e)}
                                 disabled={isLoading}
                                 className={`
-              p-1.5 sm:p-2 rounded-full shadow-lg backdrop-blur-md border transition-all duration-200
+              flex min-h-9 min-w-9 items-center justify-center rounded-full border p-2 shadow-lg backdrop-blur-md transition-all duration-200 sm:min-h-8 sm:min-w-8 sm:p-2
               ${inWatchlist
                                     ? "bg-green-500/90 border-green-400/50 text-white hover:bg-green-600/90"
                                     : "bg-black/50 border-white/30 text-white hover:bg-black/70 hover:border-white/50"
@@ -478,17 +478,17 @@ export default function CardCarousel<T extends MovieLike>({
                                       repeat: Infinity,
                                       ease: "linear",
                                     }}
-                                    className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full"
+                                    className="h-4 w-4 rounded-full border-2 border-white border-t-transparent"
                                   />
                                 ) : inWatchlist ? (
                                   <BookmarkCheck
-                                    size={14}
-                                    className="sm:w-4 sm:h-4"
+                                    size={16}
+                                    className="h-4 w-4"
                                   />
                                 ) : (
                                   <Bookmark
-                                    size={14}
-                                    className="sm:w-4 sm:h-4"
+                                    size={16}
+                                    className="h-4 w-4"
                                   />
                                 )}
                               </motion.button>

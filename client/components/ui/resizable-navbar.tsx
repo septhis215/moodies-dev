@@ -7,7 +7,7 @@ import {
 } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import { createPortal } from "react-dom";
 
 interface NavbarProps {
@@ -52,9 +52,9 @@ export const Navbar = ({ children, className }: NavbarProps) => {
     <div
       ref={ref}
       className={cn(
-        "absolute inset-x-0 top-0 z-[999] w-full flex items-center px-4",
-        "backdrop-blur-[4px] bg-gradient-to-b from-black/40 via-black/20 to-transparent",
-        "h-16 md:h-24",
+        "absolute inset-x-0 top-0 z-[999] flex w-full items-start px-0 lg:items-center lg:px-4",
+        "bg-gradient-to-b from-black/50 via-black/20 to-transparent backdrop-blur-[3px] lg:backdrop-blur-[4px]",
+        "h-14 md:h-24",
         "lg:[mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]",
         className
       )}
@@ -112,14 +112,14 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
   return (
     <motion.div
       animate={{
-        backdropFilter: visible ? "blur(10px)" : "none",
+        backdropFilter: visible ? "blur(12px)" : "none",
         boxShadow: visible
-          ? "0 0 12px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08), 0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset"
+          ? "0 1px 0 rgba(255,255,255,0.08) inset, 0 10px 28px rgba(0,0,0,0.24)"
           : "none",
-        width: visible ? "90%" : "100%",
-        paddingRight: visible ? "12px" : "0px",
-        paddingLeft: visible ? "12px" : "0px",
-        borderRadius: visible ? "4px" : "2rem",
+        width: "100%",
+        paddingRight: visible ? "10px" : "0px",
+        paddingLeft: visible ? "10px" : "0px",
+        borderRadius: "0px",
         y: 0,
       }}
       transition={{
@@ -128,8 +128,9 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         damping: 50,
       }}
       className={cn(
-        "fixed top-3 left-0 right-0 z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-3 py-3 lg:hidden",
-        visible && "bg-transparent dark:bg-transparent",
+        "fixed inset-x-0 top-0 z-50 flex w-full max-w-none flex-col items-center justify-between border-b border-white/10 bg-black/42 py-2 lg:hidden",
+        "pt-[max(0.5rem,env(safe-area-inset-top))]",
+        visible && "bg-black/42 dark:bg-black/42",
         className
       )}
     >
@@ -184,7 +185,7 @@ export const MobileNavMenu = ({
           className={cn(
             "absolute inset-0 z-[9999] flex flex-col overflow-auto",
             "bg-[linear-gradient(180deg,rgba(6,6,8,0.98),rgba(0,0,0,0.95))] backdrop-blur-md",
-            "p-6",
+            "px-4 pb-6 pt-[max(1rem,env(safe-area-inset-top))] sm:p-6",
             className
           )}
           style={{
@@ -223,8 +224,9 @@ export const MobileNavToggle = ({
   return (
     <button
       onClick={onClick}
-      className="ml-2 rounded-md border border-[#e94f37]/40 bg-[#e94f37]/10 px-3 py-2 text-white hover:bg-[#e94f37]/20 focus:outline-none focus:ring-2 focus:ring-[#e94f37]"
-      aria-label="Open menu"
+      className="ml-1 grid min-h-10 min-w-10 place-items-center rounded-md border border-[#e94f37]/40 bg-[#e94f37]/10 px-2.5 py-2 text-white hover:bg-[#e94f37]/20 focus:outline-none focus:ring-2 focus:ring-[#e94f37]"
+      aria-label={isOpen ? "Close menu" : "Open menu"}
+      aria-expanded={isOpen}
     >
       <IconMenu2 className="h-6 w-6 text-[#e94f37]" />
     </button>
@@ -246,6 +248,7 @@ export const NavbarLogo = ({ className }: { className?: string }) => {
         alt="logo"
         width={100}
         height={100}
+        className="h-9 w-9 object-contain lg:h-[100px] lg:w-[100px]"
       />{" "}
       {/* <span className="font-medium text-white">Moodies</span>{" "} */}
     </Link>
