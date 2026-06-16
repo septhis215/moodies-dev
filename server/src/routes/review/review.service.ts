@@ -304,6 +304,95 @@ export class ReviewService {
     );
   }
 
+  async getTVCriticsCorner(limit = 6) {
+    const safeLimit = Math.max(1, Math.min(Number(limit) || 6, 24));
+    const poolSize = Math.max(safeLimit * 4, 24);
+
+    const reviews = await this.prisma.review.findMany({
+      where: {
+        mediaType: MediaType.TV,
+        status: { in: [ReviewStatus.PUBLISHED, ReviewStatus.FLAGGED] },
+        content: { not: '' },
+      },
+      take: poolSize,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    const randomizedReviews = reviews
+      .sort(() => Math.random() - 0.5)
+      .slice(0, safeLimit);
+
+    if (randomizedReviews.length === 0) return [];
+
+    const cachedDetails = await this.prisma.mediaDetail.findMany({
+      where: {
+        mediaType: MediaType.TV,
+        tmdbId: { in: randomizedReviews.map((review) => review.tmdbId) },
+      },
+    });
+    const detailsByTmdbId = new Map(
+      cachedDetails.map((detail) => [detail.tmdbId, detail]),
+    );
+
+    return Promise.all(
+      randomizedReviews.map(async (review) => {
+        const publicReview = new ReviewEntity(review).toPublic();
+        const cachedDetail = detailsByTmdbId.get(review.tmdbId);
+        const cachedPayload = cachedDetail?.payload as
+          | {
+              info?: {
+                name?: string | null;
+                original_name?: string | null;
+                title?: string | null;
+                poster_path?: string | null;
+                backdrop_path?: string | null;
+                first_air_date?: string | null;
+              };
+            }
+          | undefined;
+        const cachedInfo = cachedPayload?.info;
+        const fallbackTV = cachedDetail
+          ? null
+          : await this.tmdbClient
+              .tmdb(`tv/${review.tmdbId}?language=en-US`)
+              .catch(() => null);
+
+        return {
+          ...publicReview,
+          tv: {
+            id: review.tmdbId,
+            title:
+              cachedDetail?.title ||
+              cachedInfo?.name ||
+              cachedInfo?.original_name ||
+              cachedInfo?.title ||
+              fallbackTV?.name ||
+              fallbackTV?.original_name ||
+              `Series #${review.tmdbId}`,
+            posterPath:
+              cachedInfo?.poster_path ?? fallbackTV?.poster_path ?? null,
+            backdropPath:
+              cachedInfo?.backdrop_path ?? fallbackTV?.backdrop_path ?? null,
+            firstAirDate:
+              cachedInfo?.first_air_date ?? fallbackTV?.first_air_date ?? null,
+          },
+        };
+      }),
+    );
+  }
+
   async getCommunityPicks(limit = 18) {
     const safeLimit = Math.max(1, Math.min(Number(limit) || 18, 36));
     const poolSize = Math.max(safeLimit * 4, 36);

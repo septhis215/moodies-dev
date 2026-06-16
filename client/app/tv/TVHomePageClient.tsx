@@ -6,6 +6,7 @@ import type { ReviewItem } from "@/components/sections/CommunityPicks";
 import type { CommunityPulseData } from "@/types/communityPulse";
 import {
   Star,
+  Heart,
   Info,
   ChevronRight,
   Flame,
@@ -13,6 +14,7 @@ import {
   Bookmark,
   Sparkles,
   BookmarkCheck,
+  MessageSquare,
   Tv,
 } from "lucide-react";
 import Image from "next/image";
@@ -41,6 +43,7 @@ export default function TVHomePageClient({
   newReleaseTV,
   airingToday = [],
   airingThisWeek = [],
+  TVReview = [],
   moods,
   communityPulse,
 }: {
@@ -852,6 +855,117 @@ export default function TVHomePageClient({
           </section>
         )}
         <CommunityPulseSection data={communityPulse} mediaType="tv" />
+
+        {TVReview.length > 0 && (
+          <section
+            id="reviews"
+            className="relative overflow-hidden p-3 sm:p-10"
+          >
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(233,79,55,0.055),transparent_34%),radial-gradient(circle_at_86%_12%,rgba(255,255,255,0.045),transparent_24%)]" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/10" />
+
+            <div className="relative mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="relative mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-[#e94f37]/25 bg-[#e94f37]/10 text-[#ff8b78] shadow-xl shadow-black/20">
+                  <MessageSquare className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl">
+                    Critics Corner
+                  </h2>
+                  <p className="mt-1 max-w-2xl text-sm leading-5 text-zinc-400">
+                    Quick community takes paired with the series they reviewed.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1.5 text-xs font-bold text-white/75">
+                <Heart className="h-3.5 w-3.5 text-[#ff8b78]" />
+                {Math.min(TVReview.length, 6)} fresh takes
+              </div>
+            </div>
+
+            <div className="relative -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
+              {TVReview.slice(0, 6).map((review, idx) => {
+                const criticName =
+                  review.user?.name || review.name || "Moodies critic";
+                const criticHandle = review.user?.username || review.name;
+                const initial =
+                  criticName.trim().charAt(0).toUpperCase() || "M";
+                const showTitle =
+                  review.movieTitle ||
+                  review.title ||
+                  (review.tmdbId
+                    ? `Series #${review.tmdbId}`
+                    : "Series review");
+                const showPoster = review.moviePoster
+                  ? getPosterUrl(review.moviePoster)
+                  : "/placeholder-poster.svg";
+
+                return (
+                  <div
+                    key={`${review.user?.id || "critic"}-${review.tmdbId || idx}-${idx}`}
+                    className="group relative w-[80vw] max-w-[330px] shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-zinc-950/85 p-2.5 shadow-xl shadow-black/25 ring-1 ring-white/5 transition-all hover:border-[#e94f37]/35 hover:bg-zinc-950 sm:w-auto sm:max-w-none"
+                  >
+                    <div className="absolute inset-x-0 top-0 h-px bg-[#e94f37]/45" />
+
+                    <div className="mb-2.5 flex gap-2.5">
+                      <div className="relative h-[4.5rem] w-12 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10 sm:h-20 sm:w-14">
+                        <Image
+                          src={showPoster}
+                          alt={showTitle}
+                          fill
+                          sizes="64px"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <h3 className="line-clamp-2 text-sm font-black leading-tight text-white">
+                          {showTitle}
+                        </h3>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          {review.movieYear && (
+                            <span className="rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold text-zinc-300">
+                              {review.movieYear}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] font-black text-amber-200 ring-1 ring-amber-400/20">
+                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                            {review.rating?.toFixed(1) || "-"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-white/10 bg-black/25 p-2.5">
+                      <p className="line-clamp-3 text-sm leading-5 text-zinc-300">
+                        &ldquo;{review.quote || "No review available"}&rdquo;
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2">
+                      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#e94f37]/15 text-[11px] font-black text-white ring-1 ring-[#e94f37]/25">
+                        {initial}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-white">
+                          {criticName}
+                        </p>
+                        {criticHandle && (
+                          <p className="truncate text-[11px] font-medium text-zinc-500">
+                            @{criticHandle}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />
+            </div>
+          </section>
+        )}
 
         {NewTVTrailer?.length > 0 && (
           <ComingSoonSection

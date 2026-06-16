@@ -47,6 +47,11 @@ export class ReviewController {
     return this.reviewsService.getMovieCriticsCorner(limit);
   }
 
+  @Get('critics-corner/tv')
+  getTVCriticsCorner(@Query('limit') limit?: number) {
+    return this.reviewsService.getTVCriticsCorner(limit);
+  }
+
   @Get('community-picks')
   getCommunityPicks(@Query('limit') limit?: number) {
     return this.reviewsService.getCommunityPicks(limit);

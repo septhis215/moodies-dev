@@ -564,37 +564,34 @@ export default function MoviesHomePageClient({
         {popularMovies.length > 0 && (
           <section
             id="popular-movies"
-            className="relative overflow-hidden rounded-3xl border border-white/10 bg-neutral-950/80 p-4 shadow-2xl shadow-black/30 sm:p-6"
+            className="relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/80 p-3 shadow-2xl shadow-black/30"
           >
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(245,158,11,0.08),transparent_30%),radial-gradient(circle_at_78%_4%,rgba(233,79,55,0.09),transparent_25%),linear-gradient(180deg,rgba(255,255,255,0.035),transparent_36%)]" />
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/10" />
 
-            <div className="relative mb-5 flex flex-col gap-4 sm:mb-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-300 shadow-xl shadow-black/20 sm:h-12 sm:w-12">
-                  <Ticket className="h-5 w-5 sm:h-6 sm:w-6" />
+            <div className="relative mb-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-300 shadow-xl shadow-black/20">
+                  <Ticket className="h-5 w-5" />
                 </div>
 
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-300">
-                    Crowd magnets
-                  </p>
-                  <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl lg:text-4xl">
+                  <h2 className="mt-1 text-2xl font-black text-white sm:text-[1.65rem]">
                     Box Office Hits
                   </h2>
-                  <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-zinc-400">
+                  <p className="mt-1 max-w-2xl text-sm font-medium leading-5 text-zinc-400">
                     Big-screen picks pulling the strongest attention right now.
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <div className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-amber-200">
-                  Top {Math.min(popularMovies.length, 4)} ranked
+                <div className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.12em] text-amber-200">
+                  Top {Math.min(popularMovies.length, 5)} ranked
                 </div>
                 <Link
                   href="/movies/box-office"
-                  className="group inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-2 text-xs font-bold text-zinc-300 transition-colors hover:border-[#e94f37]/40 hover:text-white"
+                  className="group inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-1.5 text-xs font-bold text-zinc-300 transition-colors hover:border-[#e94f37]/40 hover:text-white"
                 >
                   View All
                   <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -602,13 +599,13 @@ export default function MoviesHomePageClient({
               </div>
             </div>
 
-            <div className="relative grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
+            <div className="relative grid grid-cols-1 items-stretch gap-3 lg:grid-cols-2">
               {popularMovies[0] && (
                 <Link
                   href={`/movies/${popularMovies[0].id}`}
-                  className="group lg:col-span-7"
+                  className="group flex min-w-0"
                 >
-                  <div className="relative min-h-[330px] overflow-hidden rounded-3xl border border-amber-300/15 bg-zinc-950 ring-1 ring-white/10 shadow-2xl shadow-black/30 sm:min-h-[380px] lg:min-h-[460px]">
+                  <div className="relative min-h-[250px] w-full overflow-hidden rounded-2xl border border-amber-300/15 bg-zinc-950 ring-1 ring-white/10 shadow-2xl shadow-black/30 sm:min-h-[300px] lg:min-h-[350px]">
                     <Image
                       src={getImageUrl(
                         popularMovies[0].backdrop_path ||
@@ -623,79 +620,84 @@ export default function MoviesHomePageClient({
                     <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.68),transparent_62%),radial-gradient(circle_at_18%_18%,rgba(245,158,11,0.22),transparent_30%)]" />
                     <div className="absolute inset-x-0 top-0 h-px bg-amber-200/25" />
 
-                    <div className="absolute left-4 top-4 flex items-center gap-2 rounded-2xl border border-amber-300/30 bg-black/60 px-3 py-2 text-amber-200 shadow-xl shadow-black/30 backdrop-blur sm:left-5 sm:top-5">
-                      <Ticket className="h-4 w-4" />
-                      <span className="text-xs font-black uppercase tracking-[0.14em]">
+                    <div className="absolute left-3 top-3 flex items-center gap-2 rounded-xl border border-amber-300/30 bg-black/60 px-2.5 py-1.5 text-amber-200 shadow-xl shadow-black/30 backdrop-blur sm:left-4 sm:top-4">
+                      <Ticket className="h-3.5 w-3.5" />
+                      <span className="text-[11px] font-black uppercase tracking-[0.14em]">
                         Weekend leader
                       </span>
                     </div>
 
-                    <div className="absolute right-4 top-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/35 bg-black/70 text-xl font-black text-amber-200 shadow-xl shadow-black/35 backdrop-blur transition-transform duration-300 group-hover:scale-105 sm:right-5 sm:top-5 sm:h-16 sm:w-16 sm:text-2xl">
+                    <div className="absolute right-3 top-3 flex h-12 w-12 items-center justify-center rounded-xl border border-amber-300/35 bg-black/70 text-lg font-black text-amber-200 shadow-xl shadow-black/35 backdrop-blur transition-transform duration-300 group-hover:scale-105 sm:right-4 sm:top-4 sm:h-14 sm:w-14 sm:text-xl">
                       #1
                     </div>
 
-                    <div className="absolute inset-x-0 bottom-0 p-4 sm:p-7">
-                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <div className="absolute inset-x-0 bottom-0 p-3.5 sm:p-4">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
                         <RatingBadge
                           rating={popularMovies[0].vote_average}
                           variant="colored"
                           size="md"
                         />
-                        <span className="rounded-full border border-white/10 bg-white/[0.08] px-3 py-1.5 text-xs font-bold text-zinc-200">
+                        <span className="rounded-full border border-white/10 bg-white/[0.08] px-2.5 py-1 text-xs font-bold text-zinc-200">
                           {popularMovies[0].release_date?.split("-")[0] ||
                             "TBA"}
                         </span>
                       </div>
 
-                      <h3 className="max-w-3xl text-2xl font-black leading-tight text-white transition-colors group-hover:text-[#ff8b78] sm:text-4xl lg:text-5xl">
+                      <h3 className="max-w-3xl text-2xl font-black leading-tight text-white transition-colors group-hover:text-[#ff8b78] sm:text-[1.7rem] lg:text-3xl">
                         {popularMovies[0].title}
                       </h3>
 
                       {popularMovies[0].overview && (
-                        <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-zinc-300 line-clamp-2 sm:text-base">
+                        <p className="mt-2 max-w-2xl text-sm font-medium leading-5 text-zinc-300 line-clamp-1 sm:line-clamp-2">
                           {popularMovies[0].overview}
                         </p>
                       )}
 
-                      <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-2 text-xs font-bold text-zinc-200 backdrop-blur sm:mt-5">
-                        <Ticket className="h-3.5 w-3.5 text-amber-300" />
-                        Current crowd-puller
+                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-2.5 py-1.5 text-xs font-bold text-zinc-200 backdrop-blur">
+                          <Ticket className="h-3.5 w-3.5 text-amber-300" />
+                          Current crowd-puller
+                        </span>
+                        <span className="inline-flex items-center rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1.5 text-xs font-bold text-amber-100 backdrop-blur">
+                          Rank #1
+                        </span>
                       </div>
                     </div>
                   </div>
                 </Link>
               )}
 
-              <div className="rounded-3xl border border-white/10 bg-black/25 p-3 ring-1 ring-white/[0.04] sm:p-4 lg:col-span-5">
-                <div className="mb-3 flex items-start justify-between gap-3 px-1">
+              <div className="flex min-w-0 flex-col rounded-2xl border border-white/10 bg-black/25 p-3 ring-1 ring-white/[0.04]">
+                <div className="mb-2 flex items-start justify-between gap-3 px-1 lg:min-h-[40px]">
                   <div>
                     <span className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-500">
                       Box office board
                     </span>
-                    <p className="mt-1 text-xs font-medium text-zinc-500">
+                    <p className="mt-0.5 hidden text-xs font-medium text-zinc-500 sm:block">
                       Fast-scan rankings for the next biggest crowd-pullers.
                     </p>
                   </div>
-                  <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-xs font-bold text-amber-200">
+                  <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[11px] font-bold text-amber-200">
                     Live list
                   </span>
                 </div>
 
-                <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 scroll-smooth lg:mx-0 lg:block lg:space-y-3 lg:overflow-visible lg:px-0 lg:pb-0">
-                  {popularMovies.slice(1, 6).map((movie, idx) => (
+                <div className="-mx-1 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-1 pb-2 scroll-smooth lg:mx-0 lg:grid lg:flex-1 lg:grid-rows-4 lg:gap-2 lg:overflow-visible lg:px-0 lg:pb-0">
+                  {popularMovies.slice(1, 5).map((movie, idx) => (
                     <Link
                       key={movie.id}
                       href={`/movies/${movie.id}`}
-                      className="group relative grid w-[82vw] max-w-[360px] shrink-0 snap-start grid-cols-[2.75rem_4.5rem_minmax(0,1fr)] gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-2.5 transition-all hover:border-amber-300/30 hover:bg-white/[0.06] sm:w-[340px] lg:w-auto lg:max-w-none lg:grid-cols-[3rem_5.25rem_minmax(0,1fr)]"
+                      className="group relative grid w-[76vw] max-w-[315px] shrink-0 snap-start grid-cols-[2.35rem_3.75rem_minmax(0,1fr)] gap-2 overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] p-2 transition-all hover:border-amber-300/30 hover:bg-white/[0.06] sm:w-[300px] lg:h-full lg:w-auto lg:max-w-none lg:grid-cols-[2.5rem_4.1rem_minmax(0,1fr)] lg:items-center"
                     >
-                      <div className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-amber-300/25 transition-colors group-hover:bg-[#e94f37]/70" />
-                      <div className="flex items-start justify-center pt-1">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-300/25 bg-amber-300/10 text-sm font-black text-amber-200 transition-transform duration-300 group-hover:scale-105">
+                      <div className="absolute inset-y-2.5 left-0 w-1 rounded-r-full bg-amber-300/25 transition-colors group-hover:bg-[#e94f37]/70" />
+                      <div className="flex items-start justify-center pt-1 lg:items-center lg:pt-0">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-300/25 bg-amber-300/10 text-xs font-black text-amber-200 transition-transform duration-300 group-hover:scale-105">
                           #{idx + 2}
                         </span>
                       </div>
 
-                      <div className="relative h-24 overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10 sm:h-28">
+                      <div className="relative h-[4.5rem] overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10 sm:h-[5.5rem] lg:h-full lg:min-h-[64px]">
                         <Image
                           src={getPosterUrl(movie.poster_path)}
                           alt={movie.title || ""}
@@ -705,11 +707,11 @@ export default function MoviesHomePageClient({
                         />
                       </div>
 
-                      <div className="min-w-0 py-1">
-                        <h3 className="line-clamp-2 text-sm font-black leading-tight text-white transition-colors group-hover:text-[#ff8b78] sm:text-base">
+                      <div className="flex min-w-0 flex-col justify-center py-0.5">
+                        <h3 className="line-clamp-2 text-sm font-black leading-tight text-white transition-colors group-hover:text-[#ff8b78]">
                           {movie.title}
                         </h3>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
                           <RatingBadge
                             rating={movie.vote_average}
                             variant="minimal"
@@ -718,6 +720,10 @@ export default function MoviesHomePageClient({
                           <span className="text-xs font-semibold text-zinc-500">
                             {movie.release_date?.split("-")[0] || "TBA"}
                           </span>
+                        </div>
+                        <div className="mt-2 hidden items-center justify-between border-t border-white/10 pt-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500 lg:flex">
+                          <span>Rank #{idx + 2}</span>
+                          <span className="text-amber-200/80">Box office</span>
                         </div>
                       </div>
                     </Link>
@@ -948,39 +954,35 @@ export default function MoviesHomePageClient({
         {movieReviews.length > 0 && (
           <section
             id="reviews"
-            className="relative overflow-hidden rounded-3xl border border-white/10 bg-neutral-950/80 p-4 shadow-2xl shadow-black/25 sm:p-6"
+            className="relative overflow-hidden p-3 sm:p-10"
           >
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(233,79,55,0.055),transparent_34%),radial-gradient(circle_at_86%_12%,rgba(255,255,255,0.045),transparent_24%)]" />
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/10" />
 
-            <div className="relative mb-6 flex flex-col gap-4 sm:mb-8 lg:flex-row lg:items-end lg:justify-between">
-              <div className="flex items-start gap-3 sm:gap-4">
+            <div className="relative mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
                 <div className="relative mt-1">
-                  <div className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#e94f37]/25 bg-[#e94f37]/10 text-[#ff8b78] shadow-xl shadow-black/20">
+                  <div className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#e94f37]/25 bg-[#e94f37]/10 text-[#ff8b78] shadow-xl shadow-black/20">
                     <MessageSquare className="h-5 w-5" />
                   </div>
                 </div>
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#ff8b78]">
-                    Community reviews
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black text-white sm:text-3xl lg:text-4xl">
+                  <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl">
                     Critics Corner
                   </h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                    Random picks from Moodies members, paired with the movies
-                    they reviewed.
+                  <p className="mt-1 max-w-2xl text-sm leading-5 text-zinc-400">
+                    Quick community takes paired with the movies they reviewed.
                   </p>
                 </div>
               </div>
 
-              <div className="flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-2 text-xs font-bold text-white/75">
+              <div className="flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1.5 text-xs font-bold text-white/75">
                 <Heart className="h-3.5 w-3.5 text-[#ff8b78]" />
                 {Math.min(movieReviews.length, 6)} fresh takes
               </div>
             </div>
 
-            <div className="relative -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3 lg:gap-6">
+            <div className="relative -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
               {movieReviews.slice(0, 6).map((review, idx) => {
                 const criticName =
                   review.user?.name || review.name || "Moodies critic";
@@ -998,12 +1000,12 @@ export default function MoviesHomePageClient({
                 return (
                   <div
                     key={`${review.user?.id || "critic"}-${review.tmdbId || idx}-${idx}`}
-                    className="group relative w-[84vw] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/85 p-3 shadow-xl shadow-black/25 ring-1 ring-white/5 transition-all hover:border-[#e94f37]/35 hover:bg-zinc-950 sm:w-auto sm:max-w-none sm:p-4"
+                    className="group relative w-[80vw] max-w-[330px] shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-zinc-950/85 p-2.5 shadow-xl shadow-black/25 ring-1 ring-white/5 transition-all hover:border-[#e94f37]/35 hover:bg-zinc-950 sm:w-auto sm:max-w-none"
                   >
                     <div className="absolute inset-x-0 top-0 h-px bg-[#e94f37]/45" />
 
-                    <div className="mb-3 flex gap-3 sm:mb-4">
-                      <div className="relative h-20 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10 sm:h-28 sm:w-[4.6rem]">
+                    <div className="mb-2.5 flex gap-2.5">
+                      <div className="relative h-[4.5rem] w-12 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10 sm:h-20 sm:w-14">
                         <Image
                           src={moviePoster}
                           alt={movieTitle}
@@ -1014,13 +1016,10 @@ export default function MoviesHomePageClient({
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
-                          Reviewed movie
-                        </p>
-                        <h3 className="line-clamp-2 text-sm font-black leading-tight text-white sm:text-base">
+                        <h3 className="line-clamp-2 text-sm font-black leading-tight text-white">
                           {movieTitle}
                         </h3>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                           {review.movieYear && (
                             <span className="rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold text-zinc-300">
                               {review.movieYear}
@@ -1034,14 +1033,14 @@ export default function MoviesHomePageClient({
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-white/10 bg-black/25 p-3">
-                      <p className="line-clamp-3 text-sm leading-6 text-zinc-300 sm:line-clamp-4">
+                    <div className="rounded-lg border border-white/10 bg-black/25 p-2.5">
+                      <p className="line-clamp-3 text-sm leading-5 text-zinc-300">
                         &ldquo;{review.quote || "No review available"}&rdquo;
                       </p>
                     </div>
 
-                    <div className="mt-4 flex items-center gap-2">
-                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#e94f37]/15 text-xs font-black text-white ring-1 ring-[#e94f37]/25">
+                    <div className="mt-3 flex items-center gap-2">
+                      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#e94f37]/15 text-[11px] font-black text-white ring-1 ring-[#e94f37]/25">
                         {initial}
                       </div>
                       <div className="min-w-0">
