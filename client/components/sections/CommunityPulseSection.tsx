@@ -95,9 +95,6 @@ const getStatValue = (item: CommunityPulseItem, metric: PulseMetric) => {
   return item.reviewCount;
 };
 
-const getTotal = (items: CommunityPulseItem[], metric: PulseMetric) =>
-  items.reduce((total, item) => total + getStatValue(item, metric), 0);
-
 function StatPill({
   metric,
   value,
@@ -163,9 +160,9 @@ function FeaturedWinnerCard({
       <div className={`pointer-events-none absolute inset-0 ${theme.soft}`} />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/20" />
 
-      <div className="relative grid gap-3 p-3 sm:grid-cols-[7.25rem_minmax(0,1fr)] sm:gap-4 sm:p-4">
+      <div className="relative grid grid-cols-[5.75rem_minmax(0,1fr)] gap-3 p-3 sm:grid-cols-[7.25rem_minmax(0,1fr)] sm:gap-4 sm:p-4">
         <div className="relative">
-          <div className="relative aspect-[2/3] w-28 overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10 sm:w-full">
+          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10">
             <Image
               src={getPosterUrl(item.poster_path)}
               alt={item.title}
@@ -177,7 +174,7 @@ function FeaturedWinnerCard({
             <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
           </div>
           <div
-            className={`absolute -left-2 -top-2 flex h-12 w-12 items-center justify-center rounded-2xl border ${theme.border} bg-black/90 text-lg font-black ${theme.text} shadow-xl shadow-black/40 backdrop-blur`}
+            className={`absolute -left-2 -top-2 flex h-10 w-10 items-center justify-center rounded-2xl border ${theme.border} bg-black/90 text-base font-black ${theme.text} shadow-xl shadow-black/40 backdrop-blur sm:h-12 sm:w-12 sm:text-lg`}
           >
             1
           </div>
@@ -197,7 +194,7 @@ function FeaturedWinnerCard({
               </span>
             </div>
 
-            <h4 className="line-clamp-2 text-lg font-black leading-tight text-white sm:text-xl">
+            <h4 className="line-clamp-2 text-base font-black leading-tight text-white sm:text-xl">
               {item.title}
             </h4>
 
@@ -210,7 +207,7 @@ function FeaturedWinnerCard({
             </div>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-3 sm:mt-4">
             <div
               className={`mb-2 inline-flex items-center gap-1.5 rounded-full border ${theme.border} ${theme.bg} px-3 py-1.5 text-xs font-black ${theme.text}`}
             >
@@ -218,7 +215,7 @@ function FeaturedWinnerCard({
               {fmtCount(getStatValue(item, metric))} {theme.label}
             </div>
 
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               {metric !== "liked" && (
                 <StatPill metric="liked" value={item.likeCount} compact />
               )}
@@ -301,7 +298,6 @@ function PulseLaneCard({
   mediaType: MediaType;
 }) {
   const theme = METRIC_THEME[lane.metric];
-  const total = getTotal(lane.data, lane.metric);
   const leader = lane.data[0];
 
   return (
@@ -512,14 +508,16 @@ export function CommunityPulseSection({
             message={error}
           />
         ) : hasItems ? (
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth xl:mx-0 xl:grid xl:grid-cols-3 xl:gap-4 xl:overflow-visible xl:px-0 xl:pb-0">
             {lanes.map((lane) => (
-              <PulseLaneCard
+              <div
                 key={lane.metric}
-                lane={lane}
-                mediaType={mediaType}
-              />
+                className="w-[88vw] max-w-[390px] shrink-0 snap-start xl:w-auto xl:max-w-none"
+              >
+                <PulseLaneCard lane={lane} mediaType={mediaType} />
+              </div>
             ))}
+            <div className="w-1 shrink-0 xl:hidden" aria-hidden="true" />
           </div>
         ) : (
           <PulseState

@@ -9,7 +9,13 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useCallback, useState, useEffect, useMemo, useRef } from "react";
+import React, {
+  useCallback,
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -70,7 +76,7 @@ export function ComingSoonSection({
   >({});
   const [openMonth, setOpenMonth] = useState<string | null>(null);
   const [expandedWeeks, setExpandedWeeks] = useState<Record<string, number>>(
-    {}
+    {},
   );
   const hasAutoOpenedMonth = useRef(false);
   const monthRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -143,9 +149,12 @@ export function ComingSoonSection({
     return type === "tv" ? "series" : "movie";
   }, [type]);
 
-  const _isInWatchlist = useCallback((item: MovieLike) => {
-    return hookIsIn(String(item.id), toWatchType());
-  }, [hookIsIn, toWatchType]);
+  const _isInWatchlist = useCallback(
+    (item: MovieLike) => {
+      return hookIsIn(String(item.id), toWatchType());
+    },
+    [hookIsIn, toWatchType],
+  );
 
   const _addToWatchlist = async (item: MovieLike) => {
     if (!ready) {
@@ -191,7 +200,7 @@ export function ComingSoonSection({
 
   const handleWatchlistToggle = async (
     item: MovieLike,
-    event: React.MouseEvent
+    event: React.MouseEvent,
   ) => {
     event.preventDefault();
     event.stopPropagation();
@@ -224,18 +233,18 @@ export function ComingSoonSection({
   const handleMonthToggle = useCallback((monthYear: string) => {
     pendingScrollMonth.current = monthYear;
     setOpenMonth((currentMonth) =>
-      currentMonth === monthYear ? null : monthYear
+      currentMonth === monthYear ? null : monthYear,
     );
   }, []);
 
   const validItems = useMemo(
     () => items.filter((item) => Boolean(getReleaseDate(item))),
-    [items]
+    [items],
   );
 
   const grouped = useMemo(
     () => groupByMonthAndWeek(validItems),
-    [groupByMonthAndWeek, validItems]
+    [groupByMonthAndWeek, validItems],
   );
   const totalVisible = Object.values(grouped).flat().length;
   const totalReleases = validItems.length;
@@ -269,7 +278,10 @@ export function ComingSoonSection({
   }, [openMonth]);
 
   return (
-    <section id="upcoming" className="relative max-w-7xl w-full mx-auto py-16">
+    <section
+      id="upcoming"
+      className="relative mx-auto w-full max-w-7xl py-8 sm:py-12 lg:py-16"
+    >
       <div className="rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6">
         <div className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex items-start gap-3 sm:gap-4">
@@ -283,14 +295,14 @@ export function ComingSoonSection({
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white">
                 {title}
               </h2>
-              <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">
-                Curated by date and audience signal so busy months stay easy to scan.
+              <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium leading-5 sm:leading-6">
+                Curated by date and audience signal so busy months stay easy to
+                scan.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-            
             <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
               <div className="text-xl font-bold leading-none text-white">
                 {totalReleases}
@@ -309,330 +321,368 @@ export function ComingSoonSection({
             </p>
           </div>
         ) : (
-      <div className="space-y-5">
-        {Object.entries(grouped).map(([monthYear, groupedItems]) => {
-          const sorted = sortReleases(groupedItems);
-          const weeks = groupByWeek(sorted);
-          const topPicks = [...groupedItems]
-            .sort((a, b) => getInterestScore(b) - getInterestScore(a))
-            .slice(0, 6);
+          <div className="space-y-4 sm:space-y-5">
+            {Object.entries(grouped).map(([monthYear, groupedItems]) => {
+              const sorted = sortReleases(groupedItems);
+              const weeks = groupByWeek(sorted);
+              const topPicks = [...groupedItems]
+                .sort((a, b) => getInterestScore(b) - getInterestScore(a))
+                .slice(0, 6);
 
-          return (
-            <div
-              key={monthYear}
-              ref={(element) => {
-                monthRefs.current[monthYear] = element;
-              }}
-              className="scroll-mt-24 border border-white/10 rounded-2xl bg-black/35 backdrop-blur-sm overflow-hidden shadow-xl shadow-black/20"
-            >
-              <button
-                onClick={() => handleMonthToggle(monthYear)}
-                className="w-full flex items-center justify-between gap-4 px-5 sm:px-6 py-4 sm:py-5
+              return (
+                <div
+                  key={monthYear}
+                  ref={(element) => {
+                    monthRefs.current[monthYear] = element;
+                  }}
+                  className="scroll-mt-24 overflow-hidden rounded-2xl border border-white/10 bg-black/35 shadow-xl shadow-black/20 backdrop-blur-sm"
+                >
+                  <button
+                    onClick={() => handleMonthToggle(monthYear)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5
                          bg-white/[0.035] hover:bg-white/[0.06] transition-all duration-300
                          border-b border-white/10 group cursor-pointer"
-              >
-                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                  <div className="w-2 h-2 shrink-0 rounded-full bg-[#e94f37] transition-colors" />
-                  <h3 className="text-lg sm:text-xl font-bold text-white">
-                    {monthYear}
-                  </h3>
-                  <div className="flex items-center gap-3 text-sm">
-                    <span className="px-2 py-1 bg-white/[0.06] rounded text-slate-300 font-medium">
-                      {groupedItems.length} showing
-                    </span>
-                    <span className="text-gray-500 hidden sm:inline">
-                      • {Object.keys(weeks).length}{" "}
-                      {Object.keys(weeks).length === 1 ? "week" : "weeks"}
-                    </span>
-                  </div>
-                </div>
-                <ChevronDown
-                  className={`w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-all duration-300 ${openMonth === monthYear ? "rotate-180" : ""
-                    }`}
-                />
-              </button>
-
-              {openMonth === monthYear && (
-                <div className="p-5 sm:p-6 lg:p-8 space-y-8 sm:space-y-10">
-                  {topPicks.length > 0 && (
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-                      <div className="mb-4 flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-[#ff7a66]" />
-                        <h4 className="text-sm font-bold text-white">
-                          Most anticipated this month
-                        </h4>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                        {topPicks.map((item) => {
-                          const releaseDate = new Date(
-                            getReleaseDate(item) ?? ""
-                          );
-
-                          return (
-                            <Link
-                              key={`top-${item.id}`}
-                              href={`/${type}/${item.id}`}
-                              className="group flex gap-3 rounded-xl bg-black/35 p-2 ring-1 ring-white/10 transition hover:bg-white/[0.06]"
-                            >
-                              <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-md bg-white/[0.06]">
-                                <Image
-                                  src={posterGetter(item)}
-                                  alt={getTitle(item)}
-                                  fill
-                                  sizes="44px"
-                                  className="object-cover"
-                                />
-                              </div>
-                              <div className="min-w-0 py-0.5">
-                                <div className="line-clamp-2 text-xs font-bold leading-snug text-white group-hover:text-[#ff8b78]">
-                                  {getTitle(item)}
-                                </div>
-                                <div className="mt-1 text-[10px] font-medium text-gray-500">
-                                  {releaseDate.toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
-                                </div>
-                              </div>
-                            </Link>
-                          );
-                        })}
+                  >
+                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                      <div className="w-2 h-2 shrink-0 rounded-full bg-[#e94f37] transition-colors" />
+                      <h3 className="truncate text-base font-bold text-white sm:text-xl">
+                        {monthYear}
+                      </h3>
+                      <div className="flex shrink-0 items-center gap-2 text-sm sm:gap-3">
+                        <span className="rounded bg-white/[0.06] px-2 py-1 text-xs font-medium text-slate-300 sm:text-sm">
+                          {groupedItems.length} showing
+                        </span>
+                        <span className="text-gray-500 hidden sm:inline">
+                          • {Object.keys(weeks).length}{" "}
+                          {Object.keys(weeks).length === 1 ? "week" : "weeks"}
+                        </span>
                       </div>
                     </div>
-                  )}
+                    <ChevronDown
+                      className={`w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-all duration-300 ${
+                        openMonth === monthYear ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
 
-                  {Object.entries(weeks).map(([range, weekItems], index) => {
-                    const weekKey = `${monthYear}-${range}`;
-                    const visibleCount =
-                      expandedWeeks[weekKey] ?? INITIAL_WEEK_ITEMS;
-                    const visibleWeekItems = weekItems.slice(0, visibleCount);
-                    const hiddenCount = weekItems.length - visibleWeekItems.length;
+                  {openMonth === monthYear && (
+                    <div className="space-y-6 p-4 sm:space-y-8 sm:p-6 lg:p-8">
+                      {topPicks.length > 0 && (
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                          <div className="mb-4 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-[#ff7a66]" />
+                            <h4 className="text-sm font-bold text-white">
+                              Most anticipated this month
+                            </h4>
+                          </div>
+                          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-6">
+                            {topPicks.map((item) => {
+                              const releaseDate = new Date(
+                                getReleaseDate(item) ?? "",
+                              );
 
-                    return (
-                    <div key={range} className="space-y-5">
-                      <div className="flex flex-wrap items-center gap-3 mb-5 sm:mb-6">
-                        <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/[0.05] border border-white/10 rounded-lg">
-                          <span className="text-xs sm:text-sm font-bold text-slate-300">
-                            Week {index + 1}
-                          </span>
-                        </div>
-                        <div className="text-xs sm:text-sm text-gray-400 font-medium">
-                          {range}
-                        </div>
-                        <div className="px-2 py-1 bg-white/[0.04] rounded text-xs text-slate-400">
-                          {weekItems.length}{" "}
-                          {weekItems.length === 1 ? "title" : "titles"}
-                        </div>
-                        <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
-                      </div>
-
-                      <div className="grid gap-4 sm:gap-5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                        {visibleWeekItems.map((item) => {
-                          const releaseDate = new Date(
-                            getReleaseDate(item) ?? ""
-                          );
-                          const daysUntil = Math.ceil(
-                            (releaseDate.getTime() - todayMs) /
-                            (1000 * 60 * 60 * 24)
-                          );
-                          const inWatchlist =
-                            _isInWatchlist(item) ?? watchlistStates[item.id];
-                          const isLoading = loadingStates[item.id];
-
-                          return (
-                            <Link key={item.id} href={`/${type}/${item.id}`}>
-                              <div className="group relative rounded-xl sm:rounded-2xl border border-white/10 bg-neutral-950 hover:border-white/20 hover:shadow-xl hover:shadow-black/50 transition-all duration-300 overflow-hidden">
-                                <div className="relative w-full aspect-[2/3]">
-                                  <Image
-                                    src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : "/placeholder-poster.svg"}
-                                    alt={item.title || item.name || ""}
-                                    fill
-                                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                                  />
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-
-                                  <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/70 backdrop-blur-sm px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg shadow-lg ring-1 ring-white/10 z-10 transition-opacity duration-300 group-hover:opacity-0">
-                                    <div className="text-[10px] sm:text-xs font-bold text-white">
+                              return (
+                                <Link
+                                  key={`top-${item.id}`}
+                                  href={`/${type}/${item.id}`}
+                                  className="group flex w-[72vw] max-w-[270px] shrink-0 snap-start gap-3 rounded-xl bg-black/35 p-2 ring-1 ring-white/10 transition hover:bg-white/[0.06] sm:w-auto sm:max-w-none"
+                                >
+                                  <div className="relative h-16 w-11 shrink-0 overflow-hidden rounded-md bg-white/[0.06]">
+                                    <Image
+                                      src={posterGetter(item)}
+                                      alt={getTitle(item)}
+                                      fill
+                                      sizes="44px"
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                  <div className="min-w-0 py-0.5">
+                                    <div className="line-clamp-2 text-xs font-bold leading-snug text-white group-hover:text-[#ff8b78]">
+                                      {getTitle(item)}
+                                    </div>
+                                    <div className="mt-1 text-[10px] font-medium text-gray-500">
                                       {releaseDate.toLocaleDateString("en-US", {
                                         month: "short",
                                         day: "numeric",
                                       })}
                                     </div>
-                                    {daysUntil > 0 && (
-                                      <div className="text-[9px] sm:text-[10px] text-slate-400 font-medium">
-                                        {daysUntil}d away
-                                      </div>
-                                    )}
                                   </div>
-
-                                  {item.vote_average &&
-                                    item.vote_average > 0 && (
-                                      <div className="absolute top-3 right-3 bg-black/80 backdrop-blur text-white px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ring-1 ring-white/10">
-                                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                                        {item.vote_average && item.vote_average > 0
-                                          ? item.vote_average.toFixed(1)
-                                          : "New"}
-                                      </div>
-                                    )}
-
-                                  <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 z-10 transition-opacity duration-300 group-hover:opacity-0">
-                                    <h4 className="text-xs sm:text-sm font-bold text-white line-clamp-2 drop-shadow-lg mb-1">
-                                      {item.title || item.name}
-                                    </h4>
-                                    {item.genre_ids &&
-                                      item.genre_ids.length > 0 && (
-                                        <div className="text-[10px] text-slate-400 font-medium">
-                                          Upcoming Release
-                                        </div>
-                                      )}
-                                  </div>
-                                </div>
-
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/95 to-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 shadow-2xl">
-                                  <div className="absolute inset-0 p-3 sm:p-4 flex flex-col justify-between">
-                                    <div>
-                                      <h4 className="text-md sm:text-lg font-bold text-white line-clamp-3 mb-2">
-                                        {item.title || item.name}
-                                      </h4>
-                                      <div className="flex flex-wrap gap-1.5 mb-3">
-                                        <div className="px-2 py-0.5 bg-white/[0.06] backdrop-blur-sm rounded text-[9px] sm:text-[10px] text-slate-200 font-medium border border-white/10">
-                                          {releaseDate.toLocaleDateString(
-                                            "en-US",
-                                            { weekday: "short" }
-                                          )}{" "}
-                                          •{" "}
-                                          {releaseDate.toLocaleDateString(
-                                            "en-US",
-                                            {
-                                              month: "short",
-                                              day: "numeric",
-                                            }
-                                          )}
-                                        </div>
-                                        {daysUntil > 0 && (
-                                          <div className="px-2 py-0.5 bg-white/[0.06] backdrop-blur-sm rounded text-[9px] sm:text-[10px] text-slate-200 font-medium border border-white/10">
-                                            {daysUntil} days away
-                                          </div>
-                                        )}
-                                      </div>
-                                      {item.overview && (
-                                        <p className="text-[10px] sm:text-xs text-gray-300 line-clamp-4 leading-relaxed">
-                                          {item.overview}
-                                        </p>
-                                      )}
-                                    </div>
-
-                                    <div>
-                                      <div className="flex justify-center gap-2">
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <motion.button
-                                                onClick={(e) =>
-                                                  handleWatchlistToggle(item, e)
-                                                }
-                                                disabled={isLoading}
-                                                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-xl cursor-pointer ${inWatchlist
-                                                  ? "bg-[#e94f37] text-white"
-                                                  : "bg-white/95 hover:bg-white"
-                                                  } ${isLoading
-                                                    ? "opacity-70 cursor-not-allowed"
-                                                    : ""
-                                                  }`}
-                                                whileTap={{ scale: 0.9 }}
-                                              >
-                                                {isLoading ? (
-                                                  <motion.div
-                                                    animate={{ rotate: 360 }}
-                                                    transition={{
-                                                      duration: 1,
-                                                      repeat: Infinity,
-                                                      ease: "linear",
-                                                    }}
-                                                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-black border-t-transparent rounded-full"
-                                                  />
-                                                ) : inWatchlist ? (
-                                                  <BookmarkCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                                ) : (
-                                                  <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
-                                                )}
-                                              </motion.button>
-                                            </TooltipTrigger>
-                                            <TooltipContent
-                                              side="bottom"
-                                              sideOffset={8}
-                                              className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
-                                            >
-                                              <div className="text-xs sm:text-sm font-medium text-white">
-                                                {isLoading
-                                                  ? "Updating..."
-                                                  : inWatchlist
-                                                    ? "Remove from My List"
-                                                    : "Add to My List"}
-                                              </div>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <button
-                                                onClick={(event) =>
-                                                  event.stopPropagation()
-                                                }
-                                                className="w-8 h-8 sm:w-9 sm:h-9 bg-white/95 rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all shadow-xl cursor-pointer"
-                                              >
-                                                <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
-                                              </button>
-                                            </TooltipTrigger>
-                                            <TooltipContent
-                                              side="bottom"
-                                              sideOffset={8}
-                                              className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
-                                            >
-                                              <div className="text-xs sm:text-sm font-medium text-white">
-                                                More Info
-                                              </div>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-
-
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                      {hiddenCount > 0 && (
-                        <div className="flex justify-center">
-                          <button
-                            onClick={() =>
-                              setExpandedWeeks((prev) => ({
-                                ...prev,
-                                [weekKey]: visibleCount + INITIAL_WEEK_ITEMS,
-                              }))
-                            }
-                            className="cursor-pointer rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-bold text-gray-200 transition hover:bg-white/[0.1]"
-                          >
-                            Show {Math.min(hiddenCount, INITIAL_WEEK_ITEMS)} more
-                          </button>
+                                </Link>
+                              );
+                            })}
+                            <div
+                              className="w-1 shrink-0 sm:hidden"
+                              aria-hidden="true"
+                            />
+                          </div>
                         </div>
                       )}
+
+                      {Object.entries(weeks).map(
+                        ([range, weekItems], index) => {
+                          const weekKey = `${monthYear}-${range}`;
+                          const visibleCount =
+                            expandedWeeks[weekKey] ?? INITIAL_WEEK_ITEMS;
+                          const visibleWeekItems = weekItems.slice(
+                            0,
+                            visibleCount,
+                          );
+                          const hiddenCount =
+                            weekItems.length - visibleWeekItems.length;
+
+                          return (
+                            <div key={range} className="space-y-4 sm:space-y-5">
+                              <div className="mb-4 flex flex-wrap items-center gap-2 sm:mb-6 sm:gap-3">
+                                <div className="px-3 sm:px-4 py-1.5 sm:py-2 bg-white/[0.05] border border-white/10 rounded-lg">
+                                  <span className="text-xs sm:text-sm font-bold text-slate-300">
+                                    Week {index + 1}
+                                  </span>
+                                </div>
+                                <div className="text-xs sm:text-sm text-gray-400 font-medium">
+                                  {range}
+                                </div>
+                                <div className="px-2 py-1 bg-white/[0.04] rounded text-xs text-slate-400">
+                                  {weekItems.length}{" "}
+                                  {weekItems.length === 1 ? "title" : "titles"}
+                                </div>
+                                <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+                              </div>
+
+                              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-5">
+                                {visibleWeekItems.map((item) => {
+                                  const releaseDate = new Date(
+                                    getReleaseDate(item) ?? "",
+                                  );
+                                  const daysUntil = Math.ceil(
+                                    (releaseDate.getTime() - todayMs) /
+                                      (1000 * 60 * 60 * 24),
+                                  );
+                                  const inWatchlist =
+                                    _isInWatchlist(item) ??
+                                    watchlistStates[item.id];
+                                  const isLoading = loadingStates[item.id];
+
+                                  return (
+                                    <Link
+                                      key={item.id}
+                                      href={`/${type}/${item.id}`}
+                                      className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                                    >
+                                      <div className="group relative rounded-xl sm:rounded-2xl border border-white/10 bg-neutral-950 hover:border-white/20 hover:shadow-xl hover:shadow-black/50 transition-all duration-300 overflow-hidden">
+                                        <div className="relative w-full aspect-[2/3]">
+                                          <Image
+                                            src={
+                                              item.poster_path
+                                                ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+                                                : "/placeholder-poster.svg"
+                                            }
+                                            alt={item.title || item.name || ""}
+                                            fill
+                                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                          />
+                                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+                                          <div className="absolute top-2 left-2 sm:top-3 sm:left-3 bg-black/70 backdrop-blur-sm px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg shadow-lg ring-1 ring-white/10 z-10 transition-opacity duration-300 group-hover:opacity-0">
+                                            <div className="text-[10px] sm:text-xs font-bold text-white">
+                                              {releaseDate.toLocaleDateString(
+                                                "en-US",
+                                                {
+                                                  month: "short",
+                                                  day: "numeric",
+                                                },
+                                              )}
+                                            </div>
+                                            {daysUntil > 0 && (
+                                              <div className="text-[9px] sm:text-[10px] text-slate-400 font-medium">
+                                                {daysUntil}d away
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {item.vote_average &&
+                                            item.vote_average > 0 && (
+                                              <div className="absolute top-3 right-3 bg-black/80 backdrop-blur text-white px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ring-1 ring-white/10">
+                                                <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                                                {item.vote_average &&
+                                                item.vote_average > 0
+                                                  ? item.vote_average.toFixed(1)
+                                                  : "New"}
+                                              </div>
+                                            )}
+
+                                          <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 z-10 transition-opacity duration-300 group-hover:opacity-0">
+                                            <h4 className="text-xs sm:text-sm font-bold text-white line-clamp-2 drop-shadow-lg mb-1">
+                                              {item.title || item.name}
+                                            </h4>
+                                            {item.genre_ids &&
+                                              item.genre_ids.length > 0 && (
+                                                <div className="text-[10px] text-slate-400 font-medium">
+                                                  Upcoming Release
+                                                </div>
+                                              )}
+                                          </div>
+                                        </div>
+
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/95 to-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 shadow-2xl">
+                                          <div className="absolute inset-0 p-3 sm:p-4 flex flex-col justify-between">
+                                            <div>
+                                              <h4 className="text-md sm:text-lg font-bold text-white line-clamp-3 mb-2">
+                                                {item.title || item.name}
+                                              </h4>
+                                              <div className="flex flex-wrap gap-1.5 mb-3">
+                                                <div className="px-2 py-0.5 bg-white/[0.06] backdrop-blur-sm rounded text-[9px] sm:text-[10px] text-slate-200 font-medium border border-white/10">
+                                                  {releaseDate.toLocaleDateString(
+                                                    "en-US",
+                                                    { weekday: "short" },
+                                                  )}{" "}
+                                                  •{" "}
+                                                  {releaseDate.toLocaleDateString(
+                                                    "en-US",
+                                                    {
+                                                      month: "short",
+                                                      day: "numeric",
+                                                    },
+                                                  )}
+                                                </div>
+                                                {daysUntil > 0 && (
+                                                  <div className="px-2 py-0.5 bg-white/[0.06] backdrop-blur-sm rounded text-[9px] sm:text-[10px] text-slate-200 font-medium border border-white/10">
+                                                    {daysUntil} days away
+                                                  </div>
+                                                )}
+                                              </div>
+                                              {item.overview && (
+                                                <p className="text-[10px] sm:text-xs text-gray-300 line-clamp-4 leading-relaxed">
+                                                  {item.overview}
+                                                </p>
+                                              )}
+                                            </div>
+
+                                            <div>
+                                              <div className="flex justify-center gap-2">
+                                                <TooltipProvider>
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <motion.button
+                                                        onClick={(e) =>
+                                                          handleWatchlistToggle(
+                                                            item,
+                                                            e,
+                                                          )
+                                                        }
+                                                        disabled={isLoading}
+                                                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center hover:scale-110 transition-all shadow-xl cursor-pointer ${
+                                                          inWatchlist
+                                                            ? "bg-[#e94f37] text-white"
+                                                            : "bg-white/95 hover:bg-white"
+                                                        } ${
+                                                          isLoading
+                                                            ? "opacity-70 cursor-not-allowed"
+                                                            : ""
+                                                        }`}
+                                                        whileTap={{
+                                                          scale: 0.9,
+                                                        }}
+                                                      >
+                                                        {isLoading ? (
+                                                          <motion.div
+                                                            animate={{
+                                                              rotate: 360,
+                                                            }}
+                                                            transition={{
+                                                              duration: 1,
+                                                              repeat: Infinity,
+                                                              ease: "linear",
+                                                            }}
+                                                            className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-2 border-black border-t-transparent rounded-full"
+                                                          />
+                                                        ) : inWatchlist ? (
+                                                          <BookmarkCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                        ) : (
+                                                          <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
+                                                        )}
+                                                      </motion.button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent
+                                                      side="bottom"
+                                                      sideOffset={8}
+                                                      className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
+                                                    >
+                                                      <div className="text-xs sm:text-sm font-medium text-white">
+                                                        {isLoading
+                                                          ? "Updating..."
+                                                          : inWatchlist
+                                                            ? "Remove from My List"
+                                                            : "Add to My List"}
+                                                      </div>
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                </TooltipProvider>
+
+                                                <TooltipProvider>
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <button
+                                                        onClick={(event) =>
+                                                          event.stopPropagation()
+                                                        }
+                                                        className="w-8 h-8 sm:w-9 sm:h-9 bg-white/95 rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all shadow-xl cursor-pointer"
+                                                      >
+                                                        <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
+                                                      </button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent
+                                                      side="bottom"
+                                                      sideOffset={8}
+                                                      className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
+                                                    >
+                                                      <div className="text-xs sm:text-sm font-medium text-white">
+                                                        More Info
+                                                      </div>
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                </TooltipProvider>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </Link>
+                                  );
+                                })}
+                                <div
+                                  className="w-1 shrink-0 sm:hidden"
+                                  aria-hidden="true"
+                                />
+                              </div>
+                              {hiddenCount > 0 && (
+                                <div className="flex justify-center">
+                                  <button
+                                    onClick={() =>
+                                      setExpandedWeeks((prev) => ({
+                                        ...prev,
+                                        [weekKey]:
+                                          visibleCount + INITIAL_WEEK_ITEMS,
+                                      }))
+                                    }
+                                    className="cursor-pointer rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-bold text-gray-200 transition hover:bg-white/[0.1]"
+                                  >
+                                    Show{" "}
+                                    {Math.min(hiddenCount, INITIAL_WEEK_ITEMS)}{" "}
+                                    more
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        },
+                      )}
                     </div>
-                    );
-                  })}
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </section>

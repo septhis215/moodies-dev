@@ -115,7 +115,7 @@ export default function MoviesHomePageClient({
             className={`
             relative rounded-2xl overflow-hidden
             bg-neutral-950
-            shadow-xl shadow-black/30 ring-1 ring-white/10
+            shadow-lg shadow-black/25 ring-1 ring-white/10
             transition duration-300 md:group-hover:ring-[#e94f37]/45
 
             /* MOBILE: bigger + consistent */
@@ -146,7 +146,7 @@ export default function MoviesHomePageClient({
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
 
             {/* Rating */}
-            <div className="absolute top-3 right-3 ">
+            <div className="absolute right-2 top-2 sm:right-3 sm:top-3">
               <RatingBadge
                 rating={show.vote_average}
                 variant="colored"
@@ -158,7 +158,7 @@ export default function MoviesHomePageClient({
             <div
               className="
               absolute inset-x-0 bottom-0
-              p-3
+              p-2.5 sm:p-3
 
               /* Mobile: always visible */
               opacity-100
@@ -273,12 +273,12 @@ export default function MoviesHomePageClient({
           </div>
 
           {/* TEXT */}
-          <div className="mt-3 px-1">
-            <h4 className="font-bold text-sm sm:text-base line-clamp-2 leading-tight text-white md:group-hover:text-[#e94f37] transition-colors">
+          <div className="mt-2.5 px-0.5 sm:mt-3 sm:px-1">
+            <h4 className="line-clamp-2 text-sm font-bold leading-tight text-white transition-colors md:group-hover:text-[#e94f37] sm:text-base">
               {show.title || show.name}
             </h4>
 
-            <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+            <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-400 sm:text-xs">
               {show.release_date && (
                 <span className="font-semibold">
                   {show.release_date.split("-")[0]}
@@ -335,15 +335,15 @@ export default function MoviesHomePageClient({
       <section className="relative w-full text-white overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-10 sm:pt-28 sm:pb-16 relative z-20">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-12 md:gap-6 items-stretch">
+        <div className="relative z-20 mx-auto max-w-7xl px-4 pb-8 pt-6 sm:px-6 sm:pb-16 sm:pt-28">
+          <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-12 md:gap-6">
             {/* LEFT mosaic */}
-            <div className="md:col-span-7 col-span-1 rounded-2xl sm:rounded-3xl overflow-hidden bg-neutral-950/80 backdrop-blur-xl p-4 sm:p-6 flex flex-col ring-1 ring-white/10 shadow-2xl shadow-black/40">
-              <div className="h-1 -mx-5 -mt-5 mb-5 bg-gradient-to-r from-[#e94f37] via-[#ff7a66] to-[#f59e0b] sm:-mx-6 sm:-mt-6" />
-              <div className="mb-6">
+            <div className="col-span-1 flex flex-col overflow-hidden rounded-2xl bg-neutral-950/80 p-3 shadow-2xl shadow-black/40 ring-1 ring-white/10 backdrop-blur-xl sm:rounded-3xl sm:p-6 md:col-span-7">
+              <div className="-mx-3 -mt-3 mb-4 h-1 bg-gradient-to-r from-[#e94f37] via-[#ff7a66] to-[#f59e0b] sm:-mx-6 sm:-mt-6 sm:mb-5" />
+              <div className="mb-4 sm:mb-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04] text-[#ff7a66] ring-1 ring-white/10">
-                    <Film className="w-6 h-6" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] text-[#ff7a66] ring-1 ring-white/10 sm:h-11 sm:w-11">
+                    <Film className="h-5 w-5 sm:h-6 sm:w-6" />
                   </div>
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
@@ -360,8 +360,48 @@ export default function MoviesHomePageClient({
                 </p>
               </div>
 
-              <div className="relative flex-1 min-h-[300px] sm:min-h-[460px] w-full rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black/40">
-                <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 p-2.5 sm:p-3">
+              <div className="relative h-[300px] w-full overflow-hidden rounded-2xl bg-black/40 ring-1 ring-white/10 sm:h-auto sm:min-h-[460px] sm:flex-1">
+                <div className="flex h-full snap-x snap-mandatory gap-3 overflow-x-auto px-3 py-4 scroll-smooth sm:hidden">
+                  {Array.from({ length: 10 }).map((_, i) => {
+                    const s =
+                      heroMovies[(heroIndex + i) % heroMovies.length] || {};
+                    const isActive = featured?.id === s.id;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() =>
+                          setHeroIndex((heroIndex + i) % heroMovies.length)
+                        }
+                        className={`relative h-full w-[42vw] min-w-[150px] max-w-[175px] shrink-0 snap-start overflow-hidden rounded-2xl border transition-all duration-300 ${
+                          isActive
+                            ? "border-[#e94f37] shadow-2xl shadow-[#e94f37]/25"
+                            : "border-white/10"
+                        }`}
+                      >
+                        {s.poster_path ? (
+                          <Image
+                            src={getPosterUrl(s.poster_path)}
+                            alt={s.title || s.name || ""}
+                            fill
+                            sizes="170px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-zinc-800" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+                        <div className="absolute inset-x-0 bottom-0 p-3 text-left">
+                          <p className="line-clamp-2 text-sm font-black leading-tight text-white">
+                            {s.title || s.name}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  <div className="w-1 shrink-0" aria-hidden="true" />
+                </div>
+
+                <div className="absolute inset-0 hidden grid-cols-3 gap-2 p-2 sm:grid sm:grid-cols-4 sm:gap-3 sm:p-3 md:grid-cols-5 lg:grid-cols-6">
                   {Array.from({ length: 18 }).map((_, i) => {
                     const s =
                       heroMovies[(heroIndex + i) % heroMovies.length] || {};
@@ -408,7 +448,7 @@ export default function MoviesHomePageClient({
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: -20 }}
                   transition={{ duration: 0.5, ease: "easeInOut" }}
-                    className="relative flex flex-col w-full rounded-2xl sm:rounded-3xl bg-neutral-950/90 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl shadow-black/40 overflow-hidden"
+                  className="relative flex flex-col w-full rounded-2xl sm:rounded-3xl bg-neutral-950/90 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl shadow-black/40 overflow-hidden"
                 >
                   {featured?.backdrop_path && (
                     <div className="absolute inset-0 -z-10">
@@ -424,7 +464,7 @@ export default function MoviesHomePageClient({
                     </div>
                   )}
 
-                  <div className="relative w-full h-52 sm:h-80 rounded-t-2xl sm:rounded-t-3xl overflow-hidden">
+                  <div className="relative h-52 w-full overflow-hidden rounded-t-2xl sm:h-80 sm:rounded-t-3xl">
                     {featured?.backdrop_path ? (
                       <>
                         <Image
@@ -442,13 +482,13 @@ export default function MoviesHomePageClient({
                     )}
                   </div>
 
-                  <div className="relative p-4 sm:p-8 flex flex-col flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-4">
-                      <span className="px-4 py-2 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white rounded-full text-xs font-black uppercase tracking-wider shadow-lg">
+                  <div className="relative flex flex-1 flex-col p-4 sm:p-8">
+                    <div className="mb-3 flex flex-wrap items-center gap-2 sm:mb-4">
+                      <span className="rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white shadow-lg sm:px-4 sm:py-2 sm:text-xs">
                         Mood spotlight
                       </span>
                       {featured?.release_date && (
-                        <span className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-xs font-bold ring-1 ring-white/20">
+                        <span className="rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-bold ring-1 ring-white/20 backdrop-blur-sm sm:px-4 sm:py-2 sm:text-xs">
                           {featured.release_date.split("-")[0]}
                         </span>
                       )}
@@ -468,7 +508,7 @@ export default function MoviesHomePageClient({
                           handleFeaturedWatchlist();
                         }}
                         disabled={wlLoading}
-                        className={`ml-auto px-4 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer
+                        className={`ml-auto flex h-10 w-10 items-center justify-center gap-2 rounded-xl font-semibold shadow-lg transition-all cursor-pointer sm:h-auto sm:w-auto sm:px-4 sm:py-3
                                                     ${
                                                       featuredInWatchlist
                                                         ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
@@ -494,15 +534,15 @@ export default function MoviesHomePageClient({
                       </button>
                     </div>
 
-                    <h2 className="text-2xl sm:text-4xl font-black mb-3 sm:mb-4 leading-tight line-clamp-2 text-white">
+                    <h2 className="mb-2 line-clamp-2 text-xl font-black leading-tight text-white sm:mb-4 sm:text-4xl">
                       {featured?.title || "—"}
                     </h2>
 
-                    <p className="text-sm sm:text-base text-gray-300 line-clamp-2 sm:line-clamp-3 mb-5 sm:mb-6 leading-relaxed">
+                    <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-gray-300 sm:mb-6 sm:line-clamp-3 sm:text-base">
                       {featured?.overview || "No description available"}
                     </p>
 
-                    <div className="flex gap-3 mt-auto pt-4 sm:pt-6 border-t border-white/10">
+                    <div className="mt-auto flex gap-3 border-t border-white/10 pt-3 sm:pt-6">
                       <Link href={`/movies/${featured?.id}`} className="flex-1">
                         <button className="w-full min-h-12 px-5 py-3 sm:px-6 sm:py-4 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d4452f] hover:to-[#e94f37] text-white rounded-xl sm:rounded-2xl font-bold transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg shadow-[#e94f37]/30 cursor-pointer">
                           <Info className="w-5 h-5" />
@@ -519,17 +559,17 @@ export default function MoviesHomePageClient({
       </section>
 
       {/* Content */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-12 sm:space-y-20">
+      <div className="relative mx-auto max-w-7xl space-y-11 px-4 py-10 sm:space-y-14 sm:px-6 sm:py-12 lg:space-y-16 lg:px-8 lg:py-14">
         {/* Box Office */}
         {popularMovies.length > 0 && (
           <section
             id="popular-movies"
-            className="relative overflow-hidden rounded-3xl border border-white/10 bg-neutral-950/75 p-4 shadow-2xl shadow-black/30 sm:p-6"
+            className="relative overflow-hidden rounded-3xl border border-white/10 bg-neutral-950/80 p-4 shadow-2xl shadow-black/30 sm:p-6"
           >
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(245,158,11,0.075),transparent_34%),radial-gradient(circle_at_86%_8%,rgba(233,79,55,0.075),transparent_24%),radial-gradient(circle_at_12%_92%,rgba(255,255,255,0.045),transparent_28%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(245,158,11,0.08),transparent_30%),radial-gradient(circle_at_78%_4%,rgba(233,79,55,0.09),transparent_25%),linear-gradient(180deg,rgba(255,255,255,0.035),transparent_36%)]" />
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/10" />
 
-            <div className="relative mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="relative mb-5 flex flex-col gap-4 sm:mb-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="flex items-start gap-3 sm:gap-4">
                 <div className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-300 shadow-xl shadow-black/20 sm:h-12 sm:w-12">
                   <Ticket className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -548,19 +588,27 @@ export default function MoviesHomePageClient({
                 </div>
               </div>
 
-              <Link
-                href="/movies/box-office"
-                className="group inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-2 text-xs font-bold text-zinc-300 transition-colors hover:border-[#e94f37]/40 hover:text-white"
-              >
-                View All
-                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-amber-200">
+                  Top {Math.min(popularMovies.length, 4)} ranked
+                </div>
+                <Link
+                  href="/movies/box-office"
+                  className="group inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-2 text-xs font-bold text-zinc-300 transition-colors hover:border-[#e94f37]/40 hover:text-white"
+                >
+                  View All
+                  <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </div>
             </div>
 
-            <div className="relative grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)] lg:gap-5">
+            <div className="relative grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
               {popularMovies[0] && (
-                <Link href={`/movies/${popularMovies[0].id}`} className="group">
-                  <div className="relative min-h-[420px] overflow-hidden rounded-3xl border border-amber-300/15 bg-zinc-950 ring-1 ring-white/10 shadow-2xl shadow-black/30">
+                <Link
+                  href={`/movies/${popularMovies[0].id}`}
+                  className="group lg:col-span-7"
+                >
+                  <div className="relative min-h-[330px] overflow-hidden rounded-3xl border border-amber-300/15 bg-zinc-950 ring-1 ring-white/10 shadow-2xl shadow-black/30 sm:min-h-[380px] lg:min-h-[460px]">
                     <Image
                       src={getImageUrl(
                         popularMovies[0].backdrop_path ||
@@ -572,21 +620,21 @@ export default function MoviesHomePageClient({
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/72 to-black/15" />
-                    <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.54),transparent_58%),radial-gradient(circle_at_18%_18%,rgba(245,158,11,0.2),transparent_30%)]" />
+                    <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.68),transparent_62%),radial-gradient(circle_at_18%_18%,rgba(245,158,11,0.22),transparent_30%)]" />
                     <div className="absolute inset-x-0 top-0 h-px bg-amber-200/25" />
 
-                    <div className="absolute left-5 top-5 flex items-center gap-2 rounded-2xl border border-amber-300/30 bg-black/55 px-3 py-2 text-amber-200 shadow-xl shadow-black/30 backdrop-blur">
+                    <div className="absolute left-4 top-4 flex items-center gap-2 rounded-2xl border border-amber-300/30 bg-black/60 px-3 py-2 text-amber-200 shadow-xl shadow-black/30 backdrop-blur sm:left-5 sm:top-5">
                       <Ticket className="h-4 w-4" />
                       <span className="text-xs font-black uppercase tracking-[0.14em]">
-                        Box office leader
+                        Weekend leader
                       </span>
                     </div>
 
-                    <div className="absolute right-5 top-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/35 bg-black/70 text-2xl font-black text-amber-200 shadow-xl shadow-black/35 backdrop-blur transition-transform duration-300 group-hover:scale-105">
+                    <div className="absolute right-4 top-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-300/35 bg-black/70 text-xl font-black text-amber-200 shadow-xl shadow-black/35 backdrop-blur transition-transform duration-300 group-hover:scale-105 sm:right-5 sm:top-5 sm:h-16 sm:w-16 sm:text-2xl">
                       #1
                     </div>
 
-                    <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
+                    <div className="absolute inset-x-0 bottom-0 p-4 sm:p-7">
                       <div className="mb-3 flex flex-wrap items-center gap-2">
                         <RatingBadge
                           rating={popularMovies[0].vote_average}
@@ -599,7 +647,7 @@ export default function MoviesHomePageClient({
                         </span>
                       </div>
 
-                      <h3 className="max-w-3xl text-3xl font-black leading-tight text-white transition-colors group-hover:text-[#ff8b78] sm:text-5xl">
+                      <h3 className="max-w-3xl text-2xl font-black leading-tight text-white transition-colors group-hover:text-[#ff8b78] sm:text-4xl lg:text-5xl">
                         {popularMovies[0].title}
                       </h3>
 
@@ -608,28 +656,39 @@ export default function MoviesHomePageClient({
                           {popularMovies[0].overview}
                         </p>
                       )}
+
+                      <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-2 text-xs font-bold text-zinc-200 backdrop-blur sm:mt-5">
+                        <Ticket className="h-3.5 w-3.5 text-amber-300" />
+                        Current crowd-puller
+                      </div>
                     </div>
                   </div>
                 </Link>
               )}
 
-              <div className="rounded-3xl border border-white/10 bg-black/25 p-3 ring-1 ring-white/[0.04] sm:p-4">
-                <div className="mb-3 flex items-center justify-between px-1">
-                  <span className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-500">
-                    Ranked hits
-                  </span>
-                  <span className="text-xs font-bold text-amber-300">
-                    Top {Math.min(popularMovies.length, 4)}
+              <div className="rounded-3xl border border-white/10 bg-black/25 p-3 ring-1 ring-white/[0.04] sm:p-4 lg:col-span-5">
+                <div className="mb-3 flex items-start justify-between gap-3 px-1">
+                  <div>
+                    <span className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-500">
+                      Box office board
+                    </span>
+                    <p className="mt-1 text-xs font-medium text-zinc-500">
+                      Fast-scan rankings for the next biggest crowd-pullers.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-xs font-bold text-amber-200">
+                    Live list
                   </span>
                 </div>
 
-                <div className="space-y-3">
-                  {popularMovies.slice(1, 4).map((movie, idx) => (
+                <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 scroll-smooth lg:mx-0 lg:block lg:space-y-3 lg:overflow-visible lg:px-0 lg:pb-0">
+                  {popularMovies.slice(1, 6).map((movie, idx) => (
                     <Link
                       key={movie.id}
                       href={`/movies/${movie.id}`}
-                      className="group grid grid-cols-[2.75rem_4.75rem_minmax(0,1fr)] gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-2.5 transition-all hover:border-amber-300/30 hover:bg-white/[0.06] sm:grid-cols-[3rem_5.25rem_minmax(0,1fr)]"
+                      className="group relative grid w-[82vw] max-w-[360px] shrink-0 snap-start grid-cols-[2.75rem_4.5rem_minmax(0,1fr)] gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-2.5 transition-all hover:border-amber-300/30 hover:bg-white/[0.06] sm:w-[340px] lg:w-auto lg:max-w-none lg:grid-cols-[3rem_5.25rem_minmax(0,1fr)]"
                     >
+                      <div className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-amber-300/25 transition-colors group-hover:bg-[#e94f37]/70" />
                       <div className="flex items-start justify-center pt-1">
                         <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-300/25 bg-amber-300/10 text-sm font-black text-amber-200 transition-transform duration-300 group-hover:scale-105">
                           #{idx + 2}
@@ -663,6 +722,7 @@ export default function MoviesHomePageClient({
                       </div>
                     </Link>
                   ))}
+                  <div className="w-1 shrink-0 lg:hidden" aria-hidden="true" />
                 </div>
               </div>
             </div>
@@ -675,14 +735,14 @@ export default function MoviesHomePageClient({
             id="new-release-movies"
             className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
           >
-            <div className="relative flex items-center justify-between mb-10">
-              <div className="flex items-center gap-4">
+            <div className="relative mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div className="relative">
                   <div className="absolute inset-0 bg-cyan-400 blur-xl opacity-50" />
-                  <Sparkles className="relative w-9 h-9 text-cyan-400" />
+                  <Sparkles className="relative h-7 w-7 text-cyan-400 sm:h-9 sm:w-9" />
                 </div>
 
-                <h2 className="text-3xl sm:text-4xl font-black text-white">
+                <h2 className="text-2xl font-black text-white sm:text-3xl lg:text-4xl">
                   New Releases
                 </h2>
               </div>
@@ -697,13 +757,13 @@ export default function MoviesHomePageClient({
             </div>
 
             {/* Main grid */}
-            <div className="grid grid-cols-12 gap-5">
+            <div className="grid grid-cols-12 gap-4 sm:gap-5">
               {newReleaseMovies[0] && (
                 <Link
                   href={`/movies/${newReleaseMovies[0].id}`}
                   className="col-span-12 lg:col-span-8 group"
                 >
-                  <div className="relative h-96 lg:h-[500px] rounded-3xl overflow-hidden bg-zinc-900 ring-1 ring-white/10 shadow-2xl">
+                  <div className="relative h-[320px] overflow-hidden rounded-2xl bg-zinc-900 shadow-2xl ring-1 ring-white/10 sm:h-96 sm:rounded-3xl lg:h-[500px]">
                     {newReleaseMovies[0].backdrop_path && (
                       <>
                         <Image
@@ -717,18 +777,16 @@ export default function MoviesHomePageClient({
                       </>
                     )}
 
-                    <div className="absolute bottom-0 left-0 right-0 p-8 lg:p-10">
-                     
-
-                      <h3 className="text-4xl font-black mb-4 line-clamp-2 text-white">
+                    <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8 lg:p-10">
+                      <h3 className="mb-2 line-clamp-2 text-xl font-black text-white sm:mb-4 sm:text-4xl">
                         {newReleaseMovies[0].title}
                       </h3>
 
-                      <p className="text-gray-200 line-clamp-2 mb-6 max-w-3xl text-lg leading-relaxed">
+                      <p className="mb-4 line-clamp-2 max-w-3xl text-sm leading-6 text-gray-200 sm:mb-6 sm:text-lg sm:leading-relaxed">
                         {newReleaseMovies[0].overview}
                       </p>
 
-                      <div className="flex items-center gap-6">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-6">
                         <div className="flex items-center gap-2">
                           <RatingBadge
                             rating={newReleaseMovies[0].vote_average}
@@ -745,14 +803,14 @@ export default function MoviesHomePageClient({
                 </Link>
               )}
 
-              <div className="col-span-12 lg:col-span-4 grid grid-cols-2 lg:grid-cols-1 gap-5">
+              <div className="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1 lg:gap-5">
                 {newReleaseMovies.slice(1, 3).map((movie) => (
                   <Link
                     key={movie.id}
                     href={`/movies/${movie.id}`}
                     className="group"
                   >
-                    <div className="relative h-48 lg:h-[238px] rounded-2xl overflow-hidden bg-zinc-900 ring-1 ring-white/10 shadow-xl">
+                    <div className="relative h-40 overflow-hidden rounded-2xl bg-zinc-900 shadow-xl ring-1 ring-white/10 sm:h-48 lg:h-[238px]">
                       {movie.backdrop_path && (
                         <>
                           <Image
@@ -766,8 +824,8 @@ export default function MoviesHomePageClient({
                         </>
                       )}
 
-                      <div className="absolute bottom-0 left-0 right-0 p-5">
-                        <h4 className="text-lg font-bold mb-2 line-clamp-1 group-hover:text-cyan-400 transition-colors text-white">
+                      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
+                        <h4 className="mb-2 line-clamp-1 text-base font-bold text-white transition-colors group-hover:text-cyan-400 sm:text-lg">
                           {movie.title}
                         </h4>
 
@@ -791,10 +849,16 @@ export default function MoviesHomePageClient({
             </div>
 
             {/* Extra cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5 mt-6">
+            <div className="-mx-4 mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
               {newReleaseMovies.slice(3, 9).map((movie) => (
-                <MovieCard key={movie.id} show={movie} />
+                <div
+                  key={movie.id}
+                  className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                >
+                  <MovieCard show={movie} />
+                </div>
               ))}
+              <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />
             </div>
           </section>
         )}
@@ -805,7 +869,7 @@ export default function MoviesHomePageClient({
             id="trending-movies"
             className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
           >
-            <div className="flex items-center justify-between mb-6 sm:mb-8">
+            <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="relative">
                   <div className="absolute inset-0 bg-[#e94f37] blur-xl opacity-50" />
@@ -836,7 +900,7 @@ export default function MoviesHomePageClient({
             id="korean-movies"
             className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
           >
-            <div className="relative flex items-center justify-between mb-6 sm:mb-8">
+            <div className="relative mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="text-3xl sm:text-4xl lg:text-5xl">
                   <Image
@@ -916,7 +980,7 @@ export default function MoviesHomePageClient({
               </div>
             </div>
 
-            <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
+            <div className="relative -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3 lg:gap-6">
               {movieReviews.slice(0, 6).map((review, idx) => {
                 const criticName =
                   review.user?.name || review.name || "Moodies critic";
@@ -934,12 +998,12 @@ export default function MoviesHomePageClient({
                 return (
                   <div
                     key={`${review.user?.id || "critic"}-${review.tmdbId || idx}-${idx}`}
-                    className="group relative overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/85 p-3 shadow-xl shadow-black/25 ring-1 ring-white/5 transition-all hover:border-[#e94f37]/35 hover:bg-zinc-950 sm:p-4"
+                    className="group relative w-[84vw] max-w-[360px] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/85 p-3 shadow-xl shadow-black/25 ring-1 ring-white/5 transition-all hover:border-[#e94f37]/35 hover:bg-zinc-950 sm:w-auto sm:max-w-none sm:p-4"
                   >
                     <div className="absolute inset-x-0 top-0 h-px bg-[#e94f37]/45" />
 
-                    <div className="mb-4 flex gap-3">
-                      <div className="relative h-24 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10 sm:h-28 sm:w-[4.6rem]">
+                    <div className="mb-3 flex gap-3 sm:mb-4">
+                      <div className="relative h-20 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10 sm:h-28 sm:w-[4.6rem]">
                         <Image
                           src={moviePoster}
                           alt={movieTitle}
@@ -953,7 +1017,7 @@ export default function MoviesHomePageClient({
                         <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
                           Reviewed movie
                         </p>
-                        <h3 className="line-clamp-2 text-base font-black leading-tight text-white">
+                        <h3 className="line-clamp-2 text-sm font-black leading-tight text-white sm:text-base">
                           {movieTitle}
                         </h3>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -971,7 +1035,7 @@ export default function MoviesHomePageClient({
                     </div>
 
                     <div className="rounded-xl border border-white/10 bg-black/25 p-3">
-                      <p className="line-clamp-4 text-sm leading-6 text-zinc-300">
+                      <p className="line-clamp-3 text-sm leading-6 text-zinc-300 sm:line-clamp-4">
                         &ldquo;{review.quote || "No review available"}&rdquo;
                       </p>
                     </div>
@@ -994,6 +1058,7 @@ export default function MoviesHomePageClient({
                   </div>
                 );
               })}
+              <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />
             </div>
           </section>
         )}
@@ -1009,7 +1074,7 @@ export default function MoviesHomePageClient({
 
             <div className="relative p-4 sm:p-5 lg:p-6">
               {/* Section Title */}
-              <div className="flex items-center justify-between mb-5 sm:mb-6">
+              <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="relative">
                     <div className="absolute inset-0 bg-zinc-600 rounded-xl blur-lg opacity-30" />
@@ -1112,10 +1177,16 @@ export default function MoviesHomePageClient({
               </div>
 
               {/* More Movies */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 mt-5">
+              <div className="-mx-4 mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
                 {actionMovies.slice(5, 11).map((movie) => (
-                  <MovieCard key={movie.id} show={movie} />
+                  <div
+                    key={movie.id}
+                    className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                  >
+                    <MovieCard show={movie} />
+                  </div>
                 ))}
+                <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />
               </div>
             </div>
           </section>
@@ -1135,7 +1206,7 @@ export default function MoviesHomePageClient({
               <div className="absolute inset-0 bg-[linear-gradient(to_right,#fbbf24_1px,transparent_1px),linear-gradient(to_bottom,#fbbf24_1px,transparent_1px)] bg-[size:2rem_2rem]" />
             </div>
             <div className="relative p-5 sm:p-6 lg:p-8">
-              <div className="flex items-start justify-between mb-6 sm:mb-8">
+              <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-xl sm:rounded-2xl blur-xl opacity-60 animate-pulse" />
@@ -1191,7 +1262,7 @@ export default function MoviesHomePageClient({
             </div>
 
             <div className="relative p-5 sm:p-6 lg:p-8">
-              <div className="flex items-start justify-between mb-6 sm:mb-8">
+              <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-xl sm:rounded-2xl blur-xl opacity-60 animate-pulse" />
@@ -1235,7 +1306,7 @@ export default function MoviesHomePageClient({
             <div className="absolute top-0 right-0 w-80 sm:w-96 lg:w-[500px] h-80 sm:h-96 lg:h-[500px] bg-gradient-to-bl from-slate-700/10 to-transparent rounded-full blur-3xl" />
 
             <div className="relative p-5 sm:p-6 lg:p-8">
-              <div className="flex items-start justify-between mb-6 sm:mb-8">
+              <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="relative">
                     <div className="absolute inset-0 bg-slate-600 rounded-xl sm:rounded-2xl blur-lg opacity-30" />
@@ -1269,7 +1340,7 @@ export default function MoviesHomePageClient({
         )}
 
         {moods && moods.length > 0 && (
-          <div className="max-w-7xl mx-auto w-full">
+          <div className="mx-auto w-full max-w-7xl pt-1 sm:pt-0">
             <MoodRecommendationsSection
               mediaType="movie"
               initialMoods={moods}

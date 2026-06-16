@@ -435,23 +435,32 @@ export default function PublicProfilePage() {
     ["badges", "Badges"],
     ["recentActivity", "Recent activity"],
   ] as const;
-  const visibleDisclosureCount = disclosureItems.filter(([key]) => disclosure[key]).length;
+  const visibleDisclosureCount = disclosureItems.filter(
+    ([key]) => disclosure[key],
+  ).length;
   const sharedListCount =
     (disclosure.watchlist
-      ? (profile?.watchlist.movieId.length ?? 0) + (profile?.watchlist.seriesId.length ?? 0)
+      ? (profile?.watchlist.movieId.length ?? 0) +
+        (profile?.watchlist.seriesId.length ?? 0)
       : 0) +
     (disclosure.liked
-      ? (profile?.liked.movieId.length ?? 0) + (profile?.liked.seriesId.length ?? 0)
+      ? (profile?.liked.movieId.length ?? 0) +
+        (profile?.liked.seriesId.length ?? 0)
       : 0);
   const featuredAchievement = profile?.achievements[0];
-  const publicScore = Math.round(([
-    disclosure.profileInfo,
-    disclosure.reviews && (profile?.stats.totalReviews ?? 0) > 0,
-    disclosure.badges && ((profile?.achievements.length ?? 0) > 0 || earnedBadges.length > 0),
-    disclosure.watchlist && watchlistItems.length > 0,
-    disclosure.liked && likedItems.length > 0,
-    disclosure.recentActivity && (profile?.recentActivity.length ?? 0) > 0,
-  ].filter(Boolean).length / 6) * 100);
+  const publicScore = Math.round(
+    ([
+      disclosure.profileInfo,
+      disclosure.reviews && (profile?.stats.totalReviews ?? 0) > 0,
+      disclosure.badges &&
+        ((profile?.achievements.length ?? 0) > 0 || earnedBadges.length > 0),
+      disclosure.watchlist && watchlistItems.length > 0,
+      disclosure.liked && likedItems.length > 0,
+      disclosure.recentActivity && (profile?.recentActivity.length ?? 0) > 0,
+    ].filter(Boolean).length /
+      6) *
+      100,
+  );
   const reviewCadence =
     profile?.reviews && profile.reviews.length > 1
       ? Math.max(
@@ -508,21 +517,28 @@ export default function PublicProfilePage() {
       <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,0.65)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.65)_1px,transparent_1px)] [background-size:44px_44px]" /> */}
 
       <section className="relative">
-        <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-8 sm:py-24 lg:px-10">
+        <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-8 sm:py-24 lg:px-10">
           <Link
             href="/"
-            className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.06] hover:text-white sm:mb-8"
+            className="mb-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-sm font-semibold text-white/58 transition hover:bg-white/[0.06] hover:text-white sm:mb-8"
           >
             <ArrowLeft size={16} />
             Back to Moodies
           </Link>
 
-          <div className="relative overflow-hidden border-b border-white/10 pb-8 sm:pb-10">
+          <div className="relative overflow-hidden border-b border-white/10 pb-6 sm:pb-10">
             <div className="pointer-events-none absolute right-0 top-0 hidden h-72 w-72 opacity-20 lg:block">
-              <Image src={MASCOT_SRC} alt="" fill sizes="288px" className="object-contain" priority />
+              <Image
+                src={MASCOT_SRC}
+                alt=""
+                fill
+                sizes="288px"
+                className="object-contain"
+                priority
+              />
             </div>
 
-            <div className="relative grid gap-6 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
+            <div className="relative grid gap-5 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-6">
                 <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.08] shadow-2xl shadow-black/30 ring-2 ring-[#e94f37]/40 sm:h-32 sm:w-32 lg:h-36 lg:w-36">
                   {avatar ? (
@@ -542,44 +558,71 @@ export default function PublicProfilePage() {
                 <div className="min-w-0 pb-1">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#ff8a78]">
-                      <Image src={LOGO_SRC} alt="" width={18} height={18} className="h-4 w-4 object-contain" />
+                      <Image
+                        src={LOGO_SRC}
+                        alt=""
+                        width={18}
+                        height={18}
+                        className="h-4 w-4 object-contain"
+                      />
                       Public Profile
                     </span>
                     <span className="rounded-lg bg-[#e94f37]/20 px-3 py-1.5 text-xs font-bold uppercase text-[#ff8a78]">
                       {visiblePersona?.title ?? "Moodies user"}
                     </span>
                   </div>
-                  <h1 className="break-words text-3xl font-black tracking-tight sm:text-6xl">
+                  <h1 className="break-words text-[2rem] font-black leading-[1.05] tracking-tight sm:text-6xl">
                     {displayName}
                   </h1>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-sm leading-6 text-white/55">
                     <span>@{profile.user.username}</span>
                     <span className="text-white/18">/</span>
-                    <span>{visiblePersona?.signal ?? "Public taste profile"}</span>
+                    <span>
+                      {visiblePersona?.signal ?? "Public taste profile"}
+                    </span>
                     <span className="text-white/18">/</span>
-                    <span>{visibleDisclosureCount}/{disclosureItems.length} sections shared</span>
+                    <span>
+                      {visibleDisclosureCount}/{disclosureItems.length} sections
+                      shared
+                    </span>
                   </div>
                   {profile.user.createdAt && (
                     <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-white/45">
                       <Calendar size={14} />
-                      Joined {new Date(profile.user.createdAt).toLocaleDateString()}
+                      Joined{" "}
+                      {new Date(profile.user.createdAt).toLocaleDateString()}
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] p-4 backdrop-blur">
+              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] p-4 backdrop-blur sm:p-5 lg:p-4">
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/70 to-transparent" />
                 <div className="flex items-start gap-3">
-                  <div className="relative h-20 w-20 flex-shrink-0 rounded-2xl bg-[#e94f37]/10">
-                    <Image src={MASCOT_SRC} alt="Moodies mascot" fill sizes="80px" className="object-contain p-1" />
+                  <div className="relative h-16 w-16 flex-shrink-0 rounded-2xl bg-[#e94f37]/10 sm:h-20 sm:w-20">
+                    <Image
+                      src={MASCOT_SRC}
+                      alt="Moodies mascot"
+                      fill
+                      sizes="80px"
+                      className="object-contain p-1"
+                    />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8a78]">Taste read</p>
-                    <p className="mt-1 text-lg font-black text-white">{visiblePersona?.title}</p>
-                    <p className="mt-1 text-xs leading-5 text-white/48">{visiblePersona?.description}</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8a78]">
+                      Taste read
+                    </p>
+                    <p className="mt-1 text-lg font-black text-white">
+                      {visiblePersona?.title}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-white/48">
+                      {visiblePersona?.description}
+                    </p>
                     <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full rounded-full bg-[#e94f37]" style={{ width: `${publicScore}%` }} />
+                      <div
+                        className="h-full rounded-full bg-[#e94f37]"
+                        style={{ width: `${publicScore}%` }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -595,10 +638,26 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <StatTile label="Reviews" value={disclosure.reviews ? profile.stats.totalReviews : "Hidden"} icon={<Star size={18} />} />
-            <StatTile label="Shared lists" value={sharedListCount} icon={<Bookmark size={18} />} />
-            <StatTile label="Badges" value={disclosure.badges ? profile.achievements.length || earnedBadges.length : "Hidden"} icon={<Medal size={18} />} />
+          <div className="mt-5 grid grid-cols-2 gap-2.5 sm:mt-6 sm:gap-3 lg:grid-cols-4">
+            <StatTile
+              label="Reviews"
+              value={disclosure.reviews ? profile.stats.totalReviews : "Hidden"}
+              icon={<Star size={18} />}
+            />
+            <StatTile
+              label="Shared lists"
+              value={sharedListCount}
+              icon={<Bookmark size={18} />}
+            />
+            <StatTile
+              label="Badges"
+              value={
+                disclosure.badges
+                  ? profile.achievements.length || earnedBadges.length
+                  : "Hidden"
+              }
+              icon={<Medal size={18} />}
+            />
             <StatTile
               label="Avg rating"
               value={
@@ -615,7 +674,7 @@ export default function PublicProfilePage() {
       </section>
 
       <section className="relative mx-auto max-w-7xl px-4 sm:px-8 lg:px-10">
-        <div className="mb-6 grid gap-3 md:grid-cols-3">
+        <div className="mb-5 grid gap-3 sm:mb-6 md:grid-cols-3">
           <PublicInsightCard
             icon={<Sparkles size={18} />}
             label="Profile pulse"
@@ -625,8 +684,15 @@ export default function PublicProfilePage() {
           <PublicInsightCard
             icon={<Medal size={18} />}
             label="Featured badge"
-            title={featuredAchievement?.badge?.badgeName ?? featuredAchievement?.achievement.title ?? "No shared badge yet"}
-            detail={featuredAchievement?.badge?.rarity ?? "Badge visibility follows this user's settings"}
+            title={
+              featuredAchievement?.badge?.badgeName ??
+              featuredAchievement?.achievement.title ??
+              "No shared badge yet"
+            }
+            detail={
+              featuredAchievement?.badge?.rarity ??
+              "Badge visibility follows this user's settings"
+            }
           />
           <PublicInsightCard
             icon={<Eye size={18} />}
@@ -636,10 +702,10 @@ export default function PublicProfilePage() {
           />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-          <aside className="space-y-4">
+        <div className="grid gap-5 sm:gap-6 lg:grid-cols-[320px_1fr]">
+          <aside className="space-y-3 sm:space-y-4">
             {disclosure.reviews && (
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
                 <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
                   Mood pattern
                 </h2>
@@ -666,46 +732,53 @@ export default function PublicProfilePage() {
             )}
 
             {disclosure.badges && (
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
                 <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
                   Achievements
                 </h2>
                 <div className="mt-4 space-y-2">
-                  {profile.achievements.length > 0 ? (
-                    profile.achievements.slice(0, 6).map((row) => (
-                      <div
-                        key={row.achievement.key}
-                        className="rounded-lg border border-[#e94f37]/25 bg-[#e94f37]/10 px-3 py-2 text-sm text-white"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="font-semibold">{row.badge?.badgeName ?? row.achievement.title}</span>
-                          <span className="text-[0.62rem] font-bold uppercase tracking-wide text-[#ff8a78]">{row.badge?.rarity ?? "Common"}</span>
-                        </div>
-                        <p className="mt-1 text-xs leading-5 text-white/50">{row.achievement.reasoningTemplate}</p>
-                      </div>
-                    ))
-                  ) : badges.map((badge) => (
-                      <div
-                        key={badge.name}
-                        className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm ${
-                          badge.earned
-                            ? "border-[#e94f37]/25 bg-[#e94f37]/10 text-white"
-                            : "border-white/10 bg-white/[0.03] text-white/32"
-                        }`}
-                      >
-                        <span
-                          className={
-                            badge.earned ? "text-[#ff8a78]" : "text-white/25"
-                          }
+                  {profile.achievements.length > 0
+                    ? profile.achievements.slice(0, 6).map((row) => (
+                        <div
+                          key={row.achievement.key}
+                          className="rounded-lg border border-[#e94f37]/25 bg-[#e94f37]/10 px-3 py-2 text-sm text-white"
                         >
-                          {badge.icon}
-                        </span>
-                        <span className="font-semibold">{badge.name}</span>
-                      </div>
-                    ))}
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="font-semibold">
+                              {row.badge?.badgeName ?? row.achievement.title}
+                            </span>
+                            <span className="text-[0.62rem] font-bold uppercase tracking-wide text-[#ff8a78]">
+                              {row.badge?.rarity ?? "Common"}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs leading-5 text-white/50">
+                            {row.achievement.reasoningTemplate}
+                          </p>
+                        </div>
+                      ))
+                    : badges.map((badge) => (
+                        <div
+                          key={badge.name}
+                          className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm ${
+                            badge.earned
+                              ? "border-[#e94f37]/25 bg-[#e94f37]/10 text-white"
+                              : "border-white/10 bg-white/[0.03] text-white/32"
+                          }`}
+                        >
+                          <span
+                            className={
+                              badge.earned ? "text-[#ff8a78]" : "text-white/25"
+                            }
+                          >
+                            {badge.icon}
+                          </span>
+                          <span className="font-semibold">{badge.name}</span>
+                        </div>
+                      ))}
                   {profile.badges.length > 0 && (
                     <p className="pt-2 text-xs text-white/35">
-                      {profile.badges.length} account badge{profile.badges.length === 1 ? "" : "s"} shared
+                      {profile.badges.length} account badge
+                      {profile.badges.length === 1 ? "" : "s"} shared
                     </p>
                   )}
                 </div>
@@ -713,7 +786,7 @@ export default function PublicProfilePage() {
             )}
 
             {(disclosure.watchlist || disclosure.liked) && (
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
+              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
                 <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
                   Shared lists
                 </h2>
@@ -735,7 +808,7 @@ export default function PublicProfilePage() {
             )}
 
             {(disclosure.badges || disclosure.recentActivity) && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                 {disclosure.badges && (
                   <InsightMini
                     label="Earned"
@@ -758,8 +831,13 @@ export default function PublicProfilePage() {
                 </h2>
                 <div className="mt-4 space-y-2">
                   {profile.recentActivity.map((activity, index) => (
-                    <div key={`${activity.type}-${index}`} className="rounded-lg bg-white/[0.04] px-3 py-2">
-                      <p className="text-sm font-semibold text-white/75">{activity.label}</p>
+                    <div
+                      key={`${activity.type}-${index}`}
+                      className="rounded-lg bg-white/[0.04] px-3 py-2"
+                    >
+                      <p className="text-sm font-semibold text-white/75">
+                        {activity.label}
+                      </p>
                       <p className="mt-0.5 text-xs text-white/35">
                         {new Date(activity.createdAt).toLocaleDateString()}
                       </p>
@@ -773,8 +851,10 @@ export default function PublicProfilePage() {
           <div className="space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-2xl font-black">
-                  {disclosure.reviews ? "Public reviews" : "Reviews are private"}
+                <h2 className="text-[1.65rem] font-black leading-tight sm:text-2xl">
+                  {disclosure.reviews
+                    ? "Public reviews"
+                    : "Reviews are private"}
                 </h2>
                 <p className="mt-1 text-sm text-white/45">
                   {disclosure.reviews
@@ -783,13 +863,13 @@ export default function PublicProfilePage() {
                 </p>
               </div>
               {disclosure.reviews && (
-                <div className="inline-flex rounded-lg border border-white/10 bg-white/[0.05] p-1">
+                <div className="inline-flex w-full rounded-lg border border-white/10 bg-white/[0.05] p-1 sm:w-auto">
                   {(["all", "MOVIE", "TV"] as const).map((filter) => (
                     <button
                       key={filter}
                       type="button"
                       onClick={() => setReviewFilter(filter)}
-                      className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                      className={`min-h-9 flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition sm:flex-none ${
                         reviewFilter === filter
                           ? "bg-[#e94f37] text-white"
                           : "text-white/55 hover:text-white"
@@ -870,7 +950,9 @@ function PublicInsightCard({
           <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/32">
             {label}
           </p>
-          <h3 className="mt-1 truncate text-base font-black text-white">{title}</h3>
+          <h3 className="mt-1 truncate text-base font-black text-white">
+            {title}
+          </h3>
           <p className="mt-1 text-xs leading-5 text-white/45">{detail}</p>
         </div>
       </div>
@@ -926,7 +1008,7 @@ function PublicListSection({
   items: PublicListItem[];
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 sm:p-6">
+    <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-6">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-black text-white">
@@ -949,7 +1031,7 @@ function PublicListSection({
           {emptyText}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-6">
           {items.map((item) => (
             <PublicListCard key={`${item.mediaType}-${item.id}`} item={item} />
           ))}
@@ -960,7 +1042,8 @@ function PublicListSection({
 }
 
 function PublicListCard({ item }: { item: PublicListItem }) {
-  const href = item.mediaType === "TV" ? `/tv/${item.id}` : `/movies/${item.id}`;
+  const href =
+    item.mediaType === "TV" ? `/tv/${item.id}` : `/movies/${item.id}`;
   const poster = posterSrc(item.poster);
 
   return (
@@ -1001,12 +1084,12 @@ function ReviewRow({ review, index }: { review: PublicReview; index: number }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.035, 0.25) }}
-      className="rounded-xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-white/20 hover:bg-white/[0.06]"
+      className="rounded-xl border border-white/10 bg-white/[0.04] p-3 transition hover:border-white/20 hover:bg-white/[0.06] sm:p-4"
     >
-      <div className="flex gap-4">
+      <div className="flex gap-3 sm:gap-4">
         <Link
           href={`/${type}/${review.tmdbId}`}
-          className="h-28 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-white/[0.08]"
+          className="h-24 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-white/[0.08] sm:h-28 sm:w-20"
         >
           {poster ? (
             <img
@@ -1030,7 +1113,7 @@ function ReviewRow({ review, index }: { review: PublicReview; index: number }) {
             <div className="min-w-0">
               <Link
                 href={`/${type}/${review.tmdbId}`}
-                className="block truncate text-base font-bold text-white transition hover:text-[#ff8a78]"
+                className="line-clamp-2 block text-sm font-bold text-white transition hover:text-[#ff8a78] sm:truncate sm:text-base"
               >
                 {review.tmdbTitle}
               </Link>
@@ -1060,7 +1143,7 @@ function ReviewRow({ review, index }: { review: PublicReview; index: number }) {
             </div>
           )}
 
-          <p className="mt-3 line-clamp-3 text-sm leading-6 text-white/68">
+          <p className="mt-3 line-clamp-3 text-sm leading-5 text-white/68 sm:leading-6">
             {review.content}
           </p>
         </div>

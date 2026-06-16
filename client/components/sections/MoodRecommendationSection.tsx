@@ -50,10 +50,17 @@ interface Recommendation {
   voteCount?: number | null;
   popularity?: number | null;
   metadata?: {
-    scoreBreakdown?: Partial<Record<
-      "genreScore" | "valenceScore" | "arousalScore" | "popularityScore" | "recencyScore" | "keywordScore",
-      number
-    >>;
+    scoreBreakdown?: Partial<
+      Record<
+        | "genreScore"
+        | "valenceScore"
+        | "arousalScore"
+        | "popularityScore"
+        | "recencyScore"
+        | "keywordScore",
+        number
+      >
+    >;
     source?: string;
   } | null;
 }
@@ -141,12 +148,15 @@ function normalizeMoods(value: unknown[]): Mood[] {
 }
 
 function getMoodImageSrc(mood: Mood) {
-  const imageName = moodImageMap[slugify(mood.name)] || iconFallbackMap[mood.icon];
+  const imageName =
+    moodImageMap[slugify(mood.name)] || iconFallbackMap[mood.icon];
   return imageName ? `/images/moods/${imageName}.png` : "/images/moodies1.png";
 }
 
 function getPosterUrl(path?: string | null) {
-  return path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
+  return path
+    ? `https://image.tmdb.org/t/p/w500${path}`
+    : "/placeholder-poster.svg";
 }
 
 function getMoodColor(mood?: Mood | null) {
@@ -174,11 +184,16 @@ function getMatchScore(rec: Recommendation) {
 
 function orderMoods(moods: Mood[]) {
   const byName = new Map(moods.map((mood) => [mood.name.toLowerCase(), mood]));
-  const preferred = FEATURED_MOOD_NAMES
-    .map((name) => byName.get(name.toLowerCase()))
-    .filter((mood): mood is Mood => Boolean(mood));
+  const preferred = FEATURED_MOOD_NAMES.map((name) =>
+    byName.get(name.toLowerCase()),
+  ).filter((mood): mood is Mood => Boolean(mood));
   const remaining = moods
-    .filter((mood) => !FEATURED_MOOD_NAMES.some((name) => name.toLowerCase() === mood.name.toLowerCase()))
+    .filter(
+      (mood) =>
+        !FEATURED_MOOD_NAMES.some(
+          (name) => name.toLowerCase() === mood.name.toLowerCase(),
+        ),
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return [...preferred, ...remaining];
@@ -200,7 +215,10 @@ function shuffleWithSeed<T>(items: T[], seed: number) {
 
   for (let index = shuffled.length - 1; index > 0; index--) {
     const swapIndex = Math.floor(seededRandom(seed + index) * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+    [shuffled[index], shuffled[swapIndex]] = [
+      shuffled[swapIndex],
+      shuffled[index],
+    ];
   }
 
   return shuffled;
@@ -213,11 +231,16 @@ export default function MoodRecommendationsSection({
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const { add, remove, isInWatchlist, ready } = useWatchlist();
-  const initialMoodList = useMemo(() => normalizeMoods(initialMoods ?? []), [initialMoods]);
+  const initialMoodList = useMemo(
+    () => normalizeMoods(initialMoods ?? []),
+    [initialMoods],
+  );
 
   const [moods, setMoods] = useState<Mood[]>(initialMoodList);
   const [displayedMoods, setDisplayedMoods] = useState<Mood[]>([]);
-  const [moodsLoading, setMoodsLoading] = useState(initialMoodList.length === 0);
+  const [moodsLoading, setMoodsLoading] = useState(
+    initialMoodList.length === 0,
+  );
   const [moodsError, setMoodsError] = useState<string | null>(null);
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -225,25 +248,35 @@ export default function MoodRecommendationsSection({
   const [error, setError] = useState<string | null>(null);
   const [moodCount, setMoodCount] = useState(DEFAULT_MOOD_COUNT);
   const [shuffleOffset, setShuffleOffset] = useState(0);
-  const [watchlistStates, setWatchlistStates] = useState<Record<string, boolean>>({});
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  const [watchlistStates, setWatchlistStates] = useState<
+    Record<string, boolean>
+  >({});
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>(
+    {},
+  );
   const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
   const requestIdRef = useRef(0);
   const initialMoodShuffleSeed = useRef(Date.now() + Math.random());
 
   const orderedMoods = useMemo(
     () => shuffleWithSeed(orderMoods(moods), initialMoodShuffleSeed.current),
-    [moods]
+    [moods],
   );
   const topMatch = recommendations[0];
-  const movieCount = recommendations.filter((rec) => rec.mediaType === "MOVIE").length;
-  const tvCount = recommendations.filter((rec) => rec.mediaType === "TV").length;
+  const movieCount = recommendations.filter(
+    (rec) => rec.mediaType === "MOVIE",
+  ).length;
+  const tvCount = recommendations.filter(
+    (rec) => rec.mediaType === "TV",
+  ).length;
 
   const toHookType = (type: "MOVIE" | "TV") =>
     (type === "TV" ? "series" : "movie") as "movie" | "series";
 
   useEffect(() => {
-    setDisplayedMoods(rotateArray(orderedMoods, shuffleOffset).slice(0, moodCount));
+    setDisplayedMoods(
+      rotateArray(orderedMoods, shuffleOffset).slice(0, moodCount),
+    );
   }, [moodCount, orderedMoods, shuffleOffset]);
 
   useEffect(() => {
@@ -260,7 +293,9 @@ export default function MoodRecommendationsSection({
         setMoodsLoading(true);
         setMoodsError(null);
         const moodsList = await getAllMoods();
-        const safeMoods = normalizeMoods(Array.isArray(moodsList) ? moodsList : []);
+        const safeMoods = normalizeMoods(
+          Array.isArray(moodsList) ? moodsList : [],
+        );
 
         if (safeMoods.length === 0) {
           throw new Error("No moods available");
@@ -269,7 +304,9 @@ export default function MoodRecommendationsSection({
         if (!cancelled) setMoods(safeMoods);
       } catch (err) {
         if (!cancelled) {
-          setMoodsError(err instanceof Error ? err.message : "Failed to load moods");
+          setMoodsError(
+            err instanceof Error ? err.message : "Failed to load moods",
+          );
         }
       } finally {
         if (!cancelled) setMoodsLoading(false);
@@ -283,12 +320,14 @@ export default function MoodRecommendationsSection({
   }, [initialMoodList]);
 
   const handleShuffleMoods = () => {
-    setShuffleOffset((current) => current + Math.max(1, Math.floor(moodCount / 2)));
+    setShuffleOffset(
+      (current) => current + Math.max(1, Math.floor(moodCount / 2)),
+    );
   };
 
   const toggleMoodCount = () => {
     setMoodCount((current) =>
-      current === DEFAULT_MOOD_COUNT ? EXPANDED_MOOD_COUNT : DEFAULT_MOOD_COUNT
+      current === DEFAULT_MOOD_COUNT ? EXPANDED_MOOD_COUNT : DEFAULT_MOOD_COUNT,
     );
   };
 
@@ -311,7 +350,7 @@ export default function MoodRecommendationsSection({
           userId: isAuthenticated ? user?.id : undefined,
           minRating: 5.8,
           excludeViewed: true,
-        }
+        },
       );
 
       const recs = Array.isArray(data?.recommendations)
@@ -330,7 +369,8 @@ export default function MoodRecommendationsSection({
       }
     } catch (err) {
       if (requestIdRef.current !== requestId) return;
-      const message = err instanceof Error ? err.message : "Failed to load recommendations";
+      const message =
+        err instanceof Error ? err.message : "Failed to load recommendations";
       setError(message);
       setRecommendations([]);
     } finally {
@@ -405,13 +445,18 @@ export default function MoodRecommendationsSection({
 
   if (moodsError && !moodsLoading) {
     return (
-      <section id="moods" className="relative w-full max-w-7xl mx-auto overflow-hidden">
+      <section
+        id="moods"
+        className="relative w-full max-w-7xl mx-auto overflow-hidden"
+      >
         <div className="flex items-center justify-center py-32">
           <div className="max-w-md text-center">
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/20">
               <Sparkles className="h-9 w-9 text-red-300" />
             </div>
-            <h3 className="mb-2 text-2xl font-black text-white">Error Loading Moods</h3>
+            <h3 className="mb-2 text-2xl font-black text-white">
+              Error Loading Moods
+            </h3>
             <p className="mb-6 text-lg text-gray-400">{moodsError}</p>
             <button
               onClick={() => window.location.reload()}
@@ -426,15 +471,18 @@ export default function MoodRecommendationsSection({
   }
 
   return (
-    <section id="moods" className="relative w-full max-w-7xl mx-auto overflow-hidden">
+    <section
+      id="moods"
+      className="relative w-full max-w-7xl mx-auto overflow-hidden"
+    >
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-1/4 h-96 w-96 rounded-full bg-violet-600/10 blur-3xl" />
         <div className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-fuchsia-600/10 blur-3xl" />
         <div className="absolute top-1/2 left-1/2 h-96 w-96 rounded-full bg-cyan-600/5 blur-3xl" />
       </div>
 
-      <div className="relative mb-12">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="relative mb-8 sm:mb-12">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-3">
               <div className="relative">
@@ -443,12 +491,13 @@ export default function MoodRecommendationsSection({
                   <Sparkles className="h-6 w-6 text-white" />
                 </div>
               </div>
-              <h2 className="bg-gradient-to-r from-white via-violet-200 to-white bg-clip-text text-3xl font-black tracking-tight text-transparent sm:text-4xl">
+              <h2 className="bg-gradient-to-r from-white via-violet-200 to-white bg-clip-text text-2xl font-black tracking-tight text-transparent sm:text-4xl">
                 Mood Matcher
               </h2>
             </div>
-            <p className="ml-14 max-w-2xl text-base text-gray-400">
-              Discover content that matches your current vibe, now ranked with stronger mood signals.
+            <p className="max-w-2xl text-sm leading-6 text-gray-400 sm:ml-14 sm:text-base">
+              Discover content that matches your current vibe, now ranked with
+              stronger mood signals.
             </p>
           </div>
 
@@ -463,7 +512,9 @@ export default function MoodRecommendationsSection({
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-violet-700 shadow-md">
                 <RefreshCw
                   className={`h-4 w-4 ${
-                    loading ? "animate-spin" : "transition-transform duration-500 group-hover:rotate-180"
+                    loading
+                      ? "animate-spin"
+                      : "transition-transform duration-500 group-hover:rotate-180"
                   }`}
                 />
               </span>
@@ -472,7 +523,9 @@ export default function MoodRecommendationsSection({
                   {loading ? "Refreshing..." : "Refresh Picks"}
                 </span>
                 <span className="block text-[11px] font-semibold text-violet-100/75">
-                  {refreshedAt ? "Fresh set requested" : `Regenerate for ${selectedMood.name.toLowerCase()}`}
+                  {refreshedAt
+                    ? "Fresh set requested"
+                    : `Regenerate for ${selectedMood.name.toLowerCase()}`}
                 </span>
               </span>
             </motion.button>
@@ -508,7 +561,9 @@ export default function MoodRecommendationsSection({
                   onClick={toggleMoodCount}
                   className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-bold text-zinc-200 transition hover:bg-white/[0.1]"
                 >
-                  {moodCount === DEFAULT_MOOD_COUNT ? "Show more moods" : "Show fewer"}
+                  {moodCount === DEFAULT_MOOD_COUNT
+                    ? "Show more moods"
+                    : "Show fewer"}
                 </button>
                 <button
                   onClick={handleShuffleMoods}
@@ -530,65 +585,68 @@ export default function MoodRecommendationsSection({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="mb-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+            className="-mx-4 mb-8 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:mb-12 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 xl:grid-cols-6"
           >
             {moodsLoading
               ? Array.from({ length: DEFAULT_MOOD_COUNT }).map((_, index) => (
-                <div key={index} className="h-48 animate-pulse rounded-2xl bg-white/[0.06]" />
-              ))
-              : displayedMoods.map((mood, index) => (
-                <motion.button
-                  key={mood.id}
-                  initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{
-                    delay: index * 0.03,
-                    type: "spring",
-                    stiffness: 260,
-                    damping: 20,
-                  }}
-                  onClick={() => handleMoodClick(mood)}
-                  className="group relative rounded-2xl p-6 transition duration-300 hover:-translate-y-2 hover:scale-105"
-                  style={{
-                    background: `linear-gradient(135deg, ${mood.color}20 0%, ${mood.color}05 100%)`,
-                    border: `2px solid ${mood.color}30`,
-                  }}
-                >
                   <div
-                    className="absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                    style={{
-                      background: `linear-gradient(135deg, ${mood.color}40 0%, ${mood.color}15 100%)`,
-                      boxShadow: `0 8px 32px ${mood.color}40, 0 0 0 1px ${mood.color}50`,
-                    }}
+                    key={index}
+                    className="h-40 w-[44vw] min-w-[150px] max-w-[178px] shrink-0 snap-start animate-pulse rounded-2xl bg-white/[0.06] sm:h-48 sm:w-auto sm:min-w-0 sm:max-w-none"
                   />
-                  <div className="relative flex flex-col items-center gap-3 text-center">
-                    <div className="relative mb-1 h-24 w-24 transition duration-300 group-hover:rotate-3 group-hover:scale-110">
-                      <Image
-                        src={getMoodImageSrc(mood)}
-                        alt={`${mood.name} mood mascot`}
-                        fill
-                        sizes="96px"
-                        className="object-contain"
+                ))
+              : displayedMoods.map((mood, index) => (
+                  <motion.button
+                    key={mood.id}
+                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{
+                      delay: index * 0.03,
+                      type: "spring",
+                      stiffness: 260,
+                      damping: 20,
+                    }}
+                    onClick={() => handleMoodClick(mood)}
+                    className="group relative w-[44vw] min-w-[150px] max-w-[178px] shrink-0 snap-start rounded-2xl p-4 transition duration-300 hover:-translate-y-2 hover:scale-105 sm:w-auto sm:min-w-0 sm:max-w-none sm:p-6"
+                    style={{
+                      background: `linear-gradient(135deg, ${mood.color}20 0%, ${mood.color}05 100%)`,
+                      border: `2px solid ${mood.color}30`,
+                    }}
+                  >
+                    <div
+                      className="absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                      style={{
+                        background: `linear-gradient(135deg, ${mood.color}40 0%, ${mood.color}15 100%)`,
+                        boxShadow: `0 8px 32px ${mood.color}40, 0 0 0 1px ${mood.color}50`,
+                      }}
+                    />
+                    <div className="relative flex flex-col items-center gap-3 text-center">
+                      <div className="relative mb-1 h-16 w-16 transition duration-300 group-hover:rotate-3 group-hover:scale-110 sm:h-24 sm:w-24">
+                        <Image
+                          src={getMoodImageSrc(mood)}
+                          alt={`${mood.name} mood mascot`}
+                          fill
+                          sizes="(max-width: 640px) 64px, 96px"
+                          className="object-contain"
+                        />
+                      </div>
+                      <div>
+                        <h3
+                          className="mb-1 text-sm font-bold"
+                          style={{ color: mood.color }}
+                        >
+                          {mood.name}
+                        </h3>
+                        <p className="line-clamp-2 text-xs leading-relaxed text-gray-400 transition-colors group-hover:text-gray-300">
+                          {mood.description}
+                        </p>
+                      </div>
+                      <ChevronRight
+                        className="h-5 w-5 opacity-0 transition duration-300 group-hover:translate-x-1 group-hover:opacity-100"
+                        style={{ color: mood.color }}
                       />
                     </div>
-                    <div>
-                      <h3
-                        className="mb-1 text-sm font-bold"
-                        style={{ color: mood.color }}
-                      >
-                        {mood.name}
-                      </h3>
-                      <p className="line-clamp-2 text-xs leading-relaxed text-gray-400 transition-colors group-hover:text-gray-300">
-                        {mood.description}
-                      </p>
-                    </div>
-                    <ChevronRight
-                      className="h-5 w-5 opacity-0 transition duration-300 group-hover:translate-x-1 group-hover:opacity-100"
-                      style={{ color: mood.color }}
-                    />
-                  </div>
-                </motion.button>
-              ))}
+                  </motion.button>
+                ))}
           </motion.div>
         ) : (
           <motion.div
@@ -677,7 +735,8 @@ export default function MoodRecommendationsSection({
                   Curating your perfect matches
                 </p>
                 <p className="text-lg text-gray-400">
-                  Finding content that fits your {selectedMood.name.toLowerCase()} mood...
+                  Finding content that fits your{" "}
+                  {selectedMood.name.toLowerCase()} mood...
                 </p>
               </div>
             ) : error ? (
@@ -702,7 +761,7 @@ export default function MoodRecommendationsSection({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+                className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6"
               >
                 {recommendations.map((rec, index) => {
                   const id = String(rec.tmdbId);
@@ -712,7 +771,10 @@ export default function MoodRecommendationsSection({
                   const matchScore = getMatchScore(rec);
                   const genres = rec.genreNames?.filter(Boolean) ?? [];
                   const visibleGenres = genres.slice(0, 2);
-                  const hiddenGenreCount = Math.max(0, genres.length - visibleGenres.length);
+                  const hiddenGenreCount = Math.max(
+                    0,
+                    genres.length - visibleGenres.length,
+                  );
                   const moodColor = getMoodColor(selectedMood);
 
                   return (
@@ -726,6 +788,7 @@ export default function MoodRecommendationsSection({
                         stiffness: 260,
                         damping: 20,
                       }}
+                      className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
                     >
                       <Link href={getMediaHref(rec)}>
                         <div className="group relative block">
@@ -765,7 +828,11 @@ export default function MoodRecommendationsSection({
                             </div>
 
                             <div className="absolute right-2 top-2">
-                              <RatingBadge rating={rec.voteAverage} variant="colored" size="sm" />
+                              <RatingBadge
+                                rating={rec.voteAverage}
+                                variant="colored"
+                                size="sm"
+                              />
                             </div>
 
                             <div className="absolute bottom-2 left-2 right-2 flex flex-wrap items-end gap-1.5 transition-opacity duration-300 group-hover:opacity-0">
@@ -792,7 +859,8 @@ export default function MoodRecommendationsSection({
                                           onClick={(event) => {
                                             event.preventDefault();
                                             event.stopPropagation();
-                                            if (!isBusy) void toggleWatchlist(rec);
+                                            if (!isBusy)
+                                              void toggleWatchlist(rec);
                                           }}
                                           disabled={isBusy}
                                           className={`flex h-9 w-9 items-center justify-center rounded-full shadow-xl transition hover:scale-110 ${
@@ -801,14 +869,20 @@ export default function MoodRecommendationsSection({
                                               : "bg-white text-black hover:text-white"
                                           } ${isBusy ? "cursor-not-allowed opacity-70" : ""}`}
                                           style={{
-                                            backgroundColor: inList ? moodColor : undefined,
+                                            backgroundColor: inList
+                                              ? moodColor
+                                              : undefined,
                                           }}
                                           whileTap={{ scale: 0.9 }}
                                           onMouseEnter={(event) => {
-                                            if (!inList) event.currentTarget.style.backgroundColor = moodColor;
+                                            if (!inList)
+                                              event.currentTarget.style.backgroundColor =
+                                                moodColor;
                                           }}
                                           onMouseLeave={(event) => {
-                                            if (!inList) event.currentTarget.style.backgroundColor = "";
+                                            if (!inList)
+                                              event.currentTarget.style.backgroundColor =
+                                                "";
                                           }}
                                         >
                                           {isBusy ? (
@@ -853,10 +927,12 @@ export default function MoodRecommendationsSection({
                                           }}
                                           className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black shadow-xl transition hover:scale-110 hover:text-white"
                                           onMouseEnter={(event) => {
-                                            event.currentTarget.style.backgroundColor = moodColor;
+                                            event.currentTarget.style.backgroundColor =
+                                              moodColor;
                                           }}
                                           onMouseLeave={(event) => {
-                                            event.currentTarget.style.backgroundColor = "";
+                                            event.currentTarget.style.backgroundColor =
+                                              "";
                                           }}
                                         >
                                           <Info className="h-4 w-4" />
@@ -867,7 +943,9 @@ export default function MoodRecommendationsSection({
                                         sideOffset={8}
                                         className="rounded-lg border border-white/20 bg-black/90 px-3 py-2 shadow-xl backdrop-blur-md"
                                       >
-                                        <div className="text-xs font-medium text-white">More Info</div>
+                                        <div className="text-xs font-medium text-white">
+                                          More Info
+                                        </div>
                                       </TooltipContent>
                                     </Tooltip>
                                   </div>
@@ -929,20 +1007,27 @@ export default function MoodRecommendationsSection({
                     </motion.div>
                   );
                 })}
+                <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />
               </motion.div>
             ) : (
               <div className="flex items-center justify-center py-32">
                 <div className="max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl shadow-black/20 backdrop-blur">
                   <div
                     className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
-                    style={{ backgroundColor: `${selectedMood.color}22`, color: selectedMood.color }}
+                    style={{
+                      backgroundColor: `${selectedMood.color}22`,
+                      color: selectedMood.color,
+                    }}
                   >
                     <Sparkles className="h-8 w-8" />
                   </div>
-                  <h3 className="mb-2 text-2xl font-black text-white">No matches found</h3>
+                  <h3 className="mb-2 text-2xl font-black text-white">
+                    No matches found
+                  </h3>
                   <p className="mb-6 text-sm leading-6 text-gray-400">
-                    We could not build a confident {selectedMood.name.toLowerCase()} set from the current filters.
-                    Refresh this mood or choose another lane.
+                    We could not build a confident{" "}
+                    {selectedMood.name.toLowerCase()} set from the current
+                    filters. Refresh this mood or choose another lane.
                   </p>
                   <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
                     <button

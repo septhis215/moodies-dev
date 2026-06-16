@@ -107,7 +107,7 @@ export default function TVHomePageClient({
             className={`
             relative rounded-2xl overflow-hidden
             bg-neutral-950
-            shadow-xl shadow-black/30 ring-1 ring-white/10
+            shadow-lg shadow-black/25 ring-1 ring-white/10
             transition duration-300 md:group-hover:ring-[#e94f37]/45
 
             /* MOBILE: bigger + consistent */
@@ -138,15 +138,19 @@ export default function TVHomePageClient({
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
 
             {/* Rating */}
-            <div className="absolute top-3 right-3 text-white rounded-lg text-xs font-bold flex items-center gap-1 ">
-              <RatingBadge rating={show.vote_average} variant="colored" size="sm" />
+            <div className="absolute right-2 top-2 flex items-center gap-1 rounded-lg text-xs font-bold text-white sm:right-3 sm:top-3">
+              <RatingBadge
+                rating={show.vote_average}
+                variant="colored"
+                size="sm"
+              />
             </div>
 
             {/* ACTIONS */}
             <div
               className="
               absolute inset-x-0 bottom-0
-              p-3
+              p-2.5 sm:p-3
 
               /* Mobile: always visible */
               opacity-100
@@ -261,12 +265,12 @@ export default function TVHomePageClient({
           </div>
 
           {/* TEXT */}
-          <div className="mt-3 px-1">
-            <h4 className="font-bold text-sm sm:text-base line-clamp-2 leading-tight text-white md:group-hover:text-[#e94f37] transition-colors">
+          <div className="mt-2.5 px-0.5 sm:mt-3 sm:px-1">
+            <h4 className="line-clamp-2 text-sm font-bold leading-tight text-white transition-colors md:group-hover:text-[#e94f37] sm:text-base">
               {show.title || show.name}
             </h4>
 
-            <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+            <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-400 sm:text-xs">
               {show.first_air_date && (
                 <span className="font-semibold">
                   {show.first_air_date.split("-")[0]}
@@ -333,15 +337,15 @@ export default function TVHomePageClient({
       <section className="relative w-full text-white overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-10 sm:pt-28 sm:pb-16 relative z-20">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-12 md:gap-6 items-stretch">
+        <div className="relative z-20 mx-auto max-w-7xl px-4 pb-8 pt-6 sm:px-6 sm:pb-16 sm:pt-28">
+          <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-12 md:gap-6">
             {/* LEFT mosaic */}
-            <div className="md:col-span-7 col-span-1 rounded-2xl sm:rounded-3xl overflow-hidden bg-neutral-950/80 backdrop-blur-xl p-4 sm:p-6 flex flex-col ring-1 ring-white/10 shadow-2xl shadow-black/40">
-              <div className="h-1 -mx-5 -mt-5 mb-5 bg-gradient-to-r from-[#e94f37] via-[#ff7a66] to-[#38bdf8] sm:-mx-6 sm:-mt-6" />
-              <div className="mb-6">
+            <div className="col-span-1 flex flex-col overflow-hidden rounded-2xl bg-neutral-950/80 p-3 shadow-2xl shadow-black/40 ring-1 ring-white/10 backdrop-blur-xl sm:rounded-3xl sm:p-6 md:col-span-7">
+              <div className="-mx-3 -mt-3 mb-4 h-1 bg-gradient-to-r from-[#e94f37] via-[#ff7a66] to-[#38bdf8] sm:-mx-6 sm:-mt-6 sm:mb-5" />
+              <div className="mb-4 sm:mb-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.04] text-[#ff7a66] ring-1 ring-white/10">
-                    <Tv className="w-6 h-6" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] text-[#ff7a66] ring-1 ring-white/10 sm:h-11 sm:w-11">
+                    <Tv className="h-5 w-5 sm:h-6 sm:w-6" />
                   </div>
                   <div>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
@@ -357,8 +361,48 @@ export default function TVHomePageClient({
                 </p>
               </div>
 
-              <div className="relative flex-1 min-h-[300px] sm:min-h-[460px] w-full rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black/40">
-                <div className="absolute inset-0 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 p-2.5 sm:p-3">
+              <div className="relative h-[300px] w-full overflow-hidden rounded-2xl bg-black/40 ring-1 ring-white/10 sm:h-auto sm:min-h-[460px] sm:flex-1">
+                <div className="flex h-full snap-x snap-mandatory gap-3 overflow-x-auto px-3 py-4 scroll-smooth sm:hidden">
+                  {Array.from({ length: 10 }).map((_, i) => {
+                    const s =
+                      heroShows[(heroIndex + i) % heroShows.length] || {};
+                    const isActive = featured?.id === s.id;
+                    return (
+                      <button
+                        key={i}
+                        onClick={() =>
+                          setHeroIndex((heroIndex + i) % heroShows.length)
+                        }
+                        className={`relative h-full w-[42vw] min-w-[150px] max-w-[175px] shrink-0 snap-start overflow-hidden rounded-2xl border transition-all duration-300 ${
+                          isActive
+                            ? "border-[#e94f37] shadow-2xl shadow-[#e94f37]/25"
+                            : "border-white/10"
+                        }`}
+                      >
+                        {s.poster_path ? (
+                          <Image
+                            src={getPosterUrl(s.poster_path)}
+                            alt={s.title || s.name || ""}
+                            fill
+                            sizes="170px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-zinc-800" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+                        <div className="absolute inset-x-0 bottom-0 p-3 text-left">
+                          <p className="line-clamp-2 text-sm font-black leading-tight text-white">
+                            {s.title || s.name}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  <div className="w-1 shrink-0" aria-hidden="true" />
+                </div>
+
+                <div className="absolute inset-0 hidden grid-cols-3 gap-2 p-2 sm:grid sm:grid-cols-4 sm:gap-3 sm:p-3 md:grid-cols-5 lg:grid-cols-6">
                   {Array.from({ length: 18 }).map((_, i) => {
                     const s =
                       heroShows[(heroIndex + i) % heroShows.length] || {};
@@ -421,7 +465,7 @@ export default function TVHomePageClient({
                     </div>
                   )}
 
-                  <div className="relative w-full h-52 sm:h-80 rounded-t-2xl sm:rounded-t-3xl overflow-hidden">
+                  <div className="relative h-52 w-full overflow-hidden rounded-t-2xl sm:h-80 sm:rounded-t-3xl">
                     {featured?.backdrop_path ? (
                       <>
                         <Image
@@ -439,19 +483,23 @@ export default function TVHomePageClient({
                     )}
                   </div>
 
-                  <div className="relative p-4 sm:p-8 flex flex-col flex-1">
-                    <div className="flex items-center gap-2 flex-wrap mb-4">
-                      <span className="px-4 py-2 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white rounded-full text-xs font-black uppercase tracking-wider shadow-lg">
+                  <div className="relative flex flex-1 flex-col p-4 sm:p-8">
+                    <div className="mb-3 flex flex-wrap items-center gap-2 sm:mb-4">
+                      <span className="rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white shadow-lg sm:px-4 sm:py-2 sm:text-xs">
                         Series spotlight
                       </span>
                       {featured?.release_date && (
-                        <span className="px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-xs font-bold ring-1 ring-white/20">
+                        <span className="rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-bold ring-1 ring-white/20 backdrop-blur-sm sm:px-4 sm:py-2 sm:text-xs">
                           {featured.release_date.split("-")[0]}
                         </span>
                       )}
                       {featured?.vote_average !== undefined && (
                         <div className="flex items-center gap-1.5 backdrop-blur-sm rounded-full ">
-                          <RatingBadge rating={featured.vote_average} variant="colored" size="md"/>
+                          <RatingBadge
+                            rating={featured.vote_average}
+                            variant="colored"
+                            size="md"
+                          />
                         </div>
                       )}
 
@@ -461,7 +509,7 @@ export default function TVHomePageClient({
                           handleFeaturedWatchlist();
                         }}
                         disabled={loadingStates["featured"]}
-                        className={`ml-auto px-4 py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer
+                        className={`ml-auto flex h-10 w-10 items-center justify-center gap-2 rounded-xl font-semibold shadow-lg transition-all cursor-pointer sm:h-auto sm:w-auto sm:px-4 sm:py-3
         ${
           featuredInWatchlist
             ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
@@ -492,15 +540,15 @@ export default function TVHomePageClient({
                       </button>
                     </div>
 
-                    <h2 className="text-2xl sm:text-4xl font-black mb-3 sm:mb-4 leading-tight line-clamp-2 text-white">
+                    <h2 className="mb-2 line-clamp-2 text-xl font-black leading-tight text-white sm:mb-4 sm:text-4xl">
                       {featured?.title || "—"}
                     </h2>
 
-                    <p className="text-sm sm:text-base text-gray-300 line-clamp-2 sm:line-clamp-3 mb-5 sm:mb-6 leading-relaxed">
+                    <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-gray-300 sm:mb-6 sm:line-clamp-3 sm:text-base">
                       {featured?.overview || "No description available"}
                     </p>
 
-                    <div className="flex gap-3 mt-auto pt-4 sm:pt-6 border-t border-white/10">
+                    <div className="mt-auto flex gap-3 border-t border-white/10 pt-3 sm:pt-6">
                       <Link href={`/tv/${featured?.id}`} className="flex-1">
                         <button className="w-full min-h-12 px-5 py-3 sm:px-6 sm:py-4 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d4452f] hover:to-[#e94f37] text-white rounded-xl sm:rounded-2xl font-bold transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg shadow-[#e94f37]/30 cursor-pointer">
                           <Info className="w-5 h-5" />
@@ -517,15 +565,15 @@ export default function TVHomePageClient({
       </section>
 
       {/* MAIN CONTENT */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-12 sm:space-y-20">
+      <div className="relative mx-auto max-w-7xl space-y-11 px-4 py-10 sm:space-y-14 sm:px-6 sm:py-12 lg:space-y-16 lg:px-8 lg:py-14">
         {/* Airing Today */}
         {airingToday && airingToday.length > 0 && (
           <section
             id="airing-today"
             className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
           >
-            <div className="relative flex items-center justify-between mb-8">
-              <div className="flex items-center gap-4">
+            <div className="relative mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div className="relative">
                   <div className="absolute inset-0 bg-[#e94f37] blur-lg opacity-40 animate-pulse" />
                   <div className="relative w-3 h-3 rounded-full bg-[#e94f37] animate-pulse" />
@@ -534,7 +582,7 @@ export default function TVHomePageClient({
                   <span className="text-xs font-black text-[#ff8b78] uppercase tracking-wider block mb-1">
                     Live Now
                   </span>
-                  <h2 className="text-3xl sm:text-4xl font-black text-white">
+                  <h2 className="text-2xl font-black text-white sm:text-3xl lg:text-4xl">
                     Airing Today
                   </h2>
                 </div>
@@ -557,13 +605,13 @@ export default function TVHomePageClient({
             id="trending-tv"
             className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
           >
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-4">
+            <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div className="relative">
                   <div className="absolute inset-0 bg-[#e94f37] blur-xl opacity-50" />
-                  <Flame className="relative w-8 h-8 text-[#e94f37]" />
+                  <Flame className="relative h-7 w-7 text-[#e94f37] sm:h-8 sm:w-8" />
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-black text-white">
+                <h2 className="text-2xl font-black text-white sm:text-3xl lg:text-4xl">
                   Trending Now
                 </h2>
               </div>
@@ -585,13 +633,13 @@ export default function TVHomePageClient({
             id="new-release-tv"
             className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
           >
-            <div className="flex items-center justify-between mb-10">
-              <div className="flex items-center gap-4">
+            <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div className="relative">
                   <div className="absolute inset-0 bg-[#e94f37] blur-xl opacity-40" />
-                  <Sparkles className="relative w-9 h-9 text-[#ff7a66]" />
+                  <Sparkles className="relative h-7 w-7 text-[#ff7a66] sm:h-9 sm:w-9" />
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-black text-white">
+                <h2 className="text-2xl font-black text-white sm:text-3xl lg:text-4xl">
                   New Releases
                 </h2>
               </div>
@@ -605,14 +653,14 @@ export default function TVHomePageClient({
               </Link>
             </div>
 
-            <div className="grid grid-cols-12 gap-5">
+            <div className="grid grid-cols-12 gap-4 sm:gap-5">
               {/* Large Featured */}
               {newReleaseTV[0] && (
                 <Link
                   href={`/tv/${newReleaseTV[0].id}`}
                   className="col-span-12 lg:col-span-8 group"
                 >
-                  <div className="relative h-96 lg:h-[500px] rounded-3xl overflow-hidden bg-zinc-900 ring-1 ring-white/10 shadow-2xl">
+                  <div className="relative h-[320px] overflow-hidden rounded-2xl bg-zinc-900 shadow-2xl ring-1 ring-white/10 sm:h-96 sm:rounded-3xl lg:h-[500px]">
                     {newReleaseTV[0].backdrop_path && (
                       <>
                         <Image
@@ -626,20 +674,24 @@ export default function TVHomePageClient({
                       </>
                     )}
 
-                    <div className="absolute bottom-0 left-0 right-0 p-8 lg:p-10">
-                      <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#e94f37] rounded-xl text-sm font-black mb-4 shadow-lg">
+                    <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8 lg:p-10">
+                      <div className="mb-3 inline-flex items-center gap-2 rounded-xl bg-[#e94f37] px-3 py-1.5 text-xs font-black shadow-lg sm:mb-4 sm:px-4 sm:py-2 sm:text-sm">
                         <Sparkles className="w-4 h-4" />
                         NEW RELEASE
                       </div>
-                      <h3 className="text-4xl font-black mb-4 line-clamp-2 text-white">
+                      <h3 className="mb-2 line-clamp-2 text-xl font-black text-white sm:mb-4 sm:text-4xl">
                         {newReleaseTV[0].title}
                       </h3>
-                      <p className="text-gray-200 line-clamp-2 mb-6 max-w-3xl text-lg leading-relaxed">
+                      <p className="mb-4 line-clamp-2 max-w-3xl text-sm leading-6 text-gray-200 sm:mb-6 sm:text-lg sm:leading-relaxed">
                         {newReleaseTV[0].overview}
                       </p>
-                      <div className="flex items-center gap-6">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-6">
                         <div className="flex items-center gap-2">
-                          <RatingBadge rating={newReleaseTV[0].vote_average} variant="colored" size="sm" />
+                          <RatingBadge
+                            rating={newReleaseTV[0].vote_average}
+                            variant="colored"
+                            size="sm"
+                          />
                         </div>
                         <span className="text-gray-300 font-semibold">
                           {newReleaseTV[0].release_date}
@@ -651,10 +703,10 @@ export default function TVHomePageClient({
               )}
 
               {/* Right Side */}
-              <div className="col-span-12 lg:col-span-4 grid grid-cols-2 lg:grid-cols-1 gap-5">
+              <div className="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1 lg:gap-5">
                 {newReleaseTV.slice(1, 3).map((tv) => (
                   <Link key={tv.id} href={`/tv/${tv.id}`} className="group">
-                    <div className="relative h-48 lg:h-[238px] rounded-2xl overflow-hidden bg-zinc-900 ring-1 ring-white/10 shadow-xl">
+                    <div className="relative h-40 overflow-hidden rounded-2xl bg-zinc-900 shadow-xl ring-1 ring-white/10 sm:h-48 lg:h-[238px]">
                       {tv.backdrop_path && (
                         <>
                           <Image
@@ -668,13 +720,17 @@ export default function TVHomePageClient({
                         </>
                       )}
 
-                      <div className="absolute bottom-0 left-0 right-0 p-5">
-                        <h4 className="text-lg font-bold mb-2 line-clamp-1 group-hover:text-[#ff7a66] transition-colors text-white">
+                      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
+                        <h4 className="mb-2 line-clamp-1 text-base font-bold text-white transition-colors group-hover:text-[#ff7a66] sm:text-lg">
                           {tv.title}
                         </h4>
                         <div className="flex items-center gap-3 text-sm">
                           <div className="flex items-center gap-1">
-                            <RatingBadge rating={tv.vote_average} variant="colored" size="sm" />
+                            <RatingBadge
+                              rating={tv.vote_average}
+                              variant="colored"
+                              size="sm"
+                            />
                           </div>
                           <span className="text-gray-400 font-semibold">
                             {tv.release_date?.split("-")[0]}
@@ -687,10 +743,16 @@ export default function TVHomePageClient({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5 mt-6">
+            <div className="-mx-4 mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
               {newReleaseTV.slice(3, 9).map((tv) => (
-                <TVCard key={tv.id} show={tv} />
+                <div
+                  key={tv.id}
+                  className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                >
+                  <TVCard show={tv} />
+                </div>
               ))}
+              <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />
             </div>
           </section>
         )}
@@ -701,7 +763,7 @@ export default function TVHomePageClient({
             id="top-rated-tv"
             className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <Star className="w-7 h-7 text-[#ff7a66]" />
                 <h2 className="text-2xl sm:text-3xl font-black">
@@ -718,10 +780,16 @@ export default function TVHomePageClient({
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
+            <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
               {topRatedTV.slice(0, 12).map((show) => (
-                <TVCard key={show.id} show={show} />
+                <div
+                  key={show.id}
+                  className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                >
+                  <TVCard show={show} />
+                </div>
               ))}
+              <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />
             </div>
           </section>
         )}
@@ -732,7 +800,7 @@ export default function TVHomePageClient({
             id="airing-this-week"
             className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <Calendar className="w-7 h-7 text-indigo-500" />
                 <h2 className="text-2xl sm:text-3xl font-black">
@@ -758,7 +826,7 @@ export default function TVHomePageClient({
             id="korean-tv"
             className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <Image
                   src="/images/south-korea.png"
@@ -793,7 +861,7 @@ export default function TVHomePageClient({
           />
         )}
         {moods && moods.length > 0 && (
-          <div className="max-w-7xl mx-auto">
+          <div className="mx-auto max-w-7xl pt-1 sm:pt-0">
             <MoodRecommendationsSection mediaType="tv" initialMoods={moods} />
           </div>
         )}
