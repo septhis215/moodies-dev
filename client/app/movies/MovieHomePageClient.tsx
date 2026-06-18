@@ -1,7 +1,7 @@
 // Enhanced Movies Homepage - MovieHomePageClient.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
 import type { CommunityPulseData } from "@/types/communityPulse";
@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
 import { ComingSoonSection } from "@/components/sections/ComingSoon";
 import MoodRecommendationsSection from "@/components/sections/MoodRecommendationSection";
 import { useScrollToHash } from "@/hooks/useScrollToHash";
@@ -30,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { Carousel } from "@/components/ui/Carousel";
 import { CommunityPulseSection } from "@/components/sections/CommunityPulseSection";
+import { HomepageMediaHero } from "@/components/hero/HomepageMediaHero";
 import RatingBadge from "@/components/ui/rating-badge";
 import {
   Tooltip,
@@ -68,9 +68,6 @@ export default function MoviesHomePageClient({
 }) {
   const router = useRouter();
   const { add, remove, isInWatchlist, ready } = useWatchlist();
-  const [wlLoading, setWlLoading] = useState(false);
-  const [heroIndex, setHeroIndex] = useState(0);
-  const heroMovies = trendingMovies.slice(0, 18);
   const [loadingStates, setLoadingStates] = useState<
     Record<string | number, boolean>
   >({});
@@ -81,19 +78,6 @@ export default function MoviesHomePageClient({
       : "/placeholder-backdrop.svg";
   const getPosterUrl = (path?: string | null) =>
     path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
-  // Keep `featured` derived from heroShows so it's always in sync
-  const featured = heroMovies[heroIndex] || heroMovies[0] || null;
-
-  // Auto-advance heroIndex every 8s
-  useEffect(() => {
-    if (!heroMovies.length) return;
-    const id = setInterval(() => {
-      setHeroIndex((i) =>
-        heroMovies.length ? (i + 1) % heroMovies.length : 0,
-      );
-    }, 8000);
-    return () => clearInterval(id);
-  }, [heroMovies.length]);
 
   const MovieCard = ({
     show,
@@ -291,38 +275,6 @@ export default function MoviesHomePageClient({
     );
   };
 
-  const featuredInWatchlist = featured?.id
-    ? isInWatchlist(String(featured.id), "movie")
-    : false;
-
-  const handleFeaturedWatchlist = async () => {
-    if (!featured?.id) return;
-    if (!ready) {
-      // not logged in -> send user to login
-      router.push("/auth/login");
-      return;
-    }
-    setWlLoading(true);
-    try {
-      const title = featured?.title ?? featured?.name ?? null;
-      const posterUrl = featured?.poster_path
-        ? getPosterUrl(featured.poster_path)
-        : featured?.backdrop_path
-          ? getImageUrl(featured.backdrop_path)
-          : null;
-
-      if (featuredInWatchlist) {
-        await remove(String(featured.id), "movie", { title, posterUrl });
-      } else {
-        await add(String(featured.id), "movie", { title, posterUrl });
-      }
-    } catch (e) {
-      console.error("Watchlist toggle failed:", e);
-    } finally {
-      setWlLoading(false);
-    }
-  };
-
   return (
     <main className="relative bg-black text-white min-h-screen overflow-hidden">
       {/* Moodies cinema backdrop */}
@@ -332,232 +284,17 @@ export default function MoviesHomePageClient({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_82%)]" />
       </div>
 
-      <section className="relative w-full text-white overflow-hidden">
-        <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-black via-black/50 to-transparent pointer-events-none z-10" />
-
-        <div className="relative z-20 mx-auto max-w-7xl px-4 pb-8 pt-6 sm:px-6 sm:pb-16 sm:pt-28">
-          <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-12 md:gap-6">
-            {/* LEFT mosaic */}
-            <div className="col-span-1 flex flex-col overflow-hidden rounded-2xl bg-neutral-950/80 p-3 shadow-2xl shadow-black/40 ring-1 ring-white/10 backdrop-blur-xl sm:rounded-3xl sm:p-6 md:col-span-7">
-              <div className="-mx-3 -mt-3 mb-4 h-1 bg-gradient-to-r from-[#e94f37] via-[#ff7a66] to-[#f59e0b] sm:-mx-6 sm:-mt-6 sm:mb-5" />
-              <div className="mb-4 sm:mb-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] text-[#ff7a66] ring-1 ring-white/10 sm:h-11 sm:w-11">
-                    <Film className="h-5 w-5 sm:h-6 sm:w-6" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
-                      Moodies cinema
-                    </p>
-                    <h1 className="text-3xl sm:text-5xl font-black leading-tight tracking-tight bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
-                      Movies Hub
-                    </h1>
-                  </div>
-                </div>
-                <p className="text-gray-400 text-sm font-medium hidden sm:block">
-                  Pick a poster to tune the spotlight, then follow the mood into
-                  your next watch.
-                </p>
-              </div>
-
-              <div className="relative h-[300px] w-full overflow-hidden rounded-2xl bg-black/40 ring-1 ring-white/10 sm:h-auto sm:min-h-[460px] sm:flex-1">
-                <div className="flex h-full snap-x snap-mandatory gap-3 overflow-x-auto px-3 py-4 scroll-smooth sm:hidden">
-                  {Array.from({ length: 10 }).map((_, i) => {
-                    const s =
-                      heroMovies[(heroIndex + i) % heroMovies.length] || {};
-                    const isActive = featured?.id === s.id;
-                    return (
-                      <button
-                        key={i}
-                        onClick={() =>
-                          setHeroIndex((heroIndex + i) % heroMovies.length)
-                        }
-                        className={`relative h-full w-[42vw] min-w-[150px] max-w-[175px] shrink-0 snap-start overflow-hidden rounded-2xl border transition-all duration-300 ${
-                          isActive
-                            ? "border-[#e94f37] shadow-2xl shadow-[#e94f37]/25"
-                            : "border-white/10"
-                        }`}
-                      >
-                        {s.poster_path ? (
-                          <Image
-                            src={getPosterUrl(s.poster_path)}
-                            alt={s.title || s.name || ""}
-                            fill
-                            sizes="170px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="h-full w-full bg-zinc-800" />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
-                        <div className="absolute inset-x-0 bottom-0 p-3 text-left">
-                          <p className="line-clamp-2 text-sm font-black leading-tight text-white">
-                            {s.title || s.name}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                  <div className="w-1 shrink-0" aria-hidden="true" />
-                </div>
-
-                <div className="absolute inset-0 hidden grid-cols-3 gap-2 p-2 sm:grid sm:grid-cols-4 sm:gap-3 sm:p-3 md:grid-cols-5 lg:grid-cols-6">
-                  {Array.from({ length: 18 }).map((_, i) => {
-                    const s =
-                      heroMovies[(heroIndex + i) % heroMovies.length] || {};
-                    const isActive = featured?.id === s.id;
-                    return (
-                      <button
-                        key={i}
-                        onClick={() =>
-                          setHeroIndex((heroIndex + i) % heroMovies.length)
-                        }
-                        className={`rounded-xl overflow-hidden border transform transition-all duration-300 cursor-pointer
-                                                hover:scale-105 hover:z-10 focus:outline-none
-                                                ${
-                                                  isActive
-                                                    ? "border-[#e94f37] scale-105 shadow-2xl shadow-[#e94f37]/30"
-                                                    : "border-white/10 hover:border-[#e94f37]/50"
-                                                }`}
-                      >
-                        {s.poster_path ? (
-                          <Image
-                            src={getPosterUrl(s.poster_path)}
-                            alt={s.title || s.name || ""}
-                            width={150}
-                            height={180}
-                            className="object-cover w-full h-full"
-                          />
-                        ) : (
-                          <div className="bg-zinc-800 w-full h-full aspect-[2/3]" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_50%,rgba(0,0,0,0.8)_95%)]" />
-              </div>
-            </div>
-
-            {/* RIGHT featured card */}
-            <div className="md:col-span-5 col-span-1 flex items-stretch">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={featured?.id}
-                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: -20 }}
-                  transition={{ duration: 0.5, ease: "easeInOut" }}
-                  className="relative flex flex-col w-full rounded-2xl sm:rounded-3xl bg-neutral-950/90 backdrop-blur-xl ring-1 ring-white/10 shadow-2xl shadow-black/40 overflow-hidden"
-                >
-                  {featured?.backdrop_path && (
-                    <div className="absolute inset-0 -z-10">
-                      <Image
-                        src={getImageUrl(featured.backdrop_path)}
-                        alt={featured.title || featured.name || ""}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        priority
-                        className="object-cover opacity-25 blur-sm"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/80 to-black" />
-                    </div>
-                  )}
-
-                  <div className="relative h-52 w-full overflow-hidden rounded-t-2xl sm:h-80 sm:rounded-t-3xl">
-                    {featured?.backdrop_path ? (
-                      <>
-                        <Image
-                          src={getImageUrl(featured.backdrop_path)}
-                          alt={featured.title || featured.name || ""}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 50vw"
-                          priority
-                          className="object-cover"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-                      </>
-                    ) : (
-                      <div className="w-full h-full bg-zinc-900" />
-                    )}
-                  </div>
-
-                  <div className="relative flex flex-1 flex-col p-4 sm:p-8">
-                    <div className="mb-3 flex flex-wrap items-center gap-2 sm:mb-4">
-                      <span className="rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white shadow-lg sm:px-4 sm:py-2 sm:text-xs">
-                        Mood spotlight
-                      </span>
-                      {featured?.release_date && (
-                        <span className="rounded-full bg-white/10 px-3 py-1.5 text-[10px] font-bold ring-1 ring-white/20 backdrop-blur-sm sm:px-4 sm:py-2 sm:text-xs">
-                          {featured.release_date.split("-")[0]}
-                        </span>
-                      )}
-                      {featured?.vote_average !== undefined && (
-                        <div className="flex items-center gap-1.5 ">
-                          <RatingBadge
-                            rating={featured.vote_average}
-                            variant="colored"
-                            size="md"
-                          />
-                        </div>
-                      )}
-
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleFeaturedWatchlist();
-                        }}
-                        disabled={wlLoading}
-                        className={`ml-auto flex h-10 w-10 items-center justify-center gap-2 rounded-xl font-semibold shadow-lg transition-all cursor-pointer sm:h-auto sm:w-auto sm:px-4 sm:py-3
-                                                    ${
-                                                      featuredInWatchlist
-                                                        ? "bg-emerald-500/90 text-white border-emerald-400/50 hover:bg-emerald-600"
-                                                        : "bg-white/10 hover:bg-white/20 backdrop-blur-sm border-white/20 text-white"
-                                                    }`}
-                        title={
-                          featuredInWatchlist
-                            ? "Remove from My List"
-                            : "Add to My List"
-                        }
-                      >
-                        {wlLoading ? (
-                          <span className="w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
-                        ) : featuredInWatchlist ? (
-                          <>
-                            <BookmarkCheck className="w-5 h-5" />
-                          </>
-                        ) : (
-                          <>
-                            <Bookmark className="w-5 h-5" />
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    <h2 className="mb-2 line-clamp-2 text-xl font-black leading-tight text-white sm:mb-4 sm:text-4xl">
-                      {featured?.title || "—"}
-                    </h2>
-
-                    <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-gray-300 sm:mb-6 sm:line-clamp-3 sm:text-base">
-                      {featured?.overview || "No description available"}
-                    </p>
-
-                    <div className="mt-auto flex gap-3 border-t border-white/10 pt-3 sm:pt-6">
-                      <Link href={`/movies/${featured?.id}`} className="flex-1">
-                        <button className="w-full min-h-12 px-5 py-3 sm:px-6 sm:py-4 bg-gradient-to-r from-[#e94f37] to-[#ff6b58] hover:from-[#d4452f] hover:to-[#e94f37] text-white rounded-xl sm:rounded-2xl font-bold transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg shadow-[#e94f37]/30 cursor-pointer">
-                          <Info className="w-5 h-5" />
-                          View Details
-                        </button>
-                      </Link>
-                    </div>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      <HomepageMediaHero
+        items={trendingMovies}
+        mediaType="movie"
+        icon={<Film className="h-5 w-5" />}
+        eyebrow="Moodies cinema"
+        title="Movies Hub"
+        description="Pick a poster to tune the spotlight, then follow the mood into your next watch."
+        spotlightLabel="Movie spotlight"
+        mediaLabel="Movie"
+        primaryCta="View movie"
+      />
       {/* Content */}
       <div className="relative mx-auto max-w-7xl space-y-11 px-4 py-10 sm:space-y-14 sm:px-6 sm:py-12 lg:space-y-16 lg:px-8 lg:py-14">
         {/* Box Office */}
