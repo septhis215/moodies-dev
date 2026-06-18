@@ -240,16 +240,21 @@ export default function SearchBarWithSuggestions({
     setSearchHistory(updatedHistory);
     localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
 
-    // Route based on search mode
+    const params = new URLSearchParams();
+    params.set("q", trimmedQuery);
+    params.set("page", "1");
     if (mode === 'person') {
-      router.push(`/search?q=${encodeURIComponent(trimmedQuery)}&type=person`);
-    } else {
-      router.push(`/search?q=${encodeURIComponent(trimmedQuery)}`);
+      params.set("type", "person");
     }
 
     setOpen(false);
     setMobileOpen(false);
     setSuggestions([]);
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    router.push(`/search?${params.toString()}`, { scroll: false });
 
     onSearch?.(trimmedQuery, mode);
   };
@@ -545,7 +550,9 @@ export default function SearchBarWithSuggestions({
                   return (
                     <div
                       key={`${s.type}-${s.id}`}
-                      ref={(el) => (itemRefs.current[idx] = el)}
+                      ref={(el) => {
+                        itemRefs.current[idx] = el;
+                      }}
                       role="option"
                       aria-selected={isHighlighted}
                       tabIndex={-1}
@@ -727,6 +734,7 @@ export default function SearchBarWithSuggestions({
         <div className="flex items-center flex-row-reverse relative">
           <button
             type="button"
+            aria-label="Open search"
             onClick={() => {
               if (resolvedIsMobile) {
                 setMobileOpen(true);
@@ -815,6 +823,7 @@ export default function SearchBarWithSuggestions({
                     autoFocus
                   />
                   <button
+                    aria-label="Close search"
                     onClick={() => setMobileOpen(false)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 bg-white/10 hover:bg-white/20 transition-colors"
                   >

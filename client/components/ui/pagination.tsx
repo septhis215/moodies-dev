@@ -1,5 +1,4 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type Props = {
     currentPage: number;
@@ -34,8 +33,16 @@ export default function Pagination({
     // scroll active into view on small screens
     useEffect(() => {
         if ((!isMobile && !isTinyMobile) || !pagesRef.current) return;
-        const active = pagesRef.current.querySelector("[aria-current='true']");
-        if (active) (active as HTMLElement).scrollIntoView({ inline: "center", behavior: "smooth" });
+        const container = pagesRef.current;
+        const active = container.querySelector<HTMLElement>("[aria-current='true']");
+        if (!active) return;
+
+        const left =
+            active.offsetLeft - (container.clientWidth - active.clientWidth) / 2;
+        container.scrollTo({
+            left: Math.max(0, left),
+            behavior: "smooth",
+        });
     }, [currentPage, isMobile, isTinyMobile]);
 
     // helper to create numeric range
@@ -128,9 +135,6 @@ export default function Pagination({
         const next = Math.max(1, Math.min(totalPages, Math.floor(page)));
         if (next !== currentPage) onPageChange(next);
     };
-
-    const btnBase =
-        "inline-flex items-center justify-center select-none rounded-md transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-orange-400";
 
     return (
         <nav aria-label="Pagination" className={`w-full ${className}`}>

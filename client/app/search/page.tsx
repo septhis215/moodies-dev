@@ -182,10 +182,24 @@ const MIN_FILTER_YEAR = 1980;
 const MAX_FILTER_YEAR = 2026;
 const SEARCH_PAGE_SIZE = 20;
 
+const parseSearchPage = (value: string | null) => {
+  const page = Number.parseInt(value ?? "1", 10);
+  return Number.isFinite(page) && page > 0 ? page : 1;
+};
+
+const parseSearchType = (
+  value: string | null
+): "all" | "movie" | "tv" | "person" =>
+  value === "movie" || value === "tv" || value === "person" ? value : "all";
+
 export default function SearchResultsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get("q") || "";
+  const requestedPage = parseSearchPage(searchParams.get("page"));
+  const requestedType = parseSearchType(searchParams.get("type"));
+  const searchIdentity = `${query.trim()}::${requestedType}`;
+  const routeSearchIdentity = `${searchIdentity}::${requestedPage}`;
 
   const [results, setResults] = useState<SearchResult[]>([]);
   const [bestMatch, setBestMatch] = useState<SearchResult | null>(null);
@@ -194,11 +208,16 @@ export default function SearchResultsPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const [totalResults, setTotalResults] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(requestedPage);
   const [totalPages, setTotalPages] = useState(0);
   const [completedSearchKey, setCompletedSearchKey] = useState<string | null>(null);
+  const [navigationReadyKey, setNavigationReadyKey] =
+    useState(routeSearchIdentity);
   const latestSearchKeyRef = useRef<string>("");
   const requestSequenceRef = useRef(0);
+  const activeSearchAbortRef = useRef<AbortController | null>(null);
+  const previousSearchIdentityRef = useRef(searchIdentity);
+  const previousRouteIdentityRef = useRef("");
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
   const availableCountries = COUNTRY_OPTIONS;
 
@@ -206,7 +225,7 @@ export default function SearchResultsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<SearchSort>("relevance");
   const [filterType, setFilterType] = useState<"all" | "movie" | "tv" | "person">(
-    (searchParams.get("type") as "all" | "movie" | "tv" | "person") || "all"
+    requestedType
   );
   const [showFilters, setShowFilters] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -312,6 +331,43 @@ export default function SearchResultsPage() {
   const loading = searchStatus === "loading";
   const hasCompletedCurrentSearch = completedSearchKey === buildSearchKey;
 
+  const navigateToNewSearch = (
+    rawQuery: string,
+    type: "all" | "movie" | "tv" | "person" = "all"
+  ) => {
+    const trimmedQuery = rawQuery.trim();
+    if (!trimmedQuery) return;
+
+    const params = new URLSearchParams();
+    params.set("q", trimmedQuery);
+    params.set("page", "1");
+    if (type !== "all") params.set("type", type);
+
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    router.push(`/search?${params.toString()}`, { scroll: false });
+  };
+
+  const navigateToSearchPage = (
+    page: number,
+    options: { replace?: boolean; type?: "all" | "movie" | "tv" | "person" } = {}
+  ) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", String(Math.max(1, page)));
+
+    if (options.type) {
+      if (options.type === "all") params.delete("type");
+      else params.set("type", options.type);
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    const href = `/search?${params.toString()}`;
+    if (options.replace) router.replace(href, { scroll: false });
+    else router.push(href, { scroll: false });
+  };
+
   // Convert SearchResult to All type for TrailerModal
   const convertToTrailerData = (item: SearchResult): TrailerItem => {
     return {
@@ -412,10 +468,79 @@ export default function SearchResultsPage() {
   }, []);
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [currentPage]);
+    const previousRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    return () => {
+      window.history.scrollRestoration = previousRestoration;
+    };
+  }, []);
 
   useEffect(() => {
+    if (previousRouteIdentityRef.current === routeSearchIdentity) return;
+
+    const queryChanged =
+      previousSearchIdentityRef.current !== searchIdentity;
+
+    activeSearchAbortRef.current?.abort();
+    activeSearchAbortRef.current = null;
+    requestSequenceRef.current += 1;
+    latestSearchKeyRef.current = "";
+
+    setResults([]);
+    setBestMatch(null);
+    setTotalResults(0);
+    setTotalPages(0);
+    setCompletedSearchKey(null);
+    setError(null);
+    setExpandedSections({});
+    setSelectedTrailer(null);
+    setCurrentPage(requestedPage);
+    setSearchStatus(query.trim() ? "loading" : "idle");
+
+    if (queryChanged) {
+      setFilterType(requestedType);
+      setSortBy("relevance");
+      setSelectedGenres([]);
+      setSelectedCountries([]);
+      setYearRange([MIN_FILTER_YEAR, MAX_FILTER_YEAR]);
+      setRatingRange([0, 10]);
+      setIncludeAdult(false);
+      setAppliedFilterType(requestedType);
+      setAppliedSortBy("relevance");
+      setAppliedSelectedGenres([]);
+      setAppliedSelectedCountries([]);
+      setAppliedYearRange([MIN_FILTER_YEAR, MAX_FILTER_YEAR]);
+      setAppliedRatingRange([0, 10]);
+      setAppliedIncludeAdult(false);
+      setShowFilters(false);
+    }
+
+    previousSearchIdentityRef.current = searchIdentity;
+    previousRouteIdentityRef.current = routeSearchIdentity;
+    setNavigationReadyKey(routeSearchIdentity);
+
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      window.setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      }, 120);
+    });
+  }, [
+    query,
+    requestedPage,
+    requestedType,
+    routeSearchIdentity,
+    searchIdentity,
+  ]);
+
+  useEffect(() => {
+    if (
+      navigationReadyKey !== routeSearchIdentity ||
+      currentPage !== requestedPage
+    ) {
+      return;
+    }
+
     latestSearchKeyRef.current = buildSearchKey;
 
     // Condition: don't fetch if user hasn't typed AND hasn't applied filters
@@ -441,7 +566,9 @@ export default function SearchResultsPage() {
       return;
     }
 
+    activeSearchAbortRef.current?.abort();
     const controller = new AbortController();
+    activeSearchAbortRef.current = controller;
     const requestId = ++requestSequenceRef.current;
     setSearchStatus("loading");
     setError(null);
@@ -542,11 +669,17 @@ export default function SearchResultsPage() {
     return () => {
       window.clearTimeout(timeoutId);
       controller.abort();
+      if (activeSearchAbortRef.current === controller) {
+        activeSearchAbortRef.current = null;
+      }
     };
   }, [
     buildSearchKey,
     query,
     currentPage,
+    requestedPage,
+    routeSearchIdentity,
+    navigationReadyKey,
     appliedFilterType,
     appliedSortBy,
     appliedSelectedGenres,
@@ -611,6 +744,11 @@ export default function SearchResultsPage() {
   };
 
   const clearAllFilters = () => {
+    if (requestedPage !== 1) {
+      setNavigationReadyKey("");
+      activeSearchAbortRef.current?.abort();
+      requestSequenceRef.current += 1;
+    }
     setSelectedGenres([]);
     setSelectedCountries([]);
     setYearRange([MIN_FILTER_YEAR, MAX_FILTER_YEAR]);
@@ -625,11 +763,17 @@ export default function SearchResultsPage() {
     setAppliedFilterType("all");
     setAppliedSortBy("relevance");
     setAppliedIncludeAdult(false);
-    setCurrentPage(1);
     setExpandedSections({});
+    if (requestedPage !== 1) navigateToSearchPage(1, { replace: true });
+    else window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   };
 
   const applyFilters = () => {
+    if (requestedPage !== 1) {
+      setNavigationReadyKey("");
+      activeSearchAbortRef.current?.abort();
+      requestSequenceRef.current += 1;
+    }
     setAppliedSelectedGenres(selectedGenres);
     setAppliedSelectedCountries(selectedCountries);
     setAppliedYearRange(yearRange);
@@ -637,9 +781,10 @@ export default function SearchResultsPage() {
     setAppliedFilterType(filterType);
     setAppliedSortBy(sortBy);
     setAppliedIncludeAdult(includeAdult);
-    setCurrentPage(1);
     setExpandedSections({});
     setShowFilters(false);
+    if (requestedPage !== 1) navigateToSearchPage(1, { replace: true });
+    else window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   };
 
   const hasActiveFilters =
@@ -973,7 +1118,7 @@ export default function SearchResultsPage() {
         currentPage={currentPage}
         totalPages={totalPages}
         totalResults={totalResults}
-        onPageChange={(p) => setCurrentPage(p)}
+        onPageChange={(page) => navigateToSearchPage(page)}
       />
     );
   };
@@ -1043,7 +1188,7 @@ export default function SearchResultsPage() {
                   if (e.key === "Enter") {
                     const value = (e.target as HTMLInputElement).value.trim();
                     if (value) {
-                      router.push(`/search?q=${encodeURIComponent(value)}`);
+                      navigateToNewSearch(value);
                     }
                   }
                 }}
@@ -1053,7 +1198,7 @@ export default function SearchResultsPage() {
                 onClick={() => {
                   const value = searchInputRef.current?.value.trim();
                   if (value) {
-                    router.push(`/search?q=${encodeURIComponent(value)}`);
+                    navigateToNewSearch(value);
                   }
                 }}
                 className="absolute right-2 top-1/2 grid min-h-10 min-w-10 -translate-y-1/2 place-items-center rounded-full bg-[#e94f37] p-2.5 transition-colors hover:bg-[#e94f37]/90 sm:right-3"
