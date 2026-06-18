@@ -1,9 +1,19 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Star, PenSquare, X } from "lucide-react";
+import Image from "next/image";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  PenSquare,
+  Send,
+  Sparkles,
+  Star,
+  X,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
 import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
@@ -67,6 +77,10 @@ function toAccentColor(rating?: number): string | null {
 
 const PREVIEW_LEN = 220;
 
+const API =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
+  "http://localhost:4000";
+
 export default function ReviewsSection({
   reviews,
   contentId,
@@ -101,7 +115,9 @@ export default function ReviewsSection({
 
   const [sortBy, setSortBy] = useState<SortOption>("latest");
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(new Set());
+  const [expandedReviews, setExpandedReviews] = useState<Set<string>>(
+    new Set(),
+  );
 
   function popularityProxy(r: Review) {
     return (
@@ -158,12 +174,20 @@ export default function ReviewsSection({
 
   useEffect(() => {
     document.body.style.overflow = reviewModalOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [reviewModalOpen]);
 
   const openModal = () => {
     if (!isAuthenticated) {
-      toast("Sign in to write a review.", "warning", 3000, "Not Logged In", null);
+      toast(
+        "Sign in to write a review.",
+        "warning",
+        3000,
+        "Not Logged In",
+        null,
+      );
       return;
     }
     setReviewModalOpen(true);
@@ -247,8 +271,12 @@ export default function ReviewsSection({
               >
                 <div className="text-4xl opacity-20 select-none">💬</div>
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-white/50">No reviews yet</p>
-                  <p className="text-xs text-white/25 mt-0.5">Be the first to share your thoughts</p>
+                  <p className="text-sm font-semibold text-white/50">
+                    No reviews yet
+                  </p>
+                  <p className="text-xs text-white/25 mt-0.5">
+                    Be the first to share your thoughts
+                  </p>
                 </div>
                 <button
                   onClick={openModal}
@@ -365,7 +393,11 @@ export default function ReviewsSection({
                             <span className="text-[10px] text-white/25">
                               {new Date(r.created_at).toLocaleDateString(
                                 "en-US",
-                                { month: "short", day: "numeric", year: "numeric" },
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                },
                               )}
                             </span>
                             {r.moodEmojis?.[0] && normalizedRating !== null && (
@@ -422,7 +454,58 @@ function ReviewModal({
   const { isAuthenticated, user } = useAuth();
   const { banStatus } = useReviewBanStatus();
   const [mounted, setMounted] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+
+    const focusTimer = window.setTimeout(
+      () => closeButtonRef.current?.focus(),
+      80,
+    );
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, [mounted, onClose]);
+
   if (!mounted) return null;
 
   return createPortal(
@@ -431,52 +514,71 @@ function ReviewModal({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[1000] flex items-end justify-center p-3 sm:items-center sm:p-4"
-      style={{ background: "rgba(8, 10, 22, 0.90)", backdropFilter: "blur(20px)" }}
+      className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/80 p-0 backdrop-blur-md sm:items-center sm:p-5"
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.97, y: 14 }}
+        ref={dialogRef}
+        initial={{ opacity: 0, scale: 0.98, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.97, y: 14 }}
+        exit={{ opacity: 0, scale: 0.98, y: 24 }}
         transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-lg rounded-2xl overflow-hidden bg-white/[0.04] border border-white/[0.09]"
-        style={{ boxShadow: "0 32px 72px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)" }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="review-dialog-title"
+        aria-describedby="review-dialog-description"
+        className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-[#0a0a0b]/96 shadow-2xl shadow-black/70 sm:max-h-[min(90dvh,780px)] sm:rounded-2xl"
+        style={{
+          boxShadow:
+            "0 32px 90px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.04)",
+        }}
       >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(233,79,55,0.18),transparent_34%),radial-gradient(circle_at_90%_12%,rgba(255,255,255,0.06),transparent_28%)]" />
         {/* Header — matches card top: quote glyph + title + close */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.07]">
+        <div className="relative z-20 flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-black/35 px-4 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
           <div className="flex items-center gap-3">
-            <svg
-              className="w-7 h-7 opacity-[0.09] flex-shrink-0"
-              viewBox="0 0 32 32"
-              fill="white"
-              aria-hidden
-            >
-              <path d="M10 8C5.6 8 2 11.6 2 16v8h8v-8H4c0-3.3 2.7-6 6-6V8zm12 0c-4.4 0-8 3.6-8 8v8h8v-8h-6c0-3.3 2.7-6 6-6V8z" />
-            </svg>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e94f37]/25 bg-[#e94f37]/10 text-[#ff8c79]">
+              <PenSquare className="h-4.5 w-4.5" />
+            </span>
             <div>
-              <h2 className="text-sm font-bold text-white leading-none">Write a Review</h2>
-              <p className="text-[11px] text-white/30 mt-1">Share your take with the community</p>
+              <h2
+                id="review-dialog-title"
+                className="text-base font-black leading-tight text-white sm:text-lg"
+              >
+                Share your viewing mood
+              </h2>
+              <p
+                id="review-dialog-description"
+                className="mt-0.5 text-xs text-white/45"
+              >
+                Rate it, name the feeling, and tell the community why.
+              </p>
             </div>
           </div>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-xl bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.08] hover:border-white/[0.16] text-white/40 hover:text-white transition-all cursor-pointer"
+            aria-label="Close review dialog"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/55 transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]"
           >
-            <X size={13} />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="max-h-[80svh] overflow-y-auto scrollbar-none">
+        <div className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain mobile-native-scroll scrollbar-none">
           {!isAuthenticated ? (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl">
                 🔐
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white mb-1">Sign in to continue</h3>
-                <p className="text-xs text-white/35">You need to be logged in to leave a review.</p>
+                <h3 className="text-sm font-bold text-white mb-1">
+                  Sign in to continue
+                </h3>
+                <p className="text-xs text-white/35">
+                  You need to be logged in to leave a review.
+                </p>
               </div>
               <Link
                 href="/auth/login"
@@ -488,21 +590,45 @@ function ReviewModal({
           ) : banStatus.banned ? (
             <div className="flex items-start gap-4 px-5 py-5">
               <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-white/[0.04] border border-red-500/20 flex items-center justify-center">
-                <svg className="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                <svg
+                  className="w-4 h-4 text-red-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                   />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-xs font-bold text-red-400 mb-1">Review Privileges Suspended</h3>
-                <p className="text-[11px] text-white/35 mb-3">Temporarily restricted due to policy violations.</p>
+                <h3 className="text-xs font-bold text-red-400 mb-1">
+                  Review Privileges Suspended
+                </h3>
+                <p className="text-[11px] text-white/35 mb-3">
+                  Temporarily restricted due to policy violations.
+                </p>
                 <div className="flex items-center gap-1.5 text-[11px] text-white/35">
-                  <svg className="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-3 h-3 text-red-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   Expires in{" "}
-                  <span className="text-red-400 font-semibold">{banStatus?.timeRemaining || "Unknown"}</span>
+                  <span className="text-red-400 font-semibold">
+                    {banStatus?.timeRemaining || "Unknown"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -521,6 +647,31 @@ function ReviewModal({
   );
 }
 
+type ReviewMood = {
+  label: string;
+  value: string;
+  emoji: string;
+  mascot: string;
+  accent: string;
+};
+
+const REVIEW_MOODS: ReviewMood[] = [
+  { emoji: "🔥", label: "Amazing", value: "amazing", mascot: "epic", accent: "#4ade80" },
+  { emoji: "❤️", label: "Loved it", value: "loved", mascot: "romantic", accent: "#fb7185" },
+  { emoji: "😊", label: "Enjoyed", value: "enjoyed", mascot: "happy", accent: "#facc15" },
+  { emoji: "🤔", label: "Thoughtful", value: "okay", mascot: "mind-bending", accent: "#38bdf8" },
+  { emoji: "😕", label: "Mixed", value: "meh", mascot: "bittersweet", accent: "#f59e0b" },
+  { emoji: "😞", label: "Disappointed", value: "disliked", mascot: "sad", accent: "#f87171" },
+];
+
+const RATING_GUIDANCE = [
+  { min: 9, mascot: "epic", accent: "#4ade80", label: "A standout watch", helper: "What made it memorable enough to recommend?" },
+  { min: 7, mascot: "happy", accent: "#a3e635", label: "A good time", helper: "Share what worked best and who would enjoy it." },
+  { min: 5, mascot: "mind-bending", accent: "#facc15", label: "A mixed experience", helper: "What worked, and what held it back?" },
+  { min: 3, mascot: "bittersweet", accent: "#fb923c", label: "More misses than hits", helper: "Be specific about pacing, story, or performances." },
+  { min: 0, mascot: "sad", accent: "#f87171", label: "Not for you", helper: "Help others understand what did not connect." },
+];
+
 /* ─── ReviewForm ─── */
 function ReviewForm({
   contentId,
@@ -537,39 +688,55 @@ function ReviewForm({
   const [rating, setRating] = useState<number | null>(null);
   const [mood, setMood] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitState, setSubmitState] = useState<
+    "idle" | "submitting" | "success"
+  >("idle");
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
+  const completionTimerRef = useRef<number | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
-  const moodOptions = [
-    { emoji: "🔥", label: "Amazing", value: "amazing" },
-    { emoji: "❤️", label: "Loved it", value: "loved" },
-    { emoji: "😊", label: "Enjoyed", value: "enjoyed" },
-    { emoji: "😐", label: "It's okay", value: "okay" },
-    { emoji: "😕", label: "Meh", value: "meh" },
-    { emoji: "😞", label: "Disliked", value: "disliked" },
-  ];
-
   const moodToEmoji: Record<string, string> = {
-    amazing: "🔥", loved: "❤️", enjoyed: "😊",
-    okay: "😐", meh: "😕", disliked: "😞",
+    amazing: "🔥",
+    loved: "❤️",
+    enjoyed: "😊",
+    okay: "🤔",
+    meh: "😕",
+    disliked: "😞",
   };
+
+  useEffect(
+    () => () => {
+      if (completionTimerRef.current) {
+        window.clearTimeout(completionTimerRef.current);
+      }
+    },
+    [],
+  );
 
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
-    if (!contentId) { setError("Content ID is missing."); return; }
-    if (!mood) { setError("🎭 Pick a mood first"); return; }
-    if (rating === null) { setError("⭐ Add a rating"); return; }
-    if (!content.trim() || content.trim().length < 10) {
-      setError("✍️ At least 10 characters needed");
+    if (!contentId) {
+      setError("Content ID is missing.");
       return;
     }
-    setSubmitting(true);
+    if (!mood) {
+      setError("Choose the mood that best matches your experience.");
+      return;
+    }
+    if (rating === null) {
+      setError("Add a rating before sharing your review.");
+      return;
+    }
+    if (!content.trim() || content.trim().length < 10) {
+      setError("Write at least 10 characters so the community has some context.");
+      return;
+    }
+    setSubmitState("submitting");
     try {
       const token = sGet("authToken");
-      const res = await fetch("http://localhost:4000/reviews", {
+      const res = await fetch(`${API}/reviews`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -587,36 +754,84 @@ function ReviewForm({
         const err = await res.json();
         throw new Error(err.message || "Failed");
       }
-      onSuccess?.();
-      router.refresh();
+      setSubmitState("success");
+      completionTimerRef.current = window.setTimeout(() => {
+        router.refresh();
+        onSuccess?.();
+      }, 900);
     } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to submit review.";
+      setError(message);
+      setSubmitState("idle");
       toast(
-        err instanceof Error ? err.message : "Failed to submit review.",
-        "error", 4000, "Error", null,
+        message,
+        "error",
+        4000,
+        "Review not submitted",
+        null,
       );
-    } finally {
-      setSubmitting(false);
     }
   }
 
   const displayRating = hoveredStar !== null ? hoveredStar : rating;
-  const normalizedDisplay = displayRating !== null ? displayRating / 2 : null;
-  const ratingColor =
-    normalizedDisplay === null ? null
-    : normalizedDisplay >= 4 ? "#4ade80"
-    : normalizedDisplay >= 2.5 ? "#facc15"
-    : "#f87171";
+  const selectedMood = REVIEW_MOODS.find((item) => item.value === mood);
+  const ratingGuidance =
+    RATING_GUIDANCE.find((item) => (displayRating ?? 0) >= item.min) ??
+    RATING_GUIDANCE[RATING_GUIDANCE.length - 1];
+  const activeMascot = selectedMood?.mascot ?? ratingGuidance.mascot;
+  const activeAccent = selectedMood?.accent ?? ratingGuidance.accent;
+  const submitting = submitState === "submitting";
+  const isReady =
+    Boolean(mood) && rating !== null && content.trim().length >= 10;
   const author = user?.username ?? user?.name ?? "User";
 
-  return (
-    <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+  if (submitState === "success") {
+    return (
+      <div
+        className="flex min-h-[420px] flex-col items-center justify-center px-6 py-10 text-center sm:min-h-[480px]"
+        role="status"
+        aria-live="polite"
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.75, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="relative h-28 w-28"
+        >
+          <Image
+            src="/images/moods/happy.png"
+            alt="Happy Moodies mascot"
+            fill
+            sizes="112px"
+            className="object-contain"
+          />
+        </motion.div>
+        <span className="mt-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-300/25">
+          <CheckCircle2 className="h-5 w-5" />
+        </span>
+        <h3 className="mt-4 text-2xl font-black text-white">
+          Your mood is in
+        </h3>
+        <p className="mt-2 max-w-sm text-sm leading-6 text-white/55">
+          Thanks for helping the Moodies community decide what to watch next.
+        </p>
+      </div>
+    );
+  }
 
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-5 px-4 py-4 sm:px-6 sm:py-5">
       {/* ── Compose card — the hero ── */}
       <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
-
         {/* Top: quote glyph + rating score pill — mirrors review card */}
         <div className="flex items-center justify-between px-4 pt-4 pb-0">
-          <svg className="w-6 h-6 opacity-[0.08]" viewBox="0 0 32 32" fill="white" aria-hidden>
+          <svg
+            className="w-6 h-6 opacity-[0.08]"
+            viewBox="0 0 32 32"
+            fill="white"
+            aria-hidden
+          >
             <path d="M10 8C5.6 8 2 11.6 2 16v8h8v-8H4c0-3.3 2.7-6 6-6V8zm12 0c-4.4 0-8 3.6-8 8v8h8v-8h-6c0-3.3 2.7-6 6-6V8z" />
           </svg>
 
@@ -636,7 +851,13 @@ function ReviewForm({
                   border: `1px solid ${ratingColor}35`,
                 }}
               >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill={ratingColor!} aria-hidden>
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill={ratingColor!}
+                  aria-hidden
+                >
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
                 {normalizedDisplay.toFixed(1)}
@@ -649,7 +870,13 @@ function ReviewForm({
                 exit={{ opacity: 0 }}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/[0.08] text-[10px] text-white/20"
               >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden
+                >
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
                 —
@@ -679,11 +906,15 @@ function ReviewForm({
               </span>
             </div>
             <div>
-              <p className="text-xs font-semibold text-white/75 leading-none">{author}</p>
+              <p className="text-xs font-semibold text-white/75 leading-none">
+                {author}
+              </p>
               <p className="text-[10px] text-white/25 mt-0.5">Posting as you</p>
             </div>
           </div>
-          <span className={`text-[10px] font-semibold ${content.length < 10 ? "text-white/20" : "text-[#4ade80]"}`}>
+          <span
+            className={`text-[10px] font-semibold ${content.length < 10 ? "text-white/20" : "text-[#4ade80]"}`}
+          >
             {content.length < 10 ? `${10 - content.length} more` : "✓ Ready"}
           </span>
         </div>
@@ -691,7 +922,9 @@ function ReviewForm({
 
       {/* ── Rating row ── */}
       <div className="flex items-center justify-between px-1">
-        <span className="text-[11px] text-white/35 font-medium">Your rating</span>
+        <span className="text-[11px] text-white/35 font-medium">
+          Your rating
+        </span>
         <div className="flex items-center gap-0.5">
           {Array.from({ length: 5 }).map((_, i) => {
             const val = (i + 1) * 2;
@@ -717,7 +950,9 @@ function ReviewForm({
 
       {/* ── Mood grid ── */}
       <div>
-        <p className="text-[11px] text-white/35 font-medium px-1 mb-2">How did it make you feel?</p>
+        <p className="text-[11px] text-white/35 font-medium px-1 mb-2">
+          How did it make you feel?
+        </p>
         <div className="grid grid-cols-6 gap-1.5">
           {moodOptions.map((m) => (
             <button
@@ -731,13 +966,23 @@ function ReviewForm({
               }`}
             >
               <span className="text-base leading-none">{m.emoji}</span>
-              <span className={`text-[9px] font-medium leading-none text-center ${mood === m.value ? "text-white/80" : "text-white/30"}`}>
+              <span
+                className={`text-[9px] font-medium leading-none text-center ${mood === m.value ? "text-white/80" : "text-white/30"}`}
+              >
                 {m.label}
               </span>
               {mood === m.value && (
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#e94f37] rounded-full flex items-center justify-center">
-                  <svg className="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg
+                    className="w-1.5 h-1.5 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 </div>
               )}
@@ -755,8 +1000,16 @@ function ReviewForm({
             exit={{ opacity: 0 }}
             className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-red-500/20"
           >
-            <svg className="w-3 h-3 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            <svg
+              className="w-3 h-3 text-red-400 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clipRule="evenodd"
+              />
             </svg>
             <span className="text-xs text-red-300">{error}</span>
           </motion.div>

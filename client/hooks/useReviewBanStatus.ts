@@ -8,6 +8,10 @@ interface BanStatus {
   timeRemaining: string;
 }
 
+const API =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
+  "http://localhost:4000";
+
 export function useReviewBanStatus() {
   const { isAuthenticated } = useAuth();
   const [banStatus, setBanStatus] = useState<BanStatus>({
@@ -27,7 +31,7 @@ export function useReviewBanStatus() {
       try {
         const token = sGet("authToken");
         const response = await fetch(
-          "http://localhost:4000/reviews/me/ban-status",
+          `${API}/reviews/me/ban-status`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

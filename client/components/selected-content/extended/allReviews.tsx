@@ -74,6 +74,10 @@ interface AllReviewsProps {
   reviewStats?: { totalRatings: number; averageRating: number };
 }
 
+const API =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
+  "http://localhost:4000";
+
 export default function AllReviews({
   reviews,
   info,
@@ -232,17 +236,14 @@ export default function AllReviews({
       const submittedContent = (
         (showReplyForm?.prefill ?? "") + replyContent
       ).trim();
-      const res = await fetch(
-        `http://localhost:4000/reviews/${reviewId}/replies`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ content: submittedContent }),
+      const res = await fetch(`${API}/reviews/${reviewId}/replies`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      );
+        body: JSON.stringify({ content: submittedContent }),
+      });
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.message || "Failed");
       setLocalReviews((prev) =>
@@ -1058,7 +1059,7 @@ function ReviewFormInModal({
     setSubmitting(true);
     try {
       const token = sGet("authToken");
-      const res = await fetch("http://localhost:4000/reviews", {
+      const res = await fetch(`${API}/reviews`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
