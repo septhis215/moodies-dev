@@ -775,12 +775,14 @@ function ReviewForm({
   }
 
   const displayRating = hoveredStar !== null ? hoveredStar : rating;
-  const selectedMood = REVIEW_MOODS.find((item) => item.value === mood);
+  const normalizedDisplay =
+    displayRating !== null ? displayRating / 2 : null;
   const ratingGuidance =
     RATING_GUIDANCE.find((item) => (displayRating ?? 0) >= item.min) ??
     RATING_GUIDANCE[RATING_GUIDANCE.length - 1];
-  const activeMascot = selectedMood?.mascot ?? ratingGuidance.mascot;
-  const activeAccent = selectedMood?.accent ?? ratingGuidance.accent;
+  const ratingColor =
+    normalizedDisplay !== null ? ratingGuidance.accent : null;
+  const moodOptions = REVIEW_MOODS;
   const submitting = submitState === "submitting";
   const isReady =
     Boolean(mood) && rating !== null && content.trim().length >= 10;
@@ -1021,7 +1023,7 @@ function ReviewForm({
         <p className="text-[10px] text-white/20">May be featured publicly.</p>
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !isReady}
           className="px-5 py-2 rounded-xl bg-white/[0.04] border border-[#e94f37]/40 text-[#e94f37] text-xs font-semibold hover:bg-[#e94f37]/[0.10] hover:border-[#e94f37]/70 active:scale-95 transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
         >
           {submitting ? "Submitting…" : "Submit Review"}
