@@ -286,9 +286,9 @@ export default function MoodiesMix({
   const visibleCards = ordered.slice(1, 7);
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+    <section className="mx-auto max-w-7xl overflow-hidden px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
+      <div className="mb-4 flex items-end justify-between gap-3 sm:mb-5">
+        <div className="min-w-0">
           <p className="mb-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
             For your taste
           </p>
@@ -296,26 +296,69 @@ export default function MoodiesMix({
             {title}
           </h2>
           {subtitle ? (
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-white/50">
+            <p className="mt-1 line-clamp-2 max-w-2xl text-xs leading-5 text-white/50 sm:text-sm sm:leading-6">
               {subtitle}
             </p>
           ) : null}
         </div>
 
-        <div className="flex flex-col items-end gap-3">
-          {/* <TasteSummary signal={tasteSignal} count={items.length} /> */}
-          <button
-            type="button"
-            onClick={() => setOffset((prev) => (prev + 1) % items.length)}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-2.5 text-xs font-black text-white/78 transition hover:bg-white/[0.1]"
-          >
-            Refresh the mix
-            <ChevronRight className="h-4 w-4 text-[#e94f37]" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setOffset((prev) => (prev + 1) % items.length)}
+          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-[11px] font-black text-white/78 transition hover:bg-white/[0.1] active:scale-[0.98] sm:gap-2 sm:px-4 sm:text-xs"
+          aria-label="Refresh your curated favorites"
+        >
+          <span className="hidden sm:inline">Refresh the mix</span>
+          <span className="sm:hidden">Refresh</span>
+          <ChevronRight className="h-4 w-4 text-[#e94f37]" />
+        </button>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-2.5 sm:p-3">
+      <div className="md:hidden">
+        <MobileFeaturedCard
+          item={primary}
+          signal={tasteSignal}
+          saved={primarySaved}
+          loading={!!loadingStates[primary.id]}
+          onOpen={() => handleClick(primary)}
+          onToggle={() => toggleWatchlist(primary)}
+        />
+
+        {visibleCards.length ? (
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/48">
+                More for you
+              </p>
+              <p className="text-[10px] font-semibold text-white/32">
+                Swipe to browse
+              </p>
+            </div>
+            <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {visibleCards.map((item, index) => {
+                const saved = isInWatchlist(
+                  String(item.id),
+                  toWatchType(item),
+                );
+                return (
+                  <MobileFavoriteCard
+                    key={`${item.id}-${index}`}
+                    item={item}
+                    signal={tasteSignal}
+                    saved={saved}
+                    loading={!!loadingStates[item.id]}
+                    onOpen={() => handleClick(item)}
+                    onToggle={() => toggleWatchlist(item)}
+                  />
+                );
+              })}
+              <div aria-hidden="true" className="w-1 shrink-0" />
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="hidden rounded-2xl border border-white/10 bg-white/[0.025] p-3 md:block">
         <div className="grid gap-3 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)]">
           <article className="group grid overflow-hidden rounded-xl border border-white/10 bg-[#0c0c0d] sm:grid-cols-[170px_minmax(0,1fr)] lg:grid-cols-1">
             <button
@@ -424,6 +467,155 @@ export default function MoodiesMix({
         </div>
       </div>
     </section>
+  );
+}
+
+function MobileFeaturedCard({
+  item,
+  signal,
+  saved,
+  loading,
+  onOpen,
+  onToggle,
+}: {
+  item: All;
+  signal: TasteSignal;
+  saved: boolean;
+  loading: boolean;
+  onOpen: () => void;
+  onToggle: () => void;
+}) {
+  return (
+    <article className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0c0c0d] shadow-[0_16px_50px_rgba(0,0,0,0.22)]">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="relative block aspect-[16/8.6] w-full overflow-hidden bg-zinc-900"
+        aria-label={`Open ${getTitle(item)}`}
+      >
+        <Image
+          src={getBackdrop(item)}
+          alt={getTitle(item)}
+          fill
+          sizes="(max-width: 767px) 100vw, 50vw"
+          className="object-cover transition duration-500 group-hover:scale-[1.03]"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+        <div className="absolute left-3 top-3 rounded-full border border-white/10 bg-black/65 px-2.5 py-1 text-[10px] font-black text-white backdrop-blur-md">
+          {getMatchScore(item, signal, saved)}% match
+        </div>
+      </button>
+
+      <div className="relative -mt-12 flex items-end justify-between gap-3 p-3.5 pt-0">
+        <button type="button" onClick={onOpen} className="min-w-0 text-left">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <ContentTypeBadge item={item} />
+            {typeof item.vote_average === "number" ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[10px] font-bold text-[#ffd78a] backdrop-blur-md">
+                <Star className="h-3 w-3 fill-current" />
+                {item.vote_average.toFixed(1)}
+              </span>
+            ) : null}
+          </div>
+          <h3 className="line-clamp-1 text-lg font-black leading-tight text-white">
+            {getTitle(item)}
+          </h3>
+          <p className="mt-1 line-clamp-1 text-[11px] font-semibold text-[#ff9b8a]/80">
+            {getShortReason(item, signal, saved)}
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={onToggle}
+          disabled={loading}
+          className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-xl border border-white/12 bg-black/55 text-white/80 backdrop-blur-md transition hover:bg-white/15 active:scale-95"
+          aria-label={saved ? "Remove from watchlist" : "Save to watchlist"}
+        >
+          {loading ? (
+            <span className="h-4 w-4 rounded-full border-2 border-white/60 border-t-transparent motion-safe:animate-spin" />
+          ) : saved ? (
+            <BookmarkCheck className="h-5 w-5 text-emerald-300" />
+          ) : (
+            <Bookmark className="h-5 w-5" />
+          )}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function MobileFavoriteCard({
+  item,
+  signal,
+  saved,
+  loading,
+  onOpen,
+  onToggle,
+}: {
+  item: All;
+  signal: TasteSignal;
+  saved: boolean;
+  loading: boolean;
+  onOpen: () => void;
+  onToggle: () => void;
+}) {
+  return (
+    <article className="group w-[132px] shrink-0 snap-start sm:w-[148px]">
+      <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="absolute inset-0"
+          aria-label={`Open ${getTitle(item)}`}
+        >
+          <Image
+            src={getPoster(item, "w342")}
+            alt={getTitle(item)}
+            fill
+            sizes="148px"
+            className="object-cover transition duration-500 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-transparent to-black/10" />
+        </button>
+        <span className="absolute left-2 top-2 rounded-full bg-black/68 px-2 py-1 text-[9px] font-black text-white backdrop-blur-sm">
+          {getMatchScore(item, signal, saved)}%
+        </span>
+        <button
+          type="button"
+          onClick={onToggle}
+          disabled={loading}
+          className="absolute bottom-2 right-2 grid min-h-9 min-w-9 place-items-center rounded-full border border-white/15 bg-black/65 text-white backdrop-blur-md transition active:scale-95"
+          aria-label={saved ? "Remove from watchlist" : "Save to watchlist"}
+        >
+          {loading ? (
+            <span className="h-3.5 w-3.5 rounded-full border-2 border-white/60 border-t-transparent motion-safe:animate-spin" />
+          ) : saved ? (
+            <BookmarkCheck className="h-4 w-4 text-emerald-300" />
+          ) : (
+            <Bookmark className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+      <button type="button" onClick={onOpen} className="mt-2 block w-full text-left">
+        <h3 className="line-clamp-2 min-h-9 text-xs font-black leading-[1.15rem] text-white">
+          {getTitle(item)}
+        </h3>
+        <div className="mt-1 flex items-center gap-1.5 text-[10px] font-semibold text-white/42">
+          {getYear(item) ? <span>{getYear(item)}</span> : null}
+          {getYear(item) && typeof item.vote_average === "number" ? (
+            <span className="h-1 w-1 rounded-full bg-white/25" />
+          ) : null}
+          {typeof item.vote_average === "number" ? (
+            <span className="inline-flex items-center gap-0.5 text-[#ffd78a]">
+              <Star className="h-2.5 w-2.5 fill-current" />
+              {item.vote_average.toFixed(1)}
+            </span>
+          ) : null}
+        </div>
+      </button>
+    </article>
   );
 }
 
@@ -582,13 +774,24 @@ function PersonalPickCard({
 
 function FavoriteLoadingState() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
+    <section className="mx-auto max-w-7xl overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-4 flex flex-col gap-2">
         <div className="h-4 w-28 animate-pulse rounded-full bg-[#e94f37]/16" />
         <div className="h-7 w-64 max-w-full animate-pulse rounded bg-zinc-900" />
         <div className="h-4 w-full max-w-lg animate-pulse rounded bg-zinc-900/80" />
       </div>
-      <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-3">
+      <div className="md:hidden">
+        <div className="aspect-[16/8.6] animate-pulse rounded-2xl bg-zinc-900" />
+        <div className="-mx-4 mt-4 flex gap-3 overflow-hidden px-4">
+          {[...Array(3)].map((_, index) => (
+            <div key={index} className="w-[132px] shrink-0">
+              <div className="aspect-[2/3] animate-pulse rounded-xl bg-zinc-900" />
+              <div className="mt-2 h-4 animate-pulse rounded bg-zinc-900/80" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="hidden rounded-2xl border border-white/10 bg-white/[0.025] p-3 md:block">
         <div className="grid gap-3 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)]">
           <div className="h-[300px] animate-pulse rounded-xl bg-zinc-900" />
           <div className="grid gap-2.5 sm:grid-cols-2">

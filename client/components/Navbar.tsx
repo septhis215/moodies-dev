@@ -881,6 +881,27 @@ export function NavbarComponent() {
               />
             </div>
 
+            <Link
+              href={isAuthenticated ? "/profile" : "/auth/login"}
+              aria-label={isAuthenticated ? "Open your profile" : "Sign in to your account"}
+              title={isAuthenticated ? "Profile" : "Sign in"}
+              className="grid min-h-10 min-w-10 place-items-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.06] text-white/80 transition hover:border-[#e94f37]/35 hover:bg-[#e94f37]/12 hover:text-white focus:outline-none focus:ring-2 focus:ring-[#e94f37]/70 active:scale-95"
+            >
+              {isAuthenticated && user?.avatarUrl ? (
+                <Image
+                  src={user.avatarUrl}
+                  alt=""
+                  width={32}
+                  height={32}
+                  unoptimized
+                  className="h-8 w-8 rounded-lg object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <IconUser className="h-5 w-5" aria-hidden="true" />
+              )}
+            </Link>
+
             <MobileNavToggle
               isOpen={isMobileOpen}
               onClick={() => setIsMobileOpen((s) => !s)}
