@@ -1027,6 +1027,7 @@ function ReviewForm({
           {submitting ? "Submitting…" : "Submit Review"}
         </button>
       </div>
+      </div>
     </form>
   );
 }
