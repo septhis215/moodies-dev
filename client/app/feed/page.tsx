@@ -42,11 +42,15 @@ interface VideoItem {
     site: string;
     video_type?: string;
     video_type_label?: string;
+    aspect_ratio?: number;
+    orientation?: "portrait" | "landscape";
   };
   video_key?: string;
   video_name?: string;
   video_type?: string;
   video_type_label?: string;
+  aspect_ratio?: number;
+  orientation?: "portrait" | "landscape";
   videos: unknown[];
 }
 
@@ -139,6 +143,9 @@ export default function VideoFeedPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLIFrameElement>>(new Map());
   const firstUserGestureRef = useRef(false);
+  const isPlayingRef = useRef(true);
+  const panelWasOpenRef = useRef(false);
+  const wasPlayingBeforePanelRef = useRef(true);
   const [videoReady, setVideoReady] = useState(false);
   const [feedVisible, setFeedVisible] = useState(true);
 
@@ -511,6 +518,10 @@ export default function VideoFeedPage() {
     } catch {}
   }, [muted]);
 
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
   const sendYouTubeCommand = (
     iframe: HTMLIFrameElement | undefined | null,
     func: string,
@@ -535,7 +546,7 @@ export default function VideoFeedPage() {
   );
 
   const playActiveVideo = useCallback(() => {
-    if (!currentVideo || !feedVisible) return;
+    if (!currentVideo || !feedVisible || panelOpen) return;
     const iframe = videoRefs.current.get(currentVideoIdentity);
     if (!iframe) return;
 
@@ -551,6 +562,7 @@ export default function VideoFeedPage() {
     currentVideoIdentity,
     feedVisible,
     muted,
+    panelOpen,
     pauseInactiveVideos,
   ]);
 
@@ -587,6 +599,7 @@ export default function VideoFeedPage() {
 
   const handleScroll = useCallback(
     (e: WheelEvent) => {
+      if (panelOpen) return;
       if (panelRef.current?.contains(e.target as Node)) return;
       e.preventDefault();
       if (Math.abs(e.deltaY) < 50) return;
@@ -600,15 +613,20 @@ export default function VideoFeedPage() {
         setPanelOpen(false);
       }
     },
-    [currentIndex, videos.length, hasMore, fetchMoreVideos],
+    [currentIndex, videos.length, hasMore, fetchMoreVideos, panelOpen],
   );
 
   const touchStartY = useRef(0);
-  const handleTouchStart = useCallback((e: TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-  }, []);
+  const handleTouchStart = useCallback(
+    (e: TouchEvent) => {
+      if (panelOpen) return;
+      touchStartY.current = e.touches[0].clientY;
+    },
+    [panelOpen],
+  );
   const handleTouchEnd = useCallback(
     (e: TouchEvent) => {
+      if (panelOpen) return;
       const diff = touchStartY.current - e.changedTouches[0].clientY;
       if (Math.abs(diff) < 50) return;
       if (diff > 0 && currentIndex < videos.length - 1) {
@@ -621,12 +639,12 @@ export default function VideoFeedPage() {
         setPanelOpen(false);
       }
     },
-    [currentIndex, videos.length, hasMore, fetchMoreVideos],
+    [currentIndex, videos.length, hasMore, fetchMoreVideos, panelOpen],
   );
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || panelOpen) return;
     container.addEventListener("wheel", handleScroll, { passive: false });
     container.addEventListener("touchstart", handleTouchStart as EventListener);
     container.addEventListener("touchend", handleTouchEnd as EventListener);
@@ -641,7 +659,7 @@ export default function VideoFeedPage() {
         handleTouchEnd as EventListener,
       );
     };
-  }, [handleScroll, handleTouchStart, handleTouchEnd]);
+  }, [handleScroll, handleTouchStart, handleTouchEnd, panelOpen]);
 
   useEffect(() => {
     if (!currentVideo) return;
@@ -663,6 +681,26 @@ export default function VideoFeedPage() {
     pauseInactiveVideos,
     playActiveVideo,
   ]);
+
+  useEffect(() => {
+    const wasOpen = panelWasOpenRef.current;
+
+    if (panelOpen && !wasOpen) {
+      wasPlayingBeforePanelRef.current = isPlayingRef.current;
+      const iframe = videoRefs.current.get(currentVideoIdentity);
+      sendYouTubeCommand(iframe, "pauseVideo", []);
+      setIsPlaying(false);
+    } else if (
+      !panelOpen &&
+      wasOpen &&
+      wasPlayingBeforePanelRef.current &&
+      feedVisible
+    ) {
+      window.setTimeout(() => playActiveVideo(), 180);
+    }
+
+    panelWasOpenRef.current = panelOpen;
+  }, [currentVideoIdentity, feedVisible, panelOpen, playActiveVideo]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -740,7 +778,7 @@ export default function VideoFeedPage() {
       typeof window !== "undefined"
         ? encodeURIComponent(window.location.origin)
         : "";
-    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=1&origin=${origin}`;
+    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&cc_load_policy=0&autohide=1&showinfo=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=1&origin=${origin}`;
   }, [currentVideo?.primary_video?.key]);
 
   const togglePlayPause = () => {
@@ -786,11 +824,21 @@ export default function VideoFeedPage() {
     currentVideo?.primary_video?.video_type ||
     currentVideo?.primary_video?.type ||
     "Video";
+  const currentAspectRatio =
+    currentVideo?.aspect_ratio ?? currentVideo?.primary_video?.aspect_ratio;
+  const currentOrientation =
+    currentVideo?.orientation ?? currentVideo?.primary_video?.orientation;
+  const isPortraitVideo =
+    currentOrientation === "portrait" ||
+    (typeof currentAspectRatio === "number" && currentAspectRatio < 1);
 
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 h-[100svh] w-full touch-none overflow-hidden overscroll-none bg-black"
+      className={cn(
+        "fixed inset-0 h-[100svh] w-full overflow-hidden overscroll-none bg-black",
+        panelOpen ? "touch-pan-y" : "touch-none",
+      )}
     >
       {/* ── TOP NAVBAR ──────────────────────────────────────────── */}
       <motion.nav
@@ -900,6 +948,14 @@ export default function VideoFeedPage() {
 
       {/* ── MAIN VIDEO AREA ─────────────────────────────────────── */}
       <div className="relative flex h-[100svh] w-full items-center justify-center overflow-hidden bg-black">
+        {currentBackdrop && (
+          <div
+            className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center opacity-45 blur-2xl"
+            style={{ backgroundImage: `url(${currentBackdrop})` }}
+            aria-hidden="true"
+          />
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-black/42" />
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
         <AnimatePresence mode="wait">
           {currentVideo && (
@@ -912,8 +968,16 @@ export default function VideoFeedPage() {
               className="absolute inset-0 flex items-center justify-center"
             >
               {/* Video iframe */}
-              <div className="relative flex h-full w-full items-center justify-center bg-black lg:px-5 lg:py-5">
-                <div className="relative h-full w-full overflow-hidden bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),0_24px_80px_rgba(0,0,0,0.45)] lg:aspect-video lg:h-auto lg:max-h-[calc(100svh-2.5rem)] lg:w-[min(calc(100vw-2.5rem),calc((100svh-2.5rem)*1.7778))] lg:max-w-none lg:rounded-2xl">
+              <div className="relative flex h-full w-full items-center justify-center bg-transparent lg:px-5 lg:py-5">
+                <div
+                  className={cn(
+                    "relative w-full overflow-hidden bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),0_24px_80px_rgba(0,0,0,0.45)]",
+                    isPortraitVideo
+                      ? "h-full"
+                      : "h-[58svh] min-h-[18rem] sm:h-[64svh]",
+                    "lg:aspect-video lg:h-auto lg:min-h-0 lg:max-h-[calc(100svh-2.5rem)] lg:w-[min(calc(100vw-2.5rem),calc((100svh-2.5rem)*1.7778))] lg:max-w-none lg:rounded-2xl",
+                  )}
+                >
                   {currentBackdrop && (
                     <div
                       className={cn(
@@ -949,7 +1013,7 @@ export default function VideoFeedPage() {
                     }}
                     title={videoTitle || `video-${currentVideo.id}`}
                     src={iframeSrc}
-                    className="absolute left-1/2 top-1/2 h-full min-h-full w-[177.78svh] min-w-full max-w-none -translate-x-1/2 -translate-y-1/2 bg-black brightness-[1.14] contrast-[1.08] saturate-[1.12] lg:h-[calc(100%+180px)] lg:min-h-[calc(56.25vw+180px)] lg:w-[calc(100%+284px)] lg:min-w-[calc(177.78vh+284px)]"
+                    className="absolute inset-0 h-full w-full bg-black brightness-[1.08] contrast-[1.04] saturate-[1.08]"
                     allow="autoplay; encrypted-media; picture-in-picture"
                     referrerPolicy="strict-origin-when-cross-origin"
                     style={{ border: "none", pointerEvents: "none" }}
@@ -1172,27 +1236,43 @@ export default function VideoFeedPage() {
       <AnimatePresence>
         {panelOpen && currentVideo && (
           <motion.div
-            initial={{ x: 28, opacity: 0, scale: 0.98 }}
-            animate={{ x: 0, opacity: 1, scale: 1 }}
-            exit={{ x: 28, opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="fixed inset-x-3 bottom-3 top-16 z-[100] flex overflow-hidden rounded-3xl
-                       border border-white/12 bg-black/58 shadow-2xl shadow-black/50
-                       backdrop-blur-2xl md:inset-y-4 md:left-auto md:right-4 md:w-[25rem]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] overscroll-none"
+            onWheel={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onTouchMove={(event) => event.stopPropagation()}
+            onTouchEnd={(event) => event.stopPropagation()}
           >
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.06] via-transparent to-black/30" />
-            {currentBackdrop && (
-              <div
-                className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-cover bg-center opacity-28 blur-sm"
-                style={{ backgroundImage: `url(${currentBackdrop})` }}
-              />
-            )}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-52 bg-gradient-to-b from-black/20 via-black/72 to-transparent" />
-
-            <div
-              ref={panelRef}
-              className="relative flex min-h-0 flex-1 flex-col overflow-y-auto"
+            <button
+              type="button"
+              className="absolute inset-0 cursor-default bg-black/55 backdrop-blur-sm"
+              onClick={() => setPanelOpen(false)}
+              aria-label="Dismiss details"
+            />
+            <motion.div
+              initial={{ x: 28, opacity: 0, scale: 0.98 }}
+              animate={{ x: 0, opacity: 1, scale: 1 }}
+              exit={{ x: 28, opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="absolute inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] top-[max(4rem,env(safe-area-inset-top))] flex overflow-hidden rounded-2xl
+                         border border-white/12 bg-black/75 shadow-2xl shadow-black/50
+                         backdrop-blur-2xl sm:inset-x-3 sm:bottom-3 sm:rounded-3xl md:inset-y-4 md:left-auto md:right-4 md:w-[25rem]"
             >
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.06] via-transparent to-black/30" />
+              {currentBackdrop && (
+                <div
+                  className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-cover bg-center opacity-28 blur-sm"
+                  style={{ backgroundImage: `url(${currentBackdrop})` }}
+                />
+              )}
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-52 bg-gradient-to-b from-black/20 via-black/72 to-transparent" />
+
+              <div
+                ref={panelRef}
+                className="relative flex min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto overscroll-contain mobile-native-scroll"
+              >
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-black/40 px-4 py-3 backdrop-blur-2xl sm:px-5">
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-[#ff6f5c] shadow-[0_0_14px_rgba(255,111,92,0.75)]" />
@@ -1371,7 +1451,8 @@ export default function VideoFeedPage() {
                   </div>
                 )}
               </div>
-            </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

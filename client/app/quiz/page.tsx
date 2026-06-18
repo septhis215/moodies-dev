@@ -497,7 +497,7 @@ export default function MovieQuizPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-black px-4 pb-10 pt-4 text-white sm:px-6 sm:pt-32 lg:px-8">
+    <main className="relative min-h-[calc(100svh-var(--mobile-nav-safe))] overflow-hidden bg-black px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 text-white sm:min-h-screen sm:px-6 sm:pb-10 sm:pt-32 lg:px-8">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(233,79,55,0.18),transparent_32%),radial-gradient(circle_at_88%_18%,rgba(34,211,238,0.10),transparent_28%),linear-gradient(180deg,#050505_0%,#000_70%)]" />
         <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(255,255,255,0.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:42px_42px]" />
@@ -510,34 +510,68 @@ export default function MovieQuizPage() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
-            className="relative z-10 mx-auto grid max-w-6xl gap-5 sm:gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.75fr)] lg:items-center"
+            className="relative z-10 mx-auto grid min-h-[calc(100svh-var(--mobile-nav-safe)-1rem)] max-w-6xl items-center gap-5 sm:min-h-0 sm:gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.75fr)]"
           >
-            <div>
+            <div className="rounded-2xl border border-white/10 bg-zinc-950/72 p-4 shadow-2xl shadow-black/25 backdrop-blur sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none">
               <div className="inline-flex items-center gap-2 rounded-full border border-[#e94f37]/25 bg-[#e94f37]/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-[#ffb2a6]">
                 <MoodMascot name="happy" size="xs" />
                 Personality quiz
               </div>
-              <h1 className="mt-4 max-w-3xl text-[2rem] font-black leading-[1.05] tracking-tight text-white sm:mt-5 sm:text-6xl">
+              <h1 className="mt-3 max-w-3xl text-[1.8rem] font-black leading-[1.06] tracking-tight text-white min-[390px]:text-[2rem] sm:mt-5 sm:text-6xl">
                 Let Moodies read the room before you pick.
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-400 sm:mt-5 sm:text-lg sm:leading-7">
-                Answer five quick prompts and the mascot will build a viewing
-                profile from your mood, genre appetite, and movie-versus-series
-                energy.
+              <p className="mt-3 max-w-2xl text-sm leading-5 text-zinc-400 sm:mt-5 sm:text-lg sm:leading-7">
+                <span className="sm:hidden">
+                  Five quick choices turn your mood into a movie or series match.
+                </span>
+                <span className="hidden sm:inline">
+                  Answer five quick prompts and the mascot will build a viewing
+                  profile from your mood, genre appetite, and movie-versus-series
+                  energy.
+                </span>
               </p>
 
-              <div className="-mx-4 mt-6 flex gap-3 overflow-x-auto px-4 pb-1 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0">
+              <div className="relative mt-3 flex items-center gap-3 overflow-hidden rounded-xl border border-white/10 bg-black/30 p-3 sm:hidden">
+                <motion.div
+                  animate={{ y: [0, -4, 0], rotate: [0, 1.5, -1.5, 0] }}
+                  transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
+                  className="relative h-20 w-20 shrink-0"
+                >
+                  <Image
+                    src={MASCOT_SRC}
+                    alt="Moodies mascot"
+                    fill
+                    sizes="80px"
+                    className="object-contain"
+                    priority
+                  />
+                </motion.div>
+                <div className="min-w-0">
+                  <div className="text-sm font-black text-white">
+                    Your next watch, decoded
+                  </div>
+                  <div className="mt-1 text-xs leading-5 text-zinc-500">
+                    Mood, genre, and format signals in about a minute.
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-3 gap-2 sm:mt-6 sm:gap-3">
                 {welcomeHighlights.map((item) => {
                   return (
                     <div
                       key={item.label}
-                      className="min-w-[168px] rounded-lg border border-white/10 bg-white/[0.04] p-4 sm:min-w-0"
+                      className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-2.5 text-center sm:p-4 sm:text-left"
                     >
-                      <MoodMascot name={item.mascot} size="sm" />
-                      <div className="mt-3 text-sm font-black text-white">
+                      <MoodMascot
+                        name={item.mascot}
+                        size="sm"
+                        className="mx-auto sm:mx-0"
+                      />
+                      <div className="mt-2 truncate text-xs font-black text-white sm:mt-3 sm:text-sm">
                         {item.label}
                       </div>
-                      <div className="mt-1 text-xs text-zinc-500">
+                      <div className="mt-1 hidden text-xs text-zinc-500 sm:block">
                         {item.text}
                       </div>
                     </div>
@@ -545,28 +579,30 @@ export default function MovieQuizPage() {
                 })}
               </div>
 
-              <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row">
+              <div className="mt-4 flex flex-col gap-3 sm:mt-8 sm:flex-row">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={startQuiz}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#e94f37] px-6 py-3 text-sm font-black text-white shadow-lg shadow-[#e94f37]/25 transition hover:bg-[#ff604b]"
+                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#e94f37] px-6 py-3 text-sm font-black text-white shadow-lg shadow-[#e94f37]/25 transition hover:bg-[#ff604b] sm:w-auto"
                 >
                   Start quiz
                 </motion.button>
                 <Link
                   href="/moods/explore"
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-bold text-zinc-200 transition hover:border-white/20 hover:bg-white/[0.08]"
+                  className="hidden min-h-12 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-bold text-zinc-200 transition hover:border-white/20 hover:bg-white/[0.08] sm:inline-flex"
                 >
                   Browse mood tools
                 </Link>
               </div>
             </div>
 
-            <MascotPanel
-              title="Moodies is listening"
-              body="Tiny choices become a watchlist signal. No pressure, just a better first pick."
-            />
+            <div className="hidden lg:block">
+              <MascotPanel
+                title="Moodies is listening"
+                body="Tiny choices become a watchlist signal. No pressure, just a better first pick."
+              />
+            </div>
           </motion.section>
         )}
 
@@ -576,16 +612,16 @@ export default function MovieQuizPage() {
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
-            className="relative z-10 mx-auto grid max-w-6xl gap-4 sm:gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start"
+            className="relative z-10 mx-auto grid max-w-6xl gap-3 sm:gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start"
           >
-            <aside className="rounded-xl border border-white/10 bg-zinc-950/80 p-4 sm:p-5">
+            <aside className="rounded-xl border border-white/10 bg-zinc-950/80 p-3 sm:p-5">
               <div className="flex items-center gap-3">
-                <div className="relative h-16 w-16 shrink-0">
+                <div className="relative h-12 w-12 shrink-0 sm:h-16 sm:w-16">
                   <Image
                     src={MASCOT_SRC}
                     alt="Moodies mascot"
                     fill
-                    sizes="64px"
+                    sizes="(max-width: 640px) 48px, 64px"
                     className="object-contain"
                   />
                 </div>
@@ -593,12 +629,12 @@ export default function MovieQuizPage() {
                   <div className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
                     Signal scan
                   </div>
-                  <div className="mt-1 text-2xl font-black text-white">
+                  <div className="mt-0.5 text-xl font-black text-white sm:mt-1 sm:text-2xl">
                     {progress}%
                   </div>
                 </div>
               </div>
-              <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10 sm:mt-5">
                 <motion.div
                   initial={{
                     width: `${(currentQuestion / selectedQuestions.length) * 100}%`,
@@ -608,7 +644,7 @@ export default function MovieQuizPage() {
                   className="h-full rounded-full bg-[#e94f37]"
                 />
               </div>
-              <div className="mt-4 grid grid-cols-5 gap-1.5 sm:mt-5 sm:block sm:space-y-2">
+              <div className="mt-3 grid grid-cols-5 gap-1.5 sm:mt-5 sm:block sm:space-y-2">
                 {selectedQuestions.map((question, index) => (
                   <div
                     key={question.id}
@@ -619,7 +655,7 @@ export default function MovieQuizPage() {
                 ))}
               </div>
               {answers.length > 0 && (
-                <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.035] p-3">
+                <div className="mt-5 hidden rounded-lg border border-white/10 bg-white/[0.035] p-3 sm:block">
                   <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
                     Last cue
                   </div>
@@ -630,8 +666,8 @@ export default function MovieQuizPage() {
               )}
             </aside>
 
-            <div className="rounded-xl border border-white/10 bg-zinc-950/85 p-4 shadow-2xl shadow-black/30 sm:p-7">
-              <div className="mb-5 flex items-center justify-between gap-3 sm:mb-6">
+            <div className="rounded-xl border border-white/10 bg-zinc-950/85 p-3.5 shadow-2xl shadow-black/30 sm:p-7">
+              <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
                 <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-bold text-zinc-300 ring-1 ring-white/10">
                   Question {currentQuestion + 1} of {selectedQuestions.length}
                 </span>
@@ -640,11 +676,11 @@ export default function MovieQuizPage() {
                 </span>
               </div>
 
-              <h2 className="max-w-3xl text-[1.55rem] font-black leading-tight text-white sm:text-4xl">
+              <h2 className="max-w-3xl text-[1.35rem] font-black leading-tight text-white min-[390px]:text-[1.5rem] sm:text-4xl">
                 {selectedQuestions[currentQuestion].question}
               </h2>
 
-              <div className="mt-6 grid gap-2.5 sm:mt-7 sm:gap-3">
+              <div className="mt-4 grid gap-2 sm:mt-7 sm:gap-3">
                 {selectedQuestions[currentQuestion].options.map(
                   (option, index) => {
                     return (
@@ -655,10 +691,10 @@ export default function MovieQuizPage() {
                         transition={{ delay: index * 0.05 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleAnswer(option)}
-                        className="group rounded-lg border border-white/10 bg-white/[0.035] p-3.5 text-left transition hover:border-[#e94f37]/50 hover:bg-[#e94f37]/10 sm:p-4"
+                        className="group min-h-16 rounded-lg border border-white/10 bg-white/[0.035] p-3 text-left transition hover:border-[#e94f37]/50 hover:bg-[#e94f37]/10 sm:p-4"
                       >
                         <div className="flex items-center gap-3 sm:gap-4">
-                          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-black/35 ring-1 ring-white/10 transition group-hover:bg-[#e94f37]/20 sm:h-14 sm:w-14">
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-black/35 ring-1 ring-white/10 transition group-hover:bg-[#e94f37]/20 sm:h-14 sm:w-14">
                             <Image
                               src={getOptionMascot(option, index)}
                               alt={`${option.mood} mood mascot`}
@@ -668,7 +704,7 @@ export default function MovieQuizPage() {
                             />
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block text-base font-bold text-white">
+                            <span className="block text-sm font-bold leading-5 text-white sm:text-base">
                               {option.text}
                             </span>
                             <span className="mt-1 block text-xs text-zinc-500">
@@ -697,7 +733,7 @@ export default function MovieQuizPage() {
             exit={{ opacity: 0, scale: 0.98 }}
             className="relative z-10 mx-auto max-w-lg text-center"
           >
-            <div className="rounded-xl border border-white/10 bg-zinc-950/85 p-8 shadow-2xl shadow-black/30">
+            <div className="rounded-xl border border-white/10 bg-zinc-950/85 p-5 shadow-2xl shadow-black/30 sm:p-8">
               <motion.div
                 animate={{ y: [0, -8, 0], rotate: [0, 2, -2, 0] }}
                 transition={{
@@ -715,7 +751,7 @@ export default function MovieQuizPage() {
                   className="object-contain"
                 />
               </motion.div>
-              <h2 className="mt-5 text-3xl font-black text-white">
+              <h2 className="mt-4 text-2xl font-black text-white sm:mt-5 sm:text-3xl">
                 Building your taste map
               </h2>
               <p className="mt-3 text-sm leading-6 text-zinc-400">
@@ -942,7 +978,7 @@ export default function MovieQuizPage() {
                 <button
                   ref={firstFocusableRef}
                   onClick={() => setSelectedMovie(null)}
-                  className="absolute right-4 top-4 z-20 rounded-lg border border-white/15 bg-black/60 px-3 py-2 text-xs font-black text-white backdrop-blur transition hover:bg-black/80"
+                  className="absolute right-3 top-3 z-20 inline-flex min-h-11 items-center justify-center rounded-lg border border-white/15 bg-black/60 px-3 py-2 text-xs font-black text-white backdrop-blur transition hover:bg-black/80 sm:right-4 sm:top-4"
                   aria-label="Close dialog"
                 >
                   Close
@@ -988,7 +1024,7 @@ export default function MovieQuizPage() {
                     </div>
                     <Link
                       href={getDetailUrl(selectedMovie)}
-                      className="inline-flex items-center justify-center rounded-lg bg-[#e94f37] px-4 py-2.5 text-sm font-black text-white transition hover:bg-[#ff604b]"
+                      className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#e94f37] px-4 py-2.5 text-sm font-black text-white transition hover:bg-[#ff604b]"
                     >
                       Open details
                     </Link>

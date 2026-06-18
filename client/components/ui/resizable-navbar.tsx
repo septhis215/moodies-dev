@@ -246,9 +246,9 @@ export const NavbarLogo = ({ className }: { className?: string }) => {
       <Image
         src="/images/moodies-transparent.png"
         alt="logo"
-        width={100}
-        height={100}
-        className="h-9 w-9 object-contain lg:h-[100px] lg:w-[100px]"
+        width={80}
+        height={80}
+        className="h-7 w-7 object-contain lg:h-[80px] lg:w-[80px]"
       />{" "}
       {/* <span className="font-medium text-white">Moodies</span>{" "} */}
     </Link>
