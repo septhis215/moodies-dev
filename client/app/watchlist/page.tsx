@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Star } from "lucide-react";
 import { useToast } from "@/app/context/ToastContext";
 import { RatingBadge } from "@/components/ui/rating-badge";
-import { sGet } from "@/utils/secureStorage";
+import { useAuth } from "@/app/context/AuthProvider";
 
 /* -------------------- Types -------------------- */
 type Watchlist = { movieId: string[]; seriesId: string[] };
@@ -130,10 +130,7 @@ export default function WatchlistPage() {
   const [tvItems, setTvItems] = useState<Item[]>([]);
   const [busyIds, setBusyIds] = useState<string[]>([]); // ids being removed
 
-  const token =
-    typeof window !== "undefined"
-      ? sGet("authToken") || ""
-      : "";
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   const movieIds = useMemo(() => data?.movieId ?? [], [data]);
   const tvIds = useMemo(() => data?.seriesId ?? [], [data]);
@@ -246,7 +243,8 @@ export default function WatchlistPage() {
       setLoading(true);
       setErr("");
 
-      if (!token) {
+      if (authLoading) return; // wait for the session check
+      if (!isAuthenticated) {
         setData(null);
         setLoading(false);
         return;
@@ -254,7 +252,7 @@ export default function WatchlistPage() {
 
       try {
         const res = await fetch(`${API_BASE}/watchlist`, {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
           cache: "no-store",
         });
         if (!res.ok) {
@@ -277,7 +275,7 @@ export default function WatchlistPage() {
     return () => {
       alive = false;
     };
-  }, [token]);
+  }, [isAuthenticated, authLoading]);
 
   /* 2) Fetch TMDB details for IDs */
   useEffect(() => {
@@ -308,7 +306,7 @@ export default function WatchlistPage() {
   /* 3) Remove (server + optimistic UI) */
   async function removeFromWatchlist(kind: Kind, idNum: number) {
     const id = String(idNum);
-    if (!token) return;
+    if (!isAuthenticated) return;
 
     // Find the item to get its details for the toast
     const item =
@@ -346,8 +344,8 @@ export default function WatchlistPage() {
       // Primary: RESTful delete
       let res = await fetch(`${API_BASE}/watchlist/${kind}/${id}`, {
         method: "DELETE",
+        credentials: "include",
         headers: {
-          Authorization: `Bearer ${token}`,
           accept: "application/json",
         },
       });
@@ -356,8 +354,8 @@ export default function WatchlistPage() {
       if (res.status === 404 || res.status === 405) {
         res = await fetch(`${API_BASE}/watchlist/toggle`, {
           method: "POST",
+          credentials: "include",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
             accept: "application/json",
           },
@@ -480,7 +478,7 @@ export default function WatchlistPage() {
           <div className="mt-8 h-px bg-gradient-to-r from-[rgb(233,79,55)]/30 via-white/[0.06] to-transparent" />
         </div>
 
-        {!token && !loading && (
+        {!isAuthenticated && !loading && (
           <EmptyState
             title="Please log in"
             note="You need to log in to view your watchlist."
@@ -497,7 +495,7 @@ export default function WatchlistPage() {
 
         {!loading &&
           !err &&
-          token &&
+          isAuthenticated &&
           movieIds.length === 0 &&
           tvIds.length === 0 && (
             <EmptyState

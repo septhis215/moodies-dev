@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/app/context/ToastContext";
-import { sGet, sSet, sRemove } from "@/utils/secureStorage";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -31,10 +30,13 @@ export function useAuth() {
                 // 3-second delay
                 await new Promise((resolve) => setTimeout(resolve, 3000));
 
-                // Perform sign-in
+                // Perform sign-in. The server sets the session as HttpOnly
+                // cookies on this response — credentials:include is required for
+                // the browser to store them, and there is no token to persist.
                 const res = await fetch(`${API_BASE}/auth/signin`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
+                    credentials: "include",
                     body: JSON.stringify({ email, password }),
                 });
 
@@ -43,23 +45,6 @@ export function useAuth() {
                 if (!res.ok) {
                     throw new Error(data?.message || "Sign-in failed");
                 }
-
-                const token = data?.access_token || data?.token;
-                if (!token) throw new Error("No token returned from server");
-
-                // Store auth data
-                sSet("authToken", token);
-                const expiryMs = Date.now() + 1 * 24 * 60 * 60 * 1000;
-                sSet("authTokenExpiry", String(expiryMs));
-                sSet("user", JSON.stringify(data.user || {}));
-
-                if (data?.user) {
-                    sSet("authUser", JSON.stringify(data.user));
-                }
-
-                // Clean up temporary credentials
-                sRemove("signupEmail");
-                sRemove("signupPassword");
 
                 // Success toast - use user avatar if available, otherwise moodies logo
                 toast(

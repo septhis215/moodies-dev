@@ -37,9 +37,8 @@ const SENSITIVE_AUTH_PATHS = [
   '/auth/request-reset',
   '/auth/verify-code',
   '/auth/reset-password',
-  '/auth/set-password',
-  '/auth/verify-password',
   '/auth/change-password',
+  '/auth/refresh',
 ];
 
 @Injectable()

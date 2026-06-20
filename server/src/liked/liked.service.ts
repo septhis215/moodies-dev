@@ -33,8 +33,15 @@ export class LikedService {
     }
   }
 
+  /**
+   * Get liked list. Read-only — never creates a row. Creating on read meant every
+   * concurrent reader (common right after login) raced to INSERT the same row,
+   * producing a P2002 unique-constraint error per loser. The row is created lazily
+   * on the first write (toggle/remove both call ensureLikedList first).
+   */
   async getAll(userId: string) {
-    return this.ensureLikedList(userId);
+    const likedList = await this.prisma.likedList.findUnique({ where: { userId } });
+    return likedList ?? { userId, movieId: [], seriesId: [] };
   }
 
   async toggle(userId: string, tmdbId: string, type: Kind) {

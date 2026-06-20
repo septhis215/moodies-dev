@@ -18,7 +18,7 @@ import {
 import type { All } from "@/types/all";
 import { tmdbImage } from "@/lib/tmdb";
 import { useWatchlist } from "@/hooks/useWatchlist";
-import { sGet } from "@/utils/secureStorage";
+import { useAuth } from "@/app/context/AuthProvider";
 
 interface MoodiesMixProps {
   data?: All[];
@@ -40,15 +40,12 @@ type TasteSignal = {
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-async function fetchFavorites(
-  token: string,
-  endpoint?: string,
-): Promise<All[]> {
+async function fetchFavorites(endpoint?: string): Promise<All[]> {
   try {
     const res = await fetch(endpoint || `${API_BASE}/all/favorites`, {
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
       },
       next: { revalidate: 60 },
     });
@@ -183,16 +180,9 @@ export default function MoodiesMix({
   const [loadingStates, setLoadingStates] = useState<Record<number, boolean>>(
     {},
   );
-  const [token, setToken] = useState<string | null>(null);
-
   const router = useRouter();
   const { add, remove, isInWatchlist } = useWatchlist();
-
-  useEffect(() => {
-    setToken(sGet("authToken") ?? "");
-  }, []);
-
-  const isAuthenticated = token !== null && token !== "";
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   useEffect(() => {
     if (data) {
@@ -201,7 +191,7 @@ export default function MoodiesMix({
       return;
     }
 
-    if (token === null) return;
+    if (authLoading) return; // wait until the session check resolves
 
     if (!isAuthenticated) {
       setLoading(false);
@@ -212,7 +202,7 @@ export default function MoodiesMix({
       setLoading(true);
 
       try {
-        const result = await fetchFavorites(token, endpoint);
+        const result = await fetchFavorites(endpoint);
         setItems(Array.isArray(result) ? result : []);
       } catch {
         setItems([]);
@@ -222,7 +212,7 @@ export default function MoodiesMix({
     };
 
     load();
-  }, [data, endpoint, token, isAuthenticated]);
+  }, [data, endpoint, authLoading, isAuthenticated]);
 
   const ordered = useMemo(
     () => items.map((_, index) => items[(offset + index) % items.length]),
@@ -259,7 +249,7 @@ export default function MoodiesMix({
     }
   };
 
-  if (token === null) return null;
+  if (authLoading) return null;
 
   if (!isAuthenticated) {
     return (

@@ -6,10 +6,8 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
-import { sGet, sSet, sRemove } from "@/utils/secureStorage";
 
 /* ---------- Types ---------- */
 type User = {
@@ -24,40 +22,28 @@ type User = {
 
 type AuthContextValue = {
   user: User | null; // null => guest
-  token: string | null;
   isAuthenticated: boolean;
-  login: (token: string, user?: User) => void;
+  loading: boolean; // true until the first /me check resolves
+  /** Re-hydrate the user from the cookie session (after a login). */
+  login: (user?: User) => Promise<void>;
+  /** Explicit logout: revokes the refresh token server-side, then clears state. */
+  logout: () => Promise<void>;
+  /** Drop client state without a server round-trip (used on a hard 401). */
   logoutSilent: () => void;
+  /** Attempt a single silent token refresh. Returns true on success. */
+  refreshSession: () => Promise<boolean>;
+  /** Re-fetch the current user from /auth/me. */
+  reloadUser: () => Promise<void>;
 };
 
 /* ---------- Config ---------- */
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-/** Try these in order; keep/adjust to match your server */
-const ME_PATHS = ["/auth/me", "/users/me", "/auth/profile"];
-
 const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };
 
-/* ---------- Utils ---------- */
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function decodeJwt<T = any>(token: string): T | null {
-  try {
-    const b64 = token.split(".")[1];
-    const json = atob(b64.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(decodeURIComponent(escape(json)));
-  } catch {
-    return null;
-  }
-}
-
-function getExpMs(token: string | null): number | null {
-  if (!token) return null;
-  const p = decodeJwt<{ exp?: number }>(token);
-  return p?.exp ? p.exp * 1000 : null;
-}
-
-/** Normalize /me (or JWT) into our User shape, handling common nestings */
+/** Normalize /me into our User shape, handling common nestings. */
 function extractUser(payload: any): User {
   const p =
     payload?.data?.user ??
@@ -78,207 +64,129 @@ function extractUser(payload: any): User {
 
 /* ---------- Provider ---------- */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const timerRef = useRef<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const clearTimer = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+  // Identity now lives in an HttpOnly cookie the JS can't read, so we always
+  // ask the server who we are rather than decoding a token client-side.
+  const reloadUser = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        credentials: "include",
+        headers: { accept: "application/json" },
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const raw = await res.json();
+        setUser(raw ? extractUser(raw) : null);
+      } else if (res.status === 401 || res.status === 498) {
+        setUser(null);
+      }
+    } catch {
+      /* network error — keep current state */
     }
-  };
-
-  const logoutSilent = useCallback(() => {
-    clearTimer();
-    sRemove("authToken");
-    setToken(null);
-    setUser(null); // guest
   }, []);
 
-  const scheduleAutoLogout = useCallback(
-    (tkn: string) => {
-      clearTimer();
-      const expMs = getExpMs(tkn);
-      if (!expMs) return;
-      const wait = Math.max(0, expMs - Date.now() - 3000); // 3s early
-      timerRef.current = window.setTimeout(
-        () => logoutSilent(),
-        wait
-      ) as unknown as number;
-    },
-    [logoutSilent]
-  );
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers: { accept: "application/json" },
+        cache: "no-store",
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const logoutSilent = useCallback(() => {
+    setUser(null);
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {
+      /* ignore — clear client state regardless */
+    }
+    setUser(null);
+  }, []);
 
   const login = useCallback(
-    (tkn: string, usr?: User) => {
-      sSet("authToken", tkn);
-      setToken(tkn);
-
-      // show identity immediately (no waiting on /me)
-      if (usr) setUser(usr);
-      else {
-        const p = decodeJwt<any>(tkn);
-        if (p) setUser((prev) => prev ?? extractUser(p));
-      }
-
-      scheduleAutoLogout(tkn);
+    async (usr?: User) => {
+      if (usr) setUser(usr); // optimistic; server cookie is already set
+      await reloadUser();
     },
-    [scheduleAutoLogout]
+    [reloadUser]
   );
 
-  /** Try multiple /me paths; if all fail, keep JWT-decoded user */
-  const fetchMe = useCallback(
-    async (tkn: string) => {
-      for (const path of ME_PATHS) {
-        try {
-          const res = await fetch(`${API_BASE}${path}`, {
-            headers: {
-              accept: "application/json",
-              Authorization: `Bearer ${tkn}`,
-            },
-            cache: "no-store",
-          });
+  // Bootstrap the session from cookies on first load (with one refresh retry).
+  useEffect(() => {
+    let cancelled = false;
 
-          if (res.status === 401 || res.status === 498) {
-            logoutSilent();
-            return;
-          }
+    const isGoogleLanding =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("google_login") === "true";
 
-          if (res.ok) {
-            const raw = await res.json();
-            const u = extractUser(raw);
-            setUser((prev) => ({ ...(prev ?? {}), ...u }));
-            return;
-          }
-        } catch {
-          /* try next path */
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          credentials: "include",
+          headers: { accept: "application/json" },
+          cache: "no-store",
+        });
+        if (!cancelled && res.ok) {
+          const raw = await res.json();
+          setUser(raw ? extractUser(raw) : null);
+        } else if (res.status === 401 || res.status === 498) {
+          const refreshed = await refreshSession();
+          if (!cancelled && refreshed) await reloadUser();
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+
+      // Google sign-in landing: strip the flag from the URL and toast.
+      if (isGoogleLanding && typeof window !== "undefined") {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        const showToast = (window as any).showToast;
+        if (typeof showToast === "function") {
+          showToast(
+            "Welcome back!",
+            "success",
+            3000,
+            "User",
+            MOODIES_LOGO,
+            MOODIES_SIZE
+          );
         }
       }
+    })();
 
-      setUser(
-        (curr) =>
-          curr ??
-          (decodeJwt<any>(tkn) ? extractUser(decodeJwt<any>(tkn)) : null)
-      );
-    },
-    [logoutSilent]
-  );
-
-  useEffect(() => {
-    if (token) fetchMe(token);
-  }, [token, fetchMe]);
-
-  useEffect(() => {
-    // Check URL for Google login token
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlToken = urlParams.get("token");
-      const isGoogleLogin = urlParams.get("google_login");
-
-      if (urlToken && isGoogleLogin) {
-        // Store token
-        sSet("authToken", urlToken);
-        const expiryMs = Date.now() + 1 * 24 * 60 * 60 * 1000;
-        sSet("authTokenExpiry", String(expiryMs));
-
-        // Clean URL
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname
-        );
-
-        // Set token and fetch user
-        setToken(urlToken);
-        scheduleAutoLogout(urlToken);
-
-        // Fetch user data for toast
-        const fetchUserForToast = async () => {
-          try {
-            const res = await fetch(`${API_BASE}/auth/me`, {
-              headers: { Authorization: `Bearer ${urlToken}` },
-            });
-
-            if (res.ok) {
-              const userData = await res.json();
-              sSet("authUser", JSON.stringify(userData));
-              sSet("user", JSON.stringify(userData));
-              setUser(extractUser(userData));
-
-              // Show success toast
-              if (typeof window !== "undefined" && (window as any).showToast) {
-                (window as any).showToast(
-                  "Welcome back!",
-                  "success",
-                  3000,
-                  userData?.username || userData?.email || "User",
-                  userData?.avatarUrl || MOODIES_LOGO,
-                  userData?.avatarUrl ? undefined : MOODIES_SIZE
-                );
-              }
-            }
-          } catch (error) {
-            console.error("Error fetching user:", error);
-            // Still show toast even if fetch fails
-            if (typeof window !== "undefined" && (window as any).showToast) {
-              (window as any).showToast(
-                "Welcome back!",
-                "success",
-                3000,
-                "User",
-                MOODIES_LOGO,
-                MOODIES_SIZE
-              );
-            }
-          }
-        };
-
-        fetchUserForToast();
-        return;
-      }
-    }
-
-    // Regular token loading from localStorage
-    const t = sGet("authToken");
-    if (t) {
-      const p = decodeJwt<any>(t);
-      if (p) setUser(extractUser(p));
-      const exp = getExpMs(t);
-      if (exp && exp <= Date.now()) logoutSilent();
-      else {
-        setToken(t);
-        scheduleAutoLogout(t);
-      }
-    }
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "authToken") {
-        if (!e.newValue) { logoutSilent(); return; }
-        const plainToken = sGet("authToken");
-        if (!plainToken) { logoutSilent(); return; }
-        const p2 = decodeJwt<any>(plainToken);
-        if (p2) setUser(extractUser(p2));
-        setToken(plainToken);
-        scheduleAutoLogout(plainToken);
-      }
-    };
-    window.addEventListener("storage", onStorage);
     return () => {
-      window.removeEventListener("storage", onStorage);
-      clearTimer();
+      cancelled = true;
     };
-  }, [logoutSilent, scheduleAutoLogout]);
+  }, [refreshSession, reloadUser]);
 
   const value = useMemo(
     () => ({
       user,
-      token,
-      isAuthenticated: !!token,
+      isAuthenticated: !!user,
+      loading,
       login,
+      logout,
       logoutSilent,
+      refreshSession,
+      reloadUser,
     }),
-    [user, token, login, logoutSilent]
+    [user, loading, login, logout, logoutSilent, refreshSession, reloadUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

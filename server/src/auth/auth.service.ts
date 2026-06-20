@@ -16,6 +16,9 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuid } from 'uuid';
+import { randomBytes } from 'node:crypto';
+import { RedisService } from 'src/redis/redis.service';
+import { REFRESH_TTL_SECONDS } from './auth.cookies';
 
 
 
@@ -25,13 +28,67 @@ export class AuthService {
     private prismaService: PrismaService,
     private readonly jwt: JwtService,
     private configService: ConfigService,
+    private readonly redis: RedisService,
   ) { }
 
-  signAccessToken(payload: { sub: number | string }) {
+  /** Short-lived access token delivered as an HttpOnly cookie. */
+  signAccessToken(payload: { sub: number | string; email?: string }) {
+    // expiresIn is a config string ('15m', '1h', …); cast past ms's StringValue
+    // template-literal type, which a plain env string can't satisfy.
+    const expiresIn = (process.env.JWT_ACCESS_EXPIRES || '15m') as unknown as number;
     return this.jwt.sign(
-      { sub: String(payload.sub) },
-      { expiresIn: '1d' }
+      { sub: String(payload.sub), ...(payload.email ? { email: payload.email } : {}) },
+      { secret: process.env.JWT_SECRET, expiresIn },
     );
+  }
+
+  private refreshKey(token: string) {
+    return `rt:${token}`;
+  }
+
+  /**
+   * Mint an opaque refresh token and record it in Redis (token → userId) with a
+   * TTL. Opaque + server-stored means it can be revoked (logout) and rotated,
+   * unlike a stateless JWT.
+   */
+  async issueRefreshToken(userId: string): Promise<string> {
+    const token = randomBytes(32).toString('hex');
+    await this.redis.set(this.refreshKey(token), userId, REFRESH_TTL_SECONDS);
+    return token;
+  }
+
+  /** Issue a fresh access + refresh pair for a freshly authenticated user. */
+  async issueTokens(userId: string, email?: string) {
+    const accessToken = this.signAccessToken({ sub: userId, email });
+    const refreshToken = await this.issueRefreshToken(userId);
+    return { accessToken, refreshToken };
+  }
+
+  /**
+   * Rotate a refresh token: validate it against Redis, delete it (single-use),
+   * and issue a new pair. Returns null when the token is unknown/expired — which
+   * also covers a replay of an already-rotated token.
+   */
+  async rotateRefreshToken(oldToken: string) {
+    if (!oldToken) return null;
+    const userId = await this.redis.get(this.refreshKey(oldToken));
+    if (!userId) return null;
+    await this.redis.del(this.refreshKey(oldToken));
+
+    const user = await this.prismaService.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true },
+    });
+    if (!user) return null;
+
+    const accessToken = this.signAccessToken({ sub: user.id, email: user.email });
+    const refreshToken = await this.issueRefreshToken(user.id);
+    return { userId: user.id, accessToken, refreshToken };
+  }
+
+  /** Invalidate a refresh token (logout). */
+  async revokeRefreshToken(token: string | undefined): Promise<void> {
+    if (token) await this.redis.del(this.refreshKey(token));
   }
 
   async signup(dto: RegisterDto) {
@@ -68,13 +125,10 @@ export class AuthService {
       throw e;
     }
 
-    const token = await this.signToken(user.id, user.email);
-
     const { password, ...result } = user;
     return {
       message: 'User created successfully',
       user: result,
-      token: token
     };
   }
 
@@ -104,8 +158,6 @@ export class AuthService {
     const pwMatches = await argon.verify(user.password, dto.password);
     if (!pwMatches) throw new UnauthorizedException('Invalid email or password');
 
-    const token = await this.signToken(user.id, user.email);
-
     return {
       message: 'Login successful',
       user: {
@@ -113,7 +165,6 @@ export class AuthService {
         username: user.username,
         email: user.email,
       },
-      token,
     };
   }
 
@@ -139,13 +190,6 @@ export class AuthService {
     const hash = await argon.hash(dto.newPassword);
     await this.prismaService.user.update({ where: { id: userId }, data: { password: hash } });
     return { ok: true };
-  }
-
-  private async signToken(userId: string, email: string) {
-    const payload = { sub: userId, email };
-    return this.jwt.signAsync(payload, {
-      secret: process.env.JWT_SECRET,
-    });
   }
 
   /**
@@ -207,17 +251,12 @@ export class AuthService {
     picture?: string;
   }) {
     const user = await this.upsertGoogleAccount(params);
-    const token = await this.signToken(user.id, user.email);
-    return { access_token: token, user };
+    return { user };
   }
 
   async upsertGoogleUser(profile: any) {
     const { email, name, picture, googleId } = profile;
     return this.upsertGoogleAccount({ email, name, googleId, picture });
-  }
-
-  signTempToken(payload: { uid: number; mode: 'set' | 'verify' }) {
-    return this.jwt.sign(payload, { expiresIn: '5m', subject: String(payload.uid), jwtid: 'temp' });
   }
 
   async getAchievementProgress(userId: string) {

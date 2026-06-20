@@ -79,7 +79,7 @@ export function NavbarComponent() {
   const [activeRoute, setActiveRoute] = useState<string>(routes[0].href);
   const [activeMobileRoute, setActiveMobileRoute] = useState<string | null>(null);
   const [mobileExpandedRoute, setMobileExpandedRoute] = useState<string | null>(routes[0].href);
-  const { user, isAuthenticated, logoutSilent } = useAuth();
+  const { user, isAuthenticated, logout: doLogout } = useAuth();
   const { toast } = useToast();
 
   const routeOptions: Record<string, { label: string; path: string }[]> = {
@@ -186,7 +186,7 @@ export function NavbarComponent() {
     );
 
     setTimeout(() => {
-      logoutSilent();
+      void doLogout();
     }, 500);
   };
 

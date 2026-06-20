@@ -43,7 +43,7 @@ reads env files at startup.
 
 | File | Purpose | Committed? |
 |---|---|---|
-| `.env` | Shared, non-URL values (TMDB key, storage secret) | ❌ gitignored — get values from a teammate |
+| `.env` | Shared, non-URL values (e.g. TMDB key) | ❌ gitignored — get values from a teammate |
 | `.env.development` | Local API URLs (`localhost:4000`) — auto-loaded by `next dev` | ✅ yes |
 | `.env.production` | Prod API URLs — auto-loaded by `next build`/`start` | ❌ gitignored |
 | `.env.local` | Active override; written by the `env:*` scripts | ❌ gitignored |
@@ -113,3 +113,58 @@ Relevant env vars (set in Railway for staging; in `server/.env` for local):
   (Preview = staging URL, Production = prod URL). The local `.env.*` files aren't used there.
 - On Railway, set `CLIENT_URL` to the Vercel URL (so OAuth redirects back to the frontend)
   and add the Vercel domain to `CORS_ORIGINS`.
+
+---
+
+## Authentication: HttpOnly cookie session (security migration)
+
+Auth no longer uses a Bearer token stored in `localStorage`. The session now lives in
+**HttpOnly cookies** that JavaScript can't read (closes the XSS token-theft and
+token-in-URL risks), with a refresh token tracked server-side in Redis so logout
+actually revokes the session.
+
+**What changed**
+- `signin` / `signup` / Google callback set two cookies (`mood_at` access, `mood_rt`
+  refresh) instead of returning a token. The Google callback **no longer puts the token
+  in the redirect URL**.
+- New `POST /auth/refresh` rotates the refresh token; `POST /auth/logout` revokes it.
+- The JWT strategy reads the access token from the cookie, with a **Bearer-header
+  fallback** during rollout.
+- Every client API call now sends `credentials: "include"` and no `Authorization`
+  header. The old `secureStorage` util and `NEXT_PUBLIC_STORAGE_SECRET` were **removed**
+  — the token is never exposed to JS, so client-side storage isn't needed.
+
+**New backend env vars** (all optional — safe defaults shown):
+
+| Var | Default | Notes |
+|---|---|---|
+| `JWT_ACCESS_EXPIRES` | `15m` | Access-token (cookie) lifetime. |
+| `REFRESH_EXPIRES_DAYS` | `30` | Refresh-token lifetime (also the Redis TTL). |
+| `COOKIE_SAMESITE` | `lax` | `lax` \| `strict` \| `none`. See cross-site note below. |
+| `COOKIE_SECURE` | `NODE_ENV==='production'` | Force `true`/`false`. Required `true` when SameSite=None. |
+| `COOKIE_DOMAIN` | host-only | Set e.g. `.moodies.com` to share the cookie across subdomains. |
+
+> Refresh tokens are stored in Redis (`rt:<token>` → userId), so the existing `REDIS_*`
+> vars must be set for login/refresh to work.
+
+**SameSite / cross-origin rule (important)**
+- `localhost:3000 ↔ :4000` and a `app.x.com ↔ api.x.com` split are **same-site**
+  (SameSite ignores port; both share the registrable domain), so the default
+  `SameSite=Lax` cookies are sent on `fetch(credentials:"include")` — no change needed.
+- Only if the API is on a **truly different domain** from the client do you need
+  `COOKIE_SAMESITE=none` + `COOKIE_SECURE=true` (and HTTPS).
+- CORS already runs with `credentials: true`; just ensure the client origin is in
+  `CORS_ORIGINS` (it must be an explicit origin, never `*`).
+
+**Manual test checklist after deploying this**
+1. Email signin → cookies `mood_at`/`mood_rt` set (DevTools → Application → Cookies); no token in `localStorage`.
+2. Protected pages work (watchlist, liked, profile, post a review/reply).
+3. Google sign-in → lands on `/` (or `/auth/onboarding`) with **no `?token=` in the URL**.
+4. Logout (Navbar + profile) → cookies cleared and `/auth/me` returns 401.
+5. Let the access token expire (or delete `mood_at`) and hit a protected page → it
+   silently refreshes via `/auth/refresh` and succeeds.
+
+> **Note (SEC-6, not addressed):** `docker-compose.yml` still has a hardcoded Postgres
+> password and a passwordless, port-exposed MongoDB. Left as-is per decision; only safe
+> for a local laptop. Harden (env-driven creds, Mongo auth, no published DB ports) before
+> running that compose file on any shared/staging host.

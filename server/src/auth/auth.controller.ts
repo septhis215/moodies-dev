@@ -7,12 +7,10 @@ import {
   Patch,
   UseGuards,
   Get,
-  Query,
   Req,
   Res,
   Put,
   UnauthorizedException,
-  NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -24,30 +22,69 @@ import { JwtGuard } from './guard';
 import { AuthGuard } from '@nestjs/passport';
 import { sendVerificationCode } from '../utils/mailer';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { JwtService } from '@nestjs/jwt';
-import type { Response as ExpressResponse } from 'express';
+import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { UpdateProfileDto } from './dto';
 import { randomInt } from 'node:crypto';
+import {
+  REFRESH_COOKIE,
+  clearAuthCookies,
+  readCookie,
+  setAuthCookies,
+} from './auth.cookies';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
-    private readonly jwt: JwtService,
     private readonly PrismaService: PrismaService,
   ) { }
 
   @HttpCode(HttpStatus.CREATED)
   @Post('signup')
-  signup(@Body() dto: authDto.RegisterDto) {
+  async signup(
+    @Body() dto: authDto.RegisterDto,
+    @Res({ passthrough: true }) res: ExpressResponse,
+  ) {
     // Do not log `dto` — it contains the plaintext password.
-    return this.authService.signup(dto);
+    const result = await this.authService.signup(dto);
+    const { accessToken, refreshToken } = await this.authService.issueTokens(
+      result.user.id,
+      result.user.email,
+    );
+    setAuthCookies(res, accessToken, refreshToken);
+    return result;
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('signin')
-  signin(@Body() dto: authDto.LoginDto) {
-    return this.authService.signin(dto);
+  async signin(
+    @Body() dto: authDto.LoginDto,
+    @Res({ passthrough: true }) res: ExpressResponse,
+  ) {
+    const result = await this.authService.signin(dto);
+    const { accessToken, refreshToken } = await this.authService.issueTokens(
+      result.user.id,
+      result.user.email,
+    );
+    setAuthCookies(res, accessToken, refreshToken);
+    return result;
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('refresh')
+  async refresh(
+    @Req() req: ExpressRequest,
+    @Res({ passthrough: true }) res: ExpressResponse,
+  ) {
+    const rotated = await this.authService.rotateRefreshToken(
+      readCookie(req, REFRESH_COOKIE) ?? '',
+    );
+    if (!rotated) {
+      clearAuthCookies(res);
+      throw new UnauthorizedException('Invalid or expired session');
+    }
+    setAuthCookies(res, rotated.accessToken, rotated.refreshToken);
+    return { ok: true };
   }
 
   @HttpCode(HttpStatus.OK)
@@ -69,8 +106,15 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtGuard)
   @Post('logout')
-  logout(@GetUser() user: User2.User) {
-    return { message: 'Loggout out successfullly' };
+  async logout(
+    @Req() req: ExpressRequest,
+    @Res({ passthrough: true }) res: ExpressResponse,
+  ) {
+    // Revoke the refresh token server-side and clear both cookies, so logout
+    // actually invalidates the session rather than just deleting a client copy.
+    await this.authService.revokeRefreshToken(readCookie(req, REFRESH_COOKIE));
+    clearAuthCookies(res);
+    return { message: 'Logged out successfully' };
   }
 
   @Get('google')
@@ -92,105 +136,35 @@ export class AuthController {
     const profile = req.user;
 
     // Use the existing googleLoginOrRegister method which handles both login and signup
-    const { access_token, user } = await this.authService.googleLoginOrRegister({
+    const { user } = await this.authService.googleLoginOrRegister({
       email: profile.email,
       name: profile.name,
       googleId: profile.googleId,
       picture: profile.picture,
     });
 
+    // Establish the session as HttpOnly cookies. The access token is NEVER placed
+    // in the redirect URL (it would leak via history, logs and the Referer header).
+    const { accessToken, refreshToken } = await this.authService.issueTokens(
+      user.id,
+      user.email,
+    );
+    setAuthCookies(res, accessToken, refreshToken);
+
     const base = process.env.CLIENT_URL ?? 'http://localhost:3000';
 
     // Check if user has completed onboarding (has preferences set)
     const needsOnboarding = !user.age || !user.preferredGenres?.length || !user.preferredLanguages?.length;
 
-    if (needsOnboarding) {
-      // New user or incomplete profile - redirect to onboarding with token
-      return res.redirect(`${base}/auth/onboarding?token=${encodeURIComponent(access_token)}`);
-    }
-
-    // Existing user with complete profile - redirect directly to home with token
-    // The AuthContext will pick up the token and show the toast
-    return res.redirect(`${base}/?token=${encodeURIComponent(access_token)}&google_login=true`);
+    // Redirect with no token in the URL; the client reads identity from /auth/me.
+    return res.redirect(
+      needsOnboarding
+        ? `${base}/auth/onboarding`
+        : `${base}/?google_login=true`,
+    );
   }
 
   /* ================= PASSWORD ENDPOINTS ================= */
-
-  @Post('set-password')
-  async setPassword(@Body() body: { token: string; password: string }) {
-    const { token, password } = body;
-
-    // These endpoints take an inline body rather than a validated DTO, so the
-    // global ValidationPipe does not enforce password strength here — check it.
-    if (typeof password !== 'string' || password.length < 8 || password.length > 100) {
-      throw new BadRequestException('Password must be between 8 and 100 characters');
-    }
-
-    let payload: any;
-    try {
-      payload = this.jwt.verify(token);
-    } catch (e: any) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
-    if (payload?.mode !== 'set') throw new UnauthorizedException('Invalid mode');
-
-    const uid = String(payload.uid);
-    if (!uid) throw new UnauthorizedException('Invalid user id');
-
-    const hash = await argon.hash(password, {
-      type: argon.argon2id,
-      memoryCost: 19456,
-      timeCost: 2,
-      parallelism: 1,
-    });
-
-    await this.PrismaService.user.update({
-      where: { id: uid },
-      data: { password: hash, provider: 'google' },
-    });
-
-    const user = await this.PrismaService.user.findUnique({
-      where: { id: uid },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        avatarUrl: true,
-      },
-    });
-
-    const accessToken = this.authService.signAccessToken({ sub: uid });
-
-    return { token: accessToken, user };
-  }
-
-  @Post('verify-password')
-  async verifyPassword(@Body() body: { token: string; password: string }) {
-    const { token, password } = body;
-
-    let payload: any;
-    try {
-      payload = this.jwt.verify(token);
-    } catch (e: any) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
-    if (payload?.mode !== 'verify') throw new UnauthorizedException('Invalid mode');
-
-    const uid = String(payload.uid);
-    if (!uid) throw new UnauthorizedException('Invalid user id');
-
-    const user = await this.PrismaService.user.findUnique({ where: { id: uid } });
-    if (!user) throw new NotFoundException('User not found');
-    if (!user.password) throw new UnauthorizedException('No password set');
-
-    const ok = await argon.verify(user.password, password);
-    if (!ok) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const accessToken = this.authService.signAccessToken({ sub: uid });
-    return { token: accessToken };
-  }
 
   @Post('request-reset')
   async requestReset(@Body('email') email: string) {
