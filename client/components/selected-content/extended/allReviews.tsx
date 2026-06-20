@@ -4,7 +4,6 @@
 
 import React, { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { sGet } from "@/utils/secureStorage";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -232,15 +231,14 @@ export default function AllReviews({
     if (!replyContent.trim()) return;
     setSubmittingReply(true);
     try {
-      const token = sGet("authToken");
       const submittedContent = (
         (showReplyForm?.prefill ?? "") + replyContent
       ).trim();
       const res = await fetch(`${API}/reviews/${reviewId}/replies`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ content: submittedContent }),
       });
@@ -1058,12 +1056,11 @@ function ReviewFormInModal({
     }
     setSubmitting(true);
     try {
-      const token = sGet("authToken");
       const res = await fetch(`${API}/reviews`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           rating,

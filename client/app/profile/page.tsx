@@ -127,7 +127,7 @@ type UserAchievementView = {
 };
 
 export default function ProfilePage() {
-  const { user: decodedUser, token, logoutSilent } = useAuth();
+  const { user: decodedUser, isAuthenticated, logout, logoutSilent } = useAuth();
 
   const [profile, setProfile] = useState<ServerUser | null>(null);
   const [watchlist, setWatchlist] = useState<Watchlist | null>(null);
@@ -194,7 +194,7 @@ export default function ProfilePage() {
   }, []);
 
   const saveProfile = useCallback(async () => {
-    if (!token) return;
+    if (!isAuthenticated) return;
     const name = profileName.trim();
     const username = profileUsername.trim();
 
@@ -227,9 +227,9 @@ export default function ProfilePage() {
         Object.keys(body).length > 0
           ? fetch(`${API_BASE}/auth/me/profile`, {
               method: "PATCH",
+              credentials: "include",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify(body),
             })
@@ -237,9 +237,9 @@ export default function ProfilePage() {
         avatarPreview
           ? fetch(`${API_BASE}/auth/me/avatar`, {
               method: "PATCH",
+              credentials: "include",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
               },
               body: JSON.stringify({ avatarUrl: avatarPreview }),
             })
@@ -275,7 +275,7 @@ export default function ProfilePage() {
     } finally {
       setProfileSaving(false);
     }
-  }, [token, profileName, profileUsername, avatarPreview, disclosure]);
+  }, [profileName, profileUsername, avatarPreview, disclosure]);
 
   const user = profile ?? (decodedUser as ServerUser | null);
 
@@ -299,14 +299,14 @@ export default function ProfilePage() {
 
   /* ---------------- Fetch reviews when tab active ---------------- */
   useEffect(() => {
-    if (tab === "watchlist" || !token) return;
+    if (tab === "watchlist" || !isAuthenticated) return;
     let alive = true;
     setReviewsLoading(true);
 
     (async () => {
       try {
         const res = await fetch(`${API_BASE}/reviews/me?limit=200`, {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
           cache: "no-store",
         });
         if (!alive) return;
@@ -344,23 +344,22 @@ export default function ProfilePage() {
     return () => {
       alive = false;
     };
-  }, [tab, token]);
+  }, [tab, isAuthenticated]);
 
   /* ---------------- Fetch profile + watchlist ---------------- */
   useEffect(() => {
-    if (!token) return;
+    if (!isAuthenticated) return;
     let alive = true;
 
     (async () => {
       setLoading(true);
       try {
-        const headers = { Authorization: `Bearer ${token}` };
         const mePromise = fetch(`${API_BASE}/auth/me`, {
-          headers,
+          credentials: "include",
           cache: "no-store",
         });
         const watchlistPromise = fetch(`${API_BASE}/watchlist`, {
-          headers,
+          credentials: "include",
           cache: "no-store",
         });
         const meRes = await mePromise;
@@ -387,16 +386,16 @@ export default function ProfilePage() {
     return () => {
       alive = false;
     };
-  }, [token, logoutSilent]);
+  }, [isAuthenticated, logoutSilent]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!isAuthenticated) return;
     let alive = true;
 
     (async () => {
       try {
         const res = await fetch(`${API_BASE}/auth/me/achievements`, {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
           cache: "no-store",
         });
 
@@ -416,7 +415,7 @@ export default function ProfilePage() {
     return () => {
       alive = false;
     };
-  }, [token, logoutSilent]);
+  }, [isAuthenticated, logoutSilent]);
 
   /* ---------------- Fetch TMDB details ---------------- */
   const movieIds = useMemo(() => watchlist?.movieId ?? [], [watchlist]);
@@ -862,7 +861,10 @@ export default function ProfilePage() {
                 </Link>
                 <button
                   className="inline-flex min-h-11 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/5 text-red-300 transition hover:bg-red-500/10"
-                  onClick={logoutSilent}
+                  onClick={async () => {
+                    await logout();
+                    window.location.href = "/";
+                  }}
                   title="Log out"
                 >
                   <LogOut className="h-4 w-4" />

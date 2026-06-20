@@ -35,9 +35,15 @@ export class WatchlistService {
     }
   }
 
-  /** Get watchlist */
+  /**
+   * Get watchlist. Read-only — never creates a row. Creating on read meant every
+   * concurrent reader (common right after login) raced to INSERT the same row,
+   * producing a P2002 unique-constraint error per loser. The row is created lazily
+   * on the first write (toggle/remove/clear all call ensureWatchlist first).
+   */
   async getAll(userId: string) {
-    return this.ensureWatchlist(userId);
+    const watchlist = await this.prisma.watchlist.findUnique({ where: { userId } });
+    return watchlist ?? { userId, movieId: [], seriesId: [] };
   }
 
   /** Toggle add/remove tmdbId into the correct array column */

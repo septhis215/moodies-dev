@@ -1,8 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { AuthGuard, PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
+import type { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ACCESS_COOKIE, readCookie } from '../auth.cookies';
+
+// Read the access token exclusively from the HttpOnly cookie.
+const cookieExtractor = (req: Request): string | null =>
+  readCookie(req, ACCESS_COOKIE) ?? null;
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -16,7 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (!secret)
       throw new Error('JWT_SECRET is not defined in environment variables');
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: cookieExtractor,
       ignoreExpiration: false,
       secretOrKey: secret,
     });

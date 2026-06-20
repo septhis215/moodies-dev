@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/app/context/AuthProvider";
-import { sGet } from "@/utils/secureStorage";
 
 interface BanStatus {
   banned: boolean;
@@ -29,13 +28,10 @@ export function useReviewBanStatus() {
 
     const checkBanStatus = async () => {
       try {
-        const token = sGet("authToken");
         const response = await fetch(
           `${API}/reviews/me/ban-status`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            credentials: "include",
           }
         );
 

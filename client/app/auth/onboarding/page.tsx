@@ -1,10 +1,8 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 import { useToast } from "@/app/context/ToastContext";
 import { useAuth } from "@/hooks/useAuth";
-import { sGet, sSet } from "@/utils/secureStorage";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -152,7 +150,6 @@ function AgeSlider({ value, onChange }: AgeSliderProps) {
 
 // ── Main component ────────────────────────────────────────────
 export default function OnboardingPage() {
-  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { signIn, isLoading: authLoading } = useAuth();
 
@@ -161,22 +158,6 @@ export default function OnboardingPage() {
   const [languages, setLanguages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mobileStep, setMobileStep] = useState<Step>("age");
-
-  useEffect(() => {
-    const urlToken = searchParams.get("token");
-    if (urlToken) {
-      sSet("authToken", urlToken);
-      sSet("authTokenExpiry", String(Date.now() + 86400000));
-      window.history.replaceState({}, document.title, window.location.pathname);
-      toast(
-        "Connected with Google! Now set your preferences.",
-        "success",
-        3000,
-        "Almost there",
-        null,
-      );
-    }
-  }, [searchParams, toast]);
 
   const toggle = (list: string[], set: (v: string[]) => void, v: string) =>
     list.includes(v) ? set(list.filter((x) => x !== v)) : set([...list, v]);
@@ -194,23 +175,21 @@ export default function OnboardingPage() {
       if (pendingSignup) {
         const { username, email, password } = JSON.parse(pendingSignup);
         toast("Creating your account...", "info", 3000, "Almost there!", null);
+        // signup sets the session cookie on this response.
         const signupRes = await fetch(`${API_BASE}/auth/signup`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ username, email, password }),
         });
         const signupData = await signupRes.json();
         if (!signupRes.ok)
           throw new Error(signupData.message || "Sign up failed");
-        const token = signupData.token;
-        sSet("authToken", token);
-        sSet("authTokenExpiry", String(Date.now() + 86400000));
+        // Authenticated via cookie now — save prefs with credentials.
         const prefsRes = await fetch(`${API_BASE}/auth/me/preferences`, {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             age,
             preferredGenres: genres,
@@ -231,11 +210,6 @@ export default function OnboardingPage() {
         await new Promise((r) => setTimeout(r, 800));
         await signIn(email, password);
       } else {
-        const token = sGet("authToken");
-        if (!token) {
-          toast("Not logged in!", "error", 3000, "Authentication Error", null);
-          return;
-        }
         toast(
           "Saving your preferences...",
           "info",
@@ -245,16 +219,18 @@ export default function OnboardingPage() {
         );
         const res = await fetch(`${API_BASE}/auth/me/preferences`, {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             age,
             preferredGenres: genres,
             preferredLanguages: languages,
           }),
         });
+        if (res.status === 401 || res.status === 498) {
+          toast("Not logged in!", "error", 3000, "Authentication Error", null);
+          return;
+        }
         const data = await res.json();
         if (!res.ok)
           throw new Error(data.message || "Failed to save preferences");

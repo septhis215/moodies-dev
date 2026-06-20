@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Star } from "lucide-react";
 import { useToast } from "@/app/context/ToastContext";
-import { sGet } from "@/utils/secureStorage";
+import { useAuth } from "@/app/context/AuthProvider";
 import { RatingBadge } from "@/components/ui/rating-badge";
 
 /* -------------------- Types -------------------- */
@@ -128,10 +128,7 @@ export default function LikedPage() {
   const [tvItems, setTvItems] = useState<Item[]>([]);
   const [busyIds, setBusyIds] = useState<string[]>([]);
 
-  const token =
-    typeof window !== "undefined"
-      ? sGet("authToken") || ""
-      : "";
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   const movieIds = useMemo(() => data?.movieId ?? [], [data]);
   const tvIds = useMemo(() => data?.seriesId ?? [], [data]);
@@ -244,7 +241,8 @@ export default function LikedPage() {
       setLoading(true);
       setErr("");
 
-      if (!token) {
+      if (authLoading) return; // wait for the session check
+      if (!isAuthenticated) {
         setData(null);
         setLoading(false);
         return;
@@ -252,7 +250,7 @@ export default function LikedPage() {
 
       try {
         const res = await fetch(`${API_BASE}/liked`, {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
           cache: "no-store",
         });
         if (!res.ok) {
@@ -275,7 +273,7 @@ export default function LikedPage() {
     return () => {
       alive = false;
     };
-  }, [token]);
+  }, [isAuthenticated, authLoading]);
 
   /* 2) Fetch TMDB details for IDs */
   useEffect(() => {
@@ -306,7 +304,7 @@ export default function LikedPage() {
   /* 3) Unlike (server + optimistic UI) */
   async function removeFromLiked(kind: Kind, idNum: number) {
     const id = String(idNum);
-    if (!token) return;
+    if (!isAuthenticated) return;
 
     const item =
       kind === "movie"
@@ -341,8 +339,8 @@ export default function LikedPage() {
     try {
       const res = await fetch(`${API_BASE}/liked/${kind}/${id}`, {
         method: "DELETE",
+        credentials: "include",
         headers: {
-          Authorization: `Bearer ${token}`,
           accept: "application/json",
         },
       });
@@ -457,7 +455,7 @@ export default function LikedPage() {
           <div className="mt-8 h-px bg-gradient-to-r from-pink-500/30 via-white/[0.06] to-transparent" />
         </div>
 
-        {!token && !loading && (
+        {!isAuthenticated && !loading && (
           <EmptyState
             title="Please log in"
             note="You need to log in to view your likes."
@@ -474,7 +472,7 @@ export default function LikedPage() {
 
         {!loading &&
           !err &&
-          token &&
+          isAuthenticated &&
           movieIds.length === 0 &&
           tvIds.length === 0 && (
             <EmptyState

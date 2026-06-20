@@ -19,7 +19,6 @@ import { useAuth } from "@/app/context/AuthProvider";
 import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
 import { useToast } from "@/app/context/ToastContext";
 import { useRouter } from "next/navigation";
-import { sGet } from "@/utils/secureStorage";
 
 type Review = {
   id: string;
@@ -735,12 +734,11 @@ function ReviewForm({
     }
     setSubmitState("submitting");
     try {
-      const token = sGet("authToken");
       const res = await fetch(`${API}/reviews`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           rating,
