@@ -4,102 +4,92 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PrismaService } from '../prisma/prisma.service';
 
 type Kind = 'movie' | 'series';
-type Field = 'movieId' | 'seriesId';
-
-type ToggleRow = { added: boolean; movieId: string[]; seriesId: string[] };
 
 @Injectable()
 export class WatchlistService {
-  constructor(private prisma: PrismaService) { }
-
-  /** Ensure the user has exactly one watchlist row (upsert avoids a find→create race). */
-  private async ensureWatchlist(userId: string) {
-    try {
-      return await this.prisma.watchlist.upsert({
-        where: { userId },
-        update: {},
-        create: {
-          user: { connect: { id: userId } },
-          movieId: [],
-          seriesId: [],
-        },
-      });
-    } catch (e) {
-      // Two concurrent first-time ensures can race the upsert to a P2002;
-      // the row exists now, so just read it back.
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
-        const existing = await this.prisma.watchlist.findUnique({ where: { userId } });
-        if (existing) return existing;
-      }
-      throw e;
-    }
-  }
+  constructor(private prisma: PrismaService) {}
 
   /**
-   * Get watchlist. Read-only — never creates a row. Creating on read meant every
-   * concurrent reader (common right after login) raced to INSERT the same row,
-   * producing a P2002 unique-constraint error per loser. The row is created lazily
-   * on the first write (toggle/remove/clear all call ensureWatchlist first).
+   * Get the watchlist as { movieId, seriesId } string-id arrays, preserving the
+   * legacy response shape so the client is unaffected. Now one indexed query over
+   * normalized rows instead of loading a per-user array column.
    */
   async getAll(userId: string) {
-    const watchlist = await this.prisma.watchlist.findUnique({ where: { userId } });
-    return watchlist ?? { userId, movieId: [], seriesId: [] };
+    const items = await this.prisma.watchlistItem.findMany({
+      where: { userId },
+      select: { tmdbId: true, mediaType: true },
+    });
+    const movieId: string[] = [];
+    const seriesId: string[] = [];
+    for (const item of items) {
+      (item.mediaType === MediaType.MOVIE ? movieId : seriesId).push(String(item.tmdbId));
+    }
+    return { userId, movieId, seriesId };
   }
 
-  /** Toggle add/remove tmdbId into the correct array column */
+  /** Toggle a title in/out of the watchlist — a single-row insert or delete. */
   async toggle(userId: string, tmdbId: string, type: Kind) {
-    await this.ensureWatchlist(userId);
-
-    const field: Field = type === 'movie' ? 'movieId' : 'seriesId';
     const mediaType = type === 'movie' ? MediaType.MOVIE : MediaType.TV;
     const numericId = Number(tmdbId);
 
     return this.prisma.$transaction(async (tx) => {
-      // Add-or-remove happens inside the DB under a row lock, so concurrent
-      // toggles serialize on the row and can't lose updates. RETURNING reports
-      // the post-update state, so `added` is the real transition — not a stale read.
-      const rows = await tx.$queryRawUnsafe<ToggleRow[]>(
-        `UPDATE "Watchlist"
-            SET "${field}" = CASE WHEN $1 = ANY("${field}")
-                                  THEN array_remove("${field}", $1)
-                                  ELSE array_append("${field}", $1) END
-          WHERE "userId" = $2
-          RETURNING ($1 = ANY("${field}")) AS "added", "movieId", "seriesId"`,
-        tmdbId,
-        userId,
-      );
-
-      const row = rows[0];
-      const added = !!row?.added;
-
-      // Counter delta matches the actual DB transition, so it can't drift.
-      await tx.mediaStat.upsert({
-        where: { tmdbId_mediaType: { tmdbId: numericId, mediaType } },
-        create: { tmdbId: numericId, mediaType, savedCount: added ? 1 : 0 },
-        update: { savedCount: { increment: added ? 1 : -1 } },
+      const existing = await tx.watchlistItem.findUnique({
+        where: { userId_tmdbId_mediaType: { userId, tmdbId: numericId, mediaType } },
+        select: { id: true },
       });
 
-      return {
-        removed: !added,
-        totalMovies: row?.movieId.length ?? 0,
-        totalSeries: row?.seriesId.length ?? 0,
-      };
+      // delta drives the counter and reflects the *actual* transition, so it can't
+      // drift even under a concurrent toggle of the same title.
+      let delta = 0;
+      if (existing) {
+        const { count } = await tx.watchlistItem.deleteMany({
+          where: { userId, tmdbId: numericId, mediaType },
+        });
+        delta = count > 0 ? -1 : 0;
+      } else {
+        try {
+          await tx.watchlistItem.create({ data: { userId, tmdbId: numericId, mediaType } });
+          delta = 1;
+        } catch (e) {
+          // Lost the add race to a concurrent toggle — the row exists now, no net change.
+          if (!(e instanceof PrismaClientKnownRequestError && e.code === 'P2002')) throw e;
+        }
+      }
+
+      if (delta !== 0) {
+        await tx.mediaStat.upsert({
+          where: { tmdbId_mediaType: { tmdbId: numericId, mediaType } },
+          create: { tmdbId: numericId, mediaType, savedCount: delta > 0 ? 1 : 0 },
+          update: { savedCount: { increment: delta } },
+        });
+      }
+
+      const [totalMovies, totalSeries] = await Promise.all([
+        tx.watchlistItem.count({ where: { userId, mediaType: MediaType.MOVIE } }),
+        tx.watchlistItem.count({ where: { userId, mediaType: MediaType.TV } }),
+      ]);
+
+      return { removed: !!existing, totalMovies, totalSeries };
     });
   }
 
-  /** Optional clear-all */
+  /** Clear the entire watchlist. */
   async clear(userId: string) {
-    await this.ensureWatchlist(userId);
-
     return this.prisma.$transaction(async (tx) => {
-      // Lock the row so concurrent toggles wait, then read the ids we're about to drop.
-      const rows = await tx.$queryRawUnsafe<{ movieId: string[]; seriesId: string[] }[]>(
-        `SELECT "movieId", "seriesId" FROM "Watchlist" WHERE "userId" = $1 FOR UPDATE`,
-        userId,
-      );
-      const cur = rows[0] ?? { movieId: [], seriesId: [] };
-      const movieIds = cur.movieId.map(Number).filter((n) => !Number.isNaN(n));
-      const seriesIds = cur.seriesId.map(Number).filter((n) => !Number.isNaN(n));
+      const items = await tx.watchlistItem.findMany({
+        where: { userId },
+        select: { tmdbId: true, mediaType: true },
+      });
+      if (items.length === 0) return { movieId: [], seriesId: [] };
+
+      const movieIds = items
+        .filter((i) => i.mediaType === MediaType.MOVIE)
+        .map((i) => i.tmdbId);
+      const seriesIds = items
+        .filter((i) => i.mediaType === MediaType.TV)
+        .map((i) => i.tmdbId);
+
+      await tx.watchlistItem.deleteMany({ where: { userId } });
 
       if (movieIds.length) {
         await tx.mediaStat.updateMany({
@@ -114,38 +104,22 @@ export class WatchlistService {
         });
       }
 
-      return tx.watchlist.update({
-        where: { userId },
-        data: { movieId: [], seriesId: [] },
-      });
+      return { movieId: [], seriesId: [] };
     });
   }
 
-  async removeFromWatchlist(
-    userId: string,
-    type: 'movie' | 'tv',
-    tmdbId: number,
-  ) {
-    await this.ensureWatchlist(userId);
-
-    const field: Field = type === 'movie' ? 'movieId' : 'seriesId';
+  async removeFromWatchlist(userId: string, type: 'movie' | 'tv', tmdbId: number) {
     const mediaType = type === 'movie' ? MediaType.MOVIE : MediaType.TV;
-    const idStr = String(tmdbId);
     const label = type === 'movie' ? 'Movie' : 'Series';
 
     return this.prisma.$transaction(async (tx) => {
-      // Only updates (and only returns a row) when the id was actually present,
-      // so the counter is decremented exactly once and never for a no-op.
-      const rows = await tx.$queryRawUnsafe<{ userId: string }[]>(
-        `UPDATE "Watchlist"
-            SET "${field}" = array_remove("${field}", $1)
-          WHERE "userId" = $2 AND $1 = ANY("${field}")
-          RETURNING "userId"`,
-        idStr,
-        userId,
-      );
+      // deleteMany returns the count, so the counter decrements exactly once and
+      // never for a no-op.
+      const { count } = await tx.watchlistItem.deleteMany({
+        where: { userId, tmdbId, mediaType },
+      });
 
-      if (rows.length === 0) {
+      if (count === 0) {
         return { message: `${label} ${tmdbId} was not in watchlist` };
       }
 

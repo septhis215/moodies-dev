@@ -5,106 +5,81 @@ import { PrismaService } from '../prisma/prisma.service';
 
 type Kind = 'movie' | 'series';
 
-type ToggleRow = { added: boolean; movieId: string[]; seriesId: string[] };
-
 @Injectable()
 export class LikedService {
   constructor(private prisma: PrismaService) {}
 
-  private async ensureLikedList(userId: string) {
-    try {
-      return await this.prisma.likedList.upsert({
-        where: { userId },
-        update: {},
-        create: {
-          user: { connect: { id: userId } },
-          movieId: [],
-          seriesId: [],
-        },
-      });
-    } catch (e) {
-      // Two concurrent first-time ensures can race the upsert to a P2002;
-      // the row exists now, so just read it back.
-      if (e instanceof PrismaClientKnownRequestError && e.code === 'P2002') {
-        const existing = await this.prisma.likedList.findUnique({ where: { userId } });
-        if (existing) return existing;
-      }
-      throw e;
-    }
-  }
-
   /**
-   * Get liked list. Read-only — never creates a row. Creating on read meant every
-   * concurrent reader (common right after login) raced to INSERT the same row,
-   * producing a P2002 unique-constraint error per loser. The row is created lazily
-   * on the first write (toggle/remove both call ensureLikedList first).
+   * Get the liked list as { movieId, seriesId } string-id arrays, preserving the
+   * legacy response shape. One indexed query over normalized rows.
    */
   async getAll(userId: string) {
-    const likedList = await this.prisma.likedList.findUnique({ where: { userId } });
-    return likedList ?? { userId, movieId: [], seriesId: [] };
+    const items = await this.prisma.likedItem.findMany({
+      where: { userId },
+      select: { tmdbId: true, mediaType: true },
+    });
+    const movieId: string[] = [];
+    const seriesId: string[] = [];
+    for (const item of items) {
+      (item.mediaType === MediaType.MOVIE ? movieId : seriesId).push(String(item.tmdbId));
+    }
+    return { userId, movieId, seriesId };
   }
 
+  /** Toggle a title in/out of the liked list — a single-row insert or delete. */
   async toggle(userId: string, tmdbId: string, type: Kind) {
-    await this.ensureLikedList(userId);
-
-    const field = type === 'movie' ? 'movieId' : 'seriesId';
     const mediaType = type === 'movie' ? MediaType.MOVIE : MediaType.TV;
     const numericId = Number(tmdbId);
 
     return this.prisma.$transaction(async (tx) => {
-      // Add-or-remove happens inside the DB under a row lock, so concurrent
-      // toggles serialize on the row and can't lose updates. RETURNING reports
-      // the post-update state, so `added` is the real transition — not a stale read.
-      const rows = await tx.$queryRawUnsafe<ToggleRow[]>(
-        `UPDATE "LikedList"
-            SET "${field}" = CASE WHEN $1 = ANY("${field}")
-                                  THEN array_remove("${field}", $1)
-                                  ELSE array_append("${field}", $1) END
-          WHERE "userId" = $2
-          RETURNING ($1 = ANY("${field}")) AS "added", "movieId", "seriesId"`,
-        tmdbId,
-        userId,
-      );
-
-      const row = rows[0];
-      const added = !!row?.added;
-
-      // Counter delta matches the actual DB transition, so it can't drift.
-      await tx.mediaStat.upsert({
-        where: { tmdbId_mediaType: { tmdbId: numericId, mediaType } },
-        create: { tmdbId: numericId, mediaType, likeCount: added ? 1 : 0 },
-        update: { likeCount: { increment: added ? 1 : -1 } },
+      const existing = await tx.likedItem.findUnique({
+        where: { userId_tmdbId_mediaType: { userId, tmdbId: numericId, mediaType } },
+        select: { id: true },
       });
 
-      return {
-        liked: added,
-        totalMovies: row?.movieId.length ?? 0,
-        totalSeries: row?.seriesId.length ?? 0,
-      };
+      let delta = 0;
+      if (existing) {
+        const { count } = await tx.likedItem.deleteMany({
+          where: { userId, tmdbId: numericId, mediaType },
+        });
+        delta = count > 0 ? -1 : 0;
+      } else {
+        try {
+          await tx.likedItem.create({ data: { userId, tmdbId: numericId, mediaType } });
+          delta = 1;
+        } catch (e) {
+          // Lost the add race to a concurrent toggle — the row exists now, no net change.
+          if (!(e instanceof PrismaClientKnownRequestError && e.code === 'P2002')) throw e;
+        }
+      }
+
+      if (delta !== 0) {
+        await tx.mediaStat.upsert({
+          where: { tmdbId_mediaType: { tmdbId: numericId, mediaType } },
+          create: { tmdbId: numericId, mediaType, likeCount: delta > 0 ? 1 : 0 },
+          update: { likeCount: { increment: delta } },
+        });
+      }
+
+      const [totalMovies, totalSeries] = await Promise.all([
+        tx.likedItem.count({ where: { userId, mediaType: MediaType.MOVIE } }),
+        tx.likedItem.count({ where: { userId, mediaType: MediaType.TV } }),
+      ]);
+
+      return { liked: !existing, totalMovies, totalSeries };
     });
   }
 
   async remove(userId: string, type: 'movie' | 'tv', tmdbId: number) {
-    await this.ensureLikedList(userId);
-
-    const field = type === 'movie' ? 'movieId' : 'seriesId';
     const mediaType = type === 'movie' ? MediaType.MOVIE : MediaType.TV;
-    const idStr = String(tmdbId);
     const label = type === 'movie' ? 'Movie' : 'Series';
 
     return this.prisma.$transaction(async (tx) => {
-      // Only updates (and only returns a row) when the id was actually present,
-      // so the counter is decremented exactly once and never for a no-op.
-      const rows = await tx.$queryRawUnsafe<{ userId: string }[]>(
-        `UPDATE "LikedList"
-            SET "${field}" = array_remove("${field}", $1)
-          WHERE "userId" = $2 AND $1 = ANY("${field}")
-          RETURNING "userId"`,
-        idStr,
-        userId,
-      );
+      const { count } = await tx.likedItem.deleteMany({
+        where: { userId, tmdbId, mediaType },
+      });
 
-      if (rows.length === 0) {
+      if (count === 0) {
         return { message: `${label} ${tmdbId} was not liked` };
       }
 
