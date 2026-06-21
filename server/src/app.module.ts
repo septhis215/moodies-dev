@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import * as Joi from 'joi';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ExternalApisModule } from './external-apis/external-apis.module';
 import { JobsModule } from './jobs/jobs.module';
@@ -32,6 +33,35 @@ import { AppService } from './app.service';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      // Fail fast at boot on missing/invalid config instead of crashing later at
+      // first use. allowUnknown MUST stay true — otherwise Joi rejects every other
+      // process.env key (PATH, NODE, Railway-injected vars, …) and the app won't start.
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string()
+          .valid('development', 'staging', 'production')
+          .default('development'),
+        PORT: Joi.number().default(3001),
+        // Required — the app cannot function without these.
+        JWT_SECRET: Joi.string().required(), // recommend >= 32 random chars
+        DATABASE_URL: Joi.string().required(),
+        // Optional / have safe defaults in code.
+        JWT_ACCESS_EXPIRES: Joi.string().default('15m'),
+        REFRESH_EXPIRES_DAYS: Joi.number().default(30),
+        DIRECT_URL: Joi.string().optional(),
+        TMDB_API_KEY: Joi.string().optional(),
+        REDIS_HOST: Joi.string().optional(),
+        REDIS_PORT: Joi.number().optional(),
+        REDIS_PASS: Joi.string().allow('').optional(),
+        COOKIE_SAMESITE: Joi.string().valid('lax', 'strict', 'none').optional(),
+        COOKIE_SECURE: Joi.string().valid('true', 'false').optional(),
+        COOKIE_DOMAIN: Joi.string().optional(),
+        CLIENT_URL: Joi.string().optional(),
+        CORS_ORIGINS: Joi.string().optional(),
+        GOOGLE_CLIENT_ID: Joi.string().optional(),
+        GOOGLE_CLIENT_SECRET: Joi.string().optional(),
+        GOOGLE_CALLBACK_URL: Joi.string().optional(),
+      }),
+      validationOptions: { allowUnknown: true, abortEarly: false },
     }),
     ScheduleModule.forRoot(),
     ExternalApisModule,
