@@ -20,6 +20,7 @@ import { v4 as uuid } from 'uuid';
 import { randomBytes, randomInt } from 'node:crypto';
 import { RedisService } from 'src/redis/redis.service';
 import { sendVerificationCode } from '../utils/mailer';
+import { uploadAvatarToStorage } from '../utils/storage';
 import { REFRESH_TTL_SECONDS } from './auth.cookies';
 
 
@@ -262,6 +263,18 @@ export class AuthService {
   }
 
   async getAchievementProgress(userId: string) {
+    // ~11 queries + a write per call; cache briefly so repeated reads of the
+    // achievements page don't recompute every time. Progress is eventually
+    // consistent within the TTL (it persists on each cache miss).
+    return this.redis.getOrSet(
+      `achievements:${userId}`,
+      60, // seconds
+      () => this.computeAchievementProgress(userId),
+      (rows) => Array.isArray(rows) && rows.length > 0,
+    );
+  }
+
+  private async computeAchievementProgress(userId: string) {
     const [
       achievements,
       user,
@@ -599,9 +612,15 @@ export class AuthService {
       throw new BadRequestException('Image too large. Please upload a smaller image.');
     }
 
+    // Base64 uploads go to object storage; we persist only the resulting URL so the
+    // User row (returned on every /auth/me) stays small instead of carrying ~200KB.
+    const finalUrl = isBase64
+      ? await uploadAvatarToStorage(avatarUrl, userId)
+      : avatarUrl;
+
     return this.prismaService.user.update({
       where: { id: String(userId) },
-      data: { avatarUrl },
+      data: { avatarUrl: finalUrl },
       select: { id: true, avatarUrl: true },
     });
   }
