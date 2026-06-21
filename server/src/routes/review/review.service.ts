@@ -18,6 +18,12 @@ import {
   ReviewWithRepliesEntity,
 } from './entities';
 import { TmdbClientService } from 'src/media/all/client/tmdb-client.service';
+import { RedisService } from 'src/redis/redis.service';
+
+// Short cache for the public discovery carousels (critics corner / community
+// picks). They previously hit the DB — plus per-item TMDB fallbacks — on every
+// request; a 2-minute cache collapses that to one build per window.
+const CRITICS_CORNER_TTL = 120; // seconds
 
 @Injectable()
 export class ReviewService {
@@ -28,6 +34,7 @@ export class ReviewService {
     private moderationDecision: ModerationDecisionService,
     private userService: UserService,
     private tmdbClient: TmdbClientService,
+    private redis: RedisService,
   ) {}
 
   async createReview(userId: string, dto: CreateReviewDto) {
@@ -219,6 +226,15 @@ export class ReviewService {
 
   async getMovieCriticsCorner(limit = 6) {
     const safeLimit = Math.max(1, Math.min(Number(limit) || 6, 24));
+    return this.redis.getOrSet(
+      `reviews:critics-corner:movies:${safeLimit}`,
+      CRITICS_CORNER_TTL,
+      () => this.buildMovieCriticsCorner(safeLimit),
+      (r) => Array.isArray(r) && r.length > 0,
+    );
+  }
+
+  private async buildMovieCriticsCorner(safeLimit: number) {
     const poolSize = Math.max(safeLimit * 4, 24);
 
     const reviews = await this.prisma.review.findMany({
@@ -306,6 +322,15 @@ export class ReviewService {
 
   async getTVCriticsCorner(limit = 6) {
     const safeLimit = Math.max(1, Math.min(Number(limit) || 6, 24));
+    return this.redis.getOrSet(
+      `reviews:critics-corner:tv:${safeLimit}`,
+      CRITICS_CORNER_TTL,
+      () => this.buildTVCriticsCorner(safeLimit),
+      (r) => Array.isArray(r) && r.length > 0,
+    );
+  }
+
+  private async buildTVCriticsCorner(safeLimit: number) {
     const poolSize = Math.max(safeLimit * 4, 24);
 
     const reviews = await this.prisma.review.findMany({
@@ -395,6 +420,15 @@ export class ReviewService {
 
   async getCommunityPicks(limit = 18) {
     const safeLimit = Math.max(1, Math.min(Number(limit) || 18, 36));
+    return this.redis.getOrSet(
+      `reviews:community-picks:${safeLimit}`,
+      CRITICS_CORNER_TTL,
+      () => this.buildCommunityPicks(safeLimit),
+      (r) => Array.isArray(r) && r.length > 0,
+    );
+  }
+
+  private async buildCommunityPicks(safeLimit: number) {
     const poolSize = Math.max(safeLimit * 4, 36);
 
     const reviews = await this.prisma.review.findMany({
