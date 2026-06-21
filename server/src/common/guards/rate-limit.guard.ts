@@ -5,11 +5,7 @@ import {
   HttpStatus,
   Injectable,
 } from '@nestjs/common';
-
-interface RateLimitBucket {
-  count: number;
-  resetAt: number;
-}
+import { RedisService } from 'src/redis/redis.service';
 
 interface RateLimitRule {
   points: number;
@@ -43,27 +39,34 @@ const SENSITIVE_AUTH_PATHS = [
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
-  private readonly buckets = new Map<string, RateLimitBucket>();
-  private lastPruneAt = Date.now();
+  constructor(private readonly redis: RedisService) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
-    const now = Date.now();
     const path = this.getPath(request);
     const rule = this.getRule(path);
-    const key = `${this.getClientKey(request)}:${request.method}:${path}`;
-    const bucket = this.getBucket(key, rule, now);
+    const key = `rl:${this.getClientKey(request)}:${request.method}:${path}`;
 
-    bucket.count += 1;
-    const remaining = Math.max(0, rule.points - bucket.count);
-    const resetSeconds = Math.ceil((bucket.resetAt - now) / 1000);
+    let count: number;
+    let ttlMs: number;
+    try {
+      ({ count, ttlMs } = await this.redis.rateLimitHit(key, rule.windowMs));
+    } catch (err) {
+      // Fail open: a Redis outage must never take the whole API down. We'd rather
+      // briefly skip rate limiting than 500 every request.
+      console.error('[rate-limit] Redis unavailable, allowing request:', err);
+      return true;
+    }
+
+    const remaining = Math.max(0, rule.points - count);
+    const resetSeconds = Math.ceil((ttlMs > 0 ? ttlMs : rule.windowMs) / 1000);
 
     response.setHeader('RateLimit-Limit', String(rule.points));
     response.setHeader('RateLimit-Remaining', String(remaining));
     response.setHeader('RateLimit-Reset', String(resetSeconds));
 
-    if (bucket.count > rule.points) {
+    if (count > rule.points) {
       response.setHeader('Retry-After', String(resetSeconds));
       throw new HttpException(
         'Too many requests. Please wait a moment and try again.',
@@ -71,17 +74,7 @@ export class RateLimitGuard implements CanActivate {
       );
     }
 
-    this.pruneExpiredBuckets(now);
     return true;
-  }
-
-  private getBucket(key: string, rule: RateLimitRule, now: number): RateLimitBucket {
-    const current = this.buckets.get(key);
-    if (current && current.resetAt > now) return current;
-
-    const next = { count: 0, resetAt: now + rule.windowMs };
-    this.buckets.set(key, next);
-    return next;
   }
 
   private getRule(path: string): RateLimitRule {
@@ -107,15 +100,5 @@ export class RateLimitGuard implements CanActivate {
 
   private getPath(request: any): string {
     return request.originalUrl?.split('?')[0] ?? request.url?.split('?')[0] ?? '/';
-  }
-
-  private pruneExpiredBuckets(now: number): void {
-    if (now - this.lastPruneAt < 60_000) return;
-
-    for (const [key, bucket] of this.buckets.entries()) {
-      if (bucket.resetAt <= now) this.buckets.delete(key);
-    }
-
-    this.lastPruneAt = now;
   }
 }

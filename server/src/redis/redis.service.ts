@@ -45,6 +45,30 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.client.del(key);
   }
 
+  /**
+   * Atomic fixed-window rate-limit hit: increment the counter, set the window TTL
+   * on the first hit, and return the current count + remaining TTL — one round
+   * trip via a Lua script so concurrent requests can't race the expiry. Works
+   * across instances, which an in-process counter cannot.
+   */
+  async rateLimitHit(
+    key: string,
+    windowMs: number,
+  ): Promise<{ count: number; ttlMs: number }> {
+    const script = `
+      local count = redis.call('INCR', KEYS[1])
+      if count == 1 then
+        redis.call('PEXPIRE', KEYS[1], ARGV[1])
+      end
+      return { count, redis.call('PTTL', KEYS[1]) }
+    `;
+    const result = (await this.client.eval(script, {
+      keys: [key],
+      arguments: [String(windowMs)],
+    })) as [number, number];
+    return { count: result[0], ttlMs: result[1] };
+  }
+
   async getOrSet<T>(
     key: string,
     ttlSeconds: number,

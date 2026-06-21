@@ -37,7 +37,6 @@ model User {
   discloseRecentActivity Boolean   @default(true)
   createdAt          DateTime      @default(now())
   Quiz               Quiz[]
-  Badge              Badge[]
   Watchlist          Watchlist[]
   LikedList          LikedList?
   reviews            Review[]
@@ -52,6 +51,11 @@ model EmailVerification {
   expiresAt DateTime
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  // Lookups filter by email(+code); the cleanup job filters by expiresAt. Without
+  // these every verify/request was a full table scan that worsened as rows piled up.
+  @@index([email, code])
+  @@index([expiresAt])
 }
 
 model Quiz {
@@ -61,14 +65,6 @@ model Quiz {
   answers    Json
   resultMood String
   createdAt  DateTime @default(now())
-}
-
-model Badge {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  badgeType String
-  awardedAt DateTime @default(now())
 }
 
 model Achievement {
