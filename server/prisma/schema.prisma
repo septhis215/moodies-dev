@@ -37,8 +37,6 @@ model User {
   discloseRecentActivity Boolean   @default(true)
   createdAt          DateTime      @default(now())
   Quiz               Quiz[]
-  Watchlist          Watchlist[]
-  LikedList          LikedList?
   watchlistItems     WatchlistItem[]
   likedItems         LikedItem[]
   reviews            Review[]
@@ -137,28 +135,9 @@ model UserAchievement {
   @@map("user_achievements")
 }
 
-model Watchlist {
-  id       String   @id @default(uuid())
-  userId   String   @unique
-  user     User     @relation(fields: [userId], references: [id])
-  movieId  String[] @default([])
-  seriesId String[] @default([])
-  addedAt  DateTime @default(now())
-}
-
-model LikedList {
-  id       String   @id @default(uuid())
-  userId   String   @unique
-  user     User     @relation(fields: [userId], references: [id])
-  movieId  String[] @default([])
-  seriesId String[] @default([])
-  addedAt  DateTime @default(now())
-}
-
-// Normalized replacements for the Watchlist/LikedList array columns: one row per
-// saved/liked title so membership is an indexed point lookup, writes don't rewrite
-// a whole array, and the list can be paginated. The legacy array tables above are
-// kept until data is backfilled and verified, then dropped in a follow-up.
+// One row per saved/liked title (replaced the legacy Watchlist/LikedList array
+// columns): membership is an indexed point lookup, writes don't rewrite a whole
+// array, and the list can be paginated.
 model WatchlistItem {
   id        String    @id @default(uuid())
   userId    String
