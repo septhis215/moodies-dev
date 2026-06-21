@@ -677,19 +677,11 @@ export class ReviewService {
         discloseLiked: true,
         discloseBadges: true,
         discloseRecentActivity: true,
-        Watchlist: {
-          select: {
-            movieId: true,
-            seriesId: true,
-            addedAt: true,
-          },
+        watchlistItems: {
+          select: { tmdbId: true, mediaType: true, addedAt: true },
         },
-        LikedList: {
-          select: {
-            movieId: true,
-            seriesId: true,
-            addedAt: true,
-          },
+        likedItems: {
+          select: { tmdbId: true, mediaType: true, addedAt: true },
         },
         userAchievements: {
           where: { unlocked: true },
@@ -722,11 +714,25 @@ export class ReviewService {
       avatarUrl: disclosure.profileInfo ? user.avatarUrl : null,
       createdAt: disclosure.profileInfo ? user.createdAt : null,
     };
+    // Aggregate the normalized item rows back into the { movieId, seriesId } shape
+    // the rest of this method (and the response) expects; addedAt = most recent.
+    const aggregateItems = (
+      items: { tmdbId: number; mediaType: MediaType; addedAt: Date }[],
+    ) => {
+      const movieId: string[] = [];
+      const seriesId: string[] = [];
+      let addedAt: Date | null = null;
+      for (const item of items) {
+        (item.mediaType === MediaType.MOVIE ? movieId : seriesId).push(String(item.tmdbId));
+        if (!addedAt || item.addedAt > addedAt) addedAt = item.addedAt;
+      }
+      return { movieId, seriesId, addedAt };
+    };
     const watchlist = disclosure.watchlist
-      ? (user.Watchlist[0] ?? { movieId: [], seriesId: [], addedAt: null })
+      ? aggregateItems(user.watchlistItems)
       : { movieId: [], seriesId: [], addedAt: null };
     const liked = disclosure.liked
-      ? (user.LikedList ?? { movieId: [], seriesId: [], addedAt: null })
+      ? aggregateItems(user.likedItems)
       : { movieId: [], seriesId: [], addedAt: null };
     const achievements = disclosure.badges
       ? user.userAchievements.map((progress) => ({

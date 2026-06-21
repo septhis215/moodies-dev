@@ -269,8 +269,8 @@ export class AuthService {
       distinctMoodRows,
       moodTotal,
       reviewCount,
-      watchlist,
-      liked,
+      savedCount,
+      likedCount,
       quizCount,
       unlockedCount,
       existingProgressRows,
@@ -298,16 +298,14 @@ export class AuthService {
       }),
       this.prismaService.mood.count({ where: { isActive: true } }),
       this.prismaService.review.count({ where: { userId } }),
-      this.prismaService.watchlist.findUnique({ where: { userId } }),
-      this.prismaService.likedList.findUnique({ where: { userId } }),
+      this.prismaService.watchlistItem.count({ where: { userId } }),
+      this.prismaService.likedItem.count({ where: { userId } }),
       this.prismaService.quiz.count({ where: { userId } }),
       this.prismaService.userAchievement.count({ where: { userId, unlocked: true } }),
       this.prismaService.userAchievement.findMany({ where: { userId } }),
     ]);
 
     const distinctMoods = distinctMoodRows.length;
-    const savedCount = (watchlist?.movieId.length ?? 0) + (watchlist?.seriesId.length ?? 0);
-    const likedCount = (liked?.movieId.length ?? 0) + (liked?.seriesId.length ?? 0);
     const profileBasic = user?.name && user?.username ? 1 : 0;
     const profileStyled =
       user?.avatarUrl && (user.preferredGenres.length > 0 || user.preferredLanguages.length > 0) ? 1 : 0;
