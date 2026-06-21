@@ -8,6 +8,11 @@ const transporter = nodemailer.createTransport({
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS,
   },
+  // Fail fast instead of hanging the request if outbound SMTP is blocked or slow
+  // (common on PaaS hosts). These bound how long a send can stall.
+  connectionTimeout: 10_000, // TCP connect
+  greetingTimeout: 10_000, // wait for server greeting
+  socketTimeout: 15_000, // inactivity on an open connection
 });
 
 type MoodiesEmailTemplateOptions = {
