@@ -1,19 +1,79 @@
 import nodemailer from 'nodemailer';
 
-// Nodemailer does not ship local project typings here, so keep the unsafe edge at the transport boundary.
+// Transport selection:
+//  - Local dev (NODE_ENV=development) uses Gmail SMTP — it works on a dev machine
+//    and can send to any recipient without a verified domain.
+//  - Staging/production send over HTTPS via Resend, because PaaS hosts (Railway)
+//    block outbound SMTP (ETIMEDOUT on connect). NODE_ENV must be exactly
+//    'development' for SMTP, so staging never tries (and hangs on) a blocked port.
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+// Resend sender. 'Moodies <onboarding@resend.dev>' only delivers to your own
+// Resend account email; set a verified-domain sender for real recipients.
+const MAIL_FROM = process.env.MAIL_FROM || 'Moodies <onboarding@resend.dev>';
+
+const useLocalSmtp =
+  process.env.NODE_ENV === 'development' &&
+  !!process.env.MAIL_USER &&
+  !!process.env.MAIL_PASS;
+
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-  },
-  // Fail fast instead of hanging the request if outbound SMTP is blocked or slow
-  // (common on PaaS hosts). These bound how long a send can stall.
-  connectionTimeout: 10_000, // TCP connect
-  greetingTimeout: 10_000, // wait for server greeting
-  socketTimeout: 15_000, // inactivity on an open connection
-});
+const smtpTransporter = useLocalSmtp
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
+      // Fail fast instead of hanging if SMTP is slow/unreachable.
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 15_000,
+    })
+  : null;
+
+async function deliverEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}) {
+  // Local dev: real send via Gmail SMTP (any recipient, no domain needed).
+  if (smtpTransporter) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    await smtpTransporter.sendMail({
+      from: `"Moodies Support" <${process.env.MAIL_USER}>`,
+      to: opts.to,
+      subject: opts.subject,
+      text: opts.text,
+      html: opts.html,
+    });
+    return;
+  }
+
+  // Staging/production: HTTPS via Resend (SMTP is blocked on PaaS).
+  if (!RESEND_API_KEY) {
+    throw new Error(
+      'No email transport configured — set MAIL_USER/MAIL_PASS for local SMTP, or RESEND_API_KEY for hosted sending.',
+    );
+  }
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: MAIL_FROM,
+      to: [opts.to],
+      subject: opts.subject,
+      html: opts.html,
+      text: opts.text,
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Resend API error ${res.status}: ${detail}`);
+  }
+}
 
 type MoodiesEmailTemplateOptions = {
   title: string;
@@ -279,16 +339,12 @@ export async function sendMoodiesEmail(
   subject: string,
   templateOptions: MoodiesEmailTemplateOptions,
 ) {
-  const mailOptions = {
-    from: `"Moodies Support" <${process.env.MAIL_USER}>`,
+  await deliverEmail({
     to: email,
     subject,
     text: createPlainTextEmail(templateOptions),
     html: createMoodiesEmailTemplate(templateOptions),
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-  await transporter.sendMail(mailOptions);
+  });
 }
 
 export async function sendVerificationCode(email: string, code: string) {

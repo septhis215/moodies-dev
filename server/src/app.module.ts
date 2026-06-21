@@ -65,6 +65,10 @@ import { AppService } from './app.service';
         GOOGLE_CLIENT_ID: Joi.string().empty('').optional(),
         GOOGLE_CLIENT_SECRET: Joi.string().empty('').optional(),
         GOOGLE_CALLBACK_URL: Joi.string().empty('').optional(),
+        // Email (Resend over HTTPS). Optional so boot never depends on them; the
+        // mailer throws a clear error at send time if RESEND_API_KEY is missing.
+        RESEND_API_KEY: Joi.string().empty('').optional(),
+        MAIL_FROM: Joi.string().empty('').optional(),
       }),
       validationOptions: { allowUnknown: true, abortEarly: false },
     }),
