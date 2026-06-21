@@ -25,6 +25,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
       },
+      {
+        // Supabase Storage public URLs for user avatars.
+        protocol: 'https',
+        hostname: '**.supabase.co',
+      },
     ],
   },
   reactStrictMode: true,

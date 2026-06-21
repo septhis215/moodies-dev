@@ -69,6 +69,11 @@ import { AppService } from './app.service';
         // mailer throws a clear error at send time if RESEND_API_KEY is missing.
         RESEND_API_KEY: Joi.string().empty('').optional(),
         MAIL_FROM: Joi.string().empty('').optional(),
+        // Avatar object storage (Supabase Storage). Optional so boot never depends
+        // on them; the avatar endpoint errors clearly at use if unset.
+        SUPABASE_URL: Joi.string().empty('').optional(),
+        SUPABASE_SERVICE_ROLE_KEY: Joi.string().empty('').optional(),
+        AVATAR_BUCKET: Joi.string().empty('').optional(),
       }),
       validationOptions: { allowUnknown: true, abortEarly: false },
     }),
