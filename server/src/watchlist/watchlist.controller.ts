@@ -19,7 +19,7 @@ export class WatchlistController {
 
   @Post("clear")
   clear(@Req() req) {
-    return this.svc.clear(req.user.sub);
+    return this.svc.clear(req.user.id);
   }
 
   @Delete(':type/:id')

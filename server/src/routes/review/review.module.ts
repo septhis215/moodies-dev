@@ -8,7 +8,7 @@ import { ModerationDecisionService } from '../moderation/moderation-decision.ser
 import { UserService } from './../user/user.service';
 import { PrismaService } from './../../prisma/prisma.service';
 import { ReviewBanGuard } from './guard/review-ban.guard';
-import { JwtAuthGuard } from 'src/auth/strategy';
+import { JwtGuard } from 'src/auth/guard';
 import { TmdbClientService } from 'src/media/all/client/tmdb-client.service';
 
 @Module({
@@ -22,7 +22,7 @@ import { TmdbClientService } from 'src/media/all/client/tmdb-client.service';
     UserService,
     PrismaService,
     ReviewBanGuard,
-    JwtAuthGuard,
+    JwtGuard,
     TmdbClientService,
   ],
 })

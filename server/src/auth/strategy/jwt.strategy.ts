@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AuthGuard, PassportStrategy } from '@nestjs/passport';
+import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-jwt';
 import type { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -56,6 +56,3 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     };
   }
 }
-
-@Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') {}

@@ -11,20 +11,15 @@ import {
   Res,
   Put,
   UnauthorizedException,
-  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GetUser } from 'src/auth/decorator';
 import * as authDto from './dto';
 import * as User2 from '@prisma/client';
-import * as argon from 'argon2';
 import { JwtGuard } from './guard';
 import { AuthGuard } from '@nestjs/passport';
-import { sendVerificationCode } from '../utils/mailer';
-import { PrismaService } from 'src/prisma/prisma.service';
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { UpdateProfileDto } from './dto';
-import { randomInt } from 'node:crypto';
 import {
   REFRESH_COOKIE,
   clearAuthCookies,
@@ -34,10 +29,7 @@ import {
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private authService: AuthService,
-    private readonly PrismaService: PrismaService,
-  ) { }
+  constructor(private authService: AuthService) { }
 
   @HttpCode(HttpStatus.CREATED)
   @Post('signup')
@@ -164,244 +156,42 @@ export class AuthController {
     );
   }
 
-  /* ================= PASSWORD ENDPOINTS ================= */
+  /* ================= PASSWORD RESET (email-code flow) ================= */
 
   @Post('request-reset')
-  async requestReset(@Body('email') email: string) {
-    const normalizedEmail = String(email ?? '').toLowerCase().trim();
-    const user = await this.PrismaService.user.findUnique({ where: { email: normalizedEmail } });
-    if (!user) {
-      // Generic response — never reveal whether the email is registered.
-      return { success: true, message: 'If this email exists, a code was sent.' };
-    }
-
-    // crypto.randomInt is cryptographically secure; Math.random is predictable
-    // and unacceptable for a security token.
-    const code = String(randomInt(100000, 1000000));
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    await this.PrismaService.emailVerification.create({
-      data: { email: normalizedEmail, code, expiresAt },
-    });
-
-    await sendVerificationCode(normalizedEmail, code);
-    return { success: true, message: 'If this email exists, a code was sent.' };
+  requestReset(@Body('email') email: string) {
+    return this.authService.requestPasswordReset(email);
   }
 
   @Post('verify-code')
-  async verifyCode(@Body('email') email: string, @Body('code') code: string) {
-    const normalizedEmail = String(email ?? '').toLowerCase().trim();
-    // Atomically flip an unused, unexpired code to verified. Doing the match and
-    // the write in one statement prevents two concurrent verifies from racing.
-    const { count } = await this.PrismaService.emailVerification.updateMany({
-      where: { email: normalizedEmail, code, verified: false, expiresAt: { gt: new Date() } },
-      data: { verified: true },
-    });
-
-    if (count > 0) {
-      return { success: true, message: 'Email verified. You may now reset password.' };
-    }
-
-    // Nothing flipped — figure out why for a helpful message.
-    const record = await this.PrismaService.emailVerification.findFirst({
-      where: { email: normalizedEmail, code },
-      orderBy: { createdAt: 'desc' },
-    });
-    if (!record) return { success: false, message: 'Invalid verification code.' };
-    if (record.expiresAt < new Date()) return { success: false, message: 'Code expired.' };
-    return { success: false, message: 'Code already used.' };
+  verifyCode(@Body('email') email: string, @Body('code') code: string) {
+    return this.authService.verifyResetCode(email, code);
   }
 
   @Post('reset-password')
-  async resetPassword(
+  resetPassword(
     @Body('email') email: string,
     @Body('newPassword') newPassword: string,
   ) {
-    // Inline body (no DTO) — enforce password strength explicitly.
-    if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 100) {
-      throw new BadRequestException('Password must be between 8 and 100 characters');
-    }
-    const normalizedEmail = String(email ?? '').toLowerCase().trim();
-    const hash = await argon.hash(newPassword);
-
-    // Atomically consume the verified token first, so it can't be replayed by a
-    // concurrent reset. Only proceed to set the password if we actually consumed one.
-    const { count } = await this.PrismaService.emailVerification.updateMany({
-      where: { email: normalizedEmail, verified: true },
-      data: { verified: false },
-    });
-
-    if (count === 0) {
-      return { success: false, message: 'Email not verified for password reset.' };
-    }
-
-    await this.PrismaService.user.update({
-      where: { email: normalizedEmail },
-      data: { password: hash },
-    });
-
-    return { success: true, message: 'Password reset successful.' };
+    return this.authService.resetPassword(email, newPassword);
   }
 
   @UseGuards(JwtGuard)
   @Patch('me/profile')
-  async updateProfile(
-    @Req() req: any,
-    @Body() body: UpdateProfileDto,
-  ) {
-    const userId = req.user?.sub ?? req.user?.id ?? req.user?.uid;
-    if (!userId) throw new UnauthorizedException('Invalid token');
-
-    const { name, username, disclosure } = body;
-    if (!name?.trim() && !username?.trim() && !disclosure) {
-      throw new BadRequestException('At least one profile field is required');
-    }
-
-    const data: {
-      name?: string;
-      username?: string;
-      discloseProfileInfo?: boolean;
-      discloseWatchlist?: boolean;
-      discloseReviews?: boolean;
-      discloseLiked?: boolean;
-      discloseBadges?: boolean;
-      discloseRecentActivity?: boolean;
-    } = {};
-    if (name?.trim()) {
-      if (name.trim().length < 2 || name.trim().length > 50) {
-        throw new BadRequestException('Display name must be between 2 and 50 characters');
-      }
-      data.name = name.trim();
-    }
-    if (username?.trim()) {
-      // basic username validation
-      if (!/^[a-zA-Z0-9_]{3,20}$/.test(username.trim())) {
-        throw new BadRequestException('Username must be 3-20 characters and contain only letters, numbers, or underscores');
-      }
-      // explicit duplicate check — catch it before hitting the DB constraint
-      const existing = await this.PrismaService.user.findUnique({
-        where: { username: username.trim() },
-        select: { id: true },
-      });
-      if (existing && existing.id !== String(userId)) {
-        throw new BadRequestException('Username is already taken');
-      }
-      data.username = username.trim();
-    }
-    if (disclosure) {
-      if (typeof disclosure.profileInfo === 'boolean') data.discloseProfileInfo = disclosure.profileInfo;
-      if (typeof disclosure.watchlist === 'boolean') data.discloseWatchlist = disclosure.watchlist;
-      if (typeof disclosure.reviews === 'boolean') data.discloseReviews = disclosure.reviews;
-      if (typeof disclosure.liked === 'boolean') data.discloseLiked = disclosure.liked;
-      if (typeof disclosure.badges === 'boolean') data.discloseBadges = disclosure.badges;
-      if (typeof disclosure.recentActivity === 'boolean') data.discloseRecentActivity = disclosure.recentActivity;
-    }
-
-    try {
-      const updated = await this.PrismaService.user.update({
-        where: { id: String(userId) },
-        data,
-        select: {
-          id: true,
-          name: true,
-          username: true,
-          discloseProfileInfo: true,
-          discloseWatchlist: true,
-          discloseReviews: true,
-          discloseLiked: true,
-          discloseBadges: true,
-          discloseRecentActivity: true,
-        },
-      });
-      return {
-        id: updated.id,
-        name: updated.name,
-        username: updated.username,
-        disclosure: {
-          profileInfo: updated.discloseProfileInfo,
-          watchlist: updated.discloseWatchlist,
-          reviews: updated.discloseReviews,
-          liked: updated.discloseLiked,
-          badges: updated.discloseBadges,
-          recentActivity: updated.discloseRecentActivity,
-        },
-      };
-    } catch (e: any) {
-      if (e?.code === 'P2002') {
-        throw new BadRequestException('Username is already taken');
-      }
-      throw e;
-    }
+  updateProfile(@GetUser() user: User2.User, @Body() body: UpdateProfileDto) {
+    return this.authService.updateProfile(user.id, body);
   }
 
   @UseGuards(JwtGuard)
   @Patch('me/avatar')
-  async updateAvatar(@Req() req: any, @Body() body: { avatarUrl: string }) {
-    const userId = req.user?.sub ?? req.user?.id ?? req.user?.uid;
-    if (!userId) throw new UnauthorizedException('Invalid token');
-
-    const { avatarUrl } = body;
-    if (!avatarUrl) throw new BadRequestException('avatarUrl is required');
-
-    // Accept base64 data URLs (image/*) or https URLs
-    const isBase64 = avatarUrl.startsWith('data:image/');
-    const isHttps = avatarUrl.startsWith('https://');
-    if (!isBase64 && !isHttps) {
-      throw new BadRequestException('avatarUrl must be a base64 data URL or https URL');
-    }
-
-    // Enforce a ~200KB limit on base64 payloads (~150KB image after encoding overhead)
-    if (isBase64 && avatarUrl.length > 200_000) {
-      throw new BadRequestException('Image too large. Please upload a smaller image.');
-    }
-
-    const updated = await this.PrismaService.user.update({
-      where: { id: String(userId) },
-      data: { avatarUrl },
-      select: { id: true, avatarUrl: true },
-    });
-
-    return updated;
+  updateAvatar(@GetUser() user: User2.User, @Body() body: { avatarUrl: string }) {
+    return this.authService.updateAvatar(user.id, body.avatarUrl);
   }
 
   @UseGuards(JwtGuard)
   @Get('me')
-  async me(@Req() req: any) {
-    const userId = req.user?.sub ?? req.user?.id ?? req.user?.uid;
-    if (!userId) return null;
-    const user = await this.PrismaService.user.findUnique({
-      where: { id: String(userId) },
-      select: {
-        id: true,
-        name: true,
-        username: true,
-        email: true,
-        avatarUrl: true,
-        provider: true,
-        reviewBannedUntil: true,
-        reviewWarningScore: true,
-        age: true,
-        preferredGenres: true,
-        preferredLanguages: true,
-        discloseProfileInfo: true,
-        discloseWatchlist: true,
-        discloseReviews: true,
-        discloseLiked: true,
-        discloseBadges: true,
-        discloseRecentActivity: true,
-      },
-    });
-    return user && ({
-      ...user,
-      disclosure: {
-        profileInfo: user.discloseProfileInfo,
-        watchlist: user.discloseWatchlist,
-        reviews: user.discloseReviews,
-        liked: user.discloseLiked,
-        badges: user.discloseBadges,
-        recentActivity: user.discloseRecentActivity,
-      },
-    });
+  me(@GetUser() user: User2.User) {
+    return this.authService.getMe(user.id);
   }
 
   @UseGuards(JwtGuard)
@@ -435,39 +225,11 @@ export class AuthController {
 
   @UseGuards(JwtGuard)
   @Put('me/preferences')
-  async upsertMyPreferences(
-    @Req() req,
-    @Body() body: { age?: number; preferredGenres?: string[]; preferredLanguages?: string[] }
+  upsertMyPreferences(
+    @GetUser() user: User2.User,
+    @Body() body: { age?: number; preferredGenres?: string[]; preferredLanguages?: string[] },
   ) {
-    const userId = req.user?.sub ?? req.user?.id ?? req.user?.userId;
-    if (!userId) {
-      throw new UnauthorizedException('Invalid token (no user id).');
-    }
-
-    const { age, preferredGenres, preferredLanguages } = body;
-
-
-    const data: any = {};
-    if (typeof age === 'number') data.age = age;
-    if (Array.isArray(preferredGenres)) {
-      data.preferredGenres = { set: preferredGenres };
-    }
-    if (Array.isArray(preferredLanguages)) {
-      data.preferredLanguages = { set: preferredLanguages };
-    }
-
-    return this.PrismaService.user.update({
-      where: { id: String(userId) },
-      data,
-      select: {
-        id: true,
-        email: true,
-        age: true,
-        preferredGenres: true,
-        preferredLanguages: true,
-      },
-    });
-
+    return this.authService.updatePreferences(user.id, body);
   }
 
 

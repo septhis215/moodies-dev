@@ -8,7 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/auth/strategy';
+import { JwtGuard } from 'src/auth/guard';
 import { CreateReplyDto } from './dto/create-reply.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewQueryDto } from './dto/review-query.dto';
@@ -20,14 +20,14 @@ export class ReviewController {
   constructor(private readonly reviewsService: ReviewService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtGuard)
   @UseGuards(ReviewBanGuard)
   createReview(@Req() req, @Body() dto: CreateReviewDto) {
     return this.reviewsService.createReview(req.user.id, dto);
   }
 
   @Post(':id/replies')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtGuard)
   @UseGuards(ReviewBanGuard)
   replyToReview(
     @Req() req,
@@ -97,7 +97,7 @@ export class ReviewController {
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtGuard)
   getMyReviews(
     @Req() req,
     @Query('page') page?: number,
@@ -107,7 +107,7 @@ export class ReviewController {
   }
 
   @Get('me/ban-status')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtGuard)
   getBanStatus(@Req() req) {
     return this.reviewsService.getReviewBanStatus(req.user);
   }
