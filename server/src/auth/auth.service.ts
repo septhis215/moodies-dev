@@ -434,7 +434,14 @@ export class AuthService {
       data: { email: normalizedEmail, code, expiresAt },
     });
 
-    await sendVerificationCode(normalizedEmail, code);
+    // Send in the background — the HTTP response must not block on (or fail
+    // because of) SMTP. Errors are logged server-side; the client always gets the
+    // generic "if this email exists" reply, so response timing can't reveal
+    // whether the account exists, and a slow/broken mailer never hangs the request.
+    void sendVerificationCode(normalizedEmail, code).catch((err) => {
+      console.error('[auth] Failed to send password-reset email:', err);
+    });
+
     return { success: true, message: 'If this email exists, a code was sent.' };
   }
 

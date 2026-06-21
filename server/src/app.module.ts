@@ -36,30 +36,35 @@ import { AppService } from './app.service';
       // Fail fast at boot on missing/invalid config instead of crashing later at
       // first use. allowUnknown MUST stay true — otherwise Joi rejects every other
       // process.env key (PATH, NODE, Railway-injected vars, …) and the app won't start.
+      // `.empty('')` treats a present-but-empty env var ("") as absent, so a
+      // platform that injects empty strings (Railway, etc.) gets defaults applied
+      // and optionals satisfied instead of a boot crash. Required vars still fail
+      // on empty, which is what we want.
       validationSchema: Joi.object({
         NODE_ENV: Joi.string()
           .valid('development', 'staging', 'production')
+          .empty('')
           .default('development'),
-        PORT: Joi.number().default(3001),
+        PORT: Joi.number().empty('').default(3001),
         // Required — the app cannot function without these.
         JWT_SECRET: Joi.string().required(), // recommend >= 32 random chars
         DATABASE_URL: Joi.string().required(),
         // Optional / have safe defaults in code.
-        JWT_ACCESS_EXPIRES: Joi.string().default('15m'),
-        REFRESH_EXPIRES_DAYS: Joi.number().default(30),
-        DIRECT_URL: Joi.string().optional(),
-        TMDB_API_KEY: Joi.string().optional(),
-        REDIS_HOST: Joi.string().optional(),
-        REDIS_PORT: Joi.number().optional(),
+        JWT_ACCESS_EXPIRES: Joi.string().empty('').default('15m'),
+        REFRESH_EXPIRES_DAYS: Joi.number().empty('').default(30),
+        DIRECT_URL: Joi.string().empty('').optional(),
+        TMDB_API_KEY: Joi.string().empty('').optional(),
+        REDIS_HOST: Joi.string().empty('').optional(),
+        REDIS_PORT: Joi.number().empty('').optional(),
         REDIS_PASS: Joi.string().allow('').optional(),
-        COOKIE_SAMESITE: Joi.string().valid('lax', 'strict', 'none').optional(),
-        COOKIE_SECURE: Joi.string().valid('true', 'false').optional(),
-        COOKIE_DOMAIN: Joi.string().optional(),
-        CLIENT_URL: Joi.string().optional(),
-        CORS_ORIGINS: Joi.string().optional(),
-        GOOGLE_CLIENT_ID: Joi.string().optional(),
-        GOOGLE_CLIENT_SECRET: Joi.string().optional(),
-        GOOGLE_CALLBACK_URL: Joi.string().optional(),
+        COOKIE_SAMESITE: Joi.string().valid('lax', 'strict', 'none').empty('').optional(),
+        COOKIE_SECURE: Joi.string().valid('true', 'false').empty('').optional(),
+        COOKIE_DOMAIN: Joi.string().empty('').optional(),
+        CLIENT_URL: Joi.string().empty('').optional(),
+        CORS_ORIGINS: Joi.string().empty('').optional(),
+        GOOGLE_CLIENT_ID: Joi.string().empty('').optional(),
+        GOOGLE_CLIENT_SECRET: Joi.string().empty('').optional(),
+        GOOGLE_CALLBACK_URL: Joi.string().empty('').optional(),
       }),
       validationOptions: { allowUnknown: true, abortEarly: false },
     }),
