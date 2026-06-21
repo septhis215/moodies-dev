@@ -27,12 +27,18 @@ type DbCriticReview = {
 
 // Fetch functions with error handling
 async function fetchWithFallback<T>(endpoint: string, fallback: T): Promise<T> {
+  // Hard timeout so a slow/down backend can't hang static generation past Next's
+  // 60s page-build limit — a hiccup degrades the section to its fallback instead
+  // of failing the whole deploy.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(`${BASE_URL}${endpoint}`, {
       next: { revalidate: 60 },
       headers: {
         "Content-Type": "application/json",
       },
+      signal: controller.signal,
     });
 
     if (!res.ok) {
@@ -45,13 +51,18 @@ async function fetchWithFallback<T>(endpoint: string, fallback: T): Promise<T> {
   } catch (error) {
     console.error(`Error fetching ${endpoint}:`, error);
     return fallback;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
 async function fetchMoods() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(`${BASE_URL}/moods`, {
       next: { revalidate: 3600 }, // Cache for 1 hour
+      signal: controller.signal,
     });
 
     if (!res.ok) {
@@ -63,6 +74,8 @@ async function fetchMoods() {
   } catch (error) {
     console.error("Error fetching moods:", error);
     return [];
+  } finally {
+    clearTimeout(timer);
   }
 }
 
