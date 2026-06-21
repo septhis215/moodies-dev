@@ -434,6 +434,12 @@ export class AuthService {
       data: { email: normalizedEmail, code, expiresAt },
     });
 
+    // Non-production convenience: surface the code in server logs so the reset
+    // flow is testable even when email delivery isn't configured. NEVER in prod.
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[auth][dev] Password reset code for ${normalizedEmail}: ${code}`);
+    }
+
     // Send in the background — the HTTP response must not block on (or fail
     // because of) SMTP. Errors are logged server-side; the client always gets the
     // generic "if this email exists" reply, so response timing can't reveal
