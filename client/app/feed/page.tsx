@@ -126,6 +126,9 @@ export default function VideoFeedPage() {
     ready: likedReady,
   } = useLiked();
   const [isPlaying, setIsPlaying] = useState(true);
+  const [manuallyPaused, setManuallyPaused] = useState(false);
+  const [playerError, setPlayerError] = useState(false);
+  const [playerReloadKey, setPlayerReloadKey] = useState(0);
   const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
   const {
     isInWatchlist,
@@ -138,6 +141,7 @@ export default function VideoFeedPage() {
   const videoRefs = useRef<Map<string, HTMLIFrameElement>>(new Map());
   const firstUserGestureRef = useRef(false);
   const isPlayingRef = useRef(true);
+  const manuallyPausedRef = useRef(false);
   const panelWasOpenRef = useRef(false);
   const wasPlayingBeforePanelRef = useRef(true);
   const [videoReady, setVideoReady] = useState(false);
@@ -479,7 +483,17 @@ export default function VideoFeedPage() {
     setPanelOpen(false);
     setExpanded(false);
     setVideoReady(false);
+    setPlayerError(false);
+    manuallyPausedRef.current = false;
+    setManuallyPaused(false);
+    setIsPlaying(false);
   }, [currentIndex]);
+
+  useEffect(() => {
+    if (!currentVideo || videoReady) return;
+    const timer = window.setTimeout(() => setPlayerError(true), 12000);
+    return () => window.clearTimeout(timer);
+  }, [currentVideo, currentVideoIdentity, playerReloadKey, videoReady]);
 
   useEffect(() => {
     if (!currentVideo?.id || !currentVideo.primary_video?.key) return;
@@ -518,6 +532,53 @@ export default function VideoFeedPage() {
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
+
+  useEffect(() => {
+    manuallyPausedRef.current = manuallyPaused;
+  }, [manuallyPaused]);
+
+  useEffect(() => {
+    const handlePlayerMessage = (event: MessageEvent) => {
+      if (
+        !event.origin.includes("youtube.com") &&
+        !event.origin.includes("youtube-nocookie.com")
+      ) {
+        return;
+      }
+      const iframe = videoRefs.current.get(currentVideoIdentity);
+      if (!iframe || event.source !== iframe.contentWindow) return;
+
+      try {
+        const payload =
+          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        const playerState = payload?.info?.playerState;
+
+        if (playerState === 1) {
+          setVideoReady(true);
+          setPlayerError(false);
+          if (manuallyPausedRef.current || panelOpen || !feedVisible) {
+            sendYouTubeCommand(iframe, "pauseVideo");
+            setIsPlaying(false);
+            return;
+          }
+          setIsPlaying(true);
+        } else if (playerState === 0 || playerState === 2) {
+          setIsPlaying(false);
+        }
+
+        if (payload?.event === "onError" || payload?.info?.errorCode) {
+          setPlayerError(true);
+          setVideoReady(false);
+          setIsPlaying(false);
+        }
+      } catch {
+        // Ignore unrelated postMessage payloads.
+      }
+    };
+
+    window.addEventListener("message", handlePlayerMessage);
+    return () => window.removeEventListener("message", handlePlayerMessage);
+  }, [currentVideoIdentity, feedVisible, panelOpen]);
 
   const sendYouTubeCommand = (
     iframe: HTMLIFrameElement | undefined | null,
@@ -564,17 +625,22 @@ export default function VideoFeedPage() {
 
     sendYouTubeCommand(iframe, "setVolume", [100]);
     sendYouTubeCommand(iframe, "unMute");
-    sendYouTubeCommand(iframe, "playVideo");
+    if (!manuallyPausedRef.current && !panelOpen) {
+      sendYouTubeCommand(iframe, "playVideo");
+      setIsPlaying(true);
+    }
     window.setTimeout(() => {
       sendYouTubeCommand(iframe, "setVolume", [100]);
       sendYouTubeCommand(iframe, "unMute");
-      sendYouTubeCommand(iframe, "playVideo");
+      if (!manuallyPausedRef.current && !panelOpen) {
+        sendYouTubeCommand(iframe, "playVideo");
+      }
     }, 180);
-    setIsPlaying(true);
-  }, [currentVideoIdentity]);
+  }, [currentVideoIdentity, panelOpen]);
 
-  const playActiveVideo = useCallback(() => {
+  const playActiveVideo = useCallback((force = false) => {
     if (!currentVideo || !feedVisible || panelOpen) return;
+    if (manuallyPausedRef.current && !force) return;
     const iframe = videoRefs.current.get(currentVideoIdentity);
     if (!iframe) return;
 
@@ -606,8 +672,6 @@ export default function VideoFeedPage() {
           sendYouTubeCommand(iframe, "setVolume", [100]);
           sendYouTubeCommand(iframe, "unMute");
         }
-        sendYouTubeCommand(iframe, "playVideo", []);
-        setIsPlaying(true);
       }
       return next;
     });
@@ -700,7 +764,7 @@ export default function VideoFeedPage() {
     if (!currentVideo) return;
     const activeIframe = videoRefs.current.get(currentVideoIdentity);
     pauseInactiveVideos(currentVideoIdentity);
-    setIsPlaying(feedVisible);
+    setIsPlaying(false);
     const t = window.setTimeout(() => {
       playActiveVideo();
     }, 350);
@@ -721,7 +785,8 @@ export default function VideoFeedPage() {
     const wasOpen = panelWasOpenRef.current;
 
     if (panelOpen && !wasOpen) {
-      wasPlayingBeforePanelRef.current = isPlayingRef.current;
+      wasPlayingBeforePanelRef.current =
+        isPlayingRef.current && !manuallyPausedRef.current;
       const iframe = videoRefs.current.get(currentVideoIdentity);
       sendYouTubeCommand(iframe, "pauseVideo", []);
       setIsPlaying(false);
@@ -729,6 +794,7 @@ export default function VideoFeedPage() {
       !panelOpen &&
       wasOpen &&
       wasPlayingBeforePanelRef.current &&
+      !manuallyPausedRef.current &&
       feedVisible
     ) {
       window.setTimeout(() => playActiveVideo(), 180);
@@ -736,6 +802,18 @@ export default function VideoFeedPage() {
 
     panelWasOpenRef.current = panelOpen;
   }, [currentVideoIdentity, feedVisible, panelOpen, playActiveVideo]);
+
+  useEffect(() => {
+    if (!panelOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscroll = document.body.style.overscrollBehavior;
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscroll;
+    };
+  }, [panelOpen]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -780,6 +858,7 @@ export default function VideoFeedPage() {
 
   useEffect(() => {
     if (!currentVideo) return;
+    if (audioUnlocked) return;
     window.addEventListener("pointerdown", unlockActiveAudio, {
       capture: true,
       passive: true,
@@ -793,7 +872,7 @@ export default function VideoFeedPage() {
         capture: true,
       });
     };
-  }, [currentVideo, currentVideo?.id, unlockActiveAudio]);
+  }, [audioUnlocked, currentVideo, currentVideo?.id, unlockActiveAudio]);
 
   const iframeSrc = useMemo(() => {
     if (!currentVideo?.primary_video?.key) return "";
@@ -811,10 +890,14 @@ export default function VideoFeedPage() {
     if (!iframe) return;
     firstUserGestureRef.current = true;
     if (isPlaying) {
+      manuallyPausedRef.current = true;
+      setManuallyPaused(true);
       sendYouTubeCommand(iframe, "pauseVideo", []);
       setIsPlaying(false);
     } else {
-      playActiveVideo();
+      manuallyPausedRef.current = false;
+      setManuallyPaused(false);
+      playActiveVideo(true);
     }
   };
 
@@ -983,12 +1066,12 @@ export default function VideoFeedPage() {
       <div className="relative flex h-[100svh] w-full items-center justify-center overflow-hidden bg-black">
         {currentBackdrop && (
           <div
-            className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center opacity-45 blur-2xl"
+            className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center opacity-38 blur-2xl"
             style={{ backgroundImage: `url(${currentBackdrop})` }}
             aria-hidden="true"
           />
         )}
-        <div className="pointer-events-none absolute inset-0 bg-black/42" />
+        <div className="pointer-events-none absolute inset-0 bg-black/24" />
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-18 bg-black" />
         <AnimatePresence mode="wait">
           {currentVideo && (
@@ -1029,6 +1112,7 @@ export default function VideoFeedPage() {
                   )}
                   <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.10),transparent_58%)] mix-blend-screen" />
                   <iframe
+                    key={`${currentVideoIdentity}:${playerReloadKey}`}
                     ref={(el) => {
                       if (el && currentVideo) {
                         videoRefs.current.set(currentVideoIdentity, el);
@@ -1038,7 +1122,7 @@ export default function VideoFeedPage() {
                     }}
                     title={videoTitle || `video-${currentVideo.id}`}
                     src={iframeSrc}
-                    className="absolute inset-0 h-full w-full bg-black brightness-[1.08] contrast-[1.04] saturate-[1.08]"
+                    className="absolute inset-0 h-full w-full bg-black brightness-[1.14] contrast-[1.03] saturate-[1.08]"
                     allow="autoplay; encrypted-media; picture-in-picture"
                     referrerPolicy="strict-origin-when-cross-origin"
                     style={{ border: "none", pointerEvents: "none" }}
@@ -1047,7 +1131,22 @@ export default function VideoFeedPage() {
                       if (currentVideo)
                         videoRefs.current.set(currentVideoIdentity, iframe);
                       setVideoReady(true);
+                      setPlayerError(false);
+                      iframe.contentWindow?.postMessage(
+                        JSON.stringify({
+                          event: "listening",
+                          id: currentVideoIdentity,
+                        }),
+                        "*",
+                      );
                       window.setTimeout(() => {
+                        iframe.contentWindow?.postMessage(
+                          JSON.stringify({
+                            event: "listening",
+                            id: currentVideoIdentity,
+                          }),
+                          "*",
+                        );
                         playActiveVideo();
                         applyAudioState(iframe);
                       }, 180);
@@ -1056,7 +1155,51 @@ export default function VideoFeedPage() {
                         applyAudioState(iframe);
                       }, 650);
                     }}
+                    onError={() => {
+                      setVideoReady(false);
+                      setPlayerError(true);
+                      setIsPlaying(false);
+                    }}
                   />
+                  <button
+                    type="button"
+                    onClick={togglePlayPause}
+                    aria-label={isPlaying ? "Pause video" : "Play video"}
+                    className="absolute inset-0 z-[12] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
+                  />
+                  {playerError && (
+                    <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 px-6 text-center backdrop-blur-sm">
+                      <div className="max-w-xs">
+                        <p className="text-base font-bold text-white">
+                          Video could not start
+                        </p>
+                        <p className="mt-1 text-sm leading-relaxed text-white/55">
+                          Check your connection or reload this trailer.
+                        </p>
+                        <div className="mt-4 flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPlayerError(false);
+                              setVideoReady(false);
+                              setPlayerReloadKey((key) => key + 1);
+                            }}
+                            className="min-h-11 rounded-full bg-white px-4 text-sm font-bold text-black transition hover:bg-white/88"
+                          >
+                            Reload video
+                          </button>
+                          <a
+                            href={`https://www.youtube.com/watch?v=${currentVideo.primary_video.key}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-h-11 items-center rounded-full border border-white/20 px-4 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white"
+                          >
+                            Open YouTube
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {!audioUnlocked && !muted && videoReady && (
                     <button
                       type="button"
@@ -1234,6 +1377,9 @@ export default function VideoFeedPage() {
         </AnimatePresence>
         {!loading && !feedError && videos.length === 0 && (
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Video details"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="absolute inset-0 flex items-center justify-center px-6"
@@ -1309,7 +1455,7 @@ export default function VideoFeedPage() {
           >
             <button
               type="button"
-              className="absolute inset-0 cursor-default bg-black/55 backdrop-blur-sm"
+              className="absolute inset-0 cursor-default bg-black/72 backdrop-blur-md"
               onClick={() => setPanelOpen(false)}
               aria-label="Dismiss details"
             />
@@ -1318,24 +1464,26 @@ export default function VideoFeedPage() {
               animate={{ x: 0, opacity: 1, scale: 1 }}
               exit={{ x: 28, opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="absolute inset-x-2 bottom-[max(0.5rem,env(safe-area-inset-bottom))] top-[max(4rem,env(safe-area-inset-top))] flex overflow-hidden rounded-2xl
-                         border border-white/12 bg-black/75 shadow-2xl shadow-black/50
-                         backdrop-blur-2xl sm:inset-x-3 sm:bottom-3 sm:rounded-3xl md:inset-y-4 md:left-auto md:right-4 md:w-[25rem]"
+              className="absolute inset-x-0 bottom-0 top-[max(10svh,env(safe-area-inset-top))] flex overflow-hidden rounded-t-[30px]
+                         border border-white/12 bg-[#0b0c0f]/94 shadow-[0_-24px_80px_rgba(0,0,0,0.55)]
+                         backdrop-blur-2xl sm:inset-x-3 sm:bottom-3 sm:top-[max(5rem,env(safe-area-inset-top))] sm:rounded-3xl
+                         md:inset-y-6 md:left-auto md:right-6 md:w-[29rem] md:rounded-[28px] md:shadow-[0_24px_90px_rgba(0,0,0,0.62)]"
             >
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.06] via-transparent to-black/30" />
+              <div className="absolute left-1/2 top-2.5 z-20 h-1 w-10 -translate-x-1/2 rounded-full bg-white/25 md:hidden" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.045] via-transparent to-black/35" />
               {currentBackdrop && (
                 <div
-                  className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-cover bg-center opacity-28 blur-sm"
+                  className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-cover bg-center opacity-38"
                   style={{ backgroundImage: `url(${currentBackdrop})` }}
                 />
               )}
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-52 bg-gradient-to-b from-black/20 via-black/72 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-black/15 via-[#0b0c0f]/78 to-transparent" />
 
               <div
                 ref={panelRef}
                 className="relative flex min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto overscroll-contain mobile-native-scroll"
               >
-              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-black/40 px-4 py-3 backdrop-blur-2xl sm:px-5">
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/[0.08] bg-[#0b0c0f]/72 px-4 pb-3 pt-5 backdrop-blur-2xl sm:px-5 sm:pt-3">
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-[#ff6f5c] shadow-[0_0_14px_rgba(255,111,92,0.75)]" />
                   <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/70">
@@ -1346,17 +1494,17 @@ export default function VideoFeedPage() {
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.93 }}
                   onClick={() => setPanelOpen(false)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition-all hover:bg-white/12 hover:text-white"
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/35 text-white/70 transition-all hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff725e]/80"
                   aria-label="Close details"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </motion.button>
               </div>
 
-              <div className="space-y-5 px-4 pb-5 pt-4 sm:px-5">
+              <div className="space-y-5 px-4 pb-5 pt-5 sm:px-5">
                 <div className="flex gap-4">
                   <div
-                    className="h-32 w-[5.5rem] shrink-0 rounded-2xl border border-white/12 bg-white/[0.06] bg-cover bg-center shadow-xl shadow-black/30"
+                    className="h-36 w-24 shrink-0 rounded-2xl border border-white/12 bg-white/[0.06] bg-cover bg-center shadow-xl shadow-black/40"
                     style={
                       currentPoster
                         ? { backgroundImage: `url(${currentPoster})` }
@@ -1365,7 +1513,7 @@ export default function VideoFeedPage() {
                     aria-hidden="true"
                   />
                   <div className="min-w-0 flex-1 pt-1">
-                    <h2 className="mb-3 line-clamp-3 text-xl font-black leading-tight text-white">
+                    <h2 className="mb-3 line-clamp-3 text-xl font-black leading-[1.08] tracking-[-0.02em] text-white sm:text-2xl">
                       {currentVideo.title || currentVideo.name}
                     </h2>
                     <div className="flex flex-wrap items-center gap-2">
@@ -1422,13 +1570,13 @@ export default function VideoFeedPage() {
                 </div>
               </div>
 
-              <div className="mx-4 rounded-2xl border border-white/10 bg-white/[0.055] p-4 shadow-lg shadow-black/15 sm:mx-5">
+              <div className="mx-4 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 shadow-lg shadow-black/15 sm:mx-5">
                 <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
                   <span className="inline-block h-3.5 w-0.5 rounded-full bg-gradient-to-b from-red-500 to-orange-500" />
                   Overview
                 </h4>
                 <p
-                  className={`text-sm leading-relaxed text-white/[0.72] transition-all duration-300 ${expanded ? "" : "line-clamp-5"}`}
+                  className={`text-sm leading-6 text-white/[0.74] transition-all duration-300 ${expanded ? "" : "line-clamp-5"}`}
                 >
                   {currentVideo.overview}
                 </p>
@@ -1442,7 +1590,7 @@ export default function VideoFeedPage() {
                 )}
               </div>
 
-              <div className="mx-4 mt-4 rounded-2xl border border-white/10 bg-white/[0.045] p-4 sm:mx-5">
+              <div className="mx-4 mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:mx-5">
                 <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
                   <span className="inline-block h-3.5 w-0.5 rounded-full bg-gradient-to-b from-red-500 to-orange-500" />
                   Info
@@ -1491,16 +1639,16 @@ export default function VideoFeedPage() {
                 </div>
               </div>
 
-              <div className="sticky bottom-0 mt-auto border-t border-white/10 bg-black/45 px-4 py-4 backdrop-blur-2xl sm:px-5">
+              <div className="sticky bottom-0 mt-auto border-t border-white/[0.08] bg-[#0b0c0f]/88 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-2xl sm:px-5 sm:pb-4">
                 {href ? (
                   <Link href={href} prefetch shallow={false}>
                     <motion.span
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.97 }}
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl
-                                 bg-gradient-to-r from-red-500 to-orange-500 px-4 py-3
-                                 text-sm font-bold text-white shadow-md shadow-red-600/30
-                                 transition-shadow hover:shadow-red-600/50"
+                      className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl
+                                 bg-[#e94f37] px-4 py-3 text-sm font-bold text-white
+                                 shadow-[0_12px_30px_rgba(233,79,55,0.22)]
+                                 transition hover:bg-[#f05b43]"
                     >
                       <ExternalLink className="h-4 w-4" />
                       View Full Details
