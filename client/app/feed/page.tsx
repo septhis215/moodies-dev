@@ -212,7 +212,15 @@ export default function VideoFeedPage() {
     };
     if (liked) await removeFromLiked(String(currentVideo.id), likeType, meta);
     else await addToLiked(String(currentVideo.id), likeType, meta);
-  }, [currentVideo, liked, likeType, likedReady, addToLiked, removeFromLiked]);
+  }, [
+    currentVideo,
+    liked,
+    likeType,
+    likedReady,
+    addToLiked,
+    removeFromLiked,
+    router,
+  ]);
 
   const handleWatchlistToggle = useCallback(async () => {
     if (!currentVideo || isTogglingWatchlist) return;
@@ -509,6 +517,7 @@ export default function VideoFeedPage() {
     currentVideo,
     currentVideo?.id,
     currentVideo?.primary_video?.key,
+    getContentType,
     getVideoIdentity,
   ]);
 
@@ -778,7 +787,7 @@ export default function VideoFeedPage() {
       typeof window !== "undefined"
         ? encodeURIComponent(window.location.origin)
         : "";
-    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&cc_load_policy=0&autohide=1&showinfo=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=1&origin=${origin}`;
+    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&cc_load_policy=0&autohide=1&showinfo=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=1&vq=hd1080&origin=${origin}`;
   }, [currentVideo?.primary_video?.key]);
 
   const togglePlayPause = () => {
@@ -831,6 +840,16 @@ export default function VideoFeedPage() {
   const isPortraitVideo =
     currentOrientation === "portrait" ||
     (typeof currentAspectRatio === "number" && currentAspectRatio < 1);
+  const videoFrameSizeClassName = cn(
+    isPortraitVideo
+      ? "h-[calc(100svh-3.5rem)] w-[min(100vw,calc((100svh-3.5rem)*0.5625))] max-w-full lg:h-[calc(100svh-1rem)] lg:w-[calc((100svh-1rem)*0.5625)]"
+      : "h-[62svh] min-h-[18rem] w-full sm:aspect-video sm:h-auto sm:min-h-0 sm:max-w-[calc((100svh-5.5rem)*1.7778)] lg:aspect-auto lg:h-[calc(100svh-1rem)] lg:w-[min(calc(100vw-1rem),calc((100svh-1rem)*1.7778))] lg:max-w-none",
+    "sm:rounded-2xl lg:rounded-xl",
+  );
+  const videoFrameClassName = cn(
+    "relative isolate overflow-hidden bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),0_24px_80px_rgba(0,0,0,0.45)]",
+    videoFrameSizeClassName,
+  );
 
   return (
     <div
@@ -968,16 +987,8 @@ export default function VideoFeedPage() {
               className="absolute inset-0 flex items-center justify-center"
             >
               {/* Video iframe */}
-              <div className="relative flex h-full w-full items-center justify-center bg-transparent lg:px-5 lg:py-5">
-                <div
-                  className={cn(
-                    "relative w-full overflow-hidden bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),0_24px_80px_rgba(0,0,0,0.45)]",
-                    isPortraitVideo
-                      ? "h-full"
-                      : "h-[58svh] min-h-[18rem] sm:h-[64svh]",
-                    "lg:aspect-video lg:h-auto lg:min-h-0 lg:max-h-[calc(100svh-2.5rem)] lg:w-[min(calc(100vw-2.5rem),calc((100svh-2.5rem)*1.7778))] lg:max-w-none lg:rounded-2xl",
-                  )}
-                >
+              <div className="relative flex h-full w-full items-center justify-center bg-transparent pt-14 sm:pt-16 lg:p-2">
+                <div className={videoFrameClassName}>
                   {currentBackdrop && (
                     <div
                       className={cn(
@@ -1041,8 +1052,14 @@ export default function VideoFeedPage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: "easeOut" }}
-                className="pointer-events-none absolute bottom-0 left-0 right-0 z-20"
+                className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center pt-14 sm:pt-16 lg:p-2"
               >
+                <div
+                  className={cn(
+                    "relative overflow-hidden",
+                    videoFrameSizeClassName,
+                  )}
+                >
                 {/* Layer 1 — tall ambient scrim: fades video into dark over a large area */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/68 via-black/18 to-transparent lg:from-black/58 lg:via-black/14" />
 
@@ -1103,21 +1120,32 @@ export default function VideoFeedPage() {
                     </span>
                   </div>
                 </div>
+                </div>
               </motion.div>
 
               {/* Action Buttons — always visible, Info included */}
-              <ActionButtons
-                isPlaying={isPlaying}
-                liked={liked}
-                saved={inWatchlist}
-                muted={muted}
-                panelOpen={panelOpen}
-                togglePlayPause={togglePlayPause}
-                onLike={handleLikeToggle}
-                setSaved={handleWatchlistToggle}
-                toggleMute={toggleMute}
-                onInfo={() => setPanelOpen((p) => !p)}
-              />
+              <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center pt-14 sm:pt-16 lg:p-2">
+                <div
+                  className={cn(
+                    "relative pointer-events-none",
+                    videoFrameSizeClassName,
+                  )}
+                >
+                  <ActionButtons
+                    isPlaying={isPlaying}
+                    liked={liked}
+                    saved={inWatchlist}
+                    muted={muted}
+                    panelOpen={panelOpen}
+                    togglePlayPause={togglePlayPause}
+                    onLike={handleLikeToggle}
+                    setSaved={handleWatchlistToggle}
+                    toggleMute={toggleMute}
+                    onInfo={() => setPanelOpen((p) => !p)}
+                    className="pointer-events-auto absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-2.5 sm:bottom-4 sm:right-4 lg:bottom-5 lg:right-5"
+                  />
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
