@@ -864,7 +864,7 @@ export default function VideoFeedPage() {
         initial={{ y: -56, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
-        className="pointer-events-none fixed left-0 right-0 top-0 z-50 px-3 pt-3 sm:px-5"
+        className="pointer-events-none fixed left-0 right-0 top-0 z-50 border-b border-white/[0.06] bg-black px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] shadow-[0_12px_32px_rgba(0,0,0,0.45)] sm:px-5"
       >
         <div className="mx-auto grid w-full max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
           <Link
@@ -975,7 +975,7 @@ export default function VideoFeedPage() {
           />
         )}
         <div className="pointer-events-none absolute inset-0 bg-black/42" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-black" />
         <AnimatePresence mode="wait">
           {currentVideo && (
             <motion.div
@@ -1061,23 +1061,29 @@ export default function VideoFeedPage() {
                   )}
                 >
                 {/* Layer 1 — tall ambient scrim: fades video into dark over a large area */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/68 via-black/18 to-transparent lg:from-black/58 lg:via-black/14" />
+                <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-black/88 via-black/38 to-transparent lg:h-[42%]" />
 
                 {/* Layer 2 — tight bottom vignette: ensures the very bottom edge is fully dark */}
-                <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-black/44 to-transparent lg:h-20 lg:from-black/34" />
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/72 to-transparent" />
 
                 {/* Content */}
-                <div className="relative w-full px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pr-20 pt-24 sm:pr-24 lg:px-8 lg:pb-7 lg:pr-32 lg:pt-28">
+                <div className="relative w-full px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pr-20 pt-28 sm:px-5 sm:pr-24 lg:max-w-4xl lg:px-8 lg:pb-8 lg:pr-32 lg:pt-32">
+                  <div className="mb-2.5 flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#ff725e] shadow-[0_0_10px_rgba(255,114,94,0.8)]" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/58 sm:text-[11px]">
+                      {currentVideoTypeLabel}
+                    </span>
+                  </div>
                   <h2
-                    className="mb-2 line-clamp-2 text-xl font-bold leading-tight text-white lg:text-2xl"
+                    className="mb-3 line-clamp-2 max-w-2xl text-xl font-black leading-[1.08] tracking-[-0.025em] text-white sm:text-2xl lg:text-3xl"
                     style={{
                       textShadow:
-                        "0 1px 12px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8)",
+                        "0 2px 18px rgba(0,0,0,0.95), 0 1px 4px rgba(0,0,0,0.9)",
                     }}
                   >
                     {videoTitle}
                   </h2>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[11px] font-semibold text-white/68 sm:text-xs">
                     {/* Rating / Upcoming badge */}
                     {Number.isFinite(Number(currentVideo.vote_average)) &&
                       (() => {
@@ -1085,16 +1091,16 @@ export default function VideoFeedPage() {
                         const isUpcomingItem = va === 0;
                         return (
                           <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold border
-                          ${
-                            isUpcomingItem
-                              ? "bg-indigo-500/30 text-indigo-200 border-indigo-400/40"
-                              : "bg-amber-500/30 text-amber-200 border-amber-400/40"
-                          }`}
+                            className={cn(
+                              "inline-flex items-center gap-1.5",
+                              isUpcomingItem
+                                ? "text-indigo-200"
+                                : "text-amber-200",
+                            )}
                           >
                             {!isUpcomingItem && (
                               <Star
-                                className="w-3 h-3 text-amber-300"
+                                className="h-3.5 w-3.5 text-amber-300"
                                 fill="currentColor"
                               />
                             )}
@@ -1103,21 +1109,21 @@ export default function VideoFeedPage() {
                         );
                       })()}
 
-                    <span className="px-2 py-0.5 rounded-md text-xs font-bold uppercase border bg-white/10 text-white/80 border-white/20">
+                    <span className="h-1 w-1 rounded-full bg-white/30" />
+                    <span className="uppercase tracking-[0.12em] text-white/72">
                       {currentContentType}
                     </span>
 
                     {activeCategory === "upcoming" &&
                       currentReleaseDateLabel && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold border bg-emerald-500/20 text-emerald-200 border-emerald-400/30">
-                          <Calendar className="w-3 h-3" />
-                          {currentReleaseDateLabel}
-                        </span>
+                        <>
+                          <span className="h-1 w-1 rounded-full bg-white/30" />
+                          <span className="inline-flex items-center gap-1.5 text-emerald-200">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {currentReleaseDateLabel}
+                          </span>
+                        </>
                       )}
-
-                    <span className="px-2 py-0.5 rounded-md text-xs font-bold uppercase border bg-red-500/20 text-red-300 border-red-400/30">
-                      {currentVideoTypeLabel}
-                    </span>
                   </div>
                 </div>
                 </div>
