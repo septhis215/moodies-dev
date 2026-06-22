@@ -116,6 +116,7 @@ export default function VideoFeedPage() {
   // gesture listener below retries the unmute command if autoplay policy blocks
   // sound during the initial page load.
   const [muted, setMuted] = useState(false);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
 
   const [panelOpen, setPanelOpen] = useState(false);
   const {
@@ -515,12 +516,6 @@ export default function VideoFeedPage() {
   ]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("videoMuted", String(muted));
-    } catch {}
-  }, [muted]);
-
-  useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
 
@@ -547,31 +542,58 @@ export default function VideoFeedPage() {
     [],
   );
 
+  const applyAudioState = useCallback(
+    (iframe: HTMLIFrameElement | undefined | null) => {
+      if (!iframe) return;
+      if (muted) {
+        sendYouTubeCommand(iframe, "mute");
+        return;
+      }
+      sendYouTubeCommand(iframe, "setVolume", [100]);
+      sendYouTubeCommand(iframe, "unMute");
+    },
+    [muted],
+  );
+
+  const unlockActiveAudio = useCallback(() => {
+    firstUserGestureRef.current = true;
+    setAudioUnlocked(true);
+    setMuted(false);
+    const iframe = videoRefs.current.get(currentVideoIdentity);
+    if (!iframe) return;
+
+    sendYouTubeCommand(iframe, "setVolume", [100]);
+    sendYouTubeCommand(iframe, "unMute");
+    sendYouTubeCommand(iframe, "playVideo");
+    window.setTimeout(() => {
+      sendYouTubeCommand(iframe, "setVolume", [100]);
+      sendYouTubeCommand(iframe, "unMute");
+      sendYouTubeCommand(iframe, "playVideo");
+    }, 180);
+    setIsPlaying(true);
+  }, [currentVideoIdentity]);
+
   const playActiveVideo = useCallback(() => {
     if (!currentVideo || !feedVisible || panelOpen) return;
     const iframe = videoRefs.current.get(currentVideoIdentity);
     if (!iframe) return;
 
     pauseInactiveVideos(currentVideoIdentity);
-    sendYouTubeCommand(iframe, "setVolume", [100]);
-    sendYouTubeCommand(iframe, muted ? "mute" : "unMute", []);
     sendYouTubeCommand(iframe, "playVideo", []);
-    if (!muted) {
-      sendYouTubeCommand(iframe, "setVolume", [100]);
-      sendYouTubeCommand(iframe, "unMute", []);
-    }
+    applyAudioState(iframe);
     setIsPlaying(true);
   }, [
+    applyAudioState,
     currentVideo,
     currentVideoIdentity,
     feedVisible,
-    muted,
     panelOpen,
     pauseInactiveVideos,
   ]);
 
   const toggleMute = useCallback(() => {
     firstUserGestureRef.current = true;
+    setAudioUnlocked(true);
     setMuted((prev) => {
       const next = !prev;
       const iframe = currentVideo
@@ -597,17 +619,18 @@ export default function VideoFeedPage() {
     if (iframe) {
       const t = window.setTimeout(
         () => {
-          if (muted) sendYouTubeCommand(iframe, "mute");
-          else {
-            sendYouTubeCommand(iframe, "setVolume", [100]);
-            sendYouTubeCommand(iframe, "unMute");
-          }
+          applyAudioState(iframe);
         },
         250,
       );
       return () => clearTimeout(t);
     }
-  }, [currentVideo, currentVideo?.id, currentVideoIdentity, muted]);
+  }, [
+    applyAudioState,
+    currentVideo,
+    currentVideo?.id,
+    currentVideoIdentity,
+  ]);
 
   const handleScroll = useCallback(
     (e: WheelEvent) => {
@@ -757,34 +780,20 @@ export default function VideoFeedPage() {
 
   useEffect(() => {
     if (!currentVideo) return;
-    const onFirstGesture = () => {
-      if (firstUserGestureRef.current) return;
-      firstUserGestureRef.current = true;
-      const iframe = videoRefs.current.get(currentVideoIdentity);
-      if (iframe) {
-        if (!muted) {
-          sendYouTubeCommand(iframe, "setVolume", [100]);
-          sendYouTubeCommand(iframe, "unMute", []);
-        }
-        sendYouTubeCommand(iframe, "playVideo", []);
-        setIsPlaying(true);
-      }
-    };
-    window.addEventListener("click", onFirstGesture, {
-      once: true,
+    window.addEventListener("pointerdown", unlockActiveAudio, {
+      capture: true,
       passive: true,
     });
-    window.addEventListener("touchend", onFirstGesture, {
-      once: true,
-      passive: true,
-    });
+    window.addEventListener("keydown", unlockActiveAudio, { capture: true });
     return () => {
-      try {
-        window.removeEventListener("click", onFirstGesture);
-        window.removeEventListener("touchend", onFirstGesture);
-      } catch {}
+      window.removeEventListener("pointerdown", unlockActiveAudio, {
+        capture: true,
+      });
+      window.removeEventListener("keydown", unlockActiveAudio, {
+        capture: true,
+      });
     };
-  }, [currentVideo, currentVideo?.id, currentVideoIdentity, muted]);
+  }, [currentVideo, currentVideo?.id, unlockActiveAudio]);
 
   const iframeSrc = useMemo(() => {
     if (!currentVideo?.primary_video?.key) return "";
@@ -793,7 +802,7 @@ export default function VideoFeedPage() {
       typeof window !== "undefined"
         ? encodeURIComponent(window.location.origin)
         : "";
-    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&cc_load_policy=0&autohide=1&showinfo=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=0&vq=hd1080&origin=${origin}`;
+    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&cc_load_policy=0&autohide=1&showinfo=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=1&vq=hd1080&origin=${origin}`;
   }, [currentVideo?.primary_video?.key]);
 
   const togglePlayPause = () => {
@@ -1038,11 +1047,25 @@ export default function VideoFeedPage() {
                       if (currentVideo)
                         videoRefs.current.set(currentVideoIdentity, iframe);
                       setVideoReady(true);
-                      setTimeout(() => {
+                      window.setTimeout(() => {
                         playActiveVideo();
-                      }, 300);
+                        applyAudioState(iframe);
+                      }, 180);
+                      window.setTimeout(() => {
+                        playActiveVideo();
+                        applyAudioState(iframe);
+                      }, 650);
                     }}
                   />
+                  {!audioUnlocked && !muted && videoReady && (
+                    <button
+                      type="button"
+                      onClick={unlockActiveAudio}
+                      className="absolute left-1/2 top-24 z-30 -translate-x-1/2 rounded-full border border-white/15 bg-black/55 px-3.5 py-2 text-[11px] font-semibold text-white/85 shadow-lg backdrop-blur-md transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                    >
+                      Tap for sound
+                    </button>
+                  )}
                 </div>
               </div>
 
