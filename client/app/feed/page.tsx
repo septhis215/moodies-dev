@@ -112,17 +112,9 @@ export default function VideoFeedPage() {
   const viewerIdRef = useRef<string>("");
   const reportedViewsRef = useRef<Set<string>>(new Set());
 
-  const [muted, setMuted] = useState<boolean>(() => {
-    try {
-      const s =
-        typeof window !== "undefined"
-          ? localStorage.getItem("videoMuted")
-          : null;
-      return s === null ? true : s === "true";
-    } catch {
-      return true;
-    }
-  });
+  // YouTube autoplay must begin muted. Starting the UI in the same state keeps
+  // the sound icon honest and lets the first sound-button tap unmute directly.
+  const [muted, setMuted] = useState(true);
 
   const [panelOpen, setPanelOpen] = useState(false);
   const {
@@ -563,6 +555,7 @@ export default function VideoFeedPage() {
     sendYouTubeCommand(iframe, "mute", []);
     sendYouTubeCommand(iframe, "playVideo", []);
     if (firstUserGestureRef.current && !muted) {
+      sendYouTubeCommand(iframe, "setVolume", [100]);
       sendYouTubeCommand(iframe, "unMute", []);
     }
     setIsPlaying(true);
@@ -583,7 +576,12 @@ export default function VideoFeedPage() {
         ? videoRefs.current.get(currentVideoIdentity)
         : undefined;
       if (iframe) {
-        sendYouTubeCommand(iframe, next ? "mute" : "unMute");
+        if (next) {
+          sendYouTubeCommand(iframe, "mute");
+        } else {
+          sendYouTubeCommand(iframe, "setVolume", [100]);
+          sendYouTubeCommand(iframe, "unMute");
+        }
         sendYouTubeCommand(iframe, "playVideo", []);
         setIsPlaying(true);
       }
@@ -598,7 +596,10 @@ export default function VideoFeedPage() {
       const t = window.setTimeout(
         () => {
           if (muted) sendYouTubeCommand(iframe, "mute");
-          else if (firstUserGestureRef.current) sendYouTubeCommand(iframe, "unMute");
+          else if (firstUserGestureRef.current) {
+            sendYouTubeCommand(iframe, "setVolume", [100]);
+            sendYouTubeCommand(iframe, "unMute");
+          }
         },
         250,
       );
