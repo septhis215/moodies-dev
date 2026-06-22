@@ -7,6 +7,7 @@ import {
   Calendar,
   Clapperboard,
   ExternalLink,
+  Maximize2,
   RefreshCw,
   Sparkles,
   Search,
@@ -112,10 +113,9 @@ export default function VideoFeedPage() {
   const viewerIdRef = useRef<string>("");
   const reportedViewsRef = useRef<Set<string>>(new Set());
 
-  // Prefer audible playback whenever the browser allows it. The first-user
-  // gesture listener below retries the unmute command if autoplay policy blocks
-  // sound during the initial page load.
-  const [muted, setMuted] = useState(false);
+  // Mobile browsers only guarantee autoplay while muted. Once the user
+  // explicitly enables sound, that preference carries to subsequent videos.
+  const [muted, setMuted] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
   const [panelOpen, setPanelOpen] = useState(false);
@@ -129,6 +129,8 @@ export default function VideoFeedPage() {
   const [manuallyPaused, setManuallyPaused] = useState(false);
   const [playerError, setPlayerError] = useState(false);
   const [playerReloadKey, setPlayerReloadKey] = useState(0);
+  const [modalBackdropError, setModalBackdropError] = useState(false);
+  const [isMobileFullscreen, setIsMobileFullscreen] = useState(false);
   const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
   const {
     isInWatchlist,
@@ -144,6 +146,8 @@ export default function VideoFeedPage() {
   const manuallyPausedRef = useRef(false);
   const panelWasOpenRef = useRef(false);
   const wasPlayingBeforePanelRef = useRef(true);
+  const wasPlayingBeforeFullscreenRef = useRef(true);
+  const fullscreenIframeRef = useRef<HTMLIFrameElement | null>(null);
   const [videoReady, setVideoReady] = useState(false);
   const [feedVisible, setFeedVisible] = useState(true);
 
@@ -484,6 +488,8 @@ export default function VideoFeedPage() {
     setExpanded(false);
     setVideoReady(false);
     setPlayerError(false);
+    setModalBackdropError(false);
+    setIsMobileFullscreen(false);
     manuallyPausedRef.current = false;
     setManuallyPaused(false);
     setIsPlaying(false);
@@ -906,7 +912,7 @@ export default function VideoFeedPage() {
     ? `https://image.tmdb.org/t/p/w342${currentVideo.poster_path}`
     : null;
   const currentBackdrop = currentVideo?.backdrop_path
-    ? `https://image.tmdb.org/t/p/w780${currentVideo.backdrop_path}`
+    ? `https://image.tmdb.org/t/p/w1280${currentVideo.backdrop_path}`
     : currentPoster;
   const currentYear =
     currentVideo?.release_date || currentVideo?.first_air_date
@@ -938,6 +944,47 @@ export default function VideoFeedPage() {
   const isPortraitVideo =
     currentOrientation === "portrait" ||
     (typeof currentAspectRatio === "number" && currentAspectRatio < 1);
+  const isLandscapeVideo = !isPortraitVideo;
+  const fullscreenIframeSrc = currentVideo?.primary_video?.key
+    ? `https://www.youtube.com/embed/${currentVideo.primary_video.key}?autoplay=1&controls=1&disablekb=0&fs=0&iv_load_policy=3&modestbranding=1&rel=0&enablejsapi=1&playsinline=1&mute=${muted ? 1 : 0}&vq=hd1080`
+    : "";
+
+  const openMobileFullscreen = () => {
+    if (!currentVideo || !isLandscapeVideo) return;
+    wasPlayingBeforeFullscreenRef.current =
+      isPlayingRef.current && !manuallyPausedRef.current;
+    const iframe = videoRefs.current.get(currentVideoIdentity);
+    sendYouTubeCommand(iframe, "pauseVideo");
+    setIsPlaying(false);
+    setIsMobileFullscreen(true);
+  };
+
+  const closeMobileFullscreen = useCallback(() => {
+    setIsMobileFullscreen(false);
+    fullscreenIframeRef.current = null;
+    if (
+      wasPlayingBeforeFullscreenRef.current &&
+      !manuallyPausedRef.current &&
+      feedVisible
+    ) {
+      window.setTimeout(() => playActiveVideo(), 180);
+    }
+  }, [feedVisible, playActiveVideo]);
+
+  useEffect(() => {
+    if (!isMobileFullscreen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMobileFullscreen();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [closeMobileFullscreen, isMobileFullscreen]);
+
   const videoFrameSizeClassName = cn(
     isPortraitVideo
       ? "h-[100svh] w-screen max-w-none lg:h-[calc(100svh-1rem)] lg:w-[calc((100svh-1rem)*0.5625)]"
@@ -1200,7 +1247,7 @@ export default function VideoFeedPage() {
                       </div>
                     </div>
                   )}
-                  {!audioUnlocked && !muted && videoReady && (
+                  {!audioUnlocked && muted && videoReady && (
                     <button
                       type="button"
                       onClick={unlockActiveAudio}
@@ -1321,6 +1368,16 @@ export default function VideoFeedPage() {
                     onInfo={() => setPanelOpen((p) => !p)}
                     className="pointer-events-auto absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-2.5 sm:bottom-4 sm:right-4 lg:bottom-5 lg:right-5"
                   />
+                  {isLandscapeVideo && (
+                    <button
+                      type="button"
+                      onClick={openMobileFullscreen}
+                      aria-label="Open landscape video fullscreen"
+                      className="pointer-events-auto absolute right-3 top-24 z-40 grid h-11 w-11 place-items-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur-sm transition active:scale-90 sm:right-4 lg:hidden"
+                    >
+                      <Maximize2 className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -1442,6 +1499,48 @@ export default function VideoFeedPage() {
 
       {/* ── DETAIL PANEL ────────────────────────────────────────── */}
       <AnimatePresence>
+        {isMobileFullscreen && currentVideo && isLandscapeVideo && (
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Fullscreen video"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black lg:hidden"
+          >
+            <iframe
+              ref={fullscreenIframeRef}
+              title={`${videoTitle} fullscreen`}
+              src={fullscreenIframeSrc}
+              className="aspect-video max-h-[100svh] w-full bg-black"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              referrerPolicy="strict-origin-when-cross-origin"
+              onLoad={(event) => {
+                const iframe = event.currentTarget;
+                fullscreenIframeRef.current = iframe;
+                sendYouTubeCommand(iframe, "playVideo");
+                if (muted) {
+                  sendYouTubeCommand(iframe, "mute");
+                } else {
+                  sendYouTubeCommand(iframe, "setVolume", [100]);
+                  sendYouTubeCommand(iframe, "unMute");
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={closeMobileFullscreen}
+              aria-label="Exit fullscreen video"
+              className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] grid h-11 w-11 place-items-center rounded-full bg-black/65 text-white shadow-xl backdrop-blur-md transition active:scale-90"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {panelOpen && currentVideo && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -1470,14 +1569,7 @@ export default function VideoFeedPage() {
                          md:inset-y-6 md:left-auto md:right-6 md:w-[29rem] md:rounded-[28px] md:shadow-[0_24px_90px_rgba(0,0,0,0.62)]"
             >
               <div className="absolute left-1/2 top-2.5 z-20 h-1 w-10 -translate-x-1/2 rounded-full bg-white/25 md:hidden" />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.045] via-transparent to-black/35" />
-              {currentBackdrop && (
-                <div
-                  className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-cover bg-center opacity-38"
-                  style={{ backgroundImage: `url(${currentBackdrop})` }}
-                />
-              )}
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-black/15 via-[#0b0c0f]/78 to-transparent" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.035] via-transparent to-black/35" />
 
               <div
                 ref={panelRef}
@@ -1501,6 +1593,40 @@ export default function VideoFeedPage() {
                 </motion.button>
               </div>
 
+              <div className="relative h-52 shrink-0 overflow-hidden border-b border-white/[0.08] sm:h-60 md:h-64">
+                {currentBackdrop && !modalBackdropError ? (
+                  <Image
+                    src={currentBackdrop}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes="(max-width: 767px) 100vw, 464px"
+                    className="object-cover object-center"
+                    onError={() => setModalBackdropError(true)}
+                  />
+                ) : currentPoster ? (
+                  <Image
+                    src={currentPoster}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes="(max-width: 767px) 100vw, 464px"
+                    className="scale-110 object-cover object-center blur-md"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(233,79,55,0.28),transparent_42%),linear-gradient(135deg,#18191e,#08090b)]" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0c0f] via-[#0b0c0f]/20 to-black/10" />
+                <div className="absolute inset-x-0 bottom-0 px-4 pb-5 sm:px-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#ff8a76]">
+                    {currentVideoTypeLabel}
+                  </p>
+                  <h2 className="mt-1 line-clamp-2 max-w-md text-2xl font-black leading-[1.05] tracking-[-0.025em] text-white drop-shadow-lg sm:text-3xl">
+                    {currentVideo.title || currentVideo.name}
+                  </h2>
+                </div>
+              </div>
+
               <div className="space-y-5 px-4 pb-5 pt-5 sm:px-5">
                 <div className="flex gap-4">
                   <div
@@ -1513,9 +1639,9 @@ export default function VideoFeedPage() {
                     aria-hidden="true"
                   />
                   <div className="min-w-0 flex-1 pt-1">
-                    <h2 className="mb-3 line-clamp-3 text-xl font-black leading-[1.08] tracking-[-0.02em] text-white sm:text-2xl">
-                      {currentVideo.title || currentVideo.name}
-                    </h2>
+                    <p className="mb-3 text-sm leading-6 text-white/55">
+                      {currentVideo.overview || "Discover more about this title."}
+                    </p>
                     <div className="flex flex-wrap items-center gap-2">
                       {currentYear && Number.isFinite(currentYear) && (
                         <span className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.08] px-2.5 py-1 text-xs font-bold text-white/70">
