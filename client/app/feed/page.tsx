@@ -842,12 +842,11 @@ export default function VideoFeedPage() {
     (typeof currentAspectRatio === "number" && currentAspectRatio < 1);
   const videoFrameSizeClassName = cn(
     isPortraitVideo
-      ? "h-[calc(100svh-3.5rem)] w-[min(100vw,calc((100svh-3.5rem)*0.5625))] max-w-full lg:h-[calc(100svh-1rem)] lg:w-[calc((100svh-1rem)*0.5625)]"
-      : "h-[62svh] min-h-[18rem] w-full sm:aspect-video sm:h-auto sm:min-h-0 sm:max-w-[calc((100svh-5.5rem)*1.7778)] lg:aspect-auto lg:h-[calc(100svh-1rem)] lg:w-[min(calc(100vw-1rem),calc((100svh-1rem)*1.7778))] lg:max-w-none",
-    "sm:rounded-2xl lg:rounded-xl",
+      ? "h-[100svh] w-screen max-w-none lg:h-[calc(100svh-1rem)] lg:w-[calc((100svh-1rem)*0.5625)]"
+      : "h-[100svh] w-screen max-w-none lg:h-[100svh] lg:w-screen",
   );
   const videoFrameClassName = cn(
-    "relative isolate overflow-hidden bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),0_24px_80px_rgba(0,0,0,0.45)]",
+    "relative isolate overflow-hidden bg-black",
     videoFrameSizeClassName,
   );
 
@@ -987,7 +986,7 @@ export default function VideoFeedPage() {
               className="absolute inset-0 flex items-center justify-center"
             >
               {/* Video iframe */}
-              <div className="relative flex h-full w-full items-center justify-center bg-transparent pt-14 sm:pt-16 lg:p-2">
+              <div className="relative flex h-full w-full items-center justify-center bg-transparent">
                 <div className={videoFrameClassName}>
                   {currentBackdrop && (
                     <div
@@ -1052,11 +1051,11 @@ export default function VideoFeedPage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: "easeOut" }}
-                className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center pt-14 sm:pt-16 lg:p-2"
+                className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
               >
                 <div
                   className={cn(
-                    "relative overflow-hidden",
+                    "relative flex items-end overflow-hidden",
                     videoFrameSizeClassName,
                   )}
                 >
@@ -1067,7 +1066,7 @@ export default function VideoFeedPage() {
                 <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-black/44 to-transparent lg:h-20 lg:from-black/34" />
 
                 {/* Content */}
-                <div className="relative px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pr-20 pt-24 sm:pr-24 lg:px-7 lg:pb-4 lg:pr-28 lg:pt-20">
+                <div className="relative w-full px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pr-20 pt-24 sm:pr-24 lg:px-8 lg:pb-7 lg:pr-32 lg:pt-28">
                   <h2
                     className="mb-2 line-clamp-2 text-xl font-bold leading-tight text-white lg:text-2xl"
                     style={{
@@ -1124,7 +1123,7 @@ export default function VideoFeedPage() {
               </motion.div>
 
               {/* Action Buttons — always visible, Info included */}
-              <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center pt-14 sm:pt-16 lg:p-2">
+              <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
                 <div
                   className={cn(
                     "relative pointer-events-none",
