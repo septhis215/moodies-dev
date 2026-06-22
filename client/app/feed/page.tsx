@@ -112,9 +112,10 @@ export default function VideoFeedPage() {
   const viewerIdRef = useRef<string>("");
   const reportedViewsRef = useRef<Set<string>>(new Set());
 
-  // YouTube autoplay must begin muted. Starting the UI in the same state keeps
-  // the sound icon honest and lets the first sound-button tap unmute directly.
-  const [muted, setMuted] = useState(true);
+  // Prefer audible playback whenever the browser allows it. The first-user
+  // gesture listener below retries the unmute command if autoplay policy blocks
+  // sound during the initial page load.
+  const [muted, setMuted] = useState(false);
 
   const [panelOpen, setPanelOpen] = useState(false);
   const {
@@ -552,9 +553,10 @@ export default function VideoFeedPage() {
     if (!iframe) return;
 
     pauseInactiveVideos(currentVideoIdentity);
-    sendYouTubeCommand(iframe, "mute", []);
+    sendYouTubeCommand(iframe, "setVolume", [100]);
+    sendYouTubeCommand(iframe, muted ? "mute" : "unMute", []);
     sendYouTubeCommand(iframe, "playVideo", []);
-    if (firstUserGestureRef.current && !muted) {
+    if (!muted) {
       sendYouTubeCommand(iframe, "setVolume", [100]);
       sendYouTubeCommand(iframe, "unMute", []);
     }
@@ -596,7 +598,7 @@ export default function VideoFeedPage() {
       const t = window.setTimeout(
         () => {
           if (muted) sendYouTubeCommand(iframe, "mute");
-          else if (firstUserGestureRef.current) {
+          else {
             sendYouTubeCommand(iframe, "setVolume", [100]);
             sendYouTubeCommand(iframe, "unMute");
           }
@@ -760,7 +762,10 @@ export default function VideoFeedPage() {
       firstUserGestureRef.current = true;
       const iframe = videoRefs.current.get(currentVideoIdentity);
       if (iframe) {
-        if (!muted) sendYouTubeCommand(iframe, "unMute", []);
+        if (!muted) {
+          sendYouTubeCommand(iframe, "setVolume", [100]);
+          sendYouTubeCommand(iframe, "unMute", []);
+        }
         sendYouTubeCommand(iframe, "playVideo", []);
         setIsPlaying(true);
       }
@@ -788,7 +793,7 @@ export default function VideoFeedPage() {
       typeof window !== "undefined"
         ? encodeURIComponent(window.location.origin)
         : "";
-    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&cc_load_policy=0&autohide=1&showinfo=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=1&vq=hd1080&origin=${origin}`;
+    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&cc_load_policy=0&autohide=1&showinfo=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=0&vq=hd1080&origin=${origin}`;
   }, [currentVideo?.primary_video?.key]);
 
   const togglePlayPause = () => {
