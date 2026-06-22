@@ -1,160 +1,133 @@
-// File: Navbar.tsx
 "use client";
 
-import React, { useEffect, useRef, useState, Fragment } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
 import { createPortal } from "react-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  IconMenu2,
-  IconX,
-  IconUsers,
-  IconMoodSmile,
-  IconUser,
-  IconSettings,
-  IconLogout,
-  IconLogin,
-  IconUserPlus,
+  IconArrowUpRight,
   IconChevronDown,
+  IconHome,
+  IconLogin,
+  IconLogout,
+  IconMenu2,
+  IconMoodSmile,
   IconMovie,
+  IconPhoto,
+  IconSparkles,
+  IconUser,
+  IconUserPlus,
 } from "@tabler/icons-react";
+import { Bookmark, Heart, MouseIcon, Tv } from "lucide-react";
+import { useAuth } from "@/app/context/AuthProvider";
+import { useToast } from "@/app/context/ToastContext";
+import DropdownPortal from "./ui/dropdownPortal";
+import SearchBar from "./ui/searchbar";
 import {
-  Tv
-} from "lucide-react";
-import {
-  Navbar,
-  NavBody,
-  NavbarLogo,
   MobileNav,
   MobileNavHeader,
   MobileNavMenu,
   MobileNavToggle,
+  NavBody,
+  Navbar,
+  NavbarLogo,
 } from "./ui/resizable-navbar";
-import SearchBar from "./ui/searchbar";
-import Link from "next/link";
-import {
-  Bookmark,
-  Heart,
-  Infinity,
-  List,
-  Loader,
-  MouseIcon,
-  PhoneIcon,
-  Repeat,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/app/context/AuthProvider";
-import DropdownPortal from "./ui/dropdownPortal";
-import { useToast } from "@/app/context/ToastContext";
 
 const routes = [
   { name: "Home", href: "/" },
   { name: "Movies", href: "/movies" },
   { name: "Series", href: "/tv" },
-  // { name: "Community", href: "/community" },
   { name: "Your Moods", href: "/moods/explore", noLink: true },
   { name: "My Collection", href: "/collection", noLink: true },
 ];
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-type User = {
-  name: string;
-  username?: string;
-  email: string;
-  avatarUrl?: string;
+const routeOptions: Record<string, { label: string; path: string }[]> = {
+  "/": [
+    { label: "Trending", path: "/trending" },
+    { label: "New Releases", path: "/new-releases" },
+    { label: "Korean Hits", path: "/korea-hits" },
+    { label: "Moods", path: "/moods/explore" },
+    { label: "Coming Soon", path: "/coming-soon" },
+  ],
+  "/movies": [
+    { label: "Box Office Hits", path: "/movies/box-office" },
+    { label: "New Releases", path: "/movies/new-releases" },
+    { label: "Featured Now", path: "/movies/featured" },
+    { label: "Korean Cinema", path: "/movies/korean-cinema" },
+    { label: "Action-Packed", path: "/movies/action" },
+    { label: "Award Winners", path: "/movies/award-winners" },
+    { label: "Animated Magic", path: "/movies/animated" },
+    { label: "Indie Spotlight", path: "/movies/indie" },
+    { label: "Moods Matcher", path: "/movies#moods" },
+  ],
+  "/tv": [
+    { label: "Airing Today", path: "/tv/airing/today" },
+    { label: "Trending Now", path: "/tv/trending" },
+    { label: "New Releases", path: "/tv/new-releases" },
+    { label: "Top Rated", path: "/tv/top-rated" },
+    { label: "Airing This Week", path: "/tv/airing/week" },
+    { label: "K-Drama Collection", path: "/tv/k-drama" },
+    { label: "Moods Matcher", path: "/tv#moods" },
+  ],
+  "/moods/explore": [
+    { label: "Mood Wheels", path: "/moods" },
+    { label: "Movie Matcher", path: "/movies#moods" },
+    { label: "TV Matcher", path: "/tv#moods" },
+    { label: "Personality Quiz", path: "/quiz" },
+    { label: "Moodies Feed", path: "/feed" },
+  ],
+  "/collection": [
+    { label: "My List", path: "/watchlist" },
+    { label: "My Likes", path: "/liked" },
+  ],
+};
+
+const routeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  "/": IconHome,
+  "/movies": IconMovie,
+  "/tv": Tv,
+  "/moods/explore": IconMoodSmile,
+  "/collection": Bookmark,
 };
 
 const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };
+const focusRing =
+  "outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]/75 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0f]";
 
 export function NavbarComponent() {
-  const router = useRouter();
-
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // for the big site menu (menu-portal)
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
-  const createdPortalRef = useRef<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [activeRoute, setActiveRoute] = useState<string>(routes[0].href);
-  const [activeMobileRoute, setActiveMobileRoute] = useState<string | null>(null);
-  const [mobileExpandedRoute, setMobileExpandedRoute] = useState<string | null>(routes[0].href);
+  const [activeRoute, setActiveRoute] = useState(routes[0].href);
+  const [mobileExpandedRoute, setMobileExpandedRoute] = useState<string | null>(
+    routes[0].href,
+  );
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const createdPortalRef = useRef(false);
+  const dropdownTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const dropdownContentRef = useRef<HTMLDivElement | null>(null);
+  const hoverTimeoutRef = useRef<number | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const { user, isAuthenticated, logout: doLogout } = useAuth();
   const { toast } = useToast();
 
-  const routeOptions: Record<string, { label: string; path: string }[]> = {
-    "/": [
-      { label: "Trending", path: "/trending" },
-      { label: "New Releases", path: "/new-releases" },
-      { label: "Korean Hits", path: "/korea-hits" },
-      { label: "Moods", path: "/moods/explore" },
-      { label: "Coming Soon", path: "/coming-soon" },
-    ],
+  const profileHref = isAuthenticated ? "/profile" : "/auth/login";
+  const displayName = user?.username ?? user?.name ?? "Guest";
+  const initial = (user?.username?.[0] || user?.name?.[0] || "M").toUpperCase();
 
-    "/movies": [
-      { label: "Box Office Hits", path: "/movies/box-office" },
-      { label: "New Releases", path: "/movies/new-releases" },
-      { label: "Featured Now", path: "/movies/featured" },
-      { label: "Korean Cinema", path: "/movies/korean-cinema" },
-      { label: "Action-Packed", path: "/movies/action" },
-      { label: "Award Winners", path: "/movies/award-winners" },
-      { label: "Animated Magic", path: "/movies/animated" },
-      { label: "Indie Spotlight", path: "/movies/indie" },
-      { label: "Moods Matcher", path: "/movies#moods" },
-    ],
-
-    "/tv": [
-      { label: "Airing Today", path: "/tv/airing/today" },
-      { label: "Trending Now", path: "/tv/trending" },
-      { label: "New Releases", path: "/tv/new-releases" },
-      { label: "Top Rated", path: "/tv/top-rated" },
-      { label: "Airing This Week", path: "/tv/airing/week" },
-      { label: "K-Drama Collection", path: "/tv/k-drama" },
-      { label: "Moods Matcher", path: "/tv#moods" },
-    ],
-
-    "/moods": [
-      { label: "Moodies Feed", path: "/feed" },
-      { label: "Mood Wheels", path: "/moods" },
-      { label: "Personality Quiz", path: "/quiz" },
-    ],
-
-    "/moods/explore": [
-      { label: "Mood Wheels", path: "/moods" },
-      { label: "Movie Matcher", path: "/movies#moods" },
-      { label: "TV Matcher", path: "/tv#moods" },
-      { label: "Personality Quiz", path: "/quiz" },
-      { label: "Moodies Feed", path: "/feed" },
-    ],
-
-    "/collection": [
-      { label: "My List", path: "/watchlist" },
-      { label: "My Likes", path: "/liked" },
-    ],
-  };
-  const dropdownTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const dropdownContentRef = useRef<HTMLDivElement | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
-
-  // hover timer to avoid flicker
-  const hoverTimeoutRef = useRef<number | null>(null);
-
-  const openProfile = (immediate = false) => {
+  const openProfile = () => {
     if (!dropdownTriggerRef.current) return;
     const rect = dropdownTriggerRef.current.getBoundingClientRect();
-
     setDropdownPosition({
-      top: rect.bottom + 8,
-      left: rect.right - 224,
+      top: rect.bottom + 10,
+      left: Math.max(12, rect.right - 256),
     });
-
-    if (hoverTimeoutRef.current) {
-      window.clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
-
-    if (immediate) setIsProfileOpen(true);
-    else setIsProfileOpen(true);
+    if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = null;
+    setIsProfileOpen(true);
   };
 
   const closeProfile = (delay = 120) => {
@@ -162,467 +135,312 @@ export function NavbarComponent() {
     hoverTimeoutRef.current = window.setTimeout(() => {
       setIsProfileOpen(false);
       hoverTimeoutRef.current = null;
-    }, delay) as unknown as number;
+    }, delay);
   };
 
-  const toggleProfile = () => {
-    if (isProfileOpen) {
-      setIsProfileOpen(false);
-    } else {
-      openProfile(true);
-    }
-  };
-
-  const logout = () => {
+  const logout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
     setIsProfileOpen(false);
 
-    toast(
-      "You've been logged out successfully",
-      "info",
-      3000,
-      "Goodbye!",
-      MOODIES_LOGO,
-      MOODIES_SIZE
-    );
-
-    setTimeout(() => {
-      void doLogout();
-    }, 500);
+    try {
+      await doLogout();
+      toast(
+        "You've been logged out successfully",
+        "info",
+        3000,
+        "See you next time",
+        MOODIES_LOGO,
+        MOODIES_SIZE,
+      );
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
-  // Create/find portal root on mount. Clean up if we created it.
   useEffect(() => {
-    if (typeof document === "undefined") return;
-
-    let el = document.getElementById("menu-portal") as HTMLElement | null;
-    if (!el) {
-      el = document.createElement("div");
-      el.id = "menu-portal";
-      document.body.appendChild(el);
+    let element = document.getElementById("menu-portal");
+    if (!element) {
+      element = document.createElement("div");
+      element.id = "menu-portal";
+      document.body.appendChild(element);
       createdPortalRef.current = true;
     }
-    setPortalRoot(el);
+    setPortalRoot(element);
 
     return () => {
-      if (createdPortalRef.current && el && el.parentNode) {
-        el.parentNode.removeChild(el);
+      if (createdPortalRef.current && element?.parentNode) {
+        element.parentNode.removeChild(element);
       }
     };
   }, []);
 
-  // close on Escape (still closes both)
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsProfileOpen(false);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         setIsMenuOpen(false);
         setIsMobileOpen(false);
-        setIsMobileSearchOpen(false);
+        setIsProfileOpen(false);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  // lock body scroll while desktop SITE menu is open (NOT the profile dropdown)
   useEffect(() => {
-    if (isMenuOpen) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "";
-  }, [isMenuOpen]);
+    const previousOverflow = document.body.style.overflow;
+    if (isMenuOpen || isMobileOpen) document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMenuOpen, isMobileOpen]);
 
-  // close profile on outside click (works across portal boundary)
   useEffect(() => {
-    const onDocDown = (e: MouseEvent) => {
-      const target = e.target as Node | null;
-      if (!target) return;
-
+    const onDocumentPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
-        dropdownTriggerRef.current &&
-        dropdownTriggerRef.current.contains(target)
+        dropdownTriggerRef.current?.contains(target) ||
+        dropdownContentRef.current?.contains(target)
       ) {
-        // clicked trigger -> let button click handler handle toggling
         return;
       }
-      if (
-        dropdownContentRef.current &&
-        dropdownContentRef.current.contains(target)
-      ) {
-        // clicked inside dropdown content -> keep open
-        return;
-      }
-
-      // otherwise close profile dropdown
       setIsProfileOpen(false);
     };
-
-    document.addEventListener("mousedown", onDocDown);
-    return () => document.removeEventListener("mousedown", onDocDown);
+    document.addEventListener("mousedown", onDocumentPointerDown);
+    return () => document.removeEventListener("mousedown", onDocumentPointerDown);
   }, []);
 
-  // The full dropdown panel (rendered into portalRoot)
-  const menuNode = (
+  const avatar = (size: "small" | "large" = "small") => {
+    const dimensions = size === "large" ? "h-12 w-12" : "h-9 w-9";
+    return (
+      <span
+        className={`grid ${dimensions} shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.055] text-sm font-semibold text-white/80`}
+      >
+        {isAuthenticated && user?.avatarUrl ? (
+          <Image
+            src={user.avatarUrl}
+            alt=""
+            width={size === "large" ? 48 : 36}
+            height={size === "large" ? 48 : 36}
+            unoptimized
+            className="h-full w-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+        ) : isAuthenticated ? (
+          initial
+        ) : (
+          <IconUser className="h-5 w-5" aria-hidden="true" />
+        )}
+      </span>
+    );
+  };
+
+  const desktopMenu = (
     <AnimatePresence>
       {isMenuOpen && (
         <motion.div
-          key="menu-dropdown"
           id="site-menu"
-          transition={{
-            type: "spring",
-            stiffness: 280,
-            damping: 30,
-            mass: 0.8,
-          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Explore Moodies"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4"
-          style={{
-            backdropFilter: "blur(24px)",
-            background:
-              "linear-gradient(135deg, rgba(0,0,0,0.88) 0%, rgba(15,15,25,0.92) 100%)",
-            willChange: "opacity",
-          }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-3 backdrop-blur-md sm:p-5"
           onClick={() => setIsMenuOpen(false)}
         >
-          {/* Animated background particles */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {[...Array(25)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute rounded-full"
-                style={{
-                  width: Math.random() * 3 + 1,
-                  height: Math.random() * 3 + 1,
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  background: `rgba(233, 79, 55, ${Math.random() * 0.3 + 0.1})`,
-                }}
-                animate={{
-                  y: [0, -30, 0],
-                  x: [0, Math.random() * 20 - 10, 0],
-                  opacity: [0.2, 0.8, 0.2],
-                  scale: [1, 1.2, 1],
-                }}
-                transition={{
-                  duration: 3 + Math.random() * 2,
-                  repeat: Number.POSITIVE_INFINITY,
-                  delay: Math.random() * 2,
-                  ease: "easeInOut",
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Main content card */}
           <motion.div
-            initial={{ scale: 0.92, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.92, opacity: 0, y: 20 }}
-            transition={{
-              duration: 0.4,
-              ease: [0.22, 1, 0.36, 1],
-              opacity: { duration: 0.25 },
-            }}
-            className="relative flex flex-col lg:flex-row w-full mx-auto rounded-3xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              maxWidth: "min(960px, calc(100vw - 1.5rem))",
-              height: "min(82svh, 560px)",
-              minHeight: 0,
-              background:
-                "linear-gradient(135deg, rgba(20,20,30,0.98) 0%, rgba(10,10,15,0.96) 100%)",
-              boxShadow:
-                "0 50px 100px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.06) inset, 0 0 100px rgba(233,79,55,0.15)",
-              border: "1px solid rgba(255,255,255,0.08)",
-            }}
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.985 }}
+            transition={{ type: "spring", stiffness: 320, damping: 30 }}
+            className="relative grid h-[min(720px,88svh)] min-h-0 w-full max-w-5xl grid-cols-[minmax(230px,0.78fr)_minmax(0,1.45fr)] overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0c0f]/95 text-white shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+            onClick={(event) => event.stopPropagation()}
           >
-            {/* Gradient overlay borders */}
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/50 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/30 to-transparent" />
-            </div>
-
-            {/* LEFT SECTION - Navigation */}
-            <div
-              className="flex-1 lg:basis-[45%] flex flex-col justify-start relative"
-              style={{
-                padding: "clamp(1rem, 2.5vw, 1.75rem) clamp(1rem, 2.5vw, 1.6rem)",
-                gap: "clamp(0.5rem, 1.5vh, 1.1rem)",
-                background:
-                  "radial-gradient(circle at top left, rgba(233,79,55,0.12), transparent 70%)",
-              }}
-            >
-              {/* Decorative corner element */}
-              <div className="absolute top-0 left-0 w-32 h-32 opacity-20">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#e94f37] to-transparent blur-3xl" />
+            <aside className="flex min-h-0 flex-col border-r border-white/[0.08] bg-white/[0.025] p-5 xl:p-6">
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <div>
+                  <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#ef775f]">
+                    <IconSparkles className="h-4 w-4" aria-hidden="true" />
+                    Moodies guide
+                  </div>
+                  <h2 className="text-2xl font-semibold tracking-tight">Explore</h2>
+                  <p className="mt-1 text-sm text-white/45">
+                    Find your next watch by story or mood.
+                  </p>
+                </div>
+                <div className="relative hidden h-16 w-16 shrink-0 sm:block" aria-hidden="true">
+                  <div className="absolute inset-2 rounded-full bg-[#e94f37]/10 blur-xl" />
+                  <Image
+                    src={MOODIES_LOGO}
+                    alt=""
+                    fill
+                    sizes="64px"
+                    className="relative object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.35)]"
+                  />
+                </div>
               </div>
 
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="relative z-10"
-              >
-                <h2
-                  className="font-bold leading-tight mb-1"
-                  style={{
-                    fontSize: "clamp(1.25rem, 2.5vw, 2rem)",
-                    background:
-                      "linear-gradient(135deg, #ffffff 0%, #e0e0e0 50%, #888 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    backgroundClip: "text",
-                  }}
-                >
-                  Explore
-                </h2>
-                <p
-                  className="text-gray-400 font-light"
-                  style={{ fontSize: "clamp(0.7rem, 1.2vw, 0.82rem)" }}
-                >
-                  Discover what moves you
-                </p>
-              </motion.div>
-
-              {/* Navigation Links */}
-
               <nav
-                className="flex flex-col relative z-10 mt-4"
-                style={{ gap: "clamp(0.2rem, 0.8vh, 0.6rem)" }}
+                aria-label="Explore sections"
+                className="min-h-0 space-y-1.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-color:rgba(255,255,255,0.16)_transparent] [scrollbar-width:thin]"
               >
-                {routes.map((r, idx) => {
-                  const isActive = activeRoute === r.href;
+                {routes.map((route, index) => {
+                  const isActive = activeRoute === route.href;
+                  const RouteIcon = routeIcons[route.href] || IconPhoto;
 
                   return (
                     <motion.div
-                      key={r.href}
-                      initial={{ opacity: 0, x: -30 }}
+                      key={route.href}
+                      initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.15 + idx * 0.05, duration: 0.4 }}
-                      className="relative"
+                      transition={{ delay: 0.04 + index * 0.035 }}
+                      className={`group flex items-center rounded-xl border transition-colors ${
+                        isActive
+                          ? "border-[#e94f37]/25 bg-[#e94f37]/10"
+                          : "border-transparent hover:border-white/[0.08] hover:bg-white/[0.045]"
+                      }`}
                     >
-                      <div className="flex items-center justify-between">
-                        {/* ROOT OPTION (button, not link) */}
-                        <button
-                          type="button"
-                          onClick={() => setActiveRoute(r.href)}
-                          className="group relative flex items-center flex-1 text-left pl-4 py-2 rounded-2xl transition-all"
+                      <button
+                        type="button"
+                        onClick={() => setActiveRoute(route.href)}
+                        aria-pressed={isActive}
+                        className={`flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl px-3 text-left ${focusRing}`}
+                      >
+                        <span
+                          className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border ${
+                            isActive
+                              ? "border-[#e94f37]/25 bg-[#e94f37]/10 text-[#f2836d]"
+                              : "border-white/[0.08] bg-white/[0.035] text-white/55 group-hover:text-white/80"
+                          }`}
                         >
-                          {/* Active glow bar */}
-                          <motion.div
-                            className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 rounded-full bg-gradient-to-b from-[#e94f37] to-orange-500"
-                            initial={false}
-                            animate={{
-                              height: isActive ? "2.5rem" : 0,
-                              opacity: isActive ? 1 : 0,
-                            }}
-                            transition={{ duration: 0.25 }}
-                          />
-
-                          <span
-                            className={`font-semibold transition-colors ${isActive
-                              ? "text-[#e94f37]"
-                              : "text-gray-300 group-hover:text-white"
-                              }`}
-                            style={{
-                              fontSize: "clamp(0.8rem, 1.6vw, 1.15rem)",
-                              letterSpacing: "-0.02em",
-                            }}
-                          >
-                            {r.name}
-                          </span>
-                        </button>
-
-                        {/* GO TO ROOT BUTTON */}
-                        {!r.noLink && (
-                          <Link
-                            href={r.href}
-                            onClick={() => setIsMenuOpen(false)}
-                            className="
-                              ml-3 px-3 py-1 rounded-full text-sm font-medium
-                              text-[#e94f37]
-                              bg-[#e94f37]/10
-                              border border-[#e94f37]/30
-                              hover:bg-[#e94f37]/20
-                              hover:border-[#e94f37]/50
-                              transition
-                            "
-                          >
-                            Go to {r.name}
-                          </Link>
-                        )}
-                      </div>
+                          <RouteIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                        </span>
+                        <span
+                          className={`truncate text-sm font-medium ${
+                            isActive ? "text-white" : "text-white/68"
+                          }`}
+                        >
+                          {route.name}
+                        </span>
+                      </button>
+                      {!route.noLink && (
+                        <Link
+                          href={route.href}
+                          onClick={() => setIsMenuOpen(false)}
+                          aria-label={`Go to ${route.name}`}
+                          className={`mr-2 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white/35 transition hover:bg-white/[0.06] hover:text-[#f2836d] ${focusRing}`}
+                        >
+                          <IconArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                      )}
                     </motion.div>
                   );
                 })}
               </nav>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="mt-auto text-gray-500 text-sm font-light relative z-10"
-              >
-                © {new Date().getFullYear()} Moodies • All rights reserved
-              </motion.div>
-            </div>
+              <p className="mt-auto pt-5 text-xs text-white/28">
+                © {new Date().getFullYear()} Moodies
+              </p>
+            </aside>
 
-            {/* DIVIDER */}
-            <div className="hidden lg:block w-px bg-gradient-to-b from-transparent via-white/10 to-transparent" />
-
-            {/* RIGHT SECTION - Dynamic Content */}
-            <div
-              className="lg:basis-[55%] flex flex-col relative overflow-hidden min-h-0"
-              style={{
-                padding: "clamp(1rem, 2.5vw, 1.75rem) clamp(1rem, 2.5vw, 1.6rem)",
-                background:
-                  "radial-gradient(circle at bottom right, rgba(233,79,55,0.08), transparent 60%)",
-                flex: "0 0 55%",
-              }}
-            >
-              {/* Decorative corner element */}
-              <div className="absolute bottom-0 right-0 w-40 h-40 opacity-15">
-                <div className="absolute inset-0 bg-gradient-to-tl from-orange-500 to-transparent blur-3xl" />
+            <section className="flex min-h-0 min-w-0 flex-col overflow-hidden p-5 xl:p-6">
+              <div className="mb-4 flex shrink-0 items-end justify-between gap-4">
+                <div>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#ef775f]">
+                    {routes.find((route) => route.href === activeRoute)?.name}
+                  </p>
+                  <h3 className="text-xl font-semibold tracking-tight">Pick a destination</h3>
+                </div>
+                <span className="hidden text-xs text-white/35 sm:block">
+                  {routeOptions[activeRoute]?.length || 0} places to explore
+                </span>
               </div>
 
-              {/* Content area */}
               <motion.div
                 key={activeRoute}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="flex-1 flex flex-col relative z-10 min-h-0 overflow-y-auto hide-scrollbar"
-                style={{
-                  scrollbarWidth: "none",
-                  msOverflowStyle: "none",
-                  overflowY: "auto",
-                }}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                role="tabpanel"
+                aria-label={`${routes.find((route) => route.href === activeRoute)?.name} destinations`}
+                tabIndex={0}
+                className={`min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-2xl border border-white/[0.07] bg-black/10 p-2 pr-1.5 [scrollbar-color:rgba(233,79,55,0.38)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin] ${focusRing}`}
               >
-                {/* Section Title */}
-                <div className="mb-3">
-                  <motion.div
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#e94f37]/10 border border-[#e94f37]/30 mb-2"
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    <div className="w-2 h-2 rounded-full bg-[#e94f37] animate-pulse" />
-                    <span className="text-[#e94f37] text-sm font-medium">
-                      {routes.find((x) => x.href === activeRoute)?.name}
-                    </span>
-                  </motion.div>
-
-                  <h3
-                    className="font-bold text-white leading-tight"
-                    style={{ fontSize: "clamp(0.95rem, 1.6vw, 1.3rem)" }}
-                  >
-                    Quick Actions
-                  </h3>
-                </div>
-
-                {/* Options Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2">
-                  {(routeOptions[activeRoute] || []).map((opt, idx) => (
+                <div className="grid grid-cols-2 gap-2.5">
+                  {(routeOptions[activeRoute] || []).map((option, index) => (
                     <motion.div
-                      key={opt.path}
-                      initial={{ opacity: 0, y: 10 }}
+                      key={option.path}
+                      initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 + idx * 0.05 }}
+                      transition={{ delay: index * 0.025 }}
                     >
                       <Link
-                        href={opt.path}
+                        href={option.path}
                         onClick={() => setIsMenuOpen(false)}
-                        className="group relative block p-3 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:border-[#e94f37]/50 transition-all duration-300 overflow-hidden"
+                        className={`group flex min-h-[76px] items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 transition duration-200 hover:-translate-y-0.5 hover:border-[#e94f37]/25 hover:bg-white/[0.055] ${focusRing}`}
                       >
-                        <motion.div
-                          className="absolute inset-0 bg-gradient-to-br from-[#e94f37]/10 via-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                          initial={false}
-                        />
-                        <div className="relative z-10">
-                          <span className="text-white font-medium block mb-1 group-hover:text-[#e94f37] transition-colors">
-                            {opt.label}
+                        <div className="min-w-0">
+                          <span className="block truncate text-sm font-medium text-white/82 transition-colors group-hover:text-white">
+                            {option.label}
                           </span>
-                          <span className="text-gray-500 text-sm">
-                            Explore →
+                          <span className="mt-1 block text-xs text-white/35">
+                            Explore this collection
                           </span>
                         </div>
-                        <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-[#e94f37]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        <IconArrowUpRight
+                          className="h-4 w-4 shrink-0 text-white/25 transition group-hover:text-[#f2836d]"
+                          aria-hidden="true"
+                        />
                       </Link>
                     </motion.div>
                   ))}
                 </div>
               </motion.div>
 
-              {/* Profile Section - pinned to bottom */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="relative z-10 flex-shrink-0 pt-4 mt-2 border-t border-white/[0.08]"
-              >
-                <div className="flex items-center gap-3">
-                  {/* Avatar with gradient ring */}
-                  <div className="relative">
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 blur-md opacity-50" />
-                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-[#e94f37] to-orange-500 p-[2px]">
-                      <div className="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center overflow-hidden">
-                        {user?.provider === 'google' && user?.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            alt={user.username || "User"}
-                            className="w-full h-full object-cover"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          <span className="text-xl font-bold text-gray-300">
-                            {(
-                              user?.username?.[0] ||
-                              user?.name?.[0] ||
-                              "G"
-                            ).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* User info */}
-                  <div className="flex-1">
-                    <h4 className="text-white font-semibold text-base">
-                      {user?.username ?? user?.name ?? "Guest"}
-                    </h4>
-                    <p className="text-gray-400 text-sm">
-                      {user?.email || "Sign in for more features"}
-                    </p>
-                  </div>
-
-                  {/* Action button */}
-                  {isAuthenticated ? (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        logout();
-                      }}
-                      className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-medium transition-all"
-                    >
-                      Logout
-                    </motion.button>
-                  ) : (
-                    <Link
-                      href="/auth/login"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#e94f37] to-orange-500 hover:from-[#e94f37]/90 hover:to-orange-500/90 text-white font-medium transition-all"
-                    >
-                      Sign In
-                    </Link>
-                  )}
+              <div className="mt-4 flex shrink-0 items-center gap-3 border-t border-white/[0.08] pt-4">
+                <Link
+                  href={profileHref}
+                  onClick={() => setIsMenuOpen(false)}
+                  aria-label={isAuthenticated ? "View your Moodies profile" : "Sign in to Moodies"}
+                  className={`rounded-xl transition hover:border-[#e94f37]/35 ${focusRing}`}
+                >
+                  {avatar("large")}
+                </Link>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-white">
+                    {isAuthenticated ? displayName : "Welcome to Moodies"}
+                  </p>
+                  <p className="truncate text-xs text-white/42">
+                    {user?.email || "Sign in to save your discoveries"}
+                  </p>
                 </div>
-              </motion.div>
-            </div>
-
-
+                {isAuthenticated ? (
+                  <button
+                    type="button"
+                    disabled={isLoggingOut}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      void logout();
+                    }}
+                    className={`inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3.5 text-sm font-medium text-white/65 transition hover:border-[#e94f37]/25 hover:bg-[#e94f37]/[0.07] hover:text-white disabled:cursor-wait disabled:opacity-55 ${focusRing}`}
+                  >
+                    <IconLogout className="h-[18px] w-[18px]" aria-hidden="true" />
+                    {isLoggingOut ? "Signing out…" : "Sign out"}
+                  </button>
+                ) : (
+                  <Link
+                    href="/auth/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e94f37]/30 bg-[#e94f37]/12 px-4 text-sm font-semibold text-[#ffb09f] transition hover:bg-[#e94f37]/18 hover:text-white ${focusRing}`}
+                  >
+                    <IconLogin className="h-[18px] w-[18px]" aria-hidden="true" />
+                    Sign in
+                  </Link>
+                )}
+              </div>
+            </section>
           </motion.div>
         </motion.div>
       )}
@@ -630,120 +448,83 @@ export function NavbarComponent() {
   );
 
   return (
-    <Navbar className="">
+    <Navbar>
       <NavBody className="hidden lg:flex">
         <NavbarLogo />
 
-        {/* Navigation Links */}
-        <div className="flex items-center gap-1">
-          <Link
-            href="/movies"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-            title="Movies"
-          >
-            <IconMovie size={20} className="!w-5 !h-5" />
-            <span className="text-sm font-medium">Movies</span>
-          </Link>
+        <nav aria-label="Primary navigation" className="flex items-center gap-1">
+          {[
+            { label: "Movies", href: "/movies", icon: IconMovie },
+            { label: "Series", href: "/tv", icon: Tv },
+            { label: "Feed", href: "/feed", icon: MouseIcon },
+            { label: "Moods", href: "/moods/explore", icon: IconMoodSmile },
+          ].map((item) => {
+            const ItemIcon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-white/68 transition hover:bg-white/[0.055] hover:text-white ${focusRing}`}
+              >
+                <ItemIcon className="h-5 w-5" aria-hidden="true" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
 
-          <Link
-            href="/tv"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-            title="Series"
-          >
-            <Tv size={20} className="!w-5 !h-5" />
-            <span className="text-sm font-medium">Series</span>
-          </Link>
-
-          <Link
-            href="/feed"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-            title="Your Feed"
-          >
-            <MouseIcon size={20} className="!w-5 !h-5" />
-            <span className="text-sm font-medium">Feed</span>
-          </Link>
-
-          <Link
-            href="/moods/explore"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-            title="Your Moods"
-          >
-            <IconMoodSmile size={20} className="!w-5 !h-5" />
-            <span className="text-sm font-medium">Moods</span>
-          </Link>
-        </div>
-
-        {/* Right Side Actions */}
-        <div className="flex items-center gap-3">
-          {/* Search Bar */}
-          <div className="inline-flex items-center">
-            <SearchBar
-              placeholder="Search movies, series..."
-              onSearch={(q) => {
-                console.log("search:", q);
-              }}
-            />
-          </div>
-
-          {/* Menu Button */}
+        <div className="flex items-center gap-2.5">
+          <SearchBar
+            placeholder="Search movies, series..."
+            onSearch={(query) => console.log("search:", query)}
+          />
           <button
+            type="button"
             aria-expanded={isMenuOpen}
             aria-controls="site-menu"
-            onClick={() => setIsMenuOpen((s) => !s)}
-            className="rounded-lg border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-600 transition-all"
-            title="Open menu"
+            aria-label={isMenuOpen ? "Close explore menu" : "Open explore menu"}
+            onClick={() => setIsMenuOpen((open) => !open)}
+            className={`grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white/70 transition hover:border-[#e94f37]/25 hover:bg-white/[0.075] hover:text-white ${focusRing}`}
           >
-            <IconMenu2 size={20} />
+            <IconMenu2 className="h-5 w-5" aria-hidden="true" />
           </button>
 
-          {/* Divider */}
-          <div className="h-8 w-px bg-slate-700/50" />
+          <div className="mx-1 h-7 w-px bg-white/10" />
 
-          {/* Profile Section */}
           <div
-            className="relative"
-            onMouseEnter={() => openProfile()}
+            className="relative flex items-center"
+            onMouseEnter={openProfile}
             onMouseLeave={() => closeProfile()}
           >
+            <Link
+              href={profileHref}
+              aria-label={isAuthenticated ? "View your profile" : "Sign in to Moodies"}
+              className={`rounded-xl transition hover:ring-1 hover:ring-[#e94f37]/35 ${focusRing}`}
+            >
+              {avatar()}
+            </Link>
             <button
               ref={dropdownTriggerRef}
-              onClick={toggleProfile}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-all"
+              type="button"
+              onClick={() => (isProfileOpen ? setIsProfileOpen(false) : openProfile())}
+              aria-haspopup="menu"
+              aria-expanded={isProfileOpen}
+              aria-label="Open account menu"
+              className={`ml-1 flex min-h-10 items-center gap-2 rounded-xl px-2 text-left transition hover:bg-white/[0.05] ${focusRing}`}
             >
-              {/* Avatar */}
-              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden ring-2 ring-slate-800 group-hover:ring-slate-600 transition-all">
-                {user?.provider === 'google' && user?.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.username || "User"}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <span className="text-sm font-bold text-slate-300">
-                    {(
-                      user?.username?.[0] ||
-                      user?.name?.[0] ||
-                      "G"
-                    ).toUpperCase()}
-                  </span>
-                )}
-              </div>
-
-              {/* User Info */}
-              <div className="hidden xl:block text-left">
-                <div className="text-sm font-semibold text-white leading-tight">
-                  {user?.username ?? user?.name ?? "Guest"}
-                </div>
-                <div className="text-xs text-gray-400">
-                  {isAuthenticated ? "View Profile" : "Sign In"}
-                </div>
-              </div>
-
-              {/* Dropdown Icon */}
+              <span className="hidden xl:block">
+                <span className="block max-w-28 truncate text-sm font-semibold text-white">
+                  {displayName}
+                </span>
+                <span className="block text-xs text-white/40">
+                  {isAuthenticated ? "View account" : "Sign in"}
+                </span>
+              </span>
               <IconChevronDown
-                size={16}
-                className="text-gray-400 hidden xl:block"
+                className={`hidden h-4 w-4 text-white/40 transition-transform xl:block ${
+                  isProfileOpen ? "rotate-180" : ""
+                }`}
+                aria-hidden="true"
               />
             </button>
 
@@ -751,111 +532,60 @@ export function NavbarComponent() {
               {isProfileOpen && (
                 <div
                   ref={dropdownContentRef}
-                  onMouseEnter={() => {
-                    // keep open while hovering dropdown content
-                    if (hoverTimeoutRef.current) {
-                      window.clearTimeout(hoverTimeoutRef.current);
-                      hoverTimeoutRef.current = null;
-                    }
-                    setIsProfileOpen(true);
-                  }}
+                  role="menu"
+                  onMouseEnter={openProfile}
                   onMouseLeave={() => closeProfile()}
-                  className="fixed z-[999999] w-56 bg-slate-900 border border-slate-800 rounded-xl shadow-xl overflow-hidden backdrop-blur-sm transition-all"
-                  style={{
-                    top: dropdownPosition.top,
-                    left: dropdownPosition.left,
-                  }}
+                  className="fixed z-[999999] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#0c0d10]/95 p-2 text-white shadow-[0_18px_55px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+                  style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
                 >
-                  {/* Header */}
-                  <div className="p-4 border-b border-slate-800">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
-                        {user?.provider === 'google' && user?.avatarUrl ? (
-                          <img
-                            src={user.avatarUrl}
-                            alt={user.username || "User"}
-                            className="w-full h-full object-cover"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          <span className="text-sm font-bold text-slate-300">
-                            {(
-                              user?.username?.[0] ||
-                              user?.name?.[0] ||
-                              "G"
-                            ).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-white truncate">
-                          {user?.username ?? user?.name ?? "Guest"}
-                        </div>
-                        <div className="text-xs text-gray-400 truncate">
-                          {user?.email || "Sign in for more features"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <Link
+                    href={profileHref}
+                    onClick={() => setIsProfileOpen(false)}
+                    className={`flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 transition hover:bg-white/[0.055] ${focusRing}`}
+                  >
+                    {avatar()}
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold">
+                        {displayName}
+                      </span>
+                      <span className="block truncate text-xs text-white/42">
+                        {user?.email || "Sign in for your Moodies profile"}
+                      </span>
+                    </span>
+                  </Link>
 
-                  {/* Items */}
-                  <div className="p-2">
+                  <div className="mt-1 space-y-0.5">
                     {isAuthenticated ? (
                       <>
-                        <Link
-                          href="/profile"
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-                        >
-                          <IconUser size={18} />
-                          <span>My Profile</span>
-                        </Link>
-
-                        <Link
-                          href="/watchlist"
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-                        >
-                          <Bookmark size={18} />
-                          <span>My List</span>
-                        </Link>
-
-                        <Link
-                          href="/liked"
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-                        >
-                          <Heart size={18} />
-                          <span>My Likes</span>
-                        </Link>
-
-                        <div className="my-2 h-px bg-slate-800" />
-
+                        <ProfileMenuLink href="/profile" icon={IconUser} onClick={() => setIsProfileOpen(false)}>
+                          My profile
+                        </ProfileMenuLink>
+                        <ProfileMenuLink href="/watchlist" icon={Bookmark} onClick={() => setIsProfileOpen(false)}>
+                          My list
+                        </ProfileMenuLink>
+                        <ProfileMenuLink href="/liked" icon={Heart} onClick={() => setIsProfileOpen(false)}>
+                          My likes
+                        </ProfileMenuLink>
+                        <div className="my-1.5 h-px bg-white/[0.08]" />
                         <button
-                          onClick={() => {
-                            setIsProfileOpen(false);
-                            logout();
-                          }}
-                          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
+                          type="button"
+                          role="menuitem"
+                          disabled={isLoggingOut}
+                          onClick={() => void logout()}
+                          className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-white/62 transition hover:bg-[#e94f37]/[0.07] hover:text-white disabled:cursor-wait disabled:opacity-55 ${focusRing}`}
                         >
-                          <IconLogout size={18} />
-                          <span>Logout</span>
+                          <IconLogout className="h-[18px] w-[18px] text-[#ef775f]" aria-hidden="true" />
+                          {isLoggingOut ? "Signing out…" : "Sign out"}
                         </button>
                       </>
                     ) : (
                       <>
-                        <Link
-                          href="/auth/login"
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-                        >
-                          <IconLogin size={18} />
-                          <span>Login</span>
-                        </Link>
-
-                        <Link
-                          href="/auth/signup"
-                          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
-                        >
-                          <IconUserPlus size={18} />
-                          <span>Sign Up</span>
-                        </Link>
+                        <ProfileMenuLink href="/auth/login" icon={IconLogin} onClick={() => setIsProfileOpen(false)}>
+                          Sign in
+                        </ProfileMenuLink>
+                        <ProfileMenuLink href="/auth/signup" icon={IconUserPlus} onClick={() => setIsProfileOpen(false)}>
+                          Create account
+                        </ProfileMenuLink>
                       </>
                     )}
                   </div>
@@ -866,258 +596,197 @@ export function NavbarComponent() {
         </div>
       </NavBody>
 
-      {/* MOBILE NAV */}
       <MobileNav visible>
-        <MobileNavHeader className="w-full px-1">
-          <div className="flex items-center">
-            <NavbarLogo className="mr-0" />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="inline-flex">
-              <SearchBar
-                placeholder="Search movies, series..."
-                onSearch={(q) => console.log("search", q)}
-              />
-            </div>
-
+        <MobileNavHeader>
+          <NavbarLogo className="mr-0 px-1" />
+          <div className="flex items-center gap-1.5">
+            <SearchBar
+              placeholder="Search movies, series..."
+              onSearch={(query) => console.log("search", query)}
+            />
             <Link
-              href={isAuthenticated ? "/profile" : "/auth/login"}
-              aria-label={isAuthenticated ? "Open your profile" : "Sign in to your account"}
-              title={isAuthenticated ? "Profile" : "Sign in"}
-              className="grid min-h-10 min-w-10 place-items-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.06] text-white/80 transition hover:border-[#e94f37]/35 hover:bg-[#e94f37]/12 hover:text-white focus:outline-none focus:ring-2 focus:ring-[#e94f37]/70 active:scale-95"
+              href={profileHref}
+              aria-label={isAuthenticated ? "View your profile" : "Sign in to Moodies"}
+              className={`grid min-h-11 min-w-11 place-items-center rounded-xl transition active:scale-95 ${focusRing}`}
             >
-              {isAuthenticated && user?.avatarUrl ? (
-                <Image
-                  src={user.avatarUrl}
-                  alt=""
-                  width={32}
-                  height={32}
-                  unoptimized
-                  className="h-8 w-8 rounded-lg object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <IconUser className="h-5 w-5" aria-hidden="true" />
-              )}
+              {avatar()}
             </Link>
-
             <MobileNavToggle
               isOpen={isMobileOpen}
-              onClick={() => setIsMobileOpen((s) => !s)}
+              onClick={() => setIsMobileOpen((open) => !open)}
             />
           </div>
         </MobileNavHeader>
       </MobileNav>
 
-      {/* Mobile menu content */}
-      <MobileNavMenu
-        isOpen={isMobileOpen}
-        onClose={() => setIsMobileOpen(false)}
-      >
-        <div className="w-full px-4 pb-6">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
-            className="relative flex flex-col gap-1 py-2"
-          >
-            {/* Header */}
-            <motion.div
-              variants={{ hidden: { opacity: 0, y: -10 }, visible: { opacity: 1, y: 0 } }}
-              className="mb-3"
-            >
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
-                Explore
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">Tap a section to expand</p>
-            </motion.div>
+      <MobileNavMenu isOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)}>
+        <div className="mx-auto w-full max-w-xl pb-6">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="relative h-12 w-12 shrink-0" aria-hidden="true">
+              <Image src={MOODIES_LOGO} alt="" fill sizes="48px" className="object-contain" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ef775f]">
+                Moodies guide
+              </p>
+              <h2 className="text-xl font-semibold text-white">Where to next?</h2>
+            </div>
+          </div>
 
-            {/* Accordion nav */}
-            {routes.map((r) => {
-              const subOptions = routeOptions[r.href] || [];
-              const isExpanded = mobileExpandedRoute === r.href;
-              const hasOptions = subOptions.length > 0;
+          <nav aria-label="Mobile navigation" className="space-y-2">
+            {routes.map((route) => {
+              const subOptions = routeOptions[route.href] || [];
+              const isExpanded = mobileExpandedRoute === route.href;
+              const RouteIcon = routeIcons[route.href] || IconPhoto;
 
               return (
-                <motion.div
-                  key={r.href}
-                  variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }}
-                  className="rounded-xl overflow-hidden border border-white/[0.06]"
+                <div
+                  key={route.href}
+                  className={`overflow-hidden rounded-2xl border transition-colors ${
+                    isExpanded
+                      ? "border-[#e94f37]/20 bg-white/[0.045]"
+                      : "border-white/[0.08] bg-white/[0.025]"
+                  }`}
                 >
-                  {/* Row header */}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setMobileExpandedRoute(isExpanded ? null : r.href)
-                    }
-                    className={`w-full flex items-center justify-between px-4 py-3 transition-all ${isExpanded
-                      ? "bg-white/[0.07]"
-                      : "bg-white/[0.03] hover:bg-white/[0.06]"
-                      }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {isExpanded && (
-                        <span className="w-1 h-4 rounded-full bg-gradient-to-b from-[#e94f37] to-orange-500 inline-block" />
-                      )}
+                  <div className="flex min-h-14 items-center">
+                    <button
+                      type="button"
+                      aria-expanded={isExpanded}
+                      onClick={() =>
+                        setMobileExpandedRoute(isExpanded ? null : route.href)
+                      }
+                      className={`flex min-h-14 min-w-0 flex-1 items-center gap-3 px-3.5 text-left ${focusRing}`}
+                    >
                       <span
-                        className={`font-semibold text-base transition-colors ${isExpanded ? "text-[#e94f37]" : "text-gray-200"
-                          }`}
+                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border ${
+                          isExpanded
+                            ? "border-[#e94f37]/25 bg-[#e94f37]/10 text-[#f2836d]"
+                            : "border-white/[0.08] bg-white/[0.035] text-white/55"
+                        }`}
                       >
-                        {r.name}
+                        <RouteIcon className="h-[18px] w-[18px]" aria-hidden="true" />
                       </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {!r.noLink && (
-                        <Link
-                          href={r.href}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsMobileOpen(false);
-                          }}
-                          className="text-xs px-2.5 py-1 rounded-full text-[#e94f37] bg-[#e94f37]/10 border border-[#e94f37]/30 hover:bg-[#e94f37]/20 transition"
-                        >
-                          Go →
-                        </Link>
-                      )}
-                      {hasOptions && (
-                        <motion.div
-                          animate={{ rotate: isExpanded ? 180 : 0 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <IconChevronDown size={16} className="text-gray-400" />
-                        </motion.div>
-                      )}
-                    </div>
-                  </button>
+                      <span className="truncate text-sm font-semibold text-white/85">
+                        {route.name}
+                      </span>
+                      <IconChevronDown
+                        className={`ml-auto h-4 w-4 text-white/38 transition-transform ${
+                          isExpanded ? "rotate-180" : ""
+                        }`}
+                        aria-hidden="true"
+                      />
+                    </button>
+                    {!route.noLink && (
+                      <Link
+                        href={route.href}
+                        onClick={() => setIsMobileOpen(false)}
+                        aria-label={`Go to ${route.name}`}
+                        className={`mr-2 grid h-10 w-10 place-items-center rounded-xl text-white/45 transition hover:bg-white/[0.06] hover:text-[#f2836d] ${focusRing}`}
+                      >
+                        <IconArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    )}
+                  </div>
 
-                  {/* Sub-options */}
                   <AnimatePresence initial={false}>
-                    {isExpanded && hasOptions && (
+                    {isExpanded && (
                       <motion.div
-                        key="sub"
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25, ease: "easeInOut" }}
+                        transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="grid grid-cols-2 gap-2 p-3 bg-black/20">
-                          {subOptions.map((opt) => (
+                        <div className="grid grid-cols-1 gap-1.5 border-t border-white/[0.06] p-2.5 sm:grid-cols-2">
+                          {subOptions.map((option) => (
                             <Link
-                              key={opt.path}
-                              href={opt.path}
+                              key={option.path}
+                              href={option.path}
                               onClick={() => setIsMobileOpen(false)}
-                              className="group flex flex-col p-3 rounded-xl bg-white/[0.04] border border-white/[0.07] hover:border-[#e94f37]/40 hover:bg-white/[0.07] transition-all"
+                              className={`flex min-h-12 items-center justify-between rounded-xl border border-white/[0.06] bg-black/15 px-3 text-sm font-medium text-white/72 transition hover:border-[#e94f37]/20 hover:bg-white/[0.045] hover:text-white ${focusRing}`}
                             >
-                              <span className="text-sm font-medium text-white group-hover:text-[#e94f37] transition-colors">
-                                {opt.label}
-                              </span>
-                              <span className="text-xs text-gray-500 mt-0.5">Explore →</span>
+                              {option.label}
+                              <IconArrowUpRight className="h-4 w-4 text-white/28" aria-hidden="true" />
                             </Link>
                           ))}
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </motion.div>
+                </div>
               );
             })}
+          </nav>
 
-            {/* Profile section */}
-            <motion.div
-              variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-              className="mt-4 pt-4 border-t border-white/[0.08]"
+          <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3">
+            <Link
+              href={profileHref}
+              onClick={() => setIsMobileOpen(false)}
+              aria-label={isAuthenticated ? "View your profile" : "Sign in to Moodies"}
+              className={`rounded-xl ${focusRing}`}
             >
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-[#e94f37] to-orange-500 blur-md opacity-40" />
-                  <div className="relative h-11 w-11 rounded-xl bg-gradient-to-br from-[#e94f37] to-orange-500 p-[2px]">
-                    <div className="w-full h-full rounded-xl bg-slate-900 flex items-center justify-center overflow-hidden">
-                      {user?.avatarUrl ? (
-                        <img src={user.avatarUrl} alt={user.username || "User"} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-sm font-bold text-gray-300">
-                          {(user?.username?.[0] || user?.name?.[0] || "G").toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-white truncate">
-                    {user?.username ?? user?.name ?? "Guest"}
-                  </div>
-                  <div className="text-xs text-gray-400 truncate">
-                    {user?.email || "Sign in for more features"}
-                  </div>
-                </div>
-                {isAuthenticated ? (
-                  <button
-                    onClick={() => { setIsMobileOpen(false); logout(); }}
-                    className="text-sm px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition"
-                  >
-                    Logout
-                  </button>
-                ) : (
-                  <Link
-                    href="/auth/login"
-                    onClick={() => setIsMobileOpen(false)}
-                    className="text-sm px-3 py-2 rounded-lg bg-gradient-to-r from-[#e94f37] to-orange-500 text-white font-medium transition"
-                  >
-                    Sign In
-                  </Link>
-                )}
-              </div>
-            </motion.div>
-
-            <motion.div
-              variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
-              className="mt-4 text-xs text-gray-600 text-center"
-            >
-              © {new Date().getFullYear()} Moodies
-            </motion.div>
-          </motion.div>
+              {avatar("large")}
+            </Link>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">
+                {isAuthenticated ? displayName : "Welcome to Moodies"}
+              </p>
+              <p className="truncate text-xs text-white/42">
+                {user?.email || "Sign in to save your discoveries"}
+              </p>
+            </div>
+            {isAuthenticated ? (
+              <button
+                type="button"
+                disabled={isLoggingOut}
+                onClick={() => {
+                  setIsMobileOpen(false);
+                  void logout();
+                }}
+                aria-label="Sign out of Moodies"
+                className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.035] text-[#ef775f] transition hover:border-[#e94f37]/25 hover:bg-[#e94f37]/[0.07] disabled:cursor-wait disabled:opacity-55 ${focusRing}`}
+              >
+                <IconLogout className="h-5 w-5" aria-hidden="true" />
+              </button>
+            ) : (
+              <Link
+                href="/auth/login"
+                onClick={() => setIsMobileOpen(false)}
+                className={`inline-flex min-h-11 items-center rounded-xl border border-[#e94f37]/30 bg-[#e94f37]/12 px-3.5 text-sm font-semibold text-[#ffb09f] ${focusRing}`}
+              >
+                Sign in
+              </Link>
+            )}
+          </div>
         </div>
       </MobileNavMenu>
 
-      {/* Portal render */}
-      {portalRoot ? createPortal(menuNode, portalRoot) : null}
-
-      {/* Mobile search full-screen modal */}
-      <AnimatePresence>
-        {isMobileSearchOpen && (
-          <motion.div
-            key="mobile-search"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.12 }}
-            className="fixed inset-0 z-[9999] flex items-start justify-center pt-20 bg-[rgba(0,0,0,0.65)]"
-            onClick={() => setIsMobileSearchOpen(false)}
-          >
-            <motion.form
-              onClick={(e) => e.stopPropagation()}
-              initial={{ y: -20 }}
-              animate={{ y: 0 }}
-              exit={{ y: -20 }}
-              transition={{ type: "spring", stiffness: 220, damping: 26 }}
-              className="w-full max-w-xl px-6"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setIsMobileSearchOpen(false);
-              }}
-            >
-              <input
-                autoFocus
-                placeholder="Search movies, series..."
-                className="w-full rounded-full px-4 py-3 bg-white/6 text-white placeholder:text-gray-300 outline-none"
-              />
-            </motion.form>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {portalRoot ? createPortal(desktopMenu, portalRoot) : null}
     </Navbar>
+  );
+}
+
+function ProfileMenuLink({
+  href,
+  icon: Icon,
+  children,
+  onClick,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      role="menuitem"
+      onClick={onClick}
+      className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-white/62 transition hover:bg-white/[0.05] hover:text-white ${focusRing}`}
+    >
+      <Icon className="h-[18px] w-[18px] text-white/42" aria-hidden="true" />
+      {children}
+    </Link>
   );
 }
 
