@@ -21,6 +21,57 @@ function toAccentColor(rating?: number): string | null {
   return "#f87171";
 }
 
+function isPublicImagePath(value?: string): boolean {
+  return Boolean(
+    value && /^\/images\/.+\.(png|jpe?g|webp|gif|svg)$/i.test(value),
+  );
+}
+
+function moodLabelFromValue(value: string): string {
+  if (!isPublicImagePath(value)) return "Mood";
+
+  const fileName = value.split("/").pop() ?? "";
+  const baseName = fileName.replace(/\.(png|jpe?g|webp|gif|svg)$/i, "");
+
+  return baseName
+    .split("-")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function MoodChip({ value }: { value?: string }) {
+  if (!value) return null;
+
+  const label = moodLabelFromValue(value);
+
+  return (
+    <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-white/[0.09] bg-white/[0.045] py-1 pl-1 pr-2.5 text-white/55">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.05] ring-1 ring-white/[0.08]">
+        {isPublicImagePath(value) ? (
+          <Image
+            src={value}
+            alt={label}
+            width={36}
+            height={36}
+            className="h-8 w-8 object-contain opacity-95"
+          />
+        ) : (
+          <span className="text-lg leading-none">{value}</span>
+        )}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/28">
+          Mood
+        </span>
+        <span className="block max-w-24 truncate text-xs font-semibold text-white/60">
+          {label}
+        </span>
+      </span>
+    </span>
+  );
+}
+
 type Reply = {
   id?: string;
   content: string;
@@ -396,18 +447,9 @@ export default function AllReviews({
                 {topMoods.length > 0 && (
                   <>
                     <div className="h-8 w-px bg-white/[0.08]" />
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       {topMoods.slice(0, 3).map((m, i) => (
-                        <span
-                          key={i}
-                          title={`${m.count} votes`}
-                          style={{
-                            fontSize: "clamp(1.2rem, 2.5vw, 1.5rem)",
-                            filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))",
-                          }}
-                        >
-                          {m.emoji}
-                        </span>
+                        <MoodChip key={i} value={m.emoji} />
                       ))}
                       <span className="text-[11px] text-white/45 ml-1">
                         Community vibe
@@ -564,11 +606,7 @@ export default function AllReviews({
                         </div>
 
                         <div className="flex flex-shrink-0 items-center gap-2">
-                          {review.moodEmojis?.[0] && (
-                            <span className="rounded-full border border-white/[0.08] bg-white/[0.05] px-2 py-1 text-sm leading-none">
-                              {review.moodEmojis[0]}
-                            </span>
-                          )}
+                          <MoodChip value={review.moodEmojis?.[0]} />
                           {normalizedRating !== null && (
                             <div
                               className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
@@ -1039,6 +1077,26 @@ function ReviewFormInModal({
     disliked: "😞",
   };
 
+  void moodOptions;
+  void moodToEmoji;
+
+  const moodImageOptions = [
+    { imagePath: "/images/review-icons/amazing.png", label: "Amazing", value: "amazing" },
+    { imagePath: "/images/review-icons/loved-it.png", label: "Loved it", value: "loved" },
+    { imagePath: "/images/review-icons/enjoyed-it.png", label: "Enjoyed", value: "enjoyed" },
+    { imagePath: "/images/review-icons/its-okay.png", label: "It's okay", value: "okay" },
+    { imagePath: "/images/review-icons/meh.png", label: "Meh", value: "meh" },
+    { imagePath: "/images/review-icons/skip-it.png", label: "Disliked", value: "disliked" },
+  ];
+  const moodToImagePath: Record<string, string> = {
+    amazing: "/images/review-icons/amazing.png",
+    loved: "/images/review-icons/loved-it.png",
+    enjoyed: "/images/review-icons/enjoyed-it.png",
+    okay: "/images/review-icons/its-okay.png",
+    meh: "/images/review-icons/meh.png",
+    disliked: "/images/review-icons/skip-it.png",
+  };
+
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
@@ -1065,7 +1123,7 @@ function ReviewFormInModal({
         body: JSON.stringify({
           rating,
           content: content.trim(),
-          moodEmojis: [moodToEmoji[mood]],
+          moodEmojis: mood ? [moodToImagePath[mood]] : [],
           tmdbId: contentId ? parseInt(contentId) : 0,
           mediaType: (contentType?.toUpperCase() || "MOVIE") as "MOVIE" | "TV",
         }),
@@ -1234,7 +1292,7 @@ function ReviewFormInModal({
           How did it make you feel?
         </p>
         <div className="grid grid-cols-6 gap-1.5">
-          {moodOptions.map((m) => (
+          {moodImageOptions.map((m) => (
             <button
               key={m.value}
               type="button"
@@ -1245,7 +1303,13 @@ function ReviewFormInModal({
                   : "bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.07] hover:border-white/[0.15]"
               }`}
             >
-              <span className="text-base leading-none">{m.emoji}</span>
+              <Image
+                src={m.imagePath}
+                alt={m.label}
+                width={28}
+                height={28}
+                className="h-7 w-7 object-contain"
+              />
               <span
                 className={`text-[9px] font-medium leading-none text-center ${mood === m.value ? "text-white/80" : "text-white/30"}`}
               >

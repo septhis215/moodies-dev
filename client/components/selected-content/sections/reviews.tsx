@@ -74,6 +74,58 @@ function toAccentColor(rating?: number): string | null {
   return "#f87171";
 }
 
+function isPublicImagePath(value?: string): boolean {
+  return Boolean(
+    value && /^\/images\/.+\.(png|jpe?g|webp|gif|svg)$/i.test(value),
+  );
+}
+
+function moodLabelFromValue(value: string): string {
+  if (!isPublicImagePath(value)) return "Mood";
+
+  const fileName = value.split("/").pop() ?? "";
+  const baseName = fileName.replace(/\.(png|jpe?g|webp|gif|svg)$/i, "");
+
+  return baseName
+    .split("-")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function ReviewMoodPanel({ value }: { value?: string }) {
+  if (!value) return null;
+
+  const label = moodLabelFromValue(value);
+  const isImage = isPublicImagePath(value);
+
+  return (
+    <div className="flex min-w-0 items-center gap-2 text-white/35">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04]">
+        {isImage ? (
+          <Image
+            src={value}
+            alt={label}
+            width={36}
+            height={36}
+            className="h-8 w-8 object-contain opacity-90"
+          />
+        ) : (
+          <span className="text-lg leading-none">{value}</span>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/25">
+          Mood
+        </p>
+        <p className="truncate text-xs font-semibold text-white/55">
+          {label}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const PREVIEW_LEN = 220;
 
 const API =
@@ -309,51 +361,75 @@ export default function ReviewsSection({
                       layout: { duration: 0.3, ease: "easeInOut" },
                       opacity: { duration: 0.2 },
                     }}
-                    className="group flex flex-col rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-white/[0.15] hover:bg-white/[0.06] transition-all duration-200 overflow-hidden"
+                    className="group flex flex-col rounded-2xl border border-white/[0.08] bg-[#0d0d0f] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)] transition-all duration-200 hover:border-[#e94f37]/30 hover:bg-[#111113]"
                   >
-                    {/* Top: quote glyph + score badge */}
-                    <div className="flex items-start justify-between px-5 pt-5 pb-0">
-                      {/* Decorative quote mark */}
-                      <svg
-                        className="w-7 h-7 flex-shrink-0 opacity-[0.08]"
-                        viewBox="0 0 32 32"
-                        fill="white"
-                        aria-hidden
-                      >
-                        <path d="M10 8C5.6 8 2 11.6 2 16v8h8v-8H4c0-3.3 2.7-6 6-6V8zm12 0c-4.4 0-8 3.6-8 8v8h8v-8h-6c0-3.3 2.7-6 6-6V8z" />
-                      </svg>
-
-                      {/* Rating score pill */}
-                      {normalizedRating !== null ? (
-                        <div
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
-                          style={{
-                            color: accentColor!,
-                            background: `${accentColor}18`,
-                            border: `1px solid ${accentColor}35`,
-                          }}
-                        >
-                          <svg
-                            width="10"
-                            height="10"
-                            viewBox="0 0 24 24"
-                            fill={accentColor!}
-                            aria-hidden
-                          >
-                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                          </svg>
-                          {normalizedRating.toFixed(1)}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <AvatarBlock review={r} href={profileHref} size={36} />
+                        <div className="min-w-0">
+                          {profileHref ? (
+                            <Link
+                              href={profileHref}
+                              className="block truncate text-sm font-bold text-white/85 transition-colors hover:text-[#ff8a78]"
+                            >
+                              {r.author}
+                            </Link>
+                          ) : (
+                            <p className="truncate text-sm font-bold text-white/85">
+                              {r.author}
+                            </p>
+                          )}
+                          <p className="mt-0.5 text-[11px] font-medium text-white/30">
+                            {new Date(r.created_at).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              },
+                            )}
+                          </p>
                         </div>
-                      ) : r.moodEmojis?.[0] ? (
-                        <span className="text-xl leading-none" title="Mood">
-                          {r.moodEmojis[0]}
-                        </span>
-                      ) : null}
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        {normalizedRating !== null && (
+                          <div
+                            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+                            style={{
+                              color: accentColor!,
+                              background: `${accentColor}18`,
+                              border: `1px solid ${accentColor}35`,
+                            }}
+                          >
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 24 24"
+                              fill={accentColor!}
+                              aria-hidden
+                            >
+                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                            </svg>
+                            {normalizedRating.toFixed(1)}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Review text — the hero */}
-                    <div className="flex-1 px-5 pt-3 pb-4">
-                      <p className="text-[13px] text-white/70 leading-[1.75] break-words">
+                    <div className="mt-4">
+                      <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.035] text-white/15">
+                        <svg
+                          className="h-4 w-4"
+                          viewBox="0 0 32 32"
+                          fill="currentColor"
+                          aria-hidden
+                        >
+                          <path d="M10 8C5.6 8 2 11.6 2 16v8h8v-8H4c0-3.3 2.7-6 6-6V8zm12 0c-4.4 0-8 3.6-8 8v8h8v-8h-6c0-3.3 2.7-6 6-6V8z" />
+                        </svg>
+                      </div>
+                      <p className="text-[14px] leading-[1.75] text-white/72 break-words">
                         {isExpanded
                           ? r.content
                           : r.content.slice(0, PREVIEW_LEN)}
@@ -372,41 +448,8 @@ export default function ReviewsSection({
                     </div>
 
                     {/* Author attribution footer */}
-                    <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-white/[0.07] bg-white/[0.025]">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <AvatarBlock review={r} href={profileHref} size={28} />
-                        <div className="min-w-0">
-                          {profileHref ? (
-                            <Link
-                              href={profileHref}
-                              className="text-xs font-semibold text-white/75 hover:text-[#ff8a78] transition-colors truncate block"
-                            >
-                              {r.author}
-                            </Link>
-                          ) : (
-                            <p className="text-xs font-semibold text-white/75 truncate">
-                              {r.author}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] text-white/25">
-                              {new Date(r.created_at).toLocaleDateString(
-                                "en-US",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                },
-                              )}
-                            </span>
-                            {r.moodEmojis?.[0] && normalizedRating !== null && (
-                              <span className="text-xs leading-none">
-                                {r.moodEmojis[0]}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                    <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.07] pt-3">
+                      <ReviewMoodPanel value={r.moodEmojis?.[0]} />
 
                       <Link
                         href={
@@ -414,7 +457,7 @@ export default function ReviewsSection({
                             ? `/${basePath}/${contentId}/reviews?highlight=${encodeURIComponent(r.id)}`
                             : r.url || "#"
                         }
-                        className="text-[10px] font-medium text-white/20 hover:text-[#e94f37] transition-colors flex-shrink-0"
+                        className="inline-flex shrink-0 text-[11px] font-bold text-white/28 transition-colors hover:text-[#e94f37]"
                       >
                         Full →
                       </Link>
@@ -649,18 +692,18 @@ function ReviewModal({
 type ReviewMood = {
   label: string;
   value: string;
-  emoji: string;
+  imagePath: string;
   mascot: string;
   accent: string;
 };
 
 const REVIEW_MOODS: ReviewMood[] = [
-  { emoji: "🔥", label: "Amazing", value: "amazing", mascot: "epic", accent: "#4ade80" },
-  { emoji: "❤️", label: "Loved it", value: "loved", mascot: "romantic", accent: "#fb7185" },
-  { emoji: "😊", label: "Enjoyed", value: "enjoyed", mascot: "happy", accent: "#facc15" },
-  { emoji: "🤔", label: "Thoughtful", value: "okay", mascot: "mind-bending", accent: "#38bdf8" },
-  { emoji: "😕", label: "Mixed", value: "meh", mascot: "bittersweet", accent: "#f59e0b" },
-  { emoji: "😞", label: "Disappointed", value: "disliked", mascot: "sad", accent: "#f87171" },
+  { imagePath: "/images/review-icons/amazing.png", label: "Amazing", value: "amazing", mascot: "epic", accent: "#4ade80" },
+  { imagePath: "/images/review-icons/loved-it.png", label: "Loved it", value: "loved", mascot: "romantic", accent: "#fb7185" },
+  { imagePath: "/images/review-icons/enjoyed-it.png", label: "Enjoyed", value: "enjoyed", mascot: "happy", accent: "#facc15" },
+  { imagePath: "/images/review-icons/its-okay.png", label: "Thoughtful", value: "okay", mascot: "mind-bending", accent: "#38bdf8" },
+  { imagePath: "/images/review-icons/meh.png", label: "Mixed", value: "meh", mascot: "bittersweet", accent: "#f59e0b" },
+  { imagePath: "/images/review-icons/skip-it.png", label: "Disappointed", value: "disliked", mascot: "sad", accent: "#f87171" },
 ];
 
 const RATING_GUIDANCE = [
@@ -695,13 +738,13 @@ function ReviewForm({
   const { toast } = useToast();
   const router = useRouter();
 
-  const moodToEmoji: Record<string, string> = {
-    amazing: "🔥",
-    loved: "❤️",
-    enjoyed: "😊",
-    okay: "🤔",
-    meh: "😕",
-    disliked: "😞",
+  const moodToImagePath: Record<string, string> = {
+    amazing: "/images/review-icons/amazing.png",
+    loved: "/images/review-icons/loved-it.png",
+    enjoyed: "/images/review-icons/enjoyed-it.png",
+    okay: "/images/review-icons/its-okay.png",
+    meh: "/images/review-icons/meh.png",
+    disliked: "/images/review-icons/skip-it.png",
   };
 
   useEffect(
@@ -743,7 +786,7 @@ function ReviewForm({
         body: JSON.stringify({
           rating,
           content: content.trim(),
-          moodEmojis: [moodToEmoji[mood]],
+          moodEmojis: mood ? [moodToImagePath[mood]] : [],
           tmdbId: parseInt(contentId),
           mediaType: (contentType?.toUpperCase() || "MOVIE") as "MOVIE" | "TV",
         }),
@@ -965,7 +1008,13 @@ function ReviewForm({
                   : "bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.07] hover:border-white/[0.15]"
               }`}
             >
-              <span className="text-base leading-none">{m.emoji}</span>
+              <img
+                src={m.imagePath}
+                alt={m.label}
+                width={24}
+                height={24}
+                className="object-contain"
+              />
               <span
                 className={`text-[9px] font-medium leading-none text-center ${mood === m.value ? "text-white/80" : "text-white/30"}`}
               >
