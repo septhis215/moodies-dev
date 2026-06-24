@@ -15,6 +15,8 @@ type ApiReview = {
   createdAt: string;
   updatedAt: string;
   moodEmojis?: string[];
+  reactionCounts?: Array<{ type: "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD" | "ANGRY"; count: number }>;
+  myReaction?: "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD" | "ANGRY" | null;
   user?: {
     id?: string;
     username?: string;
@@ -28,6 +30,8 @@ type ApiReply = {
   id?: string;
   content: string;
   createdAt: string;
+  reactionCounts?: Array<{ type: "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD" | "ANGRY"; count: number }>;
+  myReaction?: "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD" | "ANGRY" | null;
   user?: {
     id?: string;
     username?: string;
@@ -124,11 +128,15 @@ export default async function ReviewsPage({ params }: Props) {
     updated_at: r.updatedAt,
     url: "",
     moodEmojis: r.moodEmojis || [],
+    reactionCounts: r.reactionCounts || [],
+    myReaction: r.myReaction || null,
     replies:
       r.replies?.map((reply) => ({
         id: reply.id,
         content: reply.content,
         created_at: reply.createdAt,
+        reactionCounts: reply.reactionCounts || [],
+        myReaction: reply.myReaction || null,
         user: {
           id: reply.user?.id,
           username: reply.user?.username || "Anonymous",

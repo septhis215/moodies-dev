@@ -9,7 +9,8 @@ export class ReviewWithRepliesEntity extends ReviewEntity {
     super(reviewData);
 
     this.replies = (replies || []).map(
-      (reply: any) => new ReviewReplyEntity(reply),
+      (reply: any) =>
+        new ReviewReplyEntity({ ...reply, viewerId: reviewData.viewerId }),
     );
   }
 
