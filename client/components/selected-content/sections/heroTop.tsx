@@ -468,6 +468,25 @@ function findDirectorOrCreator(
   return "Unknown";
 }
 
+function isPublicImagePath(value?: string): boolean {
+  return Boolean(
+    value && /^\/images\/.+\.(png|jpe?g|webp|gif|svg)$/i.test(value),
+  );
+}
+
+function getMoodLabel(value: string, index: number): string {
+  if (!isPublicImagePath(value)) return `Mood ${index + 1}`;
+
+  const fileName = value.split("/").pop() ?? "";
+  const baseName = fileName.replace(/\.(png|jpe?g|webp|gif|svg)$/i, "");
+
+  return baseName
+    .split("-")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 interface HeroContentCardProps {
   content?: Content;
   data?: MovieDetailsData | TvDetailsData;
@@ -491,6 +510,11 @@ export function HeroContentCard({
   const trailerKey = data?.trailer?.key;
   const contentId = data?.info?.id ?? content?.id ?? null;
   const viewAllRef = contentId ? `/${contentType}/${contentId}/reviews` : "#";
+  const displayedTopMoods = topMoods.slice(0, 3);
+  const displayedMoodTotal = displayedTopMoods.reduce(
+    (total, mood) => total + mood.count,
+    0,
+  );
 
   const mappedContent: Content = React.useMemo(() => {
     if (content) return content;
@@ -762,6 +786,119 @@ export function HeroContentCard({
       color: "#f87c6d",
     } as React.CSSProperties,
 
+    moodBubble: {
+      position: "relative" as const,
+      width: "fit-content",
+      maxWidth: "min(100%, 430px)",
+      display: "flex",
+      alignItems: "center",
+      gap: "0.65rem",
+      padding: "0.58rem 0.78rem 0.58rem 0.62rem",
+      borderRadius: 18,
+      border: "1px solid rgba(233,79,55,0.3)",
+      background:
+        "linear-gradient(135deg, rgba(233,79,55,0.12), rgba(255,255,255,0.045))",
+      boxShadow:
+        "0 18px 42px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08)",
+      backdropFilter: "blur(18px)",
+      color: "#fff",
+      textDecoration: "none",
+    } as React.CSSProperties,
+
+    moodBubbleTail: {
+      position: "absolute" as const,
+      left: "1.25rem",
+      bottom: -7,
+      width: 14,
+      height: 14,
+      background: "rgba(233,79,55,0.12)",
+      borderRight: "1px solid rgba(233,79,55,0.26)",
+      borderBottom: "1px solid rgba(233,79,55,0.26)",
+      transform: "rotate(45deg)",
+    } as React.CSSProperties,
+
+    moodLeadIcon: {
+      width: "clamp(3.1rem, 6vw, 3.7rem)",
+      height: "clamp(3.1rem, 6vw, 3.7rem)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      borderRadius: "50%",
+      background: "rgba(233,79,55,0.12)",
+      border: "1px solid rgba(233,79,55,0.3)",
+      boxShadow: "0 0 28px rgba(233,79,55,0.26)",
+      overflow: "hidden",
+    } as React.CSSProperties,
+
+    moodText: {
+      minWidth: 0,
+      display: "flex",
+      flexDirection: "column" as const,
+      gap: "0.22rem",
+    } as React.CSSProperties,
+
+    moodEyebrow: {
+      margin: 0,
+      fontSize: "0.62rem",
+      textTransform: "uppercase" as const,
+      letterSpacing: "0.14em",
+      color: "rgba(248,124,109,0.88)",
+      fontWeight: 800,
+    } as React.CSSProperties,
+
+    moodTitle: {
+      margin: 0,
+      fontSize: "clamp(0.82rem, 1.55vw, 0.96rem)",
+      color: "rgba(255,255,255,0.92)",
+      fontWeight: 850,
+      lineHeight: 1.15,
+      whiteSpace: "nowrap" as const,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    } as React.CSSProperties,
+
+    moodVotes: {
+      color: "rgba(255,255,255,0.5)",
+      fontSize: "0.66rem",
+      fontWeight: 700,
+      whiteSpace: "nowrap" as const,
+    } as React.CSSProperties,
+
+    moodMiniStack: {
+      display: "flex",
+      alignItems: "center",
+      marginLeft: "0.1rem",
+      paddingLeft: "0.15rem",
+      flexShrink: 0,
+    } as React.CSSProperties,
+
+    moodMiniIcon: {
+      width: "1.8rem",
+      height: "1.8rem",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: "-0.45rem",
+      borderRadius: "50%",
+      border: "1px solid rgba(233,79,55,0.3)",
+      background: "rgba(233,79,55,0.12)",
+      boxShadow: "0 8px 18px rgba(0,0,0,0.28)",
+      overflow: "hidden",
+    } as React.CSSProperties,
+
+    moodIcon: {
+      width: "100%",
+      height: "100%",
+      objectFit: "contain" as const,
+      filter: "drop-shadow(0 10px 18px rgba(0,0,0,0.35))",
+    } as React.CSSProperties,
+
+    moodEmoji: {
+      fontSize: "1.35rem",
+      lineHeight: 1,
+    } as React.CSSProperties,
+
     actions: {
       display: "flex",
       gap: "0.6rem",
@@ -855,6 +992,11 @@ export function HeroContentCard({
       .hero-eyebrow, .hero-genres, .hero-meta, .hero-actions, .hero-credits {
         justify-content: center !important;
       }
+      .hero-mood-bubble {
+        max-width: min(100%, 340px) !important;
+        padding: 0.58rem 0.7rem !important;
+        text-align: left !important;
+      }
       .hero-credits,
       .hero-meta {
         display: none !important;
@@ -944,34 +1086,6 @@ export function HeroContentCard({
                   style={{ width: "100%", height: "auto", display: "block" }}
                 />
               </div>
-
-              {/* Mood badges */}
-              {topMoods.length > 0 && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: -10,
-                    right: -10,
-                    display: "flex",
-                    gap: "0.2rem",
-                  }}
-                >
-                  {topMoods.slice(0, 3).map((mood, i) => (
-                    <div
-                      key={i}
-                      title={`${mood.count} votes`}
-                      style={{
-                        fontSize: "clamp(1.5rem, 3.5vw, 2rem)",
-                        filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.6))",
-                        transform: `rotate(${[-12, 0, 12][i]}deg)`,
-                        cursor: "default",
-                      }}
-                    >
-                      {mood.emoji}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Rating below poster */}
@@ -1046,6 +1160,79 @@ export function HeroContentCard({
                   </span>
                 ))}
               </div>
+            )}
+
+            {/* Audience mood */}
+            {displayedTopMoods.length > 0 && (
+              <Link
+                href={viewAllRef}
+                className="hero-mood-bubble"
+                style={s.moodBubble}
+                aria-label="See audience reviews"
+              >
+                <span style={s.moodBubbleTail} aria-hidden />
+
+                <span style={s.moodLeadIcon}>
+                  {isPublicImagePath(displayedTopMoods[0].emoji) ? (
+                    <Image
+                      src={displayedTopMoods[0].emoji}
+                      alt={getMoodLabel(displayedTopMoods[0].emoji, 0)}
+                      width={62}
+                      height={62}
+                      style={s.moodIcon}
+                    />
+                  ) : (
+                    <span style={s.moodEmoji}>{displayedTopMoods[0].emoji}</span>
+                  )}
+                </span>
+
+                <span style={s.moodText}>
+                  <span style={s.moodEyebrow}>Audience mood</span>
+                  <span style={s.moodTitle}>
+                    Mostly {getMoodLabel(displayedTopMoods[0].emoji, 0)}
+                  </span>
+                  <span style={s.moodVotes}>
+                    {displayedTopMoods[0].count} vote
+                    {displayedTopMoods[0].count === 1 ? "" : "s"}
+                    {displayedMoodTotal > 0
+                      ? ` - ${Math.round(
+                          (displayedTopMoods[0].count / displayedMoodTotal) *
+                            100,
+                        )}% of top moods`
+                      : ""}
+                  </span>
+                </span>
+
+                {displayedTopMoods.length > 1 && (
+                  <span style={s.moodMiniStack} aria-label="Other top moods">
+                    {displayedTopMoods.slice(1).map((mood, i) => {
+                      const label = getMoodLabel(mood.emoji, i + 1);
+
+                      return (
+                        <span
+                          key={`${mood.emoji}-${i}`}
+                          title={`${label}: ${mood.count} vote${
+                            mood.count === 1 ? "" : "s"
+                          }`}
+                          style={s.moodMiniIcon}
+                        >
+                          {isPublicImagePath(mood.emoji) ? (
+                            <Image
+                              src={mood.emoji}
+                              alt={label}
+                              width={30}
+                              height={30}
+                              style={s.moodIcon}
+                            />
+                          ) : (
+                            <span style={s.moodEmoji}>{mood.emoji}</span>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </span>
+                )}
+              </Link>
             )}
 
             {/* Engagement stats */}
