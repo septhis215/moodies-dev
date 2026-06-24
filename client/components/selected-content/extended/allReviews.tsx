@@ -13,6 +13,18 @@ import { useAuth } from "@/app/context/AuthProvider";
 import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
 import { useToast } from "@/app/context/ToastContext";
 
+type ReactionType = "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD" | "ANGRY";
+type ReactionCount = { type: ReactionType; count: number };
+
+const REACTIONS: Array<{ type: ReactionType; emoji: string; label: string }> = [
+  { type: "LIKE", emoji: "👍", label: "Like" },
+  { type: "LOVE", emoji: "❤️", label: "Love" },
+  { type: "HAHA", emoji: "😂", label: "Haha" },
+  { type: "WOW", emoji: "😮", label: "Wow" },
+  { type: "SAD", emoji: "😢", label: "Sad" },
+  { type: "ANGRY", emoji: "😡", label: "Angry" },
+];
+
 function toAccentColor(rating?: number): string | null {
   if (rating == null) return null;
   const n = rating / 2;
@@ -72,11 +84,112 @@ function MoodChip({ value }: { value?: string }) {
   );
 }
 
+function ReactionBar({
+  counts = [],
+  myReaction,
+  onReact,
+  disabled = false,
+  size = "default",
+  pickerPlacement = "left",
+}: {
+  counts?: ReactionCount[];
+  myReaction?: ReactionType | null;
+  onReact: (type: ReactionType) => void;
+  disabled?: boolean;
+  size?: "default" | "compact";
+  pickerPlacement?: "left" | "right";
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = REACTIONS.find((reaction) => reaction.type === myReaction);
+  const total = counts.reduce((sum, item) => sum + item.count, 0);
+  const topCounts = counts
+    .slice()
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+  const pickerPlacementClass =
+    pickerPlacement === "right" ? "left-0 origin-bottom-left" : "right-0 origin-bottom-right";
+
+  return (
+    <div
+      className="relative inline-flex items-center gap-1.5"
+      onMouseEnter={() => !disabled && setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen((value) => !value)}
+        className={`inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.035] font-semibold text-white/58 transition-all hover:border-[#e94f37]/35 hover:bg-[#e94f37]/10 hover:text-[#ff8a78] disabled:cursor-not-allowed disabled:opacity-45 ${
+          size === "compact"
+            ? "px-2 py-1 text-[10px]"
+            : "px-3 py-1.5 text-[11px]"
+        }`}
+      >
+        <span className={selected ? "text-sm" : ""}>
+          {selected?.emoji ?? "React +"}
+        </span>
+        {selected && <span>{selected.label}</span>}
+      </button>
+
+      {total > 0 && (
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-white/36">
+          <span className="flex -space-x-1">
+            {topCounts.map((item) => {
+              const reaction = REACTIONS.find((r) => r.type === item.type);
+              return (
+                <span
+                  key={item.type}
+                  className="flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-[11px] ring-1 ring-white/[0.08]"
+                  title={`${reaction?.label ?? item.type}: ${item.count}`}
+                >
+                  {reaction?.emoji}
+                </span>
+              );
+            })}
+          </span>
+          {total}
+        </span>
+      )}
+
+      <AnimatePresence>
+        {open && !disabled && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.96 }}
+            transition={{ duration: 0.12 }}
+            className={`absolute bottom-full z-40 mb-2 flex gap-1 rounded-full border border-white/[0.10] bg-[#161618] p-1.5 shadow-2xl shadow-black/50 ${pickerPlacementClass}`}
+          >
+            {REACTIONS.map((reaction) => (
+              <button
+                key={reaction.type}
+                type="button"
+                title={reaction.label}
+                onClick={() => {
+                  onReact(reaction.type);
+                  setOpen(false);
+                }}
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-lg transition hover:scale-125 hover:bg-white/[0.08] ${
+                  myReaction === reaction.type ? "bg-[#e94f37]/15" : ""
+                }`}
+              >
+                {reaction.emoji}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 type Reply = {
   id?: string;
   content: string;
   created_at: string;
   user: { id?: string; username: string; avatar_path?: string | null };
+  reactionCounts?: ReactionCount[];
+  myReaction?: ReactionType | null;
 };
 
 type ReplyFormState = { reviewId: string; prefill: string } | null;
@@ -98,6 +211,8 @@ type Review = {
   url: string;
   replies?: Reply[];
   moodEmojis?: string[];
+  reactionCounts?: ReactionCount[];
+  myReaction?: ReactionType | null;
 };
 
 type Info = {
@@ -328,6 +443,101 @@ export default function AllReviews({
       );
     } finally {
       setSubmittingReply(false);
+    }
+  };
+
+  const handleReviewReaction = async (
+    reviewId: string,
+    currentReaction: ReactionType | null | undefined,
+    nextReaction: ReactionType,
+  ) => {
+    if (!isAuthenticated) {
+      toast("Sign in to react to reviews.", "warning", 3000, "Not Logged In", null);
+      return;
+    }
+
+    const removing = currentReaction === nextReaction;
+    try {
+      const res = await fetch(`${API}/reviews/${reviewId}/reactions`, {
+        method: removing ? "DELETE" : "POST",
+        credentials: "include",
+        headers: removing ? undefined : { "Content-Type": "application/json" },
+        body: removing ? undefined : JSON.stringify({ type: nextReaction }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed");
+
+      setLocalReviews((prev) =>
+        prev.map((review) =>
+          review.id === reviewId
+            ? {
+                ...review,
+                reactionCounts: data.reactionCounts || [],
+                myReaction: data.myReaction || null,
+              }
+            : review,
+        ),
+      );
+    } catch (error) {
+      toast(
+        error instanceof Error ? error.message : "Failed to update reaction.",
+        "error",
+        3000,
+        "Error",
+        null,
+      );
+    }
+  };
+
+  const handleReplyReaction = async (
+    reviewId: string,
+    replyId: string | undefined,
+    currentReaction: ReactionType | null | undefined,
+    nextReaction: ReactionType,
+  ) => {
+    if (!replyId) return;
+    if (!isAuthenticated) {
+      toast("Sign in to react to replies.", "warning", 3000, "Not Logged In", null);
+      return;
+    }
+
+    const removing = currentReaction === nextReaction;
+    try {
+      const res = await fetch(`${API}/reviews/replies/${replyId}/reactions`, {
+        method: removing ? "DELETE" : "POST",
+        credentials: "include",
+        headers: removing ? undefined : { "Content-Type": "application/json" },
+        body: removing ? undefined : JSON.stringify({ type: nextReaction }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed");
+
+      setLocalReviews((prev) =>
+        prev.map((review) =>
+          review.id !== reviewId
+            ? review
+            : {
+                ...review,
+                replies: (review.replies || []).map((reply) =>
+                  reply.id === replyId
+                    ? {
+                        ...reply,
+                        reactionCounts: data.reactionCounts || [],
+                        myReaction: data.myReaction || null,
+                      }
+                    : reply,
+                ),
+              },
+        ),
+      );
+    } catch (error) {
+      toast(
+        error instanceof Error ? error.message : "Failed to update reaction.",
+        "error",
+        3000,
+        "Error",
+        null,
+      );
     }
   };
 
@@ -699,6 +909,21 @@ export default function AllReviews({
                                       <span className="text-[10px] text-white/45">
                                         {formatDate(reply.created_at)}
                                       </span>
+                                      <ReactionBar
+                                        counts={reply.reactionCounts}
+                                        myReaction={reply.myReaction}
+                                        disabled={!isAuthenticated}
+                                        size="compact"
+                                        pickerPlacement="right"
+                                        onReact={(type) =>
+                                          handleReplyReaction(
+                                            review.id,
+                                            reply.id,
+                                            reply.myReaction,
+                                            type,
+                                          )
+                                        }
+                                      />
                                       {!banStatus.banned && (
                                         <button
                                           onClick={() =>
@@ -848,6 +1073,19 @@ export default function AllReviews({
                       </div>
 
                       <div className="flex flex-shrink-0 items-center gap-3">
+                        <ReactionBar
+                          counts={review.reactionCounts}
+                          myReaction={review.myReaction}
+                          disabled={!isAuthenticated}
+                          pickerPlacement="left"
+                          onReact={(type) =>
+                            handleReviewReaction(
+                              review.id,
+                              review.myReaction,
+                              type,
+                            )
+                          }
+                        />
                         {banStatus.banned ? (
                           <span className="text-[10px] text-red-400/50">
                             Replies suspended

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -9,9 +10,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtGuard } from 'src/auth/guard';
+import { OptionalJwtGuard } from 'src/auth/guard/optional-jwt.guard';
 import { CreateReplyDto } from './dto/create-reply.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewQueryDto } from './dto/review-query.dto';
+import { SetReactionDto } from './dto/set-reaction.dto';
 import { ReviewBanGuard } from './guard/review-ban.guard';
 import { ReviewService } from './review.service';
 
@@ -35,6 +38,38 @@ export class ReviewController {
     @Body() dto: CreateReplyDto,
   ) {
     return this.reviewsService.createReply(req.user.id, reviewId, dto);
+  }
+
+  @Post(':id/reactions')
+  @UseGuards(JwtGuard)
+  reactToReview(
+    @Req() req,
+    @Param('id') reviewId: string,
+    @Body() dto: SetReactionDto,
+  ) {
+    return this.reviewsService.setReviewReaction(req.user.id, reviewId, dto.type);
+  }
+
+  @Delete(':id/reactions')
+  @UseGuards(JwtGuard)
+  removeReviewReaction(@Req() req, @Param('id') reviewId: string) {
+    return this.reviewsService.removeReviewReaction(req.user.id, reviewId);
+  }
+
+  @Post('replies/:id/reactions')
+  @UseGuards(JwtGuard)
+  reactToReply(
+    @Req() req,
+    @Param('id') replyId: string,
+    @Body() dto: SetReactionDto,
+  ) {
+    return this.reviewsService.setReplyReaction(req.user.id, replyId, dto.type);
+  }
+
+  @Delete('replies/:id/reactions')
+  @UseGuards(JwtGuard)
+  removeReplyReaction(@Req() req, @Param('id') replyId: string) {
+    return this.reviewsService.removeReplyReaction(req.user.id, replyId);
   }
 
   @Get()
@@ -66,7 +101,9 @@ export class ReviewController {
   }
 
   @Get('media/:mediaType/:tmdbId')
+  @UseGuards(OptionalJwtGuard)
   getMediaReviews(
+    @Req() req,
     @Param('mediaType') mediaType: string,
     @Param('tmdbId') tmdbId: string,
     @Query('page') page?: number,
@@ -77,6 +114,7 @@ export class ReviewController {
       mediaType,
       page,
       limit,
+      req.user?.id,
     );
   }
 

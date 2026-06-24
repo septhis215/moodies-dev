@@ -11,7 +11,7 @@ import { ModerationDecisionService } from '../moderation/moderation-decision.ser
 import { ProfanityFilterService } from '../moderation/profanity-filter.service';
 import { ToxicityAnalysisService } from '../moderation/toxicity-analysis.service';
 import { UserService } from './../user/user.service';
-import { MediaType, ReviewStatus } from '@prisma/client';
+import { MediaType, ReactionType, ReviewStatus } from '@prisma/client';
 import {
   ReviewEntity,
   ReviewReplyEntity,
@@ -24,6 +24,11 @@ import { RedisService } from 'src/redis/redis.service';
 // picks). They previously hit the DB — plus per-item TMDB fallbacks — on every
 // request; a 2-minute cache collapses that to one build per window.
 const CRITICS_CORNER_TTL = 120; // seconds
+
+const reactionSelect = {
+  type: true,
+  userId: true,
+} as const;
 
 @Injectable()
 export class ReviewService {
@@ -162,6 +167,116 @@ export class ReviewService {
 
     const replyEntity = new ReviewReplyEntity(reply);
     return replyEntity.toPublic();
+  }
+
+  async setReviewReaction(
+    userId: string,
+    reviewId: string,
+    type: ReactionType,
+  ) {
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+      select: { id: true },
+    });
+
+    if (!review) {
+      throw new NotFoundException('Review not found');
+    }
+
+    await this.prisma.reviewReaction.upsert({
+      where: {
+        reviewId_userId: { reviewId, userId },
+      },
+      create: {
+        reviewId,
+        userId,
+        type,
+      },
+      update: {
+        type,
+      },
+    });
+
+    return this.getReviewReactionSummary(reviewId, userId);
+  }
+
+  async removeReviewReaction(userId: string, reviewId: string) {
+    await this.prisma.reviewReaction.deleteMany({
+      where: { reviewId, userId },
+    });
+
+    return this.getReviewReactionSummary(reviewId, userId);
+  }
+
+  async setReplyReaction(userId: string, replyId: string, type: ReactionType) {
+    const reply = await this.prisma.reviewReply.findUnique({
+      where: { id: replyId },
+      select: { id: true },
+    });
+
+    if (!reply) {
+      throw new NotFoundException('Reply not found');
+    }
+
+    await this.prisma.reviewReplyReaction.upsert({
+      where: {
+        replyId_userId: { replyId, userId },
+      },
+      create: {
+        replyId,
+        userId,
+        type,
+      },
+      update: {
+        type,
+      },
+    });
+
+    return this.getReplyReactionSummary(replyId, userId);
+  }
+
+  async removeReplyReaction(userId: string, replyId: string) {
+    await this.prisma.reviewReplyReaction.deleteMany({
+      where: { replyId, userId },
+    });
+
+    return this.getReplyReactionSummary(replyId, userId);
+  }
+
+  private async getReviewReactionSummary(reviewId: string, viewerId: string) {
+    const reactions = await this.prisma.reviewReaction.findMany({
+      where: { reviewId },
+      select: reactionSelect,
+    });
+
+    return this.toReactionSummary(reactions, viewerId);
+  }
+
+  private async getReplyReactionSummary(replyId: string, viewerId: string) {
+    const reactions = await this.prisma.reviewReplyReaction.findMany({
+      where: { replyId },
+      select: reactionSelect,
+    });
+
+    return this.toReactionSummary(reactions, viewerId);
+  }
+
+  private toReactionSummary(
+    reactions: Array<{ type: ReactionType; userId: string }>,
+    viewerId?: string,
+  ) {
+    return {
+      reactionCounts: Object.values(ReactionType)
+        .map((type) => ({
+          type,
+          count: reactions.filter((reaction) => reaction.type === type).length,
+        }))
+        .filter((item) => item.count > 0),
+      myReaction: viewerId
+        ? (reactions.find((reaction) => reaction.userId === viewerId)?.type ??
+          null)
+        : null,
+    };
   }
 
   async getReviews(query: ReviewQueryDto) {
@@ -516,6 +631,7 @@ export class ReviewService {
     mediaType: string,
     page = 1,
     limit = 10,
+    viewerId?: string,
   ) {
     const skip = (page - 1) * limit;
 
@@ -540,6 +656,9 @@ export class ReviewService {
               avatarUrl: true,
             },
           },
+          reactions: {
+            select: reactionSelect,
+          },
           replies: {
             include: {
               user: {
@@ -549,6 +668,9 @@ export class ReviewService {
                   name: true,
                   avatarUrl: true,
                 },
+              },
+              reactions: {
+                select: reactionSelect,
               },
             },
             orderBy: {
@@ -582,7 +704,7 @@ export class ReviewService {
 
     // Convert to entities and sanitize
     const reviewEntities = reviews.map(
-      (review) => new ReviewWithRepliesEntity(review),
+      (review) => new ReviewWithRepliesEntity({ ...review, viewerId }),
     );
 
     return {
