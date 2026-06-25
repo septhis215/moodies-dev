@@ -7,15 +7,17 @@ import ReviewsSection from "@/components/selected-content/sections/reviews";
 import TvSeasonsEpisodes from "@/components/selected-content/sections/TvSeasonsEpisodes";
 import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
 import CommonCardCarousel from "@/components/sections/CommonCardCarousel";
+import { normalizeMediaDetails } from "@/lib/mediaDetails";
+import type { TvDetailsData } from "@/components/selected-content/types";
 
-async function fetchDetails(id: string) {
+async function fetchDetails(id: string): Promise<TvDetailsData | null> {
   try {
     const base = process.env.NEST_API_URL ?? "http://localhost:4000";
     const res = await fetch(`${base}/tv/details/${id}`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return null;
-    return res.json();
+    return normalizeMediaDetails<TvDetailsData>(await res.json());
   } catch {
     return null;
   }
@@ -77,7 +79,6 @@ async function fetchReviews(id: string) {
   try {
     const base = process.env.NEST_API_URL ?? "http://localhost:4000";
     const res = await fetch(`${base}/reviews/media/TV/${id}?page=1&limit=10`, {
-      next: { revalidate: 60 },
       cache: "no-store",
     });
     if (!res.ok)
@@ -100,7 +101,6 @@ async function fetchReviewStats(id: string) {
   try {
     const base = process.env.NEST_API_URL ?? "http://localhost:4000";
     const res = await fetch(`${base}/reviews/media/TV/${id}/stats`, {
-      next: { revalidate: 60 },
       cache: "no-store",
     });
     if (!res.ok) return null;
@@ -128,7 +128,6 @@ export async function generateMetadata({
 
   const title =
     info.title?.trim() ||
-    info.name?.trim() ||
     info.original_title?.trim() ||
     `TV Show ${info.id ?? ""}`;
 
