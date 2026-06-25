@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useToast } from "@/app/context/ToastContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -8,7 +7,6 @@ const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };
 
 export function useAuth() {
-    const router = useRouter();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
 
@@ -63,10 +61,12 @@ export function useAuth() {
                 window.location.href = "/";
 
                 return { success: true, data };
-            } catch (error: any) {
+            } catch (error: unknown) {
+                const message =
+                    error instanceof Error ? error.message : "Failed to sign in";
                 // Error toast with moodies logo
                 toast(
-                    error.message || "Failed to sign in",
+                    message,
                     "error",
                     4000,
                     "Sign-in Failed",
@@ -74,12 +74,12 @@ export function useAuth() {
                     MOODIES_SIZE
                 );
 
-                return { success: false, error: error.message };
+                return { success: false, error: message };
             } finally {
                 setIsLoading(false);
             }
         },
-        [toast, router]
+        [toast]
     );
 
     return {

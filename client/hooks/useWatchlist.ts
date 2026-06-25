@@ -15,6 +15,10 @@ type ToastMeta = {
   duration?: number;
 };
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function useWatchlist() {
   // local sets for fast lookup
   const [movieIds, setMovieIds] = useState<Set<string>>(new Set());
@@ -41,10 +45,10 @@ export function useWatchlist() {
         setMovieIds(new Set(wl.movieId ?? []));
         setSeriesIds(new Set(wl.seriesId ?? []));
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       // If client threw "NO_TOKEN", just treat as logged-out silently.
-      if (!String(e?.message || e).includes("NO_TOKEN")) {
-        setError(e?.message || "Failed to load watchlist");
+      if (!getErrorMessage(e).includes("NO_TOKEN")) {
+        setError(getErrorMessage(e) || "Failed to load watchlist");
         console.error("[useWatchlist] refresh error:", e);
       } else {
         setMovieIds(new Set());
@@ -104,7 +108,7 @@ export function useWatchlist() {
             meta?.posterUrl ?? null
           );
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         // rollback on error
         if (type === "movie")
           setMovieIds((s) => {
@@ -119,7 +123,7 @@ export function useWatchlist() {
             return n;
           });
 
-        if (String(e?.message || e).includes("NO_TOKEN")) {
+        if (getErrorMessage(e).includes("NO_TOKEN")) {
           // replaced alert with toast
           toast("Please log in to use Watchlist", "warning", 3500, null, null);
           return;
@@ -165,12 +169,12 @@ export function useWatchlist() {
             meta?.posterUrl ?? null
           );
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         // rollback on error
         if (type === "movie") setMovieIds((s) => new Set(s).add(id));
         else setSeriesIds((s) => new Set(s).add(id));
 
-        if (String(e?.message || e).includes("NO_TOKEN")) {
+        if (getErrorMessage(e).includes("NO_TOKEN")) {
           // replaced alert with toast
           toast("Please log in to use Watchlist", "warning", 3500, null, null);
           return;

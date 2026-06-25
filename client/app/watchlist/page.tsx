@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Star } from "lucide-react";
 import { useToast } from "@/app/context/ToastContext";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { useAuth } from "@/app/context/AuthProvider";
@@ -32,6 +31,10 @@ type TmdbTv = {
 };
 
 type Item = ({ kind: "movie" } & TmdbMovie) | ({ kind: "tv" } & TmdbTv);
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
 
 /* -------------------- Config -------------------- */
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -262,9 +265,9 @@ export default function WatchlistPage() {
         const json = (await res.json()) as Watchlist;
         if (!alive) return;
         setData(json);
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!alive) return;
-        setErr(e?.message || "Failed to load watchlist");
+        setErr(getErrorMessage(e, "Failed to load watchlist"));
         setData(null);
       } finally {
         if (!alive) return;
@@ -524,7 +527,7 @@ export default function WatchlistPage() {
               filteredTv.length === 0 && (
                 <div className="py-16 text-center text-white/30 text-sm">
                   No results for{" "}
-                  <span className="text-white/60">"{search}"</span>
+                  <span className="text-white/60">&quot;{search}&quot;</span>
                 </div>
               )}
 
@@ -793,19 +796,6 @@ function ViewMore({ onClick, count }: { onClick: () => void; count: number }) {
         </svg>
       </button>
     </div>
-  );
-}
-
-function Badge({ label, ok = true }: { label: string; ok?: boolean }) {
-  return (
-    <span
-      className={`rounded-full px-3 py-1 ${ok
-        ? "bg-emerald-500/15 text-emerald-300 border-emerald-400/30"
-        : "bg-red-500/15 text-red-300 border-red-400/30"
-        } border text-xs font-medium`}
-    >
-      {label}
-    </span>
   );
 }
 

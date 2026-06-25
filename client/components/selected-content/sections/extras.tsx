@@ -5,118 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Building2, ChevronDown, ChevronUp } from "lucide-react";
 import { motion } from "framer-motion";
-
-export type MovieDetailsData = {
-  info: {
-    id: number;
-    title: string;
-    overview: string;
-    release_date: string;
-    runtime: number;
-    budget: number;
-    revenue: number;
-    vote_average: number;
-    vote_count: number;
-    genres: Array<{ id: number; name: string }>;
-    production_companies: Array<{
-      id: number;
-      name: string;
-      logo_path?: string;
-    }>;
-    production_countries: Array<{ iso_3166_1: string; name?: string }>;
-    spoken_languages: Array<{ iso_639_1: string; name: string }>;
-    status: string;
-    tagline?: string;
-    homepage?: string;
-    poster_path?: string;
-    backdrop_path?: string;
-    content_type: "movie";
-    director?: string;
-    content_rating?: string;
-  };
-  credits: {
-    cast: Array<{
-      id: number;
-      name: string;
-      character: string;
-      profile_path?: string;
-      order: number;
-    }>;
-    crew: Array<{
-      id: number;
-      name: string;
-      job: string;
-      department: string;
-      profile_path?: string;
-    }>;
-  };
-  trailer?: any;
-  providers?: any;
-  reviews?: any[];
-  similar?: any[];
-  raw?: any;
-};
-
-export type TvDetailsData = {
-  info: {
-    id: number;
-    title: string;
-    original_title?: string;
-    overview: string;
-    release_date: string;
-    runtime: number;
-    budget: number;
-    revenue: number;
-    vote_average: number;
-    vote_count: number;
-    genres: Array<{ id: number; name: string }>;
-    production_companies: Array<{
-      id: number;
-      name: string;
-      logo_path?: string;
-    }>;
-    production_countries: Array<{ iso_3166_1: string; name?: string }>;
-    spoken_languages: Array<{ iso_639_1: string; name: string }>;
-    status: string;
-    tagline?: string;
-    homepage?: string;
-    poster_path?: string;
-    backdrop_path?: string;
-    adult: boolean;
-    created_by?: Array<{ id: number; name: string }>;
-    content_type: "tv";
-    director?: string;
-    content_rating?: string;
-    number_of_seasons?: number;
-    number_of_episodes?: number;
-    episode_run_time?: number[];
-    first_air_date?: string;
-    last_air_date?: string;
-    networks?: Array<{ id: number; name: string; logo_path?: string }>;
-    seasons?: Array<any>;
-  };
-  credits: {
-    cast: Array<{
-      id: number;
-      name: string;
-      character: string;
-      profile_path?: string;
-      order: number;
-    }>;
-    crew: Array<{
-      id: number;
-      name: string;
-      jobs: { job: string };
-      department: string;
-      profile_path?: string;
-    }>;
-  };
-  trailer?: any;
-  providers?: any;
-  reviews?: any[];
-  similar?: any[];
-  raw?: any;
-};
+import type {
+  MovieDetailsData,
+  ProviderCountry,
+  TvDetailsData,
+} from "@/components/selected-content/types";
 
 interface DetailsProp {
   data: MovieDetailsData | TvDetailsData;
@@ -151,9 +44,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
     if (!providers?.results) return [];
     Object.values(providers.results).forEach((countryEntry) => {
       ["flatrate", "rent", "buy"].forEach((key) => {
-        const list = (countryEntry as any)[key] as
-          | Array<{ provider_name: string; logo_path?: string }>
-          | undefined;
+        const list = countryEntry[key as keyof ProviderCountry];
         if (!Array.isArray(list)) return;
         list.forEach((p) => {
           if (!map.has(p.provider_name)) {
@@ -198,7 +89,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
         const people = credits.crew.filter((person) => {
           if ("job" in person && person.job) return person.job === job;
           if ("jobs" in person && Array.isArray(person.jobs))
-            return person.jobs.some((j: any) => j.job === job);
+            return person.jobs.some((j) => j.job === job);
           return false;
         });
         return { job, people };
@@ -207,7 +98,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
   };
 
   const resolvedContentType: "movie" | "tv" =
-    (info as any)?.content_type === "tv" ? "tv" : "movie";
+    info.content_type === "tv" ? "tv" : "movie";
   const basePath = resolvedContentType === "tv" ? "tv" : "movies";
   const viewAllHref = contentId ? `/${basePath}/${contentId}/credits` : "#";
 
@@ -240,7 +131,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
         </div>
 
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5">
-          {credits.cast.slice(0, castLimit).map((actor, i) => (
+          {credits.cast.slice(0, castLimit).map((actor) => (
             <Link
               key={actor.id}
               href={`/celeb/${actor.id}`}

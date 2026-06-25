@@ -11,6 +11,10 @@ type ToastMeta = {
   duration?: number;
 };
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function useLiked() {
   const [movieIds, setMovieIds] = useState<Set<string>>(new Set());
   const [seriesIds, setSeriesIds] = useState<Set<string>>(new Set());
@@ -25,8 +29,8 @@ export function useLiked() {
       const list = await fetchLikedList();
       setMovieIds(new Set(list.movieId ?? []));
       setSeriesIds(new Set(list.seriesId ?? []));
-    } catch (e: any) {
-      if (!String(e?.message || e).includes("NO_TOKEN")) {
+    } catch (e: unknown) {
+      if (!getErrorMessage(e).includes("NO_TOKEN")) {
         console.error("[useLiked] refresh error:", e);
       }
       setMovieIds(new Set());

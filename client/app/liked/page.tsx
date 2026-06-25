@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Star } from "lucide-react";
 import { useToast } from "@/app/context/ToastContext";
 import { useAuth } from "@/app/context/AuthProvider";
 import { RatingBadge } from "@/components/ui/rating-badge";
@@ -32,6 +31,10 @@ type TmdbTv = {
 };
 
 type Item = ({ kind: "movie" } & TmdbMovie) | ({ kind: "tv" } & TmdbTv);
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
 
 /* -------------------- Config -------------------- */
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -260,9 +263,9 @@ export default function LikedPage() {
         const json = (await res.json()) as LikedList;
         if (!alive) return;
         setData(json);
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!alive) return;
-        setErr(e?.message || "Failed to load liked list");
+        setErr(getErrorMessage(e, "Failed to load liked list"));
         setData(null);
       } finally {
         if (!alive) return;
@@ -501,7 +504,7 @@ export default function LikedPage() {
               filteredTv.length === 0 && (
                 <div className="py-16 text-center text-white/30 text-sm">
                   No results for{" "}
-                  <span className="text-white/60">"{search}"</span>
+                  <span className="text-white/60">&quot;{search}&quot;</span>
                 </div>
               )}
 

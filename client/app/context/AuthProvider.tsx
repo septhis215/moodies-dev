@@ -20,6 +20,16 @@ type User = {
   provider?: string;
 };
 
+type JsonRecord = Record<string, unknown>;
+type ToastFn = (
+  title: string,
+  type: string,
+  duration: number,
+  label: string,
+  image: string,
+  size: { width: number; height: number },
+) => void;
+
 type AuthContextValue = {
   user: User | null; // null => guest
   isAuthenticated: boolean;
@@ -44,21 +54,40 @@ const MOODIES_SIZE = { width: 30, height: 30 };
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 /** Normalize /me into our User shape, handling common nestings. */
-function extractUser(payload: any): User {
-  const p =
-    payload?.data?.user ??
-    payload?.user ??
-    payload?.profile ??
-    payload?.data ??
-    payload ??
-    {};
-  const id = p.id ?? p.sub ?? p.userId ?? p.uid;
+function asRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" ? (value as JsonRecord) : {};
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function extractUser(payload: unknown): User {
+  const root = asRecord(payload);
+  const data = asRecord(root.data);
+  const p = asRecord(data.user ?? root.user ?? root.profile ?? root.data ?? root);
+  const nestedUser = asRecord(p.user);
+  const id =
+    stringValue(p.id) ??
+    stringValue(p.sub) ??
+    stringValue(p.userId) ??
+    stringValue(p.uid);
   const username =
-    p.username ?? p.userName ?? p.user_name ?? p.login ?? p.handle;
-  const name = p.name ?? p.fullname ?? p.full_name ?? username ?? "User";
-  const email = p.email ?? p.mail ?? p.user?.email;
-  const avatarUrl = p.avatarUrl ?? p.avatar_url ?? p.picture;
-  const provider = p.provider;
+    stringValue(p.username) ??
+    stringValue(p.userName) ??
+    stringValue(p.user_name) ??
+    stringValue(p.login) ??
+    stringValue(p.handle);
+  const name =
+    stringValue(p.name) ??
+    stringValue(p.fullname) ??
+    stringValue(p.full_name) ??
+    username ??
+    "User";
+  const email = stringValue(p.email) ?? stringValue(p.mail) ?? stringValue(nestedUser.email);
+  const avatarUrl =
+    stringValue(p.avatarUrl) ?? stringValue(p.avatar_url) ?? stringValue(p.picture);
+  const provider = stringValue(p.provider);
   return { id, name, username, email, avatarUrl, provider };
 }
 
@@ -156,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Google sign-in landing: strip the flag from the URL and toast.
       if (isGoogleLanding && typeof window !== "undefined") {
         window.history.replaceState({}, document.title, window.location.pathname);
-        const showToast = (window as any).showToast;
+        const showToast = (window as Window & { showToast?: ToastFn }).showToast;
         if (typeof showToast === "function") {
           showToast(
             "Welcome back!",

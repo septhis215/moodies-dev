@@ -148,7 +148,7 @@ export default function NotFoundAuroraVisible() {
         <div className="max-w-3xl w-full text-center p-10 rounded-2xl backdrop-blur-md bg-black/40 border border-white/6 shadow-2xl">
           <h1 className="text-6xl font-extrabold tracking-tight mb-4">404</h1>
           <h2 className="text-xl text-gray-200 mb-6">
-            We couldn't find that page
+            We couldn&apos;t find that page
           </h2>
           <p className="text-gray-400 mb-8">
             Looks like this route drifted into the aurora. Try heading back

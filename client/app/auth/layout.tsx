@@ -1,7 +1,6 @@
 // app/auth/layout.tsx
 import React from "react";
 import AuthBackground from "./AuthBackground";
-import AuthPoster from "./AuthPoster";
 import AuthLayoutClient from "./AuthLayoutClient";
 
 type Slide = {
@@ -15,17 +14,36 @@ type Slide = {
   kind?: "movie" | "tv";
 };
 
+type FeaturedItem = {
+  id?: number;
+  title?: string;
+  name?: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  vote_average?: number;
+  release_date?: string;
+  first_air_date?: string;
+  genres?: string[];
+  type?: "movie" | "tv";
+};
+
 async function fetchAuthFeatured(): Promise<Slide[]> {
   const base = process.env.NEST_API_URL || "http://localhost:4000";
   const res = await fetch(`${base}/all/trending`, {
     next: { revalidate: 180 },
   });
   if (!res.ok) return [];
-  const data = await res.json();
+  const data = (await res.json()) as unknown;
   const slides: Slide[] = (Array.isArray(data) ? data : [])
-    .filter((x: any) => x?.poster_path && x?.backdrop_path)
+    .filter(
+      (x: unknown): x is FeaturedItem =>
+        typeof x === "object" &&
+        x !== null &&
+        Boolean((x as FeaturedItem).poster_path) &&
+        Boolean((x as FeaturedItem).backdrop_path),
+    )
     .slice(0, 5)
-    .map((x: any) => ({
+    .map((x) => ({
       id: typeof x?.id === "number" ? x.id : undefined,
       title: x?.title || x?.name || "Featured",
       poster: x?.poster_path
