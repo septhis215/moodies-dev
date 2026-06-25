@@ -109,7 +109,7 @@ async function fetchReviewStats(id: string) {
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string } | Promise<{ id: string }>;
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
   const data = await fetchDetails(id);
@@ -138,7 +138,7 @@ export async function generateMetadata({
 export default async function TvPage({
   params,
 }: {
-  params: { id: string } | Promise<{ id: string }>;
+  params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
   const [

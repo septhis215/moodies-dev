@@ -3,14 +3,14 @@ import AllCredits from "@/components/selected-content/extended/allCredits";
 import type { Metadata } from "next";
 
 type Props = {
-  params: { id: string } | Promise<{ id: string }>;
-  searchParams: { highlight?: string } | Promise<{ highlight?: string }>;
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ highlight?: string }>;
 };
 
 export async function generateMetadata({
   params,
 }: {
-  params: { id: string } | Promise<{ id: string }>;
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
   return { title: `Credits for ${id}` };
