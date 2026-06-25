@@ -158,6 +158,10 @@ type CareerMoment = { label: string; value: string; detail: string };
 type VideoFilter = "all" | "trailer" | "clip" | "feature" | "show";
 
 const RELATED_VIDEO_PAGE_SIZE = 4;
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_NEST_API_URL ||
+  "http://localhost:4000";
 
 const genreMap: Record<number, string> = {
   28: "Action",
@@ -677,8 +681,7 @@ export default function CelebrityDetailPage({
       setSimilarPeople([]);
       setUpcomingProjects([]);
       try {
-        const base =
-          process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
+        const base = API_BASE;
         const personRes = await fetch(`${base}/people/${resolvedParams.id}`, {
           signal: controller.signal,
         });
@@ -806,8 +809,7 @@ export default function CelebrityDetailPage({
     if (!person || !shouldLoadVideos) return;
 
     const controller = new AbortController();
-    const base =
-      process.env.NEXT_PUBLIC_NEST_API_URL || "http://localhost:4000";
+    const base = API_BASE;
 
     setVideosLoading(true);
     setVideosError(null);
