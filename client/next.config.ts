@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const configDir = dirname(fileURLToPath(import.meta.url));
+const repoRoot = dirname(configDir);
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -34,9 +35,15 @@ const nextConfig: NextConfig = {
     ],
   },
   reactStrictMode: true,
-  outputFileTracingRoot: configDir,
+  outputFileTracingRoot: repoRoot,
+  outputFileTracingIncludes: {
+    "/*": [
+      "../node_modules/next/dist/compiled/source-map/**/*",
+      "node_modules/next/dist/compiled/source-map/**/*",
+    ],
+  },
   turbopack: {
-    root: configDir,
+    root: repoRoot,
   },
 };
 
