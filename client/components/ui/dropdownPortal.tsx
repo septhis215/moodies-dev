@@ -2,8 +2,9 @@
 
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
-export default function DropdownPortal({ children }) {
+export default function DropdownPortal({ children }: { children: ReactNode }) {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {

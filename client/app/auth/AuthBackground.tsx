@@ -11,14 +11,6 @@ type Slide = {
   kind?: "movie" | "tv";
 };
 type Props = { slides: Slide[]; rotationMs?: number };
-type IdleWindow = Window &
-  typeof globalThis & {
-    requestIdleCallback?: (
-      cb: () => void,
-      opts?: { timeout: number },
-    ) => number;
-    cancelIdleCallback?: (handle: number) => void;
-  };
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -87,17 +79,11 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
       }
     };
 
-    const idleWindow = window as IdleWindow;
-    const ric = idleWindow.requestIdleCallback;
-    const handle = ric
-      ? ric(() => start(), { timeout: 2500 })
-      : window.setTimeout(start, 1200);
+    const handle = window.setTimeout(start, 1200);
 
     return () => {
       cancelled = true;
-      const cancelRic = idleWindow.cancelIdleCallback;
-      if (ric && cancelRic) cancelRic(handle as number);
-      else window.clearTimeout(handle as number);
+      window.clearTimeout(handle);
     };
   }, [slides]);
 

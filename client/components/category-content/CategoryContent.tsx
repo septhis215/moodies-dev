@@ -4,19 +4,14 @@ import { useState, useMemo, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  Star,
   Calendar,
   Play,
-  Info,
-  TrendingUp,
-  Crown,
   Award,
   ChevronLeft,
   ChevronRight,
   Loader2,
   Tv,
   Film,
-  Rat,
 } from "lucide-react";
 import RatingBadge from "../ui/rating-badge";
 

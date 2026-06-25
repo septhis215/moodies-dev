@@ -9,7 +9,6 @@ import {
   MousePointer2,
   Play,
   Repeat,
-  Sparkles,
   Zap,
 } from "lucide-react";
 

@@ -38,12 +38,12 @@ type MovieLike = {
   overview?: string | null;
   release_date?: string | null;
   first_air_date?: string | null;
-  year?: number | 0;
-  type?: "movies" | "tv" | "movie" | null;
-  media_type?: "movie" | "tv";
+  year?: number | string | null;
+  type?: "movies" | "tv" | "movie" | "person" | null;
+  media_type?: "movie" | "tv" | "person";
   genres?: string[];
-  vote_count?: number;
-  popularity?: number;
+  vote_count?: number | null;
+  popularity?: number | null;
   origin_country?: string[];
   recommendations?: MovieLike[];
   number_of_seasons?: number;
@@ -238,7 +238,9 @@ export default function CardCarousel<T extends MovieLike>({
     }px) / ${itemsPerView})`;
 
   const getContentType = (item: MovieLike): "movie" | "tv" => {
-    if (item.media_type) return item.media_type;
+    if (item.media_type === "movie" || item.media_type === "tv") {
+      return item.media_type;
+    }
     if (item.type === "movies" || item.type === "movie") return "movie";
     if (item.type === "tv") return "tv";
     if (item.number_of_seasons || item.first_air_date || item.name) return "tv";

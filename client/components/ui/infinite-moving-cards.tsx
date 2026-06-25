@@ -137,7 +137,6 @@ export const InfiniteMovingCards = ({
               <blockquote className="relative z-10 grid min-h-[210px] grid-cols-[86px_minmax(0,1fr)] gap-3 p-3 sm:min-h-[224px] sm:grid-cols-[102px_minmax(0,1fr)] sm:p-4">
                 <div className="flex flex-col gap-2">
                   <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={poster}
                       alt={title}
@@ -180,7 +179,6 @@ export const InfiniteMovingCards = ({
                   </p>
 
                   <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={getAvatarSrc(item.avatar)}
                       alt={item.name}
@@ -211,7 +209,6 @@ export const InfiniteMovingCards = ({
                       title="Moodies community signal"
                       aria-hidden
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={MASCOT_SRC}
                         alt=""

@@ -4,10 +4,8 @@ import type { Metadata } from "next";
 import HeroContentCard from "@/components/selected-content/sections/heroTop";
 import ExtraDetails from "@/components/selected-content/sections/extras";
 import ReviewsSection from "@/components/selected-content/sections/reviews";
-import CardCarousel from "@/components/sections/CardCarousel";
 import TvSeasonsEpisodes from "@/components/selected-content/sections/TvSeasonsEpisodes";
 import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
-import Analytics from "@/components/selected-content/sections/analytics";
 import CommonCardCarousel from "@/components/sections/CommonCardCarousel";
 
 async function fetchDetails(id: string) {
@@ -27,7 +25,7 @@ async function fetchSeasonsWithEpisodes(id: string) {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -40,7 +38,7 @@ async function fetchImages(id: string) {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -53,7 +51,7 @@ async function fetchVideos(id: string) {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -66,7 +64,7 @@ async function fetchRecommendations(id: string) {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -85,7 +83,7 @@ async function fetchReviews(id: string) {
         pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
       };
     return res.json();
-  } catch (err) {
+  } catch {
     return {
       reviews: [],
       topMoods: [],
@@ -103,7 +101,7 @@ async function fetchReviewStats(id: string) {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (err) {
+  } catch {
     return null;
   }
 }

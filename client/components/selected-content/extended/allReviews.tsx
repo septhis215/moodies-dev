@@ -1691,7 +1691,6 @@ function AvatarBlock({
       className="rounded-full overflow-hidden bg-white/[0.08] border border-white/[0.10] flex items-center justify-center flex-shrink-0 transition-colors group-hover:border-[#e94f37]/50"
     >
       {avatarSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={avatarSrc}
           alt={review.author}
@@ -1746,7 +1745,6 @@ function ReplyAvatarBlock({
       className="rounded-full overflow-hidden bg-white/[0.08] border border-white/[0.10] flex items-center justify-center flex-shrink-0 transition-colors group-hover:border-[#e94f37]/50"
     >
       {avatarSrc ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={avatarSrc}
           alt={reply.user.username}

@@ -53,7 +53,7 @@ export default async function CreditsPage({ params, searchParams }: Props) {
         />
       </main>
     );
-  } catch (err) {
+  } catch {
     return (
       <main className="min-h-screen flex items-center justify-center p-8 bg-black text-white">
         <div className="text-center">

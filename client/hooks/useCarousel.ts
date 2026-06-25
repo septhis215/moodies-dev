@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export default function useCarousel({ length, intervalMs = 7000 }: { length: number; intervalMs?: number }) {
     const [index, setIndex] = useState(0);
@@ -11,26 +11,26 @@ export default function useCarousel({ length, intervalMs = 7000 }: { length: num
     const timer = useRef<number | null>(null);
     const paused = useRef(false);
 
-    const clearTimer = () => {
+    const clearTimer = useCallback(() => {
         if (timer.current) {
             window.clearInterval(timer.current);
             timer.current = null;
         }
-    };
+    }, []);
 
-    const startTimer = () => {
+    const startTimer = useCallback(() => {
         if (timer.current) clearTimer();
         if (length <= 1) return;
         timer.current = window.setInterval(() => {
             setIndex((i) => (length ? (i + 1) % length : 0));
         }, intervalMs);
-    };
+    }, [clearTimer, intervalMs, length]);
 
     useEffect(() => {
         if (!mounted) return;
         startTimer();
         return () => clearTimer();
-    }, [mounted, length, intervalMs]);
+    }, [clearTimer, mounted, startTimer]);
 
     const pause = () => {
         paused.current = true;

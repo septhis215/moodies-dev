@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import HeroContentCard from "@/components/selected-content/sections/heroTop";
 import MovieDetails from "@/components/selected-content/sections/extras";
 import ReviewsSection from "@/components/selected-content/sections/reviews";
-import CardCarousel from "@/components/sections/CardCarousel";
 import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
 import CommonCardCarousel from "@/components/sections/CommonCardCarousel";
 
@@ -24,7 +23,7 @@ async function fetchImages(id: string) {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -37,7 +36,7 @@ async function fetchVideos(id: string) {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -50,7 +49,7 @@ async function fetchRecommendations(id: string) {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (err) {
+  } catch {
     return null;
   }
 }
@@ -72,7 +71,7 @@ async function fetchReviews(id: string) {
         pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
       };
     return res.json();
-  } catch (err) {
+  } catch {
     return {
       reviews: [],
       topMoods: [],
@@ -90,7 +89,7 @@ async function fetchReviewStats(id: string) {
     });
     if (!res.ok) return null;
     return res.json();
-  } catch (err) {
+  } catch {
     return null;
   }
 }
