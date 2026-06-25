@@ -1,6 +1,8 @@
 // app/tv/[id]/reviews/page.tsx
 import AllReviews from "@/components/selected-content/extended/allReviews";
 import { ReviewsPageUnavailable } from "@/components/selected-content/extended/reviewsPageStates";
+import { normalizeMediaDetails } from "@/lib/mediaDetails";
+import type { TvDetailsData } from "@/components/selected-content/types";
 import type { Metadata } from "next";
 
 type Props = {
@@ -43,7 +45,6 @@ async function fetchReviews(id: string) {
   try {
     const base = process.env.NEST_API_URL ?? "http://localhost:4000";
     const res = await fetch(`${base}/reviews/media/TV/${id}?page=1&limit=100`, {
-      next: { revalidate: 60 },
       cache: "no-store",
     });
     if (!res.ok)
@@ -66,7 +67,6 @@ async function fetchReviewStats(id: string, mediaType: string) {
   try {
     const base = process.env.NEST_API_URL ?? "http://localhost:4000";
     const res = await fetch(`${base}/reviews/media/${mediaType}/${id}/stats`, {
-      next: { revalidate: 60 },
       cache: "no-store",
     });
     if (!res.ok) return null;
@@ -103,11 +103,19 @@ export default async function ReviewsPage({ params }: Props) {
     );
   }
 
-  const data = await res.json();
+  const data = normalizeMediaDetails<TvDetailsData>(await res.json());
+  if (!data) {
+    return (
+      <ReviewsPageUnavailable
+        message="Could not fetch reviews for this TV show."
+        backHref={`/tv/${id}`}
+      />
+    );
+  }
+
   const reviewsData = await fetchReviews(id);
   const tvInfo = data.info;
-  const mediaType = tvInfo.content_type === "tv" ? "TV" : "MOVIE";
-  const reviewStats = await fetchReviewStats(id, mediaType);
+  const reviewStats = await fetchReviewStats(id, "TV");
 
   const transformedReviews = reviewsData.reviews.map((r: ApiReview) => ({
     id: r.id,

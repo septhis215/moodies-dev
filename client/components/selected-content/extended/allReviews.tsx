@@ -227,8 +227,8 @@ type Info = {
   runtime: number;
   genres: Array<{ id: number; name: string }>;
   content_type: string;
-  number_of_seasons: number;
-  number_of_episodes: number;
+  number_of_seasons?: number;
+  number_of_episodes?: number;
 };
 
 interface AllReviewsProps {
@@ -601,13 +601,13 @@ export default function AllReviews({
                 <span className="text-xs text-white/40">
                   {new Date(info.release_date).getFullYear()}
                 </span>
-                {info.content_type === "tv" && info.number_of_seasons > 0 && (
+                {info.content_type === "tv" && (info.number_of_seasons ?? 0) > 0 && (
                   <span className="text-xs text-white/40">
                     {info.number_of_seasons} Season
                     {info.number_of_seasons !== 1 ? "s" : ""}
                   </span>
                 )}
-                {info.content_type === "tv" && info.number_of_episodes > 0 && (
+                {info.content_type === "tv" && (info.number_of_episodes ?? 0) > 0 && (
                   <span className="text-xs text-white/40">
                     {info.number_of_episodes} Episodes
                   </span>
