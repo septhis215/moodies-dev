@@ -6,11 +6,14 @@ import {
   ParseIntPipe,
   Post,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { MoviesService } from './movies.service';
 
 @Controller('movies')
 export class MoviesController {
+  private readonly logger = new Logger(MoviesController.name);
+
   constructor(private readonly movieService: MoviesService) { }
 
   @Get('details/:id')
@@ -236,7 +239,10 @@ export class MoviesController {
       const images = this.movieService.images(Number(id), type);
       return images;
     } catch (err) {
-      console.log(err);
+      this.logger.error(
+        `Failed to load movie images for ${id}`,
+        err instanceof Error ? err.stack : String(err),
+      );
     }
   }
 
@@ -302,7 +308,10 @@ export class MoviesController {
       const videos = this.movieService.videos(Number(id), type);
       return videos;
     } catch (err) {
-      console.log(err);
+      this.logger.error(
+        `Failed to load movie videos for ${id}`,
+        err instanceof Error ? err.stack : String(err),
+      );
     }
   }
 }

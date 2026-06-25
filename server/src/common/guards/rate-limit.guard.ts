@@ -4,12 +4,26 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { RedisService } from 'src/redis/redis.service';
 
 interface RateLimitRule {
   points: number;
   windowMs: number;
+}
+
+interface RateLimitRequest {
+  method: string;
+  originalUrl?: string;
+  url?: string;
+  ip?: string;
+  socket?: {
+    remoteAddress?: string;
+  };
+  headers?: {
+    'x-forwarded-for'?: string | string[];
+  };
 }
 
 const DEFAULT_RULE: RateLimitRule = { points: 120, windowMs: 60_000 };
@@ -39,10 +53,12 @@ const SENSITIVE_AUTH_PATHS = [
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
+  private readonly logger = new Logger(RateLimitGuard.name);
+
   constructor(private readonly redis: RedisService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<RateLimitRequest>();
     const response = context.switchToHttp().getResponse();
     const path = this.getPath(request);
     const rule = this.getRule(path);
@@ -55,7 +71,11 @@ export class RateLimitGuard implements CanActivate {
     } catch (err) {
       // Fail open: a Redis outage must never take the whole API down. We'd rather
       // briefly skip rate limiting than 500 every request.
-      console.error('[rate-limit] Redis unavailable, allowing request:', err);
+      this.logger.warn(
+        `Redis unavailable, allowing request without rate limiting: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
       return true;
     }
 
@@ -85,7 +105,7 @@ export class RateLimitGuard implements CanActivate {
     return DEFAULT_RULE;
   }
 
-  private getClientKey(request: any): string {
+  private getClientKey(request: RateLimitRequest): string {
     // Trust the proxy's forwarding header only when configured to do so;
     // otherwise it is attacker-controlled and useless as a rate-limit key.
     if (TRUST_PROXY) {
@@ -98,7 +118,7 @@ export class RateLimitGuard implements CanActivate {
     return request.ip ?? request.socket?.remoteAddress ?? 'anonymous';
   }
 
-  private getPath(request: any): string {
+  private getPath(request: RateLimitRequest): string {
     return request.originalUrl?.split('?')[0] ?? request.url?.split('?')[0] ?? '/';
   }
 }

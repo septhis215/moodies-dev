@@ -1,15 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ReviewStatus } from '@prisma/client';
 
 @Injectable()
 export class ModerationDecisionService {
-  decide(toxicity: { score: number | string; severe: boolean }) {
-    console.log('⚖️ Moderation Decision:', toxicity);
+  private readonly logger = new Logger(ModerationDecisionService.name);
 
+  decide(toxicity: { score: number | string; severe: boolean }) {
     const score =
       typeof toxicity.score === 'string'
         ? parseFloat(toxicity.score)
         : toxicity.score;
+
+    this.logger.debug(
+      `Moderation decision input: score=${score.toFixed(2)}, severe=${toxicity.severe}`,
+    );
 
     // Severe toxicity = reject immediately
     if (toxicity.severe) {

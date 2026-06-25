@@ -1,4 +1,7 @@
 import nodemailer from 'nodemailer';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('Mailer');
 
 // Transport selection:
 //  - Local dev (NODE_ENV=development) uses Gmail SMTP — it works on a dev machine
@@ -368,5 +371,5 @@ export async function sendVerificationCode(email: string, code: string) {
       'This email was sent because someone requested password recovery for your Moodies account.',
   });
 
-  console.log(`Sent password reset verification code to ${email}`);
+  logger.log(`Sent password reset verification email to ${email}`);
 }

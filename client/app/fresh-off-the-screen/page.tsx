@@ -12,7 +12,6 @@ async function fetchNewReleases(page: number = 1) {
   );
   if (!res.ok) return { data: [], total: 0, page: 1, totalPages: 0 };
   const json = await res.json();
-  console.log("Upcoming data:", json);
   return json;
 }
 

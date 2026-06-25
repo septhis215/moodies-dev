@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class ToxicityAnalysisService {
+  private readonly logger = new Logger(ToxicityAnalysisService.name);
+
   async analyze(text: string): Promise<{ score: number; severe: boolean }> {
     const lowerText = text.toLowerCase();
 
@@ -30,10 +32,7 @@ export class ToxicityAnalysisService {
     const hasSevere = severePatterns.some((pattern) => pattern.test(text));
 
     if (hasSevere) {
-      console.log('🚨 SEVERE VIOLATION DETECTED:', {
-        text: text.substring(0, 100),
-        score: 0.95,
-      });
+      this.logger.warn('Severe moderation violation detected');
       return { score: 0.95, severe: true };
     }
 
@@ -142,15 +141,9 @@ export class ToxicityAnalysisService {
 
     score = Math.min(score, 0.9);
 
-    console.log('🧪 Toxicity Analysis:', {
-      text: text.substring(0, 80),
-      foundProfanity: foundProfanity.slice(0, 5),
-      profanityCount,
-      personalAttacks,
-      attackCount,
-      score: score.toFixed(2),
-      severe: score >= 0.8,
-    });
+    this.logger.debug(
+      `Toxicity analysis: profanityCount=${profanityCount}, attackCount=${attackCount}, score=${score.toFixed(2)}, severe=${score >= 0.8}`,
+    );
 
     return {
       score,

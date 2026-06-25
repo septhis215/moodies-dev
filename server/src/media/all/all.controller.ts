@@ -9,12 +9,15 @@ import {
   UseGuards,
   Req,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { AllService } from './all.service';
 import { JwtGuard } from 'src/auth/guard';
 
 @Controller('all')
 export class AllController {
+  private readonly logger = new Logger(AllController.name);
+
   constructor(private readonly allService: AllService) {}
 
   @Get('trending/day')
@@ -267,7 +270,10 @@ export class AllController {
       const images = this.allService.images(Number(id), type);
       return images;
     } catch (err) {
-      console.log(err);
+      this.logger.error(
+        `Failed to load ${type} images for ${id}`,
+        err instanceof Error ? err.stack : String(err),
+      );
     }
   }
 

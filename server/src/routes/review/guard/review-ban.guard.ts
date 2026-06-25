@@ -3,11 +3,14 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class ReviewBanGuard implements CanActivate {
+  private readonly logger = new Logger(ReviewBanGuard.name);
+
   constructor(private prisma: PrismaService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -30,12 +33,9 @@ export class ReviewBanGuard implements CanActivate {
     const bannedUntil = new Date(user.reviewBannedUntil);
     const now = new Date();
 
-    console.log('🔍 Ban check:', {
-      userId,
-      bannedUntil: bannedUntil.toISOString(),
-      now: now.toISOString(),
-      isBanned: bannedUntil > now,
-    });
+    this.logger.debug(
+      `Ban check for user ${userId}: bannedUntil=${bannedUntil.toISOString()}, now=${now.toISOString()}, isBanned=${bannedUntil > now}`,
+    );
 
     if (bannedUntil > now) {
       throw new ForbiddenException(

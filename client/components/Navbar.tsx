@@ -476,7 +476,7 @@ export function NavbarComponent() {
         <div className="flex items-center gap-2.5">
           <SearchBar
             placeholder="Search movies, series..."
-            onSearch={(query) => console.log("search:", query)}
+            onSearch={() => undefined}
           />
           <button
             type="button"
@@ -602,7 +602,7 @@ export function NavbarComponent() {
           <div className="flex items-center gap-1.5">
             <SearchBar
               placeholder="Search movies, series..."
-              onSearch={(query) => console.log("search", query)}
+              onSearch={() => undefined}
             />
             <Link
               href={profileHref}

@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as filter from 'leo-profanity';
 
 @Injectable()
 export class ProfanityFilterService {
+  private readonly logger = new Logger(ProfanityFilterService.name);
+
   constructor() {
     filter.loadDictionary();
   }
@@ -21,13 +23,9 @@ export class ProfanityFilterService {
     // Lower threshold: block if 12+ asterisks (roughly 2-3+ severe words)
     const shouldBlock = asteriskCount >= 12;
 
-    console.log('🔍 Profanity Check:', {
-      text: text.substring(0, 80),
-      hasProfanity,
-      cleaned: cleaned.substring(0, 80),
-      asteriskCount,
-      willBlock: shouldBlock,
-    });
+    this.logger.debug(
+      `Profanity check: hasProfanity=${hasProfanity}, asteriskCount=${asteriskCount}, willBlock=${shouldBlock}`,
+    );
 
     return {
       hit: hasProfanity,
