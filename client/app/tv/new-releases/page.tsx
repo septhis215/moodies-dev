@@ -1,14 +1,13 @@
 import React from "react";
 import { CategoryContent } from "@/components/category-content/CategoryContent";
+import { fetchPaginatedPage } from "@/lib/serverFetch";
 
 const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
 
 async function fetchNewReleasesTV(page: number = 1) {
-  const res = await fetch(`${BASE_URL}/tv/new-releases?page=${page}&limit=20`, {
+  return fetchPaginatedPage(`${BASE_URL}/tv/new-releases?page=${page}&limit=20`, {
     cache: "no-store",
   });
-  if (!res.ok) return { data: [], total: 0, page: 1, totalPages: 0 };
-  return await res.json();
 }
 
 export const metadata = {

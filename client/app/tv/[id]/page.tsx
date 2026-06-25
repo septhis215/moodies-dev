@@ -9,12 +9,16 @@ import ImageVideoCarousel from "@/components/selected-content/sections/imageVide
 import CommonCardCarousel from "@/components/sections/CommonCardCarousel";
 
 async function fetchDetails(id: string) {
-  const base = process.env.NEST_API_URL ?? "http://localhost:4000";
-  const res = await fetch(`${base}/tv/details/${id}`, {
-    next: { revalidate: 60 },
-  });
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(`${base}/tv/details/${id}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }
 
 async function fetchSeasonsWithEpisodes(id: string) {
@@ -210,9 +214,9 @@ export default async function TvPage({
 
           <hr className="my-8 border-white/8 sm:my-14" />
           <ImageVideoCarousel
-            posters={images.posters}
-            backdrops={images.backdrops}
-            videos={videos.videos}
+            posters={images?.posters ?? []}
+            backdrops={images?.backdrops ?? []}
+            videos={videos?.videos ?? []}
           />
 
           <hr className="my-8 border-white/8 sm:my-14" />
@@ -230,7 +234,7 @@ export default async function TvPage({
             title="Something Similar"
             subtitle="TV shows you may also enjoy"
             type="tv"
-            items={recommendations}
+            items={recommendations ?? []}
           />
         </div>
       </div>

@@ -7,12 +7,16 @@ import ImageVideoCarousel from "@/components/selected-content/sections/imageVide
 import CommonCardCarousel from "@/components/sections/CommonCardCarousel";
 
 async function fetchDetails(id: string) {
-  const base = process.env.NEST_API_URL ?? "http://localhost:4000";
-  const res = await fetch(`${base}/movies/details/${id}`, {
-    next: { revalidate: 60 },
-  });
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const res = await fetch(`${base}/movies/details/${id}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }
 
 async function fetchImages(id: string) {
@@ -160,9 +164,9 @@ export default async function MoviePage({
       <div className="min-h-screen bg-black text-slate-100">
         <div className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:space-y-14 sm:px-6 sm:py-16">
           <ImageVideoCarousel
-            posters={images.posters}
-            backdrops={images.backdrops}
-            videos={videos.videos}
+            posters={images?.posters ?? []}
+            backdrops={images?.backdrops ?? []}
+            videos={videos?.videos ?? []}
           />
 
           <hr className="my-8 border-white/8 sm:my-14" />
@@ -181,7 +185,7 @@ export default async function MoviePage({
             title="Something Similar"
             subtitle="Films you may also enjoy"
             type="movie"
-            items={recommendations}
+            items={recommendations ?? []}
           />
         </div>
       </div>
