@@ -34,8 +34,17 @@ async function bootstrap() {
     .map((o) => o.trim())
     .filter(Boolean);
 
+  const isAllowedVercelPreview = (origin: string): boolean =>
+    /^https:\/\/moodies-dev(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(origin);
+
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || isAllowedVercelPreview(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
   });
 
