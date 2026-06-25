@@ -95,9 +95,9 @@ export default async function ReviewsPage({ params }: Props) {
 
   const res = await fetch(`${base}/movies/details/${id}`, {
     next: { revalidate: 60 },
-  });
+  }).catch(() => null);
 
-  if (!res.ok) {
+  if (!res?.ok) {
     return (
       <ReviewsPageUnavailable
         message="Could not fetch reviews for this movie."

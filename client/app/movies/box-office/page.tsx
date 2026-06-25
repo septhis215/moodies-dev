@@ -1,18 +1,14 @@
 import React from "react";
 import { CategoryContent } from "@/components/category-content/CategoryContent";
+import { fetchPaginatedPage } from "@/lib/serverFetch";
 
 const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
 
 async function fetchBoxOffice(page: number = 1) {
   // Reuse the existing trending endpoint with pagination
-  const res = await fetch(
-    `${BASE_URL}/movies/trending?page=${page}&limit=20`,
-    {
-      cache: "no-store",
-    }
-  );
-  if (!res.ok) return { data: [], total: 0, page: 1, totalPages: 0 };
-  return await res.json();
+  return fetchPaginatedPage(`${BASE_URL}/movies/trending?page=${page}&limit=20`, {
+    cache: "no-store",
+  });
 }
 
 export const metadata = {

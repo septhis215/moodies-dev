@@ -1,5 +1,6 @@
 import React from "react";
 import { CategoryContent } from "@/components/category-content/CategoryContent";
+import { fetchPaginatedPage } from "@/lib/serverFetch";
 
 const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
 const PAGE_SIZE = 25;
@@ -20,15 +21,9 @@ async function fetchWorldCupDocs(page: number = 1, sort: SortMode = "curated") {
   url.searchParams.set("language", "en-US");
   url.searchParams.set("region", "US");
 
-  const res = await fetch(url.toString(), {
+  return fetchPaginatedPage(url.toString(), {
     cache: "no-store",
   });
-
-  if (!res.ok) {
-    return { data: [], total: 0, page: 1, totalPages: 0 };
-  }
-
-  return res.json();
 }
 
 export const metadata = {
