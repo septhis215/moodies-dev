@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -32,6 +33,8 @@ const reactionSelect = {
 
 @Injectable()
 export class ReviewService {
+  private readonly logger = new Logger(ReviewService.name);
+
   constructor(
     private prisma: PrismaService,
     private profanityFilter: ProfanityFilterService,
@@ -43,14 +46,16 @@ export class ReviewService {
   ) {}
 
   async createReview(userId: string, dto: CreateReviewDto) {
-    console.log('🚀 createReview called for userId:', userId);
+    this.logger.debug(`Creating review for user ${userId}`);
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { reviewBannedUntil: true },
     });
 
-    console.log('👤 User ban status:', user?.reviewBannedUntil);
+    this.logger.debug(
+      `Review ban status for user ${userId}: ${user?.reviewBannedUntil ?? 'none'}`,
+    );
 
     const profanityResult = this.profanityFilter.check(dto.content);
 
@@ -159,11 +164,9 @@ export class ReviewService {
       },
     });
 
-    console.log('✅ Reply created (no warning applied):', {
-      replyId: reply.id,
-      userId,
-      toxicityScore: toxicity.score,
-    });
+    this.logger.debug(
+      `Reply ${reply.id} created for user ${userId}; toxicity score ${toxicity.score}`,
+    );
 
     const replyEntity = new ReviewReplyEntity(reply);
     return replyEntity.toPublic();

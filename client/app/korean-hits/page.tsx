@@ -12,7 +12,6 @@ async function fetchKoreanHits(page: number = 1) {
   );
   if (!res.ok) return { data: [], total: 0, page: 1, totalPages: 0 };
   const json = await res.json();
-  console.log("Korean Hits data:", json);
   return json;
 }
 export default async function KoreanHitsPage({

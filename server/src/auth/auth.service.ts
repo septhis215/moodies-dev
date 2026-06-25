@@ -3,7 +3,8 @@ import {
   Injectable,
   InternalServerErrorException,
   BadRequestException,
-  UnauthorizedException
+  UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import {
   ChangePasswordDto,
@@ -27,6 +28,8 @@ import { REFRESH_TTL_SECONDS } from './auth.cookies';
 
 @Injectable({})
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prismaService: PrismaService,
     private readonly jwt: JwtService,
@@ -413,7 +416,10 @@ export class AuthService {
 
     if (writes.length > 0) {
       void this.prismaService.$transaction(writes).catch((error) => {
-        console.error('[achievements] Failed to persist achievement progress', error);
+        this.logger.error(
+          'Failed to persist achievement progress',
+          error instanceof Error ? error.stack : String(error),
+        );
       });
     }
 
@@ -445,10 +451,10 @@ export class AuthService {
       data: { email: normalizedEmail, code, expiresAt },
     });
 
-    // Non-production convenience: surface the code in server logs so the reset
-    // flow is testable even when email delivery isn't configured. NEVER in prod.
+    // Never log reset codes. Development and staging logs are still durable
+    // enough to leak credentials through terminals, CI, or hosted log drains.
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[auth][dev] Password reset code for ${normalizedEmail}: ${code}`);
+      this.logger.debug(`Password reset requested for ${normalizedEmail}`);
     }
 
     // Send in the background — the HTTP response must not block on (or fail
@@ -456,7 +462,10 @@ export class AuthService {
     // generic "if this email exists" reply, so response timing can't reveal
     // whether the account exists, and a slow/broken mailer never hangs the request.
     void sendVerificationCode(normalizedEmail, code).catch((err) => {
-      console.error('[auth] Failed to send password-reset email:', err);
+      this.logger.error(
+        'Failed to send password-reset email',
+        err instanceof Error ? err.stack : String(err),
+      );
     });
 
     return { success: true, message: 'If this email exists, a code was sent.' };

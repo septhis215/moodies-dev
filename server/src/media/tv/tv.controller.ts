@@ -7,12 +7,15 @@ import {
   Param,
   Query,
   ParseIntPipe,
+  Logger,
 } from '@nestjs/common';
 import { TvService } from './tv.service';
 import { parse } from 'path';
 import { MoodsService } from 'src/routes/moods/moods.service';
 @Controller('tv')
 export class TvController {
+  private readonly logger = new Logger(TvController.name);
+
   constructor(private readonly tvService: TvService, private readonly moodsService: MoodsService) { }
 
   // Main TV details endpoint - matches movies approach
@@ -277,7 +280,10 @@ export class TvController {
       const images = this.tvService.images(Number(id), type);
       return images;
     } catch (err) {
-      console.log(err);
+      this.logger.error(
+        `Failed to load TV images for ${id}`,
+        err instanceof Error ? err.stack : String(err),
+      );
     }
   }
 
@@ -287,7 +293,10 @@ export class TvController {
       const videos = this.tvService.videos(Number(id), type);
       return videos;
     } catch (err) {
-      console.log(err);
+      this.logger.error(
+        `Failed to load TV videos for ${id}`,
+        err instanceof Error ? err.stack : String(err),
+      );
     }
   }
 

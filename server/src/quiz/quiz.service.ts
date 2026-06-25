@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TMDBService } from 'src/external-apis/services/tmdb.service';
 
 export interface QuizAnswer {
@@ -41,6 +41,7 @@ export interface RecommendationResult {
 
 @Injectable()
 export class QuizRecommendationService {
+    private readonly logger = new Logger(QuizRecommendationService.name);
     private readonly token = process.env.TMDB_API_KEY;
     private readonly MIN_RESULTS = 25;
 
@@ -73,14 +74,14 @@ export class QuizRecommendationService {
     async getRecommendations(answers: QuizAnswer[]): Promise<RecommendationResult> {
         // Validate API token
         if (!this.token) {
-            console.error('TMDB_API_KEY is not set in environment variables');
+            this.logger.error('TMDB_API_KEY is not set in environment variables');
             throw new Error('TMDB API key is not configured');
         }
 
         // Analyze user answers
         const analysis = this.analyzeAnswers(answers);
 
-        console.log('Analysis result:', JSON.stringify(analysis, null, 2));
+        this.logger.debug(`Analysis result: ${JSON.stringify(analysis)}`);
 
         // Fetch recommendations from TMDB
         const recommendations = await this.fetchFromTMDB(analysis);
@@ -184,11 +185,11 @@ export class QuizRecommendationService {
                 });
             }
 
-            console.log(`After genre fetch: ${allResults.length} results`);
+            this.logger.debug(`After genre fetch: ${allResults.length} results`);
 
             // Strategy 2: If we don't have enough results, fetch popular content
             if (allResults.length < this.MIN_RESULTS) {
-                console.log('Fetching popular content to reach minimum...');
+                this.logger.debug('Fetching popular content to reach minimum');
                 const popularResults = await this.fetchPopularContent(
                     analysis.preferredMediaType,
                     Math.ceil((this.MIN_RESULTS - allResults.length) / 20) + 1
@@ -203,11 +204,11 @@ export class QuizRecommendationService {
                 });
             }
 
-            console.log(`After popular fetch: ${allResults.length} results`);
+            this.logger.debug(`After popular fetch: ${allResults.length} results`);
 
             // Strategy 3: If still not enough, fetch trending content
             if (allResults.length < this.MIN_RESULTS) {
-                console.log('Fetching trending content to reach minimum...');
+                this.logger.debug('Fetching trending content to reach minimum');
                 const trendingResults = await this.fetchTrendingContent(
                     analysis.preferredMediaType
                 );
@@ -221,13 +222,16 @@ export class QuizRecommendationService {
                 });
             }
 
-            console.log(`Final results count: ${allResults.length}`);
+            this.logger.debug(`Final results count: ${allResults.length}`);
 
             // Shuffle for variety and return at least MIN_RESULTS
             const shuffled = this.shuffleArray(allResults);
             return shuffled.slice(0, Math.max(this.MIN_RESULTS, shuffled.length));
         } catch (error) {
-            console.error('Error fetching from TMDB:', error);
+            this.logger.error(
+                'Error fetching from TMDB',
+                error instanceof Error ? error.stack : String(error),
+            );
             throw error;
         }
     }
@@ -260,7 +264,7 @@ export class QuizRecommendationService {
                         // Small delay to avoid rate limiting
                         await this.delay(100);
                     } catch (error) {
-                        console.error(`Movie fetch failed for page ${page}:`, error.message);
+                        this.logger.warn(`Movie fetch failed for page ${page}: ${this.getErrorMessage(error)}`);
                     }
                 }
             }
@@ -283,12 +287,15 @@ export class QuizRecommendationService {
 
                         await this.delay(100);
                     } catch (error) {
-                        console.error(`TV fetch failed for page ${page}:`, error.message);
+                        this.logger.warn(`TV fetch failed for page ${page}: ${this.getErrorMessage(error)}`);
                     }
                 }
             }
         } catch (error) {
-            console.error('Error in fetchWithGenres:', error);
+            this.logger.error(
+                'Error in fetchWithGenres',
+                error instanceof Error ? error.stack : String(error),
+            );
         }
 
         return results;
@@ -317,7 +324,7 @@ export class QuizRecommendationService {
 
                         await this.delay(100);
                     } catch (error) {
-                        console.error(`Popular movies fetch failed for page ${page}:`, error.message);
+                        this.logger.warn(`Popular movies fetch failed for page ${page}: ${this.getErrorMessage(error)}`);
                     }
                 }
             }
@@ -338,12 +345,15 @@ export class QuizRecommendationService {
 
                         await this.delay(100);
                     } catch (error) {
-                        console.error(`Popular TV fetch failed for page ${page}:`, error.message);
+                        this.logger.warn(`Popular TV fetch failed for page ${page}: ${this.getErrorMessage(error)}`);
                     }
                 }
             }
         } catch (error) {
-            console.error('Error in fetchPopularContent:', error);
+            this.logger.error(
+                'Error in fetchPopularContent',
+                error instanceof Error ? error.stack : String(error),
+            );
         }
 
         return results;
@@ -364,7 +374,7 @@ export class QuizRecommendationService {
                         results.push(...data.results);
                     }
                 } catch (error) {
-                    console.error('Trending all fetch failed:', error.message);
+                    this.logger.warn(`Trending all fetch failed: ${this.getErrorMessage(error)}`);
                 }
             } else {
                 // Fetch trending for specific media type
@@ -379,11 +389,14 @@ export class QuizRecommendationService {
                         results.push(...withType);
                     }
                 } catch (error) {
-                    console.error(`Trending ${mediaType} fetch failed:`, error.message);
+                    this.logger.warn(`Trending ${mediaType} fetch failed: ${this.getErrorMessage(error)}`);
                 }
             }
         } catch (error) {
-            console.error('Error in fetchTrendingContent:', error);
+            this.logger.error(
+                'Error in fetchTrendingContent',
+                error instanceof Error ? error.stack : String(error),
+            );
         }
 
         return results;
@@ -400,6 +413,10 @@ export class QuizRecommendationService {
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         return shuffled;
+    }
+
+    private getErrorMessage(error: unknown): string {
+        return error instanceof Error ? error.message : String(error);
     }
 
     // Helper method to get recommendations by specific genres

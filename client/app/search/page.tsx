@@ -389,7 +389,6 @@ export default function SearchResultsPage() {
   // Handle play trailer button click
   const handlePlayTrailer = async (item: SearchResult) => {
     try {
-      console.log(item.trailer_key);
       if (item.trailer_key) {
         const trailerData = convertToTrailerData({
           ...item,
