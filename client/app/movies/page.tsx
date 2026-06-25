@@ -6,6 +6,8 @@ import MoviesHomePageClient from "./MovieHomePageClient";
 
 const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
 
+export const dynamic = "force-dynamic";
+
 type DbCriticReview = {
   id: string;
   tmdbId: number;

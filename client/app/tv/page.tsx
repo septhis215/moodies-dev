@@ -5,6 +5,8 @@ import type { CommunityPulseData } from "@/types/communityPulse";
 import TVHomePageClient from "./TVHomePageClient";
 const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
 
+export const dynamic = "force-dynamic";
+
 type DbCriticReview = {
   id: string;
   tmdbId: number;
@@ -156,12 +158,15 @@ async function fetchAiringThisWeek() {
 
 // NEW: Use bulk endpoint for better performance (if available)
 async function fetchDashboardData() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(`${BASE_URL}/tv/bulk/dashboard?limit=15`, {
-      next: { revalidate: 60 },
+      cache: "no-store",
       headers: {
         "Content-Type": "application/json",
       },
+      signal: controller.signal,
     });
 
     if (res.ok) {
@@ -178,6 +183,8 @@ async function fetchDashboardData() {
     }
   } catch {
     console.error("Bulk fetch failed, falling back to individual requests");
+  } finally {
+    clearTimeout(timer);
   }
 
   // Fallback to individual requests
