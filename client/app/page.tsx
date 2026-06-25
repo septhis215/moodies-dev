@@ -17,11 +17,16 @@ import { Clapperboard, Heart, MessageCircle, Tv } from 'lucide-react';
 
 async function fetchFeatured() {
   const base = process.env.NEST_API_URL || 'http://localhost:4000';
-  // cache policy: change revalidate per your needs
-  const res = await fetch(`${base}/all/featured`, { next: { revalidate: 60 } });
-  if (!res.ok) return [];
-  const json = await res.json();
-  return json as All[];
+  try {
+    const res = await fetch(`${base}/all/featured`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json as All[];
+  } catch {
+    return [];
+  }
 }
 
 const mobileActions = [

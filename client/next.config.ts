@@ -1,15 +1,16 @@
 import type { NextConfig } from "next";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const configDir = dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   /* config options here */
-  // The codebase has many pre-existing lint/type issues that don't affect runtime
-  // but block `next build` (which runs ESLint + tsc). These let production builds
-  // (Vercel) succeed. TODO: clean these up, then flip both back to false.
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     remotePatterns: [
@@ -33,6 +34,10 @@ const nextConfig: NextConfig = {
     ],
   },
   reactStrictMode: true,
+  outputFileTracingRoot: configDir,
+  turbopack: {
+    root: configDir,
+  },
 };
 
 export default nextConfig;

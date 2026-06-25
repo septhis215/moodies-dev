@@ -513,7 +513,6 @@ const Toast: React.FC<ToastProps> = ({
         <div className="m-toast__body">
           {hasMedia ? (
             <div className="m-toast__media" aria-hidden>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={posterUrl ?? ""}
                 alt=""

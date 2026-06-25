@@ -5,12 +5,8 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  AlertCircle,
   CheckCircle2,
-  Loader2,
   PenSquare,
-  Send,
-  Sparkles,
   Star,
   X,
 } from "lucide-react";
@@ -210,7 +206,11 @@ export default function ReviewsSection({
   const toggleExpand = (id: string) => {
     setExpandedReviews((prev) => {
       const s = new Set(prev);
-      s.has(id) ? s.delete(id) : s.add(id);
+      if (s.has(id)) {
+        s.delete(id);
+      } else {
+        s.add(id);
+      }
       return s;
     });
   };

@@ -12,14 +12,24 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
-const eslintConfig = [...compat.extends("next/core-web-vitals", "next/typescript"), {
-  ignores: [
-    "node_modules/**",
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ],
-}, ...storybook.configs["flat/recommended"]];
+const eslintConfig = [
+  {
+    ignores: [
+      "node_modules/**",
+      ".next/**",
+      "out/**",
+      "build/**",
+      "next-env.d.ts",
+      "public/mockServiceWorker.js",
+    ],
+  },
+  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      "@next/next/no-img-element": "off",
+    },
+  },
+  ...storybook.configs["flat/recommended"],
+];
 
 export default eslintConfig;

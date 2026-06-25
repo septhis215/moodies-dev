@@ -5,11 +5,11 @@ import type { All } from "@/types/all";
 import Image from "next/image";
 import Link from "next/link";
 import { Carousel } from "@/components/ui/Carousel";
-import { Star, Plus, Info, Share2 } from "lucide-react";
+import { Plus, Info } from "lucide-react";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Bookmark, BookmarkCheck } from "lucide-react";
+import { BookmarkCheck } from "lucide-react";
 import RatingBadge from "../ui/rating-badge";
 
 interface CommonCardCarouselProps {
@@ -34,7 +34,7 @@ export default function CommonCardCarousel({
   const getPosterUrl = (path?: string) =>
     path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
 
-  const toWatchType = (show: All): "movie" | "series" =>
+  const toWatchType = (): "movie" | "series" =>
     type === "tv" ? "series" : "movie";
 
   const handleWatchlistToggle = async (show: All, event: React.MouseEvent) => {
@@ -47,7 +47,7 @@ export default function CommonCardCarousel({
     }
 
     const itemId = show.id;
-    const isCurrentlyInWatchlist = hookIsIn(String(itemId), toWatchType(show));
+    const isCurrentlyInWatchlist = hookIsIn(String(itemId), toWatchType());
 
     setLoadingStates((prev) => ({ ...prev, [itemId]: true }));
 
@@ -56,14 +56,14 @@ export default function CommonCardCarousel({
       const posterUrl = getPosterUrl(show.poster_path ?? undefined);
 
       if (isCurrentlyInWatchlist) {
-        await remove(String(itemId), toWatchType(show), {
+        await remove(String(itemId), toWatchType(), {
           title,
           posterUrl,
           variant: "info",
           duration: 3500,
         });
       } else {
-        await add(String(itemId), toWatchType(show), {
+        await add(String(itemId), toWatchType(), {
           title,
           posterUrl,
           variant: "info",
@@ -122,21 +122,21 @@ export default function CommonCardCarousel({
                       handleWatchlistToggle(show, e);
                     }}
                     disabled={loadingStates[show.id]}
-                    className={`min-h-11 min-w-11 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${hookIsIn(String(show.id), toWatchType(show))
+                    className={`min-h-11 min-w-11 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${hookIsIn(String(show.id), toWatchType())
                       ? "bg-green-500 text-white"
                       : "bg-white text-black"
                       }`}
                     title={
                       loadingStates[show.id]
                         ? "Loading..."
-                        : hookIsIn(String(show.id), toWatchType(show))
+                        : hookIsIn(String(show.id), toWatchType())
                           ? "Remove from My List"
                           : "Add to My List"
                     }
                   >
                     {loadingStates[show.id] ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : hookIsIn(String(show.id), toWatchType(show)) ? (
+                    ) : hookIsIn(String(show.id), toWatchType()) ? (
                       <BookmarkCheck className="w-5 h-5" />
                     ) : (
                       <Plus className="w-5 h-5" />

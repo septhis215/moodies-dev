@@ -609,51 +609,6 @@ function MobileFavoriteCard({
   );
 }
 
-function TasteSummary({
-  signal,
-  count,
-}: {
-  signal: TasteSignal;
-  count: number;
-}) {
-  const labels = [
-    ...signal.topGenres.slice(0, 2),
-    ...signal.topCountries.slice(0, 1),
-  ];
-
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3 sm:min-w-[260px]">
-      <div className="flex items-center gap-3">
-        <div className="h-9 w-1.5 shrink-0 rounded-full bg-[#e94f37]" />
-        <div className="min-w-0">
-          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#ff9b8a]">
-            Taste profile
-          </p>
-          <p className="mt-0.5 text-xs font-semibold text-white/58">
-            Based on {count} favorite{count === 1 ? "" : "s"}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {(labels.length ? labels : ["Popular", "Highly rated"]).map((label) => (
-          <span
-            key={label}
-            className="rounded-full bg-black/24 px-2 py-1 text-[10px] font-bold text-white/56"
-          >
-            {label}
-          </span>
-        ))}
-        {signal.averageRating ? (
-          <span className="rounded-full bg-[#f6b73c]/10 px-2 py-1 text-[10px] font-bold text-[#ffd78a]">
-            Avg {signal.averageRating.toFixed(1)}
-          </span>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
 function ContentTypeBadge({ item }: { item: All }) {
   const type = getContentType(item);
   return (

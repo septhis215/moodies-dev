@@ -2,13 +2,7 @@
 
 import Link from "next/link";
 
-export default function SearchError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function SearchError() {
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center">
       <div className="text-center">

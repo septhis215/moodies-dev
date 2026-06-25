@@ -275,7 +275,7 @@ export default function ProfilePage() {
     } finally {
       setProfileSaving(false);
     }
-  }, [profileName, profileUsername, avatarPreview, disclosure]);
+  }, [profileName, profileUsername, avatarPreview, disclosure, isAuthenticated]);
 
   const user = profile ?? (decodedUser as ServerUser | null);
 
@@ -2044,14 +2044,12 @@ export default function ProfilePage() {
                         className="group relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-zinc-900 ring-2 ring-[#e94f37]/50 transition hover:ring-[#ff8a78]"
                       >
                         {avatarPreview ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={avatarPreview}
                             alt="preview"
                             className="w-full h-full object-cover"
                           />
                         ) : user?.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={user.avatarUrl}
                             alt="avatar"
