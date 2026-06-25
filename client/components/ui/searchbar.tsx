@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { IconSearch, IconX, IconClock, IconArrowRight, IconTrendingUp } from "@tabler/icons-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
@@ -23,7 +23,11 @@ interface SearchSuggestion {
 interface TrendingTerm {
   id: number;
   title: string;
-  media_type: string;
+  media_type?: "movie" | "tv" | "person" | string;
+  type?: "movies" | "movie" | "tv" | "person" | string;
+  number_of_seasons?: number;
+  first_air_date?: string;
+  name?: string;
 }
 
 interface SearchBarProps {
@@ -78,11 +82,17 @@ export default function SearchBarWithSuggestions({
   }, [searchMode]);
 
   const getContentType = (item: Partial<TrendingTerm>): "movie" | "tv" | "person" => {
-    if ((item as any).media_type) return (item as any).media_type as any;
-    if ((item as any).type === "movies" || (item as any).type === "movie") return "movie";
-    if ((item as any).type === "tv") return "tv";
-    if ((item as any).type === "person") return "person";
-    if ((item as any).number_of_seasons || (item as any).first_air_date || (item as any).name) return "tv";
+    if (
+      item.media_type === "movie" ||
+      item.media_type === "tv" ||
+      item.media_type === "person"
+    ) {
+      return item.media_type;
+    }
+    if (item.type === "movies" || item.type === "movie") return "movie";
+    if (item.type === "tv") return "tv";
+    if (item.type === "person") return "person";
+    if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
     return "movie";
   };
 
@@ -105,11 +115,9 @@ export default function SearchBarWithSuggestions({
     { id: 1, title: 'Stranger Things', media_type: 'tv' },
     { id: 2, title: 'Batman', media_type: 'movie' },
   ]);
-  const [loadingTrending, setLoadingTrending] = useState(false);
 
   useEffect(() => {
     const fetchTrendingTerms = async () => {
-      setLoadingTrending(true);
       try {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/all/search/trending-terms`
@@ -122,8 +130,6 @@ export default function SearchBarWithSuggestions({
         }
       } catch (error) {
         console.error('Failed to fetch trending terms:', error);
-      } finally {
-        setLoadingTrending(false);
       }
     };
 
@@ -232,7 +238,7 @@ export default function SearchBarWithSuggestions({
     };
   }, [mobileOpen]);
 
-  const handleSearch = (query: string, mode: SearchMode = searchMode) => {
+  const handleSearch = useCallback((query: string, mode: SearchMode = searchMode) => {
     const trimmedQuery = query.trim();
     if (!trimmedQuery) return;
 
@@ -257,9 +263,9 @@ export default function SearchBarWithSuggestions({
     router.push(`/search?${params.toString()}`, { scroll: false });
 
     onSearch?.(trimmedQuery, mode);
-  };
+  }, [onSearch, router, searchHistory, searchMode]);
 
-  const handleSuggestionClick = (suggestion: SearchSuggestion) => {
+  const handleSuggestionClick = useCallback((suggestion: SearchSuggestion) => {
     let path: string;
 
     if (suggestion.type === 'person') {
@@ -271,7 +277,7 @@ export default function SearchBarWithSuggestions({
     router.push(path);
     setOpen(false);
     setSuggestions([]);
-  };
+  }, [router]);
 
   const showSuggestions = open && !isMobile && (
     suggestions.length > 0 ||
@@ -390,7 +396,7 @@ export default function SearchBarWithSuggestions({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, isMobile, showSuggestions, suggestions, highlightedIndex, value, searchMode]);
+  }, [open, isMobile, showSuggestions, suggestions, highlightedIndex, value, searchMode, handleSearch, handleSuggestionClick]);
 
   useEffect(() => {
     if (highlightedIndex === null) return;
@@ -763,7 +769,7 @@ export default function SearchBarWithSuggestions({
                 }
               }}
               onFocus={() => setOpen(true)}
-              placeholder={searchMode === 'person' ? 'Search for actors, directors...' : 'Search movies & TV series...'}
+              placeholder={searchMode === 'person' ? 'Search for actors, directors...' : placeholder}
               className="w-full bg-white/10 backdrop-blur-md placeholder:text-gray-300 text-white rounded-full px-4 py-2 text-sm outline-none transition-all"
               style={{ height: 36 }}
             />
@@ -818,7 +824,7 @@ export default function SearchBarWithSuggestions({
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleSearch(mobileValue, mobileMode);
                     }}
-                    placeholder={mobileMode === 'person' ? 'Search for actors, directors...' : 'Search movies & TV series...'}
+                    placeholder={mobileMode === 'person' ? 'Search for actors, directors...' : placeholder}
                     className="w-full rounded-full px-4 py-3 bg-white/10 backdrop-blur-md text-white placeholder:text-gray-300 outline-none"
                     autoFocus
                   />
@@ -846,9 +852,11 @@ export default function SearchBarWithSuggestions({
                         onClick={() => { handleSuggestionClick(suggestion); setMobileOpen(false); }}
                         className="flex items-center gap-3 p-2 hover:bg-white/10 rounded cursor-pointer text-white"
                       >
-                        <img
+                        <Image
                           src={suggestion.poster_path ? `https://image.tmdb.org/t/p/w92${suggestion.poster_path}` : '/placeholder-poster.svg'}
                           alt=""
+                          width={32}
+                          height={40}
                           className="w-8 h-10 rounded object-cover flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">

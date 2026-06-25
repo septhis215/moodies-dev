@@ -12,9 +12,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly inFlight = new Map<string, Promise<unknown>>();
 
   async onModuleInit() {
-    const host = await this.configService.get<string>('REDIS_HOST');
-    const pass = await this.configService.get<string>('REDIS_PASS');
-    const port = await this.configService.get<number>('REDIS_PORT');
+    const host = this.configService.get<string>('REDIS_HOST');
+    const pass = this.configService.get<string>('REDIS_PASS');
+    const port = this.configService.get<number>('REDIS_PORT');
 
     this.client = createClient({
       username: 'default',

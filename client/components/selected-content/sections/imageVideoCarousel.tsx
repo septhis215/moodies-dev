@@ -1,13 +1,21 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
 type Props = {
   posters?: string[];
   backdrops?: string[];
-  videos?: any[];
+  videos?: Array<string | VideoItem>;
+};
+
+type VideoItem = {
+  id?: string;
+  key: string;
+  name?: string;
+  site?: string;
+  official?: boolean;
 };
 
 const DEFAULT_IMAGE_BASE = "https://image.tmdb.org/t/p/";
@@ -94,6 +102,19 @@ export default function ImageVideoCarousel({
   const thumbsContainerRef = useRef<HTMLDivElement>(null);
   const thumbRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
+  const navigate = useCallback((dir: "prev" | "next") => {
+    setSelectedIndex((prev) => {
+      const len = Math.max(1, totalItems);
+      return dir === "prev"
+        ? prev === 0
+          ? len - 1
+          : prev - 1
+        : prev === len - 1
+          ? 0
+          : prev + 1;
+    });
+  }, [totalItems]);
+
   useEffect(() => {
     setSelectedIndex((prev) =>
       Math.max(0, Math.min(prev, Math.max(0, totalItems - 1))),
@@ -109,7 +130,7 @@ export default function ImageVideoCarousel({
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [lightboxOpen, selectedIndex, totalItems]);
+  }, [lightboxOpen, navigate]);
 
   useEffect(() => {
     const ref = thumbRefs.current[selectedIndex];
@@ -128,19 +149,6 @@ export default function ImageVideoCarousel({
     return `${DEFAULT_IMAGE_BASE}${imageSize}${path}`;
   };
 
-  const navigate = (dir: "prev" | "next") => {
-    setSelectedIndex((prev) => {
-      const len = Math.max(1, totalItems);
-      return dir === "prev"
-        ? prev === 0
-          ? len - 1
-          : prev - 1
-        : prev === len - 1
-          ? 0
-          : prev + 1;
-    });
-  };
-  
   if (!posters.length && !backdrops.length && !normalizedVideos.length)
     return null;
 
@@ -529,13 +537,14 @@ export default function ImageVideoCarousel({
       {/* Thumbnails */}
       <div className="ivc-thumbs-wrap" ref={thumbsContainerRef}>
         <div className="ivc-thumbs">
-          {allThumbs.map((item: any, idx: number) => {
+          {allThumbs.map((item, idx: number) => {
             const isSelected = selectedIndex === idx;
             const dist = Math.abs(idx - selectedIndex);
+            const videoItem = item as VideoItem;
             return (
               <button
                 key={
-                  (activeTab === "videos" ? (item.id ?? item.key) : item) +
+                  (activeTab === "videos" ? (videoItem.id ?? videoItem.key) : item) +
                   "-" +
                   idx
                 }
@@ -558,8 +567,8 @@ export default function ImageVideoCarousel({
                 {activeTab === "videos" ? (
                   <>
                     <Image
-                      src={youtubeThumb(item.key)}
-                      alt={item.name ?? `Video ${idx + 1}`}
+                      src={youtubeThumb(videoItem.key)}
+                      alt={videoItem.name ?? `Video ${idx + 1}`}
                       fill
                       style={{ objectFit: "cover" }}
                       sizes="120px"
@@ -573,7 +582,7 @@ export default function ImageVideoCarousel({
                   </>
                 ) : (
                   <Image
-                    src={buildImageUrl(item)}
+                    src={buildImageUrl(item as string)}
                     alt={`Thumbnail ${idx + 1}`}
                     fill
                     style={{ objectFit: "cover" }}

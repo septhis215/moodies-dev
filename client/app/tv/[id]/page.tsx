@@ -171,11 +171,21 @@ export default async function TvPage({
       </main>
     );
   }
+  type SeasonSummary = {
+    season_number?: number;
+    name?: string;
+    overview?: string;
+    air_date?: string;
+    poster_path?: string | null;
+    episode_count?: number;
+    episodes?: unknown[];
+  };
+
   const seasonsProp =
     seasonsFromEndpoint && Array.isArray(seasonsFromEndpoint)
       ? seasonsFromEndpoint
       : // fallback to minimal shape expected by TvSeasonsEpisodes (episodes = [])
-        (data.info?.seasons ?? []).map((s: any) => ({
+        ((data.info?.seasons ?? []) as SeasonSummary[]).map((s) => ({
           season_number: s.season_number,
           name: s.name,
           overview: s.overview,
