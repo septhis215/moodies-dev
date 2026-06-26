@@ -201,7 +201,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
   return (
     <section
-      className="relative isolate h-[86svh] min-h-[620px] w-full overflow-hidden bg-[#080808] text-white sm:h-[82vh] sm:min-h-[560px] lg:h-screen lg:max-h-[1100px]"
+      className="relative isolate h-[78svh] min-h-[540px] w-full overflow-hidden bg-[#080808] text-white sm:h-[82vh] sm:min-h-[560px] lg:h-screen lg:max-h-[1100px]"
       onMouseEnter={pause}
       onMouseLeave={resume}
       aria-roledescription="carousel"
@@ -223,9 +223,12 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
         <div className="absolute inset-x-0 bottom-0 h-2/3 bg-[radial-gradient(ellipse_at_bottom,rgba(0,0,0,0.86)_0%,rgba(0,0,0,0.45)_44%,transparent_74%)] sm:hidden" />
       </div>
 
-      <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col justify-end px-5 pb-7 pt-24 sm:px-6 sm:pb-7 lg:px-8 lg:pb-9 xl:px-12">
+      <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col justify-end px-5 pb-6 pt-[calc(var(--mobile-nav-safe)+1rem)] sm:px-6 sm:pb-7 sm:pt-24 lg:px-8 lg:pb-9 xl:px-12">
         <div className="grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-8 xl:gap-10">
           <div className="max-w-[34rem] sm:max-w-2xl xl:max-w-3xl">
+            <p className="mb-2 max-w-[19rem] text-[11px] font-black uppercase tracking-[0.16em] text-[#ff9b8a] sm:hidden">
+              Movies, shows, moods, and community picks in one place
+            </p>
             <div className="mb-3 flex flex-wrap items-center gap-1.5 sm:mb-2.5 sm:gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e94f37]/40 bg-[#e94f37]/18 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-[#ffb2a5] sm:text-[10px] lg:text-[11px]">
                 {currentKind === "tv" ? (
@@ -251,7 +254,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
               ) : null}
             </div>
 
-            <h1 className="max-w-3xl text-balance text-[2.35rem] font-black leading-[0.98] tracking-normal text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.56)] min-[390px]:text-[2.7rem] sm:text-[clamp(1.65rem,4.6vw,4rem)] sm:leading-[0.96] xl:text-[clamp(2.35rem,4.2vw,4.8rem)]">
+            <h1 className="max-w-3xl text-balance text-[2.1rem] font-black leading-[0.98] tracking-normal text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.56)] min-[390px]:text-[2.45rem] sm:text-[clamp(1.65rem,4.6vw,4rem)] sm:leading-[0.96] xl:text-[clamp(2.35rem,4.2vw,4.8rem)]">
               {currentTitle}
             </h1>
 
@@ -266,7 +269,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
               ))}
             </div>
 
-            <p className="mt-4 max-w-[31rem] text-sm leading-6 text-white/80 sm:hidden">
+            <p className="mt-3 line-clamp-3 max-w-[31rem] text-sm leading-6 text-white/80 sm:hidden">
               {mobileOverview}
             </p>
             <p className="mt-3 hidden max-w-xl text-xs leading-5 text-white/76 sm:mt-4 sm:block sm:text-sm sm:leading-6 lg:mt-4 lg:max-w-2xl lg:text-[15px] lg:leading-7 xl:text-base">
@@ -280,7 +283,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#e94f37] px-4 py-3 text-sm font-black text-white shadow-[0_12px_32px_rgba(233,79,55,0.28)] transition hover:bg-[#d9412b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff9c8d] sm:min-h-11 sm:px-5 sm:py-2.5"
               >
                 <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                Details
+                Explore
               </button>
 
               <button

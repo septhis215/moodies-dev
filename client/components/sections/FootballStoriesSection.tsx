@@ -144,39 +144,39 @@ export default function FootballStoriesSection() {
   };
 
   return (
-    <section className="relative mx-auto w-full max-w-7xl px-4 py-7 sm:px-6 sm:py-10 lg:px-8">
-      <div className="relative overflow-hidden rounded-lg border border-white/10 bg-[#06140d] shadow-2xl shadow-black/60">
+    <section className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#06140d] shadow-2xl shadow-black/60 sm:rounded-lg">
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.065)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.045)_1px,transparent_1px)] bg-[size:58px_58px]" />
         <div className="absolute inset-x-5 top-1/2 h-px bg-white/15" />
-        <div className="absolute left-1/2 top-0 h-full w-px bg-white/15" />
-        <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
-        <div className="absolute inset-x-6 top-5 h-12 rounded-b-full border-x border-b border-white/12" />
-        <div className="absolute inset-x-6 bottom-5 h-12 rounded-t-full border-x border-t border-white/12" />
+        <div className="absolute left-1/2 top-0 hidden h-full w-px bg-white/15 min-[420px]:block" />
+        <div className="absolute left-1/2 top-1/2 hidden h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15 min-[420px]:block" />
+        <div className="absolute inset-x-6 top-5 hidden h-12 rounded-b-full border-x border-b border-white/12 min-[420px]:block" />
+        <div className="absolute inset-x-6 bottom-5 hidden h-12 rounded-t-full border-x border-t border-white/12 min-[420px]:block" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_13%_0%,rgba(255,255,255,0.28),transparent_22%),radial-gradient(circle_at_87%_0%,rgba(255,214,89,0.24),transparent_24%),radial-gradient(circle_at_68%_68%,rgba(233,79,55,0.16),transparent_32%),linear-gradient(135deg,rgba(233,79,55,0.16),transparent_38%,rgba(16,185,129,0.16))]" />
         <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
         <div className="relative p-4 sm:p-5 lg:p-6">
           <div className="flex flex-col gap-4 border-b border-white/10 pb-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-black/35 p-2 shadow-2xl shadow-black/40 sm:h-24 sm:w-24">
+            <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/35 p-1.5 shadow-2xl shadow-black/40 sm:h-24 sm:w-24 sm:rounded-lg sm:p-2">
                 <Image
                   src="/images/Fifa2026.png"
                   alt="FIFA World Cup 2026"
                   fill
-                  sizes="96px"
+                  sizes="(max-width: 640px) 56px, 96px"
                   className="object-contain p-2"
                   priority={false}
                 />
               </div>
               <div className="min-w-0">
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-yellow-300/25 bg-yellow-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-yellow-100 sm:text-xs">
+                <div className="mb-2 inline-flex max-w-full items-center gap-1.5 rounded-full border border-yellow-300/25 bg-yellow-300/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-yellow-100 sm:gap-2 sm:px-3 sm:text-xs">
                   <Trophy className="h-3.5 w-3.5" />
-                  FIFA World Cup 2026 spotlight
+                  <span className="truncate">FIFA World Cup 2026 spotlight</span>
                 </div>
-                <h2 className="max-w-3xl text-2xl font-black leading-none text-white sm:text-3xl lg:text-4xl">
+                <h2 className="max-w-3xl text-xl font-black leading-tight text-white sm:text-3xl sm:leading-none lg:text-4xl">
                   World Cup Documentary Picks
                 </h2>
-                <p className="mt-2 max-w-2xl text-sm leading-5 text-zinc-200">
+                <p className="mt-1.5 line-clamp-2 max-w-2xl text-xs leading-5 text-zinc-200 sm:mt-2 sm:text-sm">
                   National-team journeys, player portraits, club access, and
                   tournament stories from the curated matchday pool.
                 </p>
@@ -186,7 +186,7 @@ export default function FootballStoriesSection() {
             <div className="flex shrink-0 items-center justify-end gap-2">
               <Link
                 href="/world-cup-docs"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-yellow-200/40 bg-yellow-300 px-3 text-xs font-black uppercase tracking-[0.08em] text-zinc-950 shadow-lg shadow-yellow-300/20 transition hover:bg-yellow-200 sm:px-4 sm:text-sm"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-yellow-200/40 bg-yellow-300 px-3 text-xs font-black uppercase tracking-[0.08em] text-zinc-950 shadow-lg shadow-yellow-300/20 transition hover:bg-yellow-200 sm:w-auto sm:px-4 sm:text-sm"
               >
                 Matchday Shelf
                 <ArrowRight className="h-4 w-4" />
@@ -233,13 +233,13 @@ export default function FootballStoriesSection() {
                 )}
                 <div
                   ref={carouselRef}
-                  className="flex snap-x gap-3 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4"
+                  className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4"
                 >
                   {loading
                     ? Array.from({ length: 10 }).map((_, index) => (
                       <div
                         key={index}
-                        className="h-[244px] w-[138px] shrink-0 animate-pulse rounded-lg border border-white/10 bg-white/10 sm:h-[286px] sm:w-[162px]"
+                        className="h-[228px] w-[128px] shrink-0 snap-start animate-pulse rounded-lg border border-white/10 bg-white/10 sm:h-[286px] sm:w-[162px]"
                       />
                     ))
                     : displayItems.map((item, index) => (
@@ -286,17 +286,17 @@ function FootballCard({ item, index }: { item: FootballStory; index: number }) {
   const relevance = getRelevanceLabel(item, index);
 
   return (
-    <Link href={href} className="group w-[138px] shrink-0 snap-start sm:w-[162px]">
+    <Link href={href} className="group w-[128px] shrink-0 snap-start sm:w-[162px]">
       <div className="relative aspect-[2/3] overflow-hidden rounded-lg border border-white/10 bg-white/[0.065] shadow-xl shadow-black/30 backdrop-blur transition duration-300 group-hover:-translate-y-1 group-hover:border-yellow-200/35">
         <Image
           src={posterUrl(item.poster_path)}
           alt={title}
           fill
-          sizes="(max-width: 640px) 42vw, (max-width: 1024px) 28vw, 15vw"
+          sizes="(max-width: 640px) 128px, (max-width: 1024px) 28vw, 15vw"
           className="object-cover transition duration-700 group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-85" />
-        <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white shadow-lg shadow-black/30 backdrop-blur">
+        <div className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border border-white/15 bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white shadow-lg shadow-black/30 backdrop-blur sm:px-2 sm:text-[11px]">
           {mediaType === "tv" ? (
             <>
               <Tv className="h-3 w-3 text-sky-300" />

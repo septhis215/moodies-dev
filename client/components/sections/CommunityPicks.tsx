@@ -254,17 +254,17 @@ export default function CommunityPicks({
   return (
     <section
       id="community"
-      className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8"
+      className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-9 sm:px-6 lg:px-8"
     >
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/80 py-5 shadow-xl shadow-black/20 sm:py-6">
-        <div className="px-5 sm:px-7">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/80 py-4 shadow-xl shadow-black/20 sm:py-6">
+        <div className="px-4 sm:px-7">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#ff8b78]">
                 Community signal
               </p>
               <h2
-                className="mt-2 bg-clip-text text-xl font-black tracking-tight text-transparent sm:text-2xl lg:text-3xl"
+                className="mt-2 bg-clip-text text-[1.35rem] font-black leading-tight tracking-tight text-transparent sm:text-2xl lg:text-3xl"
                 style={{
                   backgroundImage:
                     "linear-gradient(to right, #e94f37, #ff6b58)",
@@ -276,7 +276,7 @@ export default function CommunityPicks({
               </h2>
 
               {subtitle && (
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-400">
+                <p className="mt-2 line-clamp-2 max-w-2xl text-[13px] leading-5 text-gray-400 sm:text-sm sm:leading-6">
                   {subtitle}
                 </p>
               )}

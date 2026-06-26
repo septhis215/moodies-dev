@@ -99,7 +99,7 @@ export default function CelebSection() {
   useEffect(() => {
     const updateLayout = () => {
       const w = window.innerWidth;
-      if (w < 640) setItemsPerView(1.5);
+      if (w < 640) setItemsPerView(1.75);
       else if (w < 768) setItemsPerView(2.5);
       else if (w < 1024) setItemsPerView(3.5);
       else setItemsPerView(4.5);
@@ -120,7 +120,7 @@ export default function CelebSection() {
 
       // compute card width (px) from container width and gaps; clamp with a sensible min
       const computed = Math.max(
-        160,
+        152,
         (containerWidth - Math.max(0, itemsPerView - 1) * GAP_PX) / itemsPerView
       );
       setCardWidthPx(Math.round(computed));
@@ -217,11 +217,11 @@ export default function CelebSection() {
   if (!celebs.length) return null;
 
   return (
-    <section id="celebs" className="relative mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8 lg:py-32">
+    <section id="celebs" className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-20 lg:px-8 lg:py-32">
       <div className="mx-auto">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-10">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-5 sm:mb-10">
           <h2
-            className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
+            className="bg-clip-text text-[1.35rem] font-bold leading-tight tracking-tight text-transparent sm:text-2xl lg:text-3xl"
             style={{
               backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
               WebkitBackgroundClip: "text",
@@ -231,7 +231,7 @@ export default function CelebSection() {
             Your Moodies Icons
           </h2>
 
-          <p className="text-gray-400 text-xs sm:text-sm mt-1">
+          <p className="mt-1 line-clamp-2 max-w-[34ch] text-[13px] leading-5 text-gray-400 sm:max-w-none sm:text-sm">
             Discover the most popular stars and rising talents in entertainment
           </p>
         </motion.div>
@@ -249,19 +249,19 @@ export default function CelebSection() {
             </button>
           )}
 
-          <motion.div ref={containerRef} className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-3 mobile-native-scroll sm:mx-0 sm:gap-6 sm:px-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }} style={{ WebkitOverflowScrolling: "touch" }}>
+          <motion.div ref={containerRef} className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 mobile-native-scroll sm:mx-0 sm:gap-6 sm:px-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }} style={{ WebkitOverflowScrolling: "touch" }}>
             {celebs.map((celeb) => {
               const notableWorks = celeb.known_for?.slice(0, 2) ?? [];
 
               return (
                 <motion.div
                   key={`celeb-${celeb.id}`}
-                  className="relative flex-shrink-0 group"
+                  className="group relative flex-shrink-0 snap-start"
                   style={{
                     flex: `0 0 ${cardBasisCss}`,
                     minWidth: `${cardWidthPx}px`,
                     maxWidth: `${Math.max(cardWidthPx, 200)}px`,
-                    minHeight: "410px",
+                    minHeight: "360px",
                     maxHeight: "470px",
                     width: cardBasisCss,
                   }}
@@ -270,7 +270,7 @@ export default function CelebSection() {
                     {/* --- Top: Profile Section (taller, responsive) --- */}
                     <div
                       onClick={() => handleOpenPerson(celeb)}
-                      className="relative w-full h-44 sm:h-52 md:h-56 cursor-pointer flex-shrink-0 overflow-hidden"
+                      className="relative h-40 w-full flex-shrink-0 cursor-pointer overflow-hidden sm:h-52 md:h-56"
                     >
                       <div className="absolute inset-0">
                         <Image
@@ -282,7 +282,7 @@ export default function CelebSection() {
                           alt={celeb.name}
                           fill
                           className="object-cover object-center"
-                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 256px"
+                          sizes="(max-width: 640px) 52vw, (max-width: 768px) 40vw, (max-width: 1200px) 33vw, 256px"
                           quality={90}
                         />
 
@@ -320,7 +320,7 @@ export default function CelebSection() {
 
                     </div>
 
-                    <div className="flex flex-1 flex-col justify-between gap-3 bg-neutral-950 p-4">
+                    <div className="flex flex-1 flex-col justify-between gap-3 bg-neutral-950 p-3 sm:p-4">
 
 
                       {notableWorks.length > 0 ? (
@@ -331,7 +331,7 @@ export default function CelebSection() {
                           </div>
 
                           <div className="grid grid-cols-2 gap-2">
-                            {notableWorks.map((work) => (
+                            {notableWorks.slice(0, 2).map((work) => (
                               <button
                                 key={`${work.media_type}-${work.id}`}
                                 onClick={() => handleOpenWork(work)}
@@ -384,7 +384,7 @@ export default function CelebSection() {
 
                       <button
                         onClick={() => handleOpenPerson(celeb)}
-                        className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-gray-950 shadow-lg shadow-black/20 transition hover:bg-gray-100"
+                        className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-bold text-gray-950 shadow-lg shadow-black/20 transition hover:bg-gray-100"
                       >
                         View profile
                         <ChevronRight className="h-3.5 w-3.5" />

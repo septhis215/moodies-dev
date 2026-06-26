@@ -70,10 +70,10 @@ export default function MoodDiscoverySection({ variant = "full" }: MoodDiscovery
     return (
       <section
         id="your-moods"
-        className="relative mx-auto max-w-7xl overflow-hidden bg-black px-4 py-10 sm:px-6 lg:px-8"
+        className="relative mx-auto max-w-7xl scroll-mt-24 overflow-hidden bg-black px-4 py-9 sm:px-6 lg:px-8"
       >
-        <div className="relative overflow-hidden rounded-xl border border-white/10 bg-neutral-950/80 p-5 shadow-2xl shadow-black/30 sm:p-6 lg:p-7">
-          <div className="absolute inset-y-0 right-0 hidden w-72 sm:block">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/80 p-4 shadow-2xl shadow-black/30 sm:p-6 lg:p-7">
+          <div className="absolute bottom-0 right-0 h-32 w-32 opacity-15 sm:inset-y-0 sm:h-auto sm:w-72 sm:opacity-25">
             <Image
               src="/images/moods/romantic.png"
               alt="Romantic mood mascot"
@@ -87,22 +87,22 @@ export default function MoodDiscoverySection({ variant = "full" }: MoodDiscovery
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
                 Mood paths
               </p>
-              <h2 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">
+              <h2 className="mt-2 text-[1.45rem] font-black leading-tight tracking-tight text-white sm:mt-3 sm:text-3xl">
                 Start with the feeling, then choose the route.
               </h2>
-              <p className="mt-3 text-sm leading-6 text-zinc-400 sm:text-base">
+              <p className="mt-2 max-w-[34ch] text-[13px] leading-6 text-zinc-400 sm:mt-3 sm:max-w-none sm:text-base">
                 Spin the wheel, take the quiz, or jump straight into movie and series mood matchers.
               </p>
             </div>
 
-            <div className="relative flex flex-wrap gap-2 sm:gap-3 lg:justify-end">
+            <div className="relative grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3 lg:justify-end">
               {cards.slice(0, 4).map((card) => {
                 const Icon = card.icon;
                 return (
                   <Link
                     key={card.id}
                     href={card.href}
-                    className="group inline-flex min-w-[140px] flex-1 items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.045] px-3 py-3 text-white transition hover:border-white/25 hover:bg-white/[0.075] sm:flex-none"
+                    className="group inline-flex min-h-[4.25rem] min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-3 text-white transition hover:border-white/25 hover:bg-white/[0.075] sm:min-w-[140px] sm:flex-none sm:rounded-lg"
                   >
                     <span
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black/35"

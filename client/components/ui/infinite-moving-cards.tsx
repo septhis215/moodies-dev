@@ -96,7 +96,7 @@ export const InfiniteMovingCards = ({
     >
       <ul
         className={cn(
-          "flex w-max min-w-full shrink-0 flex-nowrap gap-4 py-5 animate-scroll motion-safe:[animation-play-state:running] sm:gap-5",
+          "flex w-max min-w-full shrink-0 flex-nowrap gap-3 py-4 animate-scroll motion-safe:[animation-play-state:running] sm:gap-5 sm:py-5",
           pauseOnHover && "hover:[animation-play-state:paused]",
         )}
       >
@@ -116,7 +116,7 @@ export const InfiniteMovingCards = ({
             <li
               key={`${item.name}-${idx}`}
               className={cn(
-                "group relative w-[300px] max-w-[calc(100vw-2rem)] shrink-0 overflow-hidden rounded-2xl border border-white/10",
+                "group relative w-[272px] max-w-[calc(100vw-2rem)] shrink-0 overflow-hidden rounded-2xl border border-white/10",
                 "bg-[#101012] shadow-xl shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-[#e94f37]/35 hover:bg-[#141416]",
                 href && "cursor-pointer",
                 "sm:w-[360px] md:w-[410px]",
@@ -134,7 +134,7 @@ export const InfiniteMovingCards = ({
 
               <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white/[0.055] to-transparent" />
 
-              <blockquote className="relative z-10 grid min-h-[210px] grid-cols-[86px_minmax(0,1fr)] gap-3 p-3 sm:min-h-[224px] sm:grid-cols-[102px_minmax(0,1fr)] sm:p-4">
+              <blockquote className="relative z-10 grid min-h-[196px] grid-cols-[76px_minmax(0,1fr)] gap-3 p-3 sm:min-h-[224px] sm:grid-cols-[102px_minmax(0,1fr)] sm:p-4">
                 <div className="flex flex-col gap-2">
                   <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10">
                     <img
@@ -174,7 +174,7 @@ export const InfiniteMovingCards = ({
                     {title}
                   </h3>
 
-                  <p className="mt-2 line-clamp-4 text-xs leading-5 text-white/62 sm:text-[13px] sm:leading-5">
+                  <p className="mt-2 line-clamp-3 text-xs leading-5 text-white/62 sm:line-clamp-4 sm:text-[13px] sm:leading-5">
                     {item.quote}
                   </p>
 

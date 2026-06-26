@@ -157,7 +157,7 @@ export default function CardCarousel<T extends MovieLike>({
   useEffect(() => {
     const updateLayout = () => {
       const w = window.innerWidth;
-      if (w < 640) setItemsPerView(1.5);
+      if (w < 640) setItemsPerView(2.35);
       else if (w < 768) setItemsPerView(2.5);
       else if (w < 1024) setItemsPerView(3.5);
       else setItemsPerView(4.5);
@@ -177,7 +177,7 @@ export default function CardCarousel<T extends MovieLike>({
       const containerWidth = el.clientWidth || 0;
       // compute card width (px) from container width and gaps; clamp with a sensible min
       const computed = Math.max(
-        140,
+        124,
         (containerWidth - Math.max(0, itemsPerView - 1) * GAP_PX) / itemsPerView
       );
       setItemWidthPx(Math.round(computed));
@@ -345,14 +345,14 @@ export default function CardCarousel<T extends MovieLike>({
       <style jsx>{scrollbarStyles}</style>
       <section
         id={sectionId}
-        className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:px-8"
+        className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-9 sm:px-6 sm:py-16 lg:px-8"
       >
-        <div className="mb-5 sm:mb-8">
+        <div className="mb-4 sm:mb-8">
           {titleLink ? (
             // link to trending page
             <Link href={titleLink} className="inline-block group">
               <h2
-                className="text-2xl font-bold tracking-tight text-transparent bg-clip-text sm:text-2xl lg:text-3xl"
+                className="bg-clip-text text-[1.35rem] font-bold leading-tight tracking-tight text-transparent sm:text-2xl lg:text-3xl"
                 style={{
                   backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
                   WebkitBackgroundClip: "text",
@@ -364,7 +364,7 @@ export default function CardCarousel<T extends MovieLike>({
             </Link>
           ) : (
             <h2
-              className="text-2xl font-bold tracking-tight text-transparent bg-clip-text sm:text-2xl lg:text-3xl"
+              className="bg-clip-text text-[1.35rem] font-bold leading-tight tracking-tight text-transparent sm:text-2xl lg:text-3xl"
               style={{
                 backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
                 WebkitBackgroundClip: "text",
@@ -376,7 +376,7 @@ export default function CardCarousel<T extends MovieLike>({
           )}
 
           {subtitle && (
-            <p className="mt-2 max-w-[34ch] text-sm leading-5 text-gray-400 sm:max-w-none">{subtitle}</p>
+            <p className="mt-1.5 line-clamp-2 max-w-[34ch] text-[13px] leading-5 text-gray-400 sm:mt-2 sm:max-w-none sm:text-sm">{subtitle}</p>
           )}
         </div>
 
@@ -404,7 +404,7 @@ export default function CardCarousel<T extends MovieLike>({
 
           <div
             ref={containerRef}
-            className="flex gap-3 sm:gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-3"
+            className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-3 scrollbar-hide sm:gap-4"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
             {" "}
@@ -422,7 +422,7 @@ export default function CardCarousel<T extends MovieLike>({
                   <motion.div
                     key={movie.id}
                     whileHover={{ scale: 1.03 }}
-                    className="movie-card relative flex-shrink-0 group"
+                    className="movie-card group relative flex-shrink-0 snap-start"
                     style={{
                       flex: `0 0 ${cardBasisCss}`,
                       minWidth: `${itemWidthPx}px`,
@@ -431,7 +431,7 @@ export default function CardCarousel<T extends MovieLike>({
                   >
                     {/* Main Card Container */}
                     <div
-                      className="relative w-full aspect-[2/3] rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 bg-gray-900 cursor-pointer"
+                      className="relative aspect-[2/3] w-full cursor-pointer overflow-hidden rounded-xl bg-gray-900 shadow-lg transition-all duration-300 hover:shadow-2xl"
                       onClick={() => handleCardClick(movie)}
                       role="button"
                       tabIndex={0}
@@ -447,7 +447,7 @@ export default function CardCarousel<T extends MovieLike>({
                         src={posterGetter(movie)}
                         alt={movieTitle}
                         fill
-                        sizes="(max-width: 640px) 128px, (max-width: 768px) 160px, (max-width: 1024px) 192px, (max-width: 1280px) 224px, 256px"
+                        sizes="(max-width: 640px) 42vw, (max-width: 768px) 38vw, (max-width: 1024px) 28vw, (max-width: 1280px) 22vw, 256px"
                         className="object-cover transition-transform duration-700 group-hover:scale-110"
                         placeholder="blur"
                         blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
@@ -515,7 +515,7 @@ export default function CardCarousel<T extends MovieLike>({
                         <RatingBadge
                           rating={movie.vote_average}
                           variant="colored"
-                          size="md"
+                          size="sm"
                         />
                       </div>
 
@@ -523,7 +523,7 @@ export default function CardCarousel<T extends MovieLike>({
                       <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 z-40 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
                         <div
                           className={`
-        flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-medium text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
+        flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[9px] font-medium shadow-lg backdrop-blur-md sm:px-2 sm:py-1 sm:text-xs
         ${contentType === "tv"
                               ? "bg-blue-500/90 text-white border-blue-400/50"
                               : "bg-purple-500/90 text-white border-purple-400/50"
@@ -581,7 +581,7 @@ export default function CardCarousel<T extends MovieLike>({
                                     </span>
                                   )}
                                 </div>
-                                <h3 className="text-base font-bold leading-tight text-white line-clamp-2">
+                                <h3 className="line-clamp-2 text-sm font-bold leading-tight text-white sm:text-base">
                                   {movieTitle}
                                 </h3>
                               </div>

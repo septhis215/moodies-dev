@@ -235,13 +235,13 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
   return (
     <section
       id="upcoming"
-      className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative"
+      className="relative mx-auto max-w-7xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-16 lg:px-8"
     >
-      <div className="flex items-end justify-between mb-8">
+      <div className="mb-4 flex items-end justify-between sm:mb-8">
         <div>
           <Link href="/coming-soon" className="group">
             <h2
-              className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-transparent bg-clip-text"
+              className="bg-clip-text text-[1.35rem] font-bold leading-tight tracking-tight text-transparent sm:text-2xl lg:text-3xl"
               style={{
                 backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
                 WebkitBackgroundClip: "text",
@@ -253,7 +253,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
           </Link>
 
           {subtitle && (
-            <p className="text-gray-400 text-xs sm:text-sm mt-2">{subtitle}</p>
+            <p className="mt-1.5 line-clamp-2 max-w-[34ch] text-[13px] leading-5 text-gray-400 sm:mt-2 sm:max-w-none sm:text-sm">{subtitle}</p>
           )}
         </div>
       </div>
@@ -280,13 +280,13 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
         )}
 
         <div
-          className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-3 [overscroll-behavior-x:contain] [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:hidden [&::-webkit-scrollbar]:hidden"
+          className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [overscroll-behavior-x:contain] [scrollbar-width:none] sm:-mx-6 sm:gap-4 sm:px-6 lg:hidden [&::-webkit-scrollbar]:hidden"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
           {trailerItems.map((item, index) => (
             <div
               key={item.id}
-              className="relative w-[82vw] max-w-[360px] flex-[0_0_auto] cursor-pointer group sm:w-[46vw]"
+              className="group relative w-[74vw] max-w-[300px] flex-[0_0_auto] snap-start cursor-pointer sm:w-[46vw] sm:max-w-[360px]"
               onClick={() => handleSelectTrailer(item)}
             >
               <div className="relative aspect-[16/11] overflow-hidden rounded-xl border border-white/10 bg-gray-900 shadow-2xl">
@@ -298,7 +298,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                   }
                   alt={item.title}
                   fill
-                  sizes="(max-width: 640px) 82vw, 46vw"
+                  sizes="(max-width: 640px) 74vw, 46vw"
                   className="object-cover"
                   priority={index === 0}
                 />
@@ -326,13 +326,13 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                 </div>
 
                 <div className="absolute inset-0 z-10 flex items-center justify-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-2xl">
-                    <Play size={18} className="ml-0.5 text-black" fill="black" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-2xl sm:h-12 sm:w-12">
+                    <Play size={16} className="ml-0.5 text-black sm:h-[18px] sm:w-[18px]" fill="black" />
                   </div>
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 z-10 p-4">
-                  <h3 className="mb-1.5 line-clamp-2 text-base font-black text-white">
+                <div className="absolute bottom-0 left-0 right-0 z-10 p-3 sm:p-4">
+                  <h3 className="mb-1.5 line-clamp-2 text-sm font-black leading-tight text-white sm:text-base">
                     {item.title}
                   </h3>
 
