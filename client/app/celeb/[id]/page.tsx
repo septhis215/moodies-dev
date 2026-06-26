@@ -256,21 +256,21 @@ function SectionHeader({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e94f37]/20 bg-white/[0.04] shadow-lg shadow-black/20 backdrop-blur">
-          <Icon className="h-5 w-5 text-[#e94f37]" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#e94f37]/20 bg-white/[0.04] shadow-lg shadow-black/20 backdrop-blur sm:h-10 sm:w-10">
+          <Icon className="h-[18px] w-[18px] text-[#e94f37] sm:h-5 sm:w-5" />
         </div>
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold leading-tight tracking-tight text-white sm:text-2xl">
             {title}
           </h2>
           {subtitle && (
-            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-zinc-400">
+            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-zinc-400 sm:text-sm">
               {subtitle}
             </p>
           )}
         </div>
       </div>
-      {action}
+      {action && <div className="max-w-full sm:shrink-0">{action}</div>}
     </div>
   );
 }
@@ -285,12 +285,14 @@ function EmptyState({
   text: string;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/70 p-6 text-center">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-900 text-zinc-500">
+    <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-950/70 p-4 text-center sm:p-6">
+      <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-900 text-zinc-500 sm:h-12 sm:w-12">
         <Icon className="h-5 w-5" />
       </div>
       <h3 className="font-semibold text-white">{title}</h3>
-      <p className="mx-auto mt-1 max-w-md text-sm text-zinc-500">{text}</p>
+      <p className="mx-auto mt-1 max-w-md text-[13px] leading-relaxed text-zinc-500 sm:text-sm">
+        {text}
+      </p>
     </div>
   );
 }
@@ -305,12 +307,14 @@ function MiniStat({
   icon: React.ElementType;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-2.5 sm:p-3">
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 sm:gap-2 sm:text-[11px]">
         <Icon className="h-3.5 w-3.5 text-[#e94f37]" />
         {label}
       </div>
-      <div className="mt-1 text-xl font-black text-white">{value}</div>
+      <div className="mt-1 text-lg font-black text-white sm:text-xl">
+        {value}
+      </div>
     </div>
   );
 }
@@ -417,11 +421,14 @@ function WorkCard({
                   onWatchlistToggle(credit);
                 }}
                 disabled={isLoading}
-                className={`absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full shadow-lg transition hover:scale-105 ${
+                className={`absolute bottom-2.5 right-2.5 flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition hover:scale-105 sm:bottom-3 sm:right-3 sm:h-9 sm:w-9 ${
                   inWatchlist
                     ? "bg-emerald-500 text-white"
                     : "bg-white text-black"
                 } ${isLoading ? "cursor-not-allowed opacity-70" : ""}`}
+                aria-label={
+                  inWatchlist ? "Remove from watchlist" : "Add to watchlist"
+                }
                 title={
                   inWatchlist ? "Remove from watchlist" : "Add to watchlist"
                 }
@@ -437,11 +444,11 @@ function WorkCard({
             )}
           </div>
         </div>
-        <div className="mt-3">
-          <h3 className="line-clamp-2 text-sm font-bold leading-snug text-white transition group-hover:text-zinc-200">
+        <div className="mt-2.5 sm:mt-3">
+          <h3 className="line-clamp-2 text-[13px] font-bold leading-snug text-white transition group-hover:text-zinc-200 sm:text-sm">
             {getTitle(credit)}
           </h3>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-zinc-500 sm:text-xs">
             <span>{year || "TBA"}</span>
             {credit.character && (
               <>
@@ -494,13 +501,13 @@ function VideoCard({
           </span>
         )}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-black shadow-2xl transition group-hover:scale-110">
-            <Play className="h-4 w-4 fill-current" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-black shadow-2xl transition group-hover:scale-110 sm:h-10 sm:w-10">
+            <Play className="h-[18px] w-[18px] fill-current sm:h-4 sm:w-4" />
           </div>
         </div>
       </div>
 
-      <div className="space-y-2.5 p-3">
+      <div className="space-y-2 p-3">
         <div>
           <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
             <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-zinc-300">
@@ -552,7 +559,7 @@ function PersonCard({ person }: { person: SimilarPerson }) {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
       </div>
-      <h3 className="mt-3 line-clamp-2 text-sm font-bold text-white transition group-hover:text-zinc-200">
+      <h3 className="mt-2.5 line-clamp-2 text-sm font-bold leading-snug text-white transition group-hover:text-zinc-200 sm:mt-3">
         {person.name}
       </h3>
       <p className="mt-1 text-xs text-zinc-500">
@@ -1109,12 +1116,12 @@ export default function CelebrityDetailPage({
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-black/90" />
         </div>
 
-        <main className="relative mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 sm:pb-20 sm:pt-24 lg:pt-28">
-          <header className="grid gap-4 rounded-[2rem] border border-white/10 bg-black/45 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl sm:p-5 lg:grid-cols-[190px_minmax(0,1fr)_300px] xl:grid-cols-[210px_minmax(0,1fr)_320px]">
+        <main className="relative mx-auto max-w-7xl px-4 pb-12 pt-[calc(var(--mobile-nav-safe)+0.75rem)] sm:px-6 sm:pb-20 sm:pt-24 lg:pt-28">
+          <header className="grid gap-4 rounded-[1.5rem] border border-white/10 bg-black/45 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl sm:rounded-[2rem] sm:p-5 lg:grid-cols-[190px_minmax(0,1fr)_300px] xl:grid-cols-[210px_minmax(0,1fr)_320px]">
             <motion.div
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 sm:grid-cols-[150px_minmax(0,1fr)] lg:block"
+              className="mx-auto w-full max-w-[150px] sm:grid sm:max-w-none sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-3 lg:block"
             >
               <button
                 onClick={() =>
@@ -1133,12 +1140,12 @@ export default function CelebrityDetailPage({
                   className="object-cover transition duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-3 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
+                <div className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur sm:bottom-3 sm:left-3 sm:text-[11px]">
                   View portrait
                 </div>
               </button>
 
-              <div className="grid grid-cols-2 gap-2 self-start lg:mt-3 lg:grid-cols-3">
+              <div className="hidden grid-cols-2 gap-2 self-start sm:grid lg:mt-3 lg:grid-cols-3">
                 {profiles.slice(1, 4).map((image, index) => (
                   <button
                     key={`${image.file_path}-${index}`}
@@ -1168,9 +1175,9 @@ export default function CelebrityDetailPage({
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
-              className="min-w-0"
+              className="min-w-0 text-center sm:text-left"
             >
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                 <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
                   {person.known_for_department || "Celebrity"}
                 </span>
@@ -1181,16 +1188,16 @@ export default function CelebrityDetailPage({
                 )}
               </div>
 
-              <h1 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl lg:text-5xl">
+              <h1 className="mt-3 text-3xl font-black leading-tight tracking-tight text-white sm:text-4xl lg:text-5xl">
                 {person.name}
               </h1>
               {person.also_known_as?.[0] && (
-                <p className="mt-1 text-sm text-zinc-500">
+                <p className="mt-1 line-clamp-1 text-sm text-zinc-500">
                   Also known as {person.also_known_as[0]}
                 </p>
               )}
 
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-300 sm:text-base">
+              <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-zinc-300 sm:mx-0 sm:mt-4 sm:text-base sm:leading-7">
                 {knownForSummary.length > 0
                   ? `${person.name} is known for ${knownForSummary.join(", ")}. Explore the career highlights, collaborators, and standout credits below.`
                   : `${person.name}'s profile is ready to explore, with credits and related recommendations gathered from Moodies data.`}
@@ -1215,31 +1222,31 @@ export default function CelebrityDetailPage({
                 />
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
                 <a
                   href="#filmography"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#e94f37] px-4 py-2 text-sm font-bold text-black transition hover:bg-[#ff6b58]"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#e94f37] px-4 py-2 text-sm font-bold text-black transition hover:bg-[#ff6b58]"
                 >
                   <Clapperboard className="h-4 w-4" />
                   Filmography
                 </a>
                 <a
                   href="#biography"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
                 >
                   <Sparkles className="h-4 w-4 text-zinc-300" />
                   Biography
                 </a>
                 <a
                   href="#gallery"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
                 >
                   <Sparkles className="h-4 w-4 text-zinc-300" />
                   Photos
                 </a>
                 <a
                   href="#genre-identity"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                  className="hidden min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white min-[430px]:inline-flex"
                 >
                   <Sparkles className="h-4 w-4 text-zinc-300" />
                   Genres
@@ -1253,7 +1260,7 @@ export default function CelebrityDetailPage({
               transition={{ delay: 0.1 }}
               className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1"
             >
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 sm:p-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
@@ -1284,7 +1291,7 @@ export default function CelebrityDetailPage({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 sm:p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                     External profiles
@@ -1309,9 +1316,9 @@ export default function CelebrityDetailPage({
 
           <section
             id="biography"
-            className="mt-10 grid gap-5 lg:grid-cols-[1.25fr_0.75fr]"
+            className="mt-8 grid gap-4 sm:mt-10 sm:gap-5 lg:grid-cols-[1.25fr_0.75fr]"
           >
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/55 p-5 sm:p-7">
+            <div className="rounded-[1.5rem] border border-zinc-800 bg-zinc-900/55 p-4 sm:rounded-3xl sm:p-7">
               <SectionHeader
                 icon={Sparkles}
                 title="Biography"
@@ -1320,7 +1327,7 @@ export default function CelebrityDetailPage({
               {person.biography ? (
                 <div className="relative mt-5">
                   <p
-                    className={`whitespace-pre-line text-sm leading-8 text-zinc-300 sm:text-base ${bioExpanded ? "" : "line-clamp-6"}`}
+                    className={`whitespace-pre-line text-sm leading-7 text-zinc-300 sm:text-base sm:leading-8 ${bioExpanded ? "" : "line-clamp-6 sm:line-clamp-6"}`}
                   >
                     {person.biography}
                   </p>
@@ -1330,7 +1337,7 @@ export default function CelebrityDetailPage({
                   {person.biography.length > 520 && (
                     <button
                       onClick={() => setBioExpanded((value) => !value)}
-                      className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white hover:text-black"
+                      className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white hover:text-black"
                     >
                       {bioExpanded ? (
                         <ChevronUp className="h-4 w-4" />
@@ -1350,7 +1357,7 @@ export default function CelebrityDetailPage({
               )}
             </div>
 
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/55 p-5 sm:p-7">
+            <div className="rounded-[1.5rem] border border-zinc-800 bg-zinc-900/55 p-4 sm:rounded-3xl sm:p-7">
               <SectionHeader icon={Layers} title="Career Snapshot" />
               <div className="mt-5 space-y-4">
                 {careerMoments.map((item) => (
@@ -1379,7 +1386,7 @@ export default function CelebrityDetailPage({
           </section>
 
           {notableWorks.length > 0 && (
-            <section className="mt-16 space-y-5">
+            <section className="mt-10 space-y-4 sm:mt-16 sm:space-y-5">
               <SectionHeader
                 icon={Star}
                 title="Known For"
@@ -1393,26 +1400,30 @@ export default function CelebrityDetailPage({
                   </a>
                 }
               />
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
                 {notableWorks.slice(0, 5).map((credit) => (
-                  <WorkCard
+                  <div
                     key={`${credit.media_type}-${credit.id}`}
-                    credit={credit}
-                    compact
-                  />
+                    className="w-[42vw] min-w-[142px] max-w-[180px] shrink-0 sm:w-auto sm:min-w-0 sm:max-w-none"
+                  >
+                    <WorkCard credit={credit} compact />
+                  </div>
                 ))}
               </div>
             </section>
           )}
 
-          <section ref={relatedVideosSectionRef} className="mt-16 space-y-5">
+          <section
+            ref={relatedVideosSectionRef}
+            className="mt-10 space-y-4 sm:mt-16 sm:space-y-5"
+          >
             <SectionHeader
               icon={Play}
               title="Related Videos"
               subtitle="Trailers, clips, interviews, and show appearances tied to meaningful credits."
               action={
                 relatedVideos.length > 0 && (
-                  <div className="flex max-w-full overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.04] p-1 backdrop-blur">
+                  <div className="-mx-1 flex max-w-[calc(100vw-2rem)] overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.04] p-1 backdrop-blur mobile-native-scroll sm:mx-0 sm:max-w-full">
                     {[
                       ["all", `All ${relatedVideos.length}`],
                       ["trailer", "Trailers"],
@@ -1426,7 +1437,7 @@ export default function CelebrityDetailPage({
                           setVideoFilter(value as VideoFilter);
                           setVideoStartIndex(0);
                         }}
-                        className={`cursor-pointer whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition sm:text-sm ${
+                        className={`min-h-10 cursor-pointer whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition sm:text-sm ${
                           videoFilter === value
                             ? "bg-[#e94f37] text-black shadow-lg shadow-[#e94f37]/15"
                             : "text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -1441,11 +1452,11 @@ export default function CelebrityDetailPage({
             />
 
             {!shouldLoadVideos || videosLoading ? (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div
                     key={index}
-                    className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]"
+                    className="w-[78vw] min-w-[260px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] sm:w-auto sm:min-w-0"
                   >
                     <div className="aspect-video animate-pulse bg-zinc-800" />
                     <div className="space-y-2.5 p-3">
@@ -1463,7 +1474,7 @@ export default function CelebrityDetailPage({
               />
             ) : visibleVideos.length > 0 ? (
               <div className="space-y-4">
-                <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.025] p-3 backdrop-blur">
+                <div className="relative -mx-4 overflow-hidden border-y border-white/10 bg-white/[0.025] px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-3xl sm:border sm:p-3">
                   <AnimatePresence mode="popLayout">
                     <motion.div
                       key={`${videoFilter}-${videoStartIndex}`}
@@ -1471,14 +1482,15 @@ export default function CelebrityDetailPage({
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -24 }}
                       transition={{ duration: 0.25 }}
-                      className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                      className="flex gap-3 overflow-x-auto pb-1 mobile-native-scroll sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-4"
                     >
                       {visibleVideos.map((video) => (
-                        <VideoCard
+                        <div
                           key={video.id}
-                          video={video}
-                          onPlay={setSelectedVideo}
-                        />
+                          className="w-[78vw] min-w-[260px] max-w-[340px] shrink-0 sm:w-auto sm:min-w-0 sm:max-w-none"
+                        >
+                          <VideoCard video={video} onPlay={setSelectedVideo} />
+                        </div>
                       ))}
                     </motion.div>
                   </AnimatePresence>
@@ -1493,7 +1505,7 @@ export default function CelebrityDetailPage({
                         )
                       }
                       disabled={!canScrollVideosLeft}
-                      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
                       aria-label="Previous related videos"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -1535,7 +1547,7 @@ export default function CelebrityDetailPage({
                         )
                       }
                       disabled={!canScrollVideosRight}
-                      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
                       aria-label="Next related videos"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -1558,7 +1570,7 @@ export default function CelebrityDetailPage({
 
           <section
             id="genre-identity"
-            className="mt-14 grid gap-4 lg:grid-cols-[0.82fr_1.18fr]"
+            className="mt-10 grid gap-4 sm:mt-14 lg:grid-cols-[0.82fr_1.18fr]"
           >
             <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/55 p-4 sm:p-5">
               <SectionHeader
@@ -1567,8 +1579,8 @@ export default function CelebrityDetailPage({
                 subtitle="The strongest genre signals across known credits."
               />
               {topGenres.length > 0 ? (
-                <div className="mt-4 grid gap-4 sm:grid-cols-[116px_minmax(0,1fr)]">
-                  <div className="relative mx-auto flex h-28 w-28 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] shadow-xl shadow-black/20">
+                <div className="mt-4 grid gap-4 min-[430px]:grid-cols-[96px_minmax(0,1fr)] sm:grid-cols-[116px_minmax(0,1fr)]">
+                  <div className="relative mx-auto flex h-24 w-24 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] shadow-xl shadow-black/20 sm:h-28 sm:w-28">
                     <div
                       className="absolute inset-2.5 rounded-full"
                       style={{
@@ -1579,8 +1591,8 @@ export default function CelebrityDetailPage({
                         )}deg, rgba(63,63,70,.75) 0deg)`,
                       }}
                     />
-                    <div className="relative flex h-20 w-20 flex-col items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-center">
-                      <span className="text-xl font-black text-white">
+                    <div className="relative flex h-16 w-16 flex-col items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-center sm:h-20 sm:w-20">
+                      <span className="text-lg font-black text-white sm:text-xl">
                         {Math.round(
                           ((topGenres[0]?.[1] || 0) /
                             Math.max(totalGenreWorks, 1)) *
@@ -1588,7 +1600,7 @@ export default function CelebrityDetailPage({
                         )}
                         %
                       </span>
-                      <span className="mt-0.5 max-w-16 truncate text-[10px] font-bold uppercase tracking-wider text-zinc-300">
+                      <span className="mt-0.5 max-w-14 truncate text-[9px] font-bold uppercase tracking-wider text-zinc-300 sm:max-w-16 sm:text-[10px]">
                         {topGenres[0]?.[0]}
                       </span>
                     </div>
@@ -1648,11 +1660,11 @@ export default function CelebrityDetailPage({
                 subtitle="Repeated creative pairings, with shared projects at a glance."
               />
               {collaborationsLoading ? (
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="-mx-4 mt-4 flex gap-3 overflow-x-auto px-4 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0">
                   {Array.from({ length: 4 }).map((_, index) => (
                     <div
                       key={index}
-                      className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
+                      className="w-[80vw] min-w-[260px] shrink-0 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:w-auto sm:min-w-0"
                     >
                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 animate-pulse rounded-xl bg-zinc-800" />
@@ -1666,11 +1678,11 @@ export default function CelebrityDetailPage({
                   ))}
                 </div>
               ) : collaborations.length > 0 ? (
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="-mx-4 mt-4 flex gap-3 overflow-x-auto px-4 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0">
                   {collaborations.slice(0, 4).map((collab) => (
                     <div
                       key={collab.id}
-                      className="group rounded-xl border border-white/10 bg-white/[0.03] p-3 transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06]"
+                      className="group w-[80vw] min-w-[260px] shrink-0 rounded-xl border border-white/10 bg-white/[0.03] p-3 transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06] sm:w-auto sm:min-w-0"
                     >
                       <div className="flex items-center gap-3">
                         <Link
@@ -1732,16 +1744,19 @@ export default function CelebrityDetailPage({
           </section>
 
           {(upcomingLoading || upcomingProjects.length > 0) && (
-            <section className="mt-16 space-y-5">
+            <section className="mt-10 space-y-4 sm:mt-16 sm:space-y-5">
               <SectionHeader
                 icon={Calendar}
                 title="Upcoming Projects"
                 subtitle="Future releases and announced credits when available."
               />
               {upcomingLoading ? (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
                   {Array.from({ length: 6 }).map((_, index) => (
-                    <div key={index} className="space-y-3">
+                    <div
+                      key={index}
+                      className="w-[42vw] min-w-[142px] max-w-[180px] shrink-0 space-y-3 sm:w-auto sm:min-w-0 sm:max-w-none"
+                    >
                       <div className="aspect-[2/3] animate-pulse rounded-2xl bg-zinc-800" />
                       <div className="h-4 w-4/5 animate-pulse rounded bg-zinc-800" />
                       <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800" />
@@ -1749,20 +1764,21 @@ export default function CelebrityDetailPage({
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
                   {upcomingProjects.slice(0, 6).map((credit) => (
-                    <WorkCard
+                    <div
                       key={`upcoming-${credit.media_type}-${credit.id}`}
-                      credit={credit}
-                      compact
-                    />
+                      className="w-[42vw] min-w-[142px] max-w-[180px] shrink-0 sm:w-auto sm:min-w-0 sm:max-w-none"
+                    >
+                      <WorkCard credit={credit} compact />
+                    </div>
                   ))}
                 </div>
               )}
             </section>
           )}
 
-          <section className="mt-16 space-y-5">
+          <section className="mt-10 space-y-4 sm:mt-16 sm:space-y-5">
             <SectionHeader
               icon={Camera}
               title="Photo Gallery"
@@ -1775,7 +1791,7 @@ export default function CelebrityDetailPage({
                         setGalleryPage((page) => Math.max(0, page - 1))
                       }
                       disabled={galleryPage === 0}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
                       aria-label="Previous gallery page"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -1790,7 +1806,7 @@ export default function CelebrityDetailPage({
                         )
                       }
                       disabled={galleryPage >= galleryPages - 1}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
                       aria-label="Next gallery page"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -1802,7 +1818,7 @@ export default function CelebrityDetailPage({
             {galleryItems.length > 0 ? (
               <div
                 id="gallery"
-                className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8"
+                className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-8"
               >
                 {currentGalleryItems.map((image, index) => (
                   <button
@@ -1810,7 +1826,7 @@ export default function CelebrityDetailPage({
                     onClick={() =>
                       setSelectedImage(getImageUrl(image.file_path))
                     }
-                    className="group relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:-translate-y-1 hover:border-white/30"
+                    className="group relative aspect-[2/3] w-[38vw] min-w-[132px] max-w-[160px] shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] transition hover:-translate-y-1 hover:border-white/30 sm:w-auto sm:min-w-0 sm:max-w-none"
                   >
                     <Image
                       src={getProfileUrl(image.file_path)}
@@ -1835,18 +1851,18 @@ export default function CelebrityDetailPage({
           </section>
 
           <section
-            className="mt-[4.5rem] rounded-3xl border border-zinc-800 bg-zinc-900/45 p-4 shadow-2xl shadow-black/20 sm:p-6 lg:p-7"
+            className="mt-12 rounded-[1.5rem] border border-zinc-800 bg-zinc-900/45 p-3 shadow-2xl shadow-black/20 sm:mt-[4.5rem] sm:rounded-3xl sm:p-6 lg:p-7"
             id="filmography"
           >
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <SectionHeader
                 icon={Clapperboard}
                 title="Filmography"
                 subtitle={`${filteredCredits.length} credits shown. Filter by format, then sort by what matters most.`}
               />
 
-              <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-black/25 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-1">
+              <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-black/25 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:p-3">
+                <div className="flex max-w-full overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-1 mobile-native-scroll">
                   {[
                     ["all", `All ${credits.length}`],
                     ["movies", `Movies ${movieCredits.length}`],
@@ -1858,7 +1874,7 @@ export default function CelebrityDetailPage({
                         setSelectedTab(value as FilmographyTab);
                         setShowAllCredits(false);
                       }}
-                      className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+                      className={`min-h-10 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition sm:px-4 sm:py-2.5 sm:text-sm ${
                         selectedTab === value
                           ? "bg-[#e94f37] text-black shadow-lg shadow-[#e94f37]/15"
                           : "text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -1888,8 +1904,8 @@ export default function CelebrityDetailPage({
               </div>
             </div>
             {visibleCredits.length > 0 ? (
-              <div className="mt-7 space-y-8">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              <div className="mt-5 space-y-6 sm:mt-7 sm:space-y-8">
+                <div className="grid grid-cols-2 gap-x-3 gap-y-6 min-[430px]:grid-cols-3 sm:gap-x-4 sm:gap-y-7 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                   {visibleCredits.map((credit) => {
                     const itemType =
                       credit.media_type === "tv" ? "series" : "movie";
@@ -1908,7 +1924,7 @@ export default function CelebrityDetailPage({
                   <div className="text-center">
                     <button
                       onClick={() => setShowAllCredits((value) => !value)}
-                      className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#e94f37] px-6 py-3 text-sm font-bold text-black transition hover:bg-[#ff6b58]"
+                      className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-[#e94f37] px-5 py-3 text-sm font-bold text-black transition hover:bg-[#ff6b58] sm:mt-7 sm:px-6"
                     >
                       {showAllCredits ? (
                         <ChevronUp className="h-4 w-4" />
@@ -1931,7 +1947,7 @@ export default function CelebrityDetailPage({
             )}
           </section>
 
-          <section className="mt-16 space-y-5">
+          <section className="mt-10 space-y-4 sm:mt-16 sm:space-y-5">
             <SectionHeader
               icon={Sparkles}
               title="You May Also Like"
@@ -1944,7 +1960,7 @@ export default function CelebrityDetailPage({
                         setSimilarStartIndex((index) => Math.max(0, index - 6))
                       }
                       disabled={!canScrollSimilarLeft}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
                       aria-label="Previous similar celebrities"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -1959,7 +1975,7 @@ export default function CelebrityDetailPage({
                         )
                       }
                       disabled={!canScrollSimilarRight}
-                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
                       aria-label="Next similar celebrities"
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -1969,10 +1985,13 @@ export default function CelebrityDetailPage({
               }
             />
             {similarLoading ? (
-              <div className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/35 p-4">
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              <div className="relative -mx-4 overflow-hidden border-y border-zinc-800 bg-zinc-900/35 px-4 py-3 sm:mx-0 sm:rounded-3xl sm:border sm:p-4">
+                <div className="flex gap-3 overflow-x-auto pb-2 mobile-native-scroll sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
                   {Array.from({ length: 6 }).map((_, index) => (
-                    <div key={index} className="space-y-3">
+                    <div
+                      key={index}
+                      className="w-[42vw] min-w-[138px] max-w-[170px] shrink-0 space-y-3 sm:w-auto sm:min-w-0 sm:max-w-none"
+                    >
                       <div className="aspect-[2/3] animate-pulse rounded-2xl bg-zinc-800" />
                       <div className="h-4 w-4/5 animate-pulse rounded bg-zinc-800" />
                       <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800" />
@@ -1981,7 +2000,7 @@ export default function CelebrityDetailPage({
                 </div>
               </div>
             ) : similarPeople.length > 0 ? (
-              <div className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900/35 p-4">
+              <div className="relative -mx-4 overflow-hidden border-y border-zinc-800 bg-zinc-900/35 px-4 py-3 sm:mx-0 sm:rounded-3xl sm:border sm:p-4">
                 <AnimatePresence mode="popLayout">
                   <motion.div
                     key={similarStartIndex}
@@ -1989,15 +2008,20 @@ export default function CelebrityDetailPage({
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -24 }}
                     transition={{ duration: 0.25 }}
-                    className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+                    className="flex gap-3 overflow-x-auto pb-2 mobile-native-scroll sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 lg:grid-cols-6"
                   >
                     {similarCarouselItems.map((similar) => (
-                      <PersonCard key={similar.id} person={similar} />
+                      <div
+                        key={similar.id}
+                        className="w-[42vw] min-w-[138px] max-w-[170px] shrink-0 sm:w-auto sm:min-w-0 sm:max-w-none"
+                      >
+                        <PersonCard person={similar} />
+                      </div>
                     ))}
                   </motion.div>
                 </AnimatePresence>
                 {similarPeople.length > 6 && (
-                  <div className="mt-4 flex justify-center gap-1.5">
+                  <div className="mt-4 hidden justify-center gap-1.5 sm:flex">
                     {Array.from({
                       length: Math.ceil(Math.min(similarPeople.length, 12) / 6),
                     }).map((_, index) => (
