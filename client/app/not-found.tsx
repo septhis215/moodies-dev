@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SupportEmailLink } from "@/components/ui/support-email-link";
 
 // a visible, robust aurora background + centered 404 card
 export default function NotFoundAuroraVisible() {
@@ -153,6 +154,9 @@ export default function NotFoundAuroraVisible() {
           <p className="text-gray-400 mb-8">
             Looks like this route drifted into the aurora. Try heading back
             home.
+          </p>
+          <p className="mb-8 text-sm text-gray-400">
+            Still stuck? Email <SupportEmailLink />.
           </p>
           <Link
             href="/"

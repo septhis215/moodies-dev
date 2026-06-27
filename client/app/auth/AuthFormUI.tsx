@@ -11,6 +11,7 @@ import {
   Info,
   Loader2,
 } from "lucide-react";
+import { SupportEmailLink } from "@/components/ui/support-email-link";
 
 type AuthFrameProps = {
   children: ReactNode;
@@ -263,6 +264,14 @@ export function AuthMessage({ children, tone = "error" }: AuthMessageProps) {
         {children}
       </p>
     </div>
+  );
+}
+
+export function AuthSupportNote({ className = "" }: { className?: string }) {
+  return (
+    <p className={`text-center text-xs leading-5 text-white/45 ${className}`}>
+      Need help? Contact us at <SupportEmailLink />.
+    </p>
   );
 }
 

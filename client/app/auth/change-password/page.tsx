@@ -10,6 +10,7 @@ import {
   AuthHeader,
   AuthMessage,
   AuthPasswordInput,
+  AuthSupportNote,
 } from "../AuthFormUI";
 
 const API =
@@ -115,6 +116,8 @@ export default function ChangePasswordPage() {
             Change Password
           </AuthButton>
         </form>
+
+        <AuthSupportNote className="mt-5 [@media(max-height:700px)]:mt-4" />
       </AuthFrame>
     </>
   );
