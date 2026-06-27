@@ -16,21 +16,70 @@ type ToastMeta = {
   duration?: number;
 };
 
+type CachedWatchlist = {
+  movieId?: string[];
+  seriesId?: string[];
+};
+
+const WATCHLIST_CACHE_PREFIX = "moodies:watchlist:";
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+function readCachedWatchlist(userId?: string) {
+  if (!userId || typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(`${WATCHLIST_CACHE_PREFIX}${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedWatchlist;
+    return {
+      movieIds: new Set(parsed.movieId ?? []),
+      seriesIds: new Set(parsed.seriesId ?? []),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedWatchlist(
+  userId: string | undefined,
+  movieIds: Set<string>,
+  seriesIds: Set<string>,
+) {
+  if (!userId || typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      `${WATCHLIST_CACHE_PREFIX}${userId}`,
+      JSON.stringify({
+        movieId: Array.from(movieIds),
+        seriesId: Array.from(seriesIds),
+      }),
+    );
+  } catch {
+    /* Ignore storage quota/private-mode failures. */
+  }
+}
+
 export function useWatchlist() {
-  // local sets for fast lookup
-  const [movieIds, setMovieIds] = useState<Set<string>>(new Set());
-  const [seriesIds, setSeriesIds] = useState<Set<string>>(new Set());
-
-  const [loading, setLoading] = useState(true);
-  const [ready, setReady] = useState(false); // true after first load
-  const [error, setError] = useState<string>("");
-
   const { toast } = useToast(); // use toast hook
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const userId = user?.id;
+  const initialCached = useMemo(() => readCachedWatchlist(userId), [userId]);
+
+  // local sets for fast lookup
+  const [movieIds, setMovieIds] = useState<Set<string>>(
+    () => initialCached?.movieIds ?? new Set(),
+  );
+  const [seriesIds, setSeriesIds] = useState<Set<string>>(
+    () => initialCached?.seriesIds ?? new Set(),
+  );
+
+  const [loading, setLoading] = useState(!initialCached);
+  const [ready, setReady] = useState(!!initialCached); // true after first load
+  const [error, setError] = useState<string>("");
 
   /** initial fetch */
   const refresh = useCallback(async () => {
@@ -49,6 +98,13 @@ export function useWatchlist() {
       return;
     }
 
+    const cached = readCachedWatchlist(userId);
+    if (cached) {
+      setMovieIds(cached.movieIds);
+      setSeriesIds(cached.seriesIds);
+      setReady(true);
+    }
+
     setLoading(true);
     setError("");
 
@@ -59,8 +115,11 @@ export function useWatchlist() {
         setMovieIds(new Set());
         setSeriesIds(new Set());
       } else {
-        setMovieIds(new Set(wl.movieId ?? []));
-        setSeriesIds(new Set(wl.seriesId ?? []));
+        const nextMovieIds = new Set<string>(wl.movieId ?? []);
+        const nextSeriesIds = new Set<string>(wl.seriesId ?? []);
+        setMovieIds(nextMovieIds);
+        setSeriesIds(nextSeriesIds);
+        writeCachedWatchlist(userId, nextMovieIds, nextSeriesIds);
       }
     } catch (e: unknown) {
       // If client threw "NO_TOKEN", just treat as logged-out silently.
@@ -75,7 +134,7 @@ export function useWatchlist() {
       setLoading(false);
       setReady(true);
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, userId]);
 
   useEffect(() => {
     refresh();
@@ -101,8 +160,18 @@ export function useWatchlist() {
       const id = String(tmdbId);
 
       // optimistic add
-      if (type === "movie") setMovieIds((s) => new Set(s).add(id));
-      else setSeriesIds((s) => new Set(s).add(id));
+      if (type === "movie")
+        setMovieIds((s) => {
+          const next = new Set(s).add(id);
+          writeCachedWatchlist(userId, next, seriesIds);
+          return next;
+        });
+      else
+        setSeriesIds((s) => {
+          const next = new Set(s).add(id);
+          writeCachedWatchlist(userId, movieIds, next);
+          return next;
+        });
 
       try {
         const res = await toggleWatchlist(id, type); // token handled inside client
@@ -112,12 +181,14 @@ export function useWatchlist() {
             setMovieIds((s) => {
               const n = new Set(s);
               n.delete(id);
+              writeCachedWatchlist(userId, n, seriesIds);
               return n;
             });
           else
             setSeriesIds((s) => {
               const n = new Set(s);
               n.delete(id);
+              writeCachedWatchlist(userId, movieIds, n);
               return n;
             });
         } else {
@@ -136,12 +207,14 @@ export function useWatchlist() {
           setMovieIds((s) => {
             const n = new Set(s);
             n.delete(id);
+            writeCachedWatchlist(userId, n, seriesIds);
             return n;
           });
         else
           setSeriesIds((s) => {
             const n = new Set(s);
             n.delete(id);
+            writeCachedWatchlist(userId, movieIds, n);
             return n;
           });
 
@@ -154,7 +227,7 @@ export function useWatchlist() {
         throw e;
       }
     },
-    [isAuthenticated, toast]
+    [isAuthenticated, movieIds, seriesIds, toast, userId]
   );
 
   const remove = useCallback(
@@ -171,12 +244,14 @@ export function useWatchlist() {
         setMovieIds((s) => {
           const n = new Set(s);
           n.delete(id);
+          writeCachedWatchlist(userId, n, seriesIds);
           return n;
         });
       else
         setSeriesIds((s) => {
           const n = new Set(s);
           n.delete(id);
+          writeCachedWatchlist(userId, movieIds, n);
           return n;
         });
 
@@ -184,8 +259,18 @@ export function useWatchlist() {
         const res = await toggleWatchlist(id, type);
         // If API says it added (toggle again), revert
         if (!res.removed) {
-          if (type === "movie") setMovieIds((s) => new Set(s).add(id));
-          else setSeriesIds((s) => new Set(s).add(id));
+          if (type === "movie")
+            setMovieIds((s) => {
+              const next = new Set(s).add(id);
+              writeCachedWatchlist(userId, next, seriesIds);
+              return next;
+            });
+          else
+            setSeriesIds((s) => {
+              const next = new Set(s).add(id);
+              writeCachedWatchlist(userId, movieIds, next);
+              return next;
+            });
         } else {
           // Success -> show toast
           toast(
@@ -198,8 +283,18 @@ export function useWatchlist() {
         }
       } catch (e: unknown) {
         // rollback on error
-        if (type === "movie") setMovieIds((s) => new Set(s).add(id));
-        else setSeriesIds((s) => new Set(s).add(id));
+        if (type === "movie")
+          setMovieIds((s) => {
+            const next = new Set(s).add(id);
+            writeCachedWatchlist(userId, next, seriesIds);
+            return next;
+          });
+        else
+          setSeriesIds((s) => {
+            const next = new Set(s).add(id);
+            writeCachedWatchlist(userId, movieIds, next);
+            return next;
+          });
 
         if (getErrorMessage(e).includes("NO_TOKEN")) {
           // replaced alert with toast
@@ -210,7 +305,7 @@ export function useWatchlist() {
         throw e;
       }
     },
-    [isAuthenticated, toast]
+    [isAuthenticated, movieIds, seriesIds, toast, userId]
   );
 
   return {

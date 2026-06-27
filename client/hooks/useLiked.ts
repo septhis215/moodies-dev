@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchLikedList, toggleLiked, type LikeType } from "@/utils/likedClient";
 import { useAuth } from "@/app/context/AuthProvider";
 import { useToast } from "@/app/context/ToastContext";
@@ -12,18 +12,67 @@ type ToastMeta = {
   duration?: number;
 };
 
+type CachedLiked = {
+  movieId?: string[];
+  seriesId?: string[];
+};
+
+const LIKED_CACHE_PREFIX = "moodies:liked:";
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function useLiked() {
-  const [movieIds, setMovieIds] = useState<Set<string>>(new Set());
-  const [seriesIds, setSeriesIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
-  const [ready, setReady] = useState(false);
+function readCachedLiked(userId?: string) {
+  if (!userId || typeof window === "undefined") return null;
 
+  try {
+    const raw = window.localStorage.getItem(`${LIKED_CACHE_PREFIX}${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CachedLiked;
+    return {
+      movieIds: new Set(parsed.movieId ?? []),
+      seriesIds: new Set(parsed.seriesId ?? []),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedLiked(
+  userId: string | undefined,
+  movieIds: Set<string>,
+  seriesIds: Set<string>,
+) {
+  if (!userId || typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      `${LIKED_CACHE_PREFIX}${userId}`,
+      JSON.stringify({
+        movieId: Array.from(movieIds),
+        seriesId: Array.from(seriesIds),
+      }),
+    );
+  } catch {
+    /* Ignore storage quota/private-mode failures. */
+  }
+}
+
+export function useLiked() {
   const { toast } = useToast();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const userId = user?.id;
+  const initialCached = useMemo(() => readCachedLiked(userId), [userId]);
+
+  const [movieIds, setMovieIds] = useState<Set<string>>(
+    () => initialCached?.movieIds ?? new Set(),
+  );
+  const [seriesIds, setSeriesIds] = useState<Set<string>>(
+    () => initialCached?.seriesIds ?? new Set(),
+  );
+  const [loading, setLoading] = useState(!initialCached);
+  const [ready, setReady] = useState(!!initialCached);
 
   const refresh = useCallback(async () => {
     if (authLoading) {
@@ -40,11 +89,21 @@ export function useLiked() {
       return;
     }
 
+    const cached = readCachedLiked(userId);
+    if (cached) {
+      setMovieIds(cached.movieIds);
+      setSeriesIds(cached.seriesIds);
+      setReady(true);
+    }
+
     setLoading(true);
     try {
       const list = await fetchLikedList();
-      setMovieIds(new Set(list.movieId ?? []));
-      setSeriesIds(new Set(list.seriesId ?? []));
+      const nextMovieIds = new Set<string>(list.movieId ?? []);
+      const nextSeriesIds = new Set<string>(list.seriesId ?? []);
+      setMovieIds(nextMovieIds);
+      setSeriesIds(nextSeriesIds);
+      writeCachedLiked(userId, nextMovieIds, nextSeriesIds);
     } catch (e: unknown) {
       if (!getErrorMessage(e).includes("NO_TOKEN")) {
         console.error("[useLiked] refresh error:", e);
@@ -55,7 +114,7 @@ export function useLiked() {
       setLoading(false);
       setReady(true);
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, userId]);
 
   useEffect(() => {
     refresh();
@@ -78,15 +137,37 @@ export function useLiked() {
 
       const id = String(tmdbId);
 
-      if (type === "movie") setMovieIds((s) => new Set(s).add(id));
-      else setSeriesIds((s) => new Set(s).add(id));
+      if (type === "movie")
+        setMovieIds((s) => {
+          const next = new Set(s).add(id);
+          writeCachedLiked(userId, next, seriesIds);
+          return next;
+        });
+      else
+        setSeriesIds((s) => {
+          const next = new Set(s).add(id);
+          writeCachedLiked(userId, movieIds, next);
+          return next;
+        });
 
       try {
         const res = await toggleLiked(id, type);
         if (!res.liked) {
           // API toggled it off instead
-          if (type === "movie") setMovieIds((s) => { const n = new Set(s); n.delete(id); return n; });
-          else setSeriesIds((s) => { const n = new Set(s); n.delete(id); return n; });
+          if (type === "movie")
+            setMovieIds((s) => {
+              const n = new Set(s);
+              n.delete(id);
+              writeCachedLiked(userId, n, seriesIds);
+              return n;
+            });
+          else
+            setSeriesIds((s) => {
+              const n = new Set(s);
+              n.delete(id);
+              writeCachedLiked(userId, movieIds, n);
+              return n;
+            });
         } else {
           toast(
             "Added to your likes",
@@ -98,12 +179,24 @@ export function useLiked() {
         }
       } catch (e) {
         // rollback
-        if (type === "movie") setMovieIds((s) => { const n = new Set(s); n.delete(id); return n; });
-        else setSeriesIds((s) => { const n = new Set(s); n.delete(id); return n; });
+        if (type === "movie")
+          setMovieIds((s) => {
+            const n = new Set(s);
+            n.delete(id);
+            writeCachedLiked(userId, n, seriesIds);
+            return n;
+          });
+        else
+          setSeriesIds((s) => {
+            const n = new Set(s);
+            n.delete(id);
+            writeCachedLiked(userId, movieIds, n);
+            return n;
+          });
         console.error("[useLiked] like error:", e);
       }
     },
-    [isAuthenticated, toast]
+    [isAuthenticated, movieIds, seriesIds, toast, userId]
   );
 
   const unlike = useCallback(
@@ -115,8 +208,20 @@ export function useLiked() {
 
       const id = String(tmdbId);
 
-      if (type === "movie") setMovieIds((s) => { const n = new Set(s); n.delete(id); return n; });
-      else setSeriesIds((s) => { const n = new Set(s); n.delete(id); return n; });
+      if (type === "movie")
+        setMovieIds((s) => {
+          const n = new Set(s);
+          n.delete(id);
+          writeCachedLiked(userId, n, seriesIds);
+          return n;
+        });
+      else
+        setSeriesIds((s) => {
+          const n = new Set(s);
+          n.delete(id);
+          writeCachedLiked(userId, movieIds, n);
+          return n;
+        });
 
       try {
         await toggleLiked(id, type);
@@ -129,12 +234,22 @@ export function useLiked() {
         );
       } catch (e) {
         // rollback
-        if (type === "movie") setMovieIds((s) => new Set(s).add(id));
-        else setSeriesIds((s) => new Set(s).add(id));
+        if (type === "movie")
+          setMovieIds((s) => {
+            const next = new Set(s).add(id);
+            writeCachedLiked(userId, next, seriesIds);
+            return next;
+          });
+        else
+          setSeriesIds((s) => {
+            const next = new Set(s).add(id);
+            writeCachedLiked(userId, movieIds, next);
+            return next;
+          });
         console.error("[useLiked] unlike error:", e);
       }
     },
-    [isAuthenticated, toast]
+    [isAuthenticated, movieIds, seriesIds, toast, userId]
   );
 
   return { isLiked, like, unlike, loading, ready, refresh };
