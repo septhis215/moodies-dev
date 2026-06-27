@@ -1147,54 +1147,57 @@ export default function AllReviews({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-[1000] flex items-end justify-center p-3 sm:items-center sm:p-4"
-                style={{
-                  background: "rgba(8, 10, 22, 0.90)",
-                  backdropFilter: "blur(20px)",
-                }}
+                className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/80 p-0 backdrop-blur-md sm:items-center sm:p-5"
                 onClick={() => setWriteModalOpen(false)}
               >
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.97, y: 14 }}
+                  initial={{ opacity: 0, scale: 0.98, y: 24 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.97, y: 14 }}
+                  exit={{ opacity: 0, scale: 0.98, y: 24 }}
                   transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                   onClick={(e) => e.stopPropagation()}
-                  className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-white/[0.09] bg-white/[0.04]"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="review-dialog-title"
+                  aria-describedby="review-dialog-description"
+                  className="relative flex h-[100dvh] w-full max-w-2xl flex-col overflow-hidden border border-white/10 bg-[#0a0a0b]/96 shadow-2xl shadow-black/70 sm:h-auto sm:max-h-[min(90dvh,780px)] sm:rounded-2xl"
                   style={{
                     boxShadow:
-                      "0 32px 72px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)",
+                      "0 32px 90px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.04)",
                   }}
                 >
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(233,79,55,0.18),transparent_34%),radial-gradient(circle_at_90%_12%,rgba(255,255,255,0.06),transparent_28%)]" />
                   {/* Header — quote glyph + title + close */}
-                  <div className="flex items-center justify-between border-b border-white/[0.07] px-4 pb-4 pt-4 sm:px-5 sm:pt-5">
+                  <div className="relative z-20 flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-black/35 px-4 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
                     <div className="flex items-center gap-3">
-                      <svg
-                        className="w-7 h-7 opacity-[0.09] flex-shrink-0"
-                        viewBox="0 0 32 32"
-                        fill="white"
-                        aria-hidden
-                      >
-                        <path d="M10 8C5.6 8 2 11.6 2 16v8h8v-8H4c0-3.3 2.7-6 6-6V8zm12 0c-4.4 0-8 3.6-8 8v8h8v-8h-6c0-3.3 2.7-6 6-6V8z" />
-                      </svg>
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e94f37]/25 bg-[#e94f37]/10 text-[#ff8c79]">
+                        <PenSquare className="h-4.5 w-4.5" />
+                      </span>
                       <div>
-                        <h2 className="text-sm font-bold text-white leading-none">
-                          Write a Review
+                        <h2
+                          id="review-dialog-title"
+                          className="text-base font-black leading-tight text-white sm:text-lg"
+                        >
+                          Share your viewing mood
                         </h2>
-                        <p className="text-[11px] text-white/30 mt-1">
-                          {info.title}
+                        <p
+                          id="review-dialog-description"
+                          className="mt-0.5 text-xs text-white/45"
+                        >
+                          Rate it, name the feeling, and tell the community why.
                         </p>
                       </div>
                     </div>
                     <button
                       onClick={() => setWriteModalOpen(false)}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.05] text-white/40 transition-all hover:border-white/[0.16] hover:bg-white/[0.10] hover:text-white cursor-pointer sm:h-7 sm:w-7"
+                      aria-label="Close review dialog"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/55 transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]"
                     >
-                      <X size={13} />
+                      <X className="h-5 w-5" />
                     </button>
                   </div>
 
-                  <div className="max-h-[82svh] overflow-y-auto mobile-native-scroll scrollbar-none">
+                  <div className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain mobile-native-scroll scrollbar-none">
                     {!isAuthenticated ? (
                       <div className="flex flex-col items-center justify-center py-12 px-6 text-center gap-4">
                         <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl">
@@ -1298,26 +1301,6 @@ function ReviewFormInModal({
   const [submitting, setSubmitting] = useState(false);
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
 
-  const moodOptions = [
-    { emoji: "🔥", label: "Amazing", value: "amazing" },
-    { emoji: "❤️", label: "Loved it", value: "loved" },
-    { emoji: "😊", label: "Enjoyed", value: "enjoyed" },
-    { emoji: "😐", label: "It's okay", value: "okay" },
-    { emoji: "😕", label: "Meh", value: "meh" },
-    { emoji: "😞", label: "Disliked", value: "disliked" },
-  ];
-  const moodToEmoji: Record<string, string> = {
-    amazing: "🔥",
-    loved: "❤️",
-    enjoyed: "😊",
-    okay: "😐",
-    meh: "😕",
-    disliked: "😞",
-  };
-
-  void moodOptions;
-  void moodToEmoji;
-
   const moodImageOptions = [
     { imagePath: "/images/review-icons/amazing.png", label: "Amazing", value: "amazing" },
     { imagePath: "/images/review-icons/loved-it.png", label: "Loved it", value: "loved" },
@@ -1326,19 +1309,17 @@ function ReviewFormInModal({
     { imagePath: "/images/review-icons/meh.png", label: "Meh", value: "meh" },
     { imagePath: "/images/review-icons/skip-it.png", label: "Disliked", value: "disliked" },
   ];
-  const moodToImagePath: Record<string, string> = {
-    amazing: "/images/review-icons/amazing.png",
-    loved: "/images/review-icons/loved-it.png",
-    enjoyed: "/images/review-icons/enjoyed-it.png",
-    okay: "/images/review-icons/its-okay.png",
-    meh: "/images/review-icons/meh.png",
-    disliked: "/images/review-icons/skip-it.png",
-  };
-
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     setError(null);
     if (!mood) {
+      setError("🎭 Pick a mood first");
+      return;
+    }
+    const selectedMoodForSubmit = moodImageOptions.find(
+      (item) => item.value === mood,
+    );
+    if (!selectedMoodForSubmit) {
       setError("🎭 Pick a mood first");
       return;
     }
@@ -1361,7 +1342,7 @@ function ReviewFormInModal({
         body: JSON.stringify({
           rating,
           content: content.trim(),
-          moodEmojis: mood ? [moodToImagePath[mood]] : [],
+          moodEmojis: [selectedMoodForSubmit.imagePath],
           tmdbId: contentId ? parseInt(contentId) : 0,
           mediaType: (contentType?.toUpperCase() || "MOVIE") as "MOVIE" | "TV",
         }),
@@ -1395,14 +1376,58 @@ function ReviewFormInModal({
         : normalizedDisplay >= 2.5
           ? "#facc15"
           : "#f87171";
+  const isReady =
+    Boolean(mood) && rating !== null && content.trim().length >= 10;
   const author = user?.username ?? user?.name ?? "User";
+  const selectedMoodIndex = moodImageOptions.findIndex(
+    (m) => m.value === mood,
+  );
+  const selectedMoodData =
+    selectedMoodIndex === -1 ? undefined : moodImageOptions[selectedMoodIndex];
+  const selectedMoodImage = selectedMoodData?.imagePath;
+
+  function handleMoodKeyDown(
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) {
+    const lastIndex = moodImageOptions.length - 1;
+    const nextIndexByKey: Partial<Record<string, number>> = {
+      ArrowRight: index === lastIndex ? 0 : index + 1,
+      ArrowDown: index === lastIndex ? 0 : index + 1,
+      ArrowLeft: index === 0 ? lastIndex : index - 1,
+      ArrowUp: index === 0 ? lastIndex : index - 1,
+      Home: 0,
+      End: lastIndex,
+    };
+    const nextIndex = nextIndexByKey[event.key];
+
+    if (nextIndex === undefined) return;
+
+    event.preventDefault();
+    const nextMood = moodImageOptions[nextIndex];
+    setMood(nextMood.value);
+    event.currentTarget.parentElement
+      ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+      [nextIndex]?.focus();
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-5 px-4 py-4 sm:px-6 sm:py-5">
       {/* Compose card — hero */}
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+        {selectedMoodImage && (
+          <Image
+            src={selectedMoodImage}
+            alt=""
+            aria-hidden="true"
+            width={220}
+            height={220}
+            className="pointer-events-none absolute bottom-11 right-[-12px] z-0 h-44 w-auto select-none object-contain opacity-[0.12] transition-[opacity,transform] duration-200 ease-out [transform:rotate(-3deg)_scale(0.98)] md:bottom-8 md:right-[-10px] md:h-[210px] md:opacity-[0.105] lg:bottom-7 lg:right-[-18px] lg:h-[250px] lg:opacity-[0.095] lg:[transform:rotate(-4deg)_scale(1.04)]"
+          />
+        )}
         {/* Top: quote glyph + live rating pill */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-0">
+        <div className="relative z-10 flex items-center justify-between px-4 pt-4 pb-0">
           <svg
             className="w-6 h-6 opacity-[0.08]"
             viewBox="0 0 32 32"
@@ -1467,11 +1492,11 @@ function ReviewFormInModal({
           onChange={(e) => setContent(e.target.value)}
           placeholder="What did you think? Share what you loved, hated, or found surprising…"
           rows={5}
-          className="w-full bg-transparent px-4 py-3 text-[13px] text-white/75 placeholder-white/20 resize-none outline-none leading-[1.75]"
+          className="relative z-10 w-full resize-none bg-transparent px-4 py-3 text-[13px] leading-[1.75] text-white/75 outline-none placeholder-white/20"
         />
 
         {/* Author attribution footer */}
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-white/[0.07] bg-white/[0.025]">
+        <div className="relative z-10 flex items-center justify-between gap-3 border-t border-white/[0.07] bg-white/[0.025] px-4 py-3">
           <div className="flex items-center gap-2.5">
             <div
               style={{ width: 28, height: 28, minWidth: 28 }}
@@ -1525,53 +1550,83 @@ function ReviewFormInModal({
       </div>
 
       {/* Mood grid */}
-      <div>
-        <p className="text-[11px] text-white/35 font-medium px-1 mb-2">
-          How did it make you feel?
-        </p>
-        <div className="grid grid-cols-6 gap-1.5">
-          {moodImageOptions.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              onClick={() => setMood(m.value)}
-              className={`relative flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border transition-all duration-200 cursor-pointer ${
-                mood === m.value
-                  ? "bg-[#e94f37]/[0.10] border-[#e94f37]/50 scale-[1.04]"
-                  : "bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.07] hover:border-white/[0.15]"
-              }`}
-            >
-              <Image
-                src={m.imagePath}
-                alt={m.label}
-                width={28}
-                height={28}
-                className="h-7 w-7 object-contain"
-              />
-              <span
-                className={`text-[9px] font-medium leading-none text-center ${mood === m.value ? "text-white/80" : "text-white/30"}`}
-              >
-                {m.label}
-              </span>
-              {mood === m.value && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#e94f37] rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-1.5 h-1.5 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-              )}
-            </button>
-          ))}
+      <section className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] p-3.5 sm:p-4">
+        <div className="mb-3 flex flex-col gap-1">
+          <span className="text-[13px] font-bold text-[#f5f5f7]">
+            How did it make you feel?
+          </span>
+          <span className="text-[11px] font-medium text-white/45">
+            Choose one mood
+          </span>
         </div>
-      </div>
+        <div
+          className="grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-6"
+          role="radiogroup"
+          aria-label="How did it make you feel?"
+        >
+          {moodImageOptions.map((m, index) => {
+            const isSelected = mood === m.value;
+
+            return (
+              <button
+                key={m.value}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                tabIndex={
+                  selectedMoodIndex === -1
+                    ? index === 0
+                      ? 0
+                      : -1
+                    : isSelected
+                      ? 0
+                      : -1
+                }
+                onClick={() => setMood(m.value)}
+                onKeyDown={(event) => handleMoodKeyDown(event, index)}
+                className={`relative flex min-h-[84px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border px-2.5 py-3 text-center transition-[border-color,background-color,box-shadow,color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e3262a]/60 motion-safe:hover:-translate-y-px md:min-h-[76px] ${
+                  isSelected
+                    ? "border-[#e3262a] bg-[#e3262a]/[0.16] text-white shadow-[0_0_0_1px_rgba(227,38,42,0.25),0_12px_28px_rgba(227,38,42,0.18)]"
+                    : "border-white/[0.10] bg-white/[0.045] text-white/70 hover:border-[#e3262a]/55 hover:bg-[#e3262a]/[0.08] hover:text-white"
+                }`}
+              >
+                {isSelected && (
+                  <span
+                    className="absolute right-2 top-2 grid h-[18px] w-[18px] place-items-center rounded-full bg-[#e3262a] text-[11px] font-bold leading-none text-white"
+                    aria-hidden="true"
+                  >
+                    <svg
+                      className="h-3 w-3"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                )}
+                <Image
+                  src={m.imagePath}
+                  alt=""
+                  width={32}
+                  height={32}
+                  className={`h-8 w-8 object-contain transition-[filter,transform] duration-150 md:h-[30px] md:w-[30px] ${
+                    isSelected
+                      ? "scale-110 drop-shadow-[0_0_8px_rgba(227,38,42,0.45)]"
+                      : ""
+                  }`}
+                />
+                <span className="text-[12px] font-semibold leading-tight md:text-[11px]">
+                  {m.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Error */}
       <AnimatePresence>
@@ -1603,11 +1658,12 @@ function ReviewFormInModal({
         <p className="text-[10px] text-white/20">May be featured publicly.</p>
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !isReady}
           className="px-5 py-2 rounded-xl bg-white/[0.04] border border-[#e94f37]/40 text-[#e94f37] text-xs font-semibold hover:bg-[#e94f37]/[0.10] hover:border-[#e94f37]/70 active:scale-95 transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
         >
           {submitting ? "Submitting…" : "Submit Review"}
         </button>
+      </div>
       </div>
     </form>
   );

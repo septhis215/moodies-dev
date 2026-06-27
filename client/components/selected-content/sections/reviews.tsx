@@ -693,17 +693,15 @@ type ReviewMood = {
   label: string;
   value: string;
   imagePath: string;
-  mascot: string;
-  accent: string;
 };
 
 const REVIEW_MOODS: ReviewMood[] = [
-  { imagePath: "/images/review-icons/amazing.png", label: "Amazing", value: "amazing", mascot: "epic", accent: "#4ade80" },
-  { imagePath: "/images/review-icons/loved-it.png", label: "Loved it", value: "loved", mascot: "romantic", accent: "#fb7185" },
-  { imagePath: "/images/review-icons/enjoyed-it.png", label: "Enjoyed", value: "enjoyed", mascot: "happy", accent: "#facc15" },
-  { imagePath: "/images/review-icons/its-okay.png", label: "Thoughtful", value: "okay", mascot: "mind-bending", accent: "#38bdf8" },
-  { imagePath: "/images/review-icons/meh.png", label: "Mixed", value: "meh", mascot: "bittersweet", accent: "#f59e0b" },
-  { imagePath: "/images/review-icons/skip-it.png", label: "Disappointed", value: "disliked", mascot: "sad", accent: "#f87171" },
+  { imagePath: "/images/review-icons/amazing.png", label: "Amazing", value: "amazing" },
+  { imagePath: "/images/review-icons/loved-it.png", label: "Loved it", value: "loved" },
+  { imagePath: "/images/review-icons/enjoyed-it.png", label: "Enjoyed", value: "enjoyed" },
+  { imagePath: "/images/review-icons/its-okay.png", label: "It's okay", value: "okay" },
+  { imagePath: "/images/review-icons/meh.png", label: "Meh", value: "meh" },
+  { imagePath: "/images/review-icons/skip-it.png", label: "Disliked", value: "disliked" },
 ];
 
 const RATING_GUIDANCE = [
@@ -738,15 +736,6 @@ function ReviewForm({
   const { toast } = useToast();
   const router = useRouter();
 
-  const moodToImagePath: Record<string, string> = {
-    amazing: "/images/review-icons/amazing.png",
-    loved: "/images/review-icons/loved-it.png",
-    enjoyed: "/images/review-icons/enjoyed-it.png",
-    okay: "/images/review-icons/its-okay.png",
-    meh: "/images/review-icons/meh.png",
-    disliked: "/images/review-icons/skip-it.png",
-  };
-
   useEffect(
     () => () => {
       if (completionTimerRef.current) {
@@ -764,6 +753,11 @@ function ReviewForm({
       return;
     }
     if (!mood) {
+      setError("Choose the mood that best matches your experience.");
+      return;
+    }
+    const selectedMoodForSubmit = moodOptions.find((item) => item.value === mood);
+    if (!selectedMoodForSubmit) {
       setError("Choose the mood that best matches your experience.");
       return;
     }
@@ -786,7 +780,7 @@ function ReviewForm({
         body: JSON.stringify({
           rating,
           content: content.trim(),
-          moodEmojis: mood ? [moodToImagePath[mood]] : [],
+          moodEmojis: [selectedMoodForSubmit.imagePath],
           tmdbId: parseInt(contentId),
           mediaType: (contentType?.toUpperCase() || "MOVIE") as "MOVIE" | "TV",
         }),
@@ -828,6 +822,35 @@ function ReviewForm({
   const isReady =
     Boolean(mood) && rating !== null && content.trim().length >= 10;
   const author = user?.username ?? user?.name ?? "User";
+  const selectedMoodIndex = moodOptions.findIndex((m) => m.value === mood);
+  const selectedMoodData =
+    selectedMoodIndex === -1 ? undefined : moodOptions[selectedMoodIndex];
+  const selectedMoodImage = selectedMoodData?.imagePath;
+
+  function handleMoodKeyDown(
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) {
+    const lastIndex = moodOptions.length - 1;
+    const nextIndexByKey: Partial<Record<string, number>> = {
+      ArrowRight: index === lastIndex ? 0 : index + 1,
+      ArrowDown: index === lastIndex ? 0 : index + 1,
+      ArrowLeft: index === 0 ? lastIndex : index - 1,
+      ArrowUp: index === 0 ? lastIndex : index - 1,
+      Home: 0,
+      End: lastIndex,
+    };
+    const nextIndex = nextIndexByKey[event.key];
+
+    if (nextIndex === undefined) return;
+
+    event.preventDefault();
+    const nextMood = moodOptions[nextIndex];
+    setMood(nextMood.value);
+    event.currentTarget.parentElement
+      ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+      [nextIndex]?.focus();
+  }
 
   if (submitState === "success") {
     return (
@@ -866,9 +889,19 @@ function ReviewForm({
     <form onSubmit={handleSubmit}>
       <div className="space-y-5 px-4 py-4 sm:px-6 sm:py-5">
       {/* ── Compose card — the hero ── */}
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+        {selectedMoodImage && (
+          <Image
+            src={selectedMoodImage}
+            alt=""
+            aria-hidden="true"
+            width={220}
+            height={220}
+            className="pointer-events-none absolute bottom-11 right-[-12px] z-0 h-44 w-auto select-none object-contain opacity-[0.12] transition-[opacity,transform] duration-200 ease-out [transform:rotate(-3deg)_scale(0.98)] md:bottom-8 md:right-[-10px] md:h-[210px] md:opacity-[0.105] lg:bottom-7 lg:right-[-18px] lg:h-[250px] lg:opacity-[0.095] lg:[transform:rotate(-4deg)_scale(1.04)]"
+          />
+        )}
         {/* Top: quote glyph + rating score pill — mirrors review card */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-0">
+        <div className="relative z-10 flex items-center justify-between px-4 pt-4 pb-0">
           <svg
             className="w-6 h-6 opacity-[0.08]"
             viewBox="0 0 32 32"
@@ -934,11 +967,11 @@ function ReviewForm({
           onChange={(e) => setContent(e.target.value)}
           placeholder="What did you think? Share what you loved, hated, or found surprising…"
           rows={5}
-          className="w-full bg-transparent px-4 py-3 text-[13px] text-white/75 placeholder-white/20 resize-none outline-none leading-[1.75]"
+          className="relative z-10 w-full resize-none bg-transparent px-4 py-3 text-[13px] leading-[1.75] text-white/75 outline-none placeholder-white/20"
         />
 
         {/* Attribution footer — mirrors card's author row */}
-        <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-white/[0.07] bg-white/[0.025]">
+        <div className="relative z-10 flex items-center justify-between gap-3 border-t border-white/[0.07] bg-white/[0.025] px-4 py-3">
           <div className="flex items-center gap-2.5">
             <div
               style={{ width: 28, height: 28, minWidth: 28 }}
@@ -992,53 +1025,83 @@ function ReviewForm({
       </div>
 
       {/* ── Mood grid ── */}
-      <div>
-        <p className="text-[11px] text-white/35 font-medium px-1 mb-2">
-          How did it make you feel?
-        </p>
-        <div className="grid grid-cols-6 gap-1.5">
-          {moodOptions.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              onClick={() => setMood(m.value)}
-              className={`relative flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border transition-all duration-200 cursor-pointer ${
-                mood === m.value
-                  ? "bg-[#e94f37]/[0.10] border-[#e94f37]/50 scale-[1.04]"
-                  : "bg-white/[0.03] border-white/[0.07] hover:bg-white/[0.07] hover:border-white/[0.15]"
-              }`}
-            >
-              <img
-                src={m.imagePath}
-                alt={m.label}
-                width={24}
-                height={24}
-                className="object-contain"
-              />
-              <span
-                className={`text-[9px] font-medium leading-none text-center ${mood === m.value ? "text-white/80" : "text-white/30"}`}
-              >
-                {m.label}
-              </span>
-              {mood === m.value && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#e94f37] rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-1.5 h-1.5 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-              )}
-            </button>
-          ))}
+      <section className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] p-3.5 sm:p-4">
+        <div className="mb-3 flex flex-col gap-1">
+          <span className="text-[13px] font-bold text-[#f5f5f7]">
+            How did it make you feel?
+          </span>
+          <span className="text-[11px] font-medium text-white/45">
+            Choose one mood
+          </span>
         </div>
-      </div>
+        <div
+          className="grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-6"
+          role="radiogroup"
+          aria-label="How did it make you feel?"
+        >
+          {moodOptions.map((m, index) => {
+            const isSelected = mood === m.value;
+
+            return (
+              <button
+                key={m.value}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                tabIndex={
+                  selectedMoodIndex === -1
+                    ? index === 0
+                      ? 0
+                      : -1
+                    : isSelected
+                      ? 0
+                      : -1
+                }
+                onClick={() => setMood(m.value)}
+                onKeyDown={(event) => handleMoodKeyDown(event, index)}
+                className={`relative flex min-h-[84px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border px-2.5 py-3 text-center transition-[border-color,background-color,box-shadow,color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e3262a]/60 motion-safe:hover:-translate-y-px md:min-h-[76px] ${
+                  isSelected
+                    ? "border-[#e3262a] bg-[#e3262a]/[0.16] text-white shadow-[0_0_0_1px_rgba(227,38,42,0.25),0_12px_28px_rgba(227,38,42,0.18)]"
+                    : "border-white/[0.10] bg-white/[0.045] text-white/70 hover:border-[#e3262a]/55 hover:bg-[#e3262a]/[0.08] hover:text-white"
+                }`}
+              >
+                {isSelected && (
+                  <span
+                    className="absolute right-2 top-2 grid h-[18px] w-[18px] place-items-center rounded-full bg-[#e3262a] text-[11px] font-bold leading-none text-white"
+                    aria-hidden="true"
+                  >
+                    <svg
+                      className="h-3 w-3"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                )}
+                <Image
+                  src={m.imagePath}
+                  alt=""
+                  width={32}
+                  height={32}
+                  className={`h-8 w-8 object-contain transition-[filter,transform] duration-150 md:h-[30px] md:w-[30px] ${
+                    isSelected
+                      ? "scale-110 drop-shadow-[0_0_8px_rgba(227,38,42,0.45)]"
+                      : ""
+                  }`}
+                />
+                <span className="text-[12px] font-semibold leading-tight md:text-[11px]">
+                  {m.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* ── Error ── */}
       <AnimatePresence>
