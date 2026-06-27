@@ -26,6 +26,16 @@ const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || "";
 const TMDB_READ_TOKEN = process.env.NEXT_PUBLIC_TMDB_READ_TOKEN || "";
 const MASCOT_SRC = "/images/moodies-mascot.png";
 const LOGO_SRC = "/images/moodies-transparent.png";
+const PUBLIC_IMAGE_PATH_PATTERN =
+  /^\/images\/.+\.(?:png|jpe?g|webp|gif|svg)(?:[?#].*)?$/i;
+const REVIEW_MOOD_LABELS: Record<string, string> = {
+  amazing: "Amazing",
+  "loved-it": "Loved it",
+  "enjoyed-it": "Enjoyed",
+  "its-okay": "It's okay",
+  meh: "Meh",
+  "skip-it": "Disliked",
+};
 
 type PublicUser = {
   id: string;
@@ -135,6 +145,92 @@ function posterSrc(path?: string | null) {
   return path ? `https://image.tmdb.org/t/p/w342${path}` : null;
 }
 
+function isPublicImagePath(value: string) {
+  return PUBLIC_IMAGE_PATH_PATTERN.test(value.trim());
+}
+
+function moodKeyFromValue(value: string) {
+  const cleanValue = value.trim().split(/[?#]/)[0] ?? "";
+  const fileName = cleanValue.split("/").pop() ?? cleanValue;
+  return fileName.replace(/\.[^.]+$/, "").toLowerCase();
+}
+
+function titleCaseMoodKey(key: string) {
+  return key
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function moodLabelFromValue(value?: string | null) {
+  const trimmedValue = value?.trim();
+  if (!trimmedValue) return "Mood";
+
+  const key = moodKeyFromValue(trimmedValue);
+  if (REVIEW_MOOD_LABELS[key]) return REVIEW_MOOD_LABELS[key];
+
+  return isPublicImagePath(trimmedValue)
+    ? titleCaseMoodKey(key)
+    : trimmedValue;
+}
+
+function MoodBadge({
+  value,
+  count,
+  compact = false,
+}: {
+  value: string;
+  count?: number;
+  compact?: boolean;
+}) {
+  const trimmedValue = value.trim();
+  const hasImage = isPublicImagePath(trimmedValue);
+  const label = moodLabelFromValue(trimmedValue);
+
+  return (
+    <span
+      title={label}
+      className={`inline-flex max-w-full items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] ${
+        compact ? "py-1 pl-1 pr-2" : "py-1.5 pl-1.5 pr-3"
+      } text-white/80`}
+    >
+      {hasImage ? (
+        <span
+          className={`flex shrink-0 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-white/[0.08] ${
+            compact ? "h-6 w-6" : "h-7 w-7"
+          }`}
+        >
+          <Image
+            src={trimmedValue}
+            alt=""
+            aria-hidden="true"
+            width={compact ? 20 : 24}
+            height={compact ? 20 : 24}
+            className="h-5 w-5 object-contain"
+          />
+        </span>
+      ) : (
+        <span className={compact ? "text-sm leading-none" : "text-base"}>
+          {trimmedValue}
+        </span>
+      )}
+      {hasImage && (
+        <span
+          className={`truncate font-semibold text-white/75 ${
+            compact ? "max-w-[7rem] text-[11px]" : "max-w-[9rem] text-xs"
+          }`}
+        >
+          {label}
+        </span>
+      )}
+      {typeof count === "number" && (
+        <span className="text-xs text-white/45">{count}</span>
+      )}
+    </span>
+  );
+}
+
 async function fetchTmdbDetail(
   review: PublicReview,
 ): Promise<TmdbDetail | null> {
@@ -192,7 +288,9 @@ async function fetchTmdbListItem(
 function getMoodPersona(profile: PublicProfile): MoodPersona {
   const { movieReviews, tvReviews, totalReviews, averageRating, topMoods } =
     profile.stats;
-  const favoriteMood = topMoods[0]?.emoji;
+  const favoriteMood = topMoods[0]?.emoji
+    ? moodLabelFromValue(topMoods[0].emoji)
+    : null;
   const rating = averageRating / 2;
 
   if (totalReviews === 0) {
@@ -712,15 +810,11 @@ export default function PublicProfilePage() {
                 {profile.stats.topMoods.length > 0 ? (
                   <div className="mt-4 flex flex-wrap gap-2">
                     {profile.stats.topMoods.map((mood) => (
-                      <span
+                      <MoodBadge
                         key={mood.emoji}
-                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-sm text-white/80"
-                      >
-                        <span>{mood.emoji}</span>
-                        <span className="text-xs text-white/45">
-                          {mood.count}
-                        </span>
-                      </span>
+                        value={mood.emoji}
+                        count={mood.count}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -1134,11 +1228,13 @@ function ReviewRow({ review, index }: { review: PublicReview; index: number }) {
           </div>
 
           {review.moodEmojis.length > 0 && (
-            <div className="mt-3 flex gap-1">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {review.moodEmojis.slice(0, 4).map((mood, moodIndex) => (
-                <span key={`${mood}-${moodIndex}`} className="text-base">
-                  {mood}
-                </span>
+                <MoodBadge
+                  key={`${mood}-${moodIndex}`}
+                  value={mood}
+                  compact
+                />
               ))}
             </div>
           )}

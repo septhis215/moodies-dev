@@ -44,6 +44,71 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || "";
 const MASCOT_SRC = "/images/moodies-mascot.png";
 const LOGO_SRC = "/images/moodies-transparent.png";
+const PUBLIC_IMAGE_PATH_PATTERN =
+  /^\/images\/.+\.(?:png|jpe?g|webp|gif|svg)(?:[?#].*)?$/i;
+const REVIEW_MOOD_LABELS: Record<string, string> = {
+  amazing: "Amazing",
+  "loved-it": "Loved it",
+  "enjoyed-it": "Enjoyed",
+  "its-okay": "It's okay",
+  meh: "Meh",
+  "skip-it": "Disliked",
+};
+
+function isPublicImagePath(value: string) {
+  return PUBLIC_IMAGE_PATH_PATTERN.test(value.trim());
+}
+
+function moodKeyFromValue(value: string) {
+  const cleanValue = value.trim().split(/[?#]/)[0] ?? "";
+  const fileName = cleanValue.split("/").pop() ?? cleanValue;
+  return fileName.replace(/\.[^.]+$/, "").toLowerCase();
+}
+
+function titleCaseMoodKey(key: string) {
+  return key
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function moodLabelFromValue(value?: string | null) {
+  const trimmedValue = value?.trim();
+  if (!trimmedValue) return "Mood";
+
+  const key = moodKeyFromValue(trimmedValue);
+  if (REVIEW_MOOD_LABELS[key]) return REVIEW_MOOD_LABELS[key];
+
+  return isPublicImagePath(trimmedValue)
+    ? titleCaseMoodKey(key)
+    : trimmedValue;
+}
+
+function ReviewMoodIcon({ value }: { value: string }) {
+  const trimmedValue = value.trim();
+  const hasImage = isPublicImagePath(trimmedValue);
+  const label = moodLabelFromValue(trimmedValue);
+
+  if (!hasImage) {
+    return <span className="text-[0.7rem] leading-none">{trimmedValue}</span>;
+  }
+
+  return (
+    <span
+      title={label}
+      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-white/[0.08]"
+    >
+      <Image
+        src={trimmedValue}
+        alt={label}
+        width={18}
+        height={18}
+        className="h-4 w-4 object-contain"
+      />
+    </span>
+  );
+}
 
 type ProfileDisclosure = {
   profileInfo: boolean;
@@ -1585,12 +1650,7 @@ export default function ProfilePage() {
                                       {review.moodEmojis
                                         .slice(0, 2)
                                         .map((e, i) => (
-                                          <span
-                                            key={i}
-                                            className="text-[0.7rem] leading-none"
-                                          >
-                                            {e}
-                                          </span>
+                                          <ReviewMoodIcon key={i} value={e} />
                                         ))}
                                     </div>
                                   )}
