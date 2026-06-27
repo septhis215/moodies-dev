@@ -98,11 +98,11 @@ const APP_URL = (process.env.CLIENT_URL || 'https://moodies.com').replace(
 
 const MOODIES_BRAND = {
   name: 'Moodies',
-  supportEmail: process.env.MAIL_SUPPORT || 'support@moodies.com',
+  supportEmail: process.env.MAIL_SUPPORT || 'moodies.support@gmail.com',
   appUrl: APP_URL,
-  mascotUrl:
-    process.env.MOODIES_MASCOT_URL || `${APP_URL}/images/moodies-mascot.png`,
 };
+
+const SUPPORT_EMAIL_SUBJECT = 'Moodies Support Request';
 
 function escapeHtml(value: string) {
   return value
@@ -111,6 +111,12 @@ function escapeHtml(value: string) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function supportMailtoHref(email: string) {
+  return `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(
+    SUPPORT_EMAIL_SUBJECT,
+  )}`;
 }
 
 function createMoodiesEmailTemplate(options: MoodiesEmailTemplateOptions) {
@@ -138,7 +144,9 @@ function createMoodiesEmailTemplate(options: MoodiesEmailTemplateOptions) {
   const safeCtaLabel = ctaLabel ? escapeHtml(ctaLabel) : '';
   const safeCtaUrl = ctaUrl ? escapeHtml(ctaUrl) : '';
   const safeSupportEmail = escapeHtml(MOODIES_BRAND.supportEmail);
-  const safeMascotUrl = escapeHtml(MOODIES_BRAND.mascotUrl);
+  const safeSupportHref = escapeHtml(
+    supportMailtoHref(MOODIES_BRAND.supportEmail),
+  );
   const currentYear = new Date().getFullYear();
 
   return `
@@ -175,13 +183,18 @@ function createMoodiesEmailTemplate(options: MoodiesEmailTemplateOptions) {
                             <div style="width:48px; height:2px; margin-top:14px; background:#e94f37; border-radius:999px; box-shadow:0 0 18px rgba(233,79,55,0.55);"></div>
                           </td>
                           <td align="right" style="vertical-align:middle;">
-                            <img
-                              src="${safeMascotUrl}"
-                              width="70"
-                              height="70"
-                              alt="Moodies mascot"
-                              style="display:block; border:0; outline:none; text-decoration:none; border-radius:20px; background:rgba(233,79,55,0.10);"
-                            />
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                              <tr>
+                                <td align="center" style="width:70px; height:70px; border-radius:20px; border:1px solid rgba(233,79,55,0.34); background:linear-gradient(135deg, rgba(233,79,55,0.20), rgba(255,255,255,0.05)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.10);">
+                                  <div style="font-size:28px; line-height:30px; font-weight:900; color:#ffffff; letter-spacing:1px;">
+                                    M
+                                  </div>
+                                  <div style="margin-top:4px; font-size:8px; line-height:10px; font-weight:800; letter-spacing:1.7px; color:#e94f37; text-transform:uppercase;">
+                                    Moodies
+                                  </div>
+                                </td>
+                              </tr>
+                            </table>
                           </td>
                         </tr>
                       </table>
@@ -283,7 +296,7 @@ function createMoodiesEmailTemplate(options: MoodiesEmailTemplateOptions) {
 
                 <p style="margin:0; font-size:13px; line-height:20px; color:rgba(255,255,255,0.42);">
                   Need help? Contact
-                  <a href="mailto:${safeSupportEmail}" style="color:#ffb199; text-decoration:none; font-weight:700;">
+                  <a href="${safeSupportHref}" style="color:#ffb199; text-decoration:none; font-weight:700;">
                     ${safeSupportEmail}
                   </a>
                 </p>

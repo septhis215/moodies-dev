@@ -15,6 +15,7 @@ import {
   AuthMascotCallout,
   AuthMessage,
   AuthPasswordInput,
+  AuthSupportNote,
   GoogleButton,
 } from "../AuthFormUI";
 
@@ -115,6 +116,8 @@ export default function LoginPage() {
         <GoogleButton loading={googleLoading} onClick={handleGoogleLogin}>
           Continue with Google
         </GoogleButton>
+
+        <AuthSupportNote className="mt-5 [@media(max-height:700px)]:mt-4" />
       </AuthFrame>
     </>
   );

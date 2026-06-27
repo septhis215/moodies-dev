@@ -51,6 +51,38 @@ npm run dev:client
 Frontend: http://localhost:3000  
 Backend: http://localhost:4000 or the port configured in `server/.env`
 
+## Support Email
+
+The app uses `NEXT_PUBLIC_SUPPORT_EMAIL` to display the public support contact.
+The server email templates use `MAIL_SUPPORT` for the same support contact.
+
+Default:
+
+```txt
+moodies.support@gmail.com
+```
+
+For now, this is a dedicated Gmail inbox. Do not use a Vercel subdomain as an
+email domain because the project does not control the root DNS records.
+
+When a custom domain is added later, change the public support email to:
+
+```txt
+support@yourcustomdomain.com
+```
+
+The intended future setup is Cloudflare Email Routing:
+
+```txt
+support@yourcustomdomain.com -> moodies.support@gmail.com
+```
+
+Future deployment steps: add the domain to Cloudflare, point nameservers to
+Cloudflare, add the domain to Vercel, configure Vercel DNS records, enable
+Cloudflare Email Routing, verify `moodies.support@gmail.com` as the destination
+inbox, create the support route, then update `NEXT_PUBLIC_SUPPORT_EMAIL` and
+`MAIL_SUPPORT`.
+
 ## Verification
 
 From the repository root:
