@@ -1,10 +1,29 @@
 
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "./client-layout";
 import { AuthProvider } from "./context/AuthProvider";
 import { ToastProvider } from "./context/ToastContext";
+
+const ACCESS_COOKIE = "mood_at";
+const SESSION_MARKER_COOKIE = "mood_session";
+const SESSION_MARKER_KEY = "moodies:session";
+const AUTH_PREHIDE_STYLE_ID = "moodies-auth-prehide";
+const AUTH_PREHIDE_SCRIPT = `
+(function () {
+  try {
+    var hasMarker = window.localStorage.getItem("${SESSION_MARKER_KEY}") === "1";
+    var isGoogleLanding = new URLSearchParams(window.location.search).get("google_login") === "true";
+    if (!hasMarker && !isGoogleLanding) return;
+    var style = document.createElement("style");
+    style.id = "${AUTH_PREHIDE_STYLE_ID}";
+    style.textContent = "body{background:#000!important}body>*{visibility:hidden!important}";
+    document.head.appendChild(style);
+  } catch (error) {}
+})();
+`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,19 +67,29 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const initialBlockSessionBootstrap = Boolean(
+    cookieStore.get(ACCESS_COOKIE) ?? cookieStore.get(SESSION_MARKER_COOKIE),
+  );
+
   return (
-    <html lang="en" style={{ background: "#000" }}>
+    <html lang="en" style={{ background: "#000" }} suppressHydrationWarning>
+      {!initialBlockSessionBootstrap && (
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: AUTH_PREHIDE_SCRIPT }} />
+        </head>
+      )}
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         style={{ background: "#000" }}
       >
         <ToastProvider>
-          <AuthProvider>
+          <AuthProvider initialBlockSessionBootstrap={initialBlockSessionBootstrap}>
             <ClientLayout>{children}</ClientLayout>
           </AuthProvider>
         </ToastProvider>

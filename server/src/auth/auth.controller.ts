@@ -21,6 +21,7 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { UpdateProfileDto } from './dto';
 import {
+  ACCESS_COOKIE,
   REFRESH_COOKIE,
   clearAuthCookies,
   readCookie,
@@ -30,6 +31,13 @@ import {
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) { }
+
+  @Get('bootstrap')
+  bootstrap(@Req() req: ExpressRequest) {
+    return this.authService.getBootstrapFromAccessToken(
+      readCookie(req, ACCESS_COOKIE),
+    );
+  }
 
   @HttpCode(HttpStatus.CREATED)
   @Post('signup')
