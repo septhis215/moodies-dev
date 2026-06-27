@@ -252,12 +252,14 @@ export default function ImageVideoCarousel({
       backdrop-filter: blur(16px);
       display: flex; align-items: center; justify-content: center;
       padding: clamp(1rem, 4vw, 2rem);
+      cursor: pointer;
     }
     .ivc-lightbox-inner {
       position: relative;
       width: 100%; height: 100%;
       max-width: 1100px;
       max-height: 80svh;
+      cursor: default;
     }
     .ivc-lightbox-close {
       position: absolute; top: clamp(-2.2rem, -4vw, -2.5rem); right: 0;

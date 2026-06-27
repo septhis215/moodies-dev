@@ -50,7 +50,12 @@ export default function CustomSelect<T extends string>({
       {open && (
         <>
           {/* Click-away overlay */}
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <button
+            type="button"
+            aria-label="Close options"
+            className="fixed inset-0 z-40"
+            onClick={() => setOpen(false)}
+          />
           <div
             className="absolute mt-1.5 w-full z-50
                           bg-zinc-900 border border-white/[0.08]
