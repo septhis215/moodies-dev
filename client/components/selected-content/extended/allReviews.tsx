@@ -1160,7 +1160,7 @@ export default function AllReviews({
                   aria-modal="true"
                   aria-labelledby="review-dialog-title"
                   aria-describedby="review-dialog-description"
-                  className="relative flex h-[100dvh] w-full max-w-2xl flex-col overflow-hidden border border-white/10 bg-[#0a0a0b]/96 shadow-2xl shadow-black/70 sm:h-auto sm:max-h-[min(90dvh,780px)] sm:rounded-2xl"
+                  className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-[#0a0a0b]/96 shadow-2xl shadow-black/70 sm:max-h-[min(90dvh,780px)] sm:rounded-2xl"
                   style={{
                     boxShadow:
                       "0 32px 90px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.04)",
