@@ -6,6 +6,7 @@ import {
   toggleWatchlist,
   type WatchType,
 } from "@/utils/watchlistClient";
+import { useAuth } from "@/app/context/AuthProvider";
 import { useToast } from "@/app/context/ToastContext";
 
 type ToastMeta = {
@@ -29,9 +30,25 @@ export function useWatchlist() {
   const [error, setError] = useState<string>("");
 
   const { toast } = useToast(); // use toast hook
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   /** initial fetch */
   const refresh = useCallback(async () => {
+    if (authLoading) {
+      setLoading(true);
+      setReady(false);
+      return;
+    }
+
+    if (!isAuthenticated) {
+      setMovieIds(new Set());
+      setSeriesIds(new Set());
+      setLoading(false);
+      setReady(true);
+      setError("");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -58,7 +75,7 @@ export function useWatchlist() {
       setLoading(false);
       setReady(true);
     }
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
     refresh();
@@ -76,6 +93,11 @@ export function useWatchlist() {
   // add / remove now accept optional meta so callers can provide title/poster
   const add = useCallback(
     async (tmdbId: string | number, type: WatchType, meta?: ToastMeta) => {
+      if (!isAuthenticated) {
+        toast("Please log in to use Watchlist", "warning", 3500, null, null);
+        return;
+      }
+
       const id = String(tmdbId);
 
       // optimistic add
@@ -132,11 +154,16 @@ export function useWatchlist() {
         throw e;
       }
     },
-    [toast]
+    [isAuthenticated, toast]
   );
 
   const remove = useCallback(
     async (tmdbId: string | number, type: WatchType, meta?: ToastMeta) => {
+      if (!isAuthenticated) {
+        toast("Please log in to use Watchlist", "warning", 3500, null, null);
+        return;
+      }
+
       const id = String(tmdbId);
 
       // optimistic remove
@@ -183,7 +210,7 @@ export function useWatchlist() {
         throw e;
       }
     },
-    [toast]
+    [isAuthenticated, toast]
   );
 
   return {

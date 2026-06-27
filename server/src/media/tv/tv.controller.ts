@@ -12,11 +12,16 @@ import {
 import { TvService } from './tv.service';
 import { parse } from 'path';
 import { MoodsService } from 'src/routes/moods/moods.service';
+import { RedisService } from 'src/redis/redis.service';
 @Controller('tv')
 export class TvController {
   private readonly logger = new Logger(TvController.name);
 
-  constructor(private readonly tvService: TvService, private readonly moodsService: MoodsService) { }
+  constructor(
+    private readonly tvService: TvService,
+    private readonly moodsService: MoodsService,
+    private readonly redisService: RedisService,
+  ) { }
 
   // Main TV details endpoint - matches movies approach
   @Get('details/:id')
@@ -216,15 +221,9 @@ export class TvController {
     };
   }
 
-  // NEW: Cache status endpoint (useful for monitoring)
   @Get('cache/status')
   async getCacheStatus() {
-    // This would require adding cache status methods to your service
-    return {
-      message:
-        'Cache status endpoint - implement cache metrics in service if needed',
-      timestamp: new Date().toISOString(),
-    };
+    return this.redisService.getSummary('*', 500);
   }
 
   // NEW: Bulk endpoint for getting multiple categories at once

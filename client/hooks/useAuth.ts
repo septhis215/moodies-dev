@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useToast } from "@/app/context/ToastContext";
+import { markSessionPresent } from "@/app/context/AuthProvider";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -43,6 +44,8 @@ export function useAuth() {
                 if (!res.ok) {
                     throw new Error(data?.message || "Sign-in failed");
                 }
+
+                markSessionPresent();
 
                 // Success toast - use user avatar if available, otherwise moodies logo
                 toast(

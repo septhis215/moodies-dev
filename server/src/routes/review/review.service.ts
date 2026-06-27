@@ -121,8 +121,26 @@ export class ReviewService {
       await this.userService.applyReviewWarning(userId);
     }
 
+    await this.invalidatePublicReviewCaches();
+
     const reviewEntity = new ReviewEntity(review);
     return reviewEntity.toPublic();
+  }
+
+  private async invalidatePublicReviewCaches() {
+    try {
+      await Promise.all([
+        this.redis.deleteByPrefix('reviews:critics-corner:movies:'),
+        this.redis.deleteByPrefix('reviews:critics-corner:tv:'),
+        this.redis.deleteByPrefix('reviews:community-picks:'),
+      ]);
+    } catch (err) {
+      this.logger.warn(
+        `Failed to invalidate public review caches: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
   }
 
   async createReply(userId: string, reviewId: string, dto: CreateReplyDto) {

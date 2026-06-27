@@ -156,41 +156,6 @@ async function fetchAiringThisWeek() {
   return fetchWithFallback<All[]>("/tv/airing/week?limit=20", []);
 }
 
-// NEW: Use bulk endpoint for better performance (if available)
-async function fetchDashboardData() {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
-  try {
-    const res = await fetch(`${BASE_URL}/tv/bulk/dashboard?limit=15`, {
-      cache: "no-store",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      signal: controller.signal,
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        featured: data.featured || [],
-        trending: data.trending || [],
-        trailers: data.trailers || [],
-        koreaTrending: data.koreaTrending || [],
-        reviews: data.reviews || [],
-        newReleases: data.newReleases || [],
-        moods: data.moods || [],
-      };
-    }
-  } catch {
-    console.error("Bulk fetch failed, falling back to individual requests");
-  } finally {
-    clearTimeout(timer);
-  }
-
-  // Fallback to individual requests
-  return null;
-}
-
 export const metadata = {
   title: "TV Shows - Discover Trending Series",
   description:
@@ -205,62 +170,33 @@ export const metadata = {
 };
 
 export default async function TVHomePage() {
-  // Try bulk fetch first for better performance
-  const bulkData = await fetchDashboardData();
-
-  let trendingTV: All[];
-  let popularTV: All[];
-  let topRatedTV: All[];
-  let TVTrailer: All[];
-  let KoreanTV: All[];
-  let TVReview: ReviewItem[];
-  let newReleaseTV: All[];
-  let moods;
-
-  if (bulkData) {
-    // Use bulk data
-    trendingTV = bulkData.featured;
-    popularTV = bulkData.trending;
-    TVTrailer = bulkData.trailers;
-    KoreanTV = bulkData.koreaTrending;
-    newReleaseTV = bulkData.newReleases;
-    moods = bulkData.moods;
-    // Fetch remaining data in parallel
-    [topRatedTV, TVReview] = await Promise.all([
-      fetchTopRatedTV(),
-      fetchTVReviews(),
-    ]);
-  } else {
-    // Fallback: fetch all data in parallel
-    [
-      trendingTV,
-      popularTV,
-      topRatedTV,
-      TVTrailer,
-      KoreanTV,
-      TVReview,
-      newReleaseTV,
-      moods,
-    ] = await Promise.all([
-      fetchTrendingTV(),
-      fetchPopularTV(),
-      fetchTopRatedTV(),
-      fetchTVTrailers(),
-      fetchKoreanTV(),
-      fetchTVReviews(),
-      fetchNewReleases(),
-      fetchMoods(),
-    ]);
-  }
-
-  // Always fetch these separately for more control
-  const [NewTVTrailer, AiringToday, AiringThisWeek, communityPulse] =
-    await Promise.all([
-      fetchNewTVTrailers(),
-      fetchAiringToday(),
-      fetchAiringThisWeek(),
-      fetchCommunityPulse(),
-    ]);
+  const [
+    trendingTV,
+    popularTV,
+    topRatedTV,
+    TVTrailer,
+    KoreanTV,
+    TVReview,
+    newReleaseTV,
+    moods,
+    NewTVTrailer,
+    AiringToday,
+    AiringThisWeek,
+    communityPulse,
+  ] = await Promise.all([
+    fetchTrendingTV(),
+    fetchPopularTV(),
+    fetchTopRatedTV(),
+    fetchTVTrailers(),
+    fetchKoreanTV(),
+    fetchTVReviews(),
+    fetchNewReleases(),
+    fetchMoods(),
+    fetchNewTVTrailers(),
+    fetchAiringToday(),
+    fetchAiringThisWeek(),
+    fetchCommunityPulse(),
+  ]);
 
   return (
     <TVHomePageClient

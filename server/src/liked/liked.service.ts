@@ -61,12 +61,7 @@ export class LikedService {
         });
       }
 
-      const [totalMovies, totalSeries] = await Promise.all([
-        tx.likedItem.count({ where: { userId, mediaType: MediaType.MOVIE } }),
-        tx.likedItem.count({ where: { userId, mediaType: MediaType.TV } }),
-      ]);
-
-      return { liked: !existing, totalMovies, totalSeries };
+      return { liked: !existing };
     });
   }
 

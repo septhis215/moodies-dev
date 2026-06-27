@@ -9,12 +9,16 @@ import {
   Logger,
 } from '@nestjs/common';
 import { MoviesService } from './movies.service';
+import { RedisService } from 'src/redis/redis.service';
 
 @Controller('movies')
 export class MoviesController {
   private readonly logger = new Logger(MoviesController.name);
 
-  constructor(private readonly movieService: MoviesService) { }
+  constructor(
+    private readonly movieService: MoviesService,
+    private readonly redisService: RedisService,
+  ) { }
 
   @Get('details/:id')
   async details(@Param('id') id: string) {
@@ -178,15 +182,9 @@ export class MoviesController {
     };
   }
 
-  // NEW: Cache status endpoint (useful for monitoring)
   @Get('cache/status')
   async getCacheStatus() {
-    // This would require adding cache status methods to your service
-    return {
-      message:
-        'Cache status endpoint - implement cache metrics in service if needed',
-      timestamp: new Date().toISOString(),
-    };
+    return this.redisService.getSummary('*', 500);
   }
 
   // NEW: Bulk endpoint for getting multiple categories at once

@@ -50,6 +50,7 @@ type AuthContextValue = {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };
+const SESSION_MARKER_KEY = "moodies:session";
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -91,6 +92,25 @@ function extractUser(payload: unknown): User {
   return { id, name, username, email, avatarUrl, provider };
 }
 
+function hasSessionMarker(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.localStorage.getItem(SESSION_MARKER_KEY) === "1"
+  );
+}
+
+export function markSessionPresent(): void {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(SESSION_MARKER_KEY, "1");
+  }
+}
+
+export function clearSessionMarker(): void {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(SESSION_MARKER_KEY);
+  }
+}
+
 /* ---------- Provider ---------- */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -108,8 +128,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const raw = await res.json();
         setUser(raw ? extractUser(raw) : null);
+        markSessionPresent();
       } else if (res.status === 401 || res.status === 498) {
         setUser(null);
+        clearSessionMarker();
       }
     } catch {
       /* network error — keep current state */
@@ -117,6 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
+    if (!hasSessionMarker()) return false;
+
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: "POST",
@@ -124,7 +148,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: { accept: "application/json" },
         cache: "no-store",
       });
-      return res.ok;
+      if (res.ok) {
+        markSessionPresent();
+        return true;
+      }
+      clearSessionMarker();
+      return false;
     } catch {
       return false;
     }
@@ -132,6 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logoutSilent = useCallback(() => {
     setUser(null);
+    clearSessionMarker();
   }, []);
 
   const logout = useCallback(async () => {
@@ -144,11 +174,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       /* ignore — clear client state regardless */
     }
     setUser(null);
+    clearSessionMarker();
   }, []);
 
   const login = useCallback(
     async (usr?: User) => {
-      if (usr) setUser(usr); // optimistic; server cookie is already set
+      if (usr) {
+        setUser(usr); // optimistic; server cookie is already set
+        markSessionPresent();
+      }
       await reloadUser();
     },
     [reloadUser]
@@ -172,9 +206,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!cancelled && res.ok) {
           const raw = await res.json();
           setUser(raw ? extractUser(raw) : null);
-        } else if (res.status === 401 || res.status === 498) {
+          markSessionPresent();
+        } else if (
+          (res.status === 401 || res.status === 498) &&
+          hasSessionMarker()
+        ) {
           const refreshed = await refreshSession();
           if (!cancelled && refreshed) await reloadUser();
+        } else if (!cancelled && (res.status === 401 || res.status === 498)) {
+          setUser(null);
+          clearSessionMarker();
         }
       } catch {
         /* ignore */

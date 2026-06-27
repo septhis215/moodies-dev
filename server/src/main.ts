@@ -46,6 +46,9 @@ async function bootstrap() {
       callback(null, false);
     },
     credentials: true,
+    // Cross-origin JSON mutations preflight in staging; cache successful OPTIONS
+    // checks briefly so repeated save/like clicks do not pay that round trip.
+    maxAge: 600,
   });
 
   app.useGlobalPipes(

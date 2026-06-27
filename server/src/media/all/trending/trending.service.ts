@@ -6,7 +6,6 @@ import { RecommendationsService } from '../recommendations/recommendations.servi
 import { PrismaService } from 'src/prisma/prisma.service';
 import { TmdbAll } from '../types/tmdb.types';
 import { CACHE_TTL, shuffleArray, getRecentDate } from '../utils/helpers';
-import { TvRecommendationsService } from 'src/media/tv/recommendations/tv-recommendations.service';
 
 type FootballStoriesOptions = {
     limit?: number;
@@ -26,7 +25,6 @@ export class TrendingService {
         private readonly redisService: RedisService,
         private readonly filterService: ContentFilterService,
         private readonly recommendationsService: RecommendationsService,
-        private readonly tvRecommendationsService: TvRecommendationsService,
         private readonly prismaService: PrismaService,
     ) { }
 
@@ -538,22 +536,6 @@ export class TrendingService {
                         return null;
                     },
                     async () => {
-                        const recs = await getOrFetchJson<TmdbAll[]>(
-                            `${cacheScope}:anchor:${seed.type}:${seed.id}:tv-smart-rec`,
-                            () => this.tvRecommendationsService.getSmartRecommendationsTv(seed.id, 16, 1) as Promise<TmdbAll[]>,
-                        );
-                        recs.forEach((item) => pushCandidate(item as RawFootballItem, 'tv', `tv-smart-rec:${seed.label}`, 5));
-                        return null;
-                    },
-                    async () => {
-                        const recs = await getOrFetchJson<TmdbAll[]>(
-                            `${cacheScope}:anchor:${seed.type}:${seed.id}:all-smart-rec`,
-                            () => this.recommendationsService.getSmartRecommendations(seed.type, seed.id, 12, 1),
-                        );
-                        recs.forEach((item) => pushCandidate(item as RawFootballItem, item.type ?? seed.type, `smart-rec:${seed.label}`, 4));
-                        return null;
-                    },
-                    async () => {
                         const similar = await getOrFetchJson<{ results?: RawFootballItem[] } | null>(
                             `${cacheScope}:anchor:${seed.type}:${seed.id}:similar`,
                             () => this.client.tmdb(
@@ -639,16 +621,6 @@ export class TrendingService {
                     if (!seedType) return [];
                     return [
                         async () => {
-                            const recs = await getOrFetchJson<TmdbAll[]>(
-                                `${cacheScope}:person-credit:${seedType}:${seed.id}:smart-rec`,
-                                () => seedType === 'tv'
-                                    ? this.tvRecommendationsService.getSmartRecommendationsTv(seed.id, 12, 1) as Promise<TmdbAll[]>
-                                    : this.recommendationsService.getSmartRecommendations(seedType, seed.id, 10, 1),
-                            );
-                            recs.forEach((item) => pushCandidate(item as RawFootballItem, item.type ?? seedType, `person-credit-smart:${seed.id}`, 2));
-                            return null;
-                        },
-                        async () => {
                             const similar = await getOrFetchJson<{ results?: RawFootballItem[] } | null>(
                                 `${cacheScope}:person-credit:${seedType}:${seed.id}:similar`,
                                 () => this.client.tmdb(
@@ -667,12 +639,12 @@ export class TrendingService {
                 const documentaryGenre = 99;
                 const discoverSorts =
                     rankingMode === 'recent'
-                        ? ['first_air_date.desc', 'popularity.desc', 'vote_average.desc']
+                        ? ['first_air_date.desc']
                         : rankingMode === 'popular'
-                            ? ['popularity.desc', 'vote_average.desc', 'first_air_date.desc']
-                            : ['popularity.desc', 'vote_average.desc', 'first_air_date.desc'];
+                            ? ['popularity.desc']
+                            : ['popularity.desc', 'vote_average.desc'];
 
-                const discoveryPageCount = Math.min(5, Math.max(3, safePage + 2));
+                const discoveryPageCount = Math.min(3, Math.max(2, safePage + 1));
                 const discoveryPages = Array.from({ length: discoveryPageCount }, (_, index) => index + 1);
                 for (const sort of discoverSorts) {
                     for (const page of discoveryPages) {
@@ -709,20 +681,10 @@ export class TrendingService {
                     const fallbackSeeds = Array.from(rawMap.values())
                         .filter(isRelevantFootballDoc)
                         .sort((a, b) => scoreItem(b) - scoreItem(a))
-                        .slice(0, 4);
+                        .slice(0, 3);
                     const fallbackTasks = fallbackSeeds.flatMap((seed) => {
                         const seedType = seed.media_type === 'tv' ? 'tv' : 'movie';
                         return [
-                            async () => {
-                                const recs = await getOrFetchJson<TmdbAll[]>(
-                                    `${cacheScope}:gap:${seedType}:${seed.id}:smart-rec`,
-                                    () => seedType === 'tv'
-                                        ? this.tvRecommendationsService.getSmartRecommendationsTv(seed.id, 12, 1) as Promise<TmdbAll[]>
-                                        : this.recommendationsService.getSmartRecommendations(seedType, seed.id, 10, 1),
-                                );
-                                recs.forEach((item) => pushCandidate(item as RawFootballItem, item.type ?? seedType, `gap-smart:${seed.id}`, 2));
-                                return null;
-                            },
                             async () => {
                                 const similar = await getOrFetchJson<{ results?: RawFootballItem[] } | null>(
                                     `${cacheScope}:gap:${seedType}:${seed.id}:similar`,

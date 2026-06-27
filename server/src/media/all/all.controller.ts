@@ -13,12 +13,16 @@ import {
 } from '@nestjs/common';
 import { AllService } from './all.service';
 import { JwtGuard } from 'src/auth/guard';
+import { RedisService } from 'src/redis/redis.service';
 
 @Controller('all')
 export class AllController {
   private readonly logger = new Logger(AllController.name);
 
-  constructor(private readonly allService: AllService) {}
+  constructor(
+    private readonly allService: AllService,
+    private readonly redisService: RedisService,
+  ) {}
 
   @Get('trending/day')
   async getTrendingAllDay() {
@@ -206,15 +210,9 @@ export class AllController {
     };
   }
 
-  // NEW: Cache status endpoint (useful for monitoring)
   @Get('cache/status')
   async getCacheStatus() {
-    // This would require adding cache status methods to your service
-    return {
-      message:
-        'Cache status endpoint - implement cache metrics in service if needed',
-      timestamp: new Date().toISOString(),
-    };
+    return this.redisService.getSummary('*', 500);
   }
 
   // NEW: Bulk endpoint for getting multiple categories at once
