@@ -23,6 +23,7 @@ import { RedisService } from 'src/redis/redis.service';
 import { sendVerificationCode } from '../utils/mailer';
 import { uploadAvatarToStorage } from '../utils/storage';
 import { REFRESH_TTL_SECONDS } from './auth.cookies';
+import { MediaType } from '@prisma/client';
 
 
 
@@ -674,6 +675,89 @@ export class AuthService {
         recentActivity: user.discloseRecentActivity,
       },
     });
+  }
+
+  async getBootstrapFromAccessToken(accessToken: string | undefined) {
+    if (!accessToken) {
+      return {
+        isAuthenticated: false,
+        user: null,
+        watchlist: null,
+        liked: null,
+      };
+    }
+
+    let payload: { sub?: string };
+    try {
+      payload = await this.jwt.verifyAsync<{ sub?: string }>(accessToken, {
+        secret: process.env.JWT_SECRET,
+      });
+    } catch {
+      return {
+        isAuthenticated: false,
+        user: null,
+        watchlist: null,
+        liked: null,
+      };
+    }
+
+    if (!payload.sub) {
+      return {
+        isAuthenticated: false,
+        user: null,
+        watchlist: null,
+        liked: null,
+      };
+    }
+
+    const user = await this.prismaService.user.findUnique({
+      where: { id: String(payload.sub) },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        provider: true,
+        watchlistItems: {
+          select: { tmdbId: true, mediaType: true },
+        },
+        likedItems: {
+          select: { tmdbId: true, mediaType: true },
+        },
+      },
+    });
+
+    if (!user) {
+      return {
+        isAuthenticated: false,
+        user: null,
+        watchlist: null,
+        liked: null,
+      };
+    }
+
+    const toBuckets = (
+      items: Array<{ tmdbId: number; mediaType: MediaType }>,
+    ) => {
+      const movieId: string[] = [];
+      const seriesId: string[] = [];
+      for (const item of items) {
+        (item.mediaType === MediaType.MOVIE ? movieId : seriesId).push(
+          String(item.tmdbId),
+        );
+      }
+      return { movieId, seriesId };
+    };
+
+    const { watchlistItems, likedItems, ...safeUser } = user;
+
+    return {
+      isAuthenticated: true,
+      user: safeUser,
+      watchlist: toBuckets(watchlistItems),
+      liked: toBuckets(likedItems),
+    };
   }
 
   async updatePreferences(
