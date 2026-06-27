@@ -64,12 +64,7 @@ export class WatchlistService {
         });
       }
 
-      const [totalMovies, totalSeries] = await Promise.all([
-        tx.watchlistItem.count({ where: { userId, mediaType: MediaType.MOVIE } }),
-        tx.watchlistItem.count({ where: { userId, mediaType: MediaType.TV } }),
-      ]);
-
-      return { removed: !!existing, totalMovies, totalSeries };
+      return { removed: !!existing };
     });
   }
 

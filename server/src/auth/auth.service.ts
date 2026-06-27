@@ -18,7 +18,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuid } from 'uuid';
-import { randomBytes, randomInt } from 'node:crypto';
+import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { RedisService } from 'src/redis/redis.service';
 import { sendVerificationCode } from '../utils/mailer';
 import { uploadAvatarToStorage } from '../utils/storage';
@@ -49,6 +49,10 @@ export class AuthService {
   }
 
   private refreshKey(token: string) {
+    return `rt:${createHash('sha256').update(token).digest('hex')}`;
+  }
+
+  private legacyRefreshKey(token: string) {
     return `rt:${token}`;
   }
 
@@ -77,9 +81,11 @@ export class AuthService {
    */
   async rotateRefreshToken(oldToken: string) {
     if (!oldToken) return null;
-    const userId = await this.redis.get(this.refreshKey(oldToken));
+    const key = this.refreshKey(oldToken);
+    const legacyKey = this.legacyRefreshKey(oldToken);
+    const userId = (await this.redis.get(key)) ?? (await this.redis.get(legacyKey));
     if (!userId) return null;
-    await this.redis.del(this.refreshKey(oldToken));
+    await this.redis.del([key, legacyKey]);
 
     const user = await this.prismaService.user.findUnique({
       where: { id: userId },
@@ -94,7 +100,7 @@ export class AuthService {
 
   /** Invalidate a refresh token (logout). */
   async revokeRefreshToken(token: string | undefined): Promise<void> {
-    if (token) await this.redis.del(this.refreshKey(token));
+    if (token) await this.redis.del([this.refreshKey(token), this.legacyRefreshKey(token)]);
   }
 
   async signup(dto: RegisterDto) {

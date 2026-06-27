@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fetchLikedList, toggleLiked, type LikeType } from "@/utils/likedClient";
+import { useAuth } from "@/app/context/AuthProvider";
 import { useToast } from "@/app/context/ToastContext";
 
 type ToastMeta = {
@@ -22,8 +23,23 @@ export function useLiked() {
   const [ready, setReady] = useState(false);
 
   const { toast } = useToast();
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   const refresh = useCallback(async () => {
+    if (authLoading) {
+      setLoading(true);
+      setReady(false);
+      return;
+    }
+
+    if (!isAuthenticated) {
+      setMovieIds(new Set());
+      setSeriesIds(new Set());
+      setLoading(false);
+      setReady(true);
+      return;
+    }
+
     setLoading(true);
     try {
       const list = await fetchLikedList();
@@ -39,7 +55,7 @@ export function useLiked() {
       setLoading(false);
       setReady(true);
     }
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
     refresh();
@@ -55,6 +71,11 @@ export function useLiked() {
 
   const like = useCallback(
     async (tmdbId: string | number, type: LikeType, meta?: ToastMeta) => {
+      if (!isAuthenticated) {
+        toast("Please log in to use Likes", "warning", 3500, null, null);
+        return;
+      }
+
       const id = String(tmdbId);
 
       if (type === "movie") setMovieIds((s) => new Set(s).add(id));
@@ -82,11 +103,16 @@ export function useLiked() {
         console.error("[useLiked] like error:", e);
       }
     },
-    [toast]
+    [isAuthenticated, toast]
   );
 
   const unlike = useCallback(
     async (tmdbId: string | number, type: LikeType, meta?: ToastMeta) => {
+      if (!isAuthenticated) {
+        toast("Please log in to use Likes", "warning", 3500, null, null);
+        return;
+      }
+
       const id = String(tmdbId);
 
       if (type === "movie") setMovieIds((s) => { const n = new Set(s); n.delete(id); return n; });
@@ -108,7 +134,7 @@ export function useLiked() {
         console.error("[useLiked] unlike error:", e);
       }
     },
-    [toast]
+    [isAuthenticated, toast]
   );
 
   return { isLiked, like, unlike, loading, ready, refresh };
