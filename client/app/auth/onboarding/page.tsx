@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useToast } from "@/app/context/ToastContext";
 import { useAuth } from "@/hooks/useAuth";
+import { handleAppError } from "@/lib/errors";
+import { appToast, TOAST_IDS } from "@/lib/toast";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -150,7 +151,6 @@ function AgeSlider({ value, onChange }: AgeSliderProps) {
 
 // ── Main component ────────────────────────────────────────────
 export default function OnboardingPage() {
-  const { toast } = useToast();
   const { signIn, isLoading: authLoading } = useAuth();
 
   const [age, setAge] = useState<number>(18);
@@ -174,7 +174,10 @@ export default function OnboardingPage() {
       const pendingSignup = sessionStorage.getItem("pendingSignup");
       if (pendingSignup) {
         const { username, email, password } = JSON.parse(pendingSignup);
-        toast("Creating your account...", "info", 3000, "Almost there!", null);
+        appToast.loading("Creating your account...", {
+          id: "onboarding-account-create",
+          title: "Almost there!",
+        });
         // signup sets the session cookie on this response.
         const signupRes = await fetch(`${API_BASE}/auth/signup`, {
           method: "POST",
@@ -200,23 +203,18 @@ export default function OnboardingPage() {
         if (!prefsRes.ok)
           throw new Error(prefsData.message || "Failed to save preferences");
         sessionStorage.removeItem("pendingSignup");
-        toast(
-          "Account created! Welcome to Moodies!",
-          "success",
-          2000,
-          "All done!",
-          null,
-        );
+        appToast.success("Account created. Welcome to Moodies!", {
+          id: "onboarding-account-create",
+          title: "All done!",
+          duration: 2500,
+        });
         await new Promise((r) => setTimeout(r, 800));
         await signIn(email, password);
       } else {
-        toast(
-          "Saving your preferences...",
-          "info",
-          3000,
-          "Setting Up Your Profile",
-          null,
-        );
+        appToast.loading("Saving your preferences...", {
+          id: "onboarding-preferences",
+          title: "Setting up your profile",
+        });
         const res = await fetch(`${API_BASE}/auth/me/preferences`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -228,30 +226,32 @@ export default function OnboardingPage() {
           }),
         });
         if (res.status === 401 || res.status === 498) {
-          toast("Not logged in!", "error", 3000, "Authentication Error", null);
+          appToast.dismiss("onboarding-preferences");
+          appToast.error("Your session expired. Please log in again.", {
+            id: TOAST_IDS.authSessionExpired,
+            title: "Authentication error",
+          });
           return;
         }
         const data = await res.json();
         if (!res.ok)
           throw new Error(data.message || "Failed to save preferences");
-        toast(
-          "Setup complete! Welcome to Moodies!",
-          "success",
-          2000,
-          "You're all set",
-          null,
-        );
+        appToast.success("Setup complete. Welcome to Moodies!", {
+          id: "onboarding-preferences",
+          title: "You're all set",
+          duration: 2500,
+        });
         await new Promise((r) => setTimeout(r, 800));
         window.location.href = "/";
       }
     } catch (err: unknown) {
-      toast(
-        err instanceof Error ? err.message : "An error occurred",
-        "error",
-        4000,
-        "Error",
-        null,
-      );
+      appToast.dismiss("onboarding-account-create");
+      appToast.dismiss("onboarding-preferences");
+      handleAppError(err, {
+        fallbackMessage: "Could not finish onboarding. Please try again.",
+        toastTitle: "Onboarding",
+        toastKey: "onboarding-submit-error",
+      });
     } finally {
       setIsSubmitting(false);
     }

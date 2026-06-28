@@ -4,8 +4,10 @@ import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "./client-layout";
+import { AppErrorProvider } from "./context/AppErrorProvider";
 import { AuthProvider } from "./context/AuthProvider";
 import { ToastProvider } from "./context/ToastContext";
+import { AppToaster } from "@/components/providers/AppToaster";
 
 const ACCESS_COOKIE = "mood_at";
 const SESSION_MARKER_COOKIE = "mood_session";
@@ -90,7 +92,10 @@ export default async function RootLayout({
       >
         <ToastProvider>
           <AuthProvider initialBlockSessionBootstrap={initialBlockSessionBootstrap}>
-            <ClientLayout>{children}</ClientLayout>
+            <AppErrorProvider>
+              <ClientLayout>{children}</ClientLayout>
+              <AppToaster />
+            </AppErrorProvider>
           </AuthProvider>
         </ToastProvider>
       </body>

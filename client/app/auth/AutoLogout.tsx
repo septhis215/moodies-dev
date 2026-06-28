@@ -1,5 +1,6 @@
 "use client";
 import { useEffect } from "react";
+import { appToast, TOAST_IDS } from "@/lib/toast";
 
 export default function useAutoLogout() {
   useEffect(() => {
@@ -12,7 +13,11 @@ export default function useAutoLogout() {
           // Clear and redirect
           localStorage.removeItem("token");
           localStorage.removeItem("token_expiry");
-          alert("Session expired. Please log in again.");
+          appToast.error("Your session expired. Please log in again.", {
+            id: TOAST_IDS.authSessionExpired,
+            title: "Session expired",
+            duration: 6000,
+          });
           window.location.href = "/auth/login";
         }
       }

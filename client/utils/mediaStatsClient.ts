@@ -1,3 +1,5 @@
+import { normalizeApiError, normalizeResponseError } from "@/lib/errors";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
 export type MediaStatType = "movie" | "tv";
@@ -27,10 +29,16 @@ export async function fetchMediaStatsBatch(
 ): Promise<StatsMap> {
   if (!items.length) return {};
   const qs = items.map((i) => `${i.id}:${i.type}`).join(",");
-  const r = await fetch(
-    `${API_BASE}/media-stats/batch?items=${encodeURIComponent(qs)}`,
-    { cache: "no-store" },
-  );
-  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
-  return r.json();
+  try {
+    const r = await fetch(
+      `${API_BASE}/media-stats/batch?items=${encodeURIComponent(qs)}`,
+      { cache: "no-store" },
+    );
+    if (!r.ok) {
+      throw await normalizeResponseError(r, "Could not load engagement stats.");
+    }
+    return r.json();
+  } catch (error) {
+    throw normalizeApiError(error, "Could not load engagement stats.");
+  }
 }

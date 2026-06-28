@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { LockKeyhole } from "lucide-react";
+import { normalizeApiError, normalizeResponseError } from "@/lib/errors";
+import { appToast } from "@/lib/toast";
 import {
   AuthBrand,
   AuthButton,
@@ -48,14 +50,24 @@ export default function ChangePasswordPage() {
       });
       const data = await res.json();
       if (!res.ok || !data?.success) {
-        throw new Error(data?.message || "Failed to reset password");
+        throw await normalizeResponseError(
+          new Response(JSON.stringify(data), {
+            status: res.status || 400,
+            statusText: res.statusText,
+          }),
+          "Failed to reset password.",
+        );
       }
 
       setSuccess(true);
       setMsg("Password changed. Redirecting to login...");
+      appToast.success("Password updated. You can now log in.", {
+        id: "password-reset-success",
+        title: "Password updated",
+      });
       setTimeout(() => router.push("/auth/login"), 1200);
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : "Failed to reset password");
+      setMsg(normalizeApiError(e, "Failed to reset password.").userMessage);
     } finally {
       setLoading(false);
     }

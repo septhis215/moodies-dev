@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useToast } from "@/app/context/ToastContext";
 import { useAuth } from "@/app/context/AuthProvider";
 import { RatingBadge } from "@/components/ui/rating-badge";
+import { handleAppError } from "@/lib/errors";
+import { appToast, TOAST_IDS } from "@/lib/toast";
 
 /* -------------------- Types -------------------- */
 type LikedList = { movieId: string[]; seriesId: string[] };
@@ -122,7 +123,6 @@ function usePageSize(): number {
 /* -------------------- Page -------------------- */
 
 export default function LikedPage() {
-  const { toast } = useToast();
   const [data, setData] = useState<LikedList | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string>("");
@@ -350,21 +350,21 @@ export default function LikedPage() {
 
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
 
-      toast("Removed from your likes", "info", 3500, title, posterUrl);
+      appToast.info("Removed from favorites.", {
+        title,
+        posterUrl,
+        duration: 3500,
+      });
     } catch (e) {
       setData(prev.data);
       setMovieItems(prev.movieItems);
       setTvItems(prev.tvItems);
 
-      toast(
-        `Couldn't unlike ${title}. Please try again.`,
-        "error",
-        3500,
-        null,
-        null,
-      );
-
-      console.error("Unlike failed:", e);
+      handleAppError(e, {
+        fallbackMessage: `Could not remove ${title} from favorites. Please try again.`,
+        toastTitle: "Likes",
+        toastKey: TOAST_IDS.favoriteUpdateError,
+      });
     } finally {
       setBusyIds((s) => s.filter((k) => k !== `${kind}:${id}`));
     }

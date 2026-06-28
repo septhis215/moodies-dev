@@ -9,6 +9,7 @@ import React, {
   useState,
 } from "react";
 import AppLoading from "@/components/ui/AppLoading";
+import { appToast } from "@/lib/toast";
 
 /* ---------- Types ---------- */
 type User = {
@@ -36,15 +37,6 @@ type AccountCollectionState = {
 };
 
 type JsonRecord = Record<string, unknown>;
-type ToastFn = (
-  title: string,
-  type: string,
-  duration: number,
-  label: string,
-  image: string,
-  size: { width: number; height: number },
-) => void;
-
 type AuthContextValue = {
   user: User | null; // null => guest
   isAuthenticated: boolean;
@@ -424,17 +416,12 @@ export function AuthProvider({
       // Google sign-in landing: strip the flag from the URL and toast.
       if (isGoogleLanding && typeof window !== "undefined") {
         window.history.replaceState({}, document.title, window.location.pathname);
-        const showToast = (window as Window & { showToast?: ToastFn }).showToast;
-        if (typeof showToast === "function") {
-          showToast(
-            "Welcome back!",
-            "success",
-            3000,
-            "User",
-            MOODIES_LOGO,
-            MOODIES_SIZE
-          );
-        }
+        appToast.success("Welcome back!", {
+          title: "User",
+          duration: 3000,
+          posterUrl: MOODIES_LOGO,
+          imageSize: MOODIES_SIZE,
+        });
       }
     })();
 

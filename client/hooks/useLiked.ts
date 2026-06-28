@@ -3,7 +3,8 @@
 import { useCallback } from "react";
 import { toggleLiked, type LikeType } from "@/utils/likedClient";
 import { useAuth } from "@/app/context/AuthProvider";
-import { useToast } from "@/app/context/ToastContext";
+import { handleAppError } from "@/lib/errors";
+import { appToast, TOAST_IDS } from "@/lib/toast";
 
 type ToastMeta = {
   title?: string | null;
@@ -13,7 +14,6 @@ type ToastMeta = {
 };
 
 export function useLiked() {
-  const { toast } = useToast();
   const { isAuthenticated, liked } = useAuth();
 
   const isLiked = useCallback(
@@ -29,7 +29,10 @@ export function useLiked() {
   const like = useCallback(
     async (tmdbId: string | number, type: LikeType, meta?: ToastMeta) => {
       if (!isAuthenticated) {
-        toast("Please log in to use Likes", "warning", 3500, null, null);
+        appToast.warning("Sign in to save favorites.", {
+          id: "favorites-auth-required",
+          title: "Sign in needed",
+        });
         return;
       }
 
@@ -43,25 +46,30 @@ export function useLiked() {
           return;
         }
 
-        toast(
-          "Added to your likes",
-          meta?.variant ?? "success",
-          meta?.duration ?? 3000,
-          meta?.title ?? null,
-          meta?.posterUrl ?? null,
-        );
+        appToast[meta?.variant ?? "success"]("Added to favorites.", {
+          title: meta?.title ?? null,
+          duration: meta?.duration ?? 3000,
+          posterUrl: meta?.posterUrl ?? null,
+        });
       } catch (e) {
         liked.setItem(type, id, false);
-        console.error("[useLiked] like error:", e);
+        handleAppError(e, {
+          fallbackMessage: "Could not update favorites. Please try again.",
+          toastTitle: "Likes",
+          toastKey: TOAST_IDS.favoriteUpdateError,
+        });
       }
     },
-    [isAuthenticated, liked, toast],
+    [isAuthenticated, liked],
   );
 
   const unlike = useCallback(
     async (tmdbId: string | number, type: LikeType, meta?: ToastMeta) => {
       if (!isAuthenticated) {
-        toast("Please log in to use Likes", "warning", 3500, null, null);
+        appToast.warning("Sign in to save favorites.", {
+          id: "favorites-auth-required",
+          title: "Sign in needed",
+        });
         return;
       }
 
@@ -75,19 +83,21 @@ export function useLiked() {
           return;
         }
 
-        toast(
-          "Removed from your likes",
-          meta?.variant ?? "info",
-          meta?.duration ?? 3000,
-          meta?.title ?? null,
-          meta?.posterUrl ?? null,
-        );
+        appToast[meta?.variant ?? "info"]("Removed from favorites.", {
+          title: meta?.title ?? null,
+          duration: meta?.duration ?? 3000,
+          posterUrl: meta?.posterUrl ?? null,
+        });
       } catch (e) {
         liked.setItem(type, id, true);
-        console.error("[useLiked] unlike error:", e);
+        handleAppError(e, {
+          fallbackMessage: "Could not update favorites. Please try again.",
+          toastTitle: "Likes",
+          toastKey: TOAST_IDS.favoriteUpdateError,
+        });
       }
     },
-    [isAuthenticated, liked, toast],
+    [isAuthenticated, liked],
   );
 
   return {
