@@ -10,10 +10,11 @@ import { PrismaService } from './../../prisma/prisma.service';
 import { ReviewBanGuard } from './guard/review-ban.guard';
 import { JwtGuard } from 'src/auth/guard';
 import { TmdbClientService } from 'src/media/all/client/tmdb-client.service';
+import { ContentSnapshotController } from './content-snapshot.controller';
 
 @Module({
   imports: [ConfigModule],
-  controllers: [ReviewController],
+  controllers: [ReviewController, ContentSnapshotController],
   providers: [
     ReviewService,
     ProfanityFilterService,

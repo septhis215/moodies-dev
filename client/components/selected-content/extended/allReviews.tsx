@@ -7,11 +7,13 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Star, Search, PenSquare, X } from "lucide-react";
+import { ArrowLeft, Star, Search, PenSquare, Share2, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
 import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
 import { useToast } from "@/app/context/ToastContext";
+import { SnapshotShareModal } from "@/components/snapshot/SnapshotShareModal";
+import type { SnapshotSource } from "@/lib/snapshot/snapshot-types";
 
 type ReactionType = "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD" | "ANGRY";
 type ReactionCount = { type: ReactionType; count: number };
@@ -268,6 +270,7 @@ export default function AllReviews({
   );
   const [writeModalOpen, setWriteModalOpen] = useState(false);
   const [localReviews, setLocalReviews] = useState<Review[]>(reviews);
+  const [snapshotSource, setSnapshotSource] = useState<SnapshotSource | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -772,6 +775,9 @@ export default function AllReviews({
                   review.author_details?.rating,
                 );
                 const profileHref = profileHrefFor(review.userId);
+                const canShareReviewSnapshot = Boolean(
+                  user?.id && review.userId === user.id,
+                );
 
                 return (
                   <motion.div
@@ -1073,6 +1079,21 @@ export default function AllReviews({
                       </div>
 
                       <div className="flex flex-shrink-0 items-center gap-3">
+                        {canShareReviewSnapshot && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSnapshotSource({
+                                type: "review",
+                                reviewId: review.id,
+                              })
+                            }
+                            className="flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-[11px] font-semibold text-white/58 transition-all hover:border-[#e94f37]/35 hover:bg-[#e94f37]/10 hover:text-[#ff8a78] cursor-pointer"
+                          >
+                            <Share2 size={13} />
+                            Snapshot
+                          </button>
+                        )}
                         <ReactionBar
                           counts={review.reactionCounts}
                           myReaction={review.myReaction}
@@ -1277,6 +1298,12 @@ export default function AllReviews({
           </AnimatePresence>,
           document.body,
         )}
+
+      <SnapshotShareModal
+        open={Boolean(snapshotSource)}
+        onClose={() => setSnapshotSource(null)}
+        source={snapshotSource}
+      />
     </div>
   );
 }
