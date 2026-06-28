@@ -1,5 +1,6 @@
 "use client";
 import { useAuth } from "@/app/context/AuthProvider";
+import { throwIfResponseError } from "@/lib/errors";
 
 export function useApiFetch() {
   const { refreshSession, logoutSilent } = useAuth();
@@ -30,5 +31,15 @@ export function useApiFetch() {
     return res;
   }
 
-  return { apiFetch };
+  async function apiFetchJson<T>(
+    input: RequestInfo | URL,
+    init: RequestInit = {},
+    fallbackMessage?: string,
+  ): Promise<T> {
+    const res = await apiFetch(input, init);
+    await throwIfResponseError(res, fallbackMessage);
+    return (await res.json()) as T;
+  }
+
+  return { apiFetch, apiFetchJson };
 }

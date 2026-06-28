@@ -6,7 +6,8 @@ import {
   type WatchType,
 } from "@/utils/watchlistClient";
 import { useAuth } from "@/app/context/AuthProvider";
-import { useToast } from "@/app/context/ToastContext";
+import { handleAppError } from "@/lib/errors";
+import { appToast, TOAST_IDS } from "@/lib/toast";
 
 type ToastMeta = {
   title?: string | null;
@@ -15,12 +16,7 @@ type ToastMeta = {
   duration?: number;
 };
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function useWatchlist() {
-  const { toast } = useToast();
   const { isAuthenticated, watchlist } = useAuth();
   const [error, setError] = useState("");
 
@@ -37,7 +33,10 @@ export function useWatchlist() {
   const add = useCallback(
     async (tmdbId: string | number, type: WatchType, meta?: ToastMeta) => {
       if (!isAuthenticated) {
-        toast("Please log in to use Watchlist", "warning", 3500, null, null);
+        appToast.warning("Sign in to save this to your watchlist.", {
+          id: "watchlist-auth-required",
+          title: "Sign in needed",
+        });
         return;
       }
 
@@ -52,33 +51,32 @@ export function useWatchlist() {
           return;
         }
 
-        toast(
-          "Added to your watchlist",
-          meta?.variant ?? "info",
-          meta?.duration ?? 3500,
-          meta?.title ?? null,
-          meta?.posterUrl ?? null,
-        );
+        appToast[meta?.variant ?? "success"]("Added to your watchlist.", {
+          title: meta?.title ?? null,
+          duration: meta?.duration ?? 3500,
+          posterUrl: meta?.posterUrl ?? null,
+        });
       } catch (e: unknown) {
         watchlist.setItem(type, id, false);
-
-        if (getErrorMessage(e).includes("NO_TOKEN")) {
-          toast("Please log in to use Watchlist", "warning", 3500, null, null);
-          return;
-        }
-
-        setError(getErrorMessage(e) || "Failed to update watchlist");
-        console.error("[useWatchlist] add error:", e);
+        const appError = handleAppError(e, {
+          fallbackMessage: "Could not update your watchlist. Please try again.",
+          toastTitle: "Watchlist",
+          toastKey: TOAST_IDS.watchlistUpdateError,
+        });
+        setError(appError.userMessage);
         throw e;
       }
     },
-    [isAuthenticated, toast, watchlist],
+    [isAuthenticated, watchlist],
   );
 
   const remove = useCallback(
     async (tmdbId: string | number, type: WatchType, meta?: ToastMeta) => {
       if (!isAuthenticated) {
-        toast("Please log in to use Watchlist", "warning", 3500, null, null);
+        appToast.warning("Sign in to save this to your watchlist.", {
+          id: "watchlist-auth-required",
+          title: "Sign in needed",
+        });
         return;
       }
 
@@ -93,27 +91,23 @@ export function useWatchlist() {
           return;
         }
 
-        toast(
-          "Removed from your watchlist",
-          meta?.variant ?? "info",
-          meta?.duration ?? 3500,
-          meta?.title ?? null,
-          meta?.posterUrl ?? null,
-        );
+        appToast[meta?.variant ?? "info"]("Removed from your watchlist.", {
+          title: meta?.title ?? null,
+          duration: meta?.duration ?? 3500,
+          posterUrl: meta?.posterUrl ?? null,
+        });
       } catch (e: unknown) {
         watchlist.setItem(type, id, true);
-
-        if (getErrorMessage(e).includes("NO_TOKEN")) {
-          toast("Please log in to use Watchlist", "warning", 3500, null, null);
-          return;
-        }
-
-        setError(getErrorMessage(e) || "Failed to update watchlist");
-        console.error("[useWatchlist] remove error:", e);
+        const appError = handleAppError(e, {
+          fallbackMessage: "Could not update your watchlist. Please try again.",
+          toastTitle: "Watchlist",
+          toastKey: TOAST_IDS.watchlistUpdateError,
+        });
+        setError(appError.userMessage);
         throw e;
       }
     },
-    [isAuthenticated, toast, watchlist],
+    [isAuthenticated, watchlist],
   );
 
   return {

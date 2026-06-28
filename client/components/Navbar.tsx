@@ -21,7 +21,7 @@ import {
 } from "@tabler/icons-react";
 import { Bookmark, Heart, MouseIcon, Tv } from "lucide-react";
 import { useAuth } from "@/app/context/AuthProvider";
-import { useToast } from "@/app/context/ToastContext";
+import { appToast } from "@/lib/toast";
 import DropdownPortal from "./ui/dropdownPortal";
 import SearchBar from "./ui/searchbar";
 import {
@@ -112,7 +112,6 @@ export function NavbarComponent() {
   const hoverTimeoutRef = useRef<number | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const { user, isAuthenticated, logout: doLogout } = useAuth();
-  const { toast } = useToast();
 
   const profileHref = isAuthenticated ? "/profile" : "/auth/login";
   const displayName = user?.username ?? user?.name ?? "Guest";
@@ -145,14 +144,12 @@ export function NavbarComponent() {
 
     try {
       await doLogout();
-      toast(
-        "You've been logged out successfully",
-        "info",
-        3000,
-        "See you next time",
-        MOODIES_LOGO,
-        MOODIES_SIZE,
-      );
+      appToast.info("You've been logged out successfully", {
+        title: "See you next time",
+        duration: 3000,
+        posterUrl: MOODIES_LOGO,
+        imageSize: MOODIES_SIZE,
+      });
     } finally {
       setIsLoggingOut(false);
     }

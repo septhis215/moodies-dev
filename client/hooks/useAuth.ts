@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
-import { useToast } from "@/app/context/ToastContext";
 import { markSessionPresent } from "@/app/context/AuthProvider";
+import { handleAppError, normalizeResponseError } from "@/lib/errors";
+import { appToast } from "@/lib/toast";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -8,22 +9,18 @@ const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };
 
 export function useAuth() {
-    const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
 
     const signIn = useCallback(
         async (email: string, password: string) => {
             setIsLoading(true);
 
-            // Show signing in toast with moodies logo
-            toast(
-                "Signing you in...",
-                "info",
-                5000,
-                "Please wait",
-                MOODIES_LOGO,
-                MOODIES_SIZE
-            );
+            const loadingToastId = appToast.loading("Signing you in...", {
+                id: "auth-signin-loading",
+                title: "Please wait",
+                posterUrl: MOODIES_LOGO,
+                imageSize: MOODIES_SIZE,
+            });
 
             try {
                 // 3-second delay
@@ -42,20 +39,24 @@ export function useAuth() {
                 const data = await res.json();
 
                 if (!res.ok) {
-                    throw new Error(data?.message || "Sign-in failed");
+                    throw await normalizeResponseError(
+                        new Response(JSON.stringify(data), {
+                            status: res.status,
+                            statusText: res.statusText,
+                        }),
+                        "Sign-in failed. Please check your email and password."
+                    );
                 }
 
                 markSessionPresent();
 
-                // Success toast - use user avatar if available, otherwise moodies logo
-                toast(
-                    "Welcome back!",
-                    "success",
-                    3000,
-                    data.user?.username || data.user?.email || "User",
-                    data.user?.avatarUrl || MOODIES_LOGO,
-                    data.user?.avatarUrl ? undefined : MOODIES_SIZE
-                );
+                appToast.success("Welcome back!", {
+                    id: loadingToastId,
+                    duration: 3000,
+                    title: data.user?.username || data.user?.email || "User",
+                    posterUrl: data.user?.avatarUrl || MOODIES_LOGO,
+                    imageSize: data.user?.avatarUrl ? undefined : MOODIES_SIZE,
+                });
 
                 // Small delay before redirect to let user see success
                 await new Promise((resolve) => setTimeout(resolve, 500));
@@ -65,24 +66,24 @@ export function useAuth() {
 
                 return { success: true, data };
             } catch (error: unknown) {
-                const message =
-                    error instanceof Error ? error.message : "Failed to sign in";
-                // Error toast with moodies logo
-                toast(
-                    message,
-                    "error",
-                    4000,
-                    "Sign-in Failed",
-                    MOODIES_LOGO,
-                    MOODIES_SIZE
-                );
+                const appError = handleAppError(error, {
+                    fallbackMessage: "Sign-in failed. Please check your email and password.",
+                    showToast: false,
+                });
+                appToast.error(appError.userMessage, {
+                    id: loadingToastId,
+                    duration: 5000,
+                    title: "Sign-in Failed",
+                    posterUrl: MOODIES_LOGO,
+                    imageSize: MOODIES_SIZE,
+                });
 
-                return { success: false, error: message };
+                return { success: false, error: appError.userMessage };
             } finally {
                 setIsLoading(false);
             }
         },
-        [toast]
+        []
     );
 
     return {

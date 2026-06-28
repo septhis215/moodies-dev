@@ -8,6 +8,7 @@ import {
   Query,
   ParseIntPipe,
   Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import { TvService } from './tv.service';
 import { parse } from 'path';
@@ -145,7 +146,7 @@ export class TvController {
   ) {
     // Validate type parameter
     if (type !== 'tv') {
-      throw new Error('Type must be either "tv"');
+      throw new BadRequestException('Type must be either "tv"');
     }
 
     const parsedLimit = limit ? parseInt(limit, 10) : 3;
@@ -161,7 +162,7 @@ export class TvController {
     @Query('limit') limit?: string,
   ) {
     if (type !== 'tv') {
-      throw new Error('Type must be either "tv"');
+      throw new BadRequestException('Type must be either "tv"');
     }
 
     const parsedLimit = limit ? parseInt(limit, 10) : 3;
@@ -182,19 +183,19 @@ export class TvController {
   async getBatchTrailers(@Body() items: { type: 'tv'; id: number }[]) {
     // Validate input
     if (!Array.isArray(items) || items.length === 0) {
-      throw new Error('Items array is required and must not be empty');
+      throw new BadRequestException('Items array is required and must not be empty');
     }
 
     // Validate each item
     for (const item of items) {
       if (!item.type || !item.id || item.type !== 'tv') {
-        throw new Error('Each item must have valid type ("tv") and id');
+        throw new BadRequestException('Each item must have valid type ("tv") and id');
       }
     }
 
     // Limit batch size to prevent abuse
     if (items.length > 50) {
-      throw new Error('Maximum 50 items allowed per batch request');
+      throw new BadRequestException('Maximum 50 items allowed per batch request');
     }
 
     return this.tvService.getTrailersForItems(items);

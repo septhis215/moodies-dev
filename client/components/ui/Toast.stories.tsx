@@ -19,7 +19,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Success: Story = {
   play: async ({ canvas }) => {
-    await expect(canvas.getByRole('status')).toHaveTextContent(/saved to your space/i);
+    await expect(canvas.getByRole('status')).toHaveTextContent(/success/i);
+    await expect(canvas.getByRole('status')).toHaveTextContent(/added dune/i);
   },
 };
 

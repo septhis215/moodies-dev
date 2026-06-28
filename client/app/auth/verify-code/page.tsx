@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { KeyRound } from "lucide-react";
+import { normalizeApiError, normalizeResponseError } from "@/lib/errors";
 import {
   AuthBrand,
   AuthButton,
@@ -37,12 +38,18 @@ export default function VerifyCodePage() {
       });
       const data = await res.json();
       if (!res.ok || !data?.success) {
-        throw new Error(data?.message || "Invalid or expired code");
+        throw await normalizeResponseError(
+          new Response(JSON.stringify(data), {
+            status: res.status || 400,
+            statusText: res.statusText,
+          }),
+          "Invalid or expired code.",
+        );
       }
 
       router.push(`/auth/change-password?email=${encodeURIComponent(email)}`);
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : "Verification failed");
+      setMsg(normalizeApiError(e, "Verification failed.").userMessage);
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
+import { normalizeApiError, normalizeResponseError } from "@/lib/errors";
+import { appToast, TOAST_IDS } from "@/lib/toast";
 import {
   AuthBrand,
   AuthButton,
@@ -35,11 +37,31 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Unable to send code");
+      if (!res.ok) {
+        throw await normalizeResponseError(
+          new Response(JSON.stringify(data), {
+            status: res.status,
+            statusText: res.statusText,
+          }),
+          "Unable to send a recovery code right now.",
+        );
+      }
 
+      appToast.success("If an account exists, a reset code has been sent.", {
+        id: "password-reset-code-sent",
+        title: "Check your email",
+      });
       router.push(`/auth/verify-code?email=${encodeURIComponent(email)}`);
     } catch (e: unknown) {
-      setMsg(e instanceof Error ? e.message : "Unable to process request");
+      const appError = normalizeApiError(
+        e,
+        "Could not send reset code. Please try again.",
+      );
+      setMsg(appError.userMessage);
+      appToast.error(appError.userMessage, {
+        id: TOAST_IDS.passwordResetError,
+        title: "Reset password",
+      });
     } finally {
       setLoading(false);
     }

@@ -10,6 +10,7 @@ import {
   Req,
   UnauthorizedException,
   Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import { AllService } from './all.service';
 import { JwtGuard } from 'src/auth/guard';
@@ -134,7 +135,7 @@ export class AllController {
   ) {
     // Validate type parameter
     if (type !== 'movie' && type !== 'tv') {
-      throw new Error('Type must be either "movie" or "tv"');
+      throw new BadRequestException('Type must be either "movie" or "tv"');
     }
 
     const parsedLimit = limit ? parseInt(limit, 20) : 3;
@@ -150,7 +151,7 @@ export class AllController {
     @Query('limit') limit?: string,
   ) {
     if (type !== 'movie' && type !== 'tv') {
-      throw new Error('Type must be either "movie" or "tv"');
+      throw new BadRequestException('Type must be either "movie" or "tv"');
     }
 
     const parsedLimit = limit ? parseInt(limit, 20) : 3;
@@ -165,7 +166,7 @@ export class AllController {
   ) {
     // Validate input
     if (!Array.isArray(items) || items.length === 0) {
-      throw new Error('Items array is required and must not be empty');
+      throw new BadRequestException('Items array is required and must not be empty');
     }
 
     // Validate each item
@@ -175,7 +176,7 @@ export class AllController {
         !item.id ||
         (item.type !== 'movie' && item.type !== 'tv')
       ) {
-        throw new Error(
+        throw new BadRequestException(
           'Each item must have valid type ("movie" or "tv") and id',
         );
       }
@@ -183,7 +184,7 @@ export class AllController {
 
     // Limit batch size to prevent abuse
     if (items.length > 50) {
-      throw new Error('Maximum 50 items allowed per batch request');
+      throw new BadRequestException('Maximum 50 items allowed per batch request');
     }
 
     return this.allService.getTrailersForItems(items);

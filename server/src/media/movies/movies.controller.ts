@@ -7,6 +7,7 @@ import {
   Post,
   Query,
   Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import { MoviesService } from './movies.service';
 import { RedisService } from 'src/redis/redis.service';
@@ -106,7 +107,7 @@ export class MoviesController {
   ) {
     // Validate type parameter
     if (type !== 'movie') {
-      throw new Error('Type must be either "movie"');
+      throw new BadRequestException('Type must be either "movie"');
     }
 
     const parsedLimit = limit ? parseInt(limit, 10) : 3;
@@ -122,7 +123,7 @@ export class MoviesController {
     @Query('limit') limit?: string,
   ) {
     if (type !== 'movie') {
-      throw new Error('Type must be either "movie"');
+      throw new BadRequestException('Type must be either "movie"');
     }
 
     const parsedLimit = limit ? parseInt(limit, 10) : 3;
@@ -143,19 +144,19 @@ export class MoviesController {
   async getBatchTrailers(@Body() items: { type: 'movie'; id: number }[]) {
     // Validate input
     if (!Array.isArray(items) || items.length === 0) {
-      throw new Error('Items array is required and must not be empty');
+      throw new BadRequestException('Items array is required and must not be empty');
     }
 
     // Validate each item
     for (const item of items) {
       if (!item.type || !item.id || item.type !== 'movie') {
-        throw new Error('Each item must have valid type ("movie") and id');
+        throw new BadRequestException('Each item must have valid type ("movie") and id');
       }
     }
 
     // Limit batch size to prevent abuse
     if (items.length > 50) {
-      throw new Error('Maximum 50 items allowed per batch request');
+      throw new BadRequestException('Maximum 50 items allowed per batch request');
     }
 
     return this.movieService.getTrailersForItems(items);

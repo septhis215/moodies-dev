@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useToast } from "@/app/context/ToastContext";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { useAuth } from "@/app/context/AuthProvider";
+import { handleAppError } from "@/lib/errors";
+import { appToast, TOAST_IDS } from "@/lib/toast";
 
 /* -------------------- Types -------------------- */
 type Watchlist = { movieId: string[]; seriesId: string[] };
@@ -124,7 +125,6 @@ function usePageSize(): number {
 /* -------------------- Page -------------------- */
 
 export default function WatchlistPage() {
-  const { toast } = useToast();
   const [data, setData] = useState<Watchlist | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string>("");
@@ -370,24 +370,22 @@ export default function WatchlistPage() {
         throw new Error(`${res.status} ${res.statusText}`);
       }
 
-      // Show success toast with poster and title
-      toast("Removed from your watchlist", "info", 3500, title, posterUrl);
+      appToast.info("Removed from your watchlist.", {
+        title,
+        posterUrl,
+        duration: 3500,
+      });
     } catch (e) {
       // rollback UI
       setData(prev.data);
       setMovieItems(prev.movieItems);
       setTvItems(prev.tvItems);
 
-      // Show error toast
-      toast(
-        `Couldn't remove ${title} from your watchlist. Please try again.`,
-        "error",
-        3500,
-        null,
-        null,
-      );
-
-      console.error("Remove failed:", e);
+      handleAppError(e, {
+        fallbackMessage: `Could not remove ${title} from your watchlist. Please try again.`,
+        toastTitle: "Watchlist",
+        toastKey: TOAST_IDS.watchlistUpdateError,
+      });
     } finally {
       setBusyIds((s) => s.filter((k) => k !== `${kind}:${id}`));
     }
