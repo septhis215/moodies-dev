@@ -13,6 +13,7 @@ import { JwtGuard } from 'src/auth/guard';
 import { OptionalJwtGuard } from 'src/auth/guard/optional-jwt.guard';
 import { CreateReplyDto } from './dto/create-reply.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { CreateSnapshotDto } from './dto/create-snapshot.dto';
 import { ReviewQueryDto } from './dto/review-query.dto';
 import { SetReactionDto } from './dto/set-reaction.dto';
 import { ReviewBanGuard } from './guard/review-ban.guard';
@@ -70,6 +71,20 @@ export class ReviewController {
   @UseGuards(JwtGuard)
   removeReplyReaction(@Req() req, @Param('id') replyId: string) {
     return this.reviewsService.removeReplyReaction(req.user.id, replyId);
+  }
+
+  @Post(':id/snapshot')
+  @UseGuards(JwtGuard)
+  createReviewSnapshot(
+    @Req() req,
+    @Param('id') reviewId: string,
+    @Body() dto: CreateSnapshotDto,
+  ) {
+    return this.reviewsService.createReviewSnapshot(
+      req.user.id,
+      reviewId,
+      dto.format ?? 'square',
+    );
   }
 
   @Get()

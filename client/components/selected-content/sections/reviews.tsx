@@ -7,6 +7,7 @@ import Image from "next/image";
 import {
   CheckCircle2,
   PenSquare,
+  Share2,
   Star,
   X,
 } from "lucide-react";
@@ -15,6 +16,8 @@ import { useAuth } from "@/app/context/AuthProvider";
 import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
 import { useToast } from "@/app/context/ToastContext";
 import { useRouter } from "next/navigation";
+import { SnapshotShareModal } from "@/components/snapshot/SnapshotShareModal";
+import type { SnapshotSource } from "@/lib/snapshot/snapshot-types";
 
 type Review = {
   id: string;
@@ -133,7 +136,7 @@ export default function ReviewsSection({
   contentId,
   contentType,
 }: ReviewsSectionProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
 
   const reviewsArray: Review[] = useMemo(
@@ -162,6 +165,7 @@ export default function ReviewsSection({
 
   const [sortBy, setSortBy] = useState<SortOption>("latest");
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [snapshotSource, setSnapshotSource] = useState<SnapshotSource | null>(null);
   const [expandedReviews, setExpandedReviews] = useState<Set<string>>(
     new Set(),
   );
@@ -349,6 +353,9 @@ export default function ReviewsSection({
                     ? r.author_details.rating / 2
                     : null;
                 const accentColor = toAccentColor(r.author_details?.rating);
+                const canShareReviewSnapshot = Boolean(
+                  user?.id && r.userId === user.id,
+                );
 
                 return (
                   <motion.div
@@ -451,6 +458,22 @@ export default function ReviewsSection({
                     <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.07] pt-3">
                       <ReviewMoodPanel value={r.moodEmojis?.[0]} />
 
+                      {canShareReviewSnapshot && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSnapshotSource({
+                              type: "review",
+                              reviewId: r.id,
+                            })
+                          }
+                          className="ml-auto inline-flex shrink-0 items-center gap-1 text-[11px] font-bold text-white/36 transition-colors hover:text-[#ff8a78]"
+                        >
+                          <Share2 size={12} />
+                          Snapshot
+                        </button>
+                      )}
+
                       <Link
                         href={
                           contentId
@@ -479,6 +502,12 @@ export default function ReviewsSection({
           />
         )}
       </AnimatePresence>
+
+      <SnapshotShareModal
+        open={Boolean(snapshotSource)}
+        onClose={() => setSnapshotSource(null)}
+        source={snapshotSource}
+      />
     </>
   );
 }

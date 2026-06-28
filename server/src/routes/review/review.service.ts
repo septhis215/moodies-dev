@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -20,16 +21,60 @@ import {
 } from './entities';
 import { TmdbClientService } from 'src/media/all/client/tmdb-client.service';
 import { RedisService } from 'src/redis/redis.service';
+import type { SnapshotFormat } from './dto/create-snapshot.dto';
 
 // Short cache for the public discovery carousels (critics corner / community
 // picks). They previously hit the DB — plus per-item TMDB fallbacks — on every
 // request; a 2-minute cache collapses that to one build per window.
 const CRITICS_CORNER_TTL = 120; // seconds
+const SNAPSHOT_SIZE = 1080;
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
 const reactionSelect = {
   type: true,
   userId: true,
 } as const;
+
+type SnapshotMediaInfo = {
+  tmdbId: number;
+  mediaType: MediaType;
+  title: string;
+  releaseYear?: string | null;
+  typeLabel: 'Movie' | 'TV Show';
+  posterUrl?: string | null;
+  backdropUrl?: string | null;
+  genres: string[];
+  directors: string[];
+  runtimeLabel?: string | null;
+  ratingLabel?: string | null;
+  popularity?: number | null;
+};
+
+type SnapshotTmdbInfo = Record<string, unknown>;
+type SnapshotCachedPayload = {
+  info?: SnapshotTmdbInfo;
+  credits?: {
+    crew?: unknown;
+  };
+};
+
+type SnapshotPayload = {
+  snapshotUrl: null;
+  snapshotType: 'content' | 'review';
+  format: SnapshotFormat;
+  width: number;
+  height: number;
+  content: SnapshotMediaInfo;
+  review?: {
+    id: string;
+    rating: number;
+    content: string;
+    createdAt: string;
+    authorName?: string | null;
+    username?: string | null;
+    isPrivate: boolean;
+  };
+};
 
 @Injectable()
 export class ReviewService {
@@ -141,6 +186,284 @@ export class ReviewService {
         }`,
       );
     }
+  }
+
+  async createContentSnapshot(
+    mediaTypeParam: string,
+    tmdbId: number,
+    format: SnapshotFormat = 'square',
+  ): Promise<SnapshotPayload> {
+    this.validateSnapshotFormat(format);
+    const mediaType = this.normalizeSnapshotMediaType(mediaTypeParam);
+
+    if (!Number.isInteger(tmdbId) || tmdbId <= 0) {
+      throw new BadRequestException('A valid content id is required.');
+    }
+
+    const content = await this.getSnapshotContent(mediaType, tmdbId);
+
+    return {
+      snapshotUrl: null,
+      snapshotType: 'content',
+      format,
+      width: SNAPSHOT_SIZE,
+      height: SNAPSHOT_SIZE,
+      content,
+    };
+  }
+
+  async createReviewSnapshot(
+    userId: string,
+    reviewId: string,
+    format: SnapshotFormat = 'square',
+  ): Promise<SnapshotPayload> {
+    this.validateSnapshotFormat(format);
+
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+      include: {
+        user: {
+          select: {
+            name: true,
+            username: true,
+          },
+        },
+      },
+    });
+
+    if (!review) {
+      throw new NotFoundException('Review not found.');
+    }
+
+    if (review.userId !== userId) {
+      throw new ForbiddenException(
+        'You can only create snapshots for your own reviews.',
+      );
+    }
+
+    const content = await this.getSnapshotContent(review.mediaType, review.tmdbId);
+
+    return {
+      snapshotUrl: null,
+      snapshotType: 'review',
+      format,
+      width: SNAPSHOT_SIZE,
+      height: SNAPSHOT_SIZE,
+      content,
+      review: {
+        id: review.id,
+        rating: review.rating,
+        content: review.content,
+        createdAt: review.createdAt.toISOString(),
+        authorName: review.user.name,
+        username: review.user.username,
+        isPrivate: false,
+      },
+    };
+  }
+
+  private validateSnapshotFormat(format: SnapshotFormat) {
+    if (format !== 'square') {
+      throw new BadRequestException('Only square snapshots are supported.');
+    }
+  }
+
+  private normalizeSnapshotMediaType(mediaType: string): MediaType {
+    const normalized = mediaType.trim().toUpperCase();
+    if (normalized === 'MOVIE' || normalized === 'MOVIES') {
+      return MediaType.MOVIE;
+    }
+    if (normalized === 'TV' || normalized === 'SHOW' || normalized === 'SERIES') {
+      return MediaType.TV;
+    }
+    throw new BadRequestException('Unsupported content type.');
+  }
+
+  private async getSnapshotContent(
+    mediaType: MediaType,
+    tmdbId: number,
+  ): Promise<SnapshotMediaInfo> {
+    const cachedDetail = await this.prisma.mediaDetail.findUnique({
+      where: {
+        tmdbId_mediaType: {
+          tmdbId,
+          mediaType,
+        },
+      },
+    });
+
+    const cachedPayload = cachedDetail?.payload as
+      | SnapshotCachedPayload
+      | undefined;
+    const cachedInfo = cachedPayload?.info;
+
+    const fallbackRaw: unknown = cachedInfo
+      ? null
+      : await this.tmdbClient
+          .tmdb(
+            `${mediaType === MediaType.TV ? 'tv' : 'movie'}/${tmdbId}?language=en-US&append_to_response=${
+              mediaType === MediaType.TV ? 'aggregate_credits' : 'credits'
+            }`,
+          )
+          .catch(() => null);
+    const fallbackInfo = this.asSnapshotInfo(fallbackRaw);
+
+    const info = cachedInfo ?? fallbackInfo;
+    if (!info) {
+      throw new NotFoundException('Content not found.');
+    }
+
+    const crewSource =
+      cachedPayload?.credits?.crew ??
+      this.asSnapshotInfo(fallbackRaw)?.credits ??
+      this.asSnapshotInfo(fallbackRaw)?.aggregate_credits;
+
+    return this.toSnapshotMediaInfo(
+      mediaType,
+      tmdbId,
+      cachedDetail?.title,
+      info,
+      crewSource,
+    );
+  }
+
+  private toSnapshotMediaInfo(
+    mediaType: MediaType,
+    tmdbId: number,
+    cachedTitle: string | undefined,
+    info: SnapshotTmdbInfo,
+    crewSource?: unknown,
+  ): SnapshotMediaInfo {
+    const releaseDate =
+      this.asString(info.release_date) ?? this.asString(info.first_air_date);
+    const releaseYear = releaseDate?.slice(0, 4) || null;
+    const genres = this.extractSnapshotGenres(info.genres);
+    const directors = this.extractSnapshotDirectors(info, crewSource);
+    const voteAverage = this.asNumber(info.vote_average);
+    const runtimeLabel =
+      mediaType === MediaType.TV
+        ? this.seasonCountLabel(this.asNumber(info.number_of_seasons))
+        : this.runtimeLabel(this.asNumber(info.runtime));
+
+    const title =
+      cachedTitle ||
+      this.asString(info.title) ||
+      this.asString(info.name) ||
+      this.asString(info.original_title) ||
+      this.asString(info.original_name);
+
+    if (!title) {
+      throw new NotFoundException('Content title not found.');
+    }
+
+    return {
+      tmdbId,
+      mediaType,
+      title,
+      releaseYear,
+      typeLabel: mediaType === MediaType.TV ? 'TV Show' : 'Movie',
+      posterUrl: this.tmdbImageUrl(this.asString(info.poster_path), 'w780'),
+      backdropUrl: this.tmdbImageUrl(this.asString(info.backdrop_path), 'w1280'),
+      genres,
+      directors,
+      runtimeLabel,
+      ratingLabel:
+        voteAverage && voteAverage > 0 ? `${voteAverage.toFixed(1)} average` : null,
+      popularity: this.asNumber(info.popularity),
+    };
+  }
+
+  private extractSnapshotGenres(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((genre) => {
+        if (typeof genre === 'string') return genre;
+        if (genre && typeof genre === 'object' && 'name' in genre) {
+          return this.asString((genre as { name?: unknown }).name);
+        }
+        return undefined;
+      })
+      .filter((genre): genre is string => Boolean(genre))
+      .slice(0, 3);
+  }
+
+  private extractSnapshotDirectors(
+    info: SnapshotTmdbInfo,
+    crewSource?: unknown,
+  ): string[] {
+    const fromInfo = this.asString(info.director);
+    const crew = this.extractCrewArray(crewSource);
+    const directors = crew
+      .filter((member) => member.job === 'Director')
+      .map((member) => member.name)
+      .filter((name): name is string => Boolean(name));
+
+    const createdBy = this.extractCreatedByNames(info.created_by);
+    const names = [fromInfo, ...directors, ...createdBy].filter(
+      (name): name is string => Boolean(name),
+    );
+    return Array.from(new Set(names)).slice(0, 4);
+  }
+
+  private extractCrewArray(value: unknown): Array<{ job?: string; name?: string }> {
+    const maybeCrew =
+      value && typeof value === 'object' && 'crew' in value
+        ? (value as { crew?: unknown }).crew
+        : value;
+
+    if (!Array.isArray(maybeCrew)) return [];
+    return maybeCrew.map((member) => {
+      if (!member || typeof member !== 'object') return {};
+      const record = member as Record<string, unknown>;
+      return {
+        job: this.asString(record.job),
+        name: this.asString(record.name),
+      };
+    });
+  }
+
+  private extractCreatedByNames(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((creator) => {
+        if (!creator || typeof creator !== 'object') return undefined;
+        return this.asString((creator as { name?: unknown }).name);
+      })
+      .filter((name): name is string => Boolean(name));
+  }
+
+  private tmdbImageUrl(path: string | undefined, size: 'w780' | 'w1280') {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `${TMDB_IMAGE_BASE}/${size}${path.startsWith('/') ? path : `/${path}`}`;
+  }
+
+  private runtimeLabel(minutes: number | undefined) {
+    if (!minutes || minutes <= 0) return null;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  }
+
+  private seasonCountLabel(seasonCount: number | undefined) {
+    if (!seasonCount || seasonCount <= 0) return null;
+    return `${seasonCount} season${seasonCount === 1 ? '' : 's'}`;
+  }
+
+  private asString(value: unknown) {
+    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+  }
+
+  private asNumber(value: unknown) {
+    return typeof value === 'number' && Number.isFinite(value)
+      ? value
+      : undefined;
+  }
+
+  private asSnapshotInfo(value: unknown): SnapshotTmdbInfo | null {
+    return value && typeof value === 'object'
+      ? (value as SnapshotTmdbInfo)
+      : null;
   }
 
   async createReply(userId: string, reviewId: string, dto: CreateReplyDto) {

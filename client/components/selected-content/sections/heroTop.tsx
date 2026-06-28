@@ -6,9 +6,10 @@ import Link from "next/link";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiked } from "@/hooks/useLiked";
 import { useRouter } from "next/navigation";
-import { Bookmark, BookmarkCheck, Heart, BookmarkIcon, MessageSquare } from "lucide-react";
+import { Bookmark, BookmarkCheck, Heart, BookmarkIcon, MessageSquare, Share2 } from "lucide-react";
 import { useMediaStats } from "@/hooks/useMediaStats";
 import { fmtCount } from "@/utils/mediaStatsClient";
+import { SnapshotShareModal } from "@/components/snapshot/SnapshotShareModal";
 import type {
   MovieDetailsData,
   TvDetailsData,
@@ -355,6 +356,7 @@ export function HeroContentCard({
   reviewStats,
 }: HeroContentCardProps) {
   const [isTrailerOpen, setIsTrailerOpen] = useState(false);
+  const [isSnapshotOpen, setIsSnapshotOpen] = useState(false);
   const router = useRouter();
   const { isInWatchlist, add, remove, ready } = useWatchlist();
   const { isLiked, like: addToLiked, unlike: removeFromLiked, ready: likedReady } = useLiked();
@@ -1264,6 +1266,16 @@ export function HeroContentCard({
                 </svg>
                 {inLiked ? "Liked" : "Like"}
               </button>
+
+              {contentId && (
+                <button
+                  onClick={() => setIsSnapshotOpen(true)}
+                  style={s.btnSecondary}
+                >
+                  <Share2 size={14} />
+                  Share Snapshot
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1277,6 +1289,20 @@ export function HeroContentCard({
           title={mappedContent.title}
         />
       )}
+
+      <SnapshotShareModal
+        open={isSnapshotOpen}
+        onClose={() => setIsSnapshotOpen(false)}
+        source={
+          contentId
+            ? {
+                type: "content",
+                mediaType: contentType === "tv" ? "TV" : "MOVIE",
+                tmdbId: contentId,
+              }
+            : null
+        }
+      />
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </>
