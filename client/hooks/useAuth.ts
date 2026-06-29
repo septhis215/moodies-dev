@@ -12,7 +12,7 @@ export function useAuth() {
     const [isLoading, setIsLoading] = useState(false);
 
     const signIn = useCallback(
-        async (email: string, password: string) => {
+        async (email: string, password: string, captchaToken: string) => {
             setIsLoading(true);
 
             const loadingToastId = appToast.loading("Signing you in...", {
@@ -33,7 +33,7 @@ export function useAuth() {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     credentials: "include",
-                    body: JSON.stringify({ email, password }),
+                    body: JSON.stringify({ email, password, captchaToken }),
                 });
 
                 const data = await res.json();

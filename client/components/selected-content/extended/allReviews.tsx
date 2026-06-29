@@ -12,6 +12,7 @@ import { useAuth } from "@/app/context/AuthProvider";
 import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
 import { useToast } from "@/app/context/ToastContext";
 import { SnapshotShareModal } from "@/components/snapshot/SnapshotShareModal";
+import { TurnstileCaptcha } from "@/components/ui/TurnstileCaptcha";
 import type { SnapshotSource } from "@/lib/snapshot/snapshot-types";
 
 type ReactionType = "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD" | "ANGRY";
@@ -1325,6 +1326,8 @@ function ReviewFormInModal({
   const [mood, setMood] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
 
   const moodImageOptions = [
@@ -1357,6 +1360,10 @@ function ReviewFormInModal({
       setError("✍️ At least 10 characters needed");
       return;
     }
+    if (!captchaToken) {
+      setError("Please complete the verification.");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch(`${API}/reviews`, {
@@ -1371,6 +1378,7 @@ function ReviewFormInModal({
           moodEmojis: [selectedMoodForSubmit.imagePath],
           tmdbId: contentId ? parseInt(contentId) : 0,
           mediaType: (contentType?.toUpperCase() || "MOVIE") as "MOVIE" | "TV",
+          captchaToken,
         }),
       });
       if (!res.ok) {
@@ -1378,6 +1386,7 @@ function ReviewFormInModal({
         throw new Error(e.message || "Failed");
       }
       onSuccess?.();
+      setCaptchaToken("");
       router.refresh();
     } catch (err) {
       toast(
@@ -1387,6 +1396,8 @@ function ReviewFormInModal({
         "Error",
         null,
       );
+      setCaptchaToken("");
+      setCaptchaResetKey((key) => key + 1);
     } finally {
       setSubmitting(false);
     }
@@ -1403,7 +1414,10 @@ function ReviewFormInModal({
           ? "#facc15"
           : "#f87171";
   const isReady =
-    Boolean(mood) && rating !== null && content.trim().length >= 10;
+    Boolean(mood) &&
+    rating !== null &&
+    content.trim().length >= 10 &&
+    Boolean(captchaToken);
   const author = user?.username ?? user?.name ?? "User";
   const selectedMoodIndex = moodImageOptions.findIndex(
     (m) => m.value === mood,
@@ -1678,6 +1692,15 @@ function ReviewFormInModal({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <TurnstileCaptcha
+        action="review_submit"
+        onVerify={setCaptchaToken}
+        onClear={() => setCaptchaToken("")}
+        resetSignal={captchaResetKey}
+        className="mx-auto my-1"
+        presentation="compact"
+      />
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-1 pb-1">

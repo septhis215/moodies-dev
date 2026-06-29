@@ -54,6 +54,7 @@ import { AppService } from './app.service';
         REFRESH_EXPIRES_DAYS: Joi.number().empty('').default(30),
         DIRECT_URL: Joi.string().empty('').optional(),
         TMDB_API_KEY: Joi.string().empty('').optional(),
+        TURNSTILE_SECRET_KEY: Joi.string().empty('').optional(),
         REDIS_HOST: Joi.string().empty('').optional(),
         REDIS_PORT: Joi.number().empty('').optional(),
         REDIS_PASS: Joi.string().allow('').optional(),

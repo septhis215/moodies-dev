@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useMemo, useState } from "react";
 import { handleAppError } from "@/lib/errors";
 import { appToast, TOAST_IDS } from "@/lib/toast";
+import { TurnstileCaptcha } from "@/components/ui/TurnstileCaptcha";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -151,13 +151,18 @@ function AgeSlider({ value, onChange }: AgeSliderProps) {
 
 // ── Main component ────────────────────────────────────────────
 export default function OnboardingPage() {
-  const { signIn, isLoading: authLoading } = useAuth();
-
   const [age, setAge] = useState<number>(18);
   const [genres, setGenres] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mobileStep, setMobileStep] = useState<Step>("age");
+  const [hasPendingSignup, setHasPendingSignup] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+
+  useEffect(() => {
+    setHasPendingSignup(Boolean(sessionStorage.getItem("pendingSignup")));
+  }, []);
 
   const toggle = (list: string[], set: (v: string[]) => void, v: string) =>
     list.includes(v) ? set(list.filter((x) => x !== v)) : set([...list, v]);
@@ -168,11 +173,18 @@ export default function OnboardingPage() {
   );
 
   const handleSubmit = async () => {
-    if (isSubmitting || authLoading) return;
+    if (isSubmitting) return;
     setIsSubmitting(true);
+    const pendingSignup = sessionStorage.getItem("pendingSignup");
     try {
-      const pendingSignup = sessionStorage.getItem("pendingSignup");
       if (pendingSignup) {
+        if (!captchaToken) {
+          appToast.error("Please complete the verification.", {
+            id: "onboarding-turnstile-required",
+            title: "Verification required",
+          });
+          return;
+        }
         const { username, email, password } = JSON.parse(pendingSignup);
         appToast.loading("Creating your account...", {
           id: "onboarding-account-create",
@@ -183,7 +195,7 @@ export default function OnboardingPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ username, email, password }),
+          body: JSON.stringify({ username, email, password, captchaToken }),
         });
         const signupData = await signupRes.json();
         if (!signupRes.ok)
@@ -209,7 +221,7 @@ export default function OnboardingPage() {
           duration: 2500,
         });
         await new Promise((r) => setTimeout(r, 800));
-        await signIn(email, password);
+        window.location.href = "/";
       } else {
         appToast.loading("Saving your preferences...", {
           id: "onboarding-preferences",
@@ -252,6 +264,10 @@ export default function OnboardingPage() {
         toastTitle: "Onboarding",
         toastKey: "onboarding-submit-error",
       });
+      if (pendingSignup) {
+        setCaptchaToken("");
+        setCaptchaResetKey((key) => key + 1);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -265,7 +281,9 @@ export default function OnboardingPage() {
         ? genres.length > 0
         : languages.length > 0;
 
-  const processingLabel = isSubmitting || authLoading;
+  const needsSignupVerification = hasPendingSignup;
+  const canFinish = canSubmit && (!needsSignupVerification || Boolean(captchaToken));
+  const processingLabel = isSubmitting;
 
   return (
     <>
@@ -313,13 +331,27 @@ export default function OnboardingPage() {
       <div className="ob-fadein hidden w-full max-w-[920px] flex-col mx-auto font-['DM_Sans'] md:flex">
         {/* Header */}
         <div className="mb-5 lg:mb-6">
-          <h1 className="font-['Bebas_Neue'] text-[2.2rem] leading-none tracking-[0.03em] text-[rgb(233,79,55)] lg:text-[2.45rem]">
-            Set up your profile
-          </h1>
-          <div className="mt-2.5 mb-2 h-0.5 w-12 rounded-full bg-[rgb(233,79,55)] shadow-[0_0_20px_rgba(233,79,55,0.55)]" />
-          <p className="text-sm leading-5 text-white/52">
-            Personalize your experience. Change it anytime in Settings.
-          </p>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-start gap-x-5 gap-y-3 sm:flex-nowrap">
+            <h1 className="font-['Bebas_Neue'] text-[2.2rem] leading-none tracking-[0.03em] text-[rgb(233,79,55)] lg:text-[2.45rem]">
+              Set up your profile
+            </h1>
+              {needsSignupVerification && (
+                <TurnstileCaptcha
+                  action="signup"
+                  onVerify={setCaptchaToken}
+                  onClear={() => setCaptchaToken("")}
+                  resetSignal={captchaResetKey}
+                  className="shrink-0"
+                  presentation="title"
+                />
+              )}
+            </div>
+            <div className="mt-2.5 mb-2 h-0.5 w-12 rounded-full bg-[rgb(233,79,55)] shadow-[0_0_20px_rgba(233,79,55,0.55)]" />
+            <p className="text-sm leading-5 text-white/52">
+              Personalize your experience. Change it anytime in Settings.
+            </p>
+          </div>
         </div>
 
         {/* 3-column card */}
@@ -419,7 +451,7 @@ export default function OnboardingPage() {
               </span>
             </div>
             <SubmitButton
-              disabled={!canSubmit || isSubmitting || authLoading}
+              disabled={!canFinish || isSubmitting}
               onClick={handleSubmit}
               className="min-w-[180px] text-center"
             >
@@ -583,6 +615,15 @@ export default function OnboardingPage() {
 
         {/* Footer nav */}
         <div className="flex-shrink-0 border-t border-white/10 bg-black/28 px-5 pb-5 pt-3 backdrop-blur">
+          {mobileStep === "languages" && needsSignupVerification && (
+            <TurnstileCaptcha
+              action="signup"
+              onVerify={setCaptchaToken}
+              onClear={() => setCaptchaToken("")}
+              resetSignal={captchaResetKey}
+              className="mb-3"
+            />
+          )}
           <div className="flex gap-2.5">
             {mobileStepIndex > 0 && (
               <button
@@ -610,11 +651,11 @@ export default function OnboardingPage() {
             ) : (
               <button
                 type="button"
-                disabled={!canSubmit || isSubmitting || authLoading}
+                disabled={!canFinish || isSubmitting}
                 onClick={handleSubmit}
                 className={[
                   "h-11 flex-1 rounded-xl font-['Bebas_Neue'] text-[0.95rem] tracking-widest transition-all",
-                  canSubmit && !isSubmitting && !authLoading
+                  canFinish && !isSubmitting
                     ? "bg-[rgb(233,79,55)] text-white shadow-[0_4px_16px_rgba(233,79,55,0.28)] hover:bg-[rgb(215,65,42)] active:scale-[0.98] cursor-pointer"
                     : "bg-white/[0.07] text-white/20 cursor-not-allowed",
                 ].join(" ")}
