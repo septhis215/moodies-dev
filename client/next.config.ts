@@ -14,23 +14,27 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
+    // Serve remote media directly instead of routing through Vercel's
+    // Image Optimization API, which can return 402 when optimization quota
+    // or billing is unavailable.
+    unoptimized: true,
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'image.tmdb.org',
+        protocol: "https",
+        hostname: "image.tmdb.org",
       },
       {
-        protocol: 'https',
-        hostname: 'img.youtube.com'
+        protocol: "https",
+        hostname: "img.youtube.com",
       },
       {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
       },
       {
         // Supabase Storage public URLs for user avatars.
-        protocol: 'https',
-        hostname: '**.supabase.co',
+        protocol: "https",
+        hostname: "**.supabase.co",
       },
     ],
   },
