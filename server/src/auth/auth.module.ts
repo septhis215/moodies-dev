@@ -7,12 +7,10 @@ import { GoogleStrategy } from './strategy/google.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { PassportModule } from '@nestjs/passport';
-import { TurnstileModule } from 'src/common/security/turnstile.module';
 
 @Module({
   imports: [
     ConfigModule,
-    TurnstileModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

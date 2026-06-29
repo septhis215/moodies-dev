@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
 import { normalizeApiError, normalizeResponseError } from "@/lib/errors";
 import { appToast, TOAST_IDS } from "@/lib/toast";
-import { TurnstileCaptcha } from "@/components/ui/TurnstileCaptcha";
 import {
   AuthBrand,
   AuthButton,
@@ -26,22 +25,17 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string>("");
-  const [captchaToken, setCaptchaToken] = useState("");
-  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg("");
-    if (!captchaToken) {
-      setMsg("Please complete the verification.");
-      return;
-    }
     setLoading(true);
     try {
       const res = await fetch(`${API}/auth/request-reset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, captchaToken }),
+        credentials: "include",
+        body: JSON.stringify({ email }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -65,8 +59,6 @@ export default function ForgotPasswordPage() {
         "Could not send reset code. Please try again.",
       );
       setMsg(appError.userMessage);
-      setCaptchaToken("");
-      setCaptchaResetKey((key) => key + 1);
       appToast.error(appError.userMessage, {
         id: TOAST_IDS.passwordResetError,
         title: "Reset password",
@@ -82,19 +74,7 @@ export default function ForgotPasswordPage() {
 
       <AuthFrame>
         <AuthBrand />
-        <AuthHeader
-          title="Reset password"
-          titleSide={
-            <TurnstileCaptcha
-              action="password_reset_request"
-              onVerify={setCaptchaToken}
-              onClear={() => setCaptchaToken("")}
-              resetSignal={captchaResetKey}
-              className="shrink-0"
-              presentation="title"
-            />
-          }
-        >
+        <AuthHeader title="Reset password">
           Enter your email and we&apos;ll send a recovery code.{" "}
           <AuthLink href="/auth/login">Back to login</AuthLink>
         </AuthHeader>

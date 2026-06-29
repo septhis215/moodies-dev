@@ -42,11 +42,6 @@ export class RegisterDto {
       'Password must be at least 8 characters long',
   })
   password: string;
-
-  @IsString()
-  @IsNotEmpty()
-  captchaToken: string;
-
   @IsOptional()
   @IsUrl({}, { message: 'Invalid URL' })
   avatarUrl?: string;

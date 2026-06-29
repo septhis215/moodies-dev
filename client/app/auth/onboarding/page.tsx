@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { handleAppError } from "@/lib/errors";
 import { appToast, TOAST_IDS } from "@/lib/toast";
-import { TurnstileCaptcha } from "@/components/ui/TurnstileCaptcha";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -156,13 +155,6 @@ export default function OnboardingPage() {
   const [languages, setLanguages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mobileStep, setMobileStep] = useState<Step>("age");
-  const [hasPendingSignup, setHasPendingSignup] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState("");
-  const [captchaResetKey, setCaptchaResetKey] = useState(0);
-
-  useEffect(() => {
-    setHasPendingSignup(Boolean(sessionStorage.getItem("pendingSignup")));
-  }, []);
 
   const toggle = (list: string[], set: (v: string[]) => void, v: string) =>
     list.includes(v) ? set(list.filter((x) => x !== v)) : set([...list, v]);
@@ -178,13 +170,6 @@ export default function OnboardingPage() {
     const pendingSignup = sessionStorage.getItem("pendingSignup");
     try {
       if (pendingSignup) {
-        if (!captchaToken) {
-          appToast.error("Please complete the verification.", {
-            id: "onboarding-turnstile-required",
-            title: "Verification required",
-          });
-          return;
-        }
         const { username, email, password } = JSON.parse(pendingSignup);
         appToast.loading("Creating your account...", {
           id: "onboarding-account-create",
@@ -195,7 +180,7 @@ export default function OnboardingPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ username, email, password, captchaToken }),
+          body: JSON.stringify({ username, email, password }),
         });
         const signupData = await signupRes.json();
         if (!signupRes.ok)
@@ -264,10 +249,6 @@ export default function OnboardingPage() {
         toastTitle: "Onboarding",
         toastKey: "onboarding-submit-error",
       });
-      if (pendingSignup) {
-        setCaptchaToken("");
-        setCaptchaResetKey((key) => key + 1);
-      }
     } finally {
       setIsSubmitting(false);
     }
@@ -281,8 +262,7 @@ export default function OnboardingPage() {
         ? genres.length > 0
         : languages.length > 0;
 
-  const needsSignupVerification = hasPendingSignup;
-  const canFinish = canSubmit && (!needsSignupVerification || Boolean(captchaToken));
+  const canFinish = canSubmit;
   const processingLabel = isSubmitting;
 
   return (
@@ -336,16 +316,6 @@ export default function OnboardingPage() {
             <h1 className="font-['Bebas_Neue'] text-[2.2rem] leading-none tracking-[0.03em] text-[rgb(233,79,55)] lg:text-[2.45rem]">
               Set up your profile
             </h1>
-              {needsSignupVerification && (
-                <TurnstileCaptcha
-                  action="signup"
-                  onVerify={setCaptchaToken}
-                  onClear={() => setCaptchaToken("")}
-                  resetSignal={captchaResetKey}
-                  className="shrink-0"
-                  presentation="title"
-                />
-              )}
             </div>
             <div className="mt-2.5 mb-2 h-0.5 w-12 rounded-full bg-[rgb(233,79,55)] shadow-[0_0_20px_rgba(233,79,55,0.55)]" />
             <p className="text-sm leading-5 text-white/52">
@@ -615,15 +585,6 @@ export default function OnboardingPage() {
 
         {/* Footer nav */}
         <div className="flex-shrink-0 border-t border-white/10 bg-black/28 px-5 pb-5 pt-3 backdrop-blur">
-          {mobileStep === "languages" && needsSignupVerification && (
-            <TurnstileCaptcha
-              action="signup"
-              onVerify={setCaptchaToken}
-              onClear={() => setCaptchaToken("")}
-              resetSignal={captchaResetKey}
-              className="mb-3"
-            />
-          )}
           <div className="flex gap-2.5">
             {mobileStepIndex > 0 && (
               <button

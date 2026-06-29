@@ -20,7 +20,6 @@ import {
   requestReviewSnapshot,
 } from "@/lib/snapshot/snapshot-api";
 import { renderSnapshotToDataUrl } from "@/lib/snapshot/render-snapshot";
-import { TurnstileCaptcha } from "@/components/ui/TurnstileCaptcha";
 import type { SnapshotPayload, SnapshotSource } from "@/lib/snapshot/snapshot-types";
 
 type SnapshotShareModalProps = {
@@ -39,24 +38,11 @@ export function SnapshotShareModal({
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [captchaToken, setCaptchaToken] = useState("");
-  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    if (!open) return;
-    setLoading(false);
-    setPayload(null);
-    setDataUrl(null);
-    setError(null);
-    setCaptchaToken("");
-    setCaptchaResetKey((key) => key + 1);
-  }, [open, source]);
-
-  useEffect(() => {
     if (!open || !source) return;
-    if (!captchaToken) return;
 
     let cancelled = false;
     setLoading(true);
@@ -69,9 +55,8 @@ export function SnapshotShareModal({
         ? requestContentSnapshot({
             mediaType: source.mediaType,
             tmdbId: source.tmdbId,
-            captchaToken,
           })
-        : requestReviewSnapshot(source.reviewId, captchaToken);
+        : requestReviewSnapshot(source.reviewId);
 
     request
       .then(async (nextPayload) => {
@@ -83,8 +68,6 @@ export function SnapshotShareModal({
       .catch((err: unknown) => {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Snapshot failed.");
-        setCaptchaToken("");
-        setCaptchaResetKey((key) => key + 1);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -93,7 +76,7 @@ export function SnapshotShareModal({
     return () => {
       cancelled = true;
     };
-  }, [captchaToken, open, source]);
+  }, [open, source]);
 
   useEffect(() => {
     if (!open) return;
@@ -227,17 +210,6 @@ export function SnapshotShareModal({
           </div>
 
           <aside className="min-h-0 overflow-y-auto border-t border-white/10 bg-[#111114]/95 p-4 lg:border-l lg:border-t-0 sm:p-5">
-            {!dataUrl && (
-              <div className="mb-4">
-                <TurnstileCaptcha
-                  action="snapshot_generate"
-                  onVerify={setCaptchaToken}
-                  onClear={() => setCaptchaToken("")}
-                  resetSignal={captchaResetKey}
-                />
-              </div>
-            )}
-
             {payload?.review?.isPrivate && (
               <div className="mb-3 rounded-md border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100/80">
                 This snapshot may include content from a private review. Sharing it will make the image visible to others.
