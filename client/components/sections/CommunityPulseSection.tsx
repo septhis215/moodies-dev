@@ -497,7 +497,7 @@ export function CommunityPulseSection({
             message={error}
           />
         ) : hasItems ? (
-          <div className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 scroll-smooth xl:mx-0 xl:grid xl:grid-cols-3 xl:gap-3 xl:overflow-visible xl:px-0 xl:pb-0">
+          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth xl:grid xl:grid-cols-3 xl:overflow-visible xl:pb-0">
             {lanes.map((lane) => (
               <div
                 key={lane.metric}

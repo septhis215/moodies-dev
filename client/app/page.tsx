@@ -51,7 +51,7 @@ export default async function LandingPage() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-black [scroll-padding-top:var(--mobile-nav-safe)]">
       <HeroCarousel all={all} />
-      <section className="mx-auto -mt-6 max-w-7xl px-4 pb-2 sm:hidden">
+      <section className="mx-auto -mt-6 max-w-7xl px-4 pb-2 pt-9 sm:hidden">
         <div className="relative z-30 overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 p-3 shadow-2xl shadow-black/60">
           <div className="mb-3 flex items-center gap-2 px-1">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#e94f37]/15 text-[#ff6b58]">

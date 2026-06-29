@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiked } from "@/hooks/useLiked";
 import { useRouter } from "next/navigation";
-import { Bookmark, BookmarkCheck, Heart, BookmarkIcon, MessageSquare, Share2 } from "lucide-react";
+import { Bookmark, BookmarkCheck, Heart, BookmarkIcon, MessageSquare, Play, Share2, SquarePen } from "lucide-react";
 import { useMediaStats } from "@/hooks/useMediaStats";
 import { fmtCount } from "@/utils/mediaStatsClient";
 import { SnapshotShareModal } from "@/components/snapshot/SnapshotShareModal";
@@ -866,17 +866,35 @@ export function HeroContentCard({
       }
       .hero-actions {
         width: 100%;
-        display: grid !important;
-        grid-template-columns: 1fr 1fr;
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        justify-content: center !important;
         gap: 0.6rem !important;
       }
       .hero-actions > button,
       .hero-actions > a,
       .hero-actions > a > button {
-        width: 100% !important;
+        width: 2.75rem !important;
+        height: 2.75rem !important;
+        min-width: 2.75rem !important;
         min-height: 2.75rem !important;
         justify-content: center !important;
-        padding-inline: 0.75rem !important;
+        padding: 0 !important;
+      }
+      .hero-actions > a {
+        display: inline-flex !important;
+        width: auto !important;
+      }
+      .hero-action-label {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
+        border: 0 !important;
       }
     }
   `;
@@ -1176,23 +1194,19 @@ export function HeroContentCard({
               <button
                 onClick={() => trailerKey && setIsTrailerOpen(true)}
                 disabled={!trailerKey}
+                aria-label="Watch trailer"
+                title="Watch trailer"
                 style={{ ...s.btnPrimary, opacity: trailerKey ? 1 : 0.4 }}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M5 3v18l15-9L5 3z" />
-                </svg>
-                Watch Trailer
+                <Play size={14} fill="currentColor" />
+                <span className="hero-action-label">Watch Trailer</span>
               </button>
 
               <button
                 onClick={handleWatchlistToggle}
                 disabled={isTogglingWatchlist}
+                aria-label={inWatchlist ? "Saved" : "My list"}
+                title={inWatchlist ? "Saved" : "My list"}
                 style={{
                   ...s.btnSecondary,
                   ...(inWatchlist
@@ -1221,33 +1235,27 @@ export function HeroContentCard({
                 ) : (
                   <Bookmark size={14} />
                 )}
-                {inWatchlist ? "Saved" : "My List"}
+                <span className="hero-action-label">
+                  {inWatchlist ? "Saved" : "My List"}
+                </span>
               </button>
 
               <Link href={viewAllRef}>
-                <button style={s.btnAccent}>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
-                    />
-                  </svg>
-                  Write a Review
+                <button
+                  aria-label="Write a review"
+                  title="Write a review"
+                  style={s.btnAccent}
+                >
+                  <SquarePen size={14} />
+                  <span className="hero-action-label">Write a Review</span>
                 </button>
               </Link>
 
               <button
                 onClick={handleLikeToggle}
                 disabled={isTogglingLiked}
+                aria-label={inLiked ? "Liked" : "Like"}
+                title={inLiked ? "Liked" : "Like"}
                 style={{
                   ...s.btnSecondary,
                   ...(inLiked ? { color: "#f472b6", borderColor: "#f472b6" } : {}),
@@ -1264,16 +1272,20 @@ export function HeroContentCard({
                 >
                   <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                 </svg>
-                {inLiked ? "Liked" : "Like"}
+                <span className="hero-action-label">
+                  {inLiked ? "Liked" : "Like"}
+                </span>
               </button>
 
               {contentId && (
                 <button
                   onClick={() => setIsSnapshotOpen(true)}
+                  aria-label="Share snapshot"
+                  title="Share snapshot"
                   style={s.btnSecondary}
                 >
                   <Share2 size={14} />
-                  Share Snapshot
+                  <span className="hero-action-label">Share Snapshot</span>
                 </button>
               )}
             </div>

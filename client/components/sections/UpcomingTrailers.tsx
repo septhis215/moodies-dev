@@ -280,7 +280,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
         )}
 
         <div
-          className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [overscroll-behavior-x:contain] [scrollbar-width:none] sm:-mx-6 sm:gap-4 sm:px-6 lg:hidden [&::-webkit-scrollbar]:hidden"
+          className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 [overscroll-behavior-x:contain] [scrollbar-width:none] sm:gap-4 lg:hidden [&::-webkit-scrollbar]:hidden"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
           {trailerItems.map((item, index) => (

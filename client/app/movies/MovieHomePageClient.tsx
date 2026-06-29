@@ -633,7 +633,11 @@ export default function MoviesHomePageClient({
               </Link>
             </div>
 
-            <Carousel items={trendingMovies} CardComponent={MovieCard} />
+            <Carousel
+              items={trendingMovies}
+              CardComponent={MovieCard}
+              mobileBleed={false}
+            />
           </section>
         )}
 
@@ -672,7 +676,11 @@ export default function MoviesHomePageClient({
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
-            <Carousel items={koreanMovies} CardComponent={MovieCard} />
+            <Carousel
+              items={koreanMovies}
+              CardComponent={MovieCard}
+              mobileBleed={false}
+            />
           </section>
         )}
 
@@ -719,7 +727,7 @@ export default function MoviesHomePageClient({
               </div>
             </div>
 
-            <div className="relative -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
+            <div className="relative flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
               {movieReviews.slice(0, 6).map((review, idx) => {
                 const criticName =
                   review.user?.name || review.name || "Moodies critic";
@@ -970,7 +978,11 @@ export default function MoviesHomePageClient({
                   <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
-              <Carousel items={awardWinners} CardComponent={MovieCard} />
+              <Carousel
+                items={awardWinners}
+                CardComponent={MovieCard}
+                mobileBleed={false}
+              />
             </div>
           </section>
         )}

@@ -375,7 +375,7 @@ export function ComingSoonSection({
                               Most anticipated this month
                             </h4>
                           </div>
-                          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-6">
+                          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
                             {topPicks.map((item) => {
                               const releaseDate = new Date(
                                 getReleaseDate(item) ?? "",
@@ -448,7 +448,7 @@ export function ComingSoonSection({
                                 <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
                               </div>
 
-                              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-5">
+                              <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth sm:grid sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:pb-0 md:grid-cols-4 lg:grid-cols-5">
                                 {visibleWeekItems.map((item) => {
                                   const releaseDate = new Date(
                                     getReleaseDate(item) ?? "",

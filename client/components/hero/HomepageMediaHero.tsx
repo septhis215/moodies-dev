@@ -151,7 +151,7 @@ export function HomepageMediaHero({
             </p>
 
             <div className="relative h-[230px] min-h-0 overflow-hidden rounded-xl bg-black/40 ring-1 ring-white/10 sm:h-[330px] md:h-auto md:min-h-[340px] md:flex-1 lg:min-h-[360px]">
-              <div className="flex h-full snap-x snap-mandatory gap-2.5 overflow-x-auto px-3 py-3 scroll-smooth sm:hidden">
+              <div className="flex h-full snap-x snap-mandatory gap-2.5 overflow-x-auto py-3 scroll-smooth sm:hidden">
                 {heroItems.slice(0, 8).map((item, index) => {
                   const isActive = featured.id === item.id;
                   return (
@@ -159,7 +159,7 @@ export function HomepageMediaHero({
                       key={`${item.id}-${index}`}
                       type="button"
                       onClick={() => setActiveIndex(index)}
-                      className={`relative h-full w-[38vw] min-w-[132px] max-w-[154px] shrink-0 snap-start overflow-hidden rounded-xl border transition ${
+                      className={`relative h-full w-[38vw] min-w-[132px] max-w-[154px] shrink-0 snap-start overflow-hidden rounded-xl border transition first:ml-3 last:mr-3 ${
                         isActive
                           ? "border-[#e94f37] shadow-xl shadow-[#e94f37]/20"
                           : "border-white/10"

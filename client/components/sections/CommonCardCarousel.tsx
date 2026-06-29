@@ -185,7 +185,7 @@ export default function CommonCardCarousel({
           <p className="text-gray-400 text-sm font-medium">{subtitle}</p>
         )}
       </div>
-      <Carousel items={items} CardComponent={MovieCard} />
+      <Carousel items={items} CardComponent={MovieCard} mobileBleed={false} />
     </section>
   );
 }
