@@ -104,7 +104,7 @@ export class AuthService {
     if (token) await this.redis.del([this.refreshKey(token), this.legacyRefreshKey(token)]);
   }
 
-  async signup(dto: RegisterDto) {
+  async signup(dto: Omit<RegisterDto, 'captchaToken'>) {
     // 1️check for existing email
     const existing = await this.prismaService.user.findUnique({
       where: { email: dto.email.toLowerCase() },
@@ -145,7 +145,7 @@ export class AuthService {
     };
   }
 
-  async signin(dto: LoginDto) {
+  async signin(dto: Omit<LoginDto, 'captchaToken'>) {
     // Normalise to match how signup stores emails (lowercased), otherwise a
     // mixed-case login silently fails to find an existing account.
     const user = await this.prismaService.user.findUnique({

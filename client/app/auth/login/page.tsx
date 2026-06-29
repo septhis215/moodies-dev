@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { LockKeyhole, Mail } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { TurnstileCaptcha } from "@/components/ui/TurnstileCaptcha";
 import {
   AuthBrand,
   AuthButton,
@@ -28,17 +29,25 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { signIn, isLoading: authLoading } = useAuth();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr("");
+    if (!captchaToken) {
+      setErr("Please complete the verification.");
+      return;
+    }
 
-    const result = await signIn(email, password);
+    const result = await signIn(email, password, captchaToken);
 
     if (!result.success) {
       setErr(result.error || "Login failed");
+      setCaptchaToken("");
+      setCaptchaResetKey((key) => key + 1);
     }
   };
 
@@ -58,7 +67,19 @@ export default function LoginPage() {
 
       <AuthFrame>
         <AuthBrand />
-        <AuthHeader title="Welcome back">
+        <AuthHeader
+          title="Welcome back"
+          titleSide={
+            <TurnstileCaptcha
+              action="login"
+              onVerify={setCaptchaToken}
+              onClear={() => setCaptchaToken("")}
+              resetSignal={captchaResetKey}
+              className="shrink-0"
+              presentation="title"
+            />
+          }
+        >
           New here? <AuthLink href="/auth/signup">Create an account</AuthLink>
         </AuthHeader>
 

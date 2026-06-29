@@ -18,6 +18,7 @@ import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
 import { useToast } from "@/app/context/ToastContext";
 import { useRouter } from "next/navigation";
 import { SnapshotShareModal } from "@/components/snapshot/SnapshotShareModal";
+import { TurnstileCaptcha } from "@/components/ui/TurnstileCaptcha";
 import type { SnapshotSource } from "@/lib/snapshot/snapshot-types";
 
 type Review = {
@@ -761,6 +762,8 @@ function ReviewForm({
   const [submitState, setSubmitState] = useState<
     "idle" | "submitting" | "success"
   >("idle");
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
   const completionTimerRef = useRef<number | null>(null);
   const { toast } = useToast();
@@ -799,6 +802,10 @@ function ReviewForm({
       setError("Write at least 10 characters so the community has some context.");
       return;
     }
+    if (!captchaToken) {
+      setError("Please complete the verification.");
+      return;
+    }
     setSubmitState("submitting");
     try {
       const res = await fetch(`${API}/reviews`, {
@@ -813,12 +820,14 @@ function ReviewForm({
           moodEmojis: [selectedMoodForSubmit.imagePath],
           tmdbId: parseInt(contentId),
           mediaType: (contentType?.toUpperCase() || "MOVIE") as "MOVIE" | "TV",
+          captchaToken,
         }),
       });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || "Failed");
       }
+      setCaptchaToken("");
       setSubmitState("success");
       completionTimerRef.current = window.setTimeout(() => {
         router.refresh();
@@ -829,6 +838,8 @@ function ReviewForm({
         err instanceof Error ? err.message : "Failed to submit review.";
       setError(message);
       setSubmitState("idle");
+      setCaptchaToken("");
+      setCaptchaResetKey((key) => key + 1);
       toast(
         message,
         "error",
@@ -850,7 +861,10 @@ function ReviewForm({
   const moodOptions = REVIEW_MOODS;
   const submitting = submitState === "submitting";
   const isReady =
-    Boolean(mood) && rating !== null && content.trim().length >= 10;
+    Boolean(mood) &&
+    rating !== null &&
+    content.trim().length >= 10 &&
+    Boolean(captchaToken);
   const author = user?.username ?? user?.name ?? "User";
   const selectedMoodIndex = moodOptions.findIndex((m) => m.value === mood);
   const selectedMoodData =
@@ -1159,6 +1173,15 @@ function ReviewForm({
       </AnimatePresence>
 
       {/* ── Footer: notice + submit ── */}
+      <TurnstileCaptcha
+        action="review_submit"
+        onVerify={setCaptchaToken}
+        onClear={() => setCaptchaToken("")}
+        resetSignal={captchaResetKey}
+        className="mx-auto my-1"
+        presentation="compact"
+      />
+
       <div className="flex items-center justify-between pt-1 pb-1">
         <p className="text-[10px] text-white/20">May be featured publicly.</p>
         <button

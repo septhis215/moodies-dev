@@ -18,16 +18,26 @@ import { ReviewQueryDto } from './dto/review-query.dto';
 import { SetReactionDto } from './dto/set-reaction.dto';
 import { ReviewBanGuard } from './guard/review-ban.guard';
 import { ReviewService } from './review.service';
+import { TurnstileService } from 'src/common/security/turnstile.service';
+import type { Request as ExpressRequest } from 'express';
 
 @Controller('reviews')
 export class ReviewController {
-  constructor(private readonly reviewsService: ReviewService) {}
+  constructor(
+    private readonly reviewsService: ReviewService,
+    private readonly turnstile: TurnstileService,
+  ) {}
 
   @Post()
   @UseGuards(JwtGuard)
   @UseGuards(ReviewBanGuard)
-  createReview(@Req() req, @Body() dto: CreateReviewDto) {
-    return this.reviewsService.createReview(req.user.id, dto);
+  async createReview(
+    @Req() req: ExpressRequest & { user: { id: string } },
+    @Body() dto: CreateReviewDto,
+  ) {
+    await this.turnstile.verifyToken(dto.captchaToken, this.clientIp(req));
+    const { captchaToken, ...reviewDto } = dto;
+    return this.reviewsService.createReview(req.user.id, reviewDto);
   }
 
   @Post(':id/replies')
@@ -75,11 +85,12 @@ export class ReviewController {
 
   @Post(':id/snapshot')
   @UseGuards(JwtGuard)
-  createReviewSnapshot(
-    @Req() req,
+  async createReviewSnapshot(
+    @Req() req: ExpressRequest & { user: { id: string } },
     @Param('id') reviewId: string,
     @Body() dto: CreateSnapshotDto,
   ) {
+    await this.turnstile.verifyToken(dto.captchaToken, this.clientIp(req));
     return this.reviewsService.createReviewSnapshot(
       req.user.id,
       reviewId,
@@ -163,5 +174,12 @@ export class ReviewController {
   @UseGuards(JwtGuard)
   getBanStatus(@Req() req) {
     return this.reviewsService.getReviewBanStatus(req.user);
+  }
+
+  private clientIp(req: ExpressRequest): string | undefined {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (typeof forwardedFor === 'string') return forwardedFor.split(',')[0]?.trim();
+    if (Array.isArray(forwardedFor)) return forwardedFor[0]?.split(',')[0]?.trim();
+    return req.ip;
   }
 }
