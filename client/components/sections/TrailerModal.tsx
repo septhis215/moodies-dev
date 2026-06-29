@@ -1,7 +1,8 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { useState, useEffect } from "react";
 import {
   Calendar,
@@ -71,7 +72,7 @@ export default function TrailerModal({
   };
   const contentType = getContentType(trailer);
   const posterUrl = trailer.poster_path
-    ? `https://image.tmdb.org/t/p/w500${trailer.poster_path}`
+    ? tmdbImage(trailer.poster_path, "w500")
     : "/placeholder-poster.svg";
   const youtubeUrl = trailer.trailer_key
     ? `https://www.youtube.com/watch?v=${trailer.trailer_key}`
@@ -332,7 +333,7 @@ export default function TrailerModal({
                       {/* Poster */}
                       <div className="aspect-[2/3] relative overflow-hidden">
                         <Image
-                          src={rec.poster_path ? `https://image.tmdb.org/t/p/w300${rec.poster_path}` : "/placeholder-poster.svg"}
+                          src={rec.poster_path ? tmdbImage(rec.poster_path, "w300") : "/placeholder-poster.svg"}
                           alt={rec.title}
                           fill
                           sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 180px"

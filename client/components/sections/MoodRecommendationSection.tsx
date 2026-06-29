@@ -1,7 +1,8 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import {
   Bookmark,
@@ -155,7 +156,7 @@ function getMoodImageSrc(mood: Mood) {
 
 function getPosterUrl(path?: string | null) {
   return path
-    ? `https://image.tmdb.org/t/p/w500${path}`
+    ? tmdbImage(path, "w500")
     : "/placeholder-poster.svg";
 }
 

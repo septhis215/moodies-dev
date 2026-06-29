@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
+import { tmdbImage } from "@/lib/tmdb";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { ArrowLeft, Users2, Search } from "lucide-react";
 import CustomSelect from "@/components/ui/custom-select";
@@ -103,7 +104,7 @@ export default function AllCredits({
     if (!path) return null;
     if (path.startsWith("/http") || path.startsWith("/https"))
       return path.slice(1);
-    return `https://image.tmdb.org/t/p/w185${path}`;
+    return tmdbImage(path, "w185");
   }
 
   function contentType(type: string) {

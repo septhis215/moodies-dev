@@ -1,7 +1,8 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { useAuth } from "@/app/context/AuthProvider";
@@ -100,7 +101,7 @@ async function mapWithConcurrency<T, R>(
 /* formatting */
 const yearOf = (d?: string) => (d && d.length >= 4 ? d.slice(0, 4) : "—");
 const imgUrl = (path?: string | null, size = "w500") =>
-  path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
+  path ? tmdbImage(path, size) : null;
 
 /* -------------------- Responsive page size -------------------- */
 
@@ -324,7 +325,7 @@ export default function WatchlistPage() {
       : "Item";
 
     const posterUrl = item?.poster_path
-      ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+      ? tmdbImage(item.poster_path, "w500")
       : "/placeholder-poster.svg";
 
     // optimistic update

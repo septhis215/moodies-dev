@@ -1,7 +1,8 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { useAuth } from "@/app/context/AuthProvider";
 import { RatingBadge } from "@/components/ui/rating-badge";
@@ -98,7 +99,7 @@ async function mapWithConcurrency<T, R>(
 
 const yearOf = (d?: string) => (d && d.length >= 4 ? d.slice(0, 4) : "—");
 const imgUrl = (path?: string | null, size = "w500") =>
-  path ? `https://image.tmdb.org/t/p/${size}${path}` : null;
+  path ? tmdbImage(path, size) : null;
 
 /* -------------------- Responsive page size -------------------- */
 
@@ -321,7 +322,7 @@ export default function LikedPage() {
       : "Item";
 
     const posterUrl = item?.poster_path
-      ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+      ? tmdbImage(item.poster_path, "w500")
       : "/placeholder-poster.svg";
 
     const prev = { data, movieItems, tvItems } as const;

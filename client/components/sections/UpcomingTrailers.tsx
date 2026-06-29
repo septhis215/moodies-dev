@@ -1,8 +1,9 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import React, { useEffect, useState } from "react";
 import type { All } from "@/types/all";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import {
   ChevronLeft,
   ChevronRight,
@@ -293,7 +294,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                 <Image
                   src={
                     item.backdrop_path
-                      ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
+                      ? tmdbImage(item.backdrop_path, "original")
                       : "/placeholder-backdrop.svg"
                   }
                   alt={item.title}
@@ -390,7 +391,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                       <Image
                         src={
                           item.backdrop_path
-                            ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
+                            ? tmdbImage(item.backdrop_path, "original")
                             : "/placeholder-backdrop.svg"
                         }
                         alt={item.title}

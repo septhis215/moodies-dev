@@ -1,10 +1,9 @@
 "use client";
 
-"use client";
-
+import { tmdbImage } from "@/lib/tmdb";
 import React, { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Star, Search, PenSquare, Share2, X } from "lucide-react";
@@ -552,7 +551,7 @@ export default function AllReviews({
           <Image
             src={
               info.backdrop_path
-                ? `https://image.tmdb.org/t/p/w1280${info.backdrop_path}`
+                ? tmdbImage(info.backdrop_path, "w1280")
                 : "/placeholder-backdrop.svg"
             }
             alt={info.title}
@@ -582,7 +581,7 @@ export default function AllReviews({
               <Image
                 src={
                   info.poster_path
-                    ? `https://image.tmdb.org/t/p/w500${info.poster_path}`
+                    ? tmdbImage(info.poster_path, "w500")
                     : "/placeholder-poster.svg"
                 }
                 alt={info.title}
@@ -1761,7 +1760,7 @@ function AvatarBlock({
     if (av.startsWith("data:")) return av;
     if (av.startsWith("https://") || av.startsWith("http://")) return av;
     if (av.startsWith("/https") || av.startsWith("/http")) return av.slice(1);
-    return `https://image.tmdb.org/t/p/w185${av}`;
+    return tmdbImage(av, "w185");
   })();
   const initials = (review.author || "A")
     .split(" ")
@@ -1819,7 +1818,7 @@ function ReplyAvatarBlock({
     if (av.startsWith("data:")) return av;
     if (av.startsWith("https://") || av.startsWith("http://")) return av;
     if (av.startsWith("/https") || av.startsWith("/http")) return av.slice(1);
-    return `https://image.tmdb.org/t/p/w185${av}`;
+    return tmdbImage(av, "w185");
   })();
   const initial = (reply.user.username || "A").charAt(0).toUpperCase();
   const avatar = (

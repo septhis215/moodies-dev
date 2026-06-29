@@ -1,9 +1,10 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import {
   CheckCircle2,
   PenSquare,
@@ -1189,7 +1190,7 @@ function AvatarBlock({
     if (av.startsWith("data:")) return av;
     if (av.startsWith("https://") || av.startsWith("http://")) return av;
     if (av.startsWith("/https") || av.startsWith("/http")) return av.slice(1);
-    return `https://image.tmdb.org/t/p/w185${av}`;
+    return tmdbImage(av, "w185");
   })();
   const initials = (review.author || "A")
     .split(" ")

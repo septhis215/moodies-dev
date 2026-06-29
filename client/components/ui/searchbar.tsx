@@ -1,11 +1,12 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { IconSearch, IconX, IconClock, IconArrowRight, IconTrendingUp } from "@tabler/icons-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { Film, Tv, User } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -571,7 +572,7 @@ export default function SearchBarWithSuggestions({
 
                       <div className="relative w-12 h-16 rounded-md overflow-hidden flex-shrink-0 bg-gray-800">
                         <Image
-                          src={imagePath ? `https://image.tmdb.org/t/p/w154${imagePath}` : (s.type === 'person' ? '/placeholder-person.svg' : '/placeholder-poster.svg')}
+                          src={imagePath ? tmdbImage(imagePath, "w154") : (s.type === 'person' ? '/placeholder-person.svg' : '/placeholder-poster.svg')}
                           alt={displayTitle}
                           fill
             sizes="48px"
@@ -853,7 +854,7 @@ export default function SearchBarWithSuggestions({
                         className="flex items-center gap-3 p-2 hover:bg-white/10 rounded cursor-pointer text-white"
                       >
                         <Image
-                          src={suggestion.poster_path ? `https://image.tmdb.org/t/p/w92${suggestion.poster_path}` : '/placeholder-poster.svg'}
+                          src={suggestion.poster_path ? tmdbImage(suggestion.poster_path, "w92") : '/placeholder-poster.svg'}
                           alt=""
                           width={32}
                           height={40}

@@ -1,6 +1,7 @@
 "use client";
 
-import Image from "next/image";
+import { tmdbImage } from "@/lib/tmdb";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
@@ -81,7 +82,7 @@ const METRIC_THEME: Record<PulseMetric, MetricTheme> = {
 };
 
 const getPosterUrl = (path?: string | null) =>
-  path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
+  path ? tmdbImage(path, "w500") : "/placeholder-poster.svg";
 
 const getItemHref = (mediaType: MediaType, id: number) =>
   mediaType === "tv" ? `/tv/${id}` : `/movies/${id}`;

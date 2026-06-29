@@ -1,7 +1,8 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import React, { useMemo, useState } from "react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { Building2, ChevronDown, ChevronUp } from "lucide-react";
 import { motion } from "framer-motion";
@@ -141,7 +142,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
               <Image
                 src={
                   actor.profile_path
-                    ? `https://image.tmdb.org/t/p/w185${actor.profile_path}`
+                    ? tmdbImage(actor.profile_path, "w185")
                     : "/placeholder-person.svg"
                 }
                 alt={actor.name}
@@ -276,7 +277,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
                           <Image
                             src={
                               person.profile_path
-                                ? `https://image.tmdb.org/t/p/w45${person.profile_path}`
+                                ? tmdbImage(person.profile_path, "w45")
                                 : "/placeholder-person.svg"
                             }
                             alt={person.name}
@@ -327,7 +328,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
                     {company.logo_path ? (
                       <div className="relative w-full h-full opacity-40 group-hover:opacity-85 transition-opacity duration-300">
                         <Image
-                          src={`https://image.tmdb.org/t/p/w300${company.logo_path}`}
+                          src={tmdbImage(company.logo_path, "w300")}
                           alt={company.name}
                           fill
                           sizes="180px"
@@ -427,7 +428,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
                     {provider.logo_path ? (
                       <div className="relative w-5 h-5 rounded overflow-hidden flex-shrink-0">
                         <Image
-                          src={`https://image.tmdb.org/t/p/w92${provider.logo_path}`}
+                          src={tmdbImage(provider.logo_path, "w92")}
                           alt={provider.provider_name}
                           fill
                           style={{ objectFit: "cover" }}

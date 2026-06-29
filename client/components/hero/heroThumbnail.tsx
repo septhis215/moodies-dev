@@ -1,7 +1,7 @@
 // src/components/Hero/HeroThumbnail.tsx
 'use client';
 import React from 'react';
-import Image from 'next/image';
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import type { All } from '@/types/all';
 import { tmdbImage } from '@/lib/tmdb';
 
