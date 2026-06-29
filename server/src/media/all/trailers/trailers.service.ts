@@ -208,30 +208,34 @@ export class TrailersService {
 
     async getTrailersForItems(items: { type: 'movie' | 'tv', id: number }[]): Promise<Record<string, string | null>> {
         const tasks = items.map(item => async (): Promise<[string, string | null]> => {
-            // Trailer keys are stable and shared across all users, so cache per item.
-            // getOrSet also coalesces concurrent requests and negatively caches misses.
-            const key = await this.redisService.getOrSet<string | null>(
-                `trailer:${item.type}:${item.id}`,
-                CACHE_TTL.TRAILERS,
-                async () => {
-                    try {
-                        const videosData = await this.client.tmdb(
-                            `${this.client.baseUrl}/${item.type}/${item.id}/videos?language=en-US`
-                        );
-                        const trailer = (videosData?.results ?? []).find(
-                            (v: any) => v.type === 'Trailer' && v.site === 'YouTube'
-                        );
-                        return trailer?.key ?? null;
-                    } catch {
-                        return null;
-                    }
-                },
-            );
+            const key = await this.getRandomTrailerKeyForItem(item);
             return [`${item.type}-${item.id}`, key];
         });
 
         const results = await this.client.withConcurrencyLimit(tasks);
         return Object.fromEntries(results);
+    }
+
+    private async getRandomTrailerKeyForItem(item: { type: 'movie' | 'tv'; id: number }): Promise<string | null> {
+        try {
+            const videosData = await this.client.tmdb(
+                `${this.client.baseUrl}/${item.type}/${item.id}/videos?language=en-US`
+            );
+
+            const candidates = (videosData?.results ?? [])
+                .filter(
+                    (video: any) =>
+                        video?.site === 'YouTube' &&
+                        ['Trailer', 'Teaser', 'Clip'].includes(video?.type),
+                );
+
+            if (!candidates.length) return null;
+
+            const shuffled = shuffleArray([...candidates]);
+            return shuffled[0]?.key ?? null;
+        } catch {
+            return null;
+        }
     }
 
     async getMovieVideos(id: number) {

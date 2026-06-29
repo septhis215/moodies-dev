@@ -52,7 +52,7 @@ async function fetchAuthFeatured(): Promise<Slide[]> {
           Boolean((x as FeaturedItem).poster_path) &&
           Boolean((x as FeaturedItem).backdrop_path),
       )
-      .slice(0, 5)
+      .slice(0, 12)
       .map((x) => ({
         id: typeof x?.id === "number" ? x.id : undefined,
         title: x?.title || x?.name || "Featured",
