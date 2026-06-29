@@ -14,10 +14,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    // Serve remote media directly instead of routing through Vercel's
-    // Image Optimization API, which can return 402 when optimization quota
-    // or billing is unavailable.
-    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",

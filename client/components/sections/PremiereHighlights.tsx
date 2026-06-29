@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import Image from "next/image";
+import { tmdbImage } from "@/lib/tmdb";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Play, Star, Tv, Film } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -248,7 +249,7 @@ export default function PremiereHighlights({
                 <Image
                   src={
                     item.backdrop_path
-                      ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
+                      ? tmdbImage(item.backdrop_path, "original")
                       : "/placeholder-backdrop.svg"
                   }
                   alt={item.title}
@@ -339,7 +340,7 @@ export default function PremiereHighlights({
                   <Image
                     src={
                       item.backdrop_path
-                        ? `https://image.tmdb.org/t/p/original${item.backdrop_path}`
+                        ? tmdbImage(item.backdrop_path, "original")
                         : "/placeholder-backdrop.svg"
                     }
                     alt={item.title}

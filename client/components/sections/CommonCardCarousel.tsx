@@ -1,8 +1,9 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import React from "react";
 import type { All } from "@/types/all";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { Carousel } from "@/components/ui/Carousel";
 import { Plus, Info } from "lucide-react";
@@ -32,7 +33,7 @@ export default function CommonCardCarousel({
   >({});
 
   const getPosterUrl = (path?: string) =>
-    path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
+    path ? tmdbImage(path, "w500") : "/placeholder-poster.svg";
 
   const toWatchType = (): "movie" | "series" =>
     type === "tv" ? "series" : "movie";

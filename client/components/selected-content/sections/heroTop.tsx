@@ -1,7 +1,8 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiked } from "@/hooks/useLiked";
@@ -382,10 +383,10 @@ export function HeroContentCard({
       title: data.info.title || "Untitled",
       year: extractYear(data.info.release_date),
       poster: data.info.poster_path
-        ? `https://image.tmdb.org/t/p/w500${data.info.poster_path}`
+        ? tmdbImage(data.info.poster_path, "w500")
         : "/placeholder-poster.svg",
       backdrop: data.info.backdrop_path
-        ? `https://image.tmdb.org/t/p/original${data.info.backdrop_path}`
+        ? tmdbImage(data.info.backdrop_path, "original")
         : "/placeholder-backdrop.svg",
       genres: data.info.genres.map((g) => g.name),
       runtime: formatRuntime(data.info.runtime || 0),

@@ -1,7 +1,8 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -30,7 +31,7 @@ const footballLabels = [
 ];
 
 function posterUrl(path?: string | null) {
-  return path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
+  return path ? tmdbImage(path, "w500") : "/placeholder-poster.svg";
 }
 
 function getMediaType(item: FootballStory) {

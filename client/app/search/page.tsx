@@ -2,8 +2,9 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
+import { tmdbImage } from "@/lib/tmdb";
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Star,
@@ -699,18 +700,18 @@ export default function SearchResultsPage() {
   const getPosterUrl = (item: SearchResult) => {
     if (item.type === "person") {
       return item.profile_path
-        ? `https://image.tmdb.org/t/p/w500${item.profile_path}`
+        ? tmdbImage(item.profile_path, "w500")
         : "/placeholder-person.svg";
     }
 
     return item.poster_path
-      ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+      ? tmdbImage(item.poster_path, "w500")
       : "/placeholder-poster.svg";
   };
 
   const getBackdropUrl = (item: SearchResult) => {
     return item.backdrop_path
-      ? `https://image.tmdb.org/t/p/w780${item.backdrop_path}`
+      ? tmdbImage(item.backdrop_path, "w780")
       : "/placeholder-backdrop.svg";
   };
 

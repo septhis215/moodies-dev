@@ -1,3 +1,4 @@
+import { tmdbImage } from "@/lib/tmdb";
 // app/auth/layout.tsx
 import React from "react";
 import AuthBackground from "./AuthBackground";
@@ -56,10 +57,10 @@ async function fetchAuthFeatured(): Promise<Slide[]> {
         id: typeof x?.id === "number" ? x.id : undefined,
         title: x?.title || x?.name || "Featured",
         poster: x?.poster_path
-          ? `https://image.tmdb.org/t/p/w500${x.poster_path}`
+          ? tmdbImage(x.poster_path, "w500")
           : "/images/ironmanposter.jpeg",
         backdrop: x?.backdrop_path
-          ? `https://image.tmdb.org/t/p/original${x.backdrop_path}`
+          ? tmdbImage(x.backdrop_path, "original")
           : "/images/ironmanbg.jpg",
         rating:
           typeof x?.vote_average === "number"

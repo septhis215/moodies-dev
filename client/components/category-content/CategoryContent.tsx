@@ -1,5 +1,6 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import { useState, useMemo, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -74,10 +75,10 @@ export function CategoryContent({
   }, [data]);
 
   const getImageUrl = (path?: string) =>
-    path ? `https://image.tmdb.org/t/p/original${path}` : "/placeholder-backdrop.svg";
+    path ? tmdbImage(path, "original") : "/placeholder-backdrop.svg";
 
   const getPosterUrl = (path?: string) =>
-    path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
+    path ? tmdbImage(path, "w500") : "/placeholder-poster.svg";
 
   const getTitle = (item: MediaItem) => item.title || item.name || "Untitled";
 

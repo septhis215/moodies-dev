@@ -1,5 +1,6 @@
 "use client";
 import { cn } from "@/lib/utils";
+import { tmdbImage } from "@/lib/tmdb";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,7 +19,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ActionButtons from "@/components/ui/actionButtons";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiked } from "@/hooks/useLiked";
 import { useAuth } from "@/app/context/AuthProvider";
@@ -208,7 +209,7 @@ export default function VideoFeedPage() {
     const meta = {
       title: currentVideo.title || currentVideo.name,
       posterUrl: currentVideo.poster_path
-        ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}`
+        ? tmdbImage(currentVideo.poster_path, "w200")
         : null,
       duration: 3000,
     };
@@ -236,7 +237,7 @@ export default function VideoFeedPage() {
         await removeFromWatchlist(String(currentVideo.id), watchType, {
           title: currentVideo.title || currentVideo.name,
           posterUrl: currentVideo.poster_path
-            ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}`
+            ? tmdbImage(currentVideo.poster_path, "w200")
             : null,
           variant: "info",
           duration: 3500,
@@ -245,7 +246,7 @@ export default function VideoFeedPage() {
         await addToWatchlist(String(currentVideo.id), watchType, {
           title: currentVideo.title || currentVideo.name,
           posterUrl: currentVideo.poster_path
-            ? `https://image.tmdb.org/t/p/w200${currentVideo.poster_path}`
+            ? tmdbImage(currentVideo.poster_path, "w200")
             : null,
           variant: "success",
           duration: 3500,
@@ -909,10 +910,10 @@ export default function VideoFeedPage() {
 
   const videoTitle = currentVideo?.title || currentVideo?.name || "";
   const currentPoster = currentVideo?.poster_path
-    ? `https://image.tmdb.org/t/p/w342${currentVideo.poster_path}`
+    ? tmdbImage(currentVideo.poster_path, "w342")
     : null;
   const currentBackdrop = currentVideo?.backdrop_path
-    ? `https://image.tmdb.org/t/p/w1280${currentVideo.backdrop_path}`
+    ? tmdbImage(currentVideo.backdrop_path, "w1280")
     : currentPoster;
   const currentYear =
     currentVideo?.release_date || currentVideo?.first_air_date

@@ -1,8 +1,9 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { useParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -138,11 +139,11 @@ function avatarSrc(avatarUrl?: string | null) {
     return avatarUrl;
   }
   if (avatarUrl.startsWith("/http")) return avatarUrl.slice(1);
-  return `https://image.tmdb.org/t/p/w185${avatarUrl}`;
+  return tmdbImage(avatarUrl, "w185");
 }
 
 function posterSrc(path?: string | null) {
-  return path ? `https://image.tmdb.org/t/p/w342${path}` : null;
+  return path ? tmdbImage(path, "w342") : null;
 }
 
 function isPublicImagePath(value: string) {

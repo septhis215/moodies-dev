@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
@@ -14,6 +14,7 @@ import {
   Star,
   Tv,
 } from "lucide-react";
+import { tmdbImage } from "@/lib/tmdb";
 
 type MoodFromApi = {
   id: string;
@@ -74,7 +75,6 @@ type MoodCluster = {
 };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-const TMDB_POSTER = "https://image.tmdb.org/t/p/w154";
 
 const moodClusters: MoodCluster[] = [
   {
@@ -998,7 +998,7 @@ export default function MoodDiscoveryWheel() {
                         <Image
                           src={
                             rec.posterPath
-                              ? `${TMDB_POSTER}${rec.posterPath}`
+                              ? tmdbImage(rec.posterPath, "w154")
                               : "/placeholder-poster.svg"
                           }
                           alt={rec.title}

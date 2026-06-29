@@ -1,11 +1,12 @@
 "use client";
 
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import questionsData from "@/data/questions.json";
 import { RatingBadge } from "@/components/ui/rating-badge";
+import { tmdbImage } from "@/lib/tmdb";
 
 interface QuizOption {
   text: string;
@@ -65,8 +66,6 @@ type PersonalityInsight = {
 const QUESTION_POOL = questionsData.questions as Question[];
 const MASCOT_SRC = "/images/moodies-mascot.png";
 const LOGO_SRC = "/images/moodies-transparent.png";
-const TMDB_POSTER = "https://image.tmdb.org/t/p/w500";
-const TMDB_BACKDROP = "https://image.tmdb.org/t/p/w780";
 
 const GENRE_NAMES: Record<number, string> = {
   28: "Action",
@@ -163,12 +162,12 @@ function getTitle(item: MovieItem) {
 
 function getPosterSrc(item: MovieItem) {
   return item.poster_path
-    ? `${TMDB_POSTER}${item.poster_path}`
+    ? tmdbImage(item.poster_path, "w500")
     : "/placeholder-poster.svg";
 }
 
 function getBackdropSrc(item?: MovieItem | null) {
-  return item?.backdrop_path ? `${TMDB_BACKDROP}${item.backdrop_path}` : null;
+  return item?.backdrop_path ? tmdbImage(item.backdrop_path, "w780") : null;
 }
 
 function getDetailUrl(item?: MovieItem | null) {
