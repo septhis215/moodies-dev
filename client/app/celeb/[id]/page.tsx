@@ -110,24 +110,6 @@ interface SimilarPerson {
   popularity?: number;
 }
 
-interface Timeline {
-  debut?: { title: string; year: number; character?: string; rating?: number };
-  breakout?: {
-    title: string;
-    year: number;
-    character?: string;
-    rating?: number;
-  };
-  recent?: { title: string; year: number; character?: string; rating?: number };
-  decades?: Array<{
-    period: string;
-    count: number;
-    avgRating?: string;
-    topWork?: Credit;
-  }>;
-  totalYears?: number;
-}
-
 interface Collaboration {
   id: number;
   name: string;
@@ -162,7 +144,6 @@ interface RelatedVideo {
 
 type FilmographyTab = "all" | "movies" | "tv";
 type SortMode = "notable" | "latest" | "rating" | "oldest";
-type CareerMoment = { label: string; value: string; detail: string };
 type VideoFilter = "all" | "trailer" | "clip" | "interview" | "behind" | "show";
 
 const API_BASE =
@@ -177,6 +158,38 @@ const videoFilters: Array<{ value: VideoFilter; label: string }> = [
   { value: "interview", label: "Interviews" },
   { value: "behind", label: "Behind" },
   { value: "show", label: "Shows" },
+];
+
+const sortOptions: Array<{
+  value: SortMode;
+  label: string;
+  description: string;
+  icon: ElementType;
+}> = [
+  {
+    value: "notable",
+    label: "Most notable",
+    description: "Popularity and rating balance",
+    icon: Sparkles,
+  },
+  {
+    value: "latest",
+    label: "Latest first",
+    description: "Newest releases at the top",
+    icon: Calendar,
+  },
+  {
+    value: "rating",
+    label: "Highest rated",
+    description: "Best audience scores first",
+    icon: Star,
+  },
+  {
+    value: "oldest",
+    label: "Oldest first",
+    description: "Browse from the debut era",
+    icon: Clapperboard,
+  },
 ];
 
 const genreMap: Record<number, string> = {
@@ -321,58 +334,13 @@ function ProfilePill({
   value: string | number;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+    <div className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2">
       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
         {label}
       </p>
       <p className="mt-1 line-clamp-1 text-sm font-black text-white">
         {value}
       </p>
-    </div>
-  );
-}
-
-function CareerSignalCard({
-  label,
-  value,
-  detail,
-  icon: Icon,
-}: {
-  label: string;
-  value: string | number;
-  detail?: string;
-  icon: ElementType;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 shadow-lg shadow-black/15">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
-          {label}
-        </span>
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-black/35 text-[#ff8b78] ring-1 ring-white/10">
-          <Icon className="h-4 w-4" />
-        </span>
-      </div>
-      <p className="line-clamp-1 text-xl font-black text-white">{value}</p>
-      {detail && (
-        <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">
-          {detail}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function CareerMomentCard({ item }: { item: CareerMoment }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
-      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#ff8b78]">
-        {item.label}
-      </p>
-      <p className="mt-1 line-clamp-2 text-sm font-bold leading-snug text-white">
-        {item.value}
-      </p>
-      <p className="mt-1 text-xs text-zinc-500">{item.detail}</p>
     </div>
   );
 }
@@ -478,7 +446,7 @@ function WorkCard({
               fill
               sizes={
                 compact
-                  ? "(max-width: 640px) 36vw, (max-width: 768px) 42vw, 170px"
+                  ? "(max-width: 640px) 30vw, (max-width: 768px) 34vw, 138px"
                   : "(max-width: 640px) 44vw, (max-width: 768px) 50vw, 220px"
               }
               className="object-cover transition duration-500 group-hover:scale-105"
@@ -525,10 +493,10 @@ function WorkCard({
           </div>
         </div>
         <div className="mt-2 sm:mt-3">
-          <h3 className="line-clamp-2 text-[12px] font-bold leading-snug text-white transition group-hover:text-zinc-200 sm:text-sm">
+          <h3 className="line-clamp-2 text-[11px] font-bold leading-snug text-white transition group-hover:text-zinc-200 sm:text-[13px]">
             {getTitle(credit)}
           </h3>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-zinc-500 sm:text-xs">
+          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10px] text-zinc-500 sm:text-[11px]">
             <span>{year || "TBA"}</span>
             {credit.character && (
               <>
@@ -543,7 +511,7 @@ function WorkCard({
   );
 }
 
-function FilmographyLedgerCard({
+function FilmographyGridCard({
   credit,
   onWatchlistToggle,
   inWatchlist,
@@ -557,89 +525,80 @@ function FilmographyLedgerCard({
   const year = getYear(credit);
 
   return (
-    <article className="group grid grid-cols-[72px_minmax(0,1fr)] gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-2.5 transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06] sm:grid-cols-[86px_minmax(0,1fr)_auto] sm:p-3">
-      <Link
-        href={getHref(credit)}
-        className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-900"
-        aria-label={`Open ${getTitle(credit)}`}
-      >
-        <Image
-          src={getPosterUrl(credit.poster_path, "w342")}
-          alt={getTitle(credit)}
-          fill
-          sizes="(max-width: 640px) 72px, 86px"
-          className="object-cover transition duration-500 group-hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-      </Link>
-
-      <div className="min-w-0 py-0.5">
-        <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-zinc-300">
-            {credit.media_type === "tv" ? "TV" : "Movie"}
-          </span>
-          {year && (
-            <span className="rounded-full border border-white/10 px-2 py-0.5 text-[9px] font-bold text-zinc-500">
-              {year}
-            </span>
-          )}
-        </div>
-
+    <article className="group h-full overflow-hidden rounded-[1.1rem] border border-white/10 bg-zinc-950/70 p-2 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)] transition duration-200 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.06] sm:rounded-2xl sm:p-2.5">
+      <div className="relative">
         <Link
           href={getHref(credit)}
-          className="line-clamp-2 text-sm font-black leading-tight text-white transition group-hover:text-[#ff9b8a] sm:text-base"
+          className="relative block aspect-[2/3] overflow-hidden bg-zinc-950"
         >
-          {getTitle(credit)}
+          <Image
+            src={getPosterUrl(credit.poster_path, "w342")}
+            alt={getTitle(credit)}
+            fill
+            sizes="(max-width: 640px) 44vw, (max-width: 1024px) 22vw, 170px"
+            className="object-cover transition duration-500 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
         </Link>
-
-        {credit.character && (
-          <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">
-            as {credit.character}
-          </p>
-        )}
-
-        <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div className="absolute left-2 top-2 flex max-w-[calc(100%-5.5rem)] flex-wrap items-start gap-1.5">
+          <span className="rounded-full bg-black/70 px-2 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-white backdrop-blur">
+            {credit.media_type === "tv" ? "TV" : "Movie"}
+          </span>
+        </div>
+        <div className="absolute bottom-2 left-2">
+          <span className="rounded-full bg-white/90 px-2 py-1 text-[8px] font-black text-black">
+            {year || "TBA"}
+          </span>
+        </div>
+        <div className="absolute right-2 top-2">
           <RatingBadge
             rating={credit.vote_average}
             variant="colored"
             size="sm"
+            className="backdrop-blur"
           />
-          {credit.popularity ? (
-            <span className="rounded-full bg-black/25 px-2 py-1 text-[10px] font-bold text-zinc-500">
-              Pop {Math.round(credit.popularity)}
-            </span>
-          ) : null}
         </div>
-      </div>
-
-      <div className="col-span-2 flex items-center justify-between gap-2 border-t border-white/10 pt-2 sm:col-span-1 sm:flex-col sm:items-end sm:justify-center sm:border-t-0 sm:pt-0">
-        <Link
-          href={getHref(credit)}
-          className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-xs font-bold text-zinc-300 transition hover:bg-white hover:text-black"
-        >
-          Details
-          <ChevronRight className="h-3.5 w-3.5" />
-        </Link>
         <button
           type="button"
           onClick={() => onWatchlistToggle(credit)}
           disabled={isLoading}
-          className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-bold transition ${
+          className={`absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full border border-black/10 shadow-lg transition hover:scale-105 sm:h-9 sm:w-9 ${
             inWatchlist
               ? "bg-emerald-500 text-white"
-              : "bg-[#e94f37] text-black hover:bg-[#ff6b58]"
+              : "bg-white text-black"
           } ${isLoading ? "cursor-not-allowed opacity-70" : ""}`}
+          aria-label={
+            inWatchlist ? "Remove from watchlist" : "Add to watchlist"
+          }
+          title={inWatchlist ? "Remove from watchlist" : "Save to watchlist"}
         >
           {isLoading ? (
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
           ) : inWatchlist ? (
-            <BookmarkCheck className="h-3.5 w-3.5" />
+            <BookmarkCheck className="h-4 w-4" />
           ) : (
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-4 w-4" />
           )}
-          {inWatchlist ? "Saved" : "Save"}
         </button>
       </div>
+
+      <Link
+        href={getHref(credit)}
+        className="mt-2 block px-1.5 pb-1.5 sm:px-2 sm:pb-2"
+      >
+        <div className="space-y-1">
+          <p className="line-clamp-2 text-[12px] font-black leading-snug text-white transition group-hover:text-[#ffb0a3] sm:text-[13px]">
+            {getTitle(credit)}
+          </p>
+          {credit.character ? (
+            <p className="line-clamp-1 text-[10px] font-medium text-zinc-400 sm:text-[11px]">
+              as {credit.character}
+            </p>
+          ) : (
+            <p className="text-[10px] text-zinc-600 sm:text-[11px]">Tap to open</p>
+          )}
+        </div>
+      </Link>
     </article>
   );
 }
@@ -717,78 +676,30 @@ function VideoPlayButton({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function VideoSpotlightCard({
-  video,
-  onPlay,
-}: {
-  video: RelatedVideo;
-  onPlay: (video: RelatedVideo) => void;
-}) {
-  const role = getVideoRoleLabel(video);
-
+function VideoSectionSkeleton() {
   return (
-    <button
-      type="button"
-      onClick={() => onPlay(video)}
-      className="group relative min-h-[320px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 text-left shadow-2xl shadow-black/30 transition hover:border-white/25 sm:min-h-[390px]"
-    >
-      <Image
-        src={
-          video.thumbnail_url || getImageUrl(video.media_backdrop_path, "w780")
-        }
-        alt={video.video_title}
-        fill
-        sizes="(max-width: 768px) 100vw, 58vw"
-        className="object-cover transition duration-700 group-hover:scale-105"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/10" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(233,79,55,0.22),transparent_36%)]" />
-
-      <div className="absolute left-4 right-4 top-4 flex items-start justify-between gap-3 sm:left-5 sm:right-5 sm:top-5">
-        <div className="flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-[#e94f37] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-black">
-            {getVideoContextLabel(video)}
-          </span>
-          <span className="rounded-full border border-white/10 bg-black/55 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white backdrop-blur">
-            {video.media_type === "tv" ? "TV" : "Movie"}
-          </span>
-          {video.official && (
-            <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white backdrop-blur">
-              Official
-            </span>
-          )}
+    <div className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 mobile-native-scroll sm:mx-0 sm:px-0">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div
+          key={index}
+          className="w-[72vw] min-w-[228px] max-w-[270px] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] sm:w-[236px] sm:min-w-[236px] md:w-[252px] md:min-w-[252px]"
+        >
+          <div className="aspect-video animate-pulse bg-zinc-900" />
+          <div className="space-y-2 p-3">
+            <div className="flex gap-1.5">
+              <div className="h-5 w-16 animate-pulse rounded-full bg-zinc-800" />
+              <div className="h-5 w-12 animate-pulse rounded-full bg-zinc-800" />
+            </div>
+            <div className="h-4 w-full animate-pulse rounded bg-zinc-800" />
+            <div className="h-3 w-3/5 animate-pulse rounded bg-zinc-800" />
+          </div>
         </div>
-        <VideoPlayButton />
-      </div>
-
-      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-        <p className="mb-2 text-[11px] font-black uppercase tracking-[0.14em] text-[#ff9b8a]">
-          Spotlight video
-        </p>
-        <h3 className="line-clamp-2 max-w-2xl text-xl font-black leading-tight text-white sm:text-3xl">
-          {video.video_title}
-        </h3>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-zinc-300 sm:text-sm">
-          <span className="line-clamp-1 max-w-[220px] text-white sm:max-w-md">
-            {video.media_title}
-          </span>
-          <span className="h-1 w-1 rounded-full bg-zinc-600" />
-          <span>{video.release_year || "TBA"}</span>
-          <span className="h-1 w-1 rounded-full bg-zinc-600" />
-          <span>{getVideoTypeLabel(video)}</span>
-          {role && (
-            <>
-              <span className="h-1 w-1 rounded-full bg-zinc-600" />
-              <span className="line-clamp-1">{role}</span>
-            </>
-          )}
-        </div>
-      </div>
-    </button>
+      ))}
+    </div>
   );
 }
 
-function VideoShelfCard({
+function VideoCarouselCard({
   video,
   onPlay,
 }: {
@@ -801,9 +712,9 @@ function VideoShelfCard({
     <button
       type="button"
       onClick={() => onPlay(video)}
-      className="group grid min-h-full grid-cols-[118px_minmax(0,1fr)] overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] text-left shadow-lg shadow-black/20 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.07] sm:grid-cols-1"
+      className="group flex h-full w-[72vw] min-w-[228px] max-w-[270px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] text-left shadow-xl shadow-black/20 transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.07] sm:w-[236px] sm:min-w-[236px] md:w-[252px] md:min-w-[252px]"
     >
-      <div className="relative min-h-[92px] overflow-hidden bg-zinc-950 sm:aspect-video">
+      <div className="relative aspect-video overflow-hidden bg-zinc-950">
         <Image
           src={
             video.thumbnail_url ||
@@ -811,76 +722,50 @@ function VideoShelfCard({
           }
           alt={video.video_title}
           fill
-          sizes="(max-width: 640px) 118px, (max-width: 768px) 260px, 320px"
+          sizes="(max-width: 640px) 76vw, 260px"
           className="object-cover transition duration-500 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
+        <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1.5">
+          <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-black">
+            {getVideoContextLabel(video)}
+          </span>
+          <span className="rounded-full bg-black/65 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white backdrop-blur">
+            {video.media_type === "tv" ? "TV" : "Movie"}
+          </span>
+        </div>
+        {video.official && (
+          <span className="absolute right-2 top-2 rounded-full bg-[#e94f37]/90 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-black">
+            Official
+          </span>
+        )}
         <div className="absolute inset-0 flex items-center justify-center">
           <VideoPlayButton compact />
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col justify-between gap-2 p-3">
+      <div className="flex min-h-[104px] flex-1 flex-col justify-between p-3">
         <div>
-          <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.12em]">
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-zinc-200">
-              {getVideoContextLabel(video)}
-            </span>
-            <span className="rounded-full border border-white/10 px-2 py-0.5 text-zinc-400">
-              {video.media_type === "tv" ? "TV" : "Movie"}
-            </span>
-          </div>
-          <h3 className="line-clamp-2 text-xs font-bold leading-snug text-white group-hover:text-zinc-200 sm:text-[13px]">
+          <h3 className="line-clamp-2 text-sm font-black leading-snug text-white transition group-hover:text-[#ffb0a3]">
             {video.video_title}
           </h3>
-          <p className="mt-1 line-clamp-1 text-[11px] font-semibold text-zinc-400">
+          <p className="mt-1 line-clamp-1 text-xs font-semibold text-zinc-400">
             {video.media_title}
           </p>
         </div>
-
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <div className="min-w-0 text-[11px] font-medium text-zinc-500">
-            <span>{video.release_year || "TBA"}</span>
-            {video.role && (
-              <>
-                <span className="mx-1.5 text-zinc-700">|</span>
-                <span className="line-clamp-1 inline">{role}</span>
-              </>
-            )}
-          </div>
-          {video.official && (
-            <span className="shrink-0 rounded-full bg-[#e94f37]/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#ff9b8a]">
-              Official
-            </span>
+        <div className="mt-3 flex min-w-0 items-center gap-2 text-[11px] font-semibold text-zinc-500">
+          <span>{video.release_year || "TBA"}</span>
+          <span className="h-1 w-1 rounded-full bg-zinc-700" />
+          <span>{getVideoTypeLabel(video)}</span>
+          {role && (
+            <>
+              <span className="h-1 w-1 rounded-full bg-zinc-700" />
+              <span className="line-clamp-1 min-w-0">{role}</span>
+            </>
           )}
         </div>
       </div>
     </button>
-  );
-}
-
-function VideoSectionSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/70 p-3 sm:p-4">
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_0.85fr]">
-        <div className="min-h-[300px] animate-pulse rounded-2xl bg-zinc-900 sm:min-h-[380px]" />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div
-              key={index}
-              className="grid grid-cols-[118px_minmax(0,1fr)] overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] sm:grid-cols-1"
-            >
-              <div className="min-h-[92px] animate-pulse bg-zinc-900 sm:aspect-video" />
-              <div className="space-y-2 p-3">
-                <div className="h-3 w-24 animate-pulse rounded bg-zinc-800" />
-                <div className="h-4 w-full animate-pulse rounded bg-zinc-800" />
-                <div className="h-3 w-3/5 animate-pulse rounded bg-zinc-800" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -1028,18 +913,29 @@ export default function CelebrityDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<FilmographyTab>("all");
   const [sortMode, setSortMode] = useState<SortMode>("notable");
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [videoFilter, setVideoFilter] = useState<VideoFilter>("all");
   const [bioExpanded, setBioExpanded] = useState(false);
   const [showAllCredits, setShowAllCredits] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<RelatedVideo | null>(null);
   const [galleryPage, setGalleryPage] = useState(0);
-  const [similarStartIndex, setSimilarStartIndex] = useState(0);
   const [shouldLoadVideos, setShouldLoadVideos] = useState(false);
   const relatedVideosSectionRef = useRef<HTMLElement | null>(null);
+  const videoCarouselRef = useRef<HTMLDivElement | null>(null);
+  const similarCarouselRef = useRef<HTMLDivElement | null>(null);
+  const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const [loadingStates, setLoadingStates] = useState<
     Record<string | number, boolean>
   >({});
+  const [videoCarouselState, setVideoCarouselState] = useState({
+    canScrollPrev: false,
+    canScrollNext: false,
+  });
+  const [similarCarouselState, setSimilarCarouselState] = useState({
+    canScrollPrev: false,
+    canScrollNext: false,
+  });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1161,6 +1057,20 @@ export default function CelebrityDetailPage({
   }, [resolvedParams.id]);
 
   useEffect(() => {
+    const closeSortMenu = (event: PointerEvent) => {
+      if (
+        sortMenuRef.current &&
+        !sortMenuRef.current.contains(event.target as Node)
+      ) {
+        setSortMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeSortMenu);
+    return () => document.removeEventListener("pointerdown", closeSortMenu);
+  }, []);
+
+  useEffect(() => {
     if (!person) return;
 
     const section = relatedVideosSectionRef.current;
@@ -1252,31 +1162,6 @@ export default function CelebrityDetailPage({
       )[0],
     [releasedCredits],
   );
-  const timeline = useMemo<Timeline | null>(() => {
-    const datedCredits = releasedCredits.filter((credit) => getYear(credit));
-    if (datedCredits.length === 0) return null;
-
-    const debut = [...datedCredits].sort(
-      (a, b) => (getYear(a) || 9999) - (getYear(b) || 9999),
-    )[0];
-    const breakout = [...datedCredits].sort((a, b) => {
-      const ratingDelta = (b.vote_average || 0) - (a.vote_average || 0);
-      if (Math.abs(ratingDelta) > 0.4) return ratingDelta;
-      return (b.popularity || 0) - (a.popularity || 0);
-    })[0];
-
-    return {
-      debut: { title: getTitle(debut), year: getYear(debut) || 0 },
-      breakout: {
-        title: getTitle(breakout),
-        year: getYear(breakout) || 0,
-      },
-      recent: latestWork
-        ? { title: getTitle(latestWork), year: getYear(latestWork) || 0 }
-        : undefined,
-    };
-  }, [latestWork, releasedCredits]);
-
   const filteredCredits = useMemo(() => {
     const byTab =
       selectedTab === "movies"
@@ -1303,10 +1188,58 @@ export default function CelebrityDetailPage({
       return getVideoFilterGroup(video) === videoFilter;
     });
   }, [relatedVideos, videoFilter]);
-  const featuredVideo = filteredVideos[0] || null;
-  const supportingVideos = filteredVideos
-    .filter((video) => video.id !== featuredVideo?.id)
-    .slice(0, 8);
+
+  useEffect(() => {
+    const carousel = videoCarouselRef.current;
+    if (!carousel) return;
+
+    const updateVideoCarouselState = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = carousel;
+      const atStart = scrollLeft <= 1;
+      const atEnd = Math.ceil(scrollLeft + clientWidth) >= scrollWidth - 1;
+      setVideoCarouselState({
+        canScrollPrev: !atStart,
+        canScrollNext: !atEnd,
+      });
+    };
+
+    updateVideoCarouselState();
+    carousel.addEventListener("scroll", updateVideoCarouselState, {
+      passive: true,
+    });
+    window.addEventListener("resize", updateVideoCarouselState);
+
+    return () => {
+      carousel.removeEventListener("scroll", updateVideoCarouselState);
+      window.removeEventListener("resize", updateVideoCarouselState);
+    };
+  }, [relatedVideos.length, videoFilter, videosLoading, shouldLoadVideos]);
+
+  useEffect(() => {
+    const carousel = similarCarouselRef.current;
+    if (!carousel) return;
+
+    const updateSimilarCarouselState = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = carousel;
+      const atStart = scrollLeft <= 1;
+      const atEnd = Math.ceil(scrollLeft + clientWidth) >= scrollWidth - 1;
+      setSimilarCarouselState({
+        canScrollPrev: !atStart,
+        canScrollNext: !atEnd,
+      });
+    };
+
+    updateSimilarCarouselState();
+    carousel.addEventListener("scroll", updateSimilarCarouselState, {
+      passive: true,
+    });
+    window.addEventListener("resize", updateSimilarCarouselState);
+
+    return () => {
+      carousel.removeEventListener("scroll", updateSimilarCarouselState);
+      window.removeEventListener("resize", updateSimilarCarouselState);
+    };
+  }, [similarPeople.length, similarLoading]);
 
   if (loading) return <AppLoading />;
 
@@ -1379,83 +1312,35 @@ export default function CelebrityDetailPage({
     galleryPage * 8,
     galleryPage * 8 + 8,
   );
-  const similarCarouselItems = similarPeople.slice(
-    similarStartIndex,
-    similarStartIndex + 6,
-  );
-  const canScrollSimilarLeft = similarStartIndex > 0;
-  const canScrollSimilarRight =
-    similarStartIndex + 6 < Math.min(similarPeople.length, 12);
-  const careerMoments: CareerMoment[] = [
-    timeline?.debut && {
-      label: "Debut",
-      value: timeline.debut.title,
-      detail: String(timeline.debut.year),
-    },
-    timeline?.breakout && {
-      label: "Breakout",
-      value: timeline.breakout.title,
-      detail: String(timeline.breakout.year),
-    },
-    timeline?.recent && {
-      label: "Recent",
-      value: timeline.recent.title,
-      detail: String(timeline.recent.year),
-    },
-  ].filter((item): item is CareerMoment => Boolean(item));
-  const creditYears = releasedCredits
-    .map((credit) => getYear(credit))
-    .filter((year): year is number => Boolean(year));
-  const firstCreditYear =
-    creditYears.length > 0 ? Math.min(...creditYears) : null;
-  const latestCreditYear =
-    creditYears.length > 0 ? Math.max(...creditYears) : null;
-  const activeYears =
-    firstCreditYear && latestCreditYear
-      ? firstCreditYear === latestCreditYear
-        ? String(firstCreditYear)
-        : `${firstCreditYear}-${latestCreditYear}`
-      : "Building";
-  const careerDuration =
-    firstCreditYear && latestCreditYear
-      ? `${Math.max(1, latestCreditYear - firstCreditYear + 1)} year span`
-      : "Timeline pending";
   const biographyLead =
     person.biography?.split(/(?<=[.!?])\s+/).find((sentence) => sentence) ||
     (knownForSummary.length > 0
       ? `${person.name} is known for ${knownForSummary.join(", ")}.`
       : `${person.name}'s Moodies profile gathers career highlights, collaborators, genres, and credits in one place.`);
-  const careerSignals = [
-    {
-      label: "Projects",
-      value: credits.length,
-      detail: `${movieCredits.length} movies | ${tvCredits.length} TV`,
-      icon: Briefcase,
-    },
-    {
-      label: "Active years",
-      value: activeYears,
-      detail: careerDuration,
-      icon: Calendar,
-    },
-    {
-      label: "Top rated",
-      value: topRatedWorks[0] ? getTitle(topRatedWorks[0]) : "Pending",
-      detail: topRatedWorks[0]
-        ? `${topRatedWorks[0].vote_average?.toFixed(1) || "Rated"} | ${getYear(topRatedWorks[0]) || "TBA"}`
-        : "More ratings needed",
-      icon: Star,
-    },
-    {
-      label: "Primary lane",
-      value: person.known_for_department || "Entertainment",
-      detail: topGenres[0]
-        ? `${topGenres[0][0]} leads the genre mix`
-        : "Genre mix unavailable",
-      icon: Sparkles,
-    },
-  ];
   const topFilmographyCredits = visibleCredits;
+  const selectedSortOption =
+    sortOptions.find((option) => option.value === sortMode) ?? sortOptions[0];
+  const SelectedSortIcon = selectedSortOption.icon;
+  const heroFeature = latestWork || notableWorks[0] || topRatedWorks[0];
+
+  const scrollVideoCarousel = (direction: "prev" | "next") => {
+    const carousel = videoCarouselRef.current;
+    if (!carousel) return;
+    const distance = Math.min(carousel.clientWidth * 0.86, 720);
+    carousel.scrollBy({
+      left: direction === "next" ? distance : -distance,
+      behavior: "smooth",
+    });
+  };
+  const scrollSimilarCarousel = (direction: "prev" | "next") => {
+    const carousel = similarCarouselRef.current;
+    if (!carousel) return;
+    const distance = Math.min(carousel.clientWidth * 0.86, 720);
+    carousel.scrollBy({
+      left: direction === "next" ? distance : -distance,
+      behavior: "smooth",
+    });
+  };
 
   const toggleWatchlist = async (credit: Credit) => {
     if (!ready) {
@@ -1500,8 +1385,8 @@ export default function CelebrityDetailPage({
           <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-black/90" />
         </div>
 
-        <main className="relative mx-auto max-w-7xl px-4 pb-12 pt-[calc(var(--mobile-nav-safe)+1rem)] sm:px-6 sm:pb-20 sm:pt-24 lg:pt-28">
-          <header className="grid grid-cols-[104px_minmax(0,1fr)] gap-x-4 gap-y-5 rounded-[1.35rem] border border-white/10 bg-black/50 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl sm:grid-cols-[150px_minmax(0,1fr)] sm:rounded-[2rem] sm:p-5 lg:grid-cols-[190px_minmax(0,1fr)_300px] xl:grid-cols-[210px_minmax(0,1fr)_320px]">
+        <main className="relative mx-auto max-w-7xl px-4 pb-10 pt-8 sm:px-6 sm:pb-16 sm:pt-12 lg:pt-18">
+          <header className="grid grid-cols-[88px_minmax(0,1fr)] gap-3 rounded-[1.25rem] border border-white/10 bg-black/55 p-3 shadow-2xl shadow-black/40 backdrop-blur-xl sm:grid-cols-[128px_minmax(0,1fr)] sm:gap-4 sm:rounded-2xl sm:p-4 lg:grid-cols-[148px_minmax(0,1fr)_270px]">
             <motion.div
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1513,30 +1398,30 @@ export default function CelebrityDetailPage({
                     getProfileUrl(person.profile_path, "original"),
                   )
                 }
-                className="group relative block aspect-[3/4] w-full overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 shadow-xl shadow-black/40"
+                className="group relative block aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-zinc-900 shadow-xl shadow-black/40 sm:rounded-2xl"
               >
                 <Image
                   src={getProfileUrl(person.profile_path)}
                   alt={person.name}
                   fill
                   priority
-                  sizes="(max-width: 640px) 104px, (max-width: 1024px) 150px, 210px"
+                  sizes="(max-width: 640px) 88px, (max-width: 1024px) 128px, 148px"
                   className="object-cover transition duration-700 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                <div className="absolute bottom-2 left-2 hidden rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur min-[430px]:block sm:bottom-3 sm:left-3 sm:text-[11px]">
-                  View portrait
+                <div className="absolute bottom-1.5 left-1.5 hidden rounded-full bg-black/70 px-2 py-0.5 text-[9px] font-bold text-white backdrop-blur min-[430px]:block">
+                  Portrait
                 </div>
               </button>
 
-              <div className="mt-3 hidden grid-cols-3 gap-2 self-start lg:grid">
+              <div className="mt-2 hidden grid-cols-3 gap-1.5 self-start lg:grid">
                 {profiles.slice(1, 4).map((image, index) => (
                   <button
                     key={`${image.file_path}-${index}`}
                     onClick={() =>
                       setSelectedImage(getImageUrl(image.file_path))
                     }
-                    className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-zinc-900 transition hover:border-white/30"
+                    className="relative aspect-square overflow-hidden rounded-lg border border-white/10 bg-zinc-900 transition hover:border-white/30"
                   >
                     <Image
                       src={getProfileUrl(image.file_path, "w185")}
@@ -1548,7 +1433,7 @@ export default function CelebrityDetailPage({
                   </button>
                 ))}
                 {profiles.length <= 1 && (
-                  <div className="col-span-2 rounded-xl border border-dashed border-zinc-800 bg-zinc-950/70 p-3 text-xs text-zinc-500 lg:col-span-3">
+                  <div className="col-span-3 rounded-lg border border-dashed border-zinc-800 bg-zinc-950/70 p-2 text-[11px] text-zinc-500">
                     More portraits will appear when available.
                   </div>
                 )}
@@ -1561,18 +1446,18 @@ export default function CelebrityDetailPage({
               transition={{ delay: 0.05 }}
               className="min-w-0 text-left"
             >
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white sm:px-3 sm:text-xs">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white sm:px-2.5 sm:py-1 sm:text-[10px]">
                   {person.known_for_department || "Celebrity"}
                 </span>
                 {topGenres[0] && (
-                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 sm:px-3 sm:text-xs">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-zinc-300 sm:px-2.5 sm:py-1 sm:text-[10px]">
                     {topGenres[0][0]} identity
                   </span>
                 )}
               </div>
 
-              <h1 className="mt-2 text-2xl font-black leading-[1.05] tracking-tight text-white sm:mt-3 sm:text-4xl lg:text-5xl">
+              <h1 className="mt-1.5 text-2xl font-black leading-[1.04] tracking-tight text-white sm:text-4xl lg:text-[2.65rem]">
                 {person.name}
               </h1>
               {person.also_known_as?.[0] && (
@@ -1581,14 +1466,14 @@ export default function CelebrityDetailPage({
                 </p>
               )}
 
-              <p className="mt-3 line-clamp-3 max-w-3xl text-[13px] leading-6 text-zinc-300 sm:mt-4 sm:text-base sm:leading-7">
+              <p className="mt-2 line-clamp-3 max-w-3xl text-[12px] leading-5 text-zinc-300 sm:text-sm sm:leading-6">
                 {person.biography ||
                   (knownForSummary.length > 0
                     ? `${person.name} is known for ${knownForSummary.join(", ")}. Explore the career highlights, collaborators, and standout credits below.`
                     : `${person.name}'s profile is ready to explore, with credits and related recommendations gathered from Moodies data.`)}
               </p>
 
-              <div className="col-span-2 mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="col-span-2 mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <MiniStat
                   label="Projects"
                   value={credits.length}
@@ -1607,31 +1492,31 @@ export default function CelebrityDetailPage({
                 />
               </div>
 
-              <div className="col-span-2 mt-4 grid grid-cols-2 gap-2 min-[430px]:flex min-[430px]:flex-wrap sm:justify-start">
+              <div className="col-span-2 mt-3 grid grid-cols-2 gap-2 min-[430px]:flex min-[430px]:flex-wrap sm:justify-start">
                 <a
                   href="#filmography"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#e94f37] px-4 py-2 text-sm font-bold text-black transition hover:bg-[#ff6b58]"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-[#e94f37] px-4 py-2.5 text-xs font-bold text-black transition hover:bg-[#ff6b58] sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
                 >
                   <Clapperboard className="h-4 w-4" />
                   Filmography
                 </a>
                 <a
                   href="#biography"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
                 >
                   <Sparkles className="h-4 w-4 text-zinc-300" />
                   Biography
                 </a>
                 <a
                   href="#gallery"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
                 >
                   <Sparkles className="h-4 w-4 text-zinc-300" />
                   Photos
                 </a>
                 <a
                   href="#genre-identity"
-                  className="hidden min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white min-[430px]:inline-flex"
+                  className="hidden min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-semibold text-zinc-200 transition hover:border-white/30 hover:bg-white/10 hover:text-white min-[430px]:inline-flex sm:min-h-10 sm:px-3.5 sm:py-2 sm:text-sm"
                 >
                   <Sparkles className="h-4 w-4 text-zinc-300" />
                   Genres
@@ -1643,10 +1528,10 @@ export default function CelebrityDetailPage({
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="col-span-2 grid gap-3 sm:grid-cols-2 lg:col-span-1 lg:grid-cols-1"
+              className="col-span-2 grid gap-2 sm:grid-cols-3 lg:col-span-1 lg:grid-cols-1"
             >
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 sm:p-4">
-                <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3.5 sm:p-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
                     <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                       <Calendar className="h-3.5 w-3.5 text-zinc-300" />
@@ -1676,10 +1561,10 @@ export default function CelebrityDetailPage({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3 sm:p-4">
-                <div className="mb-3 flex items-center justify-between">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3.5 sm:p-3">
+                <div className="mb-2 flex items-center justify-between">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                    External profiles
+                    Links
                   </span>
                   <ExternalLink className="h-4 w-4 text-zinc-300" />
                 </div>
@@ -1691,9 +1576,12 @@ export default function CelebrityDetailPage({
                 )}
               </div>
 
-              <div className="sm:col-span-2 lg:col-span-1">
+              <div className="sm:col-span-1 lg:col-span-1">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                  <SpotlightWorkCard label="Latest work" credit={latestWork} />
+                  <SpotlightWorkCard
+                    label={latestWork ? "Latest work" : "Featured work"}
+                    credit={heroFeature}
+                  />
                 </div>
               </div>
             </motion.aside>
@@ -1701,55 +1589,85 @@ export default function CelebrityDetailPage({
 
           <section
             id="biography"
-            className="mt-9 grid scroll-mt-24 gap-5 sm:mt-10 sm:gap-5 lg:grid-cols-[1.25fr_0.75fr]"
+            className="mt-6 scroll-mt-24 sm:mt-8"
           >
-            <div className="overflow-hidden rounded-[1.35rem] border border-zinc-800 bg-zinc-900/55 shadow-2xl shadow-black/20 sm:rounded-3xl">
-              <div className="border-b border-white/10 bg-white/[0.025] p-5 sm:p-7">
+            <div className="overflow-hidden rounded-[1.25rem] border border-zinc-800 bg-zinc-900/55 shadow-2xl shadow-black/20 sm:rounded-2xl">
+              <div className="border-b border-white/10 bg-white/[0.025] p-3.5 sm:p-4">
                 <SectionHeader
                   icon={Sparkles}
                   title="Profile Story"
-                  subtitle="A human-readable career snapshot before the full biography."
+                  subtitle="A concise read on the career, identity, and context."
                 />
-                <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4">
+                <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3">
                   <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
                     Career read
                   </p>
-                  <p className="mt-2 text-base font-semibold leading-7 text-white sm:text-lg sm:leading-8">
+                  <p className="mt-2 text-sm font-semibold leading-6 text-white sm:text-base sm:leading-7">
                     {biographyLead}
                   </p>
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <ProfilePill
                     label="Department"
                     value={person.known_for_department || "Entertainment"}
                   />
-                  <ProfilePill label="Active" value={activeYears} />
+                  <ProfilePill
+                    label="Latest"
+                    value={latestWork ? getTitle(latestWork) : "Pending"}
+                  />
+                  <ProfilePill
+                    label="Top rated"
+                    value={
+                      topRatedWorks[0]
+                        ? getTitle(topRatedWorks[0])
+                        : "Pending"
+                    }
+                  />
                   <ProfilePill
                     label="Top genre"
                     value={topGenres[0]?.[0] || "Pending"}
                   />
-                  <ProfilePill
-                    label="Credits"
-                    value={`${credits.length} total`}
-                  />
                 </div>
               </div>
 
-              <div className="p-5 sm:p-7">
+              <div className="grid gap-3 p-3.5 sm:p-4 lg:grid-cols-[minmax(0,1fr)_260px]">
                 {person.biography ? (
-                  <div className="relative">
-                    <p
-                      className={`whitespace-pre-line text-[15px] leading-8 text-zinc-200 sm:text-base sm:leading-8 ${bioExpanded ? "" : "line-clamp-8 sm:line-clamp-7"}`}
-                    >
-                      {person.biography}
-                    </p>
-                    {!bioExpanded && person.biography.length > 520 && (
-                      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-zinc-900 to-transparent" />
-                    )}
+                  <div className="rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(233,79,55,0.1),transparent_38%),rgba(255,255,255,0.035)] p-3 shadow-xl shadow-black/15 sm:p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
+                          Biography
+                        </p>
+                        <p className="mt-1 text-xs font-semibold text-zinc-500">
+                          {bioExpanded
+                            ? "Scroll inside the story to keep the page compact."
+                            : "A compact profile read with more available."}
+                        </p>
+                      </div>
+                      {person.biography.length > 520 && (
+                        <span className="shrink-0 rounded-full border border-white/10 bg-black/25 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-zinc-400">
+                          {bioExpanded ? "Expanded" : "Preview"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <p
+                        className={`whitespace-pre-line rounded-xl border border-white/10 bg-black/20 p-3 text-sm leading-6 text-zinc-200 shadow-inner shadow-black/25 sm:text-[15px] ${
+                          bioExpanded
+                            ? "max-h-[320px] overflow-y-auto pr-3 [scrollbar-color:rgba(233,79,55,0.55)_rgba(255,255,255,0.08)] [scrollbar-gutter:stable] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#e94f37]/60 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-white/10"
+                            : "line-clamp-5 sm:line-clamp-4"
+                        }`}
+                      >
+                        {person.biography}
+                      </p>
+                      {!bioExpanded && person.biography.length > 520 && (
+                        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 rounded-b-xl bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent" />
+                      )}
+                    </div>
                     {person.biography.length > 520 && (
                       <button
                         onClick={() => setBioExpanded((value) => !value)}
-                        className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white hover:text-black sm:w-auto"
+                        className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-bold text-zinc-200 transition hover:border-[#ff8b78]/50 hover:bg-white hover:text-black sm:w-auto"
                       >
                         {bioExpanded ? (
                           <ChevronUp className="h-4 w-4" />
@@ -1767,48 +1685,20 @@ export default function CelebrityDetailPage({
                     text="Moodies did not receive a biography from TMDB, so this page leans on credits, genres, and related people instead."
                   />
                 )}
-              </div>
-            </div>
-
-            <div className="rounded-[1.35rem] border border-zinc-800 bg-zinc-900/55 p-5 shadow-2xl shadow-black/20 sm:rounded-3xl sm:p-7">
-              <SectionHeader
-                icon={Layers}
-                title="Career Dashboard"
-                subtitle="Projects, timeline signals, and standout lanes at a glance."
-              />
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                {careerSignals.map((signal) => (
-                  <CareerSignalCard key={signal.label} {...signal} />
-                ))}
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-3">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">
-                    Milestones
-                  </p>
-                  <span className="text-[11px] font-semibold text-zinc-600">
-                    {careerMoments.length || 0} signals
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {careerMoments.map((item) => (
-                    <CareerMomentCard key={item.label} item={item} />
-                  ))}
-                  {careerMoments.length === 0 && (
-                    <EmptyState
-                      icon={Clapperboard}
-                      title="Timeline building"
-                      text="Career milestones will appear once the timeline endpoint has enough data."
-                    />
-                  )}
+                <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+                  <ProfilePill label="Credits" value={`${credits.length} total`} />
+                  <ProfilePill
+                    label="Movies"
+                    value={movieCredits.length}
+                  />
+                  <ProfilePill label="TV" value={tvCredits.length} />
                 </div>
               </div>
             </div>
           </section>
 
           {notableWorks.length > 0 && (
-            <section className="mt-12 space-y-4 sm:mt-16 sm:space-y-5">
+            <section className="mt-10 space-y-4 sm:mt-12">
               <SectionHeader
                 icon={Star}
                 title="Known For"
@@ -1822,11 +1712,11 @@ export default function CelebrityDetailPage({
                   </a>
                 }
               />
-              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-5">
+              <div className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-3 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-6 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0">
                 {notableWorks.slice(0, 5).map((credit) => (
                   <div
                     key={`${credit.media_type}-${credit.id}`}
-                    className="w-[38vw] min-w-[128px] max-w-[160px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                    className="w-[30vw] min-w-[100px] max-w-[128px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
                   >
                     <WorkCard credit={credit} compact />
                   </div>
@@ -1837,19 +1727,26 @@ export default function CelebrityDetailPage({
 
           <section
             ref={relatedVideosSectionRef}
-            className="mt-12 scroll-mt-24 space-y-4 sm:mt-16 sm:space-y-5"
+            className="mt-10 scroll-mt-24 space-y-4 sm:mt-12"
           >
-            <div className="overflow-hidden rounded-[1.35rem] border border-white/10 bg-zinc-950/55 shadow-2xl shadow-black/25 backdrop-blur sm:rounded-3xl">
+            <div className="overflow-hidden rounded-[1.25rem] border border-white/10 bg-zinc-950/55 shadow-2xl shadow-black/25 backdrop-blur sm:rounded-2xl">
               <div className="border-b border-white/10 p-4 sm:p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                   <SectionHeader
                     icon={Play}
-                    title="Video Room"
-                    subtitle="Trailers, clips, interviews, featurettes, and show appearances connected to this career."
+                    title="On-Screen Moments"
+                    subtitle="Trailers, clips, interviews, behind-the-scenes videos, and appearances."
+                    action={
+                      relatedVideos.length > 0 && (
+                        <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-zinc-300 sm:inline-flex">
+                          {relatedVideos.length} moments
+                        </span>
+                      )
+                    }
                   />
 
                   {relatedVideos.length > 0 && (
-                    <div className="-mx-1 flex max-w-[calc(100vw-2rem)] overflow-x-auto rounded-2xl border border-white/10 bg-black/30 p-1 mobile-native-scroll sm:mx-0 sm:max-w-full">
+                    <div className="-mx-1 flex max-w-[calc(100vw-2rem)] overflow-x-auto rounded-xl border border-white/10 bg-black/30 p-1 mobile-native-scroll sm:mx-0 sm:max-w-full">
                       {videoFilters.map((filter) => {
                         const count =
                           filter.value === "all"
@@ -1864,7 +1761,7 @@ export default function CelebrityDetailPage({
                             key={filter.value}
                             type="button"
                             onClick={() => setVideoFilter(filter.value)}
-                            className={`min-h-10 cursor-pointer whitespace-nowrap rounded-xl px-3 py-2 text-xs font-black transition ${
+                            className={`min-h-9 cursor-pointer whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black transition ${
                               videoFilter === filter.value
                                 ? "bg-white text-black shadow-lg shadow-black/30"
                                 : "text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -1884,38 +1781,63 @@ export default function CelebrityDetailPage({
                 </div>
               </div>
 
-              <div className="p-3 sm:p-4">
+              <div className="overflow-visible p-3.5 sm:p-4">
                 {!shouldLoadVideos || videosLoading ? (
                   <VideoSectionSkeleton />
                 ) : videosError ? (
                   <VideoEmptyPanel error={videosError} />
-                ) : featuredVideo ? (
-                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_0.85fr]">
-                    <VideoSpotlightCard
-                      video={featuredVideo}
-                      onPlay={setSelectedVideo}
-                    />
-
-                    <div className="min-w-0">
-                      {supportingVideos.length > 0 ? (
-                        <div className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-1">
-                          {supportingVideos.map((video) => (
-                            <div
-                              key={video.id}
-                              className="w-[82vw] min-w-[272px] max-w-[340px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                ) : filteredVideos.length > 0 ? (
+                  <>
+                    <div className="group/video-carousel relative isolate">
+                      {filteredVideos.length > 1 && (
+                        <>
+                          {videoCarouselState.canScrollPrev && (
+                            <button
+                              type="button"
+                              onClick={() => scrollVideoCarousel("prev")}
+                              className="absolute left-0 top-1/2 z-30 hidden h-11 w-11 -translate-x-4 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-zinc-950/90 text-white shadow-2xl shadow-black/50 backdrop-blur transition hover:scale-105 hover:border-[#ff8b78]/50 hover:bg-[#e94f37] hover:text-black group-hover/video-carousel:opacity-100 sm:flex"
+                              aria-label="Previous videos"
                             >
-                              <VideoShelfCard
-                                video={video}
-                                onPlay={setSelectedVideo}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <VideoEmptyPanel hasFilteredVideos />
+                              <ChevronLeft className="h-5 w-5" />
+                            </button>
+                          )}
+                          {videoCarouselState.canScrollNext && (
+                            <button
+                              type="button"
+                              onClick={() => scrollVideoCarousel("next")}
+                              className="absolute right-0 top-1/2 z-30 hidden h-11 w-11 -translate-y-1/2 translate-x-4 items-center justify-center rounded-full border border-white/15 bg-zinc-950/90 text-white shadow-2xl shadow-black/50 backdrop-blur transition hover:scale-105 hover:border-[#ff8b78]/50 hover:bg-[#e94f37] hover:text-black group-hover/video-carousel:opacity-100 sm:flex"
+                              aria-label="Next videos"
+                            >
+                              <ChevronRight className="h-5 w-5" />
+                            </button>
+                          )}
+                        </>
                       )}
+                      <div
+                        ref={videoCarouselRef}
+                        className="-mx-2 flex snap-x snap-mandatory gap-2 overflow-x-auto px-2 pb-1.5 mobile-native-scroll sm:mx-0 sm:gap-3 sm:px-1 sm:pb-2"
+                      >
+                        {filteredVideos.slice(0, 12).map((video) => (
+                          <VideoCarouselCard
+                            key={video.id}
+                            video={video}
+                            onPlay={setSelectedVideo}
+                          />
+                        ))}
+                        {filteredVideos.length > 12 && (
+                          <div className="flex w-[180px] min-w-[180px] snap-start items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.025] p-4 text-center text-xs font-semibold leading-5 text-zinc-500">
+                            {filteredVideos.length - 12} more videos available
+                            in this lane.
+                          </div>
+                        )}
+                      </div>
+                      <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-10 bg-gradient-to-r from-zinc-950/80 to-transparent sm:block" />
+                      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-10 bg-gradient-to-l from-zinc-950/80 to-transparent sm:block" />
                     </div>
-                  </div>
+                    <div className="mt-2 px-1 text-[11px] font-semibold text-zinc-600">
+                      <span>{filteredVideos.length} videos</span>
+                    </div>
+                  </>
                 ) : (
                   <VideoEmptyPanel
                     hasFilteredVideos={relatedVideos.length > 0}
@@ -1927,59 +1849,45 @@ export default function CelebrityDetailPage({
 
           <section
             id="genre-identity"
-            className="mt-12 grid scroll-mt-24 gap-5 sm:mt-14 lg:grid-cols-[0.82fr_1.18fr]"
+            className="mt-10 grid scroll-mt-24 gap-5 sm:mt-12 lg:grid-cols-[0.9fr_1.1fr]"
           >
-            <div className="overflow-hidden rounded-[1.35rem] border border-zinc-800 bg-zinc-900/55 p-5 sm:rounded-2xl sm:p-5">
+            <div className="overflow-hidden rounded-[1.25rem] border border-zinc-800 bg-zinc-900/55 p-4 sm:rounded-2xl">
               <SectionHeader
                 icon={Layers}
                 title="Genre Identity"
                 subtitle="The strongest genre signals across known credits."
               />
               {topGenres.length > 0 ? (
-                <div className="mt-5 space-y-4">
-                  <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
-                          Signature lane
-                        </p>
-                        <h3 className="mt-1 truncate text-2xl font-black text-white">
-                          {topGenres[0][0]}
-                        </h3>
-                      </div>
-                      <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] shadow-xl shadow-black/20 sm:h-24 sm:w-24">
-                        <div
-                          className="absolute inset-2 rounded-full"
-                          style={{
-                            background: `conic-gradient(#f5f5f5 0deg ${Math.round(
-                              ((topGenres[0]?.[1] || 0) /
-                                Math.max(totalGenreWorks, 1)) *
-                                360,
-                            )}deg, rgba(63,63,70,.75) 0deg)`,
-                          }}
-                        />
-                        <div className="relative flex h-14 w-14 flex-col items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-center sm:h-16 sm:w-16">
-                          <span className="text-base font-black text-white">
-                            {Math.round(
-                              ((topGenres[0]?.[1] || 0) /
-                                Math.max(totalGenreWorks, 1)) *
-                                100,
-                            )}
-                            %
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-zinc-400">
-                      {person.name}'s credits lean most strongly toward{" "}
-                      <span className="font-bold text-white">
+                <div className="mt-3 space-y-3">
+                  <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-black/25 p-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
+                        Signature lane
+                      </p>
+                      <h3 className="mt-1 line-clamp-2 text-xl font-black text-white">
                         {topGenres[0][0]}
-                      </span>
-                      , based on available genre-tagged works.
-                    </p>
+                      </h3>
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">
+                        The strongest signal across available genre-tagged
+                        credits.
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-center sm:min-w-[84px]">
+                      <p className="text-lg font-black text-white">
+                        {Math.round(
+                          ((topGenres[0]?.[1] || 0) /
+                            Math.max(totalGenreWorks, 1)) *
+                            100,
+                        )}
+                        %
+                      </p>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">
+                        mix
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="grid gap-2.5">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {topGenres.slice(0, 5).map(([genre, count], index) => {
                       const pct =
                         totalGenreWorks > 0
@@ -1988,7 +1896,7 @@ export default function CelebrityDetailPage({
                       return (
                         <div
                           key={genre}
-                          className="rounded-xl border border-white/10 bg-white/[0.03] p-3 transition hover:border-white/25 hover:bg-white/[0.06]"
+                          className="rounded-xl border border-white/10 bg-white/[0.03] p-2.5 transition hover:border-white/25 hover:bg-white/[0.06]"
                         >
                           <div className="mb-1.5 flex items-center justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-2">
@@ -2005,12 +1913,12 @@ export default function CelebrityDetailPage({
                           </div>
                           <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
                             <div
-                              className="h-full rounded-full bg-gradient-to-r from-white via-zinc-300 to-zinc-500"
+                              className="h-full rounded-full bg-gradient-to-r from-[#ff8b78] via-white to-zinc-500"
                               style={{ width: `${pct}%` }}
                             />
                           </div>
-                          <p className="mt-1 text-[11px] text-zinc-500">
-                            {count} genre-tagged credits
+                          <p className="mt-1 text-[10px] text-zinc-500">
+                            {count} tagged
                           </p>
                         </div>
                       );
@@ -2026,18 +1934,18 @@ export default function CelebrityDetailPage({
               )}
             </div>
 
-            <div className="rounded-[1.35rem] border border-zinc-800 bg-zinc-900/55 p-5 sm:rounded-2xl sm:p-5">
+            <div className="rounded-[1.25rem] border border-zinc-800 bg-zinc-900/55 p-4 sm:rounded-2xl sm:p-5">
               <SectionHeader
                 icon={Users}
                 title="Frequent Collaborators"
                 subtitle="Repeated creative pairings, with shared projects at a glance."
               />
               {collaborationsLoading ? (
-                <div className="-mx-5 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-3 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-1 xl:grid-cols-2">
+                <div className="mt-3 flex flex-col gap-3 sm:grid sm:grid-cols-2">
                   {Array.from({ length: 4 }).map((_, index) => (
                     <div
                       key={index}
-                      className="w-[82vw] min-w-[260px] max-w-[340px] shrink-0 snap-start rounded-2xl border border-white/10 bg-white/[0.035] p-3.5 sm:w-auto sm:min-w-0 sm:max-w-none"
+                      className="w-full rounded-2xl border border-white/10 bg-white/[0.035] p-3"
                     >
                       <div className="flex items-center gap-3.5">
                         <div className="h-16 w-16 animate-pulse rounded-2xl bg-zinc-800" />
@@ -2054,29 +1962,26 @@ export default function CelebrityDetailPage({
                   ))}
                 </div>
               ) : collaborations.length > 0 ? (
-                <div className="-mx-5 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-3 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-1 xl:grid-cols-2">
+                <div className="mt-3 flex flex-col gap-3 sm:grid sm:grid-cols-2">
                   {collaborations.slice(0, 4).map((collab) => (
                     <div
                       key={collab.id}
-                      className="group w-[82vw] min-w-[260px] max-w-[340px] shrink-0 snap-start rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(233,79,55,0.12),transparent_42%),rgba(255,255,255,0.035)] p-3.5 transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06] sm:w-auto sm:min-w-0 sm:max-w-none"
+                      className="group w-full rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(233,79,55,0.12),transparent_42%),rgba(255,255,255,0.035)] p-3 transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06]"
                     >
                       <div className="flex items-start gap-3.5">
                         <Link
                           href={`/celeb/${collab.id}`}
-                          className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-zinc-800 ring-1 ring-white/10"
+                          className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-zinc-800 ring-1 ring-white/10"
                         >
                           <Image
                             src={getProfileUrl(collab.profile_path, "w185")}
                             alt={collab.name}
                             fill
-                            sizes="64px"
+                            sizes="56px"
                             className="object-cover"
                           />
                         </Link>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
-                            Creative pairing
-                          </p>
                           <Link
                             href={`/celeb/${collab.id}`}
                             className="mt-1 line-clamp-1 text-base font-black text-white transition hover:text-zinc-200"
@@ -2098,7 +2003,7 @@ export default function CelebrityDetailPage({
                       </div>
                       {collab.projects && collab.projects.length > 0 && (
                         <div className="mt-4 flex flex-wrap gap-2">
-                          {collab.projects.slice(0, 3).map((project) => (
+                          {collab.projects.slice(0, 2).map((project) => (
                             <div
                               key={project}
                               className="inline-flex min-h-8 max-w-full items-center gap-2 rounded-full bg-zinc-950/70 px-2.5 py-1.5 text-xs text-zinc-400 ring-1 ring-white/10"
@@ -2123,18 +2028,18 @@ export default function CelebrityDetailPage({
           </section>
 
           {(upcomingLoading || upcomingProjects.length > 0) && (
-            <section className="mt-12 space-y-4 sm:mt-16 sm:space-y-5">
+            <section className="mt-10 space-y-4 sm:mt-12">
               <SectionHeader
                 icon={Calendar}
                 title="Upcoming Projects"
                 subtitle="Future releases and announced credits when available."
               />
               {upcomingLoading ? (
-                <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
+                <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-6 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0">
                   {Array.from({ length: 6 }).map((_, index) => (
                     <div
                       key={index}
-                      className="w-[38vw] min-w-[128px] max-w-[160px] shrink-0 snap-start space-y-3 sm:w-auto sm:min-w-0 sm:max-w-none"
+                      className="w-[34vw] min-w-[116px] max-w-[148px] shrink-0 snap-start space-y-3 sm:w-auto sm:min-w-0 sm:max-w-none"
                     >
                       <div className="aspect-[2/3] animate-pulse rounded-2xl bg-zinc-800" />
                       <div className="h-4 w-4/5 animate-pulse rounded bg-zinc-800" />
@@ -2143,11 +2048,11 @@ export default function CelebrityDetailPage({
                   ))}
                 </div>
               ) : (
-                <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
+                <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-6 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0">
                   {upcomingProjects.slice(0, 6).map((credit) => (
                     <div
                       key={`upcoming-${credit.media_type}-${credit.id}`}
-                      className="w-[38vw] min-w-[128px] max-w-[160px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                      className="w-[34vw] min-w-[116px] max-w-[148px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
                     >
                       <WorkCard credit={credit} compact />
                     </div>
@@ -2157,7 +2062,7 @@ export default function CelebrityDetailPage({
             </section>
           )}
 
-          <section className="mt-12 space-y-4 sm:mt-16 sm:space-y-5">
+          <section className="mt-10 space-y-4 sm:mt-12">
             <SectionHeader
               icon={Camera}
               title="Photo Gallery"
@@ -2197,7 +2102,7 @@ export default function CelebrityDetailPage({
             {galleryItems.length > 0 ? (
               <div
                 id="gallery"
-                className="-mx-4 flex snap-x snap-mandatory scroll-mt-24 gap-3 overflow-x-auto px-4 pb-3 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-8"
+                className="flex snap-x snap-mandatory scroll-mt-24 gap-2.5 overflow-x-auto px-3 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-8 sm:overflow-visible sm:px-0 sm:pb-0"
               >
                 {currentGalleryItems.map((image, index) => (
                   <button
@@ -2205,13 +2110,13 @@ export default function CelebrityDetailPage({
                     onClick={() =>
                       setSelectedImage(getImageUrl(image.file_path))
                     }
-                    className="group relative aspect-[2/3] w-[34vw] min-w-[118px] max-w-[150px] shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] transition hover:-translate-y-1 hover:border-white/30 sm:w-auto sm:min-w-0 sm:max-w-none sm:rounded-2xl"
+                    className="group relative aspect-[2/3] w-[29vw] min-w-[96px] max-w-[126px] shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] p-1 transition hover:-translate-y-1 hover:border-white/30 sm:w-auto sm:min-w-0 sm:max-w-none"
                   >
                     <Image
                       src={getProfileUrl(image.file_path)}
                       alt={`${person.name} photo ${index + 1}`}
                       fill
-                      sizes="(max-width: 640px) 34vw, 150px"
+                      sizes="(max-width: 640px) 29vw, 126px"
                       className="object-cover transition duration-500 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/45">
@@ -2230,55 +2135,137 @@ export default function CelebrityDetailPage({
           </section>
 
           <section
-            className="mt-12 scroll-mt-24 rounded-[1.35rem] border border-zinc-800 bg-zinc-900/45 p-4 shadow-2xl shadow-black/20 sm:mt-[4.5rem] sm:rounded-3xl sm:p-6 lg:p-7"
+            className="mt-10 scroll-mt-24 rounded-[1.25rem] border border-zinc-800 bg-zinc-900/45 p-4 shadow-2xl shadow-black/20 sm:mt-12 sm:rounded-2xl sm:p-5"
             id="filmography"
           >
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-3 sm:space-y-4">
               <SectionHeader
                 icon={Clapperboard}
                 title="Filmography"
-                subtitle={`${filteredCredits.length} credits shown. Filter by format, then sort by what matters most.`}
+                subtitle={`${filteredCredits.length} credits matched. Browse compact poster cards by format and sort.`}
               />
 
-              <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800 bg-black/25 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:p-3">
-                <div className="flex max-w-full overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950 p-1 mobile-native-scroll">
+              <div className="flex flex-col gap-2 rounded-2xl border border-zinc-800 bg-black/25 p-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex max-w-full overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950 p-1 mobile-native-scroll">
                   {[
-                    ["all", `All ${credits.length}`],
-                    ["movies", `Movies ${movieCredits.length}`],
-                    ["tv", `TV ${tvCredits.length}`],
-                  ].map(([value, label]) => (
+                    { value: "all", label: "All", count: credits.length },
+                    {
+                      value: "movies",
+                      label: "Movies",
+                      count: movieCredits.length,
+                    },
+                    { value: "tv", label: "TV", count: tvCredits.length },
+                  ].map((tab) => (
                     <button
-                      key={value}
+                      key={tab.value}
                       onClick={() => {
-                        setSelectedTab(value as FilmographyTab);
+                        setSelectedTab(tab.value as FilmographyTab);
                         setShowAllCredits(false);
                       }}
-                      className={`min-h-10 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition sm:px-4 sm:py-2.5 sm:text-sm ${
-                        selectedTab === value
-                          ? "bg-[#e94f37] text-black shadow-lg shadow-[#e94f37]/15"
-                          : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                      className={`inline-flex min-h-9 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-bold transition sm:text-sm ${
+                        selectedTab === tab.value
+                          ? "border border-[#ff8b78]/40 bg-[#e94f37] text-black shadow-lg shadow-[#e94f37]/15"
+                          : "border border-transparent text-zinc-400 hover:border-white/10 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      {label}
+                      <span>{tab.label}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-black leading-none ${
+                          selectedTab === tab.value
+                            ? "bg-black/20 text-black"
+                            : "bg-white/10 text-zinc-300"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="hidden text-xs font-semibold uppercase tracking-wider text-zinc-500 sm:inline">
-                    Sort
-                  </span>
-                  <select
-                    value={sortMode}
-                    onChange={(event) =>
-                      setSortMode(event.target.value as SortMode)
-                    }
-                    className="min-h-11 w-full rounded-2xl border border-white/10 bg-zinc-950 px-4 py-2 text-sm font-semibold text-zinc-200 outline-none transition focus:border-white/40 sm:w-[180px]"
+                <div ref={sortMenuRef} className="relative z-30 w-full sm:w-[260px]">
+                  <button
+                    type="button"
+                    onClick={() => setSortMenuOpen((open) => !open)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") setSortMenuOpen(false);
+                    }}
+                    aria-haspopup="listbox"
+                    aria-expanded={sortMenuOpen}
+                    className="group flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(233,79,55,0.16),transparent_42%),rgba(9,9,11,0.92)] px-3 py-2 text-left shadow-xl shadow-black/25 outline-none transition hover:border-white/25 hover:bg-zinc-900 focus:border-[#ff8b78]/60 focus:ring-2 focus:ring-[#e94f37]/20"
                   >
-                    <option value="notable">Most notable</option>
-                    <option value="latest">Latest first</option>
-                    <option value="rating">Highest rated</option>
-                    <option value="oldest">Oldest first</option>
-                  </select>
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06] text-[#ff9b8a] transition group-hover:border-[#ff8b78]/40">
+                        <SelectedSortIcon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
+                          Sort credits
+                        </span>
+                        <span className="block truncate text-sm font-black text-white">
+                          {selectedSortOption.label}
+                        </span>
+                      </span>
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-zinc-500 transition ${
+                        sortMenuOpen ? "rotate-180 text-[#ff9b8a]" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {sortMenuOpen && (
+                    <div
+                      role="listbox"
+                      className="absolute right-0 top-[calc(100%+0.5rem)] z-40 w-full overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 p-1.5 shadow-2xl shadow-black/50 backdrop-blur-xl sm:w-[290px]"
+                    >
+                      {sortOptions.map((option) => {
+                        const OptionIcon = option.icon;
+                        const isActive = sortMode === option.value;
+
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            role="option"
+                            aria-selected={isActive}
+                            onClick={() => {
+                              setSortMode(option.value);
+                              setSortMenuOpen(false);
+                            }}
+                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                              isActive
+                                ? "bg-[#e94f37] text-black"
+                                : "text-zinc-300 hover:bg-white/[0.06] hover:text-white"
+                            }`}
+                          >
+                            <span
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                                isActive
+                                  ? "bg-black/15 text-black"
+                                  : "bg-white/[0.06] text-[#ff9b8a]"
+                              }`}
+                            >
+                              <OptionIcon className="h-4 w-4" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-black">
+                                {option.label}
+                              </span>
+                              <span
+                                className={`mt-0.5 block truncate text-[11px] font-semibold ${
+                                  isActive ? "text-black/60" : "text-zinc-500"
+                                }`}
+                              >
+                                {option.description}
+                              </span>
+                            </span>
+                            {isActive && (
+                              <span className="h-2.5 w-2.5 rounded-full bg-black/35" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2296,12 +2283,18 @@ export default function CelebrityDetailPage({
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
-                    Active span
+                    Top rated
                   </p>
                   <p className="mt-1 line-clamp-1 text-xl font-black text-white">
-                    {activeYears}
+                    {topRatedWorks[0]
+                      ? topRatedWorks[0].vote_average?.toFixed(1)
+                      : "Pending"}
                   </p>
-                  <p className="text-xs text-zinc-500">{careerDuration}</p>
+                  <p className="line-clamp-1 text-xs text-zinc-500">
+                    {topRatedWorks[0]
+                      ? getTitle(topRatedWorks[0])
+                      : "More ratings needed"}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
@@ -2317,38 +2310,13 @@ export default function CelebrityDetailPage({
               </div>
             </div>
             {visibleCredits.length > 0 ? (
-              <div className="mt-5 space-y-5 sm:mt-7 sm:space-y-6">
-                {topFilmographyCredits[0] && (
-                  <div className="rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(233,79,55,0.14),transparent_44%),rgba(255,255,255,0.035)] p-3 sm:p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
-                          Ledger focus
-                        </p>
-                        <h3 className="mt-1 line-clamp-2 text-lg font-black text-white sm:text-2xl">
-                          {getTitle(topFilmographyCredits[0])}
-                        </h3>
-                        <p className="mt-1 text-sm text-zinc-400">
-                          The first credit in the current filter and sort view.
-                        </p>
-                      </div>
-                      <Link
-                        href={getHref(topFilmographyCredits[0])}
-                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 text-sm font-bold text-zinc-200 transition hover:bg-white hover:text-black"
-                      >
-                        Open credit
-                        <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid gap-3 lg:grid-cols-2">
+              <div className="mt-4 space-y-4 sm:mt-5">
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                   {topFilmographyCredits.map((credit) => {
                     const itemType =
                       credit.media_type === "tv" ? "series" : "movie";
                     return (
-                      <FilmographyLedgerCard
+                      <FilmographyGridCard
                         key={`${credit.media_type}-${credit.id}`}
                         credit={credit}
                         onWatchlistToggle={toggleWatchlist}
@@ -2390,50 +2358,26 @@ export default function CelebrityDetailPage({
             )}
           </section>
 
-          <section className="mt-12 space-y-4 sm:mt-16 sm:space-y-5">
+          <section className="mt-10 space-y-4 sm:mt-12">
             <SectionHeader
               icon={Sparkles}
               title="You May Also Like"
               subtitle="Similar people to keep exploring across Moodies."
               action={
                 similarPeople.length > 6 && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        setSimilarStartIndex((index) => Math.max(0, index - 6))
-                      }
-                      disabled={!canScrollSimilarLeft}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
-                      aria-label="Previous similar celebrities"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() =>
-                        setSimilarStartIndex((index) =>
-                          Math.min(
-                            Math.max(0, Math.min(similarPeople.length, 12) - 6),
-                            index + 6,
-                          ),
-                        )
-                      }
-                      disabled={!canScrollSimilarRight}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
-                      aria-label="Next similar celebrities"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-zinc-300 sm:inline-flex">
+                    {similarPeople.length} profiles
+                  </span>
                 )
               }
             />
             {similarLoading ? (
-              <div className="relative -mx-4 overflow-hidden border-y border-zinc-800 bg-zinc-900/35 px-4 py-3 sm:mx-0 sm:rounded-3xl sm:border sm:p-4">
-                <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 mobile-native-scroll sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
+              <div className="relative overflow-hidden border-y border-zinc-800 bg-zinc-900/35 px-2 py-3 sm:mx-0 sm:rounded-2xl sm:border sm:p-3">
+                <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 mobile-native-scroll">
                   {Array.from({ length: 6 }).map((_, index) => (
                     <div
                       key={index}
-                      className="w-[36vw] min-w-[124px] max-w-[150px] shrink-0 snap-start space-y-3 sm:w-auto sm:min-w-0 sm:max-w-none"
+                      className="w-[32vw] min-w-[108px] max-w-[138px] shrink-0 snap-start space-y-3 sm:w-[136px] sm:min-w-[136px] md:w-[148px] md:min-w-[148px]"
                     >
                       <div className="aspect-[2/3] animate-pulse rounded-2xl bg-zinc-800" />
                       <div className="h-4 w-4/5 animate-pulse rounded bg-zinc-800" />
@@ -2443,44 +2387,48 @@ export default function CelebrityDetailPage({
                 </div>
               </div>
             ) : similarPeople.length > 0 ? (
-              <div className="relative -mx-4 overflow-hidden border-y border-zinc-800 bg-zinc-900/35 px-4 py-3 sm:mx-0 sm:rounded-3xl sm:border sm:p-4">
-                <AnimatePresence mode="popLayout">
-                  <motion.div
-                    key={similarStartIndex}
-                    initial={{ opacity: 0, x: 24 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -24 }}
-                    transition={{ duration: 0.25 }}
-                    className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 mobile-native-scroll sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 lg:grid-cols-6"
+              <div className="relative overflow-visible border-y border-zinc-800 bg-zinc-900/35 px-2 py-2.5 sm:mx-0 sm:rounded-2xl sm:border sm:p-3">
+                <div className="group/carousel relative isolate">
+                  {similarPeople.length > 6 && (
+                    <>
+                      {similarCarouselState.canScrollPrev && (
+                        <button
+                          type="button"
+                          onClick={() => scrollSimilarCarousel("prev")}
+                          className="absolute left-1 top-[43%] z-30 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-zinc-950/90 text-white shadow-2xl shadow-black/50 backdrop-blur transition hover:scale-105 hover:border-[#ff8b78]/50 hover:bg-[#e94f37] hover:text-black sm:-left-4 sm:flex sm:h-11 sm:w-11"
+                          aria-label="Previous similar celebrities"
+                        >
+                          <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+                        </button>
+                      )}
+                      {similarCarouselState.canScrollNext && (
+                        <button
+                          type="button"
+                          onClick={() => scrollSimilarCarousel("next")}
+                          className="absolute right-1 top-[43%] z-30 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-zinc-950/90 text-white shadow-2xl shadow-black/50 backdrop-blur transition hover:scale-105 hover:border-[#ff8b78]/50 hover:bg-[#e94f37] hover:text-black sm:-right-4 sm:flex sm:h-11 sm:w-11"
+                          aria-label="Next similar celebrities"
+                        >
+                          <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+                        </button>
+                      )}
+                    </>
+                  )}
+                  <div
+                    ref={similarCarouselRef}
+                    className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-3 pb-1.5 mobile-native-scroll sm:gap-3 sm:px-1 sm:pb-2"
                   >
-                    {similarCarouselItems.map((similar) => (
+                    {similarPeople.slice(0, 18).map((similar) => (
                       <div
                         key={similar.id}
-                        className="w-[36vw] min-w-[124px] max-w-[150px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                        className="w-[34vw] min-w-[112px] max-w-[138px] shrink-0 snap-start sm:w-[136px] sm:min-w-[136px] md:w-[148px] md:min-w-[148px]"
                       >
                         <PersonCard person={similar} />
                       </div>
                     ))}
-                  </motion.div>
-                </AnimatePresence>
-                {similarPeople.length > 6 && (
-                  <div className="mt-4 hidden justify-center gap-1.5 sm:flex">
-                    {Array.from({
-                      length: Math.ceil(Math.min(similarPeople.length, 12) / 6),
-                    }).map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSimilarStartIndex(index * 6)}
-                        className={`h-1.5 rounded-full transition ${
-                          similarStartIndex / 6 === index
-                            ? "w-7 bg-[#e94f37]"
-                            : "w-1.5 bg-zinc-700 hover:bg-zinc-500"
-                        }`}
-                        aria-label={`Show similar celebrities page ${index + 1}`}
-                      />
-                    ))}
                   </div>
-                )}
+                  <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-zinc-900/95 to-transparent sm:w-12" />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-zinc-900/95 to-transparent sm:w-12" />
+                </div>
               </div>
             ) : (
               <EmptyState
