@@ -90,6 +90,7 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
   const current = slides[idx];
   const currentKey =
     videoEnabled && current?.id != null ? trailerKeys[current.id] : undefined;
+  const hasVideo = Boolean(currentKey);
 
   return (
     <div className="absolute inset-0">
@@ -98,10 +99,10 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
         <motion.div
           key={current.backdrop}
           initial={{ opacity: 0 }}
-          animate={{ opacity: isLogin ? 0.82 : 0.7 }}
+          animate={{ opacity: hasVideo ? 0 : isLogin ? 0.82 : 0.7 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 1 }}
-          className="absolute inset-0"
+          transition={{ duration: hasVideo ? 0.6 : 1 }}
+          className="absolute inset-0 z-0"
         >
           <Image
             src={current.backdrop}
@@ -121,10 +122,10 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
           <motion.div
             key={currentKey}
             initial={{ opacity: 0 }}
-            animate={{ opacity: isLogin ? 0.88 : 0.7 }}
+            animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 1.2, delay: 0.6 }}
-            className="absolute inset-0 overflow-hidden"
+            className="absolute inset-0 z-10 overflow-hidden"
           >
             <iframe
               src={`https://www.youtube-nocookie.com/embed/${currentKey}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0&playsinline=1&loop=1&playlist=${currentKey}&iv_load_policy=3&disablekb=1&fs=0`}
@@ -141,12 +142,12 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
 
       {/* Cinematic overlays — sit above everything and mask any residual chrome */}
       <div
-        className={`absolute inset-0 bg-gradient-to-t ${
+        className={`absolute inset-0 z-20 bg-gradient-to-t ${
           isLogin ? "from-black/55" : "from-black"
         } via-black/00 to-transparent`}
       />
       <div
-        className={`absolute inset-0 bg-gradient-to-r ${
+        className={`absolute inset-0 z-20 bg-gradient-to-r ${
           isLogin ? "from-black/10" : "from-black/00"
         } via-black/00 to-transparent`}
       />
