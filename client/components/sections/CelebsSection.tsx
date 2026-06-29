@@ -249,7 +249,7 @@ export default function CelebSection() {
             </button>
           )}
 
-          <motion.div ref={containerRef} className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 mobile-native-scroll sm:mx-0 sm:gap-6 sm:px-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }} style={{ WebkitOverflowScrolling: "touch" }}>
+          <motion.div ref={containerRef} className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 mobile-native-scroll sm:gap-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }} style={{ WebkitOverflowScrolling: "touch" }}>
             {celebs.map((celeb) => {
               const notableWorks = celeb.known_for?.slice(0, 2) ?? [];
 

@@ -332,7 +332,11 @@ export default function TVHomePageClient({
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
-            <Carousel items={airingToday} CardComponent={TVCard} />
+            <Carousel
+              items={airingToday}
+              CardComponent={TVCard}
+              mobileBleed={false}
+            />
           </section>
         )}
 
@@ -360,7 +364,11 @@ export default function TVHomePageClient({
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
-            <Carousel items={popularTV} CardComponent={TVCard} />
+            <Carousel
+              items={popularTV}
+              CardComponent={TVCard}
+              mobileBleed={false}
+            />
           </section>
         )}
 
@@ -480,7 +488,7 @@ export default function TVHomePageClient({
               </div>
             </div>
 
-            <div className="-mx-4 mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
+            <div className="mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
               {newReleaseTV.slice(3, 9).map((tv) => (
                 <div
                   key={tv.id}
@@ -517,7 +525,7 @@ export default function TVHomePageClient({
               </Link>
             </div>
 
-            <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
+            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
               {topRatedTV.slice(0, 12).map((show) => (
                 <div
                   key={show.id}
@@ -553,7 +561,11 @@ export default function TVHomePageClient({
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
-            <Carousel items={airingThisWeek} CardComponent={TVCard} />
+            <Carousel
+              items={airingThisWeek}
+              CardComponent={TVCard}
+              mobileBleed={false}
+            />
           </section>
         )}
 
@@ -585,7 +597,11 @@ export default function TVHomePageClient({
                 <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
-            <Carousel items={KoreanTV} CardComponent={TVCard} />
+            <Carousel
+              items={KoreanTV}
+              CardComponent={TVCard}
+              mobileBleed={false}
+            />
           </section>
         )}
         <CommunityPulseSection data={communityPulse} mediaType="tv" />
@@ -619,7 +635,7 @@ export default function TVHomePageClient({
               </div>
             </div>
 
-            <div className="relative -mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
+            <div className="relative flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
               {TVReview.slice(0, 6).map((review, idx) => {
                 const criticName =
                   review.user?.name || review.name || "Moodies critic";

@@ -8,8 +8,13 @@ interface CarouselProps {
     show?: All;
     size?: "default" | "large" | "wide";
   }>;
+  mobileBleed?: boolean;
 }
-export const Carousel = ({ items, CardComponent }: CarouselProps) => {
+export const Carousel = ({
+  items,
+  CardComponent,
+  mobileBleed = true,
+}: CarouselProps) => {
   const [startIndex, setStartIndex] = useState(0);
   const [itemsPerView, setItemsPerView] = useState(6);
 
@@ -68,7 +73,11 @@ export const Carousel = ({ items, CardComponent }: CarouselProps) => {
         </button>
       )}
 
-      <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 scroll-smooth sm:hidden">
+      <div
+        className={`flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 scroll-smooth sm:hidden ${
+          mobileBleed ? "-mx-4 px-4" : "px-0"
+        }`}
+      >
         {items.map((item) => (
           <div
             key={item.id}
