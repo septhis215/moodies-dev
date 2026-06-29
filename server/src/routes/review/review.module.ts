@@ -11,9 +11,10 @@ import { ReviewBanGuard } from './guard/review-ban.guard';
 import { JwtGuard } from 'src/auth/guard';
 import { TmdbClientService } from 'src/media/all/client/tmdb-client.service';
 import { ContentSnapshotController } from './content-snapshot.controller';
+import { TurnstileModule } from 'src/common/security/turnstile.module';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, TurnstileModule],
   controllers: [ReviewController, ContentSnapshotController],
   providers: [
     ReviewService,

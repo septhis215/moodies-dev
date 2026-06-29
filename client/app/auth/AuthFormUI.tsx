@@ -64,26 +64,31 @@ type AuthHeaderProps = {
   title: string;
   children?: ReactNode;
   compact?: boolean;
+  titleSide?: ReactNode;
 };
 
 export function AuthHeader({
   title,
   children,
   compact = false,
+  titleSide,
 }: AuthHeaderProps) {
   return (
     <header
       className={compact ? "mb-3" : "mb-7 [@media(max-height:700px)]:mb-4"}
     >
-      <h1
-        className={`font-['Bebas_Neue'] leading-none tracking-[0.03em] text-[rgb(233,79,55)] ${
-          compact
-            ? "text-[1.75rem] sm:text-[1.9rem]"
-            : "text-[2.25rem] sm:text-[2.45rem] [@media(max-height:700px)]:text-[1.9rem]"
-        }`}
-      >
-        {title}
-      </h1>
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-2 sm:flex-nowrap">
+        <h1
+          className={`font-['Bebas_Neue'] leading-none tracking-[0.03em] text-[rgb(233,79,55)] ${
+            compact
+              ? "text-[1.75rem] sm:text-[1.9rem]"
+              : "text-[2.25rem] sm:text-[2.45rem] [@media(max-height:700px)]:text-[1.9rem]"
+          }`}
+        >
+          {title}
+        </h1>
+        {titleSide}
+      </div>
       <div
         className={`h-0.5 w-12 rounded-full bg-[rgb(233,79,55)] shadow-[0_0_20px_rgba(233,79,55,0.55)] ${
           compact ? "my-1.5" : "mt-3 mb-3 [@media(max-height:700px)]:my-2"

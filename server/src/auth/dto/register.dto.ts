@@ -43,6 +43,10 @@ export class RegisterDto {
   })
   password: string;
 
+  @IsString()
+  @IsNotEmpty()
+  captchaToken: string;
+
   @IsOptional()
   @IsUrl({}, { message: 'Invalid URL' })
   avatarUrl?: string;
