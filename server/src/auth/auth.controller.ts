@@ -27,19 +27,15 @@ import {
   readCookie,
   setAuthCookies,
 } from './auth.cookies';
-import { TurnstileService } from 'src/common/security/turnstile.service';
+import { TurnstileVerifiedGuard } from 'src/common/security/turnstile-verified.guard';
 
 type PasswordResetRequestBody = {
   email: string;
-  captchaToken?: string;
 };
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private authService: AuthService,
-    private readonly turnstile: TurnstileService,
-  ) { }
+  constructor(private authService: AuthService) { }
 
   @Get('bootstrap')
   bootstrap(@Req() req: ExpressRequest) {
@@ -49,16 +45,14 @@ export class AuthController {
   }
 
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(TurnstileVerifiedGuard)
   @Post('signup')
   async signup(
     @Body() dto: authDto.RegisterDto,
-    @Req() req: ExpressRequest,
     @Res({ passthrough: true }) res: ExpressResponse,
   ) {
     // Do not log `dto` — it contains the plaintext password.
-    await this.turnstile.verifyToken(dto.captchaToken, this.clientIp(req));
-    const { captchaToken, ...signupDto } = dto;
-    const result = await this.authService.signup(signupDto);
+    const result = await this.authService.signup(dto);
     const { accessToken, refreshToken } = await this.authService.issueTokens(
       result.user.id,
       result.user.email,
@@ -68,15 +62,13 @@ export class AuthController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @UseGuards(TurnstileVerifiedGuard)
   @Post('signin')
   async signin(
     @Body() dto: authDto.LoginDto,
-    @Req() req: ExpressRequest,
     @Res({ passthrough: true }) res: ExpressResponse,
   ) {
-    await this.turnstile.verifyToken(dto.captchaToken, this.clientIp(req));
-    const { captchaToken, ...signinDto } = dto;
-    const result = await this.authService.signin(signinDto);
+    const result = await this.authService.signin(dto);
     const { accessToken, refreshToken } = await this.authService.issueTokens(
       result.user.id,
       result.user.email,
@@ -182,11 +174,10 @@ export class AuthController {
   /* ================= PASSWORD RESET (email-code flow) ================= */
 
   @Post('request-reset')
+  @UseGuards(TurnstileVerifiedGuard)
   async requestReset(
     @Body() body: PasswordResetRequestBody,
-    @Req() req: ExpressRequest,
   ) {
-    await this.turnstile.verifyToken(body.captchaToken, this.clientIp(req));
     return this.authService.requestPasswordReset(body.email);
   }
 
@@ -257,12 +248,5 @@ export class AuthController {
     @Body() body: { age?: number; preferredGenres?: string[]; preferredLanguages?: string[] },
   ) {
     return this.authService.updatePreferences(user.id, body);
-  }
-
-  private clientIp(req: ExpressRequest): string | undefined {
-    const forwardedFor = req.headers['x-forwarded-for'];
-    if (typeof forwardedFor === 'string') return forwardedFor.split(',')[0]?.trim();
-    if (Array.isArray(forwardedFor)) return forwardedFor[0]?.split(',')[0]?.trim();
-    return req.ip;
   }
 }

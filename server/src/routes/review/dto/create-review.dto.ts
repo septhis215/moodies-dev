@@ -1,5 +1,5 @@
 import { MediaType } from "@prisma/client";
-import { IsInt, Min, Max, IsString, MinLength, MaxLength, IsArray, ArrayMinSize, ArrayMaxSize, IsEnum, IsNotEmpty } from "class-validator";
+import { IsInt, Min, Max, IsString, MinLength, MaxLength, IsArray, ArrayMinSize, ArrayMaxSize, IsEnum } from "class-validator";
 
 export class CreateReviewDto {
   @IsInt()
@@ -23,8 +23,4 @@ export class CreateReviewDto {
 
   @IsEnum(MediaType)
   mediaType: MediaType;
-
-  @IsString()
-  @IsNotEmpty()
-  captchaToken: string;
 }

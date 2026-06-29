@@ -16,8 +16,4 @@ export class LoginDto {
     message: 'Password must be at least 8 characters long',
   })
   password: string;
-
-  @IsString()
-  @IsNotEmpty()
-  captchaToken: string;
 }

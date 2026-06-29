@@ -8,6 +8,7 @@ import { AppErrorProvider } from "./context/AppErrorProvider";
 import { AuthProvider } from "./context/AuthProvider";
 import { ToastProvider } from "./context/ToastContext";
 import { AppToaster } from "@/components/providers/AppToaster";
+import { TurnstileGateProvider } from "@/components/security/TurnstileGateProvider";
 
 const ACCESS_COOKIE = "mood_at";
 const SESSION_MARKER_COOKIE = "mood_session";
@@ -93,7 +94,9 @@ export default async function RootLayout({
         <ToastProvider>
           <AuthProvider initialBlockSessionBootstrap={initialBlockSessionBootstrap}>
             <AppErrorProvider>
-              <ClientLayout>{children}</ClientLayout>
+              <TurnstileGateProvider>
+                <ClientLayout>{children}</ClientLayout>
+              </TurnstileGateProvider>
               <AppToaster />
             </AppErrorProvider>
           </AuthProvider>
