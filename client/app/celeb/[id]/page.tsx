@@ -33,7 +33,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ElementType,
+  type ReactNode,
+  use,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 interface Credit {
   id: number;
@@ -155,13 +163,21 @@ interface RelatedVideo {
 type FilmographyTab = "all" | "movies" | "tv";
 type SortMode = "notable" | "latest" | "rating" | "oldest";
 type CareerMoment = { label: string; value: string; detail: string };
-type VideoFilter = "all" | "trailer" | "clip" | "feature" | "show";
+type VideoFilter = "all" | "trailer" | "clip" | "interview" | "behind" | "show";
 
-const RELATED_VIDEO_PAGE_SIZE = 4;
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_NEST_API_URL ||
   "http://localhost:4000";
+
+const videoFilters: Array<{ value: VideoFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "trailer", label: "Trailers" },
+  { value: "clip", label: "Clips" },
+  { value: "interview", label: "Interviews" },
+  { value: "behind", label: "Behind" },
+  { value: "show", label: "Shows" },
+];
 
 const genreMap: Record<number, string> = {
   28: "Action",
@@ -248,10 +264,10 @@ function SectionHeader({
   subtitle,
   action,
 }: {
-  icon: React.ElementType;
+  icon: ElementType;
   title: string;
   subtitle?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -280,7 +296,7 @@ function EmptyState({
   title,
   text,
 }: {
-  icon: React.ElementType;
+  icon: ElementType;
   title: string;
   text: string;
 }) {
@@ -297,6 +313,70 @@ function EmptyState({
   );
 }
 
+function ProfilePill({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
+        {label}
+      </p>
+      <p className="mt-1 line-clamp-1 text-sm font-black text-white">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function CareerSignalCard({
+  label,
+  value,
+  detail,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  detail?: string;
+  icon: ElementType;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 shadow-lg shadow-black/15">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
+          {label}
+        </span>
+        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-black/35 text-[#ff8b78] ring-1 ring-white/10">
+          <Icon className="h-4 w-4" />
+        </span>
+      </div>
+      <p className="line-clamp-1 text-xl font-black text-white">{value}</p>
+      {detail && (
+        <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">
+          {detail}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CareerMomentCard({ item }: { item: CareerMoment }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/25 p-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#ff8b78]">
+        {item.label}
+      </p>
+      <p className="mt-1 line-clamp-2 text-sm font-bold leading-snug text-white">
+        {item.value}
+      </p>
+      <p className="mt-1 text-xs text-zinc-500">{item.detail}</p>
+    </div>
+  );
+}
+
 function MiniStat({
   label,
   value,
@@ -304,7 +384,7 @@ function MiniStat({
 }: {
   label: string;
   value: string | number;
-  icon: React.ElementType;
+  icon: ElementType;
 }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5 sm:rounded-2xl sm:p-3">
@@ -463,19 +543,267 @@ function WorkCard({
   );
 }
 
-function VideoCard({
+function FilmographyLedgerCard({
+  credit,
+  onWatchlistToggle,
+  inWatchlist,
+  isLoading,
+}: {
+  credit: Credit;
+  onWatchlistToggle: (credit: Credit) => void;
+  inWatchlist: boolean;
+  isLoading?: boolean;
+}) {
+  const year = getYear(credit);
+
+  return (
+    <article className="group grid grid-cols-[72px_minmax(0,1fr)] gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-2.5 transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06] sm:grid-cols-[86px_minmax(0,1fr)_auto] sm:p-3">
+      <Link
+        href={getHref(credit)}
+        className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-900"
+        aria-label={`Open ${getTitle(credit)}`}
+      >
+        <Image
+          src={getPosterUrl(credit.poster_path, "w342")}
+          alt={getTitle(credit)}
+          fill
+          sizes="(max-width: 640px) 72px, 86px"
+          className="object-cover transition duration-500 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+      </Link>
+
+      <div className="min-w-0 py-0.5">
+        <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-zinc-300">
+            {credit.media_type === "tv" ? "TV" : "Movie"}
+          </span>
+          {year && (
+            <span className="rounded-full border border-white/10 px-2 py-0.5 text-[9px] font-bold text-zinc-500">
+              {year}
+            </span>
+          )}
+        </div>
+
+        <Link
+          href={getHref(credit)}
+          className="line-clamp-2 text-sm font-black leading-tight text-white transition group-hover:text-[#ff9b8a] sm:text-base"
+        >
+          {getTitle(credit)}
+        </Link>
+
+        {credit.character && (
+          <p className="mt-1 line-clamp-1 text-xs font-medium text-zinc-500">
+            as {credit.character}
+          </p>
+        )}
+
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <RatingBadge
+            rating={credit.vote_average}
+            variant="colored"
+            size="sm"
+          />
+          {credit.popularity ? (
+            <span className="rounded-full bg-black/25 px-2 py-1 text-[10px] font-bold text-zinc-500">
+              Pop {Math.round(credit.popularity)}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="col-span-2 flex items-center justify-between gap-2 border-t border-white/10 pt-2 sm:col-span-1 sm:flex-col sm:items-end sm:justify-center sm:border-t-0 sm:pt-0">
+        <Link
+          href={getHref(credit)}
+          className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-xs font-bold text-zinc-300 transition hover:bg-white hover:text-black"
+        >
+          Details
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Link>
+        <button
+          type="button"
+          onClick={() => onWatchlistToggle(credit)}
+          disabled={isLoading}
+          className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-bold transition ${
+            inWatchlist
+              ? "bg-emerald-500 text-white"
+              : "bg-[#e94f37] text-black hover:bg-[#ff6b58]"
+          } ${isLoading ? "cursor-not-allowed opacity-70" : ""}`}
+        >
+          {isLoading ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : inWatchlist ? (
+            <BookmarkCheck className="h-3.5 w-3.5" />
+          ) : (
+            <Plus className="h-3.5 w-3.5" />
+          )}
+          {inWatchlist ? "Saved" : "Save"}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function getVideoTypeLabel(video: RelatedVideo) {
+  const type = video.video_type?.trim() || "Video";
+  if (type.toLowerCase() === "featurette") return "Featurette";
+  return type;
+}
+
+function getVideoFilterGroup(video: RelatedVideo): Exclude<VideoFilter, "all"> {
+  const type = getVideoTypeLabel(video).toLowerCase();
+  const label = video.relevance_label?.toLowerCase() || "";
+
+  if (type === "trailer" || type === "teaser" || type.includes("preview")) {
+    return "trailer";
+  }
+  if (type === "clip") return "clip";
+  if (type.includes("interview")) return "interview";
+  if (type.includes("behind") || type === "featurette") return "behind";
+  if (
+    type.includes("variety") ||
+    type.includes("appearance") ||
+    label.includes("variety") ||
+    label.includes("show") ||
+    video.media_type === "tv"
+  ) {
+    return "show";
+  }
+
+  return "behind";
+}
+
+function getVideoContextLabel(video: RelatedVideo) {
+  const type = getVideoTypeLabel(video).toLowerCase();
+  const label = video.relevance_label || "";
+
+  if (type === "trailer" && video.official) return "Official Trailer";
+  if (type === "teaser" && video.official) return "Official Teaser";
+  if (type.includes("interview")) return "Interview";
+  if (type.includes("behind")) return "Behind the Scenes";
+  if (type === "featurette") return "Featurette";
+  if (type.includes("variety") || label.includes("Variety")) {
+    return "Variety Appearance";
+  }
+  if (label.includes("Known")) return "Known For";
+  if (label.includes("Main")) return "Main Cast Work";
+  if (label.includes("Featured")) return "Featured Role";
+  if (type === "clip") return "Clip";
+  return video.official ? "Official Video" : "Video";
+}
+
+function getVideoRoleLabel(video: RelatedVideo) {
+  if (!video.role) return null;
+  const role = video.role.trim();
+  if (!role) return null;
+  const normalized = role.toLowerCase();
+  if (["self", "himself", "herself", "guest"].includes(normalized)) {
+    return "Appearance";
+  }
+  return `as ${role}`;
+}
+
+function VideoPlayButton({ compact = false }: { compact?: boolean }) {
+  return (
+    <span
+      className={`flex items-center justify-center rounded-full bg-white text-black shadow-2xl transition group-hover:scale-105 ${
+        compact ? "h-9 w-9" : "h-12 w-12 sm:h-14 sm:w-14"
+      }`}
+    >
+      <Play
+        className={`fill-current ${compact ? "h-3.5 w-3.5" : "h-5 w-5"}`}
+      />
+    </span>
+  );
+}
+
+function VideoSpotlightCard({
   video,
   onPlay,
 }: {
   video: RelatedVideo;
   onPlay: (video: RelatedVideo) => void;
 }) {
+  const role = getVideoRoleLabel(video);
+
   return (
     <button
+      type="button"
       onClick={() => onPlay(video)}
-      className="group min-h-full cursor-pointer overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] text-left shadow-lg shadow-black/20 backdrop-blur transition hover:-translate-y-0.5 hover:border-[#e94f37]/50 hover:bg-white/[0.07]"
+      className="group relative min-h-[320px] overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 text-left shadow-2xl shadow-black/30 transition hover:border-white/25 sm:min-h-[390px]"
     >
-      <div className="relative aspect-video overflow-hidden bg-zinc-950">
+      <Image
+        src={
+          video.thumbnail_url || getImageUrl(video.media_backdrop_path, "w780")
+        }
+        alt={video.video_title}
+        fill
+        sizes="(max-width: 768px) 100vw, 58vw"
+        className="object-cover transition duration-700 group-hover:scale-105"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/10" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(233,79,55,0.22),transparent_36%)]" />
+
+      <div className="absolute left-4 right-4 top-4 flex items-start justify-between gap-3 sm:left-5 sm:right-5 sm:top-5">
+        <div className="flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-[#e94f37] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-black">
+            {getVideoContextLabel(video)}
+          </span>
+          <span className="rounded-full border border-white/10 bg-black/55 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white backdrop-blur">
+            {video.media_type === "tv" ? "TV" : "Movie"}
+          </span>
+          {video.official && (
+            <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white backdrop-blur">
+              Official
+            </span>
+          )}
+        </div>
+        <VideoPlayButton />
+      </div>
+
+      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
+        <p className="mb-2 text-[11px] font-black uppercase tracking-[0.14em] text-[#ff9b8a]">
+          Spotlight video
+        </p>
+        <h3 className="line-clamp-2 max-w-2xl text-xl font-black leading-tight text-white sm:text-3xl">
+          {video.video_title}
+        </h3>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-zinc-300 sm:text-sm">
+          <span className="line-clamp-1 max-w-[220px] text-white sm:max-w-md">
+            {video.media_title}
+          </span>
+          <span className="h-1 w-1 rounded-full bg-zinc-600" />
+          <span>{video.release_year || "TBA"}</span>
+          <span className="h-1 w-1 rounded-full bg-zinc-600" />
+          <span>{getVideoTypeLabel(video)}</span>
+          {role && (
+            <>
+              <span className="h-1 w-1 rounded-full bg-zinc-600" />
+              <span className="line-clamp-1">{role}</span>
+            </>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function VideoShelfCard({
+  video,
+  onPlay,
+}: {
+  video: RelatedVideo;
+  onPlay: (video: RelatedVideo) => void;
+}) {
+  const role = getVideoRoleLabel(video);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onPlay(video)}
+      className="group grid min-h-full grid-cols-[118px_minmax(0,1fr)] overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] text-left shadow-lg shadow-black/20 backdrop-blur transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.07] sm:grid-cols-1"
+    >
+      <div className="relative min-h-[92px] overflow-hidden bg-zinc-950 sm:aspect-video">
         <Image
           src={
             video.thumbnail_url ||
@@ -483,35 +811,23 @@ function VideoCard({
           }
           alt={video.video_title}
           fill
-          sizes="(max-width: 640px) 72vw, (max-width: 768px) 78vw, 360px"
+          sizes="(max-width: 640px) 118px, (max-width: 768px) 260px, 320px"
           className="object-cover transition duration-500 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-        <div className="absolute left-2 top-2 flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-[#e94f37] px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-black">
-            {video.video_type}
-          </span>
-          <span className="rounded-full bg-black/70 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur">
-            {video.media_type === "tv" ? "TV" : "Movie"}
-          </span>
-        </div>
-        {video.official && (
-          <span className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-black">
-            Official
-          </span>
-        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-black shadow-2xl transition group-hover:scale-110 sm:h-10 sm:w-10">
-            <Play className="h-4 w-4 fill-current" />
-          </div>
+          <VideoPlayButton compact />
         </div>
       </div>
 
-      <div className="space-y-2 p-2.5 sm:p-3">
+      <div className="flex min-w-0 flex-col justify-between gap-2 p-3">
         <div>
-          <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[9px] font-semibold text-zinc-300">
-              {video.relevance_label || "Relevant credit"}
+          <div className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.12em]">
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-zinc-200">
+              {getVideoContextLabel(video)}
+            </span>
+            <span className="rounded-full border border-white/10 px-2 py-0.5 text-zinc-400">
+              {video.media_type === "tv" ? "TV" : "Movie"}
             </span>
           </div>
           <h3 className="line-clamp-2 text-xs font-bold leading-snug text-white group-hover:text-zinc-200 sm:text-[13px]">
@@ -522,24 +838,80 @@ function VideoCard({
           </p>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 text-[11px] text-zinc-500">
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <div className="min-w-0 text-[11px] font-medium text-zinc-500">
             <span>{video.release_year || "TBA"}</span>
             {video.role && (
               <>
                 <span className="mx-1.5 text-zinc-700">|</span>
-                <span className="line-clamp-1 inline">as {video.role}</span>
+                <span className="line-clamp-1 inline">{role}</span>
               </>
             )}
           </div>
-          <RatingBadge
-            rating={video.media_vote_average}
-            variant="colored"
-            size="sm"
-          />
+          {video.official && (
+            <span className="shrink-0 rounded-full bg-[#e94f37]/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#ff9b8a]">
+              Official
+            </span>
+          )}
         </div>
       </div>
     </button>
+  );
+}
+
+function VideoSectionSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/70 p-3 sm:p-4">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_0.85fr]">
+        <div className="min-h-[300px] animate-pulse rounded-2xl bg-zinc-900 sm:min-h-[380px]" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-[118px_minmax(0,1fr)] overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] sm:grid-cols-1"
+            >
+              <div className="min-h-[92px] animate-pulse bg-zinc-900 sm:aspect-video" />
+              <div className="space-y-2 p-3">
+                <div className="h-3 w-24 animate-pulse rounded bg-zinc-800" />
+                <div className="h-4 w-full animate-pulse rounded bg-zinc-800" />
+                <div className="h-3 w-3/5 animate-pulse rounded bg-zinc-800" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VideoEmptyPanel({
+  error,
+  hasFilteredVideos,
+}: {
+  error?: string | null;
+  hasFilteredVideos?: boolean;
+}) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/70 p-5 shadow-2xl shadow-black/20 sm:p-7">
+      <div className="mx-auto max-w-xl text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[#ff8b78]">
+          <Play className="h-5 w-5 fill-current" />
+        </div>
+        <h3 className="text-lg font-black text-white">
+          {error
+            ? "The video room is offline"
+            : hasFilteredVideos
+              ? "No videos in this lane"
+              : "No related videos yet"}
+        </h3>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-400">
+          {error ||
+            (hasFilteredVideos
+              ? "Try another video type to browse trailers, interviews, clips, and show appearances."
+              : "Moodies could not find trailers, interviews, clips, or behind-the-scenes videos connected to this profile yet.")}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -599,7 +971,7 @@ function ExternalProfileLinks({ person }: { person: Person }) {
   ].filter(Boolean) as Array<{
     label: string;
     href: string;
-    icon: React.ElementType;
+    icon: ElementType;
   }>;
 
   if (links.length === 0) {
@@ -662,7 +1034,6 @@ export default function CelebrityDetailPage({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<RelatedVideo | null>(null);
   const [galleryPage, setGalleryPage] = useState(0);
-  const [videoStartIndex, setVideoStartIndex] = useState(0);
   const [similarStartIndex, setSimilarStartIndex] = useState(0);
   const [shouldLoadVideos, setShouldLoadVideos] = useState(false);
   const relatedVideosSectionRef = useRef<HTMLElement | null>(null);
@@ -929,52 +1300,13 @@ export default function CelebrityDetailPage({
   const filteredVideos = useMemo(() => {
     return relatedVideos.filter((video) => {
       if (videoFilter === "all") return true;
-
-      const type = video.video_type.toLowerCase();
-      if (videoFilter === "trailer") {
-        return type === "trailer" || type === "teaser";
-      }
-      if (videoFilter === "clip") return type === "clip";
-      if (videoFilter === "feature") {
-        return (
-          type === "interview" ||
-          type === "behind the scenes" ||
-          type === "featurette" ||
-          type === "official preview"
-        );
-      }
-      if (videoFilter === "show") {
-        return (
-          video.media_type === "tv" ||
-          type === "variety appearance" ||
-          video.relevance_label === "Variety Appearance" ||
-          video.relevance_label === "Show Appearance"
-        );
-      }
-
-      return true;
+      return getVideoFilterGroup(video) === videoFilter;
     });
   }, [relatedVideos, videoFilter]);
-  const visibleVideos = filteredVideos.slice(
-    videoStartIndex,
-    videoStartIndex + RELATED_VIDEO_PAGE_SIZE,
-  );
-  const canScrollVideosLeft = videoStartIndex > 0;
-  const canScrollVideosRight =
-    videoStartIndex + RELATED_VIDEO_PAGE_SIZE < filteredVideos.length;
-  const videoPageCount = Math.ceil(
-    filteredVideos.length / RELATED_VIDEO_PAGE_SIZE,
-  );
-
-  useEffect(() => {
-    const lastPageStart = Math.max(
-      0,
-      Math.floor((filteredVideos.length - 1) / RELATED_VIDEO_PAGE_SIZE) *
-        RELATED_VIDEO_PAGE_SIZE,
-    );
-
-    setVideoStartIndex((index) => Math.min(index, lastPageStart));
-  }, [filteredVideos.length]);
+  const featuredVideo = filteredVideos[0] || null;
+  const supportingVideos = filteredVideos
+    .filter((video) => video.id !== featuredVideo?.id)
+    .slice(0, 8);
 
   if (loading) return <AppLoading />;
 
@@ -1034,9 +1366,8 @@ export default function CelebrityDetailPage({
     topGenres[0]?.[0] && `${topGenres[0][0].toLowerCase()} titles`,
     topRatedWorks[0] && getTitle(topRatedWorks[0]),
   ].filter(Boolean);
-  const visibleCredits = showAllCredits
-    ? filteredCredits
-    : filteredCredits.slice(0, 12);
+  const filmographyLimit = showAllCredits ? 36 : 12;
+  const visibleCredits = filteredCredits.slice(0, filmographyLimit);
   const galleryItems =
     profiles.length > 0
       ? profiles
@@ -1072,6 +1403,59 @@ export default function CelebrityDetailPage({
       detail: String(timeline.recent.year),
     },
   ].filter((item): item is CareerMoment => Boolean(item));
+  const creditYears = releasedCredits
+    .map((credit) => getYear(credit))
+    .filter((year): year is number => Boolean(year));
+  const firstCreditYear =
+    creditYears.length > 0 ? Math.min(...creditYears) : null;
+  const latestCreditYear =
+    creditYears.length > 0 ? Math.max(...creditYears) : null;
+  const activeYears =
+    firstCreditYear && latestCreditYear
+      ? firstCreditYear === latestCreditYear
+        ? String(firstCreditYear)
+        : `${firstCreditYear}-${latestCreditYear}`
+      : "Building";
+  const careerDuration =
+    firstCreditYear && latestCreditYear
+      ? `${Math.max(1, latestCreditYear - firstCreditYear + 1)} year span`
+      : "Timeline pending";
+  const biographyLead =
+    person.biography?.split(/(?<=[.!?])\s+/).find((sentence) => sentence) ||
+    (knownForSummary.length > 0
+      ? `${person.name} is known for ${knownForSummary.join(", ")}.`
+      : `${person.name}'s Moodies profile gathers career highlights, collaborators, genres, and credits in one place.`);
+  const careerSignals = [
+    {
+      label: "Projects",
+      value: credits.length,
+      detail: `${movieCredits.length} movies | ${tvCredits.length} TV`,
+      icon: Briefcase,
+    },
+    {
+      label: "Active years",
+      value: activeYears,
+      detail: careerDuration,
+      icon: Calendar,
+    },
+    {
+      label: "Top rated",
+      value: topRatedWorks[0] ? getTitle(topRatedWorks[0]) : "Pending",
+      detail: topRatedWorks[0]
+        ? `${topRatedWorks[0].vote_average?.toFixed(1) || "Rated"} | ${getYear(topRatedWorks[0]) || "TBA"}`
+        : "More ratings needed",
+      icon: Star,
+    },
+    {
+      label: "Primary lane",
+      value: person.known_for_department || "Entertainment",
+      detail: topGenres[0]
+        ? `${topGenres[0][0]} leads the genre mix`
+        : "Genre mix unavailable",
+      icon: Sparkles,
+    },
+  ];
+  const topFilmographyCredits = visibleCredits;
 
   const toggleWatchlist = async (credit: Credit) => {
     if (!ready) {
@@ -1319,69 +1703,106 @@ export default function CelebrityDetailPage({
             id="biography"
             className="mt-9 grid scroll-mt-24 gap-5 sm:mt-10 sm:gap-5 lg:grid-cols-[1.25fr_0.75fr]"
           >
-            <div className="rounded-[1.35rem] border border-zinc-800 bg-zinc-900/55 p-5 sm:rounded-3xl sm:p-7">
-              <SectionHeader
-                icon={Sparkles}
-                title="Biography"
-                subtitle="A readable snapshot of background, career shape, and public profile."
-              />
-              {person.biography ? (
-                <div className="relative mt-5">
-                  <p
-                    className={`whitespace-pre-line text-[15px] leading-8 text-zinc-200 sm:text-base sm:leading-8 ${bioExpanded ? "" : "line-clamp-7 sm:line-clamp-6"}`}
-                  >
-                    {person.biography}
-                  </p>
-                  {!bioExpanded && person.biography.length > 520 && (
-                    <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-zinc-900 to-transparent" />
-                  )}
-                  {person.biography.length > 520 && (
-                    <button
-                      onClick={() => setBioExpanded((value) => !value)}
-                      className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white hover:text-black sm:w-auto"
-                    >
-                      {bioExpanded ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                      {bioExpanded ? "Show less" : "Read more"}
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <EmptyState
-                  icon={SearchX}
-                  title="No biography yet"
-                  text="Moodies did not receive a biography from TMDB, so this page leans on credits, genres, and related people instead."
+            <div className="overflow-hidden rounded-[1.35rem] border border-zinc-800 bg-zinc-900/55 shadow-2xl shadow-black/20 sm:rounded-3xl">
+              <div className="border-b border-white/10 bg-white/[0.025] p-5 sm:p-7">
+                <SectionHeader
+                  icon={Sparkles}
+                  title="Profile Story"
+                  subtitle="A human-readable career snapshot before the full biography."
                 />
-              )}
-            </div>
+                <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4">
+                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
+                    Career read
+                  </p>
+                  <p className="mt-2 text-base font-semibold leading-7 text-white sm:text-lg sm:leading-8">
+                    {biographyLead}
+                  </p>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <ProfilePill
+                    label="Department"
+                    value={person.known_for_department || "Entertainment"}
+                  />
+                  <ProfilePill label="Active" value={activeYears} />
+                  <ProfilePill
+                    label="Top genre"
+                    value={topGenres[0]?.[0] || "Pending"}
+                  />
+                  <ProfilePill
+                    label="Credits"
+                    value={`${credits.length} total`}
+                  />
+                </div>
+              </div>
 
-            <div className="rounded-[1.35rem] border border-zinc-800 bg-zinc-900/55 p-5 sm:rounded-3xl sm:p-7">
-              <SectionHeader icon={Layers} title="Career Snapshot" />
-              <div className="mt-5 space-y-4">
-                {careerMoments.map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-2xl border border-zinc-800 bg-black/25 p-4"
-                  >
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                      {item.label}
+              <div className="p-5 sm:p-7">
+                {person.biography ? (
+                  <div className="relative">
+                    <p
+                      className={`whitespace-pre-line text-[15px] leading-8 text-zinc-200 sm:text-base sm:leading-8 ${bioExpanded ? "" : "line-clamp-8 sm:line-clamp-7"}`}
+                    >
+                      {person.biography}
                     </p>
-                    <p className="mt-1 line-clamp-2 font-bold text-white">
-                      {item.value}
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-500">{item.detail}</p>
+                    {!bioExpanded && person.biography.length > 520 && (
+                      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-zinc-900 to-transparent" />
+                    )}
+                    {person.biography.length > 520 && (
+                      <button
+                        onClick={() => setBioExpanded((value) => !value)}
+                        className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-zinc-200 transition hover:bg-white hover:text-black sm:w-auto"
+                      >
+                        {bioExpanded ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                        {bioExpanded ? "Show less" : "Read more"}
+                      </button>
+                    )}
                   </div>
-                ))}
-                {careerMoments.length === 0 && (
+                ) : (
                   <EmptyState
-                    icon={Clapperboard}
-                    title="Timeline building"
-                    text="Career milestones will appear once the timeline endpoint has enough data."
+                    icon={SearchX}
+                    title="No biography yet"
+                    text="Moodies did not receive a biography from TMDB, so this page leans on credits, genres, and related people instead."
                   />
                 )}
+              </div>
+            </div>
+
+            <div className="rounded-[1.35rem] border border-zinc-800 bg-zinc-900/55 p-5 shadow-2xl shadow-black/20 sm:rounded-3xl sm:p-7">
+              <SectionHeader
+                icon={Layers}
+                title="Career Dashboard"
+                subtitle="Projects, timeline signals, and standout lanes at a glance."
+              />
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                {careerSignals.map((signal) => (
+                  <CareerSignalCard key={signal.label} {...signal} />
+                ))}
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-zinc-500">
+                    Milestones
+                  </p>
+                  <span className="text-[11px] font-semibold text-zinc-600">
+                    {careerMoments.length || 0} signals
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {careerMoments.map((item) => (
+                    <CareerMomentCard key={item.label} item={item} />
+                  ))}
+                  {careerMoments.length === 0 && (
+                    <EmptyState
+                      icon={Clapperboard}
+                      title="Timeline building"
+                      text="Career milestones will appear once the timeline endpoint has enough data."
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </section>
@@ -1416,157 +1837,92 @@ export default function CelebrityDetailPage({
 
           <section
             ref={relatedVideosSectionRef}
-            className="mt-12 space-y-4 sm:mt-16 sm:space-y-5"
+            className="mt-12 scroll-mt-24 space-y-4 sm:mt-16 sm:space-y-5"
           >
-            <SectionHeader
-              icon={Play}
-              title="Related Videos"
-              subtitle="Trailers, clips, interviews, and show appearances tied to meaningful credits."
-              action={
-                relatedVideos.length > 0 && (
-                  <div className="-mx-1 flex max-w-[calc(100vw-2rem)] overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.04] p-1 backdrop-blur mobile-native-scroll sm:mx-0 sm:max-w-full">
-                    {[
-                      ["all", `All ${relatedVideos.length}`],
-                      ["trailer", "Trailers"],
-                      ["clip", "Clips"],
-                      ["feature", "Features"],
-                      ["show", "Shows"],
-                    ].map(([value, label]) => (
-                      <button
-                        key={value}
-                        onClick={() => {
-                          setVideoFilter(value as VideoFilter);
-                          setVideoStartIndex(0);
-                        }}
-                        className={`min-h-10 cursor-pointer whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition sm:text-sm ${
-                          videoFilter === value
-                            ? "bg-[#e94f37] text-black shadow-lg shadow-[#e94f37]/15"
-                            : "text-zinc-400 hover:bg-white/5 hover:text-white"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                )
-              }
-            />
+            <div className="overflow-hidden rounded-[1.35rem] border border-white/10 bg-zinc-950/55 shadow-2xl shadow-black/25 backdrop-blur sm:rounded-3xl">
+              <div className="border-b border-white/10 p-4 sm:p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                  <SectionHeader
+                    icon={Play}
+                    title="Video Room"
+                    subtitle="Trailers, clips, interviews, featurettes, and show appearances connected to this career."
+                  />
 
-            {!shouldLoadVideos || videosLoading ? (
-              <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="w-[74vw] min-w-[232px] max-w-[300px] shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] sm:w-auto sm:min-w-0 sm:max-w-none"
-                  >
-                    <div className="aspect-video animate-pulse bg-zinc-800" />
-                    <div className="space-y-2.5 p-3">
-                      <div className="h-4 w-4/5 animate-pulse rounded bg-zinc-800" />
-                      <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : videosError ? (
-              <EmptyState
-                icon={Play}
-                title="Videos could not load"
-                text={videosError}
-              />
-            ) : visibleVideos.length > 0 ? (
-              <div className="space-y-4">
-                <div className="relative -mx-4 overflow-hidden border-y border-white/10 bg-white/[0.025] px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-3xl sm:border sm:p-3">
-                  <AnimatePresence mode="popLayout">
-                    <motion.div
-                      key={`${videoFilter}-${videoStartIndex}`}
-                      initial={{ opacity: 0, x: 24 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -24 }}
-                      transition={{ duration: 0.25 }}
-                      className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 mobile-native-scroll sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-4"
-                    >
-                      {visibleVideos.map((video) => (
-                        <div
-                          key={video.id}
-                          className="w-[74vw] min-w-[232px] max-w-[300px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
-                        >
-                          <VideoCard video={video} onPlay={setSelectedVideo} />
-                        </div>
-                      ))}
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
+                  {relatedVideos.length > 0 && (
+                    <div className="-mx-1 flex max-w-[calc(100vw-2rem)] overflow-x-auto rounded-2xl border border-white/10 bg-black/30 p-1 mobile-native-scroll sm:mx-0 sm:max-w-full">
+                      {videoFilters.map((filter) => {
+                        const count =
+                          filter.value === "all"
+                            ? relatedVideos.length
+                            : relatedVideos.filter(
+                                (video) =>
+                                  getVideoFilterGroup(video) === filter.value,
+                              ).length;
 
-                {videoPageCount > 1 && (
-                  <div className="flex items-center justify-center gap-3">
-                    <button
-                      onClick={() =>
-                        setVideoStartIndex((index) =>
-                          Math.max(0, index - RELATED_VIDEO_PAGE_SIZE),
-                        )
-                      }
-                      disabled={!canScrollVideosLeft}
-                      className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
-                      aria-label="Previous related videos"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-
-                    <div className="flex min-w-[96px] items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 backdrop-blur">
-                      {Array.from({ length: videoPageCount }).map(
-                        (_, index) => (
+                        return (
                           <button
-                            key={index}
-                            onClick={() =>
-                              setVideoStartIndex(
-                                index * RELATED_VIDEO_PAGE_SIZE,
-                              )
-                            }
-                            className={`h-1.5 cursor-pointer rounded-full transition ${
-                              Math.floor(
-                                videoStartIndex / RELATED_VIDEO_PAGE_SIZE,
-                              ) === index
-                                ? "w-7 bg-[#e94f37]"
-                                : "w-1.5 bg-zinc-700 hover:bg-zinc-500"
+                            key={filter.value}
+                            type="button"
+                            onClick={() => setVideoFilter(filter.value)}
+                            className={`min-h-10 cursor-pointer whitespace-nowrap rounded-xl px-3 py-2 text-xs font-black transition ${
+                              videoFilter === filter.value
+                                ? "bg-white text-black shadow-lg shadow-black/30"
+                                : "text-zinc-400 hover:bg-white/5 hover:text-white"
                             }`}
-                            aria-label={`Show related videos page ${index + 1}`}
-                          />
-                        ),
+                          >
+                            {filter.label}
+                            {count > 0 && (
+                              <span className="ml-1.5 text-[10px] opacity-65">
+                                {count}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-3 sm:p-4">
+                {!shouldLoadVideos || videosLoading ? (
+                  <VideoSectionSkeleton />
+                ) : videosError ? (
+                  <VideoEmptyPanel error={videosError} />
+                ) : featuredVideo ? (
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1.15fr)_0.85fr]">
+                    <VideoSpotlightCard
+                      video={featuredVideo}
+                      onPlay={setSelectedVideo}
+                    />
+
+                    <div className="min-w-0">
+                      {supportingVideos.length > 0 ? (
+                        <div className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-1">
+                          {supportingVideos.map((video) => (
+                            <div
+                              key={video.id}
+                              className="w-[82vw] min-w-[272px] max-w-[340px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                            >
+                              <VideoShelfCard
+                                video={video}
+                                onPlay={setSelectedVideo}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <VideoEmptyPanel hasFilteredVideos />
                       )}
                     </div>
-
-                    <button
-                      onClick={() =>
-                        setVideoStartIndex((index) =>
-                          Math.min(
-                            Math.max(
-                              0,
-                              filteredVideos.length - RELATED_VIDEO_PAGE_SIZE,
-                            ),
-                            index + RELATED_VIDEO_PAGE_SIZE,
-                          ),
-                        )
-                      }
-                      disabled={!canScrollVideosRight}
-                      className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
-                      aria-label="Next related videos"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
                   </div>
+                ) : (
+                  <VideoEmptyPanel
+                    hasFilteredVideos={relatedVideos.length > 0}
+                  />
                 )}
               </div>
-            ) : (
-              <EmptyState
-                icon={Play}
-                title="No related videos found"
-                text={
-                  relatedVideos.length > 0
-                    ? "No videos match this filter yet. Try All or another video group."
-                    : "Moodies could not find trailers, teasers, clips, or official previews connected to this celebrity's known works."
-                }
-              />
-            )}
+            </div>
           </section>
 
           <section
@@ -1580,35 +1936,51 @@ export default function CelebrityDetailPage({
                 subtitle="The strongest genre signals across known credits."
               />
               {topGenres.length > 0 ? (
-                <div className="mt-5 grid gap-4 min-[430px]:grid-cols-[84px_minmax(0,1fr)] sm:grid-cols-[116px_minmax(0,1fr)]">
-                  <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] shadow-xl shadow-black/20 sm:h-28 sm:w-28">
-                    <div
-                      className="absolute inset-2 rounded-full sm:inset-2.5"
-                      style={{
-                        background: `conic-gradient(#f5f5f5 0deg ${Math.round(
-                          ((topGenres[0]?.[1] || 0) /
-                            Math.max(totalGenreWorks, 1)) *
-                            360,
-                        )}deg, rgba(63,63,70,.75) 0deg)`,
-                      }}
-                    />
-                    <div className="relative flex h-14 w-14 flex-col items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-center sm:h-20 sm:w-20">
-                      <span className="text-base font-black text-white sm:text-xl">
-                        {Math.round(
-                          ((topGenres[0]?.[1] || 0) /
-                            Math.max(totalGenreWorks, 1)) *
-                            100,
-                        )}
-                        %
-                      </span>
-                      <span className="mt-0.5 max-w-11 truncate text-[8px] font-bold uppercase tracking-wider text-zinc-300 sm:max-w-16 sm:text-[10px]">
-                        {topGenres[0]?.[0]}
-                      </span>
+                <div className="mt-5 space-y-4">
+                  <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
+                          Signature lane
+                        </p>
+                        <h3 className="mt-1 truncate text-2xl font-black text-white">
+                          {topGenres[0][0]}
+                        </h3>
+                      </div>
+                      <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] shadow-xl shadow-black/20 sm:h-24 sm:w-24">
+                        <div
+                          className="absolute inset-2 rounded-full"
+                          style={{
+                            background: `conic-gradient(#f5f5f5 0deg ${Math.round(
+                              ((topGenres[0]?.[1] || 0) /
+                                Math.max(totalGenreWorks, 1)) *
+                                360,
+                            )}deg, rgba(63,63,70,.75) 0deg)`,
+                          }}
+                        />
+                        <div className="relative flex h-14 w-14 flex-col items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 text-center sm:h-16 sm:w-16">
+                          <span className="text-base font-black text-white">
+                            {Math.round(
+                              ((topGenres[0]?.[1] || 0) /
+                                Math.max(totalGenreWorks, 1)) *
+                                100,
+                            )}
+                            %
+                          </span>
+                        </div>
+                      </div>
                     </div>
+                    <p className="mt-3 text-sm leading-6 text-zinc-400">
+                      {person.name}'s credits lean most strongly toward{" "}
+                      <span className="font-bold text-white">
+                        {topGenres[0][0]}
+                      </span>
+                      , based on available genre-tagged works.
+                    </p>
                   </div>
 
-                  <div className="space-y-2.5">
-                    {topGenres.slice(0, 3).map(([genre, count], index) => {
+                  <div className="grid gap-2.5">
+                    {topGenres.slice(0, 5).map(([genre, count], index) => {
                       const pct =
                         totalGenreWorks > 0
                           ? Math.round((count / totalGenreWorks) * 100)
@@ -1661,57 +2033,63 @@ export default function CelebrityDetailPage({
                 subtitle="Repeated creative pairings, with shared projects at a glance."
               />
               {collaborationsLoading ? (
-                <div className="-mx-5 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-3 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0">
+                <div className="-mx-5 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-3 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-1 xl:grid-cols-2">
                   {Array.from({ length: 4 }).map((_, index) => (
                     <div
                       key={index}
-                      className="w-[76vw] min-w-[236px] max-w-[320px] shrink-0 snap-start rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:w-auto sm:min-w-0 sm:max-w-none"
+                      className="w-[82vw] min-w-[260px] max-w-[340px] shrink-0 snap-start rounded-2xl border border-white/10 bg-white/[0.035] p-3.5 sm:w-auto sm:min-w-0 sm:max-w-none"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 animate-pulse rounded-xl bg-zinc-800" />
+                      <div className="flex items-center gap-3.5">
+                        <div className="h-16 w-16 animate-pulse rounded-2xl bg-zinc-800" />
                         <div className="flex-1 space-y-2">
                           <div className="h-4 w-2/3 animate-pulse rounded bg-zinc-800" />
                           <div className="h-3 w-1/2 animate-pulse rounded bg-zinc-800" />
                         </div>
                       </div>
-                      <div className="mt-3 h-8 animate-pulse rounded-lg bg-zinc-800/80" />
+                      <div className="mt-4 grid gap-2">
+                        <div className="h-8 animate-pulse rounded-xl bg-zinc-800/80" />
+                        <div className="h-8 animate-pulse rounded-xl bg-zinc-800/60" />
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : collaborations.length > 0 ? (
-                <div className="-mx-5 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-3 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0">
+                <div className="-mx-5 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-3 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-1 xl:grid-cols-2">
                   {collaborations.slice(0, 4).map((collab) => (
                     <div
                       key={collab.id}
-                      className="group w-[76vw] min-w-[236px] max-w-[320px] shrink-0 snap-start rounded-xl border border-white/10 bg-white/[0.03] p-3.5 transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06] sm:w-auto sm:min-w-0 sm:max-w-none"
+                      className="group w-[82vw] min-w-[260px] max-w-[340px] shrink-0 snap-start rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(233,79,55,0.12),transparent_42%),rgba(255,255,255,0.035)] p-3.5 transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.06] sm:w-auto sm:min-w-0 sm:max-w-none"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-start gap-3.5">
                         <Link
                           href={`/celeb/${collab.id}`}
-                          className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-zinc-800 sm:h-12 sm:w-12"
+                          className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-zinc-800 ring-1 ring-white/10"
                         >
                           <Image
                             src={getProfileUrl(collab.profile_path, "w185")}
                             alt={collab.name}
                             fill
-                            sizes="56px"
+                            sizes="64px"
                             className="object-cover"
                           />
                         </Link>
                         <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
+                            Creative pairing
+                          </p>
                           <Link
                             href={`/celeb/${collab.id}`}
-                            className="line-clamp-1 font-bold text-white transition hover:text-zinc-200"
+                            className="mt-1 line-clamp-1 text-base font-black text-white transition hover:text-zinc-200"
                           >
                             {collab.name}
                           </Link>
-                          <div className="mt-1 flex items-center gap-2">
-                            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] font-bold text-zinc-300">
-                              {collab.count} shared
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-[11px] font-black text-zinc-200">
+                              {collab.count} shared {collab.count === 1 ? "credit" : "credits"}
                             </span>
                             <Link
                               href={`/celeb/${collab.id}`}
-                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-zinc-500 transition group-hover:text-zinc-300"
+                              className="inline-flex min-h-8 items-center gap-1 rounded-full px-1 text-[11px] font-bold text-zinc-500 transition group-hover:text-zinc-300"
                             >
                               Profile <ChevronRight className="h-3 w-3" />
                             </Link>
@@ -1719,11 +2097,11 @@ export default function CelebrityDetailPage({
                         </div>
                       </div>
                       {collab.projects && collab.projects.length > 0 && (
-                        <div className="mt-2.5 space-y-1.5">
-                          {collab.projects.slice(0, 2).map((project) => (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {collab.projects.slice(0, 3).map((project) => (
                             <div
                               key={project}
-                              className="flex items-center gap-2 rounded-lg bg-zinc-900/70 px-2.5 py-1.5 text-xs text-zinc-400"
+                              className="inline-flex min-h-8 max-w-full items-center gap-2 rounded-full bg-zinc-950/70 px-2.5 py-1.5 text-xs text-zinc-400 ring-1 ring-white/10"
                             >
                               <Film className="h-3 w-3 shrink-0 text-zinc-300" />
                               <span className="line-clamp-1">{project}</span>
@@ -1903,15 +2281,74 @@ export default function CelebrityDetailPage({
                   </select>
                 </div>
               </div>
+
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
+                    Showing
+                  </p>
+                  <p className="mt-1 text-xl font-black text-white">
+                    {topFilmographyCredits.length}
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    of {filteredCredits.length} matched credits
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
+                    Active span
+                  </p>
+                  <p className="mt-1 line-clamp-1 text-xl font-black text-white">
+                    {activeYears}
+                  </p>
+                  <p className="text-xs text-zinc-500">{careerDuration}</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
+                    Current view
+                  </p>
+                  <p className="mt-1 text-xl font-black capitalize text-white">
+                    {selectedTab === "all" ? "All credits" : selectedTab}
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    Sorted by {sortMode.replace("-", " ")}
+                  </p>
+                </div>
+              </div>
             </div>
             {visibleCredits.length > 0 ? (
-              <div className="mt-5 space-y-6 sm:mt-7 sm:space-y-8">
-                <div className="grid grid-cols-3 gap-x-2.5 gap-y-5 sm:gap-x-4 sm:gap-y-7 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                  {visibleCredits.map((credit) => {
+              <div className="mt-5 space-y-5 sm:mt-7 sm:space-y-6">
+                {topFilmographyCredits[0] && (
+                  <div className="rounded-2xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(233,79,55,0.14),transparent_44%),rgba(255,255,255,0.035)] p-3 sm:p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
+                          Ledger focus
+                        </p>
+                        <h3 className="mt-1 line-clamp-2 text-lg font-black text-white sm:text-2xl">
+                          {getTitle(topFilmographyCredits[0])}
+                        </h3>
+                        <p className="mt-1 text-sm text-zinc-400">
+                          The first credit in the current filter and sort view.
+                        </p>
+                      </div>
+                      <Link
+                        href={getHref(topFilmographyCredits[0])}
+                        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 text-sm font-bold text-zinc-200 transition hover:bg-white hover:text-black"
+                      >
+                        Open credit
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {topFilmographyCredits.map((credit) => {
                     const itemType =
                       credit.media_type === "tv" ? "series" : "movie";
                     return (
-                      <WorkCard
+                      <FilmographyLedgerCard
                         key={`${credit.media_type}-${credit.id}`}
                         credit={credit}
                         onWatchlistToggle={toggleWatchlist}
@@ -1934,8 +2371,13 @@ export default function CelebrityDetailPage({
                       )}
                       {showAllCredits
                         ? "Show fewer credits"
-                        : `View all ${filteredCredits.length} credits`}
+                        : `View more credits`}
                     </button>
+                    {filteredCredits.length > 36 && showAllCredits && (
+                      <p className="mt-3 text-xs text-zinc-500">
+                        Showing the top 36 credits to keep the page quick and readable.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -2068,24 +2510,35 @@ export default function CelebrityDetailPage({
               onClick={(event) => event.stopPropagation()}
             >
               <div className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl shadow-black/60 ring-1 ring-white/5 sm:rounded-3xl">
-                <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3">
+                <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3 sm:px-5">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-[#e94f37] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-black">
-                        {selectedVideo.video_type}
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-200">
-                        {selectedVideo.media_type === "tv" ? "TV" : "Movie"}
-                      </span>
-                      {selectedVideo.official && (
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-200">
-                          Official
+                    <div className="min-w-0">
+                      <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-full bg-[#e94f37] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-black">
+                          {getVideoContextLabel(selectedVideo)}
                         </span>
-                      )}
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-200">
+                          {selectedVideo.media_type === "tv" ? "TV" : "Movie"}
+                        </span>
+                        {selectedVideo.official && (
+                          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-200">
+                            Official
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="line-clamp-1 text-sm font-black text-white sm:text-base">
+                        {selectedVideo.video_title}
+                      </h3>
+                      <p className="mt-0.5 line-clamp-1 text-xs font-semibold text-zinc-500">
+                        {selectedVideo.media_title}
+                        {selectedVideo.release_year
+                          ? ` | ${selectedVideo.release_year}`
+                          : ""}
+                      </p>
                     </div>
                     <button
                       onClick={() => setSelectedVideo(null)}
-                      className="flex cursor-pointer h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-xl shadow-black/40 backdrop-blur transition hover:border-white/40 hover:bg-white/20"
+                      className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-xl shadow-black/40 backdrop-blur transition hover:border-white/40 hover:bg-white/20"
                       aria-label="Close video"
                     >
                       <X className="h-5 w-5" />
