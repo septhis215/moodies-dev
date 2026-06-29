@@ -1,5 +1,6 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
 import { Film, MessageCircle, Star, Tv } from "lucide-react";
 import Link from "next/link";
@@ -21,17 +22,11 @@ type MovingCardItem = {
 
 const MASCOT_SRC = "/images/moodies-mascot.png";
 
-function tmdbImage(path?: string | null, size = "w342") {
-  if (!path) return null;
-  if (path.startsWith("http")) return path;
-  return `https://image.tmdb.org/t/p/${size}${path}`;
-}
-
 function getAvatarSrc(avatar?: string) {
   if (!avatar) return "/placeholder-avatar.png";
   if (avatar.startsWith("/https")) return avatar.slice(1);
   if (avatar.startsWith("http") || avatar.startsWith("/")) return avatar;
-  return `https://image.tmdb.org/t/p/w185${avatar}`;
+  return tmdbImage(avatar, "w185");
 }
 
 function getRatingTone(rating?: number) {

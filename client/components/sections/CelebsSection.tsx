@@ -1,6 +1,7 @@
 "use client";
 
-import Image from "next/image";
+import { tmdbImage } from "@/lib/tmdb";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -276,7 +277,7 @@ export default function CelebSection() {
                         <Image
                           src={
                             celeb.profile_path
-                              ? `https://image.tmdb.org/t/p/w500${celeb.profile_path}`
+                              ? tmdbImage(celeb.profile_path, "w500")
                               : "/placeholder-person.svg"
                           }
                           alt={celeb.name}
@@ -342,7 +343,7 @@ export default function CelebSection() {
                                     <Image
                                       src={
                                         work.poster_path
-                                          ? `https://image.tmdb.org/t/p/w185${work.poster_path}`
+                                          ? tmdbImage(work.poster_path, "w185")
                                           : "/placeholder-poster.svg"
                                       }
                                       alt={work.title || work.name || "Known work"}

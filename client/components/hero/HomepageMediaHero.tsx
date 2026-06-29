@@ -1,6 +1,7 @@
 "use client";
 
-import Image from "next/image";
+import { tmdbImage } from "@/lib/tmdb";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -25,11 +26,11 @@ type HomepageMediaHeroProps = {
 
 const getBackdropUrl = (path?: string | null) =>
   path
-    ? `https://image.tmdb.org/t/p/original${path}`
+    ? tmdbImage(path, "original")
     : "/placeholder-backdrop.svg";
 
 const getPosterUrl = (path?: string | null) =>
-  path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
+  path ? tmdbImage(path, "w500") : "/placeholder-poster.svg";
 
 const getTitle = (item?: All | null) => item?.title || item?.name || "Untitled";
 

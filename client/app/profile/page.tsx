@@ -1,5 +1,6 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import React, {
   useEffect,
   useState,
@@ -8,7 +9,7 @@ import React, {
   useCallback,
 } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import {
   Film,
   Tv,
@@ -1338,7 +1339,7 @@ export default function ProfilePage() {
                             ? `/movies/${item.id}`
                             : `/tv/${item.id}`;
                         const poster = item.poster_path
-                          ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+                          ? tmdbImage(item.poster_path, "w500")
                           : "/placeholder-poster.svg";
 
                         return (
@@ -1417,7 +1418,7 @@ export default function ProfilePage() {
                             ? `/movies/${item.id}`
                             : `/tv/${item.id}`;
                         const poster = item.poster_path
-                          ? `https://image.tmdb.org/t/p/w200${item.poster_path}`
+                          ? tmdbImage(item.poster_path, "w200")
                           : "/placeholder-poster.svg";
 
                         return (
@@ -1594,7 +1595,7 @@ export default function ProfilePage() {
                         ? `/movies/${rep.tmdbId}`
                         : `/tv/${rep.tmdbId}`;
                       const poster = rep.tmdbPoster
-                        ? `https://image.tmdb.org/t/p/w92${rep.tmdbPoster}`
+                        ? tmdbImage(rep.tmdbPoster, "w92")
                         : null;
                       const visibleCount = cardReviewsVisible[group.key] ?? 1;
                       const visibleReviews = group.reviews.slice(

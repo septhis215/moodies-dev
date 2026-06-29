@@ -1,7 +1,8 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import React, { useRef, useState } from "react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { motion, AnimatePresence } from "framer-motion";
 
 export type Episode = {
@@ -137,7 +138,7 @@ export default function TvSeasonsEpisodes({ seasons, className = "" }: Props) {
                 {/* Poster */}
                 <div className="relative w-16 h-24 sm:w-20 sm:h-28 rounded-lg overflow-hidden flex-shrink-0 bg-white/[0.06]">
                   <Image
-                    src={season.poster_path ? `https://image.tmdb.org/t/p/w400${season.poster_path}` : "/placeholder-poster.svg"}
+                    src={season.poster_path ? tmdbImage(season.poster_path, "w400") : "/placeholder-poster.svg"}
                     alt={season.name ?? `Season ${season.season_number}`}
                     fill
                     sizes="80px"
@@ -230,7 +231,7 @@ export default function TvSeasonsEpisodes({ seasons, className = "" }: Props) {
                             {/* Still */}
                             <div className="relative w-24 h-14 rounded-md overflow-hidden flex-shrink-0 bg-white/[0.06]">
                               <Image
-                                src={ep.still_path ? `https://image.tmdb.org/t/p/w300${ep.still_path}` : "/placeholder-backdrop.svg"}
+                                src={ep.still_path ? tmdbImage(ep.still_path, "w300") : "/placeholder-backdrop.svg"}
                                 alt={ep.name}
                                 fill
                                 sizes="96px"

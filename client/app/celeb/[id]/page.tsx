@@ -1,5 +1,6 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import AppLoading from "@/components/ui/AppLoading";
 import RatingBadge from "@/components/ui/rating-badge";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -30,7 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -224,17 +225,17 @@ const genreMap: Record<number, string> = {
 
 const getImageUrl = (path?: string | null, size = "original") =>
   path
-    ? `https://image.tmdb.org/t/p/${size}${path}`
+    ? tmdbImage(path, size)
     : "/placeholder-backdrop.svg";
 
 const getPosterUrl = (path?: string | null, size = "w500") =>
   path
-    ? `https://image.tmdb.org/t/p/${size}${path}`
+    ? tmdbImage(path, size)
     : "/placeholder-poster.svg";
 
 const getProfileUrl = (path?: string | null, size = "w500") =>
   path
-    ? `https://image.tmdb.org/t/p/${size}${path}`
+    ? tmdbImage(path, size)
     : "/placeholder-person.svg";
 
 const getTitle = (credit?: Credit) =>

@@ -1,5 +1,6 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import React, { useState } from "react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
@@ -17,7 +18,7 @@ import {
   MessageSquare,
   Tv,
 } from "lucide-react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { ComingSoonSection } from "@/components/sections/ComingSoon";
 import MoodRecommendationsSection from "@/components/sections/MoodRecommendationSection";
@@ -67,10 +68,10 @@ export default function TVHomePageClient({
   >({});
   const getImageUrl = (path?: string | null) =>
     path
-      ? `https://image.tmdb.org/t/p/original${path}`
+      ? tmdbImage(path, "original")
       : "/placeholder-backdrop.svg";
   const getPosterUrl = (path?: string | null) =>
-    path ? `https://image.tmdb.org/t/p/w500${path}` : "/placeholder-poster.svg";
+    path ? tmdbImage(path, "w500") : "/placeholder-poster.svg";
   useScrollToHash(100);
 
   /* ---------------- Compact TVCard ---------------- */

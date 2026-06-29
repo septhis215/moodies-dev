@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
+import { tmdbImage } from "@/lib/tmdb";
 
 type Props = {
   posters?: string[];
@@ -18,7 +19,6 @@ type VideoItem = {
   official?: boolean;
 };
 
-const DEFAULT_IMAGE_BASE = "https://image.tmdb.org/t/p/";
 const youtubeThumb = (key: string) =>
   `https://img.youtube.com/vi/${key}/hqdefault.jpg`;
 const youtubeEmbed = (key: string) =>
@@ -146,7 +146,7 @@ export default function ImageVideoCarousel({
   const buildImageUrl = (path: string | undefined) => {
     if (!path) return "";
     if (path.startsWith("http")) return path;
-    return `${DEFAULT_IMAGE_BASE}${imageSize}${path}`;
+    return tmdbImage(path, imageSize);
   };
 
   if (!posters.length && !backdrops.length && !normalizedVideos.length)

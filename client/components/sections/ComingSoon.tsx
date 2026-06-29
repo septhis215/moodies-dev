@@ -1,3 +1,4 @@
+import { tmdbImage } from "@/lib/tmdb";
 import {
   Calendar,
   ChevronDown,
@@ -7,7 +8,7 @@ import {
   BookmarkCheck,
   Sparkles,
 } from "lucide-react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import React, {
   useCallback,
@@ -141,7 +142,7 @@ export function ComingSoonSection({
 
   const posterGetter = (item: MovieLike): string => {
     return item.poster_path
-      ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+      ? tmdbImage(item.poster_path, "w500")
       : "/placeholder-poster.svg";
   };
 
@@ -473,7 +474,7 @@ export function ComingSoonSection({
                                           <Image
                                             src={
                                               item.poster_path
-                                                ? `https://image.tmdb.org/t/p/w500${item.poster_path}`
+                                                ? tmdbImage(item.poster_path, "w500")
                                                 : "/placeholder-poster.svg"
                                             }
                                             alt={item.title || item.name || ""}

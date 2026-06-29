@@ -1,7 +1,8 @@
 "use client";
 
+import { tmdbImage } from "@/lib/tmdb";
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -263,7 +264,7 @@ export default function CardCarousel<T extends MovieLike>({
 
   function posterGetter(item: MovieLike, size: "w342" | "w500" | "w780" = "w500"): string {
     return item.poster_path
-      ? `https://image.tmdb.org/t/p/${size}${item.poster_path}`
+      ? tmdbImage(item.poster_path, size)
       : item.poster ?? "/placeholder-poster.svg";
   }
 
