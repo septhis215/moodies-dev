@@ -226,13 +226,18 @@ export class TrailersService {
                 .filter(
                     (video: any) =>
                         video?.site === 'YouTube' &&
-                        ['Trailer', 'Teaser', 'Clip'].includes(video?.type),
-                );
+                        ['Trailer', 'Teaser'].includes(video?.type),
+                )
+                .sort((a: any, b: any) => {
+                    // Prefer official trailers, then higher resolution (proxy for landscape quality)
+                    const scoreA = (a.official ? 1000 : 0) + (a.size || 0);
+                    const scoreB = (b.official ? 1000 : 0) + (b.size || 0);
+                    return scoreB - scoreA;
+                });
 
             if (!candidates.length) return null;
 
-            const shuffled = shuffleArray([...candidates]);
-            return shuffled[0]?.key ?? null;
+            return candidates[0]?.key ?? null;
         } catch {
             return null;
         }
