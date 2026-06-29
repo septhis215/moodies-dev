@@ -19,7 +19,7 @@ import {
   IconUser,
   IconUserPlus,
 } from "@tabler/icons-react";
-import { Bookmark, Heart, MouseIcon, Tv } from "lucide-react";
+import { Bookmark, Heart, MouseIcon, Tv, Users } from "lucide-react";
 import { useAuth } from "@/app/context/AuthProvider";
 import { appToast } from "@/lib/toast";
 import DropdownPortal from "./ui/dropdownPortal";
@@ -38,6 +38,7 @@ const routes = [
   { name: "Home", href: "/" },
   { name: "Movies", href: "/movies" },
   { name: "Series", href: "/tv" },
+  { name: "Celebrities", href: "/celeb" },
   { name: "Your Moods", href: "/moods/explore", noLink: true },
   { name: "My Collection", href: "/collection", noLink: true },
 ];
@@ -70,6 +71,14 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
     { label: "K-Drama Collection", path: "/tv/k-drama" },
     { label: "Moods Matcher", path: "/tv#moods" },
   ],
+  "/celeb": [
+    { label: "Trending", path: "/celeb?category=trending&page=1" },
+    { label: "Actors", path: "/celeb?category=actors&page=1" },
+    { label: "Actresses", path: "/celeb?category=actresses&page=1" },
+    { label: "Directors", path: "/celeb?category=directors&page=1" },
+    { label: "Movie Stars", path: "/celeb?category=movie-stars&page=1" },
+    { label: "TV Stars", path: "/celeb?category=tv-stars&page=1" },
+  ],
   "/moods/explore": [
     { label: "Mood Wheels", path: "/moods" },
     { label: "Movie Matcher", path: "/movies#moods" },
@@ -83,10 +92,14 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
   ],
 };
 
-const routeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+const routeIcons: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
   "/": IconHome,
   "/movies": IconMovie,
   "/tv": Tv,
+  "/celeb": Users,
   "/moods/explore": IconMoodSmile,
   "/collection": Bookmark,
 };
@@ -204,7 +217,8 @@ export function NavbarComponent() {
       setIsProfileOpen(false);
     };
     document.addEventListener("mousedown", onDocumentPointerDown);
-    return () => document.removeEventListener("mousedown", onDocumentPointerDown);
+    return () =>
+      document.removeEventListener("mousedown", onDocumentPointerDown);
   }, []);
 
   const avatar = (size: "small" | "large" = "small") => {
@@ -262,12 +276,17 @@ export function NavbarComponent() {
                     <IconSparkles className="h-4 w-4" aria-hidden="true" />
                     Moodies guide
                   </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">Explore</h2>
+                  <h2 className="text-2xl font-semibold tracking-tight">
+                    Explore
+                  </h2>
                   <p className="mt-1 text-sm text-white/45">
                     Find your next watch by story or mood.
                   </p>
                 </div>
-                <div className="relative hidden h-16 w-16 shrink-0 sm:block" aria-hidden="true">
+                <div
+                  className="relative hidden h-16 w-16 shrink-0 sm:block"
+                  aria-hidden="true"
+                >
                   <div className="absolute inset-2 rounded-full bg-[#e94f37]/10 blur-xl" />
                   <Image
                     src={MOODIES_LOGO}
@@ -312,7 +331,10 @@ export function NavbarComponent() {
                               : "border-white/[0.08] bg-white/[0.035] text-white/55 group-hover:text-white/80"
                           }`}
                         >
-                          <RouteIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                          <RouteIcon
+                            className="h-[18px] w-[18px]"
+                            aria-hidden="true"
+                          />
                         </span>
                         <span
                           className={`truncate text-sm font-medium ${
@@ -329,7 +351,10 @@ export function NavbarComponent() {
                           aria-label={`Go to ${route.name}`}
                           className={`mr-2 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white/35 transition hover:bg-white/[0.06] hover:text-[#f2836d] ${focusRing}`}
                         >
-                          <IconArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                          <IconArrowUpRight
+                            className="h-4 w-4"
+                            aria-hidden="true"
+                          />
                         </Link>
                       )}
                     </motion.div>
@@ -348,7 +373,9 @@ export function NavbarComponent() {
                   <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#ef775f]">
                     {routes.find((route) => route.href === activeRoute)?.name}
                   </p>
-                  <h3 className="text-xl font-semibold tracking-tight">Pick a destination</h3>
+                  <h3 className="text-xl font-semibold tracking-tight">
+                    Pick a destination
+                  </h3>
                 </div>
                 <span className="hidden text-xs text-white/35 sm:block">
                   {routeOptions[activeRoute]?.length || 0} places to explore
@@ -400,7 +427,11 @@ export function NavbarComponent() {
                 <Link
                   href={profileHref}
                   onClick={() => setIsMenuOpen(false)}
-                  aria-label={isAuthenticated ? "View your Moodies profile" : "Sign in to Moodies"}
+                  aria-label={
+                    isAuthenticated
+                      ? "View your Moodies profile"
+                      : "Sign in to Moodies"
+                  }
                   className={`rounded-xl transition hover:border-[#e94f37]/35 ${focusRing}`}
                 >
                   {avatar("large")}
@@ -423,7 +454,10 @@ export function NavbarComponent() {
                     }}
                     className={`inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3.5 text-sm font-medium text-white/65 transition hover:border-[#e94f37]/25 hover:bg-[#e94f37]/[0.07] hover:text-white disabled:cursor-wait disabled:opacity-55 ${focusRing}`}
                   >
-                    <IconLogout className="h-[18px] w-[18px]" aria-hidden="true" />
+                    <IconLogout
+                      className="h-[18px] w-[18px]"
+                      aria-hidden="true"
+                    />
                     {isLoggingOut ? "Signing out…" : "Sign out"}
                   </button>
                 ) : (
@@ -432,7 +466,10 @@ export function NavbarComponent() {
                     onClick={() => setIsMenuOpen(false)}
                     className={`inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e94f37]/30 bg-[#e94f37]/12 px-4 text-sm font-semibold text-[#ffb09f] transition hover:bg-[#e94f37]/18 hover:text-white ${focusRing}`}
                   >
-                    <IconLogin className="h-[18px] w-[18px]" aria-hidden="true" />
+                    <IconLogin
+                      className="h-[18px] w-[18px]"
+                      aria-hidden="true"
+                    />
                     Sign in
                   </Link>
                 )}
@@ -449,10 +486,14 @@ export function NavbarComponent() {
       <NavBody className="hidden lg:flex">
         <NavbarLogo />
 
-        <nav aria-label="Primary navigation" className="flex items-center gap-1">
+        <nav
+          aria-label="Primary navigation"
+          className="flex items-center gap-1"
+        >
           {[
             { label: "Movies", href: "/movies", icon: IconMovie },
             { label: "Series", href: "/tv", icon: Tv },
+            { label: "Celebs", href: "/celeb", icon: Users },
             { label: "Feed", href: "/feed", icon: MouseIcon },
             { label: "Moods", href: "/moods/explore", icon: IconMoodSmile },
           ].map((item) => {
@@ -495,7 +536,9 @@ export function NavbarComponent() {
           >
             <Link
               href={profileHref}
-              aria-label={isAuthenticated ? "View your profile" : "Sign in to Moodies"}
+              aria-label={
+                isAuthenticated ? "View your profile" : "Sign in to Moodies"
+              }
               className={`rounded-xl transition hover:ring-1 hover:ring-[#e94f37]/35 ${focusRing}`}
             >
               {avatar()}
@@ -503,7 +546,9 @@ export function NavbarComponent() {
             <button
               ref={dropdownTriggerRef}
               type="button"
-              onClick={() => (isProfileOpen ? setIsProfileOpen(false) : openProfile())}
+              onClick={() =>
+                isProfileOpen ? setIsProfileOpen(false) : openProfile()
+              }
               aria-haspopup="menu"
               aria-expanded={isProfileOpen}
               aria-label="Open account menu"
@@ -533,7 +578,10 @@ export function NavbarComponent() {
                   onMouseEnter={openProfile}
                   onMouseLeave={() => closeProfile()}
                   className="fixed z-[999999] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#0c0d10]/95 p-2 text-white shadow-[0_18px_55px_rgba(0,0,0,0.5)] backdrop-blur-xl"
-                  style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+                  style={{
+                    top: dropdownPosition.top,
+                    left: dropdownPosition.left,
+                  }}
                 >
                   <Link
                     href={profileHref}
@@ -554,13 +602,25 @@ export function NavbarComponent() {
                   <div className="mt-1 space-y-0.5">
                     {isAuthenticated ? (
                       <>
-                        <ProfileMenuLink href="/profile" icon={IconUser} onClick={() => setIsProfileOpen(false)}>
+                        <ProfileMenuLink
+                          href="/profile"
+                          icon={IconUser}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
                           My profile
                         </ProfileMenuLink>
-                        <ProfileMenuLink href="/watchlist" icon={Bookmark} onClick={() => setIsProfileOpen(false)}>
+                        <ProfileMenuLink
+                          href="/watchlist"
+                          icon={Bookmark}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
                           My list
                         </ProfileMenuLink>
-                        <ProfileMenuLink href="/liked" icon={Heart} onClick={() => setIsProfileOpen(false)}>
+                        <ProfileMenuLink
+                          href="/liked"
+                          icon={Heart}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
                           My likes
                         </ProfileMenuLink>
                         <div className="my-1.5 h-px bg-white/[0.08]" />
@@ -571,16 +631,27 @@ export function NavbarComponent() {
                           onClick={() => void logout()}
                           className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-white/62 transition hover:bg-[#e94f37]/[0.07] hover:text-white disabled:cursor-wait disabled:opacity-55 ${focusRing}`}
                         >
-                          <IconLogout className="h-[18px] w-[18px] text-[#ef775f]" aria-hidden="true" />
+                          <IconLogout
+                            className="h-[18px] w-[18px] text-[#ef775f]"
+                            aria-hidden="true"
+                          />
                           {isLoggingOut ? "Signing out…" : "Sign out"}
                         </button>
                       </>
                     ) : (
                       <>
-                        <ProfileMenuLink href="/auth/login" icon={IconLogin} onClick={() => setIsProfileOpen(false)}>
+                        <ProfileMenuLink
+                          href="/auth/login"
+                          icon={IconLogin}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
                           Sign in
                         </ProfileMenuLink>
-                        <ProfileMenuLink href="/auth/signup" icon={IconUserPlus} onClick={() => setIsProfileOpen(false)}>
+                        <ProfileMenuLink
+                          href="/auth/signup"
+                          icon={IconUserPlus}
+                          onClick={() => setIsProfileOpen(false)}
+                        >
                           Create account
                         </ProfileMenuLink>
                       </>
@@ -603,7 +674,9 @@ export function NavbarComponent() {
             />
             <Link
               href={profileHref}
-              aria-label={isAuthenticated ? "View your profile" : "Sign in to Moodies"}
+              aria-label={
+                isAuthenticated ? "View your profile" : "Sign in to Moodies"
+              }
               className={`grid min-h-11 min-w-11 place-items-center rounded-xl transition active:scale-95 ${focusRing}`}
             >
               {avatar()}
@@ -616,17 +689,28 @@ export function NavbarComponent() {
         </MobileNavHeader>
       </MobileNav>
 
-      <MobileNavMenu isOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)}>
+      <MobileNavMenu
+        isOpen={isMobileOpen}
+        onClose={() => setIsMobileOpen(false)}
+      >
         <div className="mx-auto w-full max-w-xl pb-6">
           <div className="mb-5 flex items-center gap-3">
             <div className="relative h-12 w-12 shrink-0" aria-hidden="true">
-              <Image src={MOODIES_LOGO} alt="" fill sizes="48px" className="object-contain" />
+              <Image
+                src={MOODIES_LOGO}
+                alt=""
+                fill
+                sizes="48px"
+                className="object-contain"
+              />
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ef775f]">
                 Moodies guide
               </p>
-              <h2 className="text-xl font-semibold text-white">Where to next?</h2>
+              <h2 className="text-xl font-semibold text-white">
+                Where to next?
+              </h2>
             </div>
           </div>
 
@@ -661,7 +745,10 @@ export function NavbarComponent() {
                             : "border-white/[0.08] bg-white/[0.035] text-white/55"
                         }`}
                       >
-                        <RouteIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                        <RouteIcon
+                          className="h-[18px] w-[18px]"
+                          aria-hidden="true"
+                        />
                       </span>
                       <span className="truncate text-sm font-semibold text-white/85">
                         {route.name}
@@ -680,7 +767,10 @@ export function NavbarComponent() {
                         aria-label={`Go to ${route.name}`}
                         className={`mr-2 grid h-10 w-10 place-items-center rounded-xl text-white/45 transition hover:bg-white/[0.06] hover:text-[#f2836d] ${focusRing}`}
                       >
-                        <IconArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                        <IconArrowUpRight
+                          className="h-4 w-4"
+                          aria-hidden="true"
+                        />
                       </Link>
                     )}
                   </div>
@@ -703,7 +793,10 @@ export function NavbarComponent() {
                               className={`flex min-h-12 items-center justify-between rounded-xl border border-white/[0.06] bg-black/15 px-3 text-sm font-medium text-white/72 transition hover:border-[#e94f37]/20 hover:bg-white/[0.045] hover:text-white ${focusRing}`}
                             >
                               {option.label}
-                              <IconArrowUpRight className="h-4 w-4 text-white/28" aria-hidden="true" />
+                              <IconArrowUpRight
+                                className="h-4 w-4 text-white/28"
+                                aria-hidden="true"
+                              />
                             </Link>
                           ))}
                         </div>
@@ -719,7 +812,9 @@ export function NavbarComponent() {
             <Link
               href={profileHref}
               onClick={() => setIsMobileOpen(false)}
-              aria-label={isAuthenticated ? "View your profile" : "Sign in to Moodies"}
+              aria-label={
+                isAuthenticated ? "View your profile" : "Sign in to Moodies"
+              }
               className={`rounded-xl ${focusRing}`}
             >
               {avatar("large")}

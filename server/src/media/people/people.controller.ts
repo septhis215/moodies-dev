@@ -23,6 +23,21 @@ export class PeopleController {
     return this.peopleService.searchPeople(query, page);
   }
 
+  @Get('discover')
+  async discoverPeople(
+    @Query('query') query?: string,
+    @Query('category') category?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.peopleService.discoverPeople({
+      query,
+      category,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 20,
+    });
+  }
+
   @Get(':id/videos')
   async getRelatedVideos(@Param('id', ParseIntPipe) id: number) {
     return this.peopleService.getRelatedVideos(id);
