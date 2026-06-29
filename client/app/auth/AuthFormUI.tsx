@@ -34,8 +34,10 @@ type AuthBrandProps = {
 
 export function AuthBrand({ compact = false }: AuthBrandProps) {
   return (
-    <div
-      className={`auth-brand flex items-center gap-2 ${
+    <Link
+      href="/"
+      aria-label="Go to homepage"
+      className={`auth-brand inline-flex items-center gap-2 ${
         compact ? "mb-2" : "mb-5 [@media(max-height:700px)]:mb-3"
       }`}
     >
@@ -56,7 +58,7 @@ export function AuthBrand({ compact = false }: AuthBrandProps) {
       >
         MOODIES
       </span>
-    </div>
+    </Link>
   );
 }
 
