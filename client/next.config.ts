@@ -7,6 +7,10 @@ const repoRoot = dirname(configDir);
 
 const nextConfig: NextConfig = {
   /* config options here */
+  env: {
+    NEXT_PUBLIC_APP_ENV:
+      process.env.NEXT_PUBLIC_APP_ENV || process.env.APP_ENV || "development",
+  },
   eslint: {
     ignoreDuringBuilds: false,
   },

@@ -8,8 +8,10 @@ const PEOPLE_VIDEOS_TTL = 60 * 60 * 4;
 const PEOPLE_MEDIA_VIDEO_TTL = 60 * 60 * 12;
 const PEOPLE_REQUEST_TIMEOUT_MS = 4500;
 const PEOPLE_DISCOVERY_TTL = 60 * 60;
-const PEOPLE_DISCOVERY_CACHE_VERSION = 'v8';
+const PEOPLE_DISCOVERY_CACHE_VERSION = 'v9';
 const PEOPLE_DISCOVERY_MAX_PAGE = 8;
+const PEOPLE_DISCOVERY_SOURCE_PAGES = 30;
+const PEOPLE_DISCOVERY_ENRICH_BATCH_SIZE = 6;
 const PEOPLE_DISCOVERY_BANNED_WORDS = [
   'porn',
   'sex',
@@ -18,8 +20,13 @@ const PEOPLE_DISCOVERY_BANNED_WORDS = [
   'adult',
   'nude',
   'av',
+  'onlyfans',
+  'playboy',
 ];
 const PEOPLE_DISCOVERY_BANNED_GENRE_IDS = new Set([2916, 3568, 2972, 10364]);
+const MAINSTREAM_DISCOVERY_MIN_SCORE = 42;
+const MAINSTREAM_DISCOVERY_MIN_CREDITS = 2;
+const MAINSTREAM_DISCOVERY_MIN_POPULARITY = 8;
 
 type PeopleDiscoveryOptions = {
   query?: string;
@@ -42,6 +49,19 @@ type KnownForItem = {
   genre_ids?: number[];
   adult?: boolean;
   runtime?: number;
+  popularity?: number;
+  order?: number;
+  episode_count?: number;
+  character?: string;
+  job?: string;
+  department?: string;
+  original_language?: string;
+};
+
+type DiscoveryCandidate = {
+  person: any;
+  mainstreamScore: number;
+  mainstreamCredits: KnownForItem[];
 };
 
 @Injectable()
@@ -305,65 +325,92 @@ export class PeopleService {
     limit,
   }: Required<PeopleDiscoveryOptions>) {
     const source = this.getDiscoverySource(category, query);
-    const pagesToFetch = this.shouldPostFilterDiscovery(category) ? 12 : 1;
-    const endSourcePage = this.shouldPostFilterDiscovery(category)
-      ? page * pagesToFetch
-      : page;
     const pageOffset = (page - 1) * limit;
-    const collected: any[] = [];
+    const targetCount = pageOffset + limit;
+    const lookaheadCount = targetCount + 1;
+    const collected: DiscoveryCandidate[] = [];
     const seen = new Set<number>();
     let firstResponse: any = null;
-    let lastSourcePage = 0;
 
-    for (let sourcePage = 1; sourcePage <= endSourcePage; sourcePage++) {
+    for (
+      let sourcePage = 1;
+      sourcePage <= PEOPLE_DISCOVERY_SOURCE_PAGES;
+      sourcePage++
+    ) {
       const response = await this.fetchPeopleDiscoverySource(
         source,
         sourcePage,
         query,
       );
       if (!firstResponse) firstResponse = response;
-      lastSourcePage = sourcePage;
 
       const results = Array.isArray(response?.results) ? response.results : [];
       if (results.length === 0) break;
 
-      for (const person of results) {
-        if (!person?.id || seen.has(person.id)) continue;
+      const pageCandidates = results.filter((person: any) => {
+        if (!person?.id || seen.has(person.id)) return false;
         seen.add(person.id);
-        if (
+        return (
           this.isSafeDiscoveryPerson(person) &&
           this.matchesDiscoveryCategory(person, category)
-        ) {
-          collected.push(person);
-        }
+        );
+      });
+
+      for (const chunk of this.chunkArray(
+        pageCandidates,
+        PEOPLE_DISCOVERY_ENRICH_BATCH_SIZE,
+      )) {
+        const evaluated = await Promise.all(
+          chunk.map((person) =>
+            this.evaluateDiscoveryCandidate(person, category),
+          ),
+        );
+        collected.push(
+          ...evaluated.filter((candidate): candidate is DiscoveryCandidate =>
+            Boolean(candidate),
+          ),
+        );
       }
 
       if (response?.total_pages && sourcePage >= response.total_pages) break;
-      if (collected.length >= pageOffset + limit) break;
+      if (collected.length >= lookaheadCount) break;
     }
 
-    const shaped = collected
-      .map((person) => this.shapeDiscoveryPerson(person, category))
-      .slice(pageOffset, pageOffset + limit);
+    const ranked = collected
+      .sort(
+        (a, b) =>
+          b.mainstreamScore -
+          a.mainstreamScore +
+          (Number(b.person?.popularity || 0) -
+            Number(a.person?.popularity || 0)) *
+            0.1,
+      )
+      .map((candidate) =>
+        this.shapeDiscoveryPerson(
+          {
+            ...candidate.person,
+            known_for: candidate.mainstreamCredits,
+            celebrity_relevance_score: candidate.mainstreamScore,
+          },
+          category,
+        ),
+      );
+    const shaped = ranked.slice(pageOffset, pageOffset + limit);
+    const hasMore = ranked.length > targetCount;
 
     return {
       results: shaped,
       page,
-      total_pages: Math.min(
-        Number(firstResponse?.total_pages || (page > 1 ? page : 1)),
-        PEOPLE_DISCOVERY_MAX_PAGE,
-      ),
-      total_results: Number(firstResponse?.total_results || shaped.length),
+      total_pages: hasMore
+        ? Math.min(page + 1, PEOPLE_DISCOVERY_MAX_PAGE)
+        : Math.max(1, page),
+      total_results: hasMore
+        ? Math.max(Number(firstResponse?.total_results || 0), targetCount + 1)
+        : pageOffset + shaped.length,
       category,
       query,
       source,
-      has_more: Boolean(
-        firstResponse?.total_pages
-          ? lastSourcePage < firstResponse.total_pages &&
-              page < PEOPLE_DISCOVERY_MAX_PAGE &&
-              collected.length >= pageOffset + limit
-          : shaped.length >= limit,
-      ),
+      has_more: hasMore && page < PEOPLE_DISCOVERY_MAX_PAGE,
     };
   }
 
@@ -456,11 +503,188 @@ export class PeopleService {
     return true;
   }
 
+  private async evaluateDiscoveryCandidate(
+    person: any,
+    category: string,
+  ): Promise<DiscoveryCandidate | null> {
+    if (!this.isSafeDiscoveryPerson(person)) return null;
+
+    const combinedCredits = await this.getDiscoveryCombinedCredits(person.id);
+    const creditPool = this.getDiscoveryCreditPool(
+      person,
+      combinedCredits,
+      category,
+    );
+    const mainstreamCredits = creditPool
+      .filter((credit) => this.isMainstreamDiscoveryCredit(credit))
+      .map((credit) => ({
+        ...credit,
+        mainstream_score: this.getDiscoveryCreditScore(credit, person),
+      }))
+      .sort(
+        (a, b) =>
+          Number(b.mainstream_score || 0) - Number(a.mainstream_score || 0),
+      );
+
+    if (mainstreamCredits.length < MAINSTREAM_DISCOVERY_MIN_CREDITS) {
+      return null;
+    }
+
+    const topCredits = mainstreamCredits.slice(0, 6);
+    const mainstreamScore =
+      topCredits.reduce(
+        (sum, credit) => sum + Number(credit.mainstream_score || 0),
+        0,
+      ) +
+      Math.min(Number(person?.popularity || 0), 80) * 0.35 +
+      (person?.profile_path ? 8 : 0);
+
+    if (mainstreamScore < MAINSTREAM_DISCOVERY_MIN_SCORE) return null;
+
+    return {
+      person,
+      mainstreamScore: Math.round(mainstreamScore * 10) / 10,
+      mainstreamCredits: topCredits.slice(0, 3),
+    };
+  }
+
+  private async getDiscoveryCombinedCredits(id: number) {
+    return this.cached(
+      `people:discovery:combined-credits:${id}:v1`,
+      PEOPLE_DISCOVERY_TTL,
+      () =>
+        this.withTimeout(
+          this.tmdb(`person/${id}/combined_credits?language=en-US`),
+          PEOPLE_REQUEST_TIMEOUT_MS,
+        ),
+      (credits) => Array.isArray(credits?.cast) || Array.isArray(credits?.crew),
+    ).catch(() => null);
+  }
+
+  private getDiscoveryCreditPool(
+    person: any,
+    combinedCredits: any,
+    category: string,
+  ): KnownForItem[] {
+    const knownFor = Array.isArray(person?.known_for) ? person.known_for : [];
+    const cast = Array.isArray(combinedCredits?.cast)
+      ? combinedCredits.cast
+      : [];
+    const crew = Array.isArray(combinedCredits?.crew)
+      ? combinedCredits.crew
+      : [];
+    const department = String(person?.known_for_department || '').toLowerCase();
+    const wantsCrew =
+      category === 'directors' ||
+      category === 'writers' ||
+      department === 'directing' ||
+      department === 'writing';
+    const pool = [...knownFor, ...cast, ...(wantsCrew ? crew : [])];
+    const seen = new Set<string>();
+
+    return pool.filter((credit: KnownForItem) => {
+      if (!credit?.id) return false;
+      const mediaType = credit.media_type === 'tv' ? 'tv' : 'movie';
+      const key = `${mediaType}:${credit.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      if (category === 'movie-stars' && mediaType !== 'movie') return false;
+      if (category === 'tv-stars' && mediaType !== 'tv') return false;
+      if (category === 'directors') {
+        return this.isDiscoveryCrewRole(credit, 'directing');
+      }
+      if (category === 'writers') {
+        return this.isDiscoveryCrewRole(credit, 'writing');
+      }
+      return true;
+    });
+  }
+
+  private isDiscoveryCrewRole(credit: KnownForItem, department: string) {
+    const creditDepartment = String(credit?.department || '').toLowerCase();
+    const job = String(credit?.job || '').toLowerCase();
+
+    if (department === 'directing') {
+      return (
+        creditDepartment === 'directing' ||
+        /\b(director|co-director|series director)\b/.test(job)
+      );
+    }
+
+    return (
+      creditDepartment === 'writing' ||
+      /\b(writer|screenplay|story|creator|author|teleplay)\b/.test(job)
+    );
+  }
+
+  private isMainstreamDiscoveryCredit(credit: KnownForItem) {
+    if (!credit?.id) return false;
+    if (credit.media_type !== 'movie' && credit.media_type !== 'tv') {
+      return false;
+    }
+    if (this.isAdultishKnownFor(credit)) return false;
+
+    const voteCount = Number(credit.vote_count || 0);
+    const popularity = Number(credit.popularity || 0);
+    const voteAverage = Number(credit.vote_average || 0);
+    const hasReleaseDate = Boolean(
+      credit.release_date || credit.first_air_date,
+    );
+
+    if (!credit.poster_path && popularity < 12) return false;
+    if (voteCount < 25 && popularity < 10 && voteAverage < 6.5) return false;
+    if (!hasReleaseDate && voteCount < 100 && popularity < 20) return false;
+
+    return true;
+  }
+
+  private getDiscoveryCreditScore(credit: KnownForItem, person: any) {
+    let score = 0;
+    const mediaType = credit.media_type === 'tv' ? 'tv' : 'movie';
+    const voteCount = Number(credit.vote_count || 0);
+    const popularity = Number(credit.popularity || 0);
+    const voteAverage = Number(credit.vote_average || 0);
+    const order = Number.isFinite(credit.order) ? Number(credit.order) : null;
+    const episodeCount = Number(credit.episode_count || 0);
+    const department = String(person?.known_for_department || '').toLowerCase();
+
+    score += Math.min(Math.log10(voteCount + 1) * 16, 48);
+    score += Math.min(Math.log10(popularity + 1) * 12, 34);
+    score += Math.min(voteAverage * 2, 18);
+    if (credit.poster_path) score += 8;
+    if (credit.release_date || credit.first_air_date) score += 4;
+
+    if (order !== null) {
+      if (order <= 3) score += 24;
+      else if (order <= 8) score += 15;
+      else if (order <= 20) score += 6;
+    }
+
+    if (mediaType === 'tv') {
+      if (episodeCount >= 20) score += 24;
+      else if (episodeCount >= 8) score += 16;
+      else if (episodeCount >= 3) score += 7;
+    }
+
+    if (
+      (department === 'directing' &&
+        this.isDiscoveryCrewRole(credit, 'directing')) ||
+      (department === 'writing' && this.isDiscoveryCrewRole(credit, 'writing'))
+    ) {
+      score += 20;
+    }
+
+    return Math.round(score * 10) / 10;
+  }
+
   private isSafeDiscoveryPerson(person: any) {
     if (person?.adult === true) return false;
     const knownFor = Array.isArray(person?.known_for) ? person.known_for : [];
 
-    if (knownFor.length > 0 && !person?.profile_path) return false;
+    if (!person?.profile_path) return false;
+    if (Number(person?.popularity || 0) < MAINSTREAM_DISCOVERY_MIN_POPULARITY) {
+      return false;
+    }
     if (knownFor.some((item: KnownForItem) => this.isAdultishKnownFor(item))) {
       return false;
     }
@@ -471,15 +695,9 @@ export class PeopleService {
   private isAdultishKnownFor(item: KnownForItem) {
     if (item?.adult === true) return true;
 
-    const title = String(item?.title || item?.name || '').toLowerCase();
-    const overview = String(item?.overview || '').toLowerCase();
-    if (
-      PEOPLE_DISCOVERY_BANNED_WORDS.some(
-        (word) => title.includes(word) || overview.includes(word),
-      )
-    ) {
-      return true;
-    }
+    const title = String(item?.title || item?.name || '');
+    const overview = String(item?.overview || '');
+    if (this.hasAdultishDiscoveryText(`${title} ${overview}`)) return true;
 
     if (
       Array.isArray(item?.genre_ids) &&
@@ -491,6 +709,17 @@ export class PeopleService {
     }
 
     return Boolean(item?.runtime && item.runtime > 0 && item.runtime < 50);
+  }
+
+  private hasAdultishDiscoveryText(value: string) {
+    const normalized = value.toLowerCase();
+
+    return PEOPLE_DISCOVERY_BANNED_WORDS.some((word) => {
+      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, 'i').test(
+        normalized,
+      );
+    });
   }
 
   private shapeDiscoveryPerson(person: any, category: string) {
@@ -514,6 +743,7 @@ export class PeopleService {
       profile_path: person.profile_path || null,
       popularity,
       trending_score: Math.round((popularity + knownFor.length * 4) * 10) / 10,
+      celebrity_relevance_score: person.celebrity_relevance_score || null,
       category,
       gender: person.gender || 0,
       media_mix: {
