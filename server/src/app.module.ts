@@ -27,6 +27,7 @@ import { MediaStatsModule } from './media-stats/media-stats.module';
 import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { TurnstileModule } from './common/security/turnstile.module';
 
 @Module({
   imports: [
@@ -55,6 +56,8 @@ import { AppService } from './app.service';
         DIRECT_URL: Joi.string().empty('').optional(),
         TMDB_API_KEY: Joi.string().empty('').optional(),
         TURNSTILE_SECRET_KEY: Joi.string().empty('').optional(),
+        TURNSTILE_VERIFY_URL: Joi.string().empty('').optional(),
+        TURNSTILE_COOKIE_SECRET: Joi.string().empty('').optional(),
         REDIS_HOST: Joi.string().empty('').optional(),
         REDIS_PORT: Joi.number().empty('').optional(),
         REDIS_PASS: Joi.string().allow('').optional(),
@@ -99,6 +102,7 @@ import { AppService } from './app.service';
     CategoryModule,
     ReviewModule,
     ModerationModule,
+    TurnstileModule,
   ],
   providers: [
     AppService,

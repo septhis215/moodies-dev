@@ -90,7 +90,7 @@ export class ReviewService {
     private redis: RedisService,
   ) {}
 
-  async createReview(userId: string, dto: Omit<CreateReviewDto, 'captchaToken'>) {
+  async createReview(userId: string, dto: CreateReviewDto) {
     this.logger.debug(`Creating review for user ${userId}`);
 
     const user = await this.prisma.user.findUnique({

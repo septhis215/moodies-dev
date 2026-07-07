@@ -10,8 +10,8 @@ const API =
 
 async function postSnapshot<T>(
   path: string,
-  body: { format: SnapshotFormat; captchaToken: string },
-  credentials: RequestCredentials = "same-origin",
+  body: { format: SnapshotFormat },
+  credentials: RequestCredentials = "include",
 ): Promise<T> {
   const response = await fetch(`${API}${path}`, {
     method: "POST",
@@ -39,27 +39,24 @@ export function requestContentSnapshot({
   mediaType,
   tmdbId,
   format = "square",
-  captchaToken,
 }: {
   mediaType: SnapshotMediaType | "movie" | "tv" | "movies";
   tmdbId: string | number;
   format?: SnapshotFormat;
-  captchaToken: string;
 }) {
   return postSnapshot<SnapshotPayload>(
     `/content/${mediaType}/${tmdbId}/snapshot`,
-    { format, captchaToken },
+    { format },
   );
 }
 
 export function requestReviewSnapshot(
   reviewId: string,
-  captchaToken: string,
   format: SnapshotFormat = "square",
 ) {
   return postSnapshot<SnapshotPayload>(
     `/reviews/${reviewId}/snapshot`,
-    { format, captchaToken },
+    { format },
     "include",
   );
 }
