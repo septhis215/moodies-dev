@@ -18,6 +18,8 @@ export interface SearchFilters {
     regex_search?: boolean;
 }
 
+export type DiscoverFilters = Omit<SearchFilters, 'query' | 'regex_search'>;
+
 type SearchApiStatus = 'success' | 'empty' | 'partial' | 'error';
 type SourceStatus = 'fulfilled' | 'rejected' | 'timeout';
 
@@ -339,6 +341,81 @@ export class SearchService implements OnModuleInit {
         }
 
         return params;
+    }
+
+    private buildDiscoverParams(
+        filters: DiscoverFilters,
+        mediaType: 'movie' | 'tv',
+    ) {
+        const params = this.buildTMDBParams(
+            {
+                ...filters,
+                query: '',
+                regex_search: true,
+            },
+            mediaType,
+        );
+        delete params.query;
+
+        const sort = filters.sort ?? 'popularity';
+        params.sort_by =
+            sort === 'rating'
+                ? 'vote_average.desc'
+                : sort === 'date'
+                    ? mediaType === 'movie'
+                        ? 'primary_release_date.desc'
+                        : 'first_air_date.desc'
+                    : 'popularity.desc';
+
+        return params;
+    }
+
+    async discover(filters: DiscoverFilters = {}) {
+        const page = Math.min(Math.max(filters.page ?? 1, 1), 25);
+        const type = filters.type === 'tv' || filters.type === 'all' ? filters.type : 'movie';
+        const mediaTypes: Array<'movie' | 'tv'> = type === 'all' ? ['movie', 'tv'] : [type];
+
+        const sources = await Promise.all(
+            mediaTypes.map(async (mediaType) => {
+                const source = await this.tmdbSettled(
+                    mediaType,
+                    `/discover/${mediaType}`,
+                    { ...this.buildDiscoverParams(filters, mediaType), page },
+                );
+                return { mediaType, source };
+            }),
+        );
+
+        const results = sources.flatMap(({ mediaType, source }) =>
+            (source.data?.results ?? []).map((item: any) =>
+                this.normalizeResult(item, mediaType),
+            ),
+        );
+        const totalResults = sources.reduce(
+            (sum, item) => sum + Math.min(item.source.data?.total_results ?? 0, 500),
+            0,
+        );
+        const totalPages = Math.min(
+            Math.max(...sources.map((item) => item.source.data?.total_pages ?? 0), 0),
+            25,
+        );
+        const failedSources = sources.filter((item) => item.source.status !== 'fulfilled');
+
+        return {
+            status: results.length > 0 ? (failedSources.length ? 'partial' : 'success') : 'empty',
+            is_partial: failedSources.length > 0,
+            cached: false,
+            page,
+            total_results: totalResults,
+            total_pages: totalPages,
+            results: results.slice(0, 24),
+            sources: sources.map(({ source }) => ({
+                source: source.source,
+                status: source.status,
+                error: source.error,
+            })),
+            applied_filters: filters,
+        };
     }
 
     private findBestMatch(results: any[], query: string, searchRegex: RegExp | null): any | null {

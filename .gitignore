@@ -27,3 +27,8 @@ npm-debug.log*
 # OS / editor
 .DS_Store
 Thumbs.db
+
+config.json
+PRODUCTION_READY_AI_AGENT_SPEC.md
+DESIGN.MD
+UI_EVOLUTION_IDEAS.md
