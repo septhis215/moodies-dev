@@ -19,8 +19,16 @@ export function TurnstileGateProvider({
   const [isChecking, setIsChecking] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const captchaEnabled = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
 
   useEffect(() => {
+    if (!captchaEnabled) {
+      setIsChecking(false);
+      setIsVerified(true);
+      setError(null);
+      return;
+    }
+
     let cancelled = false;
 
     async function checkStatus() {
@@ -45,7 +53,7 @@ export function TurnstileGateProvider({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [captchaEnabled]);
 
   const verifyToken = useCallback(async (token: string) => {
     setError(null);

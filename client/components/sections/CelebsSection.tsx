@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export interface Person {
   id: number;
@@ -49,7 +50,10 @@ export default function CelebSection() {
   const [celebs, setCelebs] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [itemsPerView, setItemsPerView] = useState(4.5);
+  const isSm = useMediaQuery("(min-width: 640px)");
+  const isMd = useMediaQuery("(min-width: 768px)");
+  const isLg = useMediaQuery("(min-width: 1024px)");
+  const itemsPerView = isLg ? 4.5 : isMd ? 3.5 : isSm ? 2.5 : 1.75;
   const router = useRouter();
 
   // DOM ref for scroll container
@@ -95,21 +99,6 @@ export default function CelebSection() {
     const date = work.release_date || work.first_air_date;
     return date ? date.slice(0, 4) : "";
   };
-
-  // set itemsPerView responsive fractional
-  useEffect(() => {
-    const updateLayout = () => {
-      const w = window.innerWidth;
-      if (w < 640) setItemsPerView(1.75);
-      else if (w < 768) setItemsPerView(2.5);
-      else if (w < 1024) setItemsPerView(3.5);
-      else setItemsPerView(4.5);
-    };
-
-    updateLayout();
-    window.addEventListener("resize", updateLayout);
-    return () => window.removeEventListener("resize", updateLayout);
-  }, []);
 
   // compute sizes & scroll limits using the actual DOM measurements
   useEffect(() => {

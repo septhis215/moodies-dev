@@ -1,17 +1,11 @@
 "use client";
 
-import { tmdbImage } from "@/lib/tmdb";
-import React from "react";
 import type { All } from "@/types/all";
-import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import Link from "next/link";
 import { Carousel } from "@/components/ui/Carousel";
-import { Plus, Info } from "lucide-react";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { BookmarkCheck } from "lucide-react";
-import RatingBadge from "../ui/rating-badge";
+import MediaCard from "@/components/ui/MediaCard";
 
 interface CommonCardCarouselProps {
   title: string;
@@ -32,16 +26,10 @@ export default function CommonCardCarousel({
     Record<string | number, boolean>
   >({});
 
-  const getPosterUrl = (path?: string) =>
-    path ? tmdbImage(path, "w500") : "/placeholder-poster.svg";
-
   const toWatchType = (): "movie" | "series" =>
     type === "tv" ? "series" : "movie";
 
-  const handleWatchlistToggle = async (show: All, event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-
+  const handleWatchlistToggle = async (show: All) => {
     if (!ready) {
       router.push("/auth/login");
       return;
@@ -54,19 +42,16 @@ export default function CommonCardCarousel({
 
     try {
       const title = show.title || show.name || null;
-      const posterUrl = getPosterUrl(show.poster_path ?? undefined);
 
       if (isCurrentlyInWatchlist) {
         await remove(String(itemId), toWatchType(), {
           title,
-          posterUrl,
           variant: "info",
           duration: 3500,
         });
       } else {
         await add(String(itemId), toWatchType(), {
           title,
-          posterUrl,
           variant: "info",
           duration: 3500,
         });
@@ -78,99 +63,21 @@ export default function CommonCardCarousel({
     }
   };
 
-  const MovieCard = ({
-    show,
-    size = "default",
-  }: {
-    show?: All;
-    size?: "default" | "large" | "wide";
-  }) => {
+  const MovieCard = ({ show }: { show?: All }) => {
     if (!show) return null;
-
-    const isWide = size === "wide";
-    const linkHref = type === "tv" ? `/tv/${show.id}` : `/movies/${show.id}`;
-
     return (
-      <div className="group relative h-full">
-        <Link href={linkHref} className="block h-full">
-          <div
-            className={`relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 ${isWide ? "aspect-video" : "aspect-[2/3]"
-              }`}
-          >
-            <Image
-              src={getPosterUrl(show.poster_path ?? undefined)}
-              alt={show.title || show.name || ""}
-              fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-              className="group-hover:scale-110 transition-transform duration-700 object-cover"
-            />
-
-            {/* Gradient overlay for depth */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300" />
-
-            {/* Rating Badge */}
-            <div className="absolute top-3 right-3 text-white font-bold flex items-center ">
-              <RatingBadge rating={show.vote_average} size="sm"/>
-            </div>
-
-            {/* Hover overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300">
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <div className="flex justify-center gap-2 mb-3">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleWatchlistToggle(show, e);
-                    }}
-                    disabled={loadingStates[show.id]}
-                    className={`min-h-11 min-w-11 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-xl ${hookIsIn(String(show.id), toWatchType())
-                      ? "bg-green-500 text-white"
-                      : "bg-white text-black"
-                      }`}
-                    title={
-                      loadingStates[show.id]
-                        ? "Loading..."
-                        : hookIsIn(String(show.id), toWatchType())
-                          ? "Remove from My List"
-                          : "Add to My List"
-                    }
-                  >
-                    {loadingStates[show.id] ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : hookIsIn(String(show.id), toWatchType()) ? (
-                      <BookmarkCheck className="w-5 h-5" />
-                    ) : (
-                      <Plus className="w-5 h-5" />
-                    )}
-                  </button>
-
-                  <button
-                    className="hidden min-h-11 min-w-11 rounded-full bg-white sm:flex sm:h-10 sm:w-10 items-center justify-center hover:scale-110 transition-transform shadow-xl"
-                    title="More Info"
-                  >
-                    <Info className="w-5 h-5 text-black" />
-                  </button>
-
-
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3 px-1">
-            <h4 className="font-bold text-sm sm:text-base line-clamp-2 group-hover:text-[#e94f37] transition-colors leading-tight text-white">
-              {show.title || show.name}
-            </h4>
-            <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-400">
-              {show.release_date && (
-                <span className="font-semibold">
-                  {show.release_date.split("-")[0]}
-                </span>
-              )}
-            </div>
-          </div>
-        </Link>
-      </div>
+      <MediaCard
+        item={show}
+        type={type === "tv" ? "tv" : "movie"}
+        saved={hookIsIn(String(show.id), toWatchType())}
+        saving={Boolean(loadingStates[show.id])}
+        onToggleSave={() => {
+          setLoadingStates((prev) => ({ ...prev, [show.id]: true }));
+          handleWatchlistToggle(show).catch(() => undefined).finally(() => {
+            setLoadingStates((prev) => ({ ...prev, [show.id]: false }));
+          });
+        }}
+      />
     );
   };
 

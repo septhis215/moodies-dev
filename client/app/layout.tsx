@@ -9,6 +9,7 @@ import { AuthProvider } from "./context/AuthProvider";
 import { ToastProvider } from "./context/ToastContext";
 import { AppToaster } from "@/components/providers/AppToaster";
 import { TurnstileGateProvider } from "@/components/security/TurnstileGateProvider";
+import PerformanceMonitor from "@/components/providers/PerformanceMonitor";
 
 const ACCESS_COOKIE = "mood_at";
 const SESSION_MARKER_COOKIE = "mood_session";
@@ -91,6 +92,7 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         style={{ background: "#000" }}
       >
+        <PerformanceMonitor />
         <ToastProvider>
           <AuthProvider initialBlockSessionBootstrap={initialBlockSessionBootstrap}>
             <AppErrorProvider>

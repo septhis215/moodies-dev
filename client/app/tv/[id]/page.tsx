@@ -7,6 +7,7 @@ import ReviewsSection from "@/components/selected-content/sections/reviews";
 import TvSeasonsEpisodes from "@/components/selected-content/sections/TvSeasonsEpisodes";
 import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
 import CommonCardCarousel from "@/components/sections/CommonCardCarousel";
+import DecisionPanel from "@/components/selected-content/sections/DecisionPanel";
 import { normalizeMediaDetails } from "@/lib/mediaDetails";
 import type { TvDetailsData } from "@/components/selected-content/types";
 
@@ -200,6 +201,11 @@ export default async function TvPage({
     <main>
       {/* Let the components handle presentation and any mapping/normalisation */}
       <HeroContentCard
+        data={data}
+        topMoods={reviews.topMoods || []}
+        reviewStats={reviewStats}
+      />
+      <DecisionPanel
         data={data}
         topMoods={reviews.topMoods || []}
         reviewStats={reviewStats}

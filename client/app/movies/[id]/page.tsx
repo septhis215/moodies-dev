@@ -5,6 +5,7 @@ import MovieDetails from "@/components/selected-content/sections/extras";
 import ReviewsSection from "@/components/selected-content/sections/reviews";
 import ImageVideoCarousel from "@/components/selected-content/sections/imageVideoCarousel";
 import CommonCardCarousel from "@/components/sections/CommonCardCarousel";
+import DecisionPanel from "@/components/selected-content/sections/DecisionPanel";
 import { normalizeMediaDetails } from "@/lib/mediaDetails";
 import type { MovieDetailsData } from "@/components/selected-content/types";
 
@@ -154,6 +155,11 @@ export default async function MoviePage({
   return (
     <main>
       <HeroContentCard
+        data={data}
+        topMoods={reviews.topMoods || []}
+        reviewStats={reviewStats}
+      />
+      <DecisionPanel
         data={data}
         topMoods={reviews.topMoods || []}
         reviewStats={reviewStats}

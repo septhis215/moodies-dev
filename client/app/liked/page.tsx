@@ -8,6 +8,7 @@ import { useAuth } from "@/app/context/AuthProvider";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { handleAppError } from "@/lib/errors";
 import { appToast, TOAST_IDS } from "@/lib/toast";
+import { fetchMediaSummary } from "@/lib/mediaApi";
 
 /* -------------------- Types -------------------- */
 type LikedList = { movieId: string[]; seriesId: string[] };
@@ -40,42 +41,20 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 /* -------------------- Config -------------------- */
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-const TMDB_READ_TOKEN = process.env.NEXT_PUBLIC_TMDB_READ_TOKEN || "";
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || "";
-
-/* -------------------- TMDB helpers -------------------- */
-function tmdbUrl(
-  kind: Kind,
-  id: string | number,
-  params: Record<string, string> = {},
-) {
-  const base =
-    kind === "movie"
-      ? `https://api.themoviedb.org/3/movie/${id}`
-      : `https://api.themoviedb.org/3/tv/${id}`;
-
-  const query = new URLSearchParams({ language: "en-US", ...params });
-  if (!TMDB_READ_TOKEN && TMDB_API_KEY) query.set("api_key", TMDB_API_KEY);
-  return `${base}?${query.toString()}`;
-}
-
-const tmdbHeaders: HeadersInit = TMDB_READ_TOKEN
-  ? { accept: "application/json", Authorization: `Bearer ${TMDB_READ_TOKEN}` }
-  : { accept: "application/json" };
-
 async function fetchTmdb(kind: Kind, id: string): Promise<Item | null> {
-  try {
-    const res = await fetch(tmdbUrl(kind, id), {
-      headers: tmdbHeaders,
-      cache: "no-store",
-    });
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-    const json = await res.json();
-    return { kind, ...json };
-  } catch {
-    return null;
-  }
+  const summary = await fetchMediaSummary(kind, id, { cache: "no-store" });
+  if (!summary) return null;
+  return {
+    kind,
+    id: summary.id,
+    title: summary.title,
+    name: summary.title,
+    overview: summary.overview,
+    poster_path: summary.poster_path,
+    vote_average: summary.vote_average,
+    release_date: summary.release_date ?? undefined,
+    first_air_date: summary.first_air_date ?? undefined,
+  };
 }
 
 async function mapWithConcurrency<T, R>(

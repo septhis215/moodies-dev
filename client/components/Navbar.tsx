@@ -38,6 +38,7 @@ const routes = [
   { name: "Home", href: "/" },
   { name: "Movies", href: "/movies" },
   { name: "Series", href: "/tv" },
+  { name: "Discover", href: "/discover" },
   ...(process.env.NEXT_PUBLIC_APP_ENV === "staging"
     ? []
     : [{ name: "Celebrities", href: "/celeb" }]),
@@ -73,6 +74,12 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
     { label: "K-Drama Collection", path: "/tv/k-drama" },
     { label: "Moods Matcher", path: "/tv#moods" },
   ],
+  "/discover": [
+    { label: "Movies", path: "/discover?type=movie&sort=popularity" },
+    { label: "Series", path: "/discover?type=tv&sort=popularity" },
+    { label: "Top Rated", path: "/discover?type=all&sort=rating" },
+    { label: "New Releases", path: "/discover?type=all&sort=date" },
+  ],
   "/celeb": [
     { label: "Trending", path: "/celeb?category=trending&page=1" },
     { label: "Actors", path: "/celeb?category=actors&page=1" },
@@ -101,6 +108,7 @@ const routeIcons: Record<
   "/": IconHome,
   "/movies": IconMovie,
   "/tv": Tv,
+  "/discover": IconSparkles,
   "/celeb": Users,
   "/moods/explore": IconMoodSmile,
   "/collection": Bookmark,
@@ -495,6 +503,7 @@ export function NavbarComponent() {
           {[
             { label: "Movies", href: "/movies", icon: IconMovie },
             { label: "Series", href: "/tv", icon: Tv },
+            { label: "Discover", href: "/discover", icon: IconSparkles },
             ...(process.env.NEXT_PUBLIC_APP_ENV === "staging"
               ? []
               : [{ label: "Celebs", href: "/celeb", icon: Users }]),

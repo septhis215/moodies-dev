@@ -40,9 +40,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
 import { FilterDropdown } from "@/components/ui/filterdropdown";
+import { fetchMediaSummary } from "@/lib/mediaApi";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || "";
 const MASCOT_SRC = "/images/moodies-mascot.png";
 const LOGO_SRC = "/images/moodies-transparent.png";
 const PUBLIC_IMAGE_PATH_PATTERN =
@@ -384,17 +384,13 @@ export default function ProfilePage() {
         const enriched = await Promise.all(
           raw.map(async (r) => {
             const kind = r.mediaType === "MOVIE" ? "movie" : "tv";
-            const url = `https://api.themoviedb.org/3/${kind}/${r.tmdbId}?api_key=${TMDB_API_KEY}&language=en-US`;
             try {
-              const tmdb = await fetch(url).then((x) => x.json());
+              const tmdb = await fetchMediaSummary(kind, r.tmdbId);
               return {
                 ...r,
-                tmdbTitle: kind === "movie" ? tmdb.title : tmdb.name,
-                tmdbPoster: tmdb.poster_path ?? null,
-                tmdbYear: (kind === "movie"
-                  ? tmdb.release_date
-                  : tmdb.first_air_date
-                )?.split("-")[0],
+                tmdbTitle: tmdb?.title,
+                tmdbPoster: tmdb?.poster_path ?? null,
+                tmdbYear: (tmdb?.release_date ?? tmdb?.first_air_date)?.split("-")[0],
               };
             } catch {
               return r;
@@ -490,14 +486,8 @@ export default function ProfilePage() {
   useEffect(() => {
     let alive = true;
     const fetchTmdb = async (kind: Kind, id: string) => {
-      const url =
-        kind === "movie"
-          ? `https://api.themoviedb.org/3/movie/${id}?api_key=${TMDB_API_KEY}&language=en-US`
-          : `https://api.themoviedb.org/3/tv/${id}?api_key=${TMDB_API_KEY}&language=en-US`;
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      const json = await res.json();
-      return { kind, ...json };
+      const summary = await fetchMediaSummary(kind, id);
+      return summary;
     };
 
     (async () => {

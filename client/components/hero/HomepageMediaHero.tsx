@@ -4,12 +4,13 @@ import { tmdbImage } from "@/lib/tmdb";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Bookmark, BookmarkCheck, Info } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import type { All } from "@/types/all";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import useCarousel from "@/hooks/useCarousel";
 import RatingBadge from "@/components/ui/rating-badge";
 
 type HomepageMediaHeroProps = {
@@ -52,27 +53,20 @@ export function HomepageMediaHero({
 }: HomepageMediaHeroProps) {
   const router = useRouter();
   const { add, remove, isInWatchlist, ready } = useWatchlist();
-  const [activeIndex, setActiveIndex] = useState(0);
   const [watchlistLoading, setWatchlistLoading] = useState(false);
   const heroItems = useMemo(() => items.slice(0, 18), [items]);
+  const {
+    index: activeIndex,
+    setIndex: setActiveIndex,
+    pause,
+    resume,
+  } = useCarousel({ length: heroItems.length, intervalMs: 8000 });
   const featured = heroItems[activeIndex] || heroItems[0] || null;
   const routeBase = mediaType === "tv" ? "tv" : "movies";
   const watchlistType = mediaType === "tv" ? "series" : "movie";
   const isSaved = featured?.id
     ? isInWatchlist(String(featured.id), watchlistType)
     : false;
-
-  useEffect(() => {
-    if (heroItems.length < 2) return;
-    const timer = window.setInterval(() => {
-      setActiveIndex((index) => (index + 1) % heroItems.length);
-    }, 8000);
-    return () => window.clearInterval(timer);
-  }, [heroItems.length]);
-
-  useEffect(() => {
-    if (activeIndex >= heroItems.length) setActiveIndex(0);
-  }, [activeIndex, heroItems.length]);
 
   const toggleWatchlist = async () => {
     if (!featured?.id) return;
@@ -125,7 +119,11 @@ export function HomepageMediaHero({
   }
 
   return (
-    <section className="relative overflow-hidden text-white">
+    <section
+      className="relative overflow-hidden text-white"
+      onMouseEnter={pause}
+      onMouseLeave={resume}
+    >
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-black via-black/45 to-transparent" />
 
       <div className="relative z-20 mx-auto max-w-7xl px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-20 lg:px-8 lg:pt-16">
