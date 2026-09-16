@@ -26,6 +26,12 @@ export default defineConfig({
           browser: {
             enabled: true,
             headless: true,
+            api: {
+              // IPv6 loopback binding is restricted in some Windows/CI
+              // environments; keep the Vitest browser control server local.
+              host: '127.0.0.1',
+              port: 51234,
+            },
             provider: playwright({}),
             instances: [{ browser: 'chromium' }],
           },

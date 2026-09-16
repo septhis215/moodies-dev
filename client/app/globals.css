@@ -76,6 +76,13 @@ body {
 }
 :root {
   --radius: 0.625rem;
+  --brand-coral: #e94f37;
+  --brand-coral-strong: #ff6b58;
+  --brand-gold: #f6b73c;
+  --surface-0: #050506;
+  --surface-1: #0b0c0f;
+  --surface-2: #111318;
+  --surface-border: rgba(255, 255, 255, 0.1);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -111,6 +118,15 @@ body {
   --mobile-nav-safe: calc(61px + env(safe-area-inset-top));
   --mobile-page-x: 1rem;
   --mobile-section-y: 2.5rem;
+}
+
+@theme inline {
+  --color-brand-coral: var(--brand-coral);
+  --color-brand-coral-strong: var(--brand-coral-strong);
+  --color-brand-gold: var(--brand-gold);
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
 }
 
 .dark {
@@ -202,6 +218,132 @@ body {
   body {
     @apply text-foreground;
     background: #000;
+  }
+}
+
+@layer components {
+  .ui-shell {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+
+  .ui-panel {
+    border: 1px solid var(--surface-border);
+    border-radius: 1.25rem;
+    background: var(--surface-2);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--surface-2) 94%, white 6%),
+      var(--surface-1)
+    );
+    box-shadow: 0 24px 60px rgb(0 0 0 / 0.22);
+  }
+
+  .ui-panel-interactive {
+    border: 1px solid var(--surface-border);
+    border-radius: 1rem;
+    background: rgb(255 255 255 / 0.035);
+    transition:
+      border-color 180ms ease,
+      background-color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .ui-panel-interactive:hover {
+    border-color: rgb(255 255 255 / 0.2);
+    background: rgb(255 255 255 / 0.07);
+    transform: translateY(-2px);
+  }
+
+  .ui-panel-interactive:focus-visible {
+    outline: 2px solid var(--brand-coral-strong);
+    outline-offset: 3px;
+  }
+
+  .ui-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--brand-coral-strong);
+    font-size: 0.6875rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .ui-primary-action,
+  .ui-secondary-action {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.875rem;
+    padding-inline: 1rem;
+    font-size: 0.875rem;
+    font-weight: 800;
+    outline: none;
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .ui-primary-action {
+    background: var(--brand-coral);
+    color: white;
+    box-shadow: 0 10px 24px rgb(233 79 55 / 0.2);
+  }
+
+  .ui-primary-action:hover {
+    background: var(--brand-coral-strong);
+    transform: translateY(-1px);
+  }
+
+  .ui-secondary-action {
+    border: 1px solid var(--surface-border);
+    background: rgb(255 255 255 / 0.045);
+    color: rgb(255 255 255 / 0.86);
+  }
+
+  .ui-secondary-action:hover {
+    border-color: rgb(255 255 255 / 0.2);
+    background: rgb(255 255 255 / 0.09);
+    color: white;
+  }
+
+  :where(.ui-primary-action, .ui-secondary-action):focus-visible {
+    outline: 2px solid var(--brand-coral-strong);
+    outline-offset: 3px;
+  }
+}
+
+@media (min-width: 640px) {
+  .ui-shell {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ui-shell {
+    padding-inline: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-panel-interactive,
+  .ui-primary-action,
+  .ui-secondary-action {
+    transition: none;
+  }
+
+  .ui-panel-interactive:hover,
+  .ui-primary-action:hover {
+    transform: none;
   }
 }
 .navbar-transparent {

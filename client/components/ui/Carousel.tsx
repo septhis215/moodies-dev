@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { All } from "@/types/all";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface CarouselProps {
   items: All[];
@@ -16,23 +17,17 @@ export const Carousel = ({
   mobileBleed = true,
 }: CarouselProps) => {
   const [startIndex, setStartIndex] = useState(0);
-  const [itemsPerView, setItemsPerView] = useState(6);
-
-  // Update itemsPerView on resize
-  useEffect(() => {
-    const updateLayout = () => {
-      const w = window.innerWidth;
-      if (w < 640) setItemsPerView(2);
-      else if (w < 768) setItemsPerView(3);
-      else if (w < 1024) setItemsPerView(4);
-      else if (w < 1280) setItemsPerView(5);
-      else setItemsPerView(6);
-    };
-
-    updateLayout();
-    window.addEventListener("resize", updateLayout);
-    return () => window.removeEventListener("resize", updateLayout);
-  }, []);
+  const isSm = useMediaQuery("(min-width: 640px)");
+  const isMd = useMediaQuery("(min-width: 768px)");
+  const isLg = useMediaQuery("(min-width: 1024px)");
+  const isXl = useMediaQuery("(min-width: 1280px)");
+  const itemsPerView = useMemo(() => {
+    if (isXl) return 6;
+    if (isLg) return 5;
+    if (isMd) return 4;
+    if (isSm) return 3;
+    return 2;
+  }, [isLg, isMd, isSm, isXl]);
 
   // Clamp startIndex whenever items length or itemsPerView changes
   useEffect(() => {

@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const TrailerModal = dynamic(() => import("./TrailerModal"), { ssr: false });
 
@@ -69,25 +70,14 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
   const [hoveredId, setHoveredId] = useState<number | null>(null);
 
   const [startIndex, setStartIndex] = useState(0);
-  const [itemsPerView, setItemsPerView] = useState(3);
+  const isSm = useMediaQuery("(min-width: 640px)");
+  const isLg = useMediaQuery("(min-width: 1024px)");
+  const itemsPerView = isLg ? 3 : isSm ? 2 : 1;
 
   const uniqueTrailers = Array.from(
     new Map(trailers.map((item) => [item.id, item])).values()
   );
   const trailerItems = uniqueTrailers.filter((item) => item.trailer_key);
-
-  useEffect(() => {
-    const updateLayout = () => {
-      const w = window.innerWidth;
-      if (w < 640) setItemsPerView(1);
-      else if (w < 1024) setItemsPerView(2);
-      else setItemsPerView(3);
-    };
-
-    updateLayout();
-    window.addEventListener("resize", updateLayout);
-    return () => window.removeEventListener("resize", updateLayout);
-  }, []);
 
   useEffect(() => {
     if (data) {

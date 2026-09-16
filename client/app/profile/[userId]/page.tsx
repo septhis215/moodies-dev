@@ -21,10 +21,9 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
+import { fetchMediaSummary } from "@/lib/mediaApi";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || "";
-const TMDB_READ_TOKEN = process.env.NEXT_PUBLIC_TMDB_READ_TOKEN || "";
 const MASCOT_SRC = "/images/moodies-mascot.png";
 const LOGO_SRC = "/images/moodies-transparent.png";
 const PUBLIC_IMAGE_PATH_PATTERN =
@@ -235,19 +234,16 @@ function MoodBadge({
 async function fetchTmdbDetail(
   review: PublicReview,
 ): Promise<TmdbDetail | null> {
-  if (!TMDB_API_KEY && !TMDB_READ_TOKEN) return null;
   const type = review.mediaType === "TV" ? "tv" : "movie";
-  const url = TMDB_API_KEY
-    ? `https://api.themoviedb.org/3/${type}/${review.tmdbId}?api_key=${TMDB_API_KEY}&language=en-US`
-    : `https://api.themoviedb.org/3/${type}/${review.tmdbId}?language=en-US`;
-
-  const res = await fetch(url, {
-    headers: TMDB_READ_TOKEN
-      ? { Authorization: `Bearer ${TMDB_READ_TOKEN}` }
-      : undefined,
-  });
-  if (!res.ok) return null;
-  return res.json();
+  const summary = await fetchMediaSummary(type, review.tmdbId);
+  if (!summary) return null;
+  return {
+    title: summary.title,
+    name: summary.title,
+    poster_path: summary.poster_path,
+    release_date: summary.release_date ?? undefined,
+    first_air_date: summary.first_air_date ?? undefined,
+  };
 }
 
 async function fetchTmdbListItem(
@@ -256,29 +252,16 @@ async function fetchTmdbListItem(
 ): Promise<PublicListItem> {
   const type = mediaType === "TV" ? "tv" : "movie";
   const fallback = `${mediaType === "TV" ? "TV" : "Movie"} #${id}`;
-  if (!TMDB_API_KEY && !TMDB_READ_TOKEN) {
-    return { id, mediaType, title: fallback };
-  }
-
-  const url = TMDB_API_KEY
-    ? `https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=en-US`
-    : `https://api.themoviedb.org/3/${type}/${id}?language=en-US`;
-
   try {
-    const res = await fetch(url, {
-      headers: TMDB_READ_TOKEN
-        ? { Authorization: `Bearer ${TMDB_READ_TOKEN}` }
-        : undefined,
-    });
-    if (!res.ok) return { id, mediaType, title: fallback };
-    const detail: TmdbDetail = await res.json();
-    const title = detail.title || detail.name || fallback;
+    const detail = await fetchMediaSummary(type, id);
+    if (!detail) return { id, mediaType, title: fallback };
+    const title = detail.title || fallback;
     const date = detail.release_date || detail.first_air_date;
     return {
       id,
       mediaType,
       title,
-      poster: detail.poster_path ?? null,
+      poster: detail.poster_path,
       year: date ? date.slice(0, 4) : undefined,
     };
   } catch {

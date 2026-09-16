@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { tmdbImage } from "@/lib/tmdb";
+import { getMediaApiBase } from "@/lib/mediaApi";
 
 type TmdbItem = {
   id: number;
@@ -23,11 +24,9 @@ type Featured = {
 const SIZE_BACKDROP = "w1280";
 const SIZE_POSTER   = "w500";
 
-// simple client-side fetch (no cache; trending = always fresh)
+// Use the backend TMDB boundary so API credentials never ship to the browser.
 async function fetchTrendingTV(): Promise<TmdbItem[]> {
-  const key = process.env.NEXT_PUBLIC_TMDB_KEY;
-  if (!key) return [];
-  const url = `https://api.themoviedb.org/3/trending/tv/week?language=en-US&api_key=${key}`;
+  const url = `${getMediaApiBase()}/tv/trending?limit=20`;
   const res = await fetch(url, { cache: "no-store" }).catch(() => null);
   if (!res || !res.ok) return [];
   const json = await res.json();

@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useEffect, useRef } from "react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 type Props = {
     currentPage: number;
@@ -15,20 +16,9 @@ export default function Pagination({
     onPageChange,
     className = "",
 }: Props) {
-    const [isMobile, setIsMobile] = useState<boolean>(false);
-    const [isTinyMobile, setIsTinyMobile] = useState<boolean>(false);
+    const isMobile = useMediaQuery("(max-width: 639px)");
+    const isTinyMobile = useMediaQuery("(max-width: 399px)");
     const pagesRef = useRef<HTMLDivElement | null>(null);
-
-    // detect breakpoints
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 640);
-            setIsTinyMobile(window.innerWidth < 400);
-        };
-        handleResize();
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
 
     // scroll active into view on small screens
     useEffect(() => {

@@ -26,6 +26,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { RatingBadge } from "@/components/ui/rating-badge";
 
 type MovieLike = {
@@ -93,7 +94,10 @@ export default function CardCarousel<T extends MovieLike>({
   const [loadingStates, setLoadingStates] = useState<
     Record<string | number, boolean>
   >({});
-  const [itemsPerView, setItemsPerView] = useState(4.5);
+  const isSm = useMediaQuery("(min-width: 640px)");
+  const isMd = useMediaQuery("(min-width: 768px)");
+  const isLg = useMediaQuery("(min-width: 1024px)");
+  const itemsPerView = isLg ? 4.5 : isMd ? 3.5 : isSm ? 2.5 : 2.35;
   const router = useRouter();
 
   const { isInWatchlist: hookIsIn, add, remove, ready } = useWatchlist();
@@ -153,21 +157,6 @@ export default function CardCarousel<T extends MovieLike>({
   const [maxScrollLeft, setMaxScrollLeft] = useState<number>(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-
-  // responsive itemsPerView
-  useEffect(() => {
-    const updateLayout = () => {
-      const w = window.innerWidth;
-      if (w < 640) setItemsPerView(2.35);
-      else if (w < 768) setItemsPerView(2.5);
-      else if (w < 1024) setItemsPerView(3.5);
-      else setItemsPerView(4.5);
-    };
-
-    updateLayout();
-    window.addEventListener("resize", updateLayout);
-    return () => window.removeEventListener("resize", updateLayout);
-  }, []);
 
   // compute sizes & scroll limits using the actual DOM measurements
   useEffect(() => {

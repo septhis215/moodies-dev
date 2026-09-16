@@ -19,6 +19,7 @@ import type { All } from "@/types/all";
 import { tmdbImage } from "@/lib/tmdb";
 import useCarousel from "@/hooks/useCarousel";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import HeroThumbnail from "./heroThumbnail";
 import "./hero.css";
 
@@ -76,7 +77,8 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
   });
 
   const [mounted, setMounted] = useState(false);
-  const [thumbnailWindowSize, setThumbnailWindowSize] = useState(5);
+  const isCompact = useMediaQuery("(max-width: 640px)");
+  const thumbnailWindowSize = isCompact ? 4 : 5;
   const [wlLoading, setWlLoading] = useState(false);
 
   const router = useRouter();
@@ -119,20 +121,6 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
   useEffect(() => {
     setMounted(true);
-
-    const updateThumbnailSize = () => {
-      if (window.innerWidth <= 640) {
-        setThumbnailWindowSize(4);
-      } else if (window.innerWidth <= 1024) {
-        setThumbnailWindowSize(5);
-      } else {
-        setThumbnailWindowSize(5);
-      }
-    };
-
-    updateThumbnailSize();
-    window.addEventListener("resize", updateThumbnailSize);
-    return () => window.removeEventListener("resize", updateThumbnailSize);
   }, []);
 
   if (!all || all.length === 0 || !current) {
@@ -214,7 +202,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           alt=""
           fill
           sizes="100vw"
-          priority
+          priority={index === 0}
           aria-hidden
           className="hero-backdrop-image object-cover object-[58%_center] sm:object-center"
         />

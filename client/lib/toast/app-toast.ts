@@ -11,6 +11,7 @@ const TOAST_DEDUPE_MS = 3000;
 
 let sequence = 0;
 let toasts: AppToastItem[] = [];
+const EMPTY_TOASTS: AppToastItem[] = [];
 const listeners = new Set<() => void>();
 const recentToastKeys = new Map<string, number>();
 
@@ -148,6 +149,6 @@ export const appToastStore = {
     return toasts;
   },
   getServerSnapshot() {
-    return [] as AppToastItem[];
+    return EMPTY_TOASTS;
   },
 };
