@@ -1,6 +1,6 @@
 // search/search.controller.ts
 import { Controller, Get, Query, ValidationPipe } from '@nestjs/common';
-import { SearchFilters, SearchService } from './search.service';
+import { DiscoverFilters, SearchFilters, SearchService } from './search.service';
 import { IsOptional, IsString, IsNumber, IsIn, Min, Max } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
@@ -87,6 +87,62 @@ class SearchSuggestionsDto {
     regex_search?: boolean = false;
 }
 
+class DiscoverQueryDto {
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1)
+    page?: number = 1;
+
+    @IsOptional()
+    @IsIn(['all', 'movie', 'tv'])
+    type?: 'all' | 'movie' | 'tv' = 'movie';
+
+    @IsOptional()
+    @IsIn(['relevance', 'rating', 'date', 'popularity'])
+    sort?: 'relevance' | 'rating' | 'date' | 'popularity' = 'popularity';
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1900)
+    @Max(2030)
+    year_min?: number;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1900)
+    @Max(2030)
+    year_max?: number;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    @Max(10)
+    rating_min?: number;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(0)
+    @Max(10)
+    rating_max?: number;
+
+    @IsOptional()
+    @IsString()
+    genres?: string;
+
+    @IsOptional()
+    @IsString()
+    countries?: string;
+
+    @IsOptional()
+    @Transform(({ value }) => value === 'true')
+    include_adult?: boolean = false;
+}
+
 @Controller('search')
 export class SearchController {
     constructor(private readonly searchService: SearchService) { }
@@ -110,6 +166,23 @@ export class SearchController {
         };
 
         return this.searchService.search(filters);
+    }
+
+    @Get('discover')
+    discover(@Query(ValidationPipe) query: DiscoverQueryDto) {
+        const filters: DiscoverFilters = {
+            page: query.page,
+            type: query.type,
+            sort: query.sort,
+            year_min: query.year_min,
+            year_max: query.year_max,
+            rating_min: query.rating_min,
+            rating_max: query.rating_max,
+            genres: query.genres,
+            countries: query.countries,
+            include_adult: query.include_adult,
+        };
+        return this.searchService.discover(filters);
     }
 
     @Get('suggestions/content')

@@ -17,7 +17,10 @@ async function bootstrap() {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'no-referrer');
-    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    // The client is a separately served Next app. CORS remains the access
+    // control; CORP must allow the explicitly permitted client origin to read
+    // JSON responses across the client/API origin boundary.
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader('X-DNS-Prefetch-Control', 'off');
     next();
   });
@@ -37,9 +40,31 @@ async function bootstrap() {
   const isAllowedVercelPreview = (origin: string): boolean =>
     /^https:\/\/moodies-dev(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(origin);
 
+  const isAllowedLocalDevelopmentOrigin = (origin: string): boolean => {
+    if (process.env.NODE_ENV !== 'development') return false;
+
+    try {
+      const url = new URL(origin);
+      const port = Number(url.port);
+      return (
+        (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
+        url.protocol === 'http:' &&
+        port >= 3000 &&
+        port <= 3999
+      );
+    } catch {
+      return false;
+    }
+  };
+
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || isAllowedVercelPreview(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        isAllowedVercelPreview(origin) ||
+        isAllowedLocalDevelopmentOrigin(origin)
+      ) {
         callback(null, true);
         return;
       }
