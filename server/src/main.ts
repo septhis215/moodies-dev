@@ -7,6 +7,9 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Keep the public API namespace stable across local and hosted environments.
+  app.setGlobalPrefix('api');
+
   // Don't advertise the framework. Reduces fingerprinting for targeted attacks.
   app.getHttpAdapter().getInstance().disable('x-powered-by');
 

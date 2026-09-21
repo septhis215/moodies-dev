@@ -9,7 +9,7 @@
 import { writeFileSync, rmSync } from "node:fs";
 
 // Single source of truth for each environment's API base URL.
-// `null` = no override (fall back to .env.development → http://localhost:4000).
+// `null` = no override (fall back to .env.development → http://localhost:4000/api).
 const ENVIRONMENTS = {
   local: null,
   staging: process.env.MOODIES_STAGING_API_URL ?? "",

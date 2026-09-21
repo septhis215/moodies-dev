@@ -58,7 +58,7 @@ Set the final HTTPS frontend origin in `CLIENT_URL` and `CORS_ORIGINS`; never us
 ```bash
 systemctl status moodies-api
 journalctl -u moodies-api -f
-curl -fsS https://api.example.com/health
+curl -fsS https://api.example.com/api/health
 ```
 
 For releases: `git pull --ff-only`, `npm ci`, build, run `migrate:deploy`, then
