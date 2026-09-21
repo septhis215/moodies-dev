@@ -102,11 +102,11 @@ Authenticated staging timing still needs a browser/network capture because this 
 
 ## Infrastructure Issues To Verify On Staging
 
-- Client appears to be Vercel and backend Railway, with Supabase Postgres and remote Redis per project environment docs.
+- Client and backend hosting, Supabase Postgres, and remote Redis should be treated as separately deployed components.
 - Cross-origin credentialed JSON POSTs can trigger OPTIONS preflight.
-- Backend and Supabase region alignment needs to be checked in Railway/Supabase dashboards.
-- Railway cold-start/sleep behavior needs to be measured by comparing first, second, and third request after idle.
-- `CORS_ORIGINS` should include the staging Vercel origin explicitly.
+- Backend and Supabase region alignment needs to be checked in the relevant hosting dashboards.
+- Backend cold-start/sleep behavior needs to be measured by comparing first, second, and third request after idle.
+- `CORS_ORIGINS` should include the exact staging frontend origin explicitly.
 - Cookie settings must match deployment domains. Truly cross-site frontend/backend domains need `COOKIE_SAMESITE=none` and `COOKIE_SECURE=true`.
 
 ## Changes Implemented
@@ -146,8 +146,8 @@ Authenticated staging timing still needs a browser/network capture because this 
 
 ### Priority 4: Check Region Placement
 
-- Problem: Railway backend, Supabase Postgres, and Redis can be in different regions.
-- Evidence: Project environment docs identify Railway/Supabase/remote Redis staging pieces.
+- Problem: Backend hosting, Supabase Postgres, and Redis can be in different regions.
+- Evidence: The environment configuration identifies these as separate staging components.
 - Recommended change: Co-locate backend and database as closely as possible; Redis should be near backend if used for auth refresh.
 - Risk: Operational.
 - Expected improvement: Lower baseline TTFB for all protected mutations.

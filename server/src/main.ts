@@ -37,9 +37,6 @@ async function bootstrap() {
     .map((o) => o.trim())
     .filter(Boolean);
 
-  const isAllowedVercelPreview = (origin: string): boolean =>
-    /^https:\/\/moodies-dev(?:-[a-z0-9-]+)?\.vercel\.app$/i.test(origin);
-
   const isAllowedLocalDevelopmentOrigin = (origin: string): boolean => {
     if (process.env.NODE_ENV !== 'development') return false;
 
@@ -62,7 +59,6 @@ async function bootstrap() {
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
-        isAllowedVercelPreview(origin) ||
         isAllowedLocalDevelopmentOrigin(origin)
       ) {
         callback(null, true);

@@ -6,7 +6,7 @@ const logger = new Logger('Mailer');
 // Transport selection:
 //  - Local dev (NODE_ENV=development) uses Gmail SMTP — it works on a dev machine
 //    and can send to any recipient without a verified domain.
-//  - Staging/production send over HTTPS via Resend, because PaaS hosts (Railway)
+//  - Staging/production send over HTTPS via Resend, because some PaaS hosts
 //    block outbound SMTP (ETIMEDOUT on connect). NODE_ENV must be exactly
 //    'development' for SMTP, so staging never tries (and hangs on) a blocked port.
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
