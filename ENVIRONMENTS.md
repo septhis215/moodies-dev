@@ -32,7 +32,7 @@ environments and a one-command switch.
 
 | Command (run in `client/`) | Frontend talks to |
 |---|---|
-| `npm run env:local`   | `http://localhost:4000` (your local backend) |
+| `npm run env:local`   | `http://localhost:4000/api` (your local backend) |
 | `npm run env:staging` | The API URL in `MOODIES_STAGING_API_URL` |
 | `npm run env:prod`    | The API URL in `MOODIES_PROD_API_URL` |
 
@@ -90,7 +90,7 @@ OAuth credentials were moved to **our own Google Cloud project**. The OAuth clie
 **Authorized redirect URIs** registered:
 
 ```
-http://localhost:4000/auth/google/callback                              (local backend)
+http://localhost:4000/api/auth/google/callback                          (local backend)
 https://api.example.com/auth/google/callback  (staging example)
 ```
 
@@ -99,7 +99,7 @@ Relevant env vars (set in the hosted environment for staging; in `server/.env` f
 | Var | Local (`server/.env`) | Hosted environment |
 |---|---|---|
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | our project's credentials | same |
-| `GOOGLE_CALLBACK_URL` | `http://localhost:4000/auth/google/callback` | `https://api.example.com/auth/google/callback` |
+| `GOOGLE_CALLBACK_URL` | `http://localhost:4000/api/auth/google/callback` | `https://api.example.com/api/auth/google/callback` |
 | `CLIENT_URL` | unset → defaults to `http://localhost:3000` | unset → defaults to `http://localhost:3000` |
 
 > `server/.env` is gitignored — get the `GOOGLE_CLIENT_SECRET` (and other secrets) from a
