@@ -2,7 +2,7 @@
 // which Next.js loads with the highest precedence in `next dev`.
 //
 //   npm run env:local     → talk to local backend  (removes .env.local → .env.development wins)
-//   npm run env:staging   → talk to Railway staging
+//   npm run env:staging   → talk to the configured staging API
 //   npm run env:prod      → talk to production
 //
 // .env.local is gitignored, so this never affects committed files.
@@ -12,8 +12,8 @@ import { writeFileSync, rmSync } from "node:fs";
 // `null` = no override (fall back to .env.development → http://localhost:4000).
 const ENVIRONMENTS = {
   local: null,
-  staging: "https://dev-moodies.up.railway.app",
-  prod: "", // TODO: set real prod domain
+  staging: process.env.MOODIES_STAGING_API_URL ?? "",
+  prod: process.env.MOODIES_PROD_API_URL ?? "",
 };
 
 const name = process.argv[2];
@@ -24,6 +24,12 @@ if (!(name in ENVIRONMENTS)) {
 }
 
 const url = ENVIRONMENTS[name];
+
+if (name !== "local" && !url) {
+  const variable = name === "staging" ? "MOODIES_STAGING_API_URL" : "MOODIES_PROD_API_URL";
+  console.error(`Set ${variable} before switching to ${name}.`);
+  process.exit(1);
+}
 
 if (url === null) {
   rmSync(".env.local", { force: true });

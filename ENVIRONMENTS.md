@@ -33,8 +33,8 @@ environments and a one-command switch.
 | Command (run in `client/`) | Frontend talks to |
 |---|---|
 | `npm run env:local`   | `http://localhost:4000` (your local backend) |
-| `npm run env:staging` | Railway staging (`https://moodies-staging-production.up.railway.app`) |
-| `npm run env:prod`    | Production *(URL is a placeholder until prod exists)* |
+| `npm run env:staging` | The API URL in `MOODIES_STAGING_API_URL` |
+| `npm run env:prod`    | The API URL in `MOODIES_PROD_API_URL` |
 
 After switching, **restart the dev server** (`Ctrl+C`, then `npm run dev`) — Next.js only
 reads env files at startup.
@@ -50,8 +50,8 @@ reads env files at startup.
 
 - `npm run env:staging`/`env:prod` write `.env.local` (which wins over everything).
 - `npm run env:local` deletes `.env.local` so it falls back to `.env.development`.
-- The URLs live in one place: `client/scripts/use-env.mjs` → `ENVIRONMENTS`. Update the
-  `prod` line there once we have a production domain.
+- Set `MOODIES_STAGING_API_URL` or `MOODIES_PROD_API_URL` in your shell before running
+  the matching switch command. The scripts intentionally do not contain deployment URLs.
 
 > ⚠️ **Note:** Next.js does **not** load `.env.staging`. Only `.env`, `.env.local`,
 > `.env.development`, `.env.production` are auto-loaded. Don't rely on a `.env.staging` file.
@@ -75,13 +75,14 @@ Two env vars exist, and they are **not** interchangeable:
 
 ---
 
-## Backend: Railway (staging)
+## Backend deployment
 
-- Deployed via **Nixpacks** (no Dockerfile — it was removed). Config in `server/railway.json`.
-- Build runs `npx prisma generate && nest build` (Prisma types must exist before TS compiles).
-- DB is **Supabase**; Railway uses the Supabase **pooler** URLs (`DATABASE_URL` on port 6543,
-  `DIRECT_URL` on 5432).
-- Secrets/config live in **Railway variables**, not in the repo.
+- Build with `npm run build` from the repository root; start with `npm run start:prod`
+  from `server/`.
+- Provide `DATABASE_URL`, `DIRECT_URL` when migrations are needed, and all required secrets
+  through the hosting environment. Never commit production secrets.
+- Configure `CLIENT_URL`, `CORS_ORIGINS`, and `GOOGLE_CALLBACK_URL` with the real public
+  origins for each environment.
 
 ### Google OAuth
 
@@ -90,15 +91,15 @@ OAuth credentials were moved to **our own Google Cloud project**. The OAuth clie
 
 ```
 http://localhost:4000/auth/google/callback                              (local backend)
-https://moodies-staging-production.up.railway.app/auth/google/callback  (staging)
+https://api.example.com/auth/google/callback  (staging example)
 ```
 
-Relevant env vars (set in Railway for staging; in `server/.env` for local):
+Relevant env vars (set in the hosted environment for staging; in `server/.env` for local):
 
-| Var | Local (`server/.env`) | Railway (staging) |
+| Var | Local (`server/.env`) | Hosted environment |
 |---|---|---|
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | our project's credentials | same |
-| `GOOGLE_CALLBACK_URL` | `http://localhost:4000/auth/google/callback` | `https://moodies-staging-production.up.railway.app/auth/google/callback` |
+| `GOOGLE_CALLBACK_URL` | `http://localhost:4000/auth/google/callback` | `https://api.example.com/auth/google/callback` |
 | `CLIENT_URL` | unset → defaults to `http://localhost:3000` | unset → defaults to `http://localhost:3000` |
 
 > `server/.env` is gitignored — get the `GOOGLE_CLIENT_SECRET` (and other secrets) from a
@@ -107,12 +108,39 @@ Relevant env vars (set in Railway for staging; in `server/.env` for local):
 
 ---
 
-## When the frontend deploys to Vercel (future)
+## Hosted frontend and backend
 
-- Set `NEST_API_URL` + `NEXT_PUBLIC_API_URL` in the **Vercel dashboard** per environment
-  (Preview = staging URL, Production = prod URL). The local `.env.*` files aren't used there.
-- On Railway, set `CLIENT_URL` to the Vercel URL (so OAuth redirects back to the frontend)
-  and add the Vercel domain to `CORS_ORIGINS`.
+- Set `NEST_API_URL` and `NEXT_PUBLIC_API_URL` in the frontend hosting environment.
+- Set `CLIENT_URL` to the public frontend origin and add that exact origin to `CORS_ORIGINS`.
+- Keep deployment URLs outside the repository; use the environment switch script only for
+  local operator workflows.
+
+## Target hosting: Hostinger VPS API + Cloudflare frontend
+
+The NestJS API is prepared for a Hostinger VPS with systemd and Nginx templates in
+`deploy/hostinger/`. The API listens on `127.0.0.1:4000`; Nginx terminates TLS and
+proxies the public `https://api.example.com` origin to it.
+
+The current Next.js client is dynamic: it uses cookies, middleware, dynamic routes,
+and server-side API requests. It is not compatible with a plain Cloudflare Pages
+static export without a larger client-side rendering migration. Do not add
+`output: "export"` to `client/next.config.ts`, because that would break these features.
+
+For the current client, use Cloudflare's Next.js Workers integration, or deliberately
+migrate the client to a fully static/client-rendered architecture before selecting
+Cloudflare Pages' **Next.js (Static HTML Export)** preset. Client production variables
+are documented in `client/.env.production.example`.
+
+If the client is later made static, the Pages settings are:
+
+| Setting | Value |
+|---|---|
+| Root directory | `client` |
+| Build command | `npm run build` |
+| Output directory | `out` |
+| API variables | `NEST_API_URL`, `NEXT_PUBLIC_API_URL` |
+
+Do not use the `out` directory for the current dynamic client.
 
 ---
 

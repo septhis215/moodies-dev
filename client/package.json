@@ -9,6 +9,7 @@
     "env:prod": "node scripts/use-env.mjs prod",
     "build:staging": "next build",
     "build:production": "next build",
+    "build:cloudflare": "next build",
     "build": "npm run build:staging",
     "start:staging": "next start",
     "start:production": "next start",

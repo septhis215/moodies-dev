@@ -1,0 +1,23 @@
+[Unit]
+Description=Moodies NestJS API
+After=network.target
+
+[Service]
+Type=simple
+User=moodies
+WorkingDirectory=/var/www/moodies
+EnvironmentFile=/etc/moodies/server.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm run start:prod --workspace server
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/moodies/server
+
+[Install]
+WantedBy=multi-user.target

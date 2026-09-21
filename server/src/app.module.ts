@@ -36,9 +36,9 @@ import { TurnstileModule } from './common/security/turnstile.module';
       envFilePath: '.env',
       // Fail fast at boot on missing/invalid config instead of crashing later at
       // first use. allowUnknown MUST stay true — otherwise Joi rejects every other
-      // process.env key (PATH, NODE, Railway-injected vars, …) and the app won't start.
+      // process.env key (PATH, NODE, platform-injected vars, …) and the app won't start.
       // `.empty('')` treats a present-but-empty env var ("") as absent, so a
-      // platform that injects empty strings (Railway, etc.) gets defaults applied
+      // platform that injects empty strings gets defaults applied
       // and optionals satisfied instead of a boot crash. Required vars still fail
       // on empty, which is what we want.
       validationSchema: Joi.object({
