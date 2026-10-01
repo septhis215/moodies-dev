@@ -61,6 +61,7 @@ import { TurnstileModule } from './common/security/turnstile.module';
         REDIS_HOST: Joi.string().empty('').optional(),
         REDIS_PORT: Joi.number().empty('').optional(),
         REDIS_PASS: Joi.string().allow('').optional(),
+        REDIS_URL: Joi.string().uri({ scheme: ['redis', 'rediss'] }).empty('').optional(),
         COOKIE_SAMESITE: Joi.string().valid('lax', 'strict', 'none').empty('').optional(),
         COOKIE_SECURE: Joi.string().valid('true', 'false').empty('').optional(),
         COOKIE_DOMAIN: Joi.string().empty('').optional(),

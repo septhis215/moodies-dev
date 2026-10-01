@@ -81,6 +81,10 @@ Two env vars exist, and they are **not** interchangeable:
   from `server/`.
 - Provide `DATABASE_URL`, `DIRECT_URL` when migrations are needed, and all required secrets
   through the hosting environment. Never commit production secrets.
+- For Dokploy Redis, configure the backend only with Dokploy secrets: use the Redis service's
+  internal hostname as `REDIS_HOST`, internal container port `6379` as `REDIS_PORT`, and the
+  generated Redis password as `REDIS_PASS`. Alternatively set `REDIS_URL` to Dokploy's
+  internal connection URL. Do not expose Redis to the public internet just to connect the API.
 - Configure `CLIENT_URL`, `CORS_ORIGINS`, and `GOOGLE_CALLBACK_URL` with the real public
   origins for each environment.
 
