@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { InfiniteMovingCards } from "../ui/infinite-moving-cards";
+import Link from "next/link";
+import { ArrowUpRight, MessageCircle } from "lucide-react";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
+import { tmdbImage } from "@/lib/tmdb";
 
 type CanonicalMediaType = "MOVIE" | "TV";
 type MediaTypeInput = string | null | undefined;
@@ -79,8 +82,29 @@ interface CommunityPicksProps {
 
 function normalizeAvatar(avatar?: string | null) {
   if (!avatar) return "";
-  if (avatar.startsWith("http")) return `/${avatar}`;
+  if (avatar.startsWith("http")) return avatar;
   return avatar;
+}
+
+function reviewHref(review: ReviewItem) {
+  if (!review.tmdbId) return null;
+  return `/${review.mediaType === "TV" ? "tv" : "movies"}/${review.tmdbId}`;
+}
+
+function reviewPoster(review: ReviewItem) {
+  const artwork = review.moviePoster || review.movieBackdrop;
+  if (!artwork) return "/placeholder-poster.svg";
+  if (artwork.startsWith("http")) return artwork;
+  return tmdbImage(artwork, review.moviePoster ? "posterCard" : "backdropCard");
+}
+
+function reviewerInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }
 
 function normalizeMediaType(
@@ -199,8 +223,7 @@ export default function CommunityPicks({
     const fetchData = async () => {
       try {
         setLoading(true);
-        const base =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
         const path = endpoint || "/reviews/community-picks?limit=18";
         const res = await fetch(`${base}${path}`, {
           next: { revalidate: 60 },
@@ -222,18 +245,19 @@ export default function CommunityPicks({
 
   if (loading) {
     return (
-      <section className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-white/10 bg-neutral-950/75 p-5">
-          <div className="mb-6 space-y-3">
-            <div className="h-5 w-36 animate-pulse rounded-full bg-white/10" />
-            <div className="h-8 w-72 max-w-full animate-pulse rounded-lg bg-white/10" />
-            <div className="h-4 w-96 max-w-full animate-pulse rounded bg-white/5" />
-          </div>
-          <div className="flex gap-4 overflow-hidden">
+      <section className="ui-shell border-b border-[var(--surface-border)] py-8 sm:py-10">
+        <div className="mb-6 space-y-3">
+          <div className="h-3 w-32 animate-pulse rounded bg-[var(--surface-2)]" />
+          <div className="h-9 w-72 max-w-full animate-pulse rounded bg-[var(--surface-2)]" />
+          <div className="h-4 w-96 max-w-full animate-pulse rounded bg-[var(--surface-1)]" />
+        </div>
+        <div className="grid gap-3 lg:grid-cols-12">
+          <div className="h-[420px] animate-pulse rounded-md bg-[var(--surface-1)] lg:col-span-5" />
+          <div className="grid gap-3 sm:grid-cols-2 lg:col-span-7">
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="h-56 w-80 shrink-0 animate-pulse rounded-2xl border border-white/10 bg-white/[0.04]"
+                className="h-48 animate-pulse rounded-md bg-[var(--surface-1)]"
               />
             ))}
           </div>
@@ -250,57 +274,140 @@ export default function CommunityPicks({
       ? ratedReviews.reduce((sum, review) => sum + (review.rating ?? 0), 0) /
         ratedReviews.length
       : null;
+  const [featuredReview, ...supportingReviews] = reviews.slice(0, 5);
 
   return (
     <section
       id="community"
-      className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-9 sm:px-6 lg:px-8"
+      className="ui-shell scroll-mt-24 border-b border-[var(--surface-border)] py-8 sm:py-10"
     >
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/80 py-4 shadow-xl shadow-black/20 sm:py-6">
-        <div className="px-4 sm:px-7">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#ff8b78]">
-                Community signal
+      <div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#ff8b78]">
+              Community signal
+            </p>
+            <h2 className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
+              {title}
+            </h2>
+
+            {subtitle && (
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+                {subtitle}
               </p>
-              <h2
-                className="mt-2 bg-clip-text text-[1.35rem] font-black leading-tight tracking-tight text-transparent sm:text-2xl lg:text-3xl"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(to right, #e94f37, #ff6b58)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}
-              >
-                {title}
-              </h2>
+            )}
+          </div>
 
-              {subtitle && (
-                <p className="mt-2 line-clamp-2 max-w-2xl text-[13px] leading-5 text-gray-400 sm:text-sm sm:leading-6">
-                  {subtitle}
-                </p>
-              )}
-            </div>
-
-            <div className="flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-3 py-2 text-xs font-bold text-white/72">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#e94f37]" />
-              {reviews.length} review picks
-              {averageRating !== null && (
-                <span className="border-l border-white/10 pl-2 text-amber-200">
-                  {averageRating.toFixed(1)} avg
-                </span>
-              )}
-            </div>
+          <div className="flex w-fit items-center gap-2 border-l border-[var(--surface-border)] pl-3 text-xs font-semibold text-[var(--ink-muted)]">
+            <MessageCircle className="h-3.5 w-3.5 text-[var(--brand-coral-strong)]" />
+            {Math.min(reviews.length, 5)} featured reviews
+            {averageRating !== null && (
+              <span className="border-l border-[var(--surface-border)] pl-2 text-[var(--brand-gold)]">
+                {averageRating.toFixed(1)} avg
+              </span>
+            )}
           </div>
         </div>
 
-        <div className="mt-3 border-t border-white/10 pt-1">
-          <InfiniteMovingCards
-            items={reviews}
-            direction="left"
-            speed="very-slow"
-            className="px-0 sm:px-4"
-          />
+        <div className="mt-6 grid gap-3 lg:grid-cols-12">
+          {featuredReview ? (
+            <Link
+              href={reviewHref(featuredReview) || "#community"}
+              className="group grid min-h-[420px] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:grid-cols-[42%_1fr] lg:col-span-5 lg:grid-cols-[44%_1fr]"
+              aria-label={`Read the community review for ${featuredReview.movieTitle || featuredReview.title}`}
+            >
+              <div className="relative min-h-64 overflow-hidden bg-[var(--surface-2)] sm:min-h-full">
+                <Image
+                  src={reviewPoster(featuredReview)}
+                  alt={`${featuredReview.movieTitle || featuredReview.title} poster`}
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 42vw, 220px"
+                  className="object-cover"
+                />
+              </div>
+              <blockquote className="flex min-w-0 flex-col p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                  <span>
+                    {featuredReview.mediaType === "TV" ? "Series" : "Movie"}
+                    {featuredReview.movieYear
+                      ? ` · ${featuredReview.movieYear}`
+                      : ""}
+                  </span>
+                  {typeof featuredReview.rating === "number" ? (
+                    <span className="text-[var(--brand-gold)]">
+                      {featuredReview.rating.toFixed(1)}/10
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-5 line-clamp-7 text-xl font-semibold leading-7 text-[var(--ink)]">
+                  “{featuredReview.quote}”
+                </p>
+                <footer className="mt-auto pt-6">
+                  <p className="line-clamp-2 text-lg font-bold leading-5 text-[var(--ink)]">
+                    {featuredReview.movieTitle || featuredReview.title}
+                  </p>
+                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-[var(--surface-border)] pt-4">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--surface-2)] text-[10px] font-bold text-[var(--brand-coral-strong)]">
+                        {reviewerInitials(featuredReview.name)}
+                      </span>
+                      <span className="truncate text-xs text-[var(--ink-muted)]">
+                        {featuredReview.name}
+                      </span>
+                    </div>
+                    <ArrowUpRight className="h-4 w-4 shrink-0 text-[var(--ink-muted)] transition-colors group-hover:text-[var(--brand-coral-strong)]" />
+                  </div>
+                </footer>
+              </blockquote>
+            </Link>
+          ) : null}
+
+          <div className="mobile-native-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto lg:col-span-7 lg:grid lg:grid-cols-2 lg:overflow-visible">
+            {supportingReviews.map((review, index) => (
+              <Link
+                key={`${review.tmdbId || "review"}-${index}`}
+                href={reviewHref(review) || "#community"}
+                className="group grid min-h-48 w-[86vw] max-w-[360px] shrink-0 snap-start grid-cols-[104px_1fr] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:w-[48vw] lg:w-auto lg:max-w-none"
+                aria-label={`Read the community review for ${review.movieTitle || review.title}`}
+              >
+                <div className="relative bg-[var(--surface-2)]">
+                  <Image
+                    src={reviewPoster(review)}
+                    alt={`${review.movieTitle || review.title} poster`}
+                    fill
+                    sizes="104px"
+                    className="object-cover"
+                  />
+                </div>
+                <blockquote className="flex min-w-0 flex-col p-4">
+                  <div className="flex items-center justify-between gap-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+                    <span>
+                      {review.mediaType === "TV" ? "Series" : "Movie"}
+                    </span>
+                    {typeof review.rating === "number" ? (
+                      <span className="text-[var(--brand-gold)]">
+                        {review.rating.toFixed(1)}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 line-clamp-3 text-sm leading-5 text-[var(--ink)]">
+                    “{review.quote}”
+                  </p>
+                  <footer className="mt-auto pt-3">
+                    <p className="line-clamp-1 text-sm font-bold text-[var(--ink)]">
+                      {review.movieTitle || review.title}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <span className="truncate text-[10px] text-[var(--ink-muted)]">
+                        {review.name}
+                      </span>
+                      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[var(--ink-muted)] transition-colors group-hover:text-[var(--brand-coral-strong)]" />
+                    </div>
+                  </footer>
+                </blockquote>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </section>

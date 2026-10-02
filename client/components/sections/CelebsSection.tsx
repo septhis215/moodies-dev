@@ -4,16 +4,8 @@ import { tmdbImage } from "@/lib/tmdb";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import {
-  Award,
-  ChevronLeft,
-  ChevronRight,
-  Film,
-  Info,
-  Star,
-  Tv,
-  Users,
-} from "lucide-react";
+import { Award, ChevronRight, Film, Info, Star, Tv, Users } from "lucide-react";
+import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 import { useRouter } from "next/navigation";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -39,7 +31,8 @@ export interface Person {
 type KnownForWork = Person["known_for"][number];
 
 async function fetchPeople() {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const base =
+    process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
   const res = await fetch(`${base}/all/peoples`, { next: { revalidate: 60 } });
   if (!res.ok) return [];
   const json = await res.json();
@@ -111,7 +104,8 @@ export default function CelebSection() {
       // compute card width (px) from container width and gaps; clamp with a sensible min
       const computed = Math.max(
         152,
-        (containerWidth - Math.max(0, itemsPerView - 1) * GAP_PX) / itemsPerView
+        (containerWidth - Math.max(0, itemsPerView - 1) * GAP_PX) /
+          itemsPerView,
       );
       setCardWidthPx(Math.round(computed));
 
@@ -135,7 +129,9 @@ export default function CelebSection() {
     const onScroll = () => {
       const sLeft = el.scrollLeft || 0;
       setCanScrollLeft(sLeft > 5);
-      setCanScrollRight(sLeft < Math.max(0, el.scrollWidth - el.clientWidth - 5));
+      setCanScrollRight(
+        sLeft < Math.max(0, el.scrollWidth - el.clientWidth - 5),
+      );
     };
     el.addEventListener("scroll", onScroll, { passive: true });
 
@@ -167,7 +163,7 @@ export default function CelebSection() {
   };
 
   // CSS flex-basis calc (percentage + gap) so initial render has correct layout even before JS measurement
-  const cardBasisCss = `calc((100% - ${(Math.max(0, itemsPerView - 1) * GAP_PX)}px) / ${itemsPerView})`;
+  const cardBasisCss = `calc((100% - ${Math.max(0, itemsPerView - 1) * GAP_PX}px) / ${itemsPerView})`;
 
   if (loading) {
     return (
@@ -180,7 +176,10 @@ export default function CelebSection() {
             </div>
             <div className="flex gap-6 overflow-hidden">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-80 w-[72vw] max-w-72 flex-shrink-0 rounded-2xl bg-gray-800 sm:h-96"></div>
+                <div
+                  key={i}
+                  className="h-80 w-[72vw] max-w-72 flex-shrink-0 rounded-2xl bg-gray-800 sm:h-96"
+                ></div>
               ))}
             </div>
           </div>
@@ -195,7 +194,10 @@ export default function CelebSection() {
         <div className="max-w-7xl mx-auto text-center">
           <div className="p-8 bg-gray-800/50 rounded-2xl border border-gray-700">
             <p className="text-gray-400 text-lg mb-4">{error}</p>
-            <button onClick={() => window.location.reload()} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium"
+            >
               Try Again
             </button>
           </div>
@@ -207,9 +209,17 @@ export default function CelebSection() {
   if (!celebs.length) return null;
 
   return (
-    <section id="celebs" className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-20 lg:px-8 lg:py-32">
+    <section
+      id="celebs"
+      className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-20 lg:px-8 lg:py-32"
+    >
       <div className="mx-auto">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-5 sm:mb-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-5 sm:mb-10"
+        >
           <h2
             className="bg-clip-text text-[1.35rem] font-bold leading-tight tracking-tight text-transparent sm:text-2xl lg:text-3xl"
             style={{
@@ -227,19 +237,30 @@ export default function CelebSection() {
         </motion.div>
 
         <div className="relative group/carousel">
-          {canScrollLeft && (
-            <button onClick={scrollLeft} className="absolute left-0 top-1/2 z-50 hidden h-12 w-12 -translate-x-4 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] opacity-0 shadow-2xl ring-2 ring-white/10 transition-all hover:scale-110 group-hover/carousel:opacity-100 md:flex" aria-label="Previous celebrities">
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-          )}
+          <CarouselNavButton
+            direction="previous"
+            onClick={scrollLeft}
+            disabled={!canScrollLeft}
+            className="absolute left-0 top-1/2 z-50 hidden -translate-x-4 -translate-y-1/2 md:grid"
+            aria-label="Previous celebrities"
+          />
 
-          {canScrollRight && (
-            <button onClick={scrollRight} className="absolute right-0 top-1/2 z-50 hidden h-12 w-12 translate-x-4 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] opacity-0 shadow-2xl ring-2 ring-white/10 transition-all hover:scale-110 group-hover/carousel:opacity-100 md:flex" aria-label="Next celebrities">
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          )}
+          <CarouselNavButton
+            direction="next"
+            onClick={scrollRight}
+            disabled={!canScrollRight}
+            className="absolute right-0 top-1/2 z-50 hidden translate-x-4 -translate-y-1/2 md:grid"
+            aria-label="Next celebrities"
+          />
 
-          <motion.div ref={containerRef} className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 mobile-native-scroll sm:gap-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.2 }} style={{ WebkitOverflowScrolling: "touch" }}>
+          <motion.div
+            ref={containerRef}
+            className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 mobile-native-scroll sm:gap-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             {celebs.map((celeb) => {
               const notableWorks = celeb.known_for?.slice(0, 2) ?? [];
 
@@ -283,7 +304,9 @@ export default function CelebSection() {
 
                       <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-black/45 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-md ring-1 ring-white/10">
                         {getDepartmentIcon(celeb.known_for_department)}
-                        <span>{celeb.known_for_department || "Entertainment"}</span>
+                        <span>
+                          {celeb.known_for_department || "Entertainment"}
+                        </span>
                       </div>
 
                       <div className="absolute bottom-3 left-3 right-3 flex items-end gap-2">
@@ -307,16 +330,15 @@ export default function CelebSection() {
                           <Info className="h-4 w-4" />
                         </button>
                       </div>
-
                     </div>
 
                     <div className="flex flex-1 flex-col justify-between gap-3 bg-neutral-950 p-3 sm:p-4">
-
-
                       {notableWorks.length > 0 ? (
                         <div className="min-h-0">
                           <div className="mb-2 flex items-center justify-between gap-2">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">Known for</p>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">
+                              Known for
+                            </p>
                             <span className="h-px flex-1 bg-white/10" />
                           </div>
 
@@ -335,7 +357,9 @@ export default function CelebSection() {
                                           ? tmdbImage(work.poster_path, "w185")
                                           : "/placeholder-poster.svg"
                                       }
-                                      alt={work.title || work.name || "Known work"}
+                                      alt={
+                                        work.title || work.name || "Known work"
+                                      }
                                       fill
                                       sizes="40px"
                                       className="object-cover transition-transform duration-500 group-hover/work:scale-105"
@@ -352,7 +376,12 @@ export default function CelebSection() {
                                       ) : (
                                         <Tv size={10} />
                                       )}
-                                      <span>{getWorkYear(work) || (work.media_type === "movie" ? "Movie" : "TV")}</span>
+                                      <span>
+                                        {getWorkYear(work) ||
+                                          (work.media_type === "movie"
+                                            ? "Movie"
+                                            : "TV")}
+                                      </span>
                                     </div>
                                     {work.vote_average ? (
                                       <div className="mt-1 flex items-center gap-1 text-[10px] font-semibold text-yellow-300">

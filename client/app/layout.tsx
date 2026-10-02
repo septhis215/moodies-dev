@@ -1,4 +1,3 @@
-
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { Barlow_Condensed, Source_Sans_3 } from "next/font/google";
@@ -86,7 +85,7 @@ export default async function RootLayout({
   );
 
   return (
-    <html lang="en" style={{ background: "#000" }} suppressHydrationWarning>
+    <html lang="en" style={{ background: "#0b0909" }} suppressHydrationWarning>
       {!initialBlockSessionBootstrap && (
         <head>
           <script dangerouslySetInnerHTML={{ __html: AUTH_PREHIDE_SCRIPT }} />
@@ -94,11 +93,13 @@ export default async function RootLayout({
       )}
       <body
         className={`${bodyFont.variable} ${displayFont.variable} antialiased`}
-        style={{ background: "#000" }}
+        style={{ background: "#0b0909" }}
       >
         <PerformanceMonitor />
         <ToastProvider>
-          <AuthProvider initialBlockSessionBootstrap={initialBlockSessionBootstrap}>
+          <AuthProvider
+            initialBlockSessionBootstrap={initialBlockSessionBootstrap}
+          >
             <AppErrorProvider>
               <TurnstileGateProvider>
                 <ClientLayout>{children}</ClientLayout>

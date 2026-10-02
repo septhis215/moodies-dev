@@ -4,14 +4,8 @@ import { tmdbImage } from "@/lib/tmdb";
 import React, { useEffect, useState } from "react";
 import type { All } from "@/types/all";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Film,
-  Tv,
-  Clock,
-  Play,
-} from "lucide-react";
+import { Film, Tv, Clock, Play } from "lucide-react";
+import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -20,7 +14,8 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 const TrailerModal = dynamic(() => import("./TrailerModal"), { ssr: false });
 
 async function fetchUpcomingTrailers(): Promise<All[]> {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const base =
+    process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
   try {
     const res = await fetch(`${base}/all/upcoming-trailers`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -33,10 +28,11 @@ async function fetchUpcomingTrailers(): Promise<All[]> {
 
 async function fetchRecommendations(
   type: "movie" | "tv",
-  id: number
+  id: number,
 ): Promise<All[]> {
   if (!type || !id) return [];
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const base =
+    process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
   try {
     const res = await fetch(`${base}/all/${type}/${id}/recommendations`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -57,7 +53,7 @@ interface UpcomingTrailersProps {
 export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
   data,
   title = "Coming Soon",
-  subtitle = "Get a sneak peek at what's dropping next",
+  subtitle = "Release dates and first looks for titles arriving next.",
   endpoint,
 }) => {
   const [trailers, setTrailers] = useState<All[]>(data || []);
@@ -75,7 +71,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
   const itemsPerView = isLg ? 3 : isSm ? 2 : 1;
 
   const uniqueTrailers = Array.from(
-    new Map(trailers.map((item) => [item.id, item])).values()
+    new Map(trailers.map((item) => [item.id, item])).values(),
   );
   const trailerItems = uniqueTrailers.filter((item) => item.trailer_key);
 
@@ -93,7 +89,9 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
 
         let result: All[];
         if (endpoint) {
-          const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+          const base =
+            process.env.NEXT_PUBLIC_API_URL ||
+            "https://dev.api.moodies.tech/api";
           const res = await fetch(`${base}${endpoint}`);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           result = await res.json();
@@ -151,19 +149,21 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
 
   const scrollRight = () => {
     setStartIndex((prev) =>
-      Math.min(Math.max(0, trailerItems.length - itemsPerView), prev + itemsPerView)
+      Math.min(
+        Math.max(0, trailerItems.length - itemsPerView),
+        prev + itemsPerView,
+      ),
     );
   };
 
   const visibleItems = trailerItems.slice(
     startIndex,
-    startIndex + itemsPerView
+    startIndex + itemsPerView,
   );
 
   function getDaysUntilRelease(releaseDate: string) {
     const days = Math.ceil(
-      (new Date(releaseDate).getTime() - Date.now()) /
-      (1000 * 60 * 60 * 24)
+      (new Date(releaseDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
     );
 
     if (days < 0) return "Now Showing";
@@ -224,51 +224,39 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
   if (trailerItems.length === 0) return null;
 
   return (
-    <section
-      id="upcoming"
-      className="relative mx-auto max-w-7xl scroll-mt-24 px-4 py-10 sm:px-6 sm:py-16 lg:px-8"
-    >
+    <section id="upcoming" className="ui-shell scroll-mt-24 py-8 sm:py-10">
       <div className="mb-4 flex items-end justify-between sm:mb-8">
         <div>
           <Link href="/coming-soon" className="group">
-            <h2
-              className="bg-clip-text text-[1.35rem] font-bold leading-tight tracking-tight text-transparent sm:text-2xl lg:text-3xl"
-              style={{
-                backgroundImage: "linear-gradient(to right, #e94f37, #ff6b58)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
+            <h2 className="text-3xl font-bold leading-none text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)] sm:text-4xl">
               {title}
             </h2>
           </Link>
 
           {subtitle && (
-            <p className="mt-1.5 line-clamp-2 max-w-[34ch] text-[13px] leading-5 text-gray-400 sm:mt-2 sm:max-w-none sm:text-sm">{subtitle}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+              {subtitle}
+            </p>
           )}
         </div>
       </div>
 
       <div className="relative group/carousel">
-        {canScrollLeft && (
-          <button
-            onClick={scrollLeft}
-            className="absolute left-0 top-1/2 z-50 hidden h-12 w-12 -translate-x-4 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] opacity-0 shadow-2xl ring-2 ring-white/10 backdrop-blur-sm transition-all hover:scale-110 group-hover/carousel:opacity-100 lg:flex"
-            aria-label="Previous"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-        )}
+        <CarouselNavButton
+          direction="previous"
+          onClick={scrollLeft}
+          disabled={!canScrollLeft}
+          className="absolute left-0 top-1/2 z-20 hidden -translate-x-4 -translate-y-1/2 lg:grid"
+          aria-label="Previous"
+        />
 
-        {canScrollRight && (
-          <button
-            onClick={scrollRight}
-            className="absolute right-0 top-1/2 z-50 hidden h-12 w-12 translate-x-6 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] opacity-0 shadow-2xl ring-2 ring-white/10 backdrop-blur-sm transition-all hover:scale-110 group-hover/carousel:opacity-100 lg:flex"
-            aria-label="Next"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-        )}
+        <CarouselNavButton
+          direction="next"
+          onClick={scrollRight}
+          disabled={!canScrollRight}
+          className="absolute right-0 top-1/2 z-20 hidden translate-x-4 -translate-y-1/2 lg:grid"
+          aria-label="Next"
+        />
 
         <div
           className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 [overscroll-behavior-x:contain] [scrollbar-width:none] sm:gap-4 lg:hidden [&::-webkit-scrollbar]:hidden"
@@ -304,13 +292,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                     </div>
                   )}
 
-                  <div
-                    className={`flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium shadow-lg ${
-                      item.type === "tv"
-                        ? "border border-blue-300/40 bg-blue-500/90 text-white"
-                        : "border border-purple-300/40 bg-purple-500/90 text-white"
-                    }`}
-                  >
+                  <div className="flex items-center gap-1 rounded-sm border border-white/20 bg-black/75 px-2 py-1 text-xs font-medium text-white">
                     {item.type === "tv" ? <Tv size={12} /> : <Film size={12} />}
                     {item.type === "tv" ? "Series" : "Movie"}
                   </div>
@@ -318,7 +300,11 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
 
                 <div className="absolute inset-0 z-10 flex items-center justify-center">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-2xl sm:h-12 sm:w-12">
-                    <Play size={16} className="ml-0.5 text-black sm:h-[18px] sm:w-[18px]" fill="black" />
+                    <Play
+                      size={16}
+                      className="ml-0.5 text-black sm:h-[18px] sm:w-[18px]"
+                      fill="black"
+                    />
                   </div>
                 </div>
 
@@ -330,15 +316,20 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                   <div className="flex min-w-0 items-center gap-2 text-xs text-gray-300">
                     {item.release_date && (
                       <span className="shrink-0 font-medium">
-                        {new Date(item.release_date).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
+                        {new Date(item.release_date).toLocaleDateString(
+                          undefined,
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          },
+                        )}
                       </span>
                     )}
                     {item.genres && item.genres.length > 0 && (
-                      <span className="truncate">{item.genres.slice(0, 2).join(", ")}</span>
+                      <span className="truncate">
+                        {item.genres.slice(0, 2).join(", ")}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -376,7 +367,6 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                     onClick={() => handleSelectTrailer(item)}
                   >
                     <div className="relative aspect-[16/11] rounded-3xl overflow-hidden bg-gray-900 shadow-2xl border border-white/10 group">
-
                       {/* Image */}
                       <Image
                         src={
@@ -387,7 +377,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                         alt={item.title}
                         fill
                         sizes="(max-width: 1024px) 100vw, 33vw"
-                        className="object-cover transition-transform duration-700 group-hover:scale-110"
+                        className="object-cover"
                         priority={index === 0}
                       />
 
@@ -395,28 +385,25 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                       <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(0,0,0,0.95),rgba(0,0,0,0.55),rgba(0,0,0,0.1))]" />
 
                       <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between">
-
                         {/* LEFT: Countdown (old style restored) */}
                         {item.release_date && (
                           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-white text-xs font-medium">
                             <Clock size={12} />
-                            <span>{getDaysUntilRelease(item.release_date)}</span>
+                            <span>
+                              {getDaysUntilRelease(item.release_date)}
+                            </span>
                           </div>
                         )}
 
                         {/* RIGHT: Type Badge */}
-                        <div
-                          className={`
-      flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium shadow-lg
-      ${item.type === "tv"
-                              ? "bg-blue-500/90 text-white border border-blue-300/40"
-                              : "bg-purple-500/90 text-white border border-purple-300/40"}
-    `}
-                        >
-                          {item.type === "tv" ? <Tv size={12} /> : <Film size={12} />}
+                        <div className="flex items-center gap-1 rounded-sm border border-white/20 bg-black/75 px-2.5 py-1 text-xs font-medium text-white">
+                          {item.type === "tv" ? (
+                            <Tv size={12} />
+                          ) : (
+                            <Film size={12} />
+                          )}
                           {item.type === "tv" ? "Series" : "Movie"}
                         </div>
-
                       </div>
                       <motion.div
                         initial={{ scale: 0.6, opacity: 0 }}
@@ -428,12 +415,15 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                         className="absolute inset-0 flex items-center justify-center z-10"
                       >
                         <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-2xl">
-                          <Play size={24} className="text-black ml-1" fill="black" />
+                          <Play
+                            size={24}
+                            className="text-black ml-1"
+                            fill="black"
+                          />
                         </div>
                       </motion.div>
 
                       <div className="absolute bottom-0 left-0 right-0 p-5 z-10">
-
                         <h3 className="text-white font-black text-lg sm:text-xl mb-2 line-clamp-2">
                           {item.title}
                         </h3>
@@ -441,11 +431,14 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                         <div className="flex items-center gap-3 text-sm text-gray-300">
                           {item.release_date && (
                             <span className="font-medium">
-                              {new Date(item.release_date).toLocaleDateString(undefined, {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}
+                              {new Date(item.release_date).toLocaleDateString(
+                                undefined,
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                },
+                              )}
                             </span>
                           )}
                           {item.genres && item.genres.length > 0 && (
@@ -464,7 +457,7 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                       />
                     </div>
                   </motion.div>
-                )
+                ),
             )}
           </AnimatePresence>
         </motion.div>

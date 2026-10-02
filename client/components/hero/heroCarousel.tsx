@@ -2,17 +2,16 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { useRouter } from "next/navigation";
 import {
   Bookmark,
   BookmarkCheck,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   Film,
   Info,
-  Star,
   Tv,
 } from "lucide-react";
 import type { All } from "@/types/all";
@@ -21,7 +20,7 @@ import useCarousel from "@/hooks/useCarousel";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import HeroThumbnail from "./heroThumbnail";
-import "./hero.css";
+import RatingBadge from "@/components/ui/rating-badge";
 
 type Props = { all: All[]; cycleMs?: number };
 type ContentKind = "movie" | "tv";
@@ -71,6 +70,7 @@ function getOverview(item: All, maxLength: number) {
 }
 
 export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
+  const reduceMotion = useReducedMotion();
   const { index, setIndex, pause, resume } = useCarousel({
     length: all.length,
     intervalMs: cycleMs,
@@ -135,10 +135,6 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
   const currentTitle = getTitle(current);
   const releaseDate = formatReleaseDate(getReleaseDate(current));
-  const rating =
-    typeof current.vote_average === "number" && current.vote_average > 0
-      ? current.vote_average.toFixed(1)
-      : null;
   const backdropSrc =
     tmdbImage(current.backdrop_path || current.poster_path, "w1280") ??
     "/placeholder-backdrop.svg";
@@ -189,131 +185,189 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
   return (
     <section
-      className="relative isolate h-[78svh] min-h-[540px] w-full overflow-hidden bg-[#080808] text-white sm:h-[82vh] sm:min-h-[560px] lg:h-screen lg:max-h-[1100px]"
+      className="relative isolate h-[88svh] min-h-[620px] w-full overflow-hidden bg-[#080808] text-white sm:min-h-[680px] lg:h-screen lg:min-h-[720px] lg:max-h-[1080px]"
       onMouseEnter={pause}
       onMouseLeave={resume}
+      onFocusCapture={pause}
+      onBlurCapture={resume}
       aria-roledescription="carousel"
       aria-label="Featured Moodies titles"
     >
-      <div className="absolute inset-0">
-        <Image
-          key={current.id}
-          src={backdropSrc}
-          alt=""
-          fill
-          sizes="100vw"
-          priority={index === 0}
-          aria-hidden
-          className="hero-backdrop-image object-cover object-[58%_center] sm:object-center"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.42)_0%,rgba(0,0,0,0.08)_58%,rgba(0,0,0,0.28)_100%)] sm:bg-[linear-gradient(90deg,rgba(0,0,0,0.78)_0%,rgba(0,0,0,0.16)_68%,rgba(0,0,0,0.36)_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.12)_36%,rgba(0,0,0,0.9)_100%)] sm:bg-[linear-gradient(180deg,rgba(0,0,0,0.12)_0%,rgba(0,0,0,0.12)_48%,rgba(0,0,0,0.82)_100%)]" />
-        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-[radial-gradient(ellipse_at_bottom,rgba(0,0,0,0.86)_0%,rgba(0,0,0,0.45)_44%,transparent_74%)] sm:hidden" />
-      </div>
+      <AnimatePresence initial={false} mode="sync">
+        <motion.div
+          key={`landing-backdrop-${current.id}`}
+          initial={{ opacity: 0, scale: reduceMotion ? 1 : 1.025 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{
+            opacity: { duration: reduceMotion ? 0 : 0.55 },
+            scale: { duration: reduceMotion ? 0 : 1.1, ease: "easeOut" },
+          }}
+          className="absolute inset-0"
+        >
+          <Image
+            src={backdropSrc}
+            alt=""
+            fill
+            sizes="100vw"
+            priority={index === 0}
+            aria-hidden
+            className="object-cover object-[58%_center] sm:object-center"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,4,4,0.9)_0%,rgba(5,4,4,0.62)_42%,rgba(5,4,4,0.12)_78%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,4,0.24)_0%,rgba(5,4,4,0.06)_38%,rgba(5,4,4,0.96)_100%)]" />
+        </motion.div>
+      </AnimatePresence>
 
       <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col justify-end px-5 pb-6 pt-[calc(var(--mobile-nav-safe)+1rem)] sm:px-6 sm:pb-7 sm:pt-24 lg:px-8 lg:pb-9 xl:px-12">
         <div className="grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-8 xl:gap-10">
-          <div className="max-w-[34rem] sm:max-w-2xl xl:max-w-3xl">
-            <p className="mb-2 max-w-[19rem] text-[11px] font-black uppercase tracking-[0.16em] text-[#ff9b8a] sm:hidden">
-              Movies, shows, moods, and community picks in one place
-            </p>
-            <div className="mb-3 flex flex-wrap items-center gap-1.5 sm:mb-2.5 sm:gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e94f37]/40 bg-[#e94f37]/18 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-[#ffb2a5] sm:text-[10px] lg:text-[11px]">
-                {currentKind === "tv" ? (
-                  <Tv className="h-3 w-3 lg:h-3.5 lg:w-3.5" />
-                ) : (
-                  <Film className="h-3 w-3 lg:h-3.5 lg:w-3.5" />
-                )}
-                {currentKind === "tv" ? "Series" : "Movie"}
-              </span>
-
-              {rating ? (
-                <span className="hidden items-center gap-1.5 rounded-full border border-white/12 bg-black/35 px-2.5 py-1 text-[10px] font-bold text-white/88 sm:inline-flex sm:text-xs">
-                  <Star className="h-3 w-3 fill-[#f6b73c] text-[#f6b73c] sm:h-3.5 sm:w-3.5" />
-                  {rating}
+          <AnimatePresence initial={false} mode="wait">
+            <motion.div
+              key={`landing-copy-${current.id}`}
+              initial={{ opacity: 0, y: reduceMotion ? 0 : 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: reduceMotion ? 0 : -10 }}
+              transition={{
+                duration: reduceMotion ? 0 : 0.34,
+                ease: "easeOut",
+              }}
+              className="max-w-[34rem] sm:max-w-2xl xl:max-w-3xl"
+            >
+              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#ff9b8a] sm:text-[11px]">
+                Moodies spotlight
+              </p>
+              <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/65 sm:text-xs">
+                <span className="inline-flex items-center gap-1.5 text-white">
+                  {currentKind === "tv" ? (
+                    <Tv className="h-3.5 w-3.5 text-[#ff8b78]" />
+                  ) : (
+                    <Film className="h-3.5 w-3.5 text-[#ff8b78]" />
+                  )}
+                  {currentKind === "tv" ? "Series" : "Movie"}
                 </span>
-              ) : null}
+                {releaseDate ? (
+                  <>
+                    <span aria-hidden="true" className="text-white/30">
+                      /
+                    </span>
+                    <span>{releaseDate}</span>
+                  </>
+                ) : null}
+                <RatingBadge
+                  rating={current.vote_average}
+                  variant="colored"
+                  size="sm"
+                />
+              </div>
 
-              {releaseDate ? (
-                <span className="hidden items-center gap-1.5 rounded-full border border-white/12 bg-black/35 px-2.5 py-1 text-[10px] font-bold text-white/78 sm:inline-flex sm:text-xs">
-                  <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                  {releaseDate}
-                </span>
-              ) : null}
-            </div>
+              <motion.h1
+                initial={{ opacity: 0, y: reduceMotion ? 0 : 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: reduceMotion ? 0 : 0.38,
+                  delay: reduceMotion ? 0 : 0.07,
+                }}
+                className="max-w-[13ch] text-balance text-[2.55rem] font-black leading-[0.92] tracking-[-0.035em] text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.5)] min-[390px]:text-[3rem] sm:text-[clamp(3.2rem,7vw,5.8rem)] lg:text-[clamp(4rem,6vw,6.4rem)]"
+              >
+                {currentTitle}
+              </motion.h1>
 
-            <h1 className="max-w-3xl text-balance text-[2.1rem] font-black leading-[0.98] tracking-normal text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.56)] min-[390px]:text-[2.45rem] sm:text-[clamp(1.65rem,4.6vw,4rem)] sm:leading-[0.96] xl:text-[clamp(2.35rem,4.2vw,4.8rem)]">
-              {currentTitle}
-            </h1>
+              <div className="mt-4 hidden items-center gap-2 text-xs font-semibold text-white/62 sm:flex">
+                {current.genres?.slice(0, 3).map((genre, genreIndex) => (
+                  <React.Fragment key={genre}>
+                    {genreIndex > 0 ? (
+                      <span aria-hidden="true" className="text-white/25">
+                        ·
+                      </span>
+                    ) : null}
+                    <span>{genre}</span>
+                  </React.Fragment>
+                ))}
+              </div>
 
-            <div className="mt-4 hidden flex-wrap gap-1.5 sm:flex sm:gap-2">
-              {current.genres?.slice(0, 3).map((genre) => (
-                <span
-                  key={genre}
-                  className="rounded-full border border-white/12 bg-white/[0.09] px-2.5 py-1 text-[10px] font-semibold text-white/78 backdrop-blur-sm sm:text-xs"
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{
+                  duration: reduceMotion ? 0 : 0.32,
+                  delay: reduceMotion ? 0 : 0.14,
+                }}
+                className="mt-4 line-clamp-3 max-w-[31rem] text-sm leading-6 text-white/78 sm:max-w-xl sm:text-[15px] sm:leading-7 lg:max-w-2xl lg:text-base"
+              >
+                <span className="sm:hidden">{mobileOverview}</span>
+                <span className="hidden sm:inline">{desktopOverview}</span>
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: reduceMotion ? 0 : 0.3,
+                  delay: reduceMotion ? 0 : 0.18,
+                }}
+                className="mt-6 grid max-w-[25rem] grid-cols-2 gap-3 sm:flex sm:max-w-none sm:flex-wrap"
+              >
+                <button
+                  type="button"
+                  onClick={goToDetails}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[#e94f37] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#d9412b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff9c8d] sm:min-h-11"
                 >
-                  {genre}
-                </span>
-              ))}
-            </div>
+                  <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Explore
+                </button>
 
-            <p className="mt-3 line-clamp-3 max-w-[31rem] text-sm leading-6 text-white/80 sm:hidden">
-              {mobileOverview}
-            </p>
-            <p className="mt-3 hidden max-w-xl text-xs leading-5 text-white/76 sm:mt-4 sm:block sm:text-sm sm:leading-6 lg:mt-4 lg:max-w-2xl lg:text-[15px] lg:leading-7 xl:text-base">
-              {desktopOverview}
-            </p>
-
-            <div className="mt-6 grid max-w-[24rem] grid-cols-2 gap-3 sm:mt-4 sm:flex sm:max-w-none sm:flex-wrap sm:gap-3 lg:mt-6">
-              <button
-                type="button"
-                onClick={goToDetails}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#e94f37] px-4 py-3 text-sm font-black text-white shadow-[0_12px_32px_rgba(233,79,55,0.28)] transition hover:bg-[#d9412b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff9c8d] sm:min-h-11 sm:px-5 sm:py-2.5"
-              >
-                <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                Explore
-              </button>
-
-              <button
-                type="button"
-                onClick={toggleWatchlist}
-                disabled={wlLoading}
-                className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-11 sm:px-5 sm:py-2.5 ${
-                  currentInWatchlist
-                    ? "border-emerald-300/45 bg-emerald-400/18 text-emerald-100 hover:bg-emerald-400/24 focus-visible:outline-emerald-200"
-                    : "border-white/18 bg-white/10 text-white hover:bg-white/16 focus-visible:outline-white/70"
-                }`}
-              >
-                {wlLoading ? (
-                  <span className="h-3.5 w-3.5 rounded-full border-2 border-white/70 border-t-transparent motion-safe:animate-spin sm:h-4 sm:w-4" />
-                ) : currentInWatchlist ? (
-                  <BookmarkCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                ) : (
-                  <Bookmark className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                )}
-                {currentInWatchlist ? "Saved" : "My List"}
-              </button>
-            </div>
-          </div>
+                <button
+                  type="button"
+                  onClick={toggleWatchlist}
+                  disabled={wlLoading}
+                  className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-md border px-5 py-3 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-11 ${
+                    currentInWatchlist
+                      ? "border-emerald-300/45 bg-emerald-400/18 text-emerald-100 hover:bg-emerald-400/24 focus-visible:outline-emerald-200"
+                      : "border-white/18 bg-white/10 text-white hover:bg-white/16 focus-visible:outline-white/70"
+                  }`}
+                >
+                  {wlLoading ? (
+                    <span className="h-3.5 w-3.5 rounded-full border-2 border-white/70 border-t-transparent motion-safe:animate-spin sm:h-4 sm:w-4" />
+                  ) : currentInWatchlist ? (
+                    <BookmarkCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  ) : (
+                    <Bookmark className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  )}
+                  {currentInWatchlist ? "Saved" : "My List"}
+                </button>
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
 
           <div className="hidden min-w-[392px] flex-col items-end gap-3 lg:flex xl:min-w-[420px] xl:gap-4">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => goToSlide(index - 1)}
-                className="grid h-9 w-9 place-items-center rounded-full border border-white/14 bg-black/34 text-white/78 transition hover:bg-white/12 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70 xl:h-10 xl:w-10"
-                aria-label="Previous featured title"
-              >
-                <ChevronLeft className="h-4 w-4 xl:h-5 xl:w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => goToSlide(index + 1)}
-                className="grid h-9 w-9 place-items-center rounded-full border border-white/14 bg-black/34 text-white/78 transition hover:bg-white/12 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70 xl:h-10 xl:w-10"
-                aria-label="Next featured title"
-              >
-                <ChevronRight className="h-4 w-4 xl:h-5 xl:w-5" />
-              </button>
+            <div className="flex w-full items-center justify-between border-b border-white/15 pb-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
+                  Up next
+                </p>
+                <p className="mt-1 text-xs font-semibold tabular-nums text-white/75">
+                  {String(index + 1).padStart(2, "0")} /{" "}
+                  {String(all.length).padStart(2, "0")}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => goToSlide(index - 1)}
+                  className="grid h-10 w-10 place-items-center rounded-sm border border-white/20 bg-black/35 text-white/80 transition-colors hover:border-white/50 hover:bg-black/55 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70"
+                  aria-label="Previous featured title"
+                >
+                  <ChevronLeft className="h-4 w-4 xl:h-5 xl:w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToSlide(index + 1)}
+                  className="grid h-10 w-10 place-items-center rounded-sm border border-white/20 bg-black/35 text-white/80 transition-colors hover:border-white/50 hover:bg-black/55 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70"
+                  aria-label="Next featured title"
+                >
+                  <ChevronRight className="h-4 w-4 xl:h-5 xl:w-5" />
+                </button>
+              </div>
             </div>
 
             <div className="flex gap-3 xl:gap-4">
@@ -328,8 +382,8 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                       all={item}
                       active={slideIndex === index}
                       onClick={() => goToSlide(slideIndex)}
-                      width={96}
-                      height={138}
+                      width={94}
+                      height={142}
                     />
                   );
                 })}
@@ -337,19 +391,19 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           </div>
         </div>
 
-        <div className="mt-7 flex items-center gap-3 sm:mt-5 lg:hidden">
+        <div className="mt-8 flex items-center gap-3 lg:hidden">
           <button
             type="button"
             onClick={() => goToSlide(index - 1)}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/14 bg-black/38 text-white/78 backdrop-blur-sm sm:h-10 sm:w-10"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border border-white/20 bg-black/38 text-white/80 backdrop-blur-sm"
             aria-label="Previous featured title"
           >
             <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
 
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/12">
-            <div
-              className="h-full rounded-full bg-[#e94f37] transition-[width] duration-300"
+          <div className="h-px flex-1 overflow-hidden bg-white/20">
+            <motion.div
+              className="h-full origin-left bg-[#ff725e]"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -361,7 +415,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           <button
             type="button"
             onClick={() => goToSlide(index + 1)}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/14 bg-black/38 text-white/78 backdrop-blur-sm sm:h-10 sm:w-10"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border border-white/20 bg-black/38 text-white/80 backdrop-blur-sm"
             aria-label="Next featured title"
           >
             <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />

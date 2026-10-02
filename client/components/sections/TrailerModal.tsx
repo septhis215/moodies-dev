@@ -3,7 +3,7 @@
 import { tmdbImage } from "@/lib/tmdb";
 import { useRouter } from "next/navigation";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Calendar,
   ChevronDown,
@@ -54,20 +54,16 @@ export default function TrailerModal({
   const [isExpanded, setIsExpanded] = useState(false);
   const [pendingTrailerId, setPendingTrailerId] = useState<number | null>(null);
   const [selectionError, setSelectionError] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const getContentType = (item: Partial<TrailerItem>): "movie" | "tv" => {
     if (item.media_type === "movie" || item.media_type === "tv") {
       return item.media_type;
     }
-    if (item.type === "movies" || item.type === "movie")
-      return "movie";
+    if (item.type === "movies" || item.type === "movie") return "movie";
     if (item.type === "tv") return "tv";
-    if (
-      item.number_of_seasons ||
-      item.first_air_date ||
-      item.name
-    )
-      return "tv";
+    if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
     return "movie";
   };
   const contentType = getContentType(trailer);
@@ -77,6 +73,12 @@ export default function TrailerModal({
   const youtubeUrl = trailer.trailer_key
     ? `https://www.youtube.com/watch?v=${trailer.trailer_key}`
     : null;
+  const releaseDate = trailer.release_date || trailer.first_air_date;
+  const runtimeLabel = trailer.runtime
+    ? `${Math.floor(trailer.runtime / 60)}h ${trailer.runtime % 60}m`
+    : trailer.number_of_episodes
+      ? `${trailer.number_of_episodes} episodes`
+      : null;
   const router = useRouter();
   const handleClick = async (movie: Partial<TrailerItem>) => {
     const contentType = getContentType(movie);
@@ -100,13 +102,45 @@ export default function TrailerModal({
     }
   };
 
-
   useEffect(() => {
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = "";
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], iframe, [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-  }, []);
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+    const frameId = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, [onClose]);
 
   useEffect(() => {
     setPendingTrailerId(null);
@@ -115,33 +149,41 @@ export default function TrailerModal({
   }, [trailer.id]);
 
   return (
-    <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 text-white backdrop-blur-md">
-      <div className="absolute inset-0 cursor-pointer" onClick={onClose} />
-
-      <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#080808] xl:flex-row">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.035),transparent_42%)]" />
-
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/88 text-white sm:p-4 lg:p-6"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="trailer-modal-title"
+        className="relative flex h-full w-full max-w-[1540px] flex-col overflow-hidden bg-[#080808] sm:h-[min(92svh,900px)] sm:rounded-md sm:border sm:border-white/15 lg:flex-row"
+      >
         <button
+          ref={closeButtonRef}
           onClick={onClose}
-          aria-label="Close"
-          className="absolute right-3 top-3 z-50 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/60 text-white shadow-2xl backdrop-blur-xl transition hover:border-[#e94f37]/70 hover:bg-[#e94f37] focus:outline-none focus:ring-2 focus:ring-[#e94f37]/50 sm:right-4 sm:top-4 sm:h-auto sm:w-auto sm:p-2.5"
+          aria-label="Close trailer"
+          className="absolute right-3 top-3 z-50 grid h-11 w-11 place-items-center rounded-sm border border-white/25 bg-black/80 text-white transition-colors hover:border-[#ff7a66] hover:bg-[#171111] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff7a66] sm:right-4 sm:top-4"
         >
           <X className="h-5 w-5" />
         </button>
 
         {/* Trailer player */}
-        <div className="relative flex min-h-[32svh] flex-none bg-black pt-12 sm:min-h-[42vh] sm:pt-14 lg:min-h-[46vh] xl:h-full xl:min-h-0 xl:flex-1 xl:pt-0">
+        <div className="relative aspect-video w-full flex-none bg-black lg:h-full lg:min-h-0 lg:w-auto lg:flex-1 lg:aspect-auto">
           <div className="relative h-full w-full">
             {trailer.trailer_key ? (
               <iframe
-                className="h-full min-h-[32svh] w-full bg-black sm:min-h-[42vh] lg:min-h-[46vh] xl:min-h-0"
+                className="h-full w-full bg-black"
                 src={`https://www.youtube.com/embed/${trailer.trailer_key}?autoplay=0&controls=1&rel=0&modestbranding=1`}
                 title={`${trailer.title} trailer`}
                 allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
               />
             ) : (
-              <div className="flex h-full min-h-[32svh] flex-col items-center justify-center gap-3 bg-neutral-950 text-gray-400 sm:min-h-[42vh] lg:min-h-[46vh] xl:min-h-0">
+              <div className="flex h-full flex-col items-center justify-center gap-3 bg-neutral-950 text-gray-400">
                 <Film className="h-12 w-12 text-gray-600" />
                 <p className="text-sm">Trailer unavailable</p>
               </div>
@@ -149,11 +191,15 @@ export default function TrailerModal({
 
             {pendingTrailerId !== null && (
               <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-                <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-black/70 px-5 py-4 text-center shadow-2xl">
+                <div className="flex flex-col items-center gap-3 rounded-md border border-white/15 bg-[#0b0909] px-5 py-4 text-center">
                   <Loader2 className="h-8 w-8 animate-spin text-[#ff8a78]" />
                   <div>
-                    <p className="text-sm font-semibold text-white">Loading trailer</p>
-                    <p className="mt-1 text-xs text-gray-400">Switching to your recommendation...</p>
+                    <p className="text-sm font-semibold text-white">
+                      Loading trailer
+                    </p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Switching to your recommendation...
+                    </p>
                   </div>
                 </div>
               </div>
@@ -162,16 +208,13 @@ export default function TrailerModal({
         </div>
 
         {/* Details panel */}
-        <div
-          className="relative flex min-h-0 w-full flex-1 flex-col border-t border-white/10 bg-neutral-950/92 shadow-2xl backdrop-blur-xl xl:h-full xl:w-[460px] xl:flex-none xl:border-l xl:border-t-0 2xl:w-[520px]"
-        >
+        <div className="relative flex min-h-0 w-full flex-1 flex-col border-t border-white/10 bg-[#0b0909] lg:h-full lg:w-[420px] lg:flex-none lg:border-l lg:border-t-0 xl:w-[460px] 2xl:w-[500px]">
           <div className="flex-1 overflow-y-auto overflow-x-hidden mobile-native-scroll">
-
             {/* Header */}
-            <div className="relative flex-shrink-0 border-b border-white/10 p-4 sm:p-5 xl:p-6 xl:pt-16">
+            <div className="relative flex-shrink-0 border-b border-white/10 p-4 sm:p-5 lg:p-6 lg:pt-16">
               <div className="flex items-start gap-3 sm:gap-4">
                 <div
-                  className="relative aspect-[2/3] w-16 flex-shrink-0 cursor-pointer overflow-hidden rounded-lg border border-white/10 bg-white/[0.04] shadow-xl transition hover:border-[#e94f37]/60 sm:w-24 xl:w-28"
+                  className="relative aspect-[2/3] w-16 flex-shrink-0 cursor-pointer overflow-hidden rounded-sm border border-white/15 bg-white/[0.04] transition-colors hover:border-[#e94f37]/70 sm:w-24 lg:w-28"
                   onClick={() => handleClick(trailer)}
                 >
                   <Image
@@ -186,61 +229,60 @@ export default function TrailerModal({
                 {/* Title + Pills */}
                 <div className="relative z-10 flex min-w-0 flex-1 flex-col">
                   <h2
-                    className="mb-2 cursor-pointer text-lg font-bold leading-tight text-white transition hover:text-[#ff7a66] sm:mb-3 sm:text-xl xl:text-2xl"
+                    id="trailer-modal-title"
+                    className="cursor-pointer text-xl font-bold leading-[1.1] text-white transition-colors hover:text-[#ff7a66] sm:text-2xl"
                     onClick={() => handleClick(trailer)}
                   >
                     {trailer.title}
                   </h2>
 
-                  {/* Pills */}
-                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                    <span className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-gray-200">
+                  <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/55">
+                    <span className="flex items-center gap-1.5 text-white/85">
                       {contentType === "tv" ? (
                         <Tv className="h-3.5 w-3.5 text-[#ff8a78]" />
                       ) : (
                         <Film className="h-3.5 w-3.5 text-[#ff8a78]" />
                       )}
-                      <span className="whitespace-nowrap">
-                        {contentType === "tv" ? "TV Series" : "Movie"}
-                      </span>
+                      {contentType === "tv" ? "TV Series" : "Movie"}
                     </span>
 
-                    {trailer.vote_average !== undefined && (
-                      <RatingBadge rating={trailer.vote_average} variant="colored" />
-                    )}
-
-                    {trailer.release_date && (
-                      <span className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-gray-200 sm:flex">
-                        <Calendar className="h-3.5 w-3.5 text-[#ff8a78]" />
-                        <span className="whitespace-nowrap">
-                          {new Date(trailer.release_date).toLocaleDateString(undefined, {
+                    {releaseDate && (
+                      <>
+                        <span aria-hidden="true" className="text-white/25">
+                          /
+                        </span>
+                        <span className="flex items-center gap-1.5 whitespace-nowrap">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {new Date(releaseDate).toLocaleDateString(undefined, {
                             month: "short",
-                            day: "numeric",
                             year: "numeric",
                           })}
                         </span>
-                      </span>
+                      </>
                     )}
 
-                    {trailer.runtime && (
-                      <span className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-gray-200 sm:flex">
-                        <Clock className="h-3.5 w-3.5 text-[#ff8a78]" />
-                        <span className="whitespace-nowrap">{Math.floor(trailer.runtime / 60)}h {trailer.runtime % 60}m</span>
-                      </span>
-                    )}
+                    {runtimeLabel ? (
+                      <>
+                        <span aria-hidden="true" className="text-white/25">
+                          /
+                        </span>
+                        <span className="flex items-center gap-1.5 whitespace-nowrap">
+                          <Clock className="h-3.5 w-3.5" />
+                          {runtimeLabel}
+                        </span>
+                      </>
+                    ) : null}
+                  </div>
 
-                    {trailer.number_of_episodes && (
-                      <span className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-xs font-medium text-gray-200 sm:flex">
-                        <Tv className="h-3.5 w-3.5 text-[#ff8a78]" />
-                        <span className="whitespace-nowrap">{trailer.number_of_episodes} Episodes</span>
-                      </span>
-                    )}
-
-                    {trailer.genres?.slice(0, 2).map((genre, i) => (
-                      <span
-                        key={i}
-                        className="rounded-full border border-[#e94f37]/25 bg-[#e94f37]/12 px-2.5 py-1 text-xs font-semibold text-[#ffb0a3]"
-                      >
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {trailer.vote_average !== undefined ? (
+                      <RatingBadge
+                        rating={trailer.vote_average}
+                        variant="colored"
+                      />
+                    ) : null}
+                    {trailer.genres?.slice(0, 3).map((genre) => (
+                      <span key={genre} className="text-xs text-white/55">
                         {genre}
                       </span>
                     ))}
@@ -249,7 +291,7 @@ export default function TrailerModal({
                   <div className="mt-3 flex flex-wrap gap-2 sm:mt-4">
                     <button
                       onClick={() => handleClick(trailer)}
-                      className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#e94f37] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#ff624c]"
+                      className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#e94f37] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#ff624c]"
                     >
                       <ExternalLink className="h-4 w-4" />
                       Details
@@ -259,7 +301,7 @@ export default function TrailerModal({
                         href={youtubeUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-sm font-semibold text-gray-200 transition hover:border-white/30 hover:bg-white/[0.09]"
+                        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/15 px-3 py-2 text-sm font-semibold text-gray-200 transition-colors hover:border-white/40 hover:bg-white/[0.06]"
                       >
                         <Play className="h-4 w-4 fill-current" />
                         Watch
@@ -272,9 +314,9 @@ export default function TrailerModal({
 
             {/* Synopsis */}
             {trailer.overview && (
-              <div className="flex-shrink-0 border-b border-white/10 px-4 py-5 sm:px-5 xl:px-6">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Synopsis
+              <div className="flex-shrink-0 border-b border-white/10 px-4 py-5 sm:px-5 lg:px-6">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">
+                  About this title
                 </h3>
 
                 <p className="max-w-prose text-sm leading-6 text-gray-300">
@@ -290,97 +332,104 @@ export default function TrailerModal({
                       aria-expanded={isExpanded}
                     >
                       {isExpanded ? "Show less" : "Read more"}
-                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                      />
                     </button>
                   )}
                 </p>
               </div>
             )}
 
-
             {/* Recommendations */}
             {trailer.recommendations && trailer.recommendations?.length > 0 && (
-              <div className="p-4 sm:p-5 xl:p-6">
+              <div className="p-4 sm:p-5 lg:p-6">
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">
                     You Might Also Like
                   </h3>
-                  <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-1 text-xs text-gray-400">
-                    {trailer.recommendations.length}
+                  <span className="text-xs tabular-nums text-gray-500">
+                    {trailer.recommendations.length} titles
                   </span>
                 </div>
 
                 {selectionError && (
-                  <div className="mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                  <div className="mb-3 rounded-md border border-red-500/25 bg-red-500/10 px-3 py-2 text-xs text-red-200">
                     {selectionError}
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-2.5 sm:gap-3 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
+                <div className="mobile-native-scroll -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:-mx-5 sm:px-5 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0 2xl:grid-cols-3">
                   {trailer.recommendations.slice(0, 20).map((rec) => {
                     const isPending = pendingTrailerId === rec.id;
                     const isBlocked = pendingTrailerId !== null && !isPending;
 
                     return (
-                    <button
-                      type="button"
-                      key={rec.id}
-                      onClick={() => handleRecommendationSelect(rec)}
-                      disabled={pendingTrailerId !== null}
-                      title={rec.title}
-                      className={`group relative overflow-hidden rounded-lg border border-white/10 bg-white/[0.04] text-left transition hover:-translate-y-0.5 hover:border-[#e94f37]/55 hover:bg-white/[0.07] disabled:cursor-wait ${isBlocked ? "opacity-45" : ""} ${isPending ? "border-[#e94f37]/70 ring-1 ring-[#e94f37]/50" : ""}`}
-                    >
-                      {/* Poster */}
-                      <div className="aspect-[2/3] relative overflow-hidden">
-                        <Image
-                          src={rec.poster_path ? tmdbImage(rec.poster_path, "w300") : "/placeholder-poster.svg"}
-                          alt={rec.title}
-                          fill
-                          sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 180px"
-                          className="object-cover transition-transform duration-500"
-                        />
+                      <button
+                        type="button"
+                        key={rec.id}
+                        onClick={() => handleRecommendationSelect(rec)}
+                        disabled={pendingTrailerId !== null}
+                        title={rec.title}
+                        className={`group w-[38vw] min-w-[140px] max-w-[178px] shrink-0 snap-start overflow-hidden rounded-sm border bg-white/[0.03] text-left transition-colors hover:border-[#e94f37]/65 hover:bg-white/[0.06] disabled:cursor-wait lg:w-auto lg:min-w-0 lg:max-w-none ${isBlocked ? "border-white/10 opacity-45" : "border-white/15"} ${isPending ? "border-[#e94f37]" : ""}`}
+                      >
+                        {/* Poster */}
+                        <div className="aspect-[2/3] relative overflow-hidden">
+                          <Image
+                            src={
+                              rec.poster_path
+                                ? tmdbImage(rec.poster_path, "w300")
+                                : "/placeholder-poster.svg"
+                            }
+                            alt={rec.title}
+                            fill
+                            sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 180px"
+                            className="object-cover transition-transform duration-500"
+                          />
 
-                        {/* Cinematic bottom fade */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+                          {/* Hover dim */}
+                          <div
+                            className={`absolute inset-0 bg-black/45 transition-opacity duration-150 ${isPending ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"}`}
+                          />
 
-                        {/* Hover dim */}
-                        <div className={`absolute inset-0 bg-black/35 transition-opacity duration-300 ${isPending ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} />
+                          {/* Play button */}
+                          <div
+                            className={`absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-sm border border-white/45 bg-black/75 transition-opacity duration-150 ${isPending ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"}`}
+                          >
+                            {isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-white" />
+                            ) : (
+                              <Play className="ml-0.5 h-4 w-4 fill-white text-white" />
+                            )}
+                          </div>
 
-                        {/* Play button */}
-                        <div className={`absolute left-1/2 top-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/50 bg-black/55 backdrop-blur transition-all duration-300 ${isPending ? "scale-100 opacity-100" : "scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100"}`}>
-                          {isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-white" />
-                          ) : (
-                            <Play className="ml-0.5 h-4 w-4 fill-white text-white" />
+                          {isPending && (
+                            <div className="absolute inset-x-2 bottom-2 rounded-sm bg-black/80 px-2 py-1 text-center text-[11px] font-semibold text-white">
+                              Loading...
+                            </div>
+                          )}
+
+                          {/* Rating badge */}
+                          <RatingBadge
+                            rating={rec.vote_average}
+                            variant="colored"
+                            size="sm"
+                            className="absolute right-2 top-2"
+                          />
+                        </div>
+
+                        {/* Footer */}
+                        <div className="border-t border-white/10 px-2.5 py-2.5">
+                          <p className="m-0 line-clamp-2 text-sm font-semibold leading-snug text-white/75 transition-colors group-hover:text-white">
+                            {rec.title}
+                          </p>
+                          {rec.release_date && (
+                            <p className="mt-1 text-[11px] text-white/35">
+                              {new Date(rec.release_date).getFullYear()}
+                            </p>
                           )}
                         </div>
-
-                        {isPending && (
-                          <div className="absolute inset-x-2 bottom-2 rounded-md bg-black/75 px-2 py-1 text-center text-[11px] font-semibold text-white backdrop-blur">
-                            Loading...
-                          </div>
-                        )}
-
-                        {/* Rating badge */}
-                        <div className="absolute right-2 top-2">
-                          <div className="hidden sm:block">
-                            <RatingBadge rating={rec.vote_average} variant="colored" />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Footer */}
-                      <div className="px-2.5 pt-2 pb-2.5">
-                        <p className="m-0 line-clamp-2 text-sm font-medium leading-snug text-white/70 transition-colors group-hover:text-white">
-                          {rec.title}
-                        </p>
-                        {rec.release_date && (
-                          <p className="text-[11px] text-white/35 mt-0.5">
-                            {new Date(rec.release_date).getFullYear()}
-                          </p>
-                        )}
-                      </div>
-                    </button>
+                      </button>
                     );
                   })}
                 </div>

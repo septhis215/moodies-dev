@@ -3,13 +3,7 @@
 import { useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Brain,
-  Compass,
-  Film,
-  Tv,
-} from "lucide-react";
+import { ArrowRight, Brain, Compass, Film, Tv } from "lucide-react";
 
 type MoodDiscoverySectionProps = {
   variant?: "full" | "teaser";
@@ -20,7 +14,8 @@ const cards = [
     id: "wheel",
     title: "Mood Wheels",
     subtitle: "Start with a feeling",
-    description: "Spin through emotional cues and land on a watchlist-ready vibe.",
+    description:
+      "Spin through emotional cues and land on a watchlist-ready vibe.",
     href: "/moods",
     icon: Compass,
     image: "/images/moods/whimsy.png",
@@ -31,7 +26,8 @@ const cards = [
     id: "tv-moods",
     title: "TV Matcher",
     subtitle: "Settle into a series",
-    description: "Find shows that match your current energy, pace, and comfort zone.",
+    description:
+      "Find shows that match your current energy, pace, and comfort zone.",
     href: "/tv#moods",
     icon: Tv,
     image: "/images/moods/cozy.png",
@@ -42,7 +38,8 @@ const cards = [
     id: "movie-moods",
     title: "Movie Matcher",
     subtitle: "Pick tonight's tone",
-    description: "Move from chaos, comfort, romance, or thrills into the right film.",
+    description:
+      "Move from chaos, comfort, romance, or thrills into the right film.",
     href: "/movies#moods",
     icon: Film,
     image: "/images/moods/epic.png",
@@ -53,7 +50,8 @@ const cards = [
     id: "quiz",
     title: "Personality Quiz",
     subtitle: "Let Moodies read the room",
-    description: "Answer quick prompts and get recommendations tuned to your taste.",
+    description:
+      "Answer quick prompts and get recommendations tuned to your taste.",
     href: "/quiz",
     icon: Brain,
     image: "/images/moods/mind-bending.png",
@@ -62,62 +60,106 @@ const cards = [
   },
 ];
 
-export default function MoodDiscoverySection({ variant = "full" }: MoodDiscoverySectionProps) {
+const landingMoods = [
+  {
+    id: "easy",
+    label: "Easy",
+    note: "Low-stakes, comforting watches for a quiet night.",
+  },
+  {
+    id: "tense",
+    label: "Tense",
+    note: "Pressure, suspense, and stories that keep moving.",
+  },
+  {
+    id: "tender",
+    label: "Tender",
+    note: "Warm, intimate stories with something human at the center.",
+  },
+  {
+    id: "strange",
+    label: "Strange",
+    note: "Unfamiliar worlds, odd turns, and singular ideas.",
+  },
+  {
+    id: "electric",
+    label: "Electric",
+    note: "Fast, loud, kinetic picks for a high-energy watch.",
+  },
+];
+
+export default function MoodDiscoverySection({
+  variant = "full",
+}: MoodDiscoverySectionProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [activeLandingMood, setActiveLandingMood] = useState(
+    landingMoods[0].id,
+  );
   const activeCard = cards.find((card) => card.id === hoveredCard) ?? cards[0];
+  const activeMood =
+    landingMoods.find((mood) => mood.id === activeLandingMood) ??
+    landingMoods[0];
 
   if (variant === "teaser") {
     return (
       <section
         id="your-moods"
-        className="relative mx-auto max-w-7xl scroll-mt-24 overflow-hidden bg-black px-4 py-9 sm:px-6 lg:px-8"
+        className="ui-shell scroll-mt-24 border-b border-[var(--surface-border)] py-8 sm:py-10"
+        aria-labelledby="mood-shelf-heading"
       >
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/80 p-4 shadow-2xl shadow-black/30 sm:p-6 lg:p-7">
-          <div className="absolute bottom-0 right-0 h-32 w-32 opacity-15 sm:inset-y-0 sm:h-auto sm:w-72 sm:opacity-25">
-            <Image
-              src="/images/moods/romantic.png"
-              alt="Romantic mood mascot"
-              fill
-              sizes="288px"
-              className="object-contain object-right-bottom opacity-25"
-            />
+        <div className="grid gap-6 lg:grid-cols-[minmax(15rem,0.72fr)_minmax(0,1.28fr)] lg:items-end lg:gap-12">
+          <div>
+            <p className="ui-kicker">Choose by mood</p>
+            <h2
+              id="mood-shelf-heading"
+              className="mt-3 max-w-lg text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
+            >
+              What kind of night is this?
+            </h2>
+            <p className="mt-3 max-w-md text-sm leading-6 text-[var(--ink-muted)]">
+              Pick a feeling first. Moodies will take you to a focused set of
+              movies and series instead of another endless catalogue.
+            </p>
           </div>
-          <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-            <div className="max-w-2xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
-                Mood paths
-              </p>
-              <h2 className="mt-2 text-[1.45rem] font-black leading-tight tracking-tight text-white sm:mt-3 sm:text-3xl">
-                Start with the feeling, then choose the route.
-              </h2>
-              <p className="mt-2 max-w-[34ch] text-[13px] leading-6 text-zinc-400 sm:mt-3 sm:max-w-none sm:text-base">
-                Spin the wheel, take the quiz, or jump straight into movie and series mood matchers.
-              </p>
-            </div>
 
-            <div className="relative grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3 lg:justify-end">
-              {cards.slice(0, 4).map((card) => {
-                const Icon = card.icon;
+          <div>
+            <div
+              className="flex gap-5 overflow-x-auto border-b border-[var(--surface-border)] pb-3 mobile-native-scroll sm:gap-7"
+              aria-label="Choose a mood"
+            >
+              {landingMoods.map((mood) => {
+                const isActive = mood.id === activeMood.id;
                 return (
-                  <Link
-                    key={card.id}
-                    href={card.href}
-                    className="group inline-flex min-h-[4.25rem] min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-3 text-white transition hover:border-white/25 hover:bg-white/[0.075] sm:min-w-[140px] sm:flex-none sm:rounded-lg"
+                  <button
+                    key={mood.id}
+                    type="button"
+                    onClick={() => setActiveLandingMood(mood.id)}
+                    onMouseEnter={() => setActiveLandingMood(mood.id)}
+                    onFocus={() => setActiveLandingMood(mood.id)}
+                    className={`shrink-0 border-b-2 pb-2 text-lg font-semibold transition-colors sm:text-xl ${
+                      isActive
+                        ? "border-[var(--brand-coral)] text-[var(--ink)]"
+                        : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                    }`}
+                    aria-pressed={isActive}
                   >
-                    <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-black/35"
-                      style={{ color: card.accent }}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-black">{card.title}</span>
-                      <span className="block truncate text-xs text-zinc-500">{card.stats}</span>
-                    </span>
-                    <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-zinc-500 transition group-hover:translate-x-1 group-hover:text-white" />
-                  </Link>
+                    {mood.label}
+                  </button>
                 );
               })}
+            </div>
+
+            <div className="mt-4 flex min-h-12 items-start justify-between gap-5">
+              <p className="max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
+                {activeMood.note}
+              </p>
+              <Link
+                href="/moods"
+                className="inline-flex shrink-0 items-center gap-2 border-b border-[var(--brand-coral)] pb-1 text-sm font-semibold text-[var(--ink)] transition-colors hover:text-[var(--brand-coral-strong)]"
+              >
+                Find my watch
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
             </div>
           </div>
         </div>
@@ -133,16 +175,14 @@ export default function MoodDiscoverySection({ variant = "full" }: MoodDiscovery
       <div className="grid gap-8 rounded-2xl border border-white/10 bg-neutral-950/75 p-4 shadow-2xl shadow-black/30 sm:p-6 lg:grid-cols-[0.95fr_1.35fr] lg:p-8">
         <div className="flex flex-col justify-between gap-8">
           <div>
-
-
             <h2 className="mt-5 max-w-xl text-2xl font-extrabold tracking-tight text-white sm:text-4xl">
               Find what fits the mood before you search by title.
             </h2>
 
             <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-400 sm:text-base">
-              Moodies turns feelings into watchable paths: quick prompts,
-              mascot cues, and recommendations that match how you actually want
-              the night to feel.
+              Moodies turns feelings into watchable paths: quick prompts, mascot
+              cues, and recommendations that match how you actually want the
+              night to feel.
             </p>
           </div>
 

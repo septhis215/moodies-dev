@@ -6,7 +6,7 @@ import type { All } from "@/types/all";
 
 // Default fetch function for backwards compatibility
 async function fetchKoreaTrending() {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
   const res = await fetch(`${base}/all/koreaTrending`, {
     next: { revalidate: 60 },
   });
@@ -46,7 +46,8 @@ export default function KoreaTrendingSection({
         let result: All[];
 
         if (endpoint) {
-          const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+          const base =
+            process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
           const res = await fetch(`${base}${endpoint}`, {
             next: { revalidate: 60 },
           });
@@ -70,22 +71,24 @@ export default function KoreaTrendingSection({
 
   if (loading) {
     return (
-      <div className="px-6 py-12">
-        <div className="mb-6">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+      <section className="ui-shell py-8 sm:py-10" aria-busy="true">
+        <div className="mb-5">
+          <h2 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
             {title}
           </h2>
-          <p className="text-gray-400 text-sm mt-1">Loading...</p>
+          <p className="sr-only" role="status">
+            Loading Korean picks
+          </p>
         </div>
-        <div className="flex gap-4 overflow-hidden">
-          {[...Array(6)].map((_, i) => (
+        <div className="flex gap-3 overflow-hidden sm:gap-4">
+          {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="flex-shrink-0 w-48 h-72 bg-gray-800 animate-pulse rounded-lg"
+              className="aspect-[2/3] w-36 shrink-0 animate-pulse rounded-xl bg-white/[0.07] sm:w-44"
             />
           ))}
         </div>
-      </div>
+      </section>
     );
   }
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { All } from "@/types/all";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 
 interface CarouselProps {
   items: All[];
@@ -48,25 +48,21 @@ export const Carousel = ({
 
   return (
     <div className="relative group/carousel">
-      {canScrollLeft && (
-        <button
-          onClick={scrollLeft}
-          className="absolute left-0 top-1/2 z-10 hidden h-10 w-10 -translate-x-4 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--surface-border)] bg-[var(--surface-1)] text-[var(--ink)] shadow-lg shadow-black/20 transition-colors hover:border-brand-coral/60 hover:text-brand-coral-strong group-hover/carousel:opacity-100 sm:flex md:opacity-0"
-          aria-label="Scroll left"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-      )}
+      <CarouselNavButton
+        direction="previous"
+        onClick={scrollLeft}
+        disabled={!canScrollLeft}
+        className="absolute left-0 top-1/2 z-10 hidden -translate-x-4 -translate-y-1/2 sm:grid"
+        aria-label="Scroll left"
+      />
 
-      {canScrollRight && (
-        <button
-          onClick={scrollRight}
-          className="absolute right-0 top-1/2 z-10 hidden h-10 w-10 translate-x-4 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--surface-border)] bg-[var(--surface-1)] text-[var(--ink)] shadow-lg shadow-black/20 transition-colors hover:border-brand-coral/60 hover:text-brand-coral-strong group-hover/carousel:opacity-100 sm:flex md:opacity-0"
-          aria-label="Scroll right"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
-      )}
+      <CarouselNavButton
+        direction="next"
+        onClick={scrollRight}
+        disabled={!canScrollRight}
+        className="absolute right-0 top-1/2 z-10 hidden translate-x-4 -translate-y-1/2 sm:grid"
+        aria-label="Scroll right"
+      />
 
       <div
         className={`mobile-native-scroll scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 scroll-smooth sm:hidden ${
