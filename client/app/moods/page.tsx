@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   Film,
-  Grid3X3,
   Loader2,
   RefreshCw,
   Shuffle,
@@ -74,7 +73,7 @@ type MoodCluster = {
   moodNames: string[];
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
 const moodClusters: MoodCluster[] = [
   {
@@ -319,17 +318,6 @@ export default function MoodDiscoveryWheel() {
     [activeMoods, moods, selectedMoodId],
   );
 
-  const selectedClusterForMood = useMemo(() => {
-    if (!selectedMood) return activeCluster;
-    return (
-      moodClusters.find((cluster) =>
-        cluster.moodNames.some(
-          (name) => slugify(name) === slugify(selectedMood.name),
-        ),
-      ) ?? activeCluster
-    );
-  }, [activeCluster, selectedMood]);
-
   useEffect(() => {
     let aborted = false;
     setLoadingMoods(true);
@@ -504,52 +492,51 @@ export default function MoodDiscoveryWheel() {
   ).length;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-black px-4 pb-10 pt-4 text-white sm:px-6 sm:pt-32 lg:px-8">
-      <section className="relative border-b border-white/10 pb-5 sm:pb-8">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(233,79,55,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(34,211,238,0.07),transparent_30%),linear-gradient(180deg,#060606_0%,#000_72%)]" />
+    <main className="min-h-screen overflow-x-clip bg-[var(--surface-0)] px-4 pb-10 pt-20 text-white sm:px-6 sm:pt-24 lg:px-8">
+      <section className="border-b border-white/10 pb-5 sm:pb-6">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-5 sm:gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(420px,1.05fr)] lg:items-end">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(520px,1.2fr)] lg:items-end">
             <div>
-              <h1 className="max-w-3xl text-[2rem] font-black leading-[1.06] tracking-tight sm:mt-6 sm:text-5xl lg:text-6xl">
-                Spin into a mood, then let Moodies find the watchlist.
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--brand-coral-strong)]">
+                Mood wheel
+              </p>
+              <h1 className="mt-1 max-w-2xl text-3xl font-black leading-none tracking-tight sm:text-4xl">
+                What feels right tonight?
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-400 sm:mt-5 sm:text-lg sm:leading-7">
-                Explore moods by emotional clusters, use mascot cues to spot the
-                right vibe quickly, and unlock recommendations without wading
-                through clutter.
+              <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
+                Pick a mood directly or spin once. We’ll turn the result into a
+                short watchlist.
               </p>
             </div>
 
-            <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0">
+            <div
+              className="flex snap-x gap-2 overflow-x-auto pb-1 mobile-native-scroll sm:grid sm:grid-cols-4 sm:overflow-visible"
+              role="tablist"
+              aria-label="Mood families"
+            >
               {moodClusters.map((cluster) => {
                 const isActive = cluster.id === activeClusterId;
                 return (
                   <button
                     key={cluster.id}
                     onClick={() => setActiveClusterId(cluster.id)}
-                    className={`min-w-[184px] snap-start rounded-lg border p-3 text-left transition sm:min-w-0 sm:p-4 ${
+                    role="tab"
+                    aria-selected={isActive}
+                    className={`min-w-[138px] snap-start rounded-md border px-3 py-2.5 text-left transition-colors sm:min-w-0 ${
                       isActive
-                        ? "border-white/30 bg-white/[0.08]"
-                        : "border-white/10 bg-white/[0.035] hover:border-white/20 hover:bg-white/[0.06]"
+                        ? "border-[var(--brand-coral)] bg-[var(--surface-2)]"
+                        : "border-white/10 bg-[var(--surface-1)] hover:border-white/25"
                     }`}
-                    style={{
-                      boxShadow: isActive
-                        ? `0 0 28px ${cluster.color}22`
-                        : undefined,
-                    }}
                   >
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: cluster.color }}
+                      />
                       <span className="text-sm font-black text-white">
                         {cluster.label}
                       </span>
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: cluster.color }}
-                      />
                     </div>
-                    <p className="mt-2 hidden text-xs leading-5 text-zinc-400 sm:block">
-                      {cluster.description}
-                    </p>
                   </button>
                 );
               })}
@@ -558,88 +545,22 @@ export default function MoodDiscoveryWheel() {
         </div>
       </section>
 
-      <section className="py-5 sm:py-8">
-        <div className="mx-auto grid max-w-7xl gap-4 sm:gap-6 xl:grid-cols-[280px_minmax(0,1fr)_360px]">
-          <aside className="min-w-0 space-y-3 sm:space-y-4">
-            <div className="hidden rounded-lg border border-white/10 bg-white/[0.04] p-4 md:block">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                    Cluster
-                  </p>
-                  <h2 className="mt-1 text-xl font-black">
-                    {activeCluster.label}
-                  </h2>
-                </div>
-                <Grid3X3 className="h-5 w-5 text-zinc-500" />
-              </div>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                {activeCluster.description}
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-              <div className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                Related moods
-              </div>
-              <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 xl:grid-cols-1">
-                {activeMoods.map((mood) => {
-                  const isSelected = mood.id === selectedMoodId;
-                  return (
-                    <button
-                      key={mood.id}
-                      onClick={() => selectMood(mood)}
-                      className={`group flex min-w-[168px] snap-start items-center gap-2.5 rounded-lg border p-2.5 text-left transition sm:min-w-0 sm:gap-3 sm:p-3 ${
-                        isSelected
-                          ? "border-white/30 bg-white/[0.08]"
-                          : "border-white/10 bg-black/20 hover:border-white/20 hover:bg-white/[0.055]"
-                      }`}
-                    >
-                      <span
-                        className="relative h-10 w-10 shrink-0 rounded-lg border border-white/10 bg-black/30 p-1.5 sm:h-12 sm:w-12"
-                        style={{
-                          boxShadow: isSelected
-                            ? `0 0 20px ${mood.color ?? activeCluster.color}44`
-                            : undefined,
-                        }}
-                      >
-                        <Image
-                          src={getMoodImageSrc(mood)}
-                          alt={`${mood.name} mascot`}
-                          fill
-                          sizes="48px"
-                          className="object-contain transition group-hover:scale-110"
-                        />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-bold text-white">
-                          {mood.name}
-                        </span>
-                        <span className="hidden line-clamp-1 text-xs text-zinc-500 sm:block">
-                          {mood.description}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </aside>
-
-          <div className="min-w-0 rounded-lg border border-white/10 bg-zinc-950/70 p-4 sm:p-6">
-            <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+      <section className="py-5 sm:py-6">
+        <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_390px]">
+          <div className="min-w-0 rounded-md border border-white/10 bg-[var(--surface-1)] p-3 sm:p-5">
+            <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300/80">
-                  Interactive wheel
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--brand-coral-strong)]">
+                  {activeCluster.label} moods
                 </p>
-                <h2 className="mt-2 text-xl font-black sm:text-3xl">
-                  Choose a mood or spin for one
+                <h2 className="mt-1 text-xl font-black sm:text-2xl">
+                  Choose or leave it to chance
                 </h2>
               </div>
               <button
                 onClick={spinWheel}
                 disabled={isSpinning || loadingMoods}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-red-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-[var(--brand-coral)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-coral-strong)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSpinning ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -650,8 +571,39 @@ export default function MoodDiscoveryWheel() {
               </button>
             </div>
 
-            <div className="hidden place-items-center lg:grid">
-              <div className="relative size-[min(52vw,520px)] max-h-[520px] max-w-[520px]">
+            <div className="mb-3 flex snap-x gap-2 overflow-x-auto pb-1 mobile-native-scroll">
+              {activeMoods.map((mood) => {
+                const isSelected = mood.id === selectedMoodId;
+                return (
+                  <button
+                    key={mood.id}
+                    onClick={() => selectMood(mood)}
+                    aria-pressed={isSelected}
+                    className={`flex min-w-fit snap-start items-center gap-2 rounded-md border py-1.5 pl-1.5 pr-3 text-left transition-colors ${
+                      isSelected
+                        ? "border-white/35 bg-white/[0.09]"
+                        : "border-white/10 bg-black/20 hover:border-white/25"
+                    }`}
+                  >
+                    <span className="relative h-8 w-8 shrink-0 rounded-sm bg-black/30">
+                      <Image
+                        src={getMoodImageSrc(mood)}
+                        alt=""
+                        fill
+                        sizes="32px"
+                        className="object-contain"
+                      />
+                    </span>
+                    <span className="text-xs font-bold text-white">
+                      {mood.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid place-items-center">
+              <div className="relative size-[min(calc(100vw-88px),430px)] sm:size-[430px]">
                 <motion.div
                   className="absolute inset-0"
                   animate={{ rotate: currentRotation }}
@@ -664,29 +616,6 @@ export default function MoodDiscoveryWheel() {
                     className="h-full w-full drop-shadow-2xl"
                     viewBox="0 0 200 200"
                   >
-                    <defs>
-                      {activeMoods.map((mood, index) => (
-                        <linearGradient
-                          key={mood.id}
-                          id={`mood-gradient-${index}`}
-                          x1="0%"
-                          y1="0%"
-                          x2="100%"
-                          y2="100%"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor={mood.color ?? activeCluster.color}
-                            stopOpacity="0.98"
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor={mood.color ?? activeCluster.color}
-                            stopOpacity="0.72"
-                          />
-                        </linearGradient>
-                      ))}
-                    </defs>
                     <circle
                       cx="100"
                       cy="100"
@@ -719,7 +648,8 @@ export default function MoodDiscoveryWheel() {
                         >
                           <path
                             d={getSlicePath(index, total)}
-                            fill={`url(#mood-gradient-${index})`}
+                            fill={mood.color ?? activeCluster.color}
+                            fillOpacity={isSelected ? 0.96 : 0.72}
                             stroke={
                               isSelected
                                 ? "rgba(255,255,255,0.85)"
@@ -739,16 +669,6 @@ export default function MoodDiscoveryWheel() {
                           <g
                             transform={`rotate(${-currentRotation} ${mascotPoint.x} ${mascotPoint.y})`}
                           >
-                            {isSelected && (
-                              <animateTransform
-                                attributeName="transform"
-                                type="translate"
-                                values="0 0; 0 -1.4; 0 0"
-                                dur="2.4s"
-                                repeatCount="indefinite"
-                                additive="sum"
-                              />
-                            )}
                             <image
                               href={getMoodImageSrc(mood)}
                               x={mascotPoint.x - mascotSize / 2}
@@ -772,112 +692,67 @@ export default function MoodDiscoveryWheel() {
                   </svg>
                 </motion.div>
 
-                <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1">
-                  <div className="h-0 w-0 border-l-[12px] border-r-[12px] border-t-[22px] border-l-transparent border-r-transparent border-t-red-400 drop-shadow-[0_0_16px_rgba(248,113,113,0.7)]" />
+                <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-0.5">
+                  <div className="h-0 w-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-[var(--brand-coral)]" />
                 </div>
 
-                <div className="absolute left-1/2 top-1/2 z-10 flex h-28 w-28 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+                <div className="absolute left-1/2 top-1/2 z-10 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black sm:h-24 sm:w-24">
                   <Image
                     src="/images/moodies-transparent.png"
                     alt="Moodies mascot"
-                    width={64}
-                    height={64}
+                    width={56}
+                    height={56}
                     className="object-contain"
                   />
                 </div>
-
-                <AnimatePresence>
-                  {showMoodBubble && selectedMood && !isSpinning && (
-                    <motion.div
-                      key={selectedMood.id}
-                      initial={{ opacity: 0, y: 14, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.96 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 260,
-                        damping: 22,
-                      }}
-                      className="absolute -right-4 top-16 z-20 w-64 rounded-lg border border-white/15 bg-black/85 p-4 shadow-2xl backdrop-blur-xl"
-                      style={{
-                        boxShadow: `0 0 34px ${selectedMood.color ?? activeCluster.color}33`,
-                      }}
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="relative h-14 w-14 shrink-0 rounded-lg bg-white/[0.06] p-2">
-                          <Image
-                            src={getMoodImageSrc(selectedMood)}
-                            alt={`${selectedMood.name} mascot`}
-                            fill
-                            sizes="56px"
-                            className="object-contain"
-                          />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
-                            Your result
-                          </span>
-                          <span className="mt-1 block text-xl font-black text-white">
-                            {selectedMood.name}
-                          </span>
-                          <span className="mt-1 line-clamp-3 block text-sm leading-5 text-zinc-400">
-                            {selectedMood.description}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="absolute -left-2 top-8 h-4 w-4 rotate-45 border-b border-l border-white/15 bg-black/85" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:hidden">
-              {activeMoods.map((mood) => {
-                const isSelected = mood.id === selectedMoodId;
-                return (
-                  <button
-                    key={mood.id}
-                    onClick={() => selectMood(mood)}
-                    className={`flex min-h-[116px] flex-col items-start gap-2 rounded-lg border p-3 text-left transition sm:min-h-0 sm:flex-row sm:items-center sm:gap-3 ${
-                      isSelected
-                        ? "border-white/30 bg-white/[0.08]"
-                        : "border-white/10 bg-white/[0.035] hover:border-white/20"
-                    }`}
-                  >
-                    <span className="relative h-14 w-14 shrink-0 rounded-lg bg-black/30 p-2 sm:h-12 sm:w-12">
-                      <Image
-                        src={getMoodImageSrc(mood)}
-                        alt={`${mood.name} mascot`}
-                        fill
-                        sizes="48px"
-                        className="object-contain"
-                      />
+            <AnimatePresence mode="wait">
+              {showMoodBubble && selectedMood && !isSpinning ? (
+                <motion.div
+                  key={selectedMood.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="mx-auto mt-2 flex max-w-xl items-center gap-3 border-t border-white/10 pt-3"
+                  aria-live="polite"
+                >
+                  <span className="relative h-11 w-11 shrink-0 rounded-sm bg-black/30">
+                    <Image
+                      src={getMoodImageSrc(selectedMood)}
+                      alt=""
+                      fill
+                      sizes="44px"
+                      className="object-contain"
+                    />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--brand-coral-strong)]">
+                      Selected mood
                     </span>
-                    <span className="min-w-0">
-                      <span className="block text-base font-black">
-                        {mood.name}
-                      </span>
-                      <span className="mt-1 line-clamp-2 block text-xs leading-5 text-zinc-400 sm:line-clamp-1">
-                        {mood.description}
-                      </span>
+                    <span className="mt-0.5 block text-lg font-black text-white">
+                      {selectedMood.name}
                     </span>
-                  </button>
-                );
-              })}
-            </div>
+                    <span className="line-clamp-1 block text-xs text-zinc-400">
+                      {selectedMood.description}
+                    </span>
+                  </span>
+                </motion.div>
+              ) : (
+                <div className="mt-2 border-t border-white/10 pt-3 text-center text-sm text-zinc-400">
+                  The wheel is choosing…
+                </div>
+              )}
+            </AnimatePresence>
           </div>
 
-          <aside className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-4">
+          <aside className="min-w-0 rounded-md border border-white/10 bg-[var(--surface-1)] p-4">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span
                   className="relative h-12 w-12 shrink-0 rounded-lg border border-white/10 bg-black/30 p-2 sm:h-14 sm:w-14"
-                  style={{
-                    boxShadow: selectedMood
-                      ? `0 0 24px ${selectedMood.color ?? selectedClusterForMood.color}33`
-                      : undefined,
-                  }}
                 >
                   <Image
                     src={getMoodImageSrc(selectedMood)}
@@ -983,7 +858,7 @@ export default function MoodDiscoveryWheel() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="space-y-3 sm:max-h-[620px] sm:overflow-y-auto sm:pr-1 mobile-native-scroll"
+                  className="space-y-2.5 lg:max-h-[530px] lg:overflow-y-auto lg:pr-1 mobile-native-scroll"
                 >
                   {recommendations.map((rec, index) => (
                     <motion.a
@@ -1004,7 +879,7 @@ export default function MoodDiscoveryWheel() {
                           alt={rec.title}
                           fill
                           sizes="64px"
-                          className="object-cover transition group-hover:scale-105"
+                          className="object-cover"
                         />
                       </span>
                       <span className="min-w-0 flex-1">
@@ -1031,7 +906,7 @@ export default function MoodDiscoveryWheel() {
                           {rec.overview || "No description available."}
                         </span>
                       </span>
-                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-zinc-600 transition group-hover:translate-x-1 group-hover:text-red-200" />
+                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-zinc-600 transition-colors group-hover:text-red-200" />
                     </motion.a>
                   ))}
                 </motion.div>
