@@ -30,7 +30,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_NEST_API_URL ||
-  "http://localhost:4000";
+  "https://dev.api.moodies.tech/api";
 const MAX_CELEBRITY_PAGES = 8;
 
 type CelebrityCategory =

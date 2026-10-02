@@ -399,7 +399,7 @@ export default function SearchResultsPage() {
         return;
       }
 
-      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
       const endpoint = item.type === "tv" ? "tv" : "movies";
 
       const response = await fetch(`${base}/${endpoint}/${item.id}/videos`);
@@ -452,7 +452,7 @@ export default function SearchResultsPage() {
   useEffect(() => {
     const loadGenres = async () => {
       try {
-        const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
         const response = await fetch(`${base}/search/genres`);
         if (response.ok) {
           const data = await response.json();
@@ -578,7 +578,7 @@ export default function SearchResultsPage() {
       setError(null);
 
       try {
-        const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
         const params = new URLSearchParams();
 
         // Always include query if it exists
@@ -1136,7 +1136,7 @@ export default function SearchResultsPage() {
       setLoadingTrending(true);
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+          `${process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api"
           }/all/search/trending-terms`
         );
         if (response.ok) {

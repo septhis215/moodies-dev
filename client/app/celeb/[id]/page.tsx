@@ -150,7 +150,7 @@ type VideoFilter = "all" | "trailer" | "clip" | "interview" | "behind" | "show";
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_NEST_API_URL ||
-  "http://localhost:4000";
+  "https://dev.api.moodies.tech/api";
 
 const videoFilters: Array<{ value: VideoFilter; label: string }> = [
   { value: "all", label: "All" },

@@ -1,6 +1,6 @@
 import { normalizeApiError, normalizeResponseError } from "@/lib/errors";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
 export type MediaStatType = "movie" | "tv";
 

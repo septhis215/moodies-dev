@@ -145,7 +145,7 @@ export default function CollectionClient() {
           <div className="ui-panel mt-5 p-8 text-center">
             <h3 className="text-lg font-black text-white">Nothing here yet.</h3>
             <p className="mt-2 text-sm text-white/55">Explore the catalog and save a few titles to build your shelf.</p>
-            <Link href="/discover" className="ui-primary-action mt-5">Explore titles</Link>
+            <Link href="/search" className="ui-primary-action mt-5">Explore titles</Link>
           </div>
         )}
       </div>

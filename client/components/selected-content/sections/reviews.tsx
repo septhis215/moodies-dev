@@ -130,7 +130,7 @@ const PREVIEW_LEN = 220;
 
 const API =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-  "http://localhost:4000";
+  "https://dev.api.moodies.tech/api";
 
 export default function ReviewsSection({
   reviews,

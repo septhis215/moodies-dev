@@ -121,7 +121,7 @@ export default function SearchBarWithSuggestions({
     const fetchTrendingTerms = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/all/search/trending-terms`
+          `${process.env.NEXT_PUBLIC_API_URL || 'https://dev.api.moodies.tech/api'}/all/search/trending-terms`
         );
         if (response.ok) {
           const data = await response.json();
@@ -163,7 +163,7 @@ export default function SearchBarWithSuggestions({
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/search/suggestions/${type}?q=${encodeURIComponent(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://dev.api.moodies.tech/api'}/search/suggestions/${type}?q=${encodeURIComponent(
           query
         )}&limit=8`
       );

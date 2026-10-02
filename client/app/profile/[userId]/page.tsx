@@ -23,7 +23,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
 import { fetchMediaSummary } from "@/lib/mediaApi";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 const MASCOT_SRC = "/images/moodies-mascot.png";
 const LOGO_SRC = "/images/moodies-transparent.png";
 const PUBLIC_IMAGE_PATH_PATTERN =

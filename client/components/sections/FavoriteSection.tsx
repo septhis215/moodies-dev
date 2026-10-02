@@ -39,7 +39,7 @@ type TasteSignal = {
 };
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 async function fetchFavorites(endpoint?: string): Promise<All[]> {
   try {
     const res = await fetch(endpoint || `${API_BASE}/all/favorites`, {

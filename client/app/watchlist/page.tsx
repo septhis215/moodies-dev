@@ -40,7 +40,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 
 /* -------------------- Config -------------------- */
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 async function fetchTmdb(kind: Kind, id: string): Promise<Item | null> {
   const summary = await fetchMediaSummary(kind, id, { cache: "no-store" });
   if (!summary) return null;

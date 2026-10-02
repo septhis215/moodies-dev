@@ -346,7 +346,7 @@ export default function MovieQuizPage() {
     setStage("loading");
 
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
       const response = await fetch(`${base}/quiz/recommendations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -6,7 +6,7 @@ import type {
 
 const API =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-  "http://localhost:4000";
+  "https://dev.api.moodies.tech/api";
 
 async function postSnapshot<T>(
   path: string,

@@ -3,7 +3,7 @@ import { markSessionPresent } from "@/app/context/AuthProvider";
 import { handleAppError, normalizeResponseError } from "@/lib/errors";
 import { appToast } from "@/lib/toast";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
 const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };

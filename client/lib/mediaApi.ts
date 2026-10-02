@@ -16,7 +16,7 @@ export type MediaSummary = {
 };
 
 const API_BASE = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"
+  process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api"
 ).replace(/\/$/, "");
 
 function asRecord(value: unknown): Record<string, unknown> {
