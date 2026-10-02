@@ -7,7 +7,7 @@ import { useScrollToHash } from "@/hooks/useScrollToHash";
 
 // Routes where the navbar should not appear.
 // startsWith is used for prefixes (e.g. /auth/login), includes for segments (e.g. /movies/123/reviews).
-const NAVBAR_HIDDEN_PREFIXES = ["/auth", "/feed", "/discover"];
+const NAVBAR_HIDDEN_PREFIXES = ["/auth", "/feed"];
 const NAVBAR_HIDDEN_SEGMENTS = ["/reviews", "/credits"];
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
