@@ -1,9 +1,9 @@
 "use client";
 
-import { tmdbImage } from "@/lib/tmdb";
-import React, { useRef, useState } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import { motion, AnimatePresence } from "framer-motion";
+import { tmdbImage } from "@/lib/tmdb";
 
 export type Episode = {
   episode_number: number;
@@ -31,314 +31,221 @@ type Props = {
 };
 
 const PAGE_SIZE = 30;
-const ANIM_DURATION_MS = 200;
-const SCROLL_DURATION_MS = 400;
-const OPEN_SCROLL_DELAY_MS = 120;
-const PAGE_SCROLL_DELAY_MS = 160;
+
+function formatDate(value?: string | null): string {
+  if (!value) return "Date unknown";
+  return new Date(value).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function truncate(value: string | undefined, length: number): string {
+  if (!value) return "";
+  return value.length > length ? `${value.slice(0, length).trim()}…` : value;
+}
 
 export default function TvSeasonsEpisodes({ seasons, className = "" }: Props) {
   const [openSeason, setOpenSeason] = useState<number | null>(
-    seasons && seasons.length ? seasons[0].season_number : null,
+    seasons[0]?.season_number ?? null,
   );
   const [pages, setPages] = useState<Record<number, number>>({});
-  const seasonRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
-  const toggle = (num: number) => {
-    const willOpen = openSeason !== num;
-    setOpenSeason(willOpen ? num : null);
-    if (willOpen) {
-      setPages((p) => ({ ...p, [num]: 1 }));
-      setTimeout(() => scrollToSeason(num), OPEN_SCROLL_DELAY_MS);
-    }
-  };
-
-  const setPageForSeason = (seasonNum: number, page: number) => {
-    setPages((p) => ({ ...p, [seasonNum]: Math.max(1, page) }));
-    setTimeout(() => scrollToSeason(seasonNum), PAGE_SCROLL_DELAY_MS);
-  };
-
-  const smoothScrollTo = (targetY: number, duration = SCROLL_DURATION_MS) => {
-    const startY = window.scrollY || window.pageYOffset;
-    const diff = targetY - startY;
-    let start: number | null = null;
-    const ease = (t: number) =>
-      t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    const step = (timestamp: number) => {
-      if (start === null) start = timestamp;
-      const elapsed = timestamp - start;
-      const t = Math.min(1, elapsed / duration);
-      window.scrollTo(0, Math.round(startY + diff * ease(t)));
-      if (elapsed < duration) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  };
-
-  const scrollToSeason = (seasonNum: number) => {
-    const el = seasonRefs.current[seasonNum];
-    if (!el) return;
-    const top = el.getBoundingClientRect().top + window.scrollY - 16;
-    smoothScrollTo(top, SCROLL_DURATION_MS);
-  };
-
-  const formatDate = (d?: string | null) =>
-    d
-      ? new Date(d).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })
-      : "—";
-  const truncate = (s: string = "", n = 200) =>
-    s.length > n ? s.slice(0, n).trim() + "…" : s;
+  if (!seasons.length) {
+    return (
+      <section
+        className={`ui-shell scroll-mt-24 py-8 sm:py-10 ${className}`}
+        aria-labelledby="seasons-heading"
+      >
+        <h2
+          id="seasons-heading"
+          className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
+        >
+          Seasons
+        </h2>
+        <p className="mt-4 text-sm leading-6 text-[var(--ink-muted)]">
+          No season information was returned for this title.
+        </p>
+      </section>
+    );
+  }
 
   return (
-    <section className={`space-y-3 ${className}`}>
-      {seasons.length === 0 && (
-        <div className="py-12 text-center text-sm text-white/30">
-          No seasons available.
-        </div>
-      )}
+    <section
+      className={`ui-shell scroll-mt-24 py-8 sm:py-10 ${className}`}
+      aria-labelledby="seasons-heading"
+    >
+      <header className="max-w-2xl">
+        <h2
+          id="seasons-heading"
+          className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
+        >
+          Seasons and episodes
+        </h2>
+        <p className="mt-3 text-base leading-7 text-[var(--ink-muted)]">
+          Browse the run in order, with enough context to decide where to
+          start.
+        </p>
+      </header>
 
-      {seasons.map((season) => {
-        const isOpen = openSeason === season.season_number;
-        const currentPage = pages[season.season_number] ?? 1;
+      <div className="mt-8">
+        {seasons.map((season) => {
+          const isOpen = openSeason === season.season_number;
+          const episodes = [...(season.episodes ?? [])].sort(
+            (a, b) => a.episode_number - b.episode_number,
+          );
+          const currentPage = pages[season.season_number] ?? 1;
+          const totalPages = Math.max(1, Math.ceil(episodes.length / PAGE_SIZE));
+          const start = (currentPage - 1) * PAGE_SIZE;
+          const visibleEpisodes = episodes.slice(start, start + PAGE_SIZE);
 
-        const episodesSorted =
-          season.episodes && season.episodes.length > PAGE_SIZE
-            ? [...season.episodes].sort(
-                (a, b) => b.episode_number - a.episode_number,
-              )
-            : season.episodes || [];
-
-        const totalPages = Math.max(
-          1,
-          Math.ceil(episodesSorted.length / PAGE_SIZE),
-        );
-        const startIdx = (currentPage - 1) * PAGE_SIZE;
-        const pageEpisodes = episodesSorted.slice(
-          startIdx,
-          startIdx + PAGE_SIZE,
-        );
-
-        return (
-          <article
-            key={season.season_number}
-            ref={(el: HTMLDivElement | null) => {
-              seasonRefs.current[season.season_number] = el;
-            }}
-            className="rounded-xl bg-white/[0.03] border border-white/[0.07] overflow-hidden"
-          >
-            {/* ── Season header ── */}
-            <button
-              onClick={() => toggle(season.season_number)}
-              aria-expanded={isOpen}
-              className="w-full text-left focus:outline-none cursor-pointer"
+          return (
+            <article
+              key={season.season_number}
+              className="border-t border-[var(--surface-border)]"
             >
-              <div className="flex items-start gap-4 p-4">
-                {/* Poster */}
-                <div className="relative w-16 h-24 sm:w-20 sm:h-28 rounded-lg overflow-hidden flex-shrink-0 bg-white/[0.06]">
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenSeason(isOpen ? null : season.season_number)
+                }
+                aria-expanded={isOpen}
+                className="grid w-full gap-4 py-5 text-left sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:items-center"
+              >
+                <div className="relative aspect-[2/3] w-20 overflow-hidden rounded-xl bg-[var(--surface-1)] sm:w-20">
                   <Image
-                    src={season.poster_path ? tmdbImage(season.poster_path, "w400") : "/placeholder-poster.svg"}
+                    src={
+                      season.poster_path
+                        ? tmdbImage(season.poster_path, "w185")
+                        : "/placeholder-poster.svg"
+                    }
                     alt={season.name ?? `Season ${season.season_number}`}
                     fill
                     sizes="80px"
                     className="object-cover"
                   />
                 </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0 flex items-start justify-between gap-3 py-0.5">
-                  <div className="min-w-0">
-                    <p className="text-[11px] uppercase tracking-widest text-white/30 mb-1">
-                      Season {season.season_number}
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+                    Season {season.season_number}
+                  </p>
+                  <h3 className="mt-1 text-xl font-semibold leading-6 text-[var(--ink)]">
+                    {season.name ?? `Season ${season.season_number}`}
+                  </h3>
+                  {season.overview ? (
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+                      {truncate(season.overview, 180)}
                     </p>
-                    <h3 className="text-base font-semibold text-white leading-snug">
-                      {season.name ?? `Season ${season.season_number}`}
-                    </h3>
-                    {season.overview && (
-                      <p className="mt-1 text-sm text-white/40 leading-relaxed line-clamp-2">
-                        {truncate(season.overview, 160)}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-3 mt-2 flex-wrap">
-                      <span className="text-xs text-white/40">
-                        {season.episode_count ?? season.episodes.length}{" "}
-                        episodes
-                      </span>
-                      {season.air_date && (
-                        <>
-                          <span className="text-xs text-white/20">·</span>
-                          <span className="text-xs text-white/40">
-                            {formatDate(season.air_date)}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Chevron */}
-                  <div
-                    className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center border transition-all duration-200 ${
-                      isOpen
-                        ? "bg-[#e94f37] border-[#e94f37] rotate-180"
-                        : "bg-white/[0.05] border-white/[0.1]"
-                    }`}
-                    aria-hidden
-                  >
-                    <svg
-                      className="w-3.5 h-3.5 text-white"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                    >
-                      <path
-                        d="M5 8l5 5 5-5"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
+                  ) : null}
+                  <p className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
+                    {season.episode_count ?? episodes.length} episodes
+                    {season.air_date ? ` · ${formatDate(season.air_date)}` : ""}
+                  </p>
                 </div>
-              </div>
-            </button>
+                <ChevronDown
+                  className={`h-5 w-5 text-[var(--ink-muted)] transition-transform ${isOpen ? "rotate-180 text-brand-coral-strong" : ""}`}
+                  aria-hidden="true"
+                />
+              </button>
 
-            {/* ── Episodes panel ── */}
-            <AnimatePresence initial={false}>
-              {isOpen && (
-                <motion.div
-                  key={`season-${season.season_number}`}
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: ANIM_DURATION_MS / 1000 }}
-                  className="border-t border-white/[0.06]"
-                >
-                  <motion.div
-                    initial={{ y: 8, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 8, opacity: 0 }}
-                    transition={{ duration: ANIM_DURATION_MS / 1000 }}
-                    className="p-4 space-y-4"
-                  >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {pageEpisodes && pageEpisodes.length > 0 ? (
-                        pageEpisodes.map((ep) => (
-                          <div
-                            key={ep.episode_number}
-                            className="flex gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-150"
-                          >
-                            {/* Still */}
-                            <div className="relative w-24 h-14 rounded-md overflow-hidden flex-shrink-0 bg-white/[0.06]">
-                              <Image
-                                src={ep.still_path ? tmdbImage(ep.still_path, "w300") : "/placeholder-backdrop.svg"}
-                                alt={ep.name}
-                                fill
-                                sizes="96px"
-                                className="object-cover"
-                              />
-                              {/* Episode number badge */}
-                              <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-[10px] font-semibold text-white/70 leading-none">
-                                E{ep.episode_number}
-                              </div>
-                            </div>
-
-                            {/* Info */}
-                            <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                              <div>
-                                <p className="text-sm font-semibold text-white leading-snug line-clamp-1">
-                                  {ep.name}
-                                </p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-xs text-white/30">
-                                    {formatDate(ep.air_date)}
-                                  </span>
-                                  {ep.runtime && (
-                                    <>
-                                      <span className="text-xs text-white/20">
-                                        ·
-                                      </span>
-                                      <span className="text-xs text-white/30">
-                                        {ep.runtime}m
-                                      </span>
-                                    </>
-                                  )}
-                                  {ep.vote_average ? (
-                                    <>
-                                      <span className="text-xs text-white/20">
-                                        ·
-                                      </span>
-                                      <span className="text-xs text-[#e94f37] font-semibold">
-                                        ★ {ep.vote_average.toFixed(1)}
-                                      </span>
-                                    </>
-                                  ) : null}
-                                </div>
-                              </div>
-                              {ep.overview && (
-                                <p className="mt-1.5 text-xs text-white/40 leading-relaxed line-clamp-2">
-                                  {truncate(ep.overview, 120)}
-                                </p>
-                              )}
-                            </div>
+              {isOpen ? (
+                <div className="border-t border-[var(--surface-border)] pb-5 pt-2">
+                  {visibleEpisodes.length > 0 ? (
+                    <div className="divide-y divide-[var(--surface-border)]">
+                      {visibleEpisodes.map((episode) => (
+                        <article
+                          key={episode.episode_number}
+                          className="grid gap-4 py-4 sm:grid-cols-[9rem_minmax(0,1fr)]"
+                        >
+                          <div className="relative aspect-video overflow-hidden rounded-xl bg-[var(--surface-1)] sm:aspect-[16/9]">
+                            <Image
+                              src={
+                                episode.still_path
+                                  ? tmdbImage(episode.still_path, "w300")
+                                  : "/placeholder-backdrop.svg"
+                              }
+                              alt={episode.name}
+                              fill
+                              sizes="144px"
+                              className="object-cover"
+                            />
+                            <span className="absolute bottom-2 left-2 bg-black/75 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                              E{episode.episode_number}
+                            </span>
                           </div>
-                        ))
-                      ) : (
-                        <div className="col-span-full py-8 text-center text-sm text-white/25">
-                          Episode details not available.
-                        </div>
-                      )}
+                          <div className="min-w-0">
+                            <h4 className="text-base font-semibold leading-5 text-[var(--ink)]">
+                              {episode.name}
+                            </h4>
+                            <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
+                              {formatDate(episode.air_date)}
+                              {episode.runtime ? ` · ${episode.runtime}m` : ""}
+                              {episode.vote_average
+                                ? ` · ${episode.vote_average.toFixed(1)}/10`
+                                : ""}
+                            </p>
+                            {episode.overview ? (
+                              <p className="mt-2 line-clamp-3 text-sm leading-6 text-[var(--ink-muted)]">
+                                {episode.overview}
+                              </p>
+                            ) : null}
+                          </div>
+                        </article>
+                      ))}
                     </div>
+                  ) : (
+                    <p className="py-5 text-sm leading-6 text-[var(--ink-muted)]">
+                      Episode details are not available yet.
+                    </p>
+                  )}
 
-                    {/* Pagination */}
-                    {episodesSorted.length > PAGE_SIZE && (
-                      <div className="flex items-center justify-between gap-4 pt-2 border-t border-white/[0.06]">
-                        <p className="text-[11px] text-white/25">
-                          {Math.min(startIdx + 1, episodesSorted.length)}–
-                          {Math.min(
-                            startIdx + PAGE_SIZE,
-                            episodesSorted.length,
-                          )}{" "}
-                          of {episodesSorted.length}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() =>
-                              setPageForSeason(
-                                season.season_number,
-                                Math.max(1, currentPage - 1),
-                              )
-                            }
-                            disabled={currentPage === 1}
-                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.04] border border-white/[0.07] text-white/50 hover:text-white hover:bg-white/[0.08] disabled:opacity-30 transition-all cursor-pointer"
-                          >
-                            ← Prev
-                          </button>
-                          <span className="text-[11px] text-white/30 px-1">
-                            {currentPage} / {totalPages}
-                          </span>
-                          <button
-                            onClick={() =>
-                              setPageForSeason(
-                                season.season_number,
-                                Math.min(totalPages, currentPage + 1),
-                              )
-                            }
-                            disabled={currentPage === totalPages}
-                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.04] border border-white/[0.07] text-white/50 hover:text-white hover:bg-white/[0.08] disabled:opacity-30 transition-all cursor-pointer"
-                          >
-                            Next →
-                          </button>
-                        </div>
+                  {totalPages > 1 ? (
+                    <div className="mt-3 flex items-center justify-between border-t border-[var(--surface-border)] pt-4">
+                      <p className="text-xs text-[var(--ink-muted)]">
+                        {start + 1}–{Math.min(start + PAGE_SIZE, episodes.length)} of {episodes.length}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={currentPage === 1}
+                          onClick={() =>
+                            setPages((current) => ({
+                              ...current,
+                              [season.season_number]: currentPage - 1,
+                            }))
+                          }
+                          className="ui-secondary-action disabled:opacity-35"
+                          aria-label="Previous episodes"
+                        >
+                          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <span className="text-xs text-[var(--ink-muted)]">
+                          {currentPage} / {totalPages}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={currentPage === totalPages}
+                          onClick={() =>
+                            setPages((current) => ({
+                              ...current,
+                              [season.season_number]: currentPage + 1,
+                            }))
+                          }
+                          className="ui-secondary-action disabled:opacity-35"
+                          aria-label="Next episodes"
+                        >
+                          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                        </button>
                       </div>
-                    )}
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </article>
-        );
-      })}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }

@@ -11,7 +11,7 @@ export function ReviewsPageLoading() {
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center px-4 py-16 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+        <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.38)] backdrop-blur-xl">
           <div className="flex items-center gap-4">
             <div className="h-28 w-20 animate-pulse rounded-xl bg-white/[0.08]" />
             <div className="min-w-0 flex-1 space-y-3">
@@ -27,7 +27,7 @@ export function ReviewsPageLoading() {
             {[0, 1, 2].map((item) => (
               <div
                 key={item}
-                className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-4"
+                className="rounded-xl border border-white/[0.07] bg-white/[0.035] p-4"
               >
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -61,8 +61,8 @@ export function ReviewsPageUnavailable({
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-4 py-16 sm:px-6">
-        <div className="w-full rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6 text-center shadow-[0_24px_90px_rgba(0,0,0,0.38)] backdrop-blur-xl">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-400/20 bg-red-400/10 text-red-200">
+      <div className="w-full rounded-xl border border-white/[0.08] bg-white/[0.04] p-6 text-center shadow-[0_24px_90px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl border border-red-400/20 bg-red-400/10 text-red-200">
             <Search size={22} />
           </div>
           <h2 className="mt-5 text-2xl font-black text-white">{title}</h2>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, Clock3, Heart, MessageSquare, Sparkles } from "lucide-react";
+import { CalendarDays, Clock3, Heart, MessageSquare } from "lucide-react";
 import type { MovieDetailsData, TvDetailsData } from "@/components/selected-content/types";
 
 type DecisionPanelProps = {
@@ -36,30 +36,29 @@ export default function DecisionPanel({
 
   return (
     <section className="ui-shell py-8 sm:py-10" aria-labelledby="decision-heading">
-      <div className="ui-panel grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:p-8">
+      <div className="grid gap-6 border-y border-[var(--surface-border)] py-6 sm:py-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div>
-          <p className="ui-kicker">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-            Make the call
-          </p>
-          <h2 id="decision-heading" className="mt-2 text-2xl font-black text-white sm:text-3xl">
-            Everything you need before pressing play.
+          <h2 id="decision-heading" className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
+            Does this fit your night?
           </h2>
-          <div className="mt-5 flex flex-wrap gap-2 text-xs text-white/65">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+            A quick read of the audience signal, score, and format before you spend time with it.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-3 text-xs text-[var(--ink-muted)]">
+            <span className="inline-flex items-center gap-1.5">
               <CalendarDays className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
               {yearOf(date) || "Year unknown"}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
+            <span className="inline-flex items-center gap-1.5">
               <Clock3 className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
               {isTv ? `${tvInfo?.number_of_seasons || "?"} seasons` : formatRuntime(info.runtime)}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
+            <span className="inline-flex items-center gap-1.5">
               <Heart className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
               {rating ? `${rating.toFixed(1)} ${ratingLabel}` : "No score yet"}
             </span>
             {reviewStats?.totalRatings ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5">
+              <span className="inline-flex items-center gap-1.5">
                 <MessageSquare className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
                 {reviewStats.totalRatings} ratings
               </span>
@@ -67,19 +66,19 @@ export default function DecisionPanel({
           </div>
           {moodLabels.length ? (
             <div className="mt-5 flex flex-wrap items-center gap-2">
-              <span className="mr-1 text-xs font-bold uppercase tracking-[0.16em] text-white/35">
-                Fits your mood
+              <span className="mr-1 text-xs font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+                Audience mood
               </span>
               {moodLabels.map((mood) => (
-                <span key={mood.emoji} className="rounded-full bg-brand-coral/12 px-3 py-1.5 text-xs font-semibold text-brand-coral-strong">
+                <span key={mood.emoji} className="text-xs font-semibold text-brand-coral-strong">
                   {mood.emoji} {mood.count}
                 </span>
               ))}
             </div>
           ) : null}
         </div>
-        <Link href={`/${mediaPath}/${info.id}/reviews`} className="ui-primary-action">
-          Read community reviews
+        <Link href={`/${mediaPath}/${info.id}/reviews`} className="ui-primary-action w-full sm:w-auto">
+          Read all reviews
         </Link>
       </div>
     </section>

@@ -31,7 +31,7 @@ export default function CustomSelect<T extends string>({
         onClick={() => setOpen(!open)}
         className="flex items-center justify-between w-full gap-2
                    bg-white/[0.05] text-white/70 text-xs font-medium
-                   rounded-lg px-3 py-2
+                   rounded-xl px-3 py-2
                    border border-white/[0.07]
                    hover:bg-white/[0.08] hover:border-white/[0.12] hover:text-white
                    focus:outline-none focus:border-[#e94f37]/40
@@ -59,7 +59,7 @@ export default function CustomSelect<T extends string>({
           <div
             className="absolute mt-1.5 w-full z-50
                           bg-zinc-900 border border-white/[0.08]
-                          rounded-lg overflow-hidden
+                          rounded-xl overflow-hidden
                           shadow-[0_8px_24px_rgba(0,0,0,0.5)]
                           animate-in fade-in slide-in-from-top-1 duration-150"
           >

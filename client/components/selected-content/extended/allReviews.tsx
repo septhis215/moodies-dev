@@ -752,7 +752,7 @@ export default function AllReviews({
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-6 py-20 text-center shadow-[0_18px_70px_rgba(0,0,0,0.24)]"
+                className="flex flex-col items-center justify-center gap-4 rounded-xl border border-white/[0.08] bg-white/[0.04] px-6 py-20 text-center shadow-[0_18px_70px_rgba(0,0,0,0.24)]"
               >
                 <div className="text-4xl opacity-20 select-none">💬</div>
                 <p className="text-sm font-bold text-white/82">
@@ -786,7 +786,7 @@ export default function AllReviews({
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="group rounded-2xl border border-white/[0.08] bg-[rgba(255,255,255,0.045)] shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#e94f37]/25 hover:bg-white/[0.065] overflow-hidden"
+                    className="group rounded-xl border border-white/[0.08] bg-[rgba(255,255,255,0.045)] shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#e94f37]/25 hover:bg-white/[0.065] overflow-hidden"
                   >
                     <div className="flex flex-col gap-4 px-4 pt-4 sm:px-5 sm:pt-5">
                       <div className="flex items-start justify-between gap-3">
@@ -871,7 +871,7 @@ export default function AllReviews({
 
                     {/* Replies */}
                     {review.replies && review.replies.length > 0 && (
-                      <div className="mx-4 mb-4 rounded-2xl border border-white/[0.07] bg-black/20 p-3 sm:mx-5 sm:p-4">
+                      <div className="mx-4 mb-4 rounded-xl border border-white/[0.07] bg-black/20 p-3 sm:mx-5 sm:p-4">
                         <div className="mb-3 flex items-center justify-between gap-3">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
                             Replies
@@ -1017,7 +1017,7 @@ export default function AllReviews({
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="mx-4 mb-4 space-y-3 rounded-2xl border border-white/[0.07] bg-white/[0.035] p-3 sm:mx-5"
+                        className="mx-4 mb-4 space-y-3 rounded-xl border border-white/[0.07] bg-white/[0.035] p-3 sm:mx-5"
                         >
                           {showReplyForm?.prefill && (
                             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/20 border border-white/[0.07] rounded-xl">
@@ -1180,7 +1180,7 @@ export default function AllReviews({
                   aria-modal="true"
                   aria-labelledby="review-dialog-title"
                   aria-describedby="review-dialog-description"
-                  className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-[#0a0a0b]/96 shadow-2xl shadow-black/70 sm:max-h-[min(90dvh,780px)] sm:rounded-2xl"
+                  className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-xl border border-white/10 bg-[#0a0a0b]/96 shadow-2xl shadow-black/70 sm:max-h-[min(90dvh,780px)] sm:rounded-xl"
                   style={{
                     boxShadow:
                       "0 32px 90px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.04)",
@@ -1220,7 +1220,7 @@ export default function AllReviews({
                   <div className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain mobile-native-scroll scrollbar-none">
                     {!isAuthenticated ? (
                       <div className="flex flex-col items-center justify-center py-12 px-6 text-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl">
+                        <div className="w-14 h-14 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl">
                           🔐
                         </div>
                         <div>
@@ -1443,7 +1443,7 @@ function ReviewFormInModal({
     <form onSubmit={handleSubmit}>
       <div className="space-y-5 px-4 py-4 sm:px-6 sm:py-5">
       {/* Compose card — hero */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+      <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03]">
         {selectedMoodImage && (
           <Image
             src={selectedMoodImage}
@@ -1578,7 +1578,7 @@ function ReviewFormInModal({
       </div>
 
       {/* Mood grid */}
-      <section className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] p-3.5 sm:p-4">
+      <section className="rounded-xl border border-white/[0.08] bg-white/[0.035] p-3.5 sm:p-4">
         <div className="mb-3 flex flex-col gap-1">
           <span className="text-[13px] font-bold text-[#f5f5f7]">
             How did it make you feel?
@@ -1612,7 +1612,7 @@ function ReviewFormInModal({
                 }
                 onClick={() => setMood(m.value)}
                 onKeyDown={(event) => handleMoodKeyDown(event, index)}
-                className={`relative flex min-h-[84px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border px-2.5 py-3 text-center transition-[border-color,background-color,box-shadow,color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e3262a]/60 motion-safe:hover:-translate-y-px md:min-h-[76px] ${
+                className={`relative flex min-h-[84px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border px-2.5 py-3 text-center transition-[border-color,background-color,box-shadow,color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e3262a]/60 motion-safe:hover:-translate-y-px md:min-h-[76px] ${
                   isSelected
                     ? "border-[#e3262a] bg-[#e3262a]/[0.16] text-white shadow-[0_0_0_1px_rgba(227,38,42,0.25),0_12px_28px_rgba(227,38,42,0.18)]"
                     : "border-white/[0.10] bg-white/[0.045] text-white/70 hover:border-[#e3262a]/55 hover:bg-[#e3262a]/[0.08] hover:text-white"
