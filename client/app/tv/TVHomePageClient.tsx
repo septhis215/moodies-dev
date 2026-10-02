@@ -1,53 +1,22 @@
 "use client";
 
-import { tmdbImage } from "@/lib/tmdb";
-import React, { useState } from "react";
+import Link from "next/link";
+import { CalendarDays, Tv } from "lucide-react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
 import type { CommunityPulseData } from "@/types/communityPulse";
-import {
-  Star,
-  Heart,
-  Info,
-  ChevronRight,
-  Flame,
-  Calendar,
-  Bookmark,
-  Sparkles,
-  BookmarkCheck,
-  MessageSquare,
-  Tv,
-} from "lucide-react";
+import { tmdbImage } from "@/lib/tmdb";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import Link from "next/link";
-import { ComingSoonSection } from "@/components/sections/ComingSoon";
-import MoodRecommendationsSection from "@/components/sections/MoodRecommendationSection";
-import { useScrollToHash } from "@/hooks/useScrollToHash";
-import { useRouter } from "next/navigation";
-import { useWatchlist } from "@/hooks/useWatchlist";
-import { Carousel } from "@/components/ui/Carousel";
-import { CommunityPulseSection } from "@/components/sections/CommunityPulseSection";
-import { HomepageMediaHero } from "@/components/hero/HomepageMediaHero";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import RatingBadge from "@/components/ui/rating-badge";
-export default function TVHomePageClient({
-  trendingTV,
-  popularTV,
-  topRatedTV,
-  NewTVTrailer,
-  KoreanTV,
-  newReleaseTV,
-  airingToday = [],
-  airingThisWeek = [],
-  TVReview = [],
-  moods,
-  communityPulse,
-}: {
+import { HomepageMediaHero } from "@/components/hero/HomepageMediaHero";
+import { MediaShelf } from "@/components/media/MediaShelf";
+import MoodRecommendationsSection from "@/components/sections/MoodRecommendationSection";
+import CommunityPicks from "@/components/sections/CommunityPicks";
+import { ComingSoonSection } from "@/components/sections/ComingSoon";
+import { CommunityPulseSection } from "@/components/sections/CommunityPulseSection";
+import { useScrollToHash } from "@/hooks/useScrollToHash";
+
+type TVHomePageClientProps = {
   trendingTV: All[];
   popularTV: All[];
   topRatedTV: All[];
@@ -60,676 +29,216 @@ export default function TVHomePageClient({
   airingThisWeek?: All[];
   moods?: unknown[];
   communityPulse?: CommunityPulseData;
+};
+
+const titleFor = (item: All) => item.name || item.title || "Untitled";
+const posterFor = (item: All) =>
+  item.poster_path
+    ? tmdbImage(item.poster_path, "posterSmall")
+    : "/placeholder-poster.svg";
+
+function ScheduleColumn({
+  label,
+  description,
+  items,
+}: {
+  label: string;
+  description: string;
+  items: All[];
 }) {
-  const router = useRouter();
-  const { add, remove, isInWatchlist, ready } = useWatchlist();
-  const [loadingStates, setLoadingStates] = useState<
-    Record<string | number, boolean>
-  >({});
-  const getImageUrl = (path?: string | null) =>
-    path
-      ? tmdbImage(path, "original")
-      : "/placeholder-backdrop.svg";
-  const getPosterUrl = (path?: string | null) =>
-    path ? tmdbImage(path, "w500") : "/placeholder-poster.svg";
-  useScrollToHash(100);
-
-  /* ---------------- Compact TVCard ---------------- */
-  /* ---------------- Compact TVCard (Mobile Optimized) ---------------- */
-  const TVCard = ({
-    show,
-    size = "default",
-  }: {
-    show?: All;
-    size?: "default" | "large" | "wide";
-  }) => {
-    if (!show) return null;
-
-    const isWide = size === "wide";
-
-    const inWL = isInWatchlist(String(show.id), "series");
-    const isLoading = loadingStates[show.id] || false;
-
-    return (
-      <div className="group relative h-full">
-        <Link href={`/tv/${show.id}`} className="block h-full">
-          <div
-            className={`
-            relative rounded-2xl overflow-hidden
-            bg-neutral-950
-            shadow-lg shadow-black/25 ring-1 ring-white/10
-            transition duration-300 md:group-hover:ring-[#e94f37]/45
-
-            /* MOBILE: bigger + consistent */
-            aspect-[2/3]
-            w-full
-
-            /* DESKTOP */
-            md:${isWide ? "aspect-video" : "aspect-[2/3]"}
-          `}
-          >
-            <Image
-              src={
-                isWide
-                  ? getImageUrl(show.backdrop_path)
-                  : getPosterUrl(show.poster_path)
-              }
-              alt={show.title || show.name || ""}
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="
-              object-cover
-              transition-transform duration-700
-              md:group-hover:scale-110
-            "
-            />
-
-            {/* Always-visible mobile gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity" />
-
-            {/* Rating */}
-            <div className="absolute right-2 top-2 flex items-center gap-1 rounded-lg text-xs font-bold text-white sm:right-3 sm:top-3">
+  return (
+    <div>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-bold text-[var(--ink)]">{label}</h3>
+          <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
+            {description}
+          </p>
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-coral-strong)]">
+          {items.length} shows
+        </span>
+      </div>
+      <ol className="divide-y divide-[var(--surface-border)] border-y border-[var(--surface-border)]">
+        {items.map((show, index) => (
+          <li key={`${label}-${show.id}`}>
+            <Link
+              href={`/tv/${show.id}`}
+              className="group grid grid-cols-[24px_48px_minmax(0,1fr)_auto] items-center gap-3 py-3"
+            >
+              <span className="text-xs font-bold text-[var(--ink-muted)]">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="relative aspect-[2/3] overflow-hidden rounded-sm bg-[var(--surface-2)]">
+                <Image
+                  src={posterFor(show)}
+                  alt=""
+                  fill
+                  sizes="48px"
+                  className="object-cover"
+                />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                  {titleFor(show)}
+                </span>
+                <span className="mt-1 block truncate text-xs text-[var(--ink-muted)]">
+                  {label === "Today" ? "Episode today" : "Episode this week"}
+                </span>
+              </span>
               <RatingBadge
                 rating={show.vote_average}
                 variant="colored"
                 size="sm"
               />
-            </div>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
-            {/* ACTIONS */}
-            <div
-              className="
-              absolute inset-x-0 bottom-0
-              p-2.5 sm:p-3
+function AiringSchedule({ today }: { today: All[] }) {
+  const todayItems = today.slice(0, 4);
+  if (!todayItems.length) return null;
 
-              /* Mobile: always visible */
-              opacity-100
-
-              /* Desktop: hover only */
-              md:opacity-0 md:group-hover:opacity-100
-              transition-opacity
-            "
-            >
-              <div className="flex justify-center gap-2">
-                {/* Watchlist */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={async (e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (!ready) {
-                            router.push("/auth/login");
-                            return;
-                          }
-                          const itemId = show.id;
-                          setLoadingStates((prev) => ({
-                            ...prev,
-                            [itemId]: true,
-                          }));
-                          try {
-                            const title = show?.title ?? show?.name ?? null;
-                            const posterUrl = show?.poster_path
-                              ? getPosterUrl(show.poster_path)
-                              : null;
-
-                            if (inWL) {
-                              await remove(String(show.id), "series", {
-                                title,
-                                posterUrl,
-                              });
-                            } else {
-                              await add(String(show.id), "series", {
-                                title,
-                                posterUrl,
-                              });
-                            }
-                          } finally {
-                            setLoadingStates((prev) => ({
-                              ...prev,
-                              [itemId]: false,
-                            }));
-                          }
-                        }}
-                        disabled={isLoading}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 hover:scale-110 cursor-pointer ${
-                          inWL
-                            ? "bg-[#e94f37] text-white"
-                            : "bg-white text-black"
-                        } ${isLoading ? "opacity-70 cursor-not-allowed" : ""}`}
-                      >
-                        {isLoading ? (
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        ) : inWL ? (
-                          <BookmarkCheck className="w-4 h-4" />
-                        ) : (
-                          <Bookmark className="w-4 h-4" />
-                        )}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="bottom"
-                      sideOffset={8}
-                      className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
-                    >
-                      <div className="text-xs font-medium text-white">
-                        {isLoading
-                          ? "Updating..."
-                          : inWL
-                            ? "Remove from My List"
-                            : "Add to My List"}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                {/* Info */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          router.push(`/tv/${show.id}`);
-                        }}
-                        className="w-10 h-10 bg-white rounded-full sm:flex items-center justify-center shadow-lg hidden active:scale-95 hover:scale-110 cursor-pointer"
-                      >
-                        <Info className="w-4 h-4 text-black" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="bottom"
-                      sideOffset={8}
-                      className="rounded-lg bg-black/90 backdrop-blur-md px-3 py-2 shadow-xl border border-white/20"
-                    >
-                      <div className="text-xs font-medium text-white">
-                        More Info
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </div>
-          </div>
-
-          {/* TEXT */}
-          <div className="mt-2.5 px-0.5 sm:mt-3 sm:px-1">
-            <h4 className="line-clamp-2 text-sm font-bold leading-tight text-white transition-colors md:group-hover:text-[#e94f37] sm:text-base">
-              {show.title || show.name}
-            </h4>
-
-            <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-400 sm:text-xs">
-              {show.first_air_date && (
-                <span className="font-semibold">
-                  {show.first_air_date.split("-")[0]}
-                </span>
-              )}
-              {show.number_of_seasons && (
-                <>
-                  <span className="text-white/25">•</span>
-                  <span className="font-semibold">
-                    {show.number_of_seasons} Season
-                    {show.number_of_seasons > 1 ? "s" : ""}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-        </Link>
-      </div>
-    );
-  };
-
-  /* ---------------- Page Layout ---------------- */
   return (
-    <main className="relative bg-black text-white min-h-screen overflow-hidden">
-      {/* Moodies series backdrop */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(233,79,55,0.18),transparent_42%),linear-gradient(180deg,#030303_0%,#090909_45%,#000_100%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff06_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-40" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,black_82%)]" />
+    <section
+      id="airing-today"
+      className="scroll-mt-24 border-t border-[var(--surface-border)] pt-8 sm:pt-10"
+      aria-labelledby="airing-heading"
+    >
+      <div className="mb-5 border-l-2 border-[var(--brand-coral)] pl-4">
+        <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--brand-coral-strong)]">
+          <CalendarDays className="h-3.5 w-3.5" />
+          Programming guide
+        </p>
+        <h2
+          id="airing-heading"
+          className="mt-1 text-2xl font-bold leading-none text-[var(--ink)] sm:text-[28px]"
+        >
+          On air
+        </h2>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
+          New episodes scheduled for today, arranged as a compact programming
+          list instead of another poster wall.
+        </p>
       </div>
+      <ScheduleColumn
+        label="Today"
+        description="Episodes currently scheduled"
+        items={todayItems}
+      />
+    </section>
+  );
+}
+
+export default function TVHomePageClient({
+  trendingTV,
+  popularTV,
+  topRatedTV,
+  NewTVTrailer,
+  KoreanTV,
+  TVReview,
+  newReleaseTV,
+  airingToday = [],
+  airingThisWeek = [],
+  moods,
+  communityPulse,
+}: TVHomePageClientProps) {
+  useScrollToHash(100);
+  const marqueeItems = popularTV.length ? popularTV : trendingTV;
+
+  return (
+    <main className="min-h-screen overflow-x-clip bg-[var(--surface-0)] text-[var(--ink)]">
       <HomepageMediaHero
-        items={popularTV.length > 0 ? popularTV : trendingTV}
+        items={marqueeItems}
         mediaType="tv"
         icon={<Tv className="h-5 w-5" />}
-        eyebrow="Moodies series"
-        title="TV Series Hub"
-        description="Pick a poster to tune the episode-night spotlight."
-        spotlightLabel="Series spotlight"
+        eyebrow="Series"
+        title="What’s on tonight"
+        description="Use the marquee to choose a series, then check today’s episodes and the shows people are saving this week."
+        spotlightLabel="Selected series"
         mediaLabel="Series"
         primaryCta="View series"
       />
-      {/* MAIN CONTENT */}
-      <div className="relative mx-auto max-w-7xl space-y-11 px-4 py-10 sm:space-y-14 sm:px-6 sm:py-12 lg:space-y-16 lg:px-8 lg:py-14">
-        {/* Airing Today */}
-        {airingToday && airingToday.length > 0 && (
-          <section
-            id="airing-today"
-            className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
-          >
-            <div className="relative mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-[#e94f37] blur-lg opacity-40 animate-pulse" />
-                  <div className="relative w-3 h-3 rounded-full bg-[#e94f37] animate-pulse" />
-                </div>
-                <div>
-                  <span className="text-xs font-black text-[#ff8b78] uppercase tracking-wider block mb-1">
-                    Live Now
-                  </span>
-                  <h2 className="text-2xl font-black text-white sm:text-3xl lg:text-4xl">
-                    Airing Today
-                  </h2>
-                </div>
-              </div>
-              <Link
-                href="/tv/airing/today"
-                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group"
-              >
-                View All
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-            <Carousel
-              items={airingToday}
-              CardComponent={TVCard}
-              mobileBleed={false}
-            />
-          </section>
-        )}
 
-        {/* Trending Now */}
-        {popularTV && popularTV.length > 0 && (
-          <section
-            id="trending-tv"
-            className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
-          >
-            <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-[#e94f37] blur-xl opacity-50" />
-                  <Flame className="relative h-7 w-7 text-[#e94f37] sm:h-8 sm:w-8" />
-                </div>
-                <h2 className="text-2xl font-black text-white sm:text-3xl lg:text-4xl">
-                  Trending Now
-                </h2>
-              </div>
-              <Link
-                href="/tv/trending"
-                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group"
-              >
-                View All
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-            <Carousel
-              items={popularTV}
-              CardComponent={TVCard}
-              mobileBleed={false}
-            />
-          </section>
-        )}
+      <div className="ui-shell space-y-12 py-10 sm:space-y-16 sm:py-14">
+        <AiringSchedule today={airingToday} />
 
-        {/* New This Week - Responsive Grid */}
-        {newReleaseTV && newReleaseTV.length > 0 && (
-          <section
-            id="new-release-tv"
-            className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
-          >
-            <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-[#e94f37] blur-xl opacity-40" />
-                  <Sparkles className="relative h-7 w-7 text-[#ff7a66] sm:h-9 sm:w-9" />
-                </div>
-                <h2 className="text-2xl font-black text-white sm:text-3xl lg:text-4xl">
-                  New Releases
-                </h2>
-              </div>
+        <MediaShelf
+          id="trending-tv"
+          eyebrow="Most saved this week"
+          title="Trending series"
+          description="Series currently receiving the strongest audience attention on Moodies."
+          items={trendingTV}
+          hrefBase="/tv"
+          watchType="series"
+          viewAllHref="/tv/trending"
+        />
 
-              <Link
-                href="/tv/new-releases"
-                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group"
-              >
-                View All
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
+        <MediaShelf
+          id="new-release-tv"
+          eyebrow="Recently premiered"
+          title="New releases"
+          description="Series that have recently started or returned with new episodes."
+          items={newReleaseTV}
+          hrefBase="/tv"
+          watchType="series"
+          viewAllHref="/tv/new-releases"
+        />
 
-            <div className="grid grid-cols-12 gap-4 sm:gap-5">
-              {/* Large Featured */}
-              {newReleaseTV[0] && (
-                <Link
-                  href={`/tv/${newReleaseTV[0].id}`}
-                  className="col-span-12 lg:col-span-8 group"
-                >
-                  <div className="relative h-[320px] overflow-hidden rounded-2xl bg-zinc-900 shadow-2xl ring-1 ring-white/10 sm:h-96 sm:rounded-3xl lg:h-[500px]">
-                    {newReleaseTV[0].backdrop_path && (
-                      <>
-                        <Image
-                          src={getImageUrl(newReleaseTV[0].backdrop_path)}
-                          alt={newReleaseTV[0].title || ""}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 50vw"
-                          className="object-cover group-hover:scale-105 transition-transform duration-700"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-                      </>
-                    )}
+        <MediaShelf
+          id="top-rated-tv"
+          eyebrow="Audience favourites"
+          title="Top rated series"
+          description="High-scoring series with enough audience votes to earn attention."
+          items={topRatedTV}
+          hrefBase="/tv"
+          watchType="series"
+          viewAllHref="/tv/top-rated"
+        />
 
-                    <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8 lg:p-10">
-                      <div className="mb-3 inline-flex items-center gap-2 rounded-xl bg-[#e94f37] px-3 py-1.5 text-xs font-black shadow-lg sm:mb-4 sm:px-4 sm:py-2 sm:text-sm">
-                        <Sparkles className="w-4 h-4" />
-                        NEW RELEASE
-                      </div>
-                      <h3 className="mb-2 line-clamp-2 text-xl font-black text-white sm:mb-4 sm:text-4xl">
-                        {newReleaseTV[0].title}
-                      </h3>
-                      <p className="mb-4 line-clamp-2 max-w-3xl text-sm leading-6 text-gray-200 sm:mb-6 sm:text-lg sm:leading-relaxed">
-                        {newReleaseTV[0].overview}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-3 sm:gap-6">
-                        <div className="flex items-center gap-2">
-                          <RatingBadge
-                            rating={newReleaseTV[0].vote_average}
-                            variant="colored"
-                            size="sm"
-                          />
-                        </div>
-                        <span className="text-gray-300 font-semibold">
-                          {newReleaseTV[0].release_date}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              )}
+        <MediaShelf
+          id="airing-this-week"
+          eyebrow="Weekly schedule"
+          title="Airing this week"
+          description="Continuing series with episodes scheduled across the next several days."
+          items={airingThisWeek}
+          hrefBase="/tv"
+          watchType="series"
+          viewAllHref="/tv/airing/week"
+        />
 
-              {/* Right Side */}
-              <div className="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1 lg:gap-5">
-                {newReleaseTV.slice(1, 3).map((tv) => (
-                  <Link key={tv.id} href={`/tv/${tv.id}`} className="group">
-                    <div className="relative h-40 overflow-hidden rounded-2xl bg-zinc-900 shadow-xl ring-1 ring-white/10 sm:h-48 lg:h-[238px]">
-                      {tv.backdrop_path && (
-                        <>
-                          <Image
-                            src={getImageUrl(tv.backdrop_path)}
-                            alt={tv.title || ""}
-                            fill
-                            sizes="(max-width: 768px) 100vw, 50vw"
-                            className="object-cover group-hover:scale-110 transition-transform duration-700"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-                        </>
-                      )}
+        <MediaShelf
+          id="korean-tv"
+          eyebrow="International spotlight"
+          title="K-drama collection"
+          description="Korean dramas, thrillers, romances and continuing series."
+          items={KoreanTV}
+          hrefBase="/tv"
+          watchType="series"
+          viewAllHref="/tv/k-drama"
+        />
 
-                      <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-                        <h4 className="mb-2 line-clamp-1 text-base font-bold text-white transition-colors group-hover:text-[#ff7a66] sm:text-lg">
-                          {tv.title}
-                        </h4>
-                        <div className="flex items-center gap-3 text-sm">
-                          <div className="flex items-center gap-1">
-                            <RatingBadge
-                              rating={tv.vote_average}
-                              variant="colored"
-                              size="sm"
-                            />
-                          </div>
-                          <span className="text-gray-400 font-semibold">
-                            {tv.release_date?.split("-")[0]}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
-              {newReleaseTV.slice(3, 9).map((tv) => (
-                <div
-                  key={tv.id}
-                  className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
-                >
-                  <TVCard show={tv} />
-                </div>
-              ))}
-              <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />
-            </div>
-          </section>
-        )}
-
-        {/* Top Rated */}
-        {topRatedTV && topRatedTV.length > 0 && (
-          <section
-            id="top-rated-tv"
-            className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
-          >
-            <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <Star className="w-7 h-7 text-[#ff7a66]" />
-                <h2 className="text-2xl sm:text-3xl font-black">
-                  Top Rated Series
-                </h2>
-              </div>
-
-              <Link
-                href="/tv/top-rated"
-                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group"
-              >
-                View All
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-
-            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:pb-0 md:grid-cols-4 lg:grid-cols-6">
-              {topRatedTV.slice(0, 12).map((show) => (
-                <div
-                  key={show.id}
-                  className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
-                >
-                  <TVCard show={show} />
-                </div>
-              ))}
-              <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />
-            </div>
-          </section>
-        )}
-
-        {/* Airing This Week */}
-        {airingThisWeek && airingThisWeek.length > 0 && (
-          <section
-            id="airing-this-week"
-            className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
-          >
-            <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-7 h-7 text-indigo-500" />
-                <h2 className="text-2xl sm:text-3xl font-black">
-                  Airing This Week
-                </h2>
-              </div>
-
-              <Link
-                href="/tv/airing/week"
-                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group"
-              >
-                View All
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-            <Carousel
-              items={airingThisWeek}
-              CardComponent={TVCard}
-              mobileBleed={false}
-            />
-          </section>
-        )}
-
-        {/* K-Drama Collection */}
-        {KoreanTV && KoreanTV.length > 0 && (
-          <section
-            id="korean-tv"
-            className="relative rounded-3xl border border-white/10 bg-neutral-950/70 p-4 shadow-2xl shadow-black/30 sm:p-6"
-          >
-            <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <Image
-                  src="/images/south-korea.png"
-                  alt="Korean flag"
-                  width={40}
-                  height={40}
-                  className="rounded-full object-cover border border-white/20"
-                />
-                <h2 className="text-2xl sm:text-3xl font-black">
-                  K-Drama Collection
-                </h2>
-              </div>
-
-              <Link
-                href="/tv/k-drama"
-                className="text-sm font-bold text-gray-400 hover:text-[#e94f37] transition-colors flex items-center gap-2 group"
-              >
-                View All
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-            <Carousel
-              items={KoreanTV}
-              CardComponent={TVCard}
-              mobileBleed={false}
-            />
-          </section>
-        )}
         <CommunityPulseSection data={communityPulse} mediaType="tv" />
+      </div>
 
-        {TVReview.length > 0 && (
-          <section
-            id="reviews"
-            className="relative overflow-hidden p-3 sm:p-10"
-          >
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(233,79,55,0.055),transparent_34%),radial-gradient(circle_at_86%_12%,rgba(255,255,255,0.045),transparent_24%)]" />
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/10" />
+      <CommunityPicks
+        data={TVReview}
+        title="Critics corner"
+        subtitle="Recent member reviews, paired with the shows they watched."
+      />
 
-            <div className="relative mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="relative mt-1 flex h-10 w-10 items-center justify-center rounded-xl border border-[#e94f37]/25 bg-[#e94f37]/10 text-[#ff8b78] shadow-xl shadow-black/20">
-                  <MessageSquare className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl">
-                    Critics Corner
-                  </h2>
-                  <p className="mt-1 max-w-2xl text-sm leading-5 text-zinc-400">
-                    Quick community takes paired with the series they reviewed.
-                  </p>
-                </div>
-              </div>
+      <div className="ui-shell space-y-12 pb-14 pt-10 sm:space-y-16">
+        <ComingSoonSection
+          title="Premiering Soon"
+          items={NewTVTrailer}
+          type="tv"
+        />
 
-              <div className="flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.055] px-2.5 py-1.5 text-xs font-bold text-white/75">
-                <Heart className="h-3.5 w-3.5 text-[#ff8b78]" />
-                {Math.min(TVReview.length, 6)} fresh takes
-              </div>
-            </div>
-
-            <div className="relative flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
-              {TVReview.slice(0, 6).map((review, idx) => {
-                const criticName =
-                  review.user?.name || review.name || "Moodies critic";
-                const criticHandle = review.user?.username || review.name;
-                const initial =
-                  criticName.trim().charAt(0).toUpperCase() || "M";
-                const showTitle =
-                  review.movieTitle ||
-                  review.title ||
-                  (review.tmdbId
-                    ? `Series #${review.tmdbId}`
-                    : "Series review");
-                const showPoster = review.moviePoster
-                  ? getPosterUrl(review.moviePoster)
-                  : "/placeholder-poster.svg";
-
-                return (
-                  <div
-                    key={`${review.user?.id || "critic"}-${review.tmdbId || idx}-${idx}`}
-                    className="group relative w-[80vw] max-w-[330px] shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-zinc-950/85 p-2.5 shadow-xl shadow-black/25 ring-1 ring-white/5 transition-all hover:border-[#e94f37]/35 hover:bg-zinc-950 sm:w-auto sm:max-w-none"
-                  >
-                    <div className="absolute inset-x-0 top-0 h-px bg-[#e94f37]/45" />
-
-                    <div className="mb-2.5 flex gap-2.5">
-                      <div className="relative h-[4.5rem] w-12 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10 sm:h-20 sm:w-14">
-                        <Image
-                          src={showPoster}
-                          alt={showTitle}
-                          fill
-                          sizes="64px"
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <h3 className="line-clamp-2 text-sm font-black leading-tight text-white">
-                          {showTitle}
-                        </h3>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                          {review.movieYear && (
-                            <span className="rounded-full border border-white/10 bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold text-zinc-300">
-                              {review.movieYear}
-                            </span>
-                          )}
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] font-black text-amber-200 ring-1 ring-amber-400/20">
-                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            {review.rating?.toFixed(1) || "-"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border border-white/10 bg-black/25 p-2.5">
-                      <p className="line-clamp-3 text-sm leading-5 text-zinc-300">
-                        &ldquo;{review.quote || "No review available"}&rdquo;
-                      </p>
-                    </div>
-
-                    <div className="mt-3 flex items-center gap-2">
-                      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#e94f37]/15 text-[11px] font-black text-white ring-1 ring-[#e94f37]/25">
-                        {initial}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-bold text-white">
-                          {criticName}
-                        </p>
-                        {criticHandle && (
-                          <p className="truncate text-[11px] font-medium text-zinc-500">
-                            @{criticHandle}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />
-            </div>
-          </section>
-        )}
-
-        {NewTVTrailer?.length > 0 && (
-          <ComingSoonSection
-            title="Premiering Soon"
-            items={NewTVTrailer}
-            type="tv"
-          />
-        )}
-        {moods && moods.length > 0 && (
-          <div className="mx-auto max-w-7xl pt-1 sm:pt-0">
-            <MoodRecommendationsSection mediaType="tv" initialMoods={moods} />
-          </div>
-        )}
+        <MoodRecommendationsSection mediaType="tv" initialMoods={moods} />
       </div>
     </main>
   );

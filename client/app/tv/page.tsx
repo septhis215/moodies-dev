@@ -3,7 +3,7 @@ import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
 import type { CommunityPulseData } from "@/types/communityPulse";
 import TVHomePageClient from "./TVHomePageClient";
-const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
+const BASE_URL = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
 
 export const dynamic = "force-dynamic";
 
@@ -97,11 +97,79 @@ async function fetchTVTrailers() {
   return fetchWithFallback<All[]>("/tv/trailers?limit=15", []);
 }
 
+function extractMediaItems(payload: unknown): All[] {
+  if (Array.isArray(payload)) return payload as All[];
+  if (!payload || typeof payload !== "object") return [];
+
+  const record = payload as Record<string, unknown>;
+  for (const key of ["results", "items", "data"]) {
+    if (Array.isArray(record[key])) return record[key] as All[];
+  }
+
+  return [];
+}
+
+function normalizeUpcomingTV(payload: unknown): All[] {
+  const earliestAllowed = new Date();
+  earliestAllowed.setHours(0, 0, 0, 0);
+  earliestAllowed.setDate(earliestAllowed.getDate() - 1);
+
+  const unique = new Map<string, All>();
+
+  extractMediaItems(payload).forEach((item) => {
+    const releaseDate = item.first_air_date || item.release_date;
+    if (!item.id || !releaseDate) return;
+
+    const parsedDate = new Date(releaseDate);
+    if (
+      Number.isNaN(parsedDate.getTime()) ||
+      parsedDate.getTime() < earliestAllowed.getTime()
+    ) {
+      return;
+    }
+
+    const itemType = item.type;
+    const looksLikeTV =
+      itemType === "tv" ||
+      Boolean(item.first_air_date || item.name || item.number_of_seasons);
+    if (!looksLikeTV) return;
+
+    unique.set(String(item.id), {
+      ...item,
+      type: "tv",
+      first_air_date: item.first_air_date || releaseDate,
+      release_date: item.release_date || releaseDate,
+    });
+  });
+
+  return [...unique.values()].sort((a, b) => {
+    const aDate = new Date(
+      a.first_air_date || a.release_date || "9999-12-31",
+    ).getTime();
+    const bDate = new Date(
+      b.first_air_date || b.release_date || "9999-12-31",
+    ).getTime();
+    return aDate - bDate;
+  });
+}
+
 async function fetchNewTVTrailers() {
-  return fetchWithFallback<All[]>(
-    "/tv/upcoming-trailers?months=6&perMonth=18&maxPagesPerMonth=5",
-    [],
+  const primaryPayload = await fetchWithFallback<unknown>(
+    "/tv/upcoming-trailers?limit=60&months=6&perMonth=12&maxPagesPerMonth=3",
+    null,
   );
+  const primaryItems = normalizeUpcomingTV(primaryPayload);
+  if (primaryItems.length > 0) return primaryItems;
+
+  console.warn(
+    "TV upcoming endpoint returned no usable releases; using the combined upcoming feed.",
+  );
+  const fallbackPayload = await fetchWithFallback<unknown>(
+    "/all/upcoming-trailers?limit=80",
+    null,
+  );
+
+  return normalizeUpcomingTV(fallbackPayload).slice(0, 60);
 }
 
 async function fetchKoreanTV() {

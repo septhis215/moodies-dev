@@ -2,7 +2,7 @@ import React from "react";
 import { CategoryContent } from "@/components/category-content/CategoryContent";
 import { fetchPaginatedPage } from "@/lib/serverFetch";
 
-const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
+const BASE_URL = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
 
 async function fetchAiringThisWeek(page: number = 1) {
   return fetchPaginatedPage(`${BASE_URL}/tv/airing/week?page=${page}&limit=20`, {
