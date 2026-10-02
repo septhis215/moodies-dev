@@ -1,7 +1,7 @@
 "use client";
 import { cn } from "@/lib/utils";
 import { tmdbImage } from "@/lib/tmdb";
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -9,6 +9,7 @@ import {
   Clapperboard,
   ExternalLink,
   Maximize2,
+  Play,
   RefreshCw,
   Sparkles,
   Search,
@@ -23,6 +24,11 @@ import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiked } from "@/hooks/useLiked";
 import { useAuth } from "@/app/context/AuthProvider";
+import {
+  YT_PLAYER_STATE,
+  createYouTubePlayer,
+  type YouTubePlayer,
+} from "@/lib/youtube-player";
 
 interface VideoItem {
   id: number;
@@ -63,6 +69,8 @@ type FeedContentLike = Partial<VideoItem> & {
 
 type Category = "all" | "upcoming";
 type LoadingMode = "idle" | "initial" | "more" | "refresh";
+/** Playback signals the mounted player reports back to the page. */
+type FeedPlayerStatus = "playing" | "paused" | "blocked" | "error";
 
 const feedTabs: Array<{
   value: Category;
@@ -115,7 +123,10 @@ export default function VideoFeedPage() {
   const reportedViewsRef = useRef<Set<string>>(new Set());
 
   // Mobile browsers only guarantee autoplay while muted. Once the user
-  // explicitly enables sound, that preference carries to subsequent videos.
+  // explicitly enables sound, that preference carries to subsequent videos —
+  // but it may only be enabled from a deliberate tap on the sound control.
+  // Treating any stray gesture as consent would unmute the next card and the
+  // autoplay policy would then refuse to start it at all.
   const [muted, setMuted] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
@@ -129,6 +140,7 @@ export default function VideoFeedPage() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [manuallyPaused, setManuallyPaused] = useState(false);
   const [playerError, setPlayerError] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [playerReloadKey, setPlayerReloadKey] = useState(0);
   const [modalBackdropError, setModalBackdropError] = useState(false);
   const [isMobileFullscreen, setIsMobileFullscreen] = useState(false);
@@ -141,14 +153,15 @@ export default function VideoFeedPage() {
 
   const panelRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRefs = useRef<Map<string, HTMLIFrameElement>>(new Map());
-  const firstUserGestureRef = useRef(false);
+  /** Live player instance, published by the mounted slide's own player. */
+  const playerRef = useRef<YouTubePlayer | null>(null);
   const isPlayingRef = useRef(true);
   const manuallyPausedRef = useRef(false);
-  const panelWasOpenRef = useRef(false);
-  const wasPlayingBeforePanelRef = useRef(true);
+  const autoplayBlockedRef = useRef(false);
+  const gatesClearRef = useRef(true);
+  const recoveryTimerRef = useRef<number | null>(null);
+  const recoveryAttemptsRef = useRef(0);
   const wasPlayingBeforeFullscreenRef = useRef(true);
-  const fullscreenIframeRef = useRef<HTMLIFrameElement | null>(null);
   const [videoReady, setVideoReady] = useState(false);
   const [feedVisible, setFeedVisible] = useState(true);
 
@@ -301,7 +314,7 @@ export default function VideoFeedPage() {
       const requestGeneration = fetchGenerationRef.current;
 
       try {
-        const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+        const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
         const limit = isInitial ? INITIAL_FETCH_SIZE : PREFETCH_SIZE;
         const currentPage = nextPageRef.current;
         const viewerParam = viewerIdRef.current
@@ -389,39 +402,39 @@ export default function VideoFeedPage() {
       getVideoIdentity,
     ],
   );
+  const destroyActivePlayer = useCallback(() => {
+    const player = playerRef.current;
+    playerRef.current = null;
+    if (!player) return;
+    try {
+      player.destroy();
+    } catch {
+      /* the API has already torn this player down */
+    }
+  }, []);
+
   const cleanupOldVideos = useCallback(() => {
     const videosAhead = videos.length - currentIndex;
     if (currentIndex > CLEANUP_THRESHOLD && videosAhead > WINDOW_SIZE / 2) {
       const keepFrom = Math.max(0, currentIndex - 2);
       if (keepFrom > 0) {
-        setVideos((prev) => {
-          const newVideos = prev.slice(keepFrom);
-          prev
-            .slice(0, keepFrom)
-            .forEach((video) =>
-              videoRefs.current.delete(getVideoIdentity(video)),
-            );
-          return newVideos;
-        });
+        // Dropped slides unmount, and each slide owns its player, so their
+        // players are destroyed by their own effect cleanup.
+        setVideos((prev) => prev.slice(keepFrom));
         indexOffsetRef.current += keepFrom;
         setCurrentIndex((prev) => prev - keepFrom);
       }
     }
-  }, [
-    currentIndex,
-    videos.length,
-    CLEANUP_THRESHOLD,
-    WINDOW_SIZE,
-    getVideoIdentity,
-  ]);
+  }, [currentIndex, videos.length, CLEANUP_THRESHOLD, WINDOW_SIZE]);
 
   const resetFeed = useCallback(
     (mode: LoadingMode = "initial") => {
       fetchGenerationRef.current += 1;
       fetchAbortRef.current?.abort();
       if (retryTimerRef.current) window.clearTimeout(retryTimerRef.current);
-      videoRefs.current.clear();
+      destroyActivePlayer();
       setVideoReady(false);
+      setAutoplayBlocked(false);
       setVideos([]);
       setCurrentIndex(0);
       indexOffsetRef.current = 0;
@@ -438,7 +451,7 @@ export default function VideoFeedPage() {
       const timer = window.setTimeout(() => fetchMoreVideos(true, mode), 80);
       return () => window.clearTimeout(timer);
     },
-    [fetchMoreVideos],
+    [fetchMoreVideos, destroyActivePlayer],
   );
 
   useEffect(() => {
@@ -489,18 +502,33 @@ export default function VideoFeedPage() {
     setExpanded(false);
     setVideoReady(false);
     setPlayerError(false);
+    setAutoplayBlocked(false);
     setModalBackdropError(false);
     setIsMobileFullscreen(false);
     manuallyPausedRef.current = false;
     setManuallyPaused(false);
     setIsPlaying(false);
+    if (recoveryTimerRef.current !== null) {
+      window.clearTimeout(recoveryTimerRef.current);
+      recoveryTimerRef.current = null;
+    }
+    recoveryAttemptsRef.current = 0;
   }, [currentIndex]);
 
+  // Safety net for a player that never reaches PLAYING. `videoReady` is now
+  // derived from real player state, so this can finally fire on a video that is
+  // genuinely stuck instead of being disarmed the moment markup appeared.
   useEffect(() => {
-    if (!currentVideo || videoReady) return;
+    if (!currentVideo || videoReady || autoplayBlocked) return;
     const timer = window.setTimeout(() => setPlayerError(true), 12000);
     return () => window.clearTimeout(timer);
-  }, [currentVideo, currentVideoIdentity, playerReloadKey, videoReady]);
+  }, [
+    currentVideo,
+    currentVideoIdentity,
+    playerReloadKey,
+    videoReady,
+    autoplayBlocked,
+  ]);
 
   useEffect(() => {
     if (!currentVideo?.id || !currentVideo.primary_video?.key) return;
@@ -511,7 +539,7 @@ export default function VideoFeedPage() {
 
     const timer = window.setTimeout(() => {
       reportedViewsRef.current.add(identity);
-      const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
       void fetch(`${base}/all/video-feed/viewed`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -545,163 +573,132 @@ export default function VideoFeedPage() {
   }, [manuallyPaused]);
 
   useEffect(() => {
-    const handlePlayerMessage = (event: MessageEvent) => {
+    autoplayBlockedRef.current = autoplayBlocked;
+  }, [autoplayBlocked]);
+
+  useEffect(() => {
+    gatesClearRef.current = feedVisible && !panelOpen && !manuallyPaused;
+  }, [feedVisible, panelOpen, manuallyPaused]);
+
+  // ── PLAYER CONTROL LAYER ──────────────────────────────────────
+  // Every playback signal comes from the YouTube IFrame API. The feed no longer
+  // posts raw `postMessage` commands at an embed iframe: that protocol is
+  // undocumented, no message channel was ever bound here, so the page was
+  // driving a player it could not observe and calling a video "ready" as soon as
+  // its markup parsed.
+  const attachPlayer = useCallback((player: YouTubePlayer | null) => {
+    playerRef.current = player;
+  }, []);
+
+  const handlePlayerStatus = useCallback((status: FeedPlayerStatus) => {
+    if (status === "playing") {
+      setAutoplayBlocked(false);
+      setVideoReady(true);
+      setPlayerError(false);
+      setIsPlaying(true);
+      return;
+    }
+    if (status === "paused") {
+      setIsPlaying(false);
+      // A pause nobody in this page asked for. Chrome quietly suspends muted
+      // autoplays it decides are background noise, so recover it a couple of
+      // times; if the browser keeps refusing, the forced play comes back as
+      // "blocked" and the viewer gets an explicit control instead of a freeze.
+      // The recovery never touches isPlaying: the player's own PLAYING event is
+      // what is allowed to claim the video came back.
       if (
-        !event.origin.includes("youtube.com") &&
-        !event.origin.includes("youtube-nocookie.com")
+        recoveryTimerRef.current !== null ||
+        recoveryAttemptsRef.current >= 2 ||
+        !gatesClearRef.current
       ) {
         return;
       }
-      const iframe = videoRefs.current.get(currentVideoIdentity);
-      if (!iframe || event.source !== iframe.contentWindow) return;
-
-      try {
-        const payload =
-          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-        const playerState = payload?.info?.playerState;
-
-        if (playerState === 1) {
-          setVideoReady(true);
-          setPlayerError(false);
-          if (manuallyPausedRef.current || panelOpen || !feedVisible) {
-            sendYouTubeCommand(iframe, "pauseVideo");
-            setIsPlaying(false);
-            return;
-          }
-          setIsPlaying(true);
-        } else if (playerState === 0 || playerState === 2) {
-          setIsPlaying(false);
+      recoveryTimerRef.current = window.setTimeout(() => {
+        recoveryTimerRef.current = null;
+        recoveryAttemptsRef.current += 1;
+        if (!gatesClearRef.current) return;
+        try {
+          playerRef.current?.playVideo();
+        } catch {
+          /* the player is mid-teardown */
         }
-
-        if (payload?.event === "onError" || payload?.info?.errorCode) {
-          setPlayerError(true);
-          setVideoReady(false);
-          setIsPlaying(false);
-        }
-      } catch {
-        // Ignore unrelated postMessage payloads.
-      }
-    };
-
-    window.addEventListener("message", handlePlayerMessage);
-    return () => window.removeEventListener("message", handlePlayerMessage);
-  }, [currentVideoIdentity, feedVisible, panelOpen]);
-
-  const sendYouTubeCommand = (
-    iframe: HTMLIFrameElement | undefined | null,
-    func: string,
-    args: unknown[] = [],
-  ) => {
-    if (!iframe) return;
-    try {
-      iframe.contentWindow?.postMessage(
-        JSON.stringify({ event: "command", func, args }),
-        "*",
-      );
-    } catch {}
-  };
-
-  const pauseInactiveVideos = useCallback(
-    (activeIdentity?: string) => {
-      videoRefs.current.forEach((iframe, identity) => {
-        if (identity !== activeIdentity) sendYouTubeCommand(iframe, "pauseVideo", []);
-      });
-    },
-    [],
-  );
-
-  const applyAudioState = useCallback(
-    (iframe: HTMLIFrameElement | undefined | null) => {
-      if (!iframe) return;
-      if (muted) {
-        sendYouTubeCommand(iframe, "mute");
-        return;
-      }
-      sendYouTubeCommand(iframe, "setVolume", [100]);
-      sendYouTubeCommand(iframe, "unMute");
-    },
-    [muted],
-  );
-
-  const unlockActiveAudio = useCallback(() => {
-    firstUserGestureRef.current = true;
-    setAudioUnlocked(true);
-    setMuted(false);
-    const iframe = videoRefs.current.get(currentVideoIdentity);
-    if (!iframe) return;
-
-    sendYouTubeCommand(iframe, "setVolume", [100]);
-    sendYouTubeCommand(iframe, "unMute");
-    if (!manuallyPausedRef.current && !panelOpen) {
-      sendYouTubeCommand(iframe, "playVideo");
-      setIsPlaying(true);
+      }, 500);
+      return;
     }
-    window.setTimeout(() => {
-      sendYouTubeCommand(iframe, "setVolume", [100]);
-      sendYouTubeCommand(iframe, "unMute");
-      if (!manuallyPausedRef.current && !panelOpen) {
-        sendYouTubeCommand(iframe, "playVideo");
-      }
-    }, 180);
-  }, [currentVideoIdentity, panelOpen]);
+    if (status === "blocked") {
+      // The browser refused to start the video. Show an explicit gesture
+      // instead of a loading spinner that will never resolve.
+      setAutoplayBlocked(true);
+      setVideoReady(false);
+      setIsPlaying(false);
+      return;
+    }
+    setPlayerError(true);
+    setVideoReady(false);
+    setAutoplayBlocked(false);
+    setIsPlaying(false);
+  }, []);
 
-  const playActiveVideo = useCallback((force = false) => {
-    if (!currentVideo || !feedVisible || panelOpen) return;
-    if (manuallyPausedRef.current && !force) return;
-    const iframe = videoRefs.current.get(currentVideoIdentity);
-    if (!iframe) return;
+  const pauseActiveVideo = useCallback(() => {
+    try {
+      playerRef.current?.pauseVideo();
+    } catch {
+      /* the player is mid-teardown */
+    }
+    setIsPlaying(false);
+  }, []);
 
-    pauseInactiveVideos(currentVideoIdentity);
-    sendYouTubeCommand(iframe, "playVideo", []);
-    applyAudioState(iframe);
-    setIsPlaying(true);
-  }, [
-    applyAudioState,
-    currentVideo,
-    currentVideoIdentity,
-    feedVisible,
-    panelOpen,
-    pauseInactiveVideos,
-  ]);
+  const playActiveVideo = useCallback(
+    (force = false) => {
+      if (!currentVideo || !feedVisible || panelOpen) return;
+      if (manuallyPausedRef.current && !force) return;
+      // A video the browser blocked only restarts from a real gesture; retrying
+      // from an effect just bounces off the same autoplay policy.
+      if (autoplayBlockedRef.current && !force) return;
+      const player = playerRef.current;
+      if (!player) return;
+
+      setAutoplayBlocked(false);
+      player.playVideo();
+      setIsPlaying(true);
+    },
+    [currentVideo, feedVisible, panelOpen],
+  );
+
+  /**
+   * Recovers a video the browser refused to autoplay. Must be called directly
+   * from a click handler: the user gesture is what unlocks playback, and
+   * deferring the call (a timeout, an effect) loses it.
+   */
+  const startPlaybackFromGesture = useCallback(() => {
+    manuallyPausedRef.current = false;
+    setManuallyPaused(false);
+    playActiveVideo(true);
+  }, [playActiveVideo]);
 
   const toggleMute = useCallback(() => {
-    firstUserGestureRef.current = true;
     setAudioUnlocked(true);
-    setMuted((prev) => {
-      const next = !prev;
-      const iframe = currentVideo
-        ? videoRefs.current.get(currentVideoIdentity)
-        : undefined;
-      if (iframe) {
-        if (next) {
-          sendYouTubeCommand(iframe, "mute");
-        } else {
-          sendYouTubeCommand(iframe, "setVolume", [100]);
-          sendYouTubeCommand(iframe, "unMute");
-        }
-      }
-      return next;
-    });
-  }, [currentVideo, currentVideoIdentity]);
+    setMuted((prev) => !prev);
+  }, []);
 
-  useEffect(() => {
-    if (!currentVideo) return;
-    const iframe = videoRefs.current.get(currentVideoIdentity);
-    if (iframe) {
-      const t = window.setTimeout(
-        () => {
-          applyAudioState(iframe);
-        },
-        250,
-      );
-      return () => clearTimeout(t);
+  /** Turns sound on from a deliberate tap, then keeps the video running. */
+  const enableAudio = useCallback(() => {
+    setAudioUnlocked(true);
+    setMuted(false);
+    const player = playerRef.current;
+    if (!player || manuallyPausedRef.current || panelOpen) return;
+    try {
+      player.setVolume(100);
+      player.unMute();
+      // Unmuting can flip a tolerated muted stream into a blocked one, so
+      // restart inside the same gesture rather than waiting to notice.
+      player.playVideo();
+      setAutoplayBlocked(false);
+      setIsPlaying(true);
+    } catch {
+      /* the player is mid-teardown */
     }
-  }, [
-    applyAudioState,
-    currentVideo,
-    currentVideo?.id,
-    currentVideoIdentity,
-  ]);
+  }, [panelOpen]);
 
   const handleScroll = useCallback(
     (e: WheelEvent) => {
@@ -767,48 +764,26 @@ export default function VideoFeedPage() {
     };
   }, [handleScroll, handleTouchStart, handleTouchEnd, panelOpen]);
 
+  // Playback gate: a trailer only runs while the tab is visible, the details
+  // panel is closed, the user has not paused it and the browser has not blocked
+  // autoplay. Opening the panel pauses; closing it resumes.
   useEffect(() => {
     if (!currentVideo) return;
-    const activeIframe = videoRefs.current.get(currentVideoIdentity);
-    pauseInactiveVideos(currentVideoIdentity);
-    setIsPlaying(false);
-    const t = window.setTimeout(() => {
-      playActiveVideo();
-    }, 350);
-    return () => {
-      clearTimeout(t);
-      sendYouTubeCommand(activeIframe, "pauseVideo", []);
-    };
+    if (!feedVisible || panelOpen) {
+      pauseActiveVideo();
+      return;
+    }
+    if (manuallyPausedRef.current || autoplayBlocked) return;
+    const timer = window.setTimeout(() => playActiveVideo(), 260);
+    return () => window.clearTimeout(timer);
   }, [
+    autoplayBlocked,
     currentVideo,
-    currentVideo?.id,
-    currentVideoIdentity,
     feedVisible,
-    pauseInactiveVideos,
+    panelOpen,
+    pauseActiveVideo,
     playActiveVideo,
   ]);
-
-  useEffect(() => {
-    const wasOpen = panelWasOpenRef.current;
-
-    if (panelOpen && !wasOpen) {
-      wasPlayingBeforePanelRef.current =
-        isPlayingRef.current && !manuallyPausedRef.current;
-      const iframe = videoRefs.current.get(currentVideoIdentity);
-      sendYouTubeCommand(iframe, "pauseVideo", []);
-      setIsPlaying(false);
-    } else if (
-      !panelOpen &&
-      wasOpen &&
-      wasPlayingBeforePanelRef.current &&
-      !manuallyPausedRef.current &&
-      feedVisible
-    ) {
-      window.setTimeout(() => playActiveVideo(), 180);
-    }
-
-    panelWasOpenRef.current = panelOpen;
-  }, [currentVideoIdentity, feedVisible, panelOpen, playActiveVideo]);
 
   useEffect(() => {
     if (!panelOpen) return;
@@ -822,89 +797,28 @@ export default function VideoFeedPage() {
     };
   }, [panelOpen]);
 
+  // Only tab visibility gates playback. The old `blur` handler marked the feed
+  // hidden whenever the window lost focus, and a window that never fires
+  // `focus` again (clicking into another monitor, a devtools focus steal) left
+  // every later play attempt early-returning for the rest of the session.
   useEffect(() => {
     const handleVisibilityChange = () => {
-      const visible = document.visibilityState === "visible";
-      setFeedVisible(visible);
-      const iframe = currentVideo
-        ? videoRefs.current.get(currentVideoIdentity)
-        : undefined;
-      if (!visible) {
-        videoRefs.current.forEach((videoIframe) =>
-          sendYouTubeCommand(videoIframe, "pauseVideo", []),
-        );
-        setIsPlaying(false);
-        return;
-      }
-      if (iframe) window.setTimeout(() => playActiveVideo(), 180);
+      setFeedVisible(document.visibilityState === "visible");
     };
-
-    const handleBlur = () => {
-      setFeedVisible(false);
-      videoRefs.current.forEach((iframe) =>
-        sendYouTubeCommand(iframe, "pauseVideo", []),
-      );
-      setIsPlaying(false);
-    };
-
-    const handleFocus = () => {
-      setFeedVisible(true);
-      window.setTimeout(() => playActiveVideo(), 180);
-    };
-
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleBlur);
-    window.addEventListener("focus", handleFocus);
-
-    return () => {
+    return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleBlur);
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [currentVideo, currentVideoIdentity, playActiveVideo]);
-
-  useEffect(() => {
-    if (!currentVideo) return;
-    if (audioUnlocked) return;
-    window.addEventListener("pointerdown", unlockActiveAudio, {
-      capture: true,
-      passive: true,
-    });
-    window.addEventListener("keydown", unlockActiveAudio, { capture: true });
-    return () => {
-      window.removeEventListener("pointerdown", unlockActiveAudio, {
-        capture: true,
-      });
-      window.removeEventListener("keydown", unlockActiveAudio, {
-        capture: true,
-      });
-    };
-  }, [audioUnlocked, currentVideo, currentVideo?.id, unlockActiveAudio]);
-
-  const iframeSrc = useMemo(() => {
-    if (!currentVideo?.primary_video?.key) return "";
-    const key = currentVideo.primary_video.key;
-    const origin =
-      typeof window !== "undefined"
-        ? encodeURIComponent(window.location.origin)
-        : "";
-    return `https://www.youtube.com/embed/${key}?autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&cc_load_policy=0&autohide=1&showinfo=0&modestbranding=1&rel=0&loop=1&playlist=${key}&enablejsapi=1&playsinline=1&mute=1&vq=hd1080&origin=${origin}`;
-  }, [currentVideo?.primary_video?.key]);
+  }, []);
 
   const togglePlayPause = () => {
     if (!currentVideo) return;
-    const iframe = videoRefs.current.get(currentVideoIdentity);
-    if (!iframe) return;
-    firstUserGestureRef.current = true;
+    if (!playerRef.current) return;
     if (isPlaying) {
       manuallyPausedRef.current = true;
       setManuallyPaused(true);
-      sendYouTubeCommand(iframe, "pauseVideo", []);
-      setIsPlaying(false);
+      pauseActiveVideo();
     } else {
-      manuallyPausedRef.current = false;
-      setManuallyPaused(false);
-      playActiveVideo(true);
+      startPlaybackFromGesture();
     }
   };
 
@@ -946,23 +860,23 @@ export default function VideoFeedPage() {
     currentOrientation === "portrait" ||
     (typeof currentAspectRatio === "number" && currentAspectRatio < 1);
   const isLandscapeVideo = !isPortraitVideo;
+  // Escape hatch for landscape trailers on small screens: a stock YouTube
+  // player with native controls, opened from a tap, so the autoplay policy is
+  // satisfied by that gesture instead of being fought.
   const fullscreenIframeSrc = currentVideo?.primary_video?.key
-    ? `https://www.youtube.com/embed/${currentVideo.primary_video.key}?autoplay=1&controls=1&disablekb=0&fs=0&iv_load_policy=3&modestbranding=1&rel=0&enablejsapi=1&playsinline=1&mute=${muted ? 1 : 0}&vq=hd1080`
+    ? `https://www.youtube.com/embed/${currentVideo.primary_video.key}?autoplay=1&controls=1&fs=0&iv_load_policy=3&modestbranding=1&rel=0&playsinline=1&mute=${muted ? 1 : 0}&vq=hd1080`
     : "";
 
   const openMobileFullscreen = () => {
     if (!currentVideo || !isLandscapeVideo) return;
     wasPlayingBeforeFullscreenRef.current =
       isPlayingRef.current && !manuallyPausedRef.current;
-    const iframe = videoRefs.current.get(currentVideoIdentity);
-    sendYouTubeCommand(iframe, "pauseVideo");
-    setIsPlaying(false);
+    pauseActiveVideo();
     setIsMobileFullscreen(true);
   };
 
   const closeMobileFullscreen = useCallback(() => {
     setIsMobileFullscreen(false);
-    fullscreenIframeRef.current = null;
     if (
       wasPlayingBeforeFullscreenRef.current &&
       !manuallyPausedRef.current &&
@@ -995,6 +909,8 @@ export default function VideoFeedPage() {
     "relative isolate overflow-hidden bg-black",
     videoFrameSizeClassName,
   );
+
+  const playbackAllowed = feedVisible && !panelOpen && !manuallyPaused;
 
   return (
     <div
@@ -1150,7 +1066,7 @@ export default function VideoFeedPage() {
                       aria-hidden="true"
                     />
                   )}
-                  {!videoReady && (
+                  {!videoReady && !playerError && !autoplayBlocked && (
                     <div className="absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
                       <div className="h-9 w-9 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
                       <span className="rounded-full border border-white/10 bg-black/45 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/55 backdrop-blur">
@@ -1159,62 +1075,47 @@ export default function VideoFeedPage() {
                     </div>
                   )}
                   <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.10),transparent_58%)] mix-blend-screen" />
-                  <iframe
-                    key={`${currentVideoIdentity}:${playerReloadKey}`}
-                    ref={(el) => {
-                      if (el && currentVideo) {
-                        videoRefs.current.set(currentVideoIdentity, el);
-                      } else {
-                        videoRefs.current.delete(currentVideoIdentity);
-                      }
-                    }}
+                  <FeedVideoPlayer
+                    videoKey={currentVideo.primary_video.key}
+                    reloadKey={playerReloadKey}
+                    muted={muted}
+                    playbackAllowed={playbackAllowed}
+                    onStatus={handlePlayerStatus}
+                    attachPlayer={attachPlayer}
                     title={videoTitle || `video-${currentVideo.id}`}
-                    src={iframeSrc}
                     className="absolute inset-0 h-full w-full bg-black brightness-[1.14] contrast-[1.03] saturate-[1.08]"
-                    allow="autoplay; encrypted-media; picture-in-picture"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    style={{ border: "none", pointerEvents: "none" }}
-                    onLoad={(e) => {
-                      const iframe = e.currentTarget as HTMLIFrameElement;
-                      if (currentVideo)
-                        videoRefs.current.set(currentVideoIdentity, iframe);
-                      setVideoReady(true);
-                      setPlayerError(false);
-                      iframe.contentWindow?.postMessage(
-                        JSON.stringify({
-                          event: "listening",
-                          id: currentVideoIdentity,
-                        }),
-                        "*",
-                      );
-                      window.setTimeout(() => {
-                        iframe.contentWindow?.postMessage(
-                          JSON.stringify({
-                            event: "listening",
-                            id: currentVideoIdentity,
-                          }),
-                          "*",
-                        );
-                        playActiveVideo();
-                        applyAudioState(iframe);
-                      }, 180);
-                      window.setTimeout(() => {
-                        playActiveVideo();
-                        applyAudioState(iframe);
-                      }, 650);
-                    }}
-                    onError={() => {
-                      setVideoReady(false);
-                      setPlayerError(true);
-                      setIsPlaying(false);
-                    }}
                   />
+                  {/*
+                   * The feed keeps ownership of every gesture: the player host is
+                   * pointer-transparent so a tap lands here (where play/pause runs
+                   * inside a real user gesture) and a swipe still reaches the feed's
+                   * touch handlers instead of the player's own scroll chrome.
+                   */}
                   <button
                     type="button"
                     onClick={togglePlayPause}
                     aria-label={isPlaying ? "Pause video" : "Play video"}
                     className="absolute inset-0 z-[12] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
                   />
+                  {autoplayBlocked && !playerError && (
+                    <button
+                      type="button"
+                      onClick={startPlaybackFromGesture}
+                      aria-label={`Play ${videoTitle || "video"}`}
+                      className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/40 transition hover:bg-black/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
+                    >
+                      <span className="grid h-16 w-16 place-items-center rounded-full border border-white/20 bg-white/12 shadow-xl shadow-black/30 backdrop-blur">
+                        <Play
+                          className="h-7 w-7 translate-x-px text-white"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <span className="rounded-full border border-white/15 bg-black/55 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/85">
+                        Tap to play
+                      </span>
+                    </button>
+                  )}
                   {playerError && (
                     <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 px-6 text-center backdrop-blur-sm">
                       <div className="max-w-xs">
@@ -1251,7 +1152,7 @@ export default function VideoFeedPage() {
                   {!audioUnlocked && muted && videoReady && (
                     <button
                       type="button"
-                      onClick={unlockActiveAudio}
+                      onClick={enableAudio}
                       className="absolute left-1/2 top-24 z-30 -translate-x-1/2 rounded-full border border-white/15 bg-black/55 px-3.5 py-2 text-[11px] font-semibold text-white/85 shadow-lg backdrop-blur-md transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                     >
                       Tap for sound
@@ -1511,23 +1412,11 @@ export default function VideoFeedPage() {
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black lg:hidden"
           >
             <iframe
-              ref={fullscreenIframeRef}
               title={`${videoTitle} fullscreen`}
               src={fullscreenIframeSrc}
               className="aspect-video max-h-[100svh] w-full bg-black"
               allow="autoplay; encrypted-media; picture-in-picture"
               referrerPolicy="strict-origin-when-cross-origin"
-              onLoad={(event) => {
-                const iframe = event.currentTarget;
-                fullscreenIframeRef.current = iframe;
-                sendYouTubeCommand(iframe, "playVideo");
-                if (muted) {
-                  sendYouTubeCommand(iframe, "mute");
-                } else {
-                  sendYouTubeCommand(iframe, "setVolume", [100]);
-                  sendYouTubeCommand(iframe, "unMute");
-                }
-              }}
             />
             <button
               type="button"
@@ -1794,5 +1683,192 @@ export default function VideoFeedPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/**
+ * One slide, one `YT.Player`.
+ *
+ * The player lives in its own component so that its lifecycle is tied to the
+ * exact DOM node it renders into. An exiting slide stays mounted while the next
+ * one fades in, so a page-level effect can just as easily find the node that is
+ * about to disappear; owning the mount here makes that impossible.
+ *
+ * The instance is published upward through `attachPlayer` because the page still
+ * drives play/pause from its own gestures, and playback is reported through
+ * `onStatus` so the UI only claims a video is ready once the player says so.
+ */
+function FeedVideoPlayer({
+  videoKey,
+  reloadKey,
+  muted,
+  playbackAllowed,
+  onStatus,
+  attachPlayer,
+  title,
+  className,
+}: {
+  videoKey: string;
+  reloadKey: number;
+  muted: boolean;
+  playbackAllowed: boolean;
+  onStatus: (status: FeedPlayerStatus) => void;
+  attachPlayer: (player: YouTubePlayer | null) => void;
+  title: string;
+  className?: string;
+}) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const playerRef = useRef<YouTubePlayer | null>(null);
+  const mutedRef = useRef(muted);
+  const allowedRef = useRef(playbackAllowed);
+
+  useEffect(() => {
+    allowedRef.current = playbackAllowed;
+  }, [playbackAllowed]);
+
+  useEffect(() => {
+    mutedRef.current = muted;
+    const player = playerRef.current;
+    if (!player) return;
+    try {
+      if (muted) {
+        player.mute();
+      } else {
+        player.setVolume(100);
+        player.unMute();
+      }
+    } catch {
+      /* the player is mid-teardown */
+    }
+  }, [muted]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+
+    let cancelled = false;
+
+    const mount = async () => {
+      let player: YouTubePlayer | null = null;
+      try {
+        player = await createYouTubePlayer(host, {
+          videoId: videoKey,
+          playerVars: {
+            autoplay: 1,
+            // Always start muted — it is the only setting every autoplay policy
+            // tolerates. The user's real audio preference is applied in onReady.
+            mute: 1,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            loop: 1,
+            playlist: videoKey,
+            rel: 0,
+            modestbranding: 1,
+            iv_load_policy: 3,
+            cc_load_policy: 0,
+            autohide: 1,
+            playsinline: 1,
+            vq: "hd1080",
+          },
+          events: {
+            onReady: (event) => {
+              if (cancelled) return;
+              const ready = event.target;
+              try {
+                if (mutedRef.current) ready.mute();
+                else {
+                  ready.setVolume(100);
+                  ready.unMute();
+                }
+                if (allowedRef.current) ready.playVideo();
+                else ready.pauseVideo();
+              } catch {
+                /* the player is mid-teardown */
+              }
+              // onReady is not "playing". Give the browser's answer a beat, then
+              // trust the measured state over the request that was made.
+              window.setTimeout(() => {
+                if (cancelled) return;
+                if (ready.getPlayerState() !== YT_PLAYER_STATE.PLAYING) {
+                  onStatus("blocked");
+                }
+              }, 4000);
+            },
+            onStateChange: (event) => {
+              if (cancelled) return;
+              if (event.data === YT_PLAYER_STATE.PLAYING) {
+                onStatus("playing");
+              } else if (event.data === YT_PLAYER_STATE.PAUSED) {
+                onStatus("paused");
+              }
+              // ENDED is deliberately ignored: loop=1 restarts the trailer, and
+              // honouring that boundary would flicker the play/pause state.
+            },
+            onError: () => {
+              if (!cancelled) onStatus("error");
+            },
+            // The only signal that proves the browser refused to start the video.
+            // A plain embed iframe cannot report this, which is why the previous
+            // implementation never noticed it happening.
+            onAutoplayBlocked: () => {
+              if (!cancelled) onStatus("blocked");
+            },
+          },
+        });
+      } catch {
+        if (!cancelled) onStatus("error");
+        return;
+      }
+
+      if (!player) return;
+      if (cancelled) {
+        try {
+          player.destroy();
+        } catch {
+          /* already torn down */
+        }
+        return;
+      }
+
+      playerRef.current = player;
+      attachPlayer(player);
+
+      // The API builds its own iframe, so permissions and the accessible name
+      // have to be applied to the node it created, not to a node we render.
+      const frame = player.getIframe();
+      if (frame) {
+        frame.setAttribute("title", title);
+        frame.setAttribute(
+          "allow",
+          "autoplay; encrypted-media; picture-in-picture",
+        );
+        frame.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+      }
+    };
+
+    void mount();
+
+    return () => {
+      cancelled = true;
+      const live = playerRef.current;
+      playerRef.current = null;
+      if (live) {
+        attachPlayer(null);
+        try {
+          live.destroy();
+        } catch {
+          /* already torn down */
+        }
+      }
+      host.replaceChildren();
+    };
+  }, [videoKey, reloadKey, title, attachPlayer, onStatus]);
+
+  return (
+    <div
+      ref={hostRef}
+      className={cn(className, "pointer-events-none select-none")}
+    />
   );
 }
