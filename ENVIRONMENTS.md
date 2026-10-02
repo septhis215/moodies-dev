@@ -16,7 +16,8 @@ npx prisma generate        # IMPORTANT: schema changed; regenerate the Prisma cl
 # frontend
 cd ../client
 npm install
-npm run env:local          # or env:staging — see below
+cp .env.example .env
+npm run dev:local          # or npm run dev:staging
 ```
 
 If you skip `npx prisma generate`, the server fails to compile with errors like
@@ -27,34 +28,29 @@ Prisma client is stale. Regenerate it.
 
 ## Frontend: switching which backend it talks to
 
-The frontend reads its API base URL from env vars. There are now **three** target
-environments and a one-command switch.
+The frontend reads all environment settings from one `.env` file. The npm command
+selects which API URL is active, so the host URL does not need to be edited.
 
 | Command (run in `client/`) | Frontend talks to |
 |---|---|
-| `npm run env:local`   | `http://localhost:4000/api` (your local backend) |
-| `npm run env:staging` | The API URL in `MOODIES_STAGING_API_URL` |
-| `npm run env:prod`    | The API URL in `MOODIES_PROD_API_URL` |
+| `npm run dev:local`   | `LOCAL_API_URL` |
+| `npm run dev:staging` | `STAGING_API_URL` |
+| `npm run build:production` | `PRODUCTION_API_URL` |
 
-After switching, **restart the dev server** (`Ctrl+C`, then `npm run dev`) — Next.js only
-reads env files at startup.
+Next.js reads `.env` at startup and inlines `NEXT_PUBLIC_*` values during the build.
 
 ### How it works (env file layout)
 
 | File | Purpose | Committed? |
 |---|---|---|
-| `.env` | Shared, non-URL values (e.g. TMDB key) | ❌ gitignored — get values from a teammate |
-| `.env.development` | Local API URLs (`localhost:4000`) — auto-loaded by `next dev` | ✅ yes |
-| `.env.production` | Prod API URLs — auto-loaded by `next build`/`start` | ❌ gitignored |
-| `.env.local` | Active override; written by the `env:*` scripts | ❌ gitignored |
+| `.env` | All local settings and local/staging/production API URLs | ❌ gitignored — copy `.env.example` |
 
-- `npm run env:staging`/`env:prod` write `.env.local` (which wins over everything).
-- `npm run env:local` deletes `.env.local` so it falls back to `.env.development`.
-- Set `MOODIES_STAGING_API_URL` or `MOODIES_PROD_API_URL` in your shell before running
-  the matching switch command. The scripts intentionally do not contain deployment URLs.
+- `npm run dev:local` selects `LOCAL_API_URL`.
+- `npm run dev:staging` selects `STAGING_API_URL`.
+- `npm run build:production` selects `PRODUCTION_API_URL`.
 
-> ⚠️ **Note:** Next.js does **not** load `.env.staging`. Only `.env`, `.env.local`,
-> `.env.development`, `.env.production` are auto-loaded. Don't rely on a `.env.staging` file.
+> ⚠️ **Note:** Next.js does **not** load `.env.staging`; this setup intentionally uses
+> one `.env` file and selects the target through the npm command.
 
 ---
 
@@ -133,7 +129,7 @@ static export without a larger client-side rendering migration. Do not add
 For the current client, use Cloudflare's Next.js Workers integration, or deliberately
 migrate the client to a fully static/client-rendered architecture before selecting
 Cloudflare Pages' **Next.js (Static HTML Export)** preset. Client production variables
-are documented in `client/.env.production.example`.
+are documented in `client/.env.example`.
 
 If the client is later made static, the Pages settings are:
 

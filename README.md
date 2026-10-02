@@ -31,7 +31,7 @@ For local frontend API wiring:
 
 ```bash
 cd client
-npm run env:local
+npm run dev:local
 ```
 
 ## Development
