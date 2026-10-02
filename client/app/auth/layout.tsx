@@ -37,7 +37,7 @@ const fallbackSlides: Slide[] = [
 ];
 
 async function fetchAuthFeatured(): Promise<Slide[]> {
-  const base = process.env.NEST_API_URL || "http://localhost:4000";
+  const base = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
   try {
     const res = await fetch(`${base}/all/trending`, {
       next: { revalidate: 180 },

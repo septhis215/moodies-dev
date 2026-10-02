@@ -3,37 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-
-// Extend window for the YouTube IFrame API
-declare global {
-  interface Window {
-    YT?: {
-      Player: new (
-        elementId: string,
-        options: Record<string, unknown>,
-      ) => YTPlayer;
-      PlayerState?: {
-        ENDED: number;
-        PLAYING: number;
-        PAUSED: number;
-        BUFFERING: number;
-        CUED: number;
-        UNSTARTED: number;
-      };
-    };
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
-
-type YTPlayer = {
-  destroy: () => void;
-  getPlayerState: () => number;
-  getDuration: () => number;
-  getCurrentTime: () => number;
-  playVideo: () => void;
-  mute: () => void;
-  unMute: () => void;
-};
+import {
+  loadYouTubeApi,
+  type YouTubePlayer,
+} from "@/lib/youtube-player";
 
 type VideoStatus = "loading" | "playing" | "ended" | "error" | "blocked";
 
@@ -47,7 +20,7 @@ type Props = { slides: Slide[]; rotationMs?: number };
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-  "http://localhost:4000";
+  "https://dev.api.moodies.tech/api";
 
 /** Fisher-Yates shuffle — returns a new array, doesn't mutate the original. */
 function shuffleArray<T>(arr: T[]): T[] {
@@ -59,29 +32,6 @@ function shuffleArray<T>(arr: T[]): T[] {
   return shuffled;
 }
 
-/** Loads the YouTube IFrame API once and returns the YT namespace. */
-function loadYouTubeApi(): Promise<NonNullable<typeof window.YT>> {
-  return new Promise((resolve, reject) => {
-    if (typeof window === "undefined") return reject(new Error("No window"));
-    if (window.YT?.Player) return resolve(window.YT);
-
-    const prevReady = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
-      if (prevReady) prevReady();
-      if (window.YT) resolve(window.YT);
-      else reject(new Error("YouTube API failed to load"));
-    };
-
-    if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      tag.async = true;
-      tag.onerror = () => reject(new Error("YouTube script failed"));
-      document.body.appendChild(tag);
-    }
-  });
-}
-
 export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
   const [idx, setIdx] = useState(0);
   const [phase, setPhase] = useState<"image" | "video">("image");
@@ -89,7 +39,7 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [trailerKeys, setTrailerKeys] = useState<Record<number, string>>({});
   const [videoStatus, setVideoStatus] = useState<VideoStatus>("loading");
-  const playerRef = useRef<YTPlayer | null>(null);
+  const playerRef = useRef<YouTubePlayer | null>(null);
   const playerIdRef = useRef(`yt-player-${Math.random().toString(36).slice(2, 9)}`);
   const audioEnabledRef = useRef(audioEnabled);
   const pathname = usePathname();
@@ -234,7 +184,7 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
     if (typeof window === "undefined") return;
 
     let cancelled = false;
-    let player: YTPlayer | null = null;
+    let player: YouTubePlayer | null = null;
 
     const start = async () => {
       try {
@@ -259,7 +209,7 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
             cc_load_policy: 0,
           },
           events: {
-            onReady: (event: { target: YTPlayer }) => {
+            onReady: (event: { target: YouTubePlayer }) => {
               if (cancelled) return;
               setVideoStatus("loading");
               // Respect the user's audio preference for this player
