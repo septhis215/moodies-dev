@@ -11,7 +11,7 @@ import type { MovieDetailsData } from "@/components/selected-content/types";
 
 async function fetchDetails(id: string): Promise<MovieDetailsData | null> {
   try {
-    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
     const res = await fetch(`${base}/movies/details/${id}`, {
       next: { revalidate: 60 },
     });
@@ -24,7 +24,7 @@ async function fetchDetails(id: string): Promise<MovieDetailsData | null> {
 
 async function fetchImages(id: string) {
   try {
-    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
     const res = await fetch(`${base}/movies/images/movie/${id}`, {
       next: { revalidate: 60 },
     });
@@ -37,7 +37,7 @@ async function fetchImages(id: string) {
 
 async function fetchVideos(id: string) {
   try {
-    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
     const res = await fetch(`${base}/movies/videos/movie/${id}`, {
       next: { revalidate: 60 },
     });
@@ -50,7 +50,7 @@ async function fetchVideos(id: string) {
 
 async function fetchRecommendations(id: string) {
   try {
-    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
     const res = await fetch(`${base}/movies/recommendations/${id}`, {
       next: { revalidate: 60 },
     });
@@ -63,7 +63,7 @@ async function fetchRecommendations(id: string) {
 
 async function fetchReviews(id: string) {
   try {
-    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
     const res = await fetch(
       `${base}/reviews/media/MOVIE/${id}?page=1&limit=10`,
       {
@@ -88,7 +88,7 @@ async function fetchReviews(id: string) {
 
 async function fetchReviewStats(id: string) {
   try {
-    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
     const res = await fetch(`${base}/reviews/media/MOVIE/${id}/stats`, {
       cache: "no-store",
     });

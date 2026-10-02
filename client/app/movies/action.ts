@@ -1,7 +1,7 @@
 // app/movies/action.ts
 'use server';
 
-const NEST_API_URL = process.env.NEST_API_URL || 'http://localhost:4000';
+const NEST_API_URL = process.env.NEST_API_URL || 'https://dev.api.moodies.tech/api';
 
 export async function getMoodRecommendations(
     moodId: string,

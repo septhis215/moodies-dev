@@ -1,45 +1,24 @@
 "use client";
 
-import { tmdbImage } from "@/lib/tmdb";
-import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import {
   AlertCircle,
   Bookmark,
   Heart,
-  Loader2,
   MessageSquare,
-  Star,
-  Trophy,
   Users,
 } from "lucide-react";
 import type {
   CommunityPulseData,
   CommunityPulseItem,
 } from "@/types/communityPulse";
+import { tmdbImage } from "@/lib/tmdb";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
+import RatingBadge from "@/components/ui/rating-badge";
 import { fmtCount } from "@/utils/mediaStatsClient";
 
 type MediaType = "movie" | "tv";
 type PulseMetric = "liked" | "saved" | "reviewed";
-
-type MetricTheme = {
-  label: string;
-  shortLabel: string;
-  icon: ReactNode;
-  text: string;
-  bg: string;
-  border: string;
-  soft: string;
-  hoverBorder: string;
-};
-
-type PulseLane = {
-  metric: PulseMetric;
-  title: string;
-  description: string;
-  data: CommunityPulseItem[];
-};
 
 type CommunityPulseSectionProps = {
   data?: CommunityPulseData;
@@ -48,370 +27,76 @@ type CommunityPulseSectionProps = {
   error?: string | null;
 };
 
-const METRIC_THEME: Record<PulseMetric, MetricTheme> = {
-  liked: {
-    label: "Likes",
-    shortLabel: "Liked",
-    icon: <Heart className="h-3.5 w-3.5" />,
-    text: "text-pink-300",
-    bg: "bg-pink-400/10",
-    border: "border-pink-400/25",
-    soft: "bg-pink-400/5",
-    hoverBorder: "hover:border-pink-300/35",
-  },
-  saved: {
-    label: "Saves",
-    shortLabel: "Saved",
-    icon: <Bookmark className="h-3.5 w-3.5" />,
-    text: "text-emerald-300",
-    bg: "bg-emerald-400/10",
-    border: "border-emerald-400/25",
-    soft: "bg-emerald-400/5",
-    hoverBorder: "hover:border-emerald-300/35",
-  },
-  reviewed: {
-    label: "Reviews",
-    shortLabel: "Reviewed",
-    icon: <MessageSquare className="h-3.5 w-3.5" />,
-    text: "text-blue-300",
-    bg: "bg-blue-400/10",
-    border: "border-blue-400/25",
-    soft: "bg-blue-400/5",
-    hoverBorder: "hover:border-blue-300/35",
-  },
+type CommunitySignal = {
+  metric: PulseMetric;
+  item: CommunityPulseItem;
 };
 
 const getPosterUrl = (path?: string | null) =>
-  path ? tmdbImage(path, "w500") : "/placeholder-poster.svg";
+  path ? tmdbImage(path, "posterCard") : "/placeholder-poster.svg";
 
 const getItemHref = (mediaType: MediaType, id: number) =>
   mediaType === "tv" ? `/tv/${id}` : `/movies/${id}`;
 
 const getYear = (item: CommunityPulseItem) =>
-  item.release_date ? item.release_date.split("-")[0] : "TBA";
+  item.release_date?.split("-")[0] || "TBA";
 
-const getStatValue = (item: CommunityPulseItem, metric: PulseMetric) => {
-  if (metric === "liked") return item.likeCount;
-  if (metric === "saved") return item.savedCount;
-  return item.reviewCount;
+const signalIcon = (metric: PulseMetric) => {
+  if (metric === "saved") return <Bookmark className="h-3.5 w-3.5" />;
+  if (metric === "reviewed") return <MessageSquare className="h-3.5 w-3.5" />;
+  return <Heart className="h-3.5 w-3.5" />;
 };
 
-function StatPill({
-  metric,
-  value,
-  compact = false,
-}: {
-  metric: PulseMetric;
-  value: number;
-  compact?: boolean;
-}) {
-  const theme = METRIC_THEME[metric];
+const signalCopy = (signal: CommunitySignal) => {
+  const { item, metric } = signal;
+  if (metric === "saved") {
+    return `${fmtCount(item.savedCount)} members saved this for later`;
+  }
+  if (metric === "reviewed") {
+    return `${fmtCount(item.reviewCount)} reviews are keeping this in conversation`;
+  }
+  return `${fmtCount(item.likeCount)} members gave this a positive signal`;
+};
 
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border ${theme.border} ${theme.bg} px-1.5 py-0.5 font-bold ${theme.text} ${
-        compact ? "text-[10px]" : "text-xs"
-      }`}
-    >
-      {theme.icon}
-      <span>{fmtCount(value)}</span>
-      {!compact && <span className="text-white/45">{theme.label}</span>}
-    </span>
-  );
+function collectSignals(data: CommunityPulseData): CommunitySignal[] {
+  const candidates: CommunitySignal[] = [
+    ...data.mostSaved.slice(0, 3).map((item) => ({
+      metric: "saved" as const,
+      item,
+    })),
+    ...data.mostReviewed.slice(0, 3).map((item) => ({
+      metric: "reviewed" as const,
+      item,
+    })),
+    ...data.mostLiked.slice(0, 3).map((item) => ({
+      metric: "liked" as const,
+      item,
+    })),
+  ];
+
+  const seen = new Set<number>();
+  return candidates.filter(({ item }) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
 }
 
-function PosterThumb({
-  item,
-  priority = false,
-}: {
-  item: CommunityPulseItem;
-  priority?: boolean;
-}) {
+function PulseLoading() {
   return (
-    <div className="relative h-[68px] w-[46px] shrink-0 overflow-hidden rounded-lg bg-zinc-900 ring-1 ring-white/10 sm:h-[74px] sm:w-[50px]">
-      <Image
-        src={getPosterUrl(item.poster_path)}
-        alt={item.title}
-        fill
-        priority={priority}
-        sizes="56px"
-        className="object-cover transition-transform duration-500 group-hover:scale-105"
-      />
-    </div>
-  );
-}
-
-function FeaturedWinnerCard({
-  item,
-  metric,
-  mediaType,
-}: {
-  item: CommunityPulseItem;
-  metric: PulseMetric;
-  mediaType: MediaType;
-}) {
-  const theme = METRIC_THEME[metric];
-  const mediaLabel = mediaType === "tv" ? "Series" : "Movie";
-
-  return (
-    <Link
-      href={getItemHref(mediaType, item.id)}
-      className={`group relative block overflow-hidden rounded-2xl border ${theme.border} bg-zinc-950 shadow-xl shadow-black/25 transition-all duration-200 hover:bg-zinc-900/95 ${theme.hoverBorder}`}
-    >
-      <div className={`pointer-events-none absolute inset-0 ${theme.soft}`} />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/20" />
-
-      <div className="relative grid grid-cols-[4.75rem_minmax(0,1fr)] gap-2.5 p-2.5 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:p-3">
-        <div className="relative">
-          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10">
-            <Image
-              src={getPosterUrl(item.poster_path)}
-              alt={item.title}
-              fill
-              priority
-              sizes="128px"
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/70 to-transparent" />
-          </div>
-          <div
-            className={`absolute -left-1.5 -top-1.5 flex h-9 w-9 items-center justify-center rounded-xl border ${theme.border} bg-black/90 text-sm font-black ${theme.text} shadow-xl shadow-black/40 backdrop-blur`}
-          >
-            1
-          </div>
-        </div>
-
-        <div className="flex min-w-0 flex-col justify-between py-1">
-          <div>
-            <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-              <span
-                className={`inline-flex items-center gap-1 rounded-full border ${theme.border} ${theme.bg} px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${theme.text}`}
-              >
-                <Trophy className="h-3 w-3" />
-                #1
-              </span>
-            </div>
-
-            <h4 className="line-clamp-2 text-sm font-black leading-tight text-white sm:text-lg">
-              {item.title}
-            </h4>
-
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-zinc-400">
-              <span className="inline-flex items-center gap-1 font-bold text-white">
-                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                {item.vote_average > 0 ? item.vote_average.toFixed(1) : "New"}
-              </span>
-              <span>{mediaLabel}</span>
-              <span>{getYear(item)}</span>
+    <div className="grid gap-4 lg:grid-cols-12" aria-hidden="true">
+      <div className="h-[280px] animate-pulse rounded-md bg-[var(--surface-1)] lg:col-span-5" />
+      <div className="divide-y divide-[var(--surface-border)] border-y border-[var(--surface-border)] lg:col-span-7">
+        {[0, 1, 2, 3, 4].map((index) => (
+          <div key={index} className="flex gap-3 py-1.5">
+            <div className="h-[50px] w-9 animate-pulse rounded-sm bg-[var(--surface-2)]" />
+            <div className="flex-1 space-y-2 pt-1.5">
+              <div className="h-3 w-28 animate-pulse rounded bg-[var(--surface-2)]" />
+              <div className="h-4 w-2/3 animate-pulse rounded bg-[var(--surface-2)]" />
             </div>
           </div>
-
-          <div className="mt-2.5">
-            <div
-              className={`mb-1.5 inline-flex items-center gap-1.5 rounded-full border ${theme.border} ${theme.bg} px-2.5 py-1 text-xs font-black ${theme.text}`}
-            >
-              {theme.icon}
-              {fmtCount(getStatValue(item, metric))}
-            </div>
-
-            <div className="flex flex-wrap gap-1">
-              {metric !== "liked" && (
-                <StatPill metric="liked" value={item.likeCount} compact />
-              )}
-              {metric !== "saved" && (
-                <StatPill metric="saved" value={item.savedCount} compact />
-              )}
-              {metric !== "reviewed" && (
-                <StatPill metric="reviewed" value={item.reviewCount} compact />
-              )}
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
-    </Link>
-  );
-}
-
-function RankingRow({
-  item,
-  rank,
-  metric,
-  mediaType,
-}: {
-  item: CommunityPulseItem;
-  rank: number;
-  metric: PulseMetric;
-  mediaType: MediaType;
-}) {
-  const theme = METRIC_THEME[metric];
-  const mediaLabel = mediaType === "tv" ? "Series" : "Movie";
-
-  return (
-    <Link
-      href={getItemHref(mediaType, item.id)}
-      className={`group grid grid-cols-[2rem_2.875rem_minmax(0,1fr)] gap-2.5 rounded-xl border border-white/10 bg-white/[0.035] p-2 transition-all duration-200 hover:bg-white/[0.06] ${theme.hoverBorder} sm:grid-cols-[2.25rem_3.125rem_minmax(0,1fr)]`}
-    >
-      <div className="flex items-start justify-center pt-1">
-        <span
-          className={`flex h-7 w-7 items-center justify-center rounded-lg border text-xs font-black ${theme.border} ${theme.soft} ${theme.text}`}
-        >
-          {rank}
-        </span>
-      </div>
-
-      <PosterThumb item={item} priority={rank === 1} />
-
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2 py-0.5 text-[10px] font-black text-amber-200 ring-1 ring-amber-400/20">
-            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-            {item.vote_average > 0 ? item.vote_average.toFixed(1) : "New"}
-          </span>
-          <span className="text-[11px] font-semibold text-zinc-500">
-            {mediaLabel} · {getYear(item)}
-          </span>
-        </div>
-
-        <h4 className="mt-1 line-clamp-2 text-sm font-black leading-tight text-white transition-colors group-hover:text-white">
-          {item.title}
-        </h4>
-
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          <StatPill metric="liked" value={item.likeCount} compact />
-          <StatPill metric="saved" value={item.savedCount} compact />
-          <StatPill metric="reviewed" value={item.reviewCount} compact />
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function PulseLaneCard({
-  lane,
-  mediaType,
-}: {
-  lane: PulseLane;
-  mediaType: MediaType;
-}) {
-  const theme = METRIC_THEME[lane.metric];
-  const leader = lane.data[0];
-
-  return (
-    <article className="rounded-2xl border border-white/10 bg-zinc-950/80 p-2.5 shadow-xl shadow-black/20 ring-1 ring-white/[0.04] sm:p-3">
-      <div className="mb-2.5 flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <div
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${theme.border} ${theme.bg} ${theme.text}`}
-          >
-            {theme.icon}
-          </div>
-          <div className="min-w-0">
-            <h3 className="truncate text-base font-black text-white">
-              {lane.title}
-            </h3>
-          </div>
-        </div>
-      </div>
-
-      {leader ? (
-        <>
-          <FeaturedWinnerCard
-            item={leader}
-            metric={lane.metric}
-            mediaType={mediaType}
-          />
-          <div className="mt-2 space-y-2">
-            {lane.data.slice(1, 5).map((item, index) => (
-              <RankingRow
-                key={`${lane.metric}-${item.id}`}
-                item={item}
-                rank={index + 2}
-                metric={lane.metric}
-                mediaType={mediaType}
-              />
-            ))}
-          </div>
-        </>
-      ) : (
-        <EmptyLane metric={lane.metric} />
-      )}
-    </article>
-  );
-}
-
-function EmptyLane({ metric }: { metric: PulseMetric }) {
-  const theme = METRIC_THEME[metric];
-
-  return (
-    <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.025] p-4 text-center">
-      <div
-        className={`mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl border ${theme.border} ${theme.bg} ${theme.text}`}
-      >
-        {theme.icon}
-      </div>
-      <p className="text-sm font-bold text-white">No rankings yet</p>
-      <p className="mt-1 text-xs leading-5 text-zinc-500">
-        Community activity will appear here once members start engaging.
-      </p>
-    </div>
-  );
-}
-
-function PulseState({
-  icon,
-  title,
-  message,
-}: {
-  icon: ReactNode;
-  title: string;
-  message: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-950/80 p-6 text-center shadow-xl shadow-black/20">
-      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.055] text-[#ff8b78]">
-        {icon}
-      </div>
-      <h3 className="text-lg font-black text-white">{title}</h3>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-5 text-zinc-500">
-        {message}
-      </p>
-    </div>
-  );
-}
-
-function PulseSkeleton() {
-  return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-      {[0, 1, 2].map((lane) => (
-        <div
-          key={lane}
-          className="rounded-2xl border border-white/10 bg-zinc-950/80 p-3"
-        >
-          <div className="mb-3 flex items-center gap-3">
-            <div className="h-9 w-9 animate-pulse rounded-xl bg-white/10" />
-            <div className="min-w-0 flex-1">
-              <div className="h-4 w-28 animate-pulse rounded bg-white/10" />
-              <div className="mt-2 h-3 w-40 animate-pulse rounded bg-white/[0.07]" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            {[0, 1, 2, 3].map((row) => (
-              <div
-                key={row}
-                className="grid grid-cols-[2rem_2.875rem_1fr] gap-2.5 rounded-xl border border-white/10 bg-white/[0.025] p-2"
-              >
-                <div className="h-7 w-7 animate-pulse rounded-lg bg-white/10" />
-                <div className="h-[68px] w-[46px] animate-pulse rounded-lg bg-white/10" />
-                <div className="min-w-0 pt-1">
-                  <div className="h-3 w-24 animate-pulse rounded bg-white/10" />
-                  <div className="mt-3 h-4 w-3/4 animate-pulse rounded bg-white/10" />
-                  <div className="mt-3 h-3 w-full animate-pulse rounded bg-white/[0.07]" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
@@ -423,105 +108,129 @@ export function CommunityPulseSection({
   error,
 }: CommunityPulseSectionProps) {
   const mediaLabel = mediaType === "tv" ? "series" : "movies";
-  const lanes: PulseLane[] = [
-    {
-      metric: "liked",
-      title: "Most Liked",
-      description: `The ${mediaLabel} getting the warmest reactions.`,
-      data: data?.mostLiked ?? [],
-    },
-    {
-      metric: "saved",
-      title: "Most Saved",
-      description: `Watchlist picks people are saving for later.`,
-      data: data?.mostSaved ?? [],
-    },
-    {
-      metric: "reviewed",
-      title: "Most Reviewed",
-      description: `The ${mediaLabel} driving the most conversation.`,
-      data: data?.mostReviewed ?? [],
-    },
-  ];
-
-  const shouldShowLoading = isLoading || (!data && !error);
-  const hasItems = lanes.some((lane) => lane.data.length > 0);
+  const signals = data ? collectSignals(data) : [];
+  const [leadSignal, ...remainingSignals] = signals;
+  const showLoading = isLoading || (!data && !error);
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/75 p-3 shadow-2xl shadow-black/30 sm:p-4">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(233,79,55,0.055),transparent_34%),radial-gradient(circle_at_86%_10%,rgba(244,114,182,0.07),transparent_22%),radial-gradient(circle_at_14%_88%,rgba(52,211,153,0.055),transparent_24%)]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/10" />
+    <section
+      id={`${mediaType}-community-pulse`}
+      className="border-t border-[var(--surface-border)] pt-6 sm:pt-7"
+      aria-labelledby={`${mediaType}-community-pulse-heading`}
+    >
+      <div className="mb-4 max-w-2xl">
+        <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--brand-coral-strong)]">
+          <Users className="h-3.5 w-3.5" />
+          Community signal
+        </p>
+        <h2
+          id={`${mediaType}-community-pulse-heading`}
+          className="mt-1 text-2xl font-bold leading-none text-[var(--ink)] sm:text-[28px]"
+        >
+          Community pulse
+        </h2>
+        <p className="mt-1.5 text-sm leading-5 text-[var(--ink-muted)]">
+          The {mediaLabel} Moodies members are saving, discussing and responding
+          to right now.
+        </p>
+      </div>
 
-      <div className="relative mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e94f37]/25 bg-[#e94f37]/10 text-[#ff8b78] shadow-xl shadow-black/20">
-            <Users className="h-5 w-5" />
-          </div>
+      {showLoading ? (
+        <PulseLoading />
+      ) : error ? (
+        <div className="flex items-start gap-3 border-y border-[var(--surface-border)] py-6 text-[var(--ink-muted)]">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--brand-coral-strong)]" />
           <div>
-            <h2 className="mt-1 text-2xl font-black text-white sm:text-3xl">
-              Community Pulse
-            </h2>
-            <p className="mt-1 max-w-2xl text-sm font-medium leading-5 text-zinc-400">
-              What members are liking, saving, and reviewing right now.
+            <p className="font-semibold text-[var(--ink)]">
+              Community activity is unavailable
             </p>
+            <p className="mt-1 text-sm">{error}</p>
           </div>
         </div>
-
-        <div className="flex w-full gap-2 lg:w-auto">
-          {(["liked", "saved", "reviewed"] as PulseMetric[]).map((metric) => {
-            const theme = METRIC_THEME[metric];
-            return (
-              <div
-                key={metric}
-                className={`flex h-9 flex-1 items-center justify-center rounded-xl border ${theme.border} ${theme.bg} px-2 lg:w-10 lg:flex-none`}
-                title={theme.label}
-              >
-                <div className={`flex items-center gap-1.5 ${theme.text}`}>
-                  {theme.icon}
-                  <span className="text-[11px] font-black uppercase tracking-[0.12em] lg:hidden">
-                    {theme.shortLabel}
-                  </span>
-                </div>
+      ) : leadSignal ? (
+        <div className="grid gap-4 lg:grid-cols-12">
+          <Link
+            href={getItemHref(mediaType, leadSignal.item.id)}
+            className="group grid min-h-[280px] grid-cols-[38%_1fr] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] lg:col-span-5 lg:grid-cols-[42%_1fr]"
+          >
+            <div className="relative min-h-full bg-[var(--surface-2)]">
+              <Image
+                src={getPosterUrl(leadSignal.item.poster_path)}
+                alt={leadSignal.item.title}
+                fill
+                sizes="(max-width: 640px) 100vw, 220px"
+                className="object-cover"
+              />
+            </div>
+            <div className="flex min-w-0 flex-col p-4">
+              <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--brand-coral-strong)]">
+                {signalIcon(leadSignal.metric)}
+                Moving now
+              </p>
+              <h3 className="mt-3 text-xl font-bold leading-none text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                {leadSignal.item.title}
+              </h3>
+              <p className="mt-2 line-clamp-3 text-sm leading-5 text-[var(--ink-muted)]">
+                {signalCopy(leadSignal)}.
+              </p>
+              <div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
+                <RatingBadge
+                  rating={leadSignal.item.vote_average}
+                  variant="colored"
+                  size="sm"
+                />
+                <span className="text-xs text-[var(--ink-muted)]">
+                  {mediaType === "tv" ? "Series" : "Movie"} ·{" "}
+                  {getYear(leadSignal.item)}
+                </span>
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </div>
+          </Link>
 
-      <div className="relative">
-        {shouldShowLoading ? (
-          <PulseSkeleton />
-        ) : error ? (
-          <PulseState
-            icon={<AlertCircle className="h-5 w-5" />}
-            title="Community pulse is unavailable"
-            message={error}
-          />
-        ) : hasItems ? (
-          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth xl:grid xl:grid-cols-3 xl:overflow-visible xl:pb-0">
-            {lanes.map((lane) => (
-              <div
-                key={lane.metric}
-                className="w-[84vw] max-w-[360px] shrink-0 snap-start xl:w-auto xl:max-w-none"
-              >
-                <PulseLaneCard lane={lane} mediaType={mediaType} />
-              </div>
-            ))}
-            <div className="w-1 shrink-0 xl:hidden" aria-hidden="true" />
+          <div className="lg:col-span-7">
+            <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+              Elsewhere in the community
+            </p>
+            <ol className="divide-y divide-[var(--surface-border)] border-y border-[var(--surface-border)]">
+              {remainingSignals.slice(0, 5).map((signal) => (
+                <li key={`${signal.metric}-${signal.item.id}`}>
+                  <Link
+                    href={getItemHref(mediaType, signal.item.id)}
+                    className="group grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-2.5 py-1.5"
+                  >
+                    <span className="relative aspect-[2/3] overflow-hidden rounded-sm bg-[var(--surface-2)]">
+                      <Image
+                        src={getPosterUrl(signal.item.poster_path)}
+                        alt=""
+                        fill
+                        sizes="54px"
+                        className="object-cover"
+                      />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                        {signal.item.title}
+                      </span>
+                      <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-[var(--ink-muted)]">
+                        {signalIcon(signal.metric)}
+                        <span className="truncate">{signalCopy(signal)}</span>
+                      </span>
+                    </span>
+                    <RatingBadge
+                      rating={signal.item.vote_average}
+                      variant="minimal"
+                      size="sm"
+                    />
+                  </Link>
+                </li>
+              ))}
+            </ol>
           </div>
-        ) : (
-          <PulseState
-            icon={<Trophy className="h-5 w-5" />}
-            title="No community rankings yet"
-            message="Likes, saves, and reviews will appear here once the community starts engaging with these titles."
-          />
-        )}
-      </div>
-
-      {shouldShowLoading && (
-        <div className="sr-only" role="status">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading community pulse rankings
+        </div>
+      ) : (
+        <div className="border-y border-[var(--surface-border)] py-8 text-sm text-[var(--ink-muted)]">
+          Community activity will appear here once members start engaging with
+          these titles.
         </div>
       )}
     </section>

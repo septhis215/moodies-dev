@@ -4,7 +4,7 @@ import type { ReviewItem } from "@/components/sections/CommunityPicks";
 import type { CommunityPulseData } from "@/types/communityPulse";
 import MoviesHomePageClient from "./MovieHomePageClient";
 
-const BASE_URL = process.env.NEST_API_URL || "http://localhost:4000";
+const BASE_URL = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
 
 export const dynamic = "force-dynamic";
 

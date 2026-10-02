@@ -20,7 +20,7 @@ export default async function CreditsPage({ params, searchParams }: Props) {
   const { id } = await params;
   const { highlight } = (await searchParams) || {};
 
-  const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+  const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
 
   try {
     const res = await fetch(`${base}/movies/details/${id}`, {

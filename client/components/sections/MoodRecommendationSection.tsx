@@ -10,7 +10,6 @@ import {
   Layers,
   Sparkles,
   RefreshCw,
-  ChevronRight,
   Shuffle,
   BookmarkCheck,
 } from "lucide-react";
@@ -72,7 +71,7 @@ interface MoodRecommendationsSectionProps {
 }
 
 const RECOMMENDATION_LIMIT = 18;
-const DEFAULT_MOOD_COUNT = 12;
+const DEFAULT_MOOD_COUNT = 8;
 const EXPANDED_MOOD_COUNT = 18;
 const FEATURED_MOOD_NAMES = [
   "Happy",
@@ -155,9 +154,7 @@ function getMoodImageSrc(mood: Mood) {
 }
 
 function getPosterUrl(path?: string | null) {
-  return path
-    ? tmdbImage(path, "w500")
-    : "/placeholder-poster.svg";
+  return path ? tmdbImage(path, "w500") : "/placeholder-poster.svg";
 }
 
 function getMoodColor(mood?: Mood | null) {
@@ -461,7 +458,7 @@ export default function MoodRecommendationsSection({
             <p className="mb-6 text-lg text-gray-400">{moodsError}</p>
             <button
               onClick={() => window.location.reload()}
-              className="rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3 font-bold text-white transition hover:scale-105 hover:shadow-lg hover:shadow-violet-500/50"
+              className="rounded-md bg-[var(--brand-coral)] px-6 py-3 font-semibold text-white transition-colors hover:bg-[var(--brand-coral-strong)]"
             >
               Reload
             </button>
@@ -474,29 +471,20 @@ export default function MoodRecommendationsSection({
   return (
     <section
       id="moods"
-      className="relative w-full max-w-7xl mx-auto overflow-hidden"
+      className="relative mx-auto w-full max-w-7xl overflow-hidden border-t border-[var(--surface-border)] pt-6 sm:pt-7"
     >
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 left-1/4 h-96 w-96 rounded-full bg-violet-600/10 blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 h-96 w-96 rounded-full bg-fuchsia-600/10 blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 h-96 w-96 rounded-full bg-cyan-600/5 blur-3xl" />
-      </div>
-
-      <div className="relative mb-8 sm:mb-12">
+      <div className="relative mb-5 sm:mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-3">
-              <div className="relative">
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-cyan-500 opacity-50 blur-lg" />
-                <div className="relative rounded-xl bg-gradient-to-br from-violet-600 via-fuchsia-600 to-cyan-600 p-2.5">
-                  <Sparkles className="h-6 w-6 text-white" />
-                </div>
+              <div className="grid h-10 w-10 place-items-center rounded-md border border-[var(--surface-border)] text-[var(--brand-coral-strong)]">
+                <Sparkles className="h-5 w-5" />
               </div>
-              <h2 className="bg-gradient-to-r from-white via-violet-200 to-white bg-clip-text text-2xl font-black tracking-tight text-transparent sm:text-4xl">
+              <h2 className="text-2xl font-bold leading-none text-[var(--ink)] sm:text-[28px]">
                 Mood Matcher
               </h2>
             </div>
-            <p className="max-w-2xl text-sm leading-6 text-gray-400 sm:ml-14 sm:text-base">
+            <p className="max-w-2xl text-sm leading-6 text-[var(--ink-muted)] sm:ml-[52px]">
               Discover content that matches your current vibe, now ranked with
               stronger mood signals.
             </p>
@@ -508,9 +496,9 @@ export default function MoodRecommendationsSection({
               animate={{ opacity: 1, scale: 1 }}
               onClick={handleRefresh}
               disabled={loading}
-              className="group flex items-center gap-3 rounded-2xl border border-violet-400/30 bg-gradient-to-r from-violet-600/25 to-fuchsia-600/25 px-4 py-3 text-left shadow-lg shadow-black/20 ring-1 ring-white/10 backdrop-blur transition duration-300 hover:border-violet-300/60 hover:from-violet-600/35 hover:to-fuchsia-600/35 hover:shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="group flex items-center gap-2.5 rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 py-2 text-left transition-colors hover:border-[var(--brand-coral)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-violet-700 shadow-md">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--surface-2)] text-[var(--brand-coral-strong)]">
                 <RefreshCw
                   className={`h-4 w-4 ${
                     loading
@@ -520,10 +508,10 @@ export default function MoodRecommendationsSection({
                 />
               </span>
               <span>
-                <span className="block text-sm font-black text-white">
+                <span className="block text-sm font-semibold text-[var(--ink)]">
                   {loading ? "Refreshing..." : "Refresh Picks"}
                 </span>
-                <span className="block text-[11px] font-semibold text-violet-100/75">
+                <span className="block text-[11px] text-[var(--ink-muted)]">
                   {refreshedAt
                     ? "Fresh set requested"
                     : `Regenerate for ${selectedMood.name.toLowerCase()}`}
@@ -540,18 +528,18 @@ export default function MoodRecommendationsSection({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/80 shadow-xl shadow-black/20 backdrop-blur-sm"
+            className="mb-4 overflow-hidden border-y border-[var(--surface-border)] bg-[var(--surface-1)]"
           >
-            <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 text-violet-300 ring-1 ring-violet-400/20">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--surface-border)] text-[var(--brand-coral-strong)]">
                   <Layers className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-black text-white">
+                  <div className="text-sm font-semibold text-[var(--ink)]">
                     {displayedMoods.length} moods in view
                   </div>
-                  <div className="text-xs font-medium text-zinc-500">
+                  <div className="text-xs text-[var(--ink-muted)]">
                     Pick the emotional lane for your next watch.
                   </div>
                 </div>
@@ -560,7 +548,7 @@ export default function MoodRecommendationsSection({
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={toggleMoodCount}
-                  className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-bold text-zinc-200 transition hover:bg-white/[0.1]"
+                  className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)]"
                 >
                   {moodCount === DEFAULT_MOOD_COUNT
                     ? "Show more moods"
@@ -568,9 +556,9 @@ export default function MoodRecommendationsSection({
                 </button>
                 <button
                   onClick={handleShuffleMoods}
-                  className="group flex items-center gap-2 rounded-lg border border-violet-500/30 bg-gradient-to-r from-violet-600/20 to-fuchsia-600/20 px-3 py-2 text-xs font-bold text-violet-200 transition duration-300 hover:from-violet-600/30 hover:to-fuchsia-600/30"
+                  className="group flex items-center gap-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)]"
                 >
-                  <Shuffle className="h-4 w-4 text-violet-300 transition-transform duration-500 group-hover:rotate-180" />
+                  <Shuffle className="h-4 w-4 text-[var(--brand-coral-strong)]" />
                   Shuffle moods
                 </button>
               </div>
@@ -586,42 +574,32 @@ export default function MoodRecommendationsSection({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="-mx-4 mb-8 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:mb-12 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 xl:grid-cols-6"
+            className="-mx-4 mb-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 xl:grid-cols-6"
           >
             {moodsLoading
               ? Array.from({ length: DEFAULT_MOOD_COUNT }).map((_, index) => (
                   <div
                     key={index}
-                    className="h-40 w-[44vw] min-w-[150px] max-w-[178px] shrink-0 snap-start animate-pulse rounded-2xl bg-white/[0.06] sm:h-48 sm:w-auto sm:min-w-0 sm:max-w-none"
+                    className="h-36 w-[44vw] min-w-[150px] max-w-[178px] shrink-0 snap-start animate-pulse rounded-md bg-white/[0.06] sm:w-auto sm:min-w-0 sm:max-w-none"
                   />
                 ))
               : displayedMoods.map((mood, index) => (
                   <motion.button
                     key={mood.id}
-                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     transition={{
                       delay: index * 0.03,
-                      type: "spring",
-                      stiffness: 260,
-                      damping: 20,
+                      duration: 0.18,
                     }}
                     onClick={() => handleMoodClick(mood)}
-                    className="group relative w-[44vw] min-w-[150px] max-w-[178px] shrink-0 snap-start rounded-2xl p-4 transition duration-300 hover:-translate-y-2 hover:scale-105 sm:w-auto sm:min-w-0 sm:max-w-none sm:p-6"
+                    className="group relative w-[44vw] min-w-[150px] max-w-[178px] shrink-0 snap-start rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 transition-colors hover:border-[var(--brand-coral)] sm:w-auto sm:min-w-0 sm:max-w-none sm:p-4"
                     style={{
-                      background: `linear-gradient(135deg, ${mood.color}20 0%, ${mood.color}05 100%)`,
-                      border: `2px solid ${mood.color}30`,
+                      borderLeftColor: mood.color,
                     }}
                   >
-                    <div
-                      className="absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                      style={{
-                        background: `linear-gradient(135deg, ${mood.color}40 0%, ${mood.color}15 100%)`,
-                        boxShadow: `0 8px 32px ${mood.color}40, 0 0 0 1px ${mood.color}50`,
-                      }}
-                    />
                     <div className="relative flex flex-col items-center gap-3 text-center">
-                      <div className="relative mb-1 h-16 w-16 transition duration-300 group-hover:rotate-3 group-hover:scale-110 sm:h-24 sm:w-24">
+                      <div className="relative h-14 w-14 sm:h-16 sm:w-16">
                         <Image
                           src={getMoodImageSrc(mood)}
                           alt={`${mood.name} mood mascot`}
@@ -637,14 +615,10 @@ export default function MoodRecommendationsSection({
                         >
                           {mood.name}
                         </h3>
-                        <p className="line-clamp-2 text-xs leading-relaxed text-gray-400 transition-colors group-hover:text-gray-300">
+                        <p className="line-clamp-2 text-xs leading-relaxed text-[var(--ink-muted)]">
                           {mood.description}
                         </p>
                       </div>
-                      <ChevronRight
-                        className="h-5 w-5 opacity-0 transition duration-300 group-hover:translate-x-1 group-hover:opacity-100"
-                        style={{ color: mood.color }}
-                      />
                     </div>
                   </motion.button>
                 ))}
@@ -658,29 +632,16 @@ export default function MoodRecommendationsSection({
             className="mb-8"
           >
             <div
-              className="relative mb-8 flex flex-col gap-4 overflow-hidden rounded-2xl p-5 sm:flex-row sm:items-center sm:justify-between"
-              style={{
-                background: `linear-gradient(90deg, ${selectedMood.color}30 0%, ${selectedMood.color}15 50%, ${selectedMood.color}30 100%)`,
-                border: `2px solid ${selectedMood.color}50`,
-              }}
+              className="mb-5 flex flex-col gap-3 border-y border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:flex-row sm:items-center sm:justify-between"
+              style={{ borderLeft: `3px solid ${selectedMood.color}` }}
             >
-              <div className="absolute inset-0 opacity-10">
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    backgroundImage: `radial-gradient(circle at 2px 2px, ${selectedMood.color} 1px, transparent 0)`,
-                    backgroundSize: "32px 32px",
-                  }}
-                />
-              </div>
-
-              <div className="relative flex items-center gap-4">
-                <div className="relative h-20 w-20 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="relative h-14 w-14 shrink-0">
                   <Image
                     src={getMoodImageSrc(selectedMood)}
                     alt={`${selectedMood.name} mood mascot`}
                     fill
-                    sizes="80px"
+                    sizes="56px"
                     className="object-contain"
                   />
                 </div>
@@ -691,18 +652,14 @@ export default function MoodRecommendationsSection({
                   <p className="text-sm font-medium text-gray-300">
                     {selectedMood.description}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-bold text-white/80 ring-1 ring-white/10">
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+                    <span>
                       {recommendations.length || RECOMMENDATION_LIMIT} picks
                     </span>
-                    <span className="rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-bold text-white/80 ring-1 ring-white/10">
-                      {movieCount} movies
-                    </span>
-                    <span className="rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-bold text-white/80 ring-1 ring-white/10">
-                      {tvCount} series
-                    </span>
+                    <span>{movieCount} movies</span>
+                    <span>{tvCount} series</span>
                     {topMatch && (
-                      <span className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-black text-white ring-1 ring-white/20">
+                      <span className="text-[var(--ink)]">
                         Top match {getMatchScore(topMatch)}%
                       </span>
                     )}
@@ -711,14 +668,14 @@ export default function MoodRecommendationsSection({
               </div>
               <button
                 onClick={() => setSelectedMood(null)}
-                className="relative rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition duration-300 hover:scale-105 hover:border-white/40 hover:bg-white/20"
+                className="rounded-md border border-[var(--surface-border)] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:border-[var(--brand-coral)]"
               >
                 Change Mood
               </button>
             </div>
 
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-32">
+              <div className="flex flex-col items-center justify-center py-16">
                 <div className="relative mb-6">
                   <div
                     className="h-20 w-20 animate-spin rounded-full border-4"
@@ -726,10 +683,6 @@ export default function MoodRecommendationsSection({
                       borderColor: `${selectedMood.color}20`,
                       borderTopColor: selectedMood.color,
                     }}
-                  />
-                  <div
-                    className="absolute inset-0 animate-pulse blur-2xl"
-                    style={{ backgroundColor: `${selectedMood.color}55` }}
                   />
                 </div>
                 <p className="mb-2 text-2xl font-black text-white">
@@ -741,7 +694,7 @@ export default function MoodRecommendationsSection({
                 </p>
               </div>
             ) : error ? (
-              <div className="flex items-center justify-center py-32">
+              <div className="flex items-center justify-center py-16">
                 <div className="max-w-md text-center">
                   <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/20">
                     <Sparkles className="h-9 w-9 text-red-300" />
@@ -750,7 +703,7 @@ export default function MoodRecommendationsSection({
                   <p className="mb-6 text-lg text-gray-400">{error}</p>
                   <button
                     onClick={handleRefresh}
-                    className="rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-3 font-bold text-white transition hover:scale-105 hover:shadow-lg hover:shadow-violet-500/50"
+                    className="rounded-md bg-[var(--brand-coral)] px-6 py-3 font-bold text-white transition-colors hover:bg-[var(--brand-coral-strong)]"
                   >
                     Try Again
                   </button>
@@ -762,9 +715,9 @@ export default function MoodRecommendationsSection({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-5 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6"
+                className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7"
               >
-                {recommendations.map((rec, index) => {
+                {recommendations.map((rec) => {
                   const id = String(rec.tmdbId);
                   const kind = toHookType(rec.mediaType);
                   const inList = isInWatchlist(id, kind) ?? watchlistStates[id];
@@ -781,52 +734,93 @@ export default function MoodRecommendationsSection({
                   return (
                     <motion.div
                       key={`${rec.mediaType}-${rec.tmdbId}`}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{
-                        delay: index * 0.03,
-                        type: "spring",
-                        stiffness: 260,
-                        damping: 20,
-                      }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.18 }}
                       className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
                     >
                       <Link href={getMediaHref(rec)}>
                         <div className="group relative block">
-                          <div className="relative mb-3 aspect-[2/3] overflow-hidden rounded-2xl bg-zinc-900 shadow-2xl ring-1 ring-white/10 transition duration-500 group-hover:-translate-y-1">
+                          <div className="relative mb-3 aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-colors group-hover:border-[var(--brand-coral)]">
                             <Image
                               src={getPosterUrl(rec.posterPath)}
                               alt={rec.title}
                               fill
                               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
-                              className="object-cover transition-transform duration-700 group-hover:scale-110"
+                              className="object-cover"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-60 transition-opacity group-hover:opacity-40" />
                             <div
-                              className="pointer-events-none absolute inset-0 rounded-2xl border-2 opacity-0 transition duration-500 group-hover:opacity-100"
+                              className="pointer-events-none absolute inset-0 rounded-md border opacity-0 transition-opacity group-hover:opacity-100"
                               style={{
                                 borderColor: `${moodColor}B8`,
-                                boxShadow: `0 18px 46px ${moodColor}35, inset 0 0 26px ${moodColor}18`,
                               }}
                             />
 
-                            <div className="absolute left-2 top-2">
-                              <div
-                                className="relative h-14 w-14 rounded-full p-[3px] shadow-xl ring-1 ring-white/20"
-                                style={{
-                                  background: `conic-gradient(${moodColor} ${matchScore * 3.6}deg, rgba(255,255,255,0.22) 0deg)`,
-                                }}
-                              >
-                                <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-black/80 text-white backdrop-blur">
-                                  <div className="text-[8px] font-black uppercase tracking-[0.12em] text-white/60">
-                                    Match
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <motion.button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      if (!isBusy) void toggleWatchlist(rec);
+                                    }}
+                                    disabled={isBusy}
+                                    aria-label={
+                                      inList
+                                        ? "Remove from My List"
+                                        : "Add to My List"
+                                    }
+                                    className={`absolute left-2 top-2 z-30 flex h-9 w-9 items-center justify-center rounded-sm border border-white/25 bg-[#0b0909]/90 text-white shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors ${isBusy ? "cursor-not-allowed opacity-70" : ""}`}
+                                    style={{
+                                      backgroundColor: inList
+                                        ? moodColor
+                                        : undefined,
+                                    }}
+                                    onMouseEnter={(event) => {
+                                      if (!inList)
+                                        event.currentTarget.style.backgroundColor =
+                                          moodColor;
+                                    }}
+                                    onMouseLeave={(event) => {
+                                      if (!inList)
+                                        event.currentTarget.style.backgroundColor =
+                                          "";
+                                    }}
+                                  >
+                                    {isBusy ? (
+                                      <motion.div
+                                        animate={{ rotate: 360 }}
+                                        transition={{
+                                          duration: 1,
+                                          repeat: Infinity,
+                                          ease: "linear",
+                                        }}
+                                        className="h-4 w-4 rounded-full border-2 border-current border-t-transparent"
+                                      />
+                                    ) : inList ? (
+                                      <BookmarkCheck className="h-4 w-4" />
+                                    ) : (
+                                      <Bookmark className="h-4 w-4" />
+                                    )}
+                                  </motion.button>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="bottom"
+                                  sideOffset={8}
+                                  className="rounded-lg border border-white/20 bg-black/90 px-3 py-2 shadow-xl backdrop-blur-md"
+                                >
+                                  <div className="text-xs font-medium text-white">
+                                    {isBusy
+                                      ? "Updating..."
+                                      : inList
+                                        ? "Remove from My List"
+                                        : "Add to My List"}
                                   </div>
-                                  <div className="text-sm font-black leading-none">
-                                    {matchScore}%
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
 
                             <div className="absolute right-2 top-2">
                               <RatingBadge
@@ -837,87 +831,21 @@ export default function MoodRecommendationsSection({
                             </div>
 
                             <div className="absolute bottom-2 left-2 right-2 flex flex-wrap items-end gap-1.5 transition-opacity duration-300 group-hover:opacity-0">
-                              <span className="rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-black text-white ring-1 ring-white/10 backdrop-blur">
+                              <span className="border border-white/15 bg-[#0b0909]/90 px-2 py-1 text-[10px] font-bold text-white">
+                                Match {matchScore}%
+                              </span>
+                              <span className="border border-white/15 bg-[#0b0909]/90 px-2 py-1 text-[10px] font-bold text-white">
                                 {getMediaLabel(rec)}
                               </span>
-                              <span className="rounded-full bg-black/70 px-2.5 py-1 text-[10px] font-bold text-zinc-200 ring-1 ring-white/10 backdrop-blur">
+                              <span className="border border-white/15 bg-[#0b0909]/90 px-2 py-1 text-[10px] font-bold text-zinc-200">
                                 {getYear(rec.releaseDate)}
                               </span>
                             </div>
 
-                            <div
-                              className="absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100"
-                              style={{
-                                background: `linear-gradient(to top, rgba(0,0,0,0.92) 0%, ${moodColor}66 58%, rgba(0,0,0,0.28) 100%)`,
-                              }}
-                            >
+                            <div className="absolute inset-0 bg-[#0b0909]/94 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
                               <div className="absolute inset-0 flex items-end justify-center p-3">
                                 <TooltipProvider>
                                   <div className="flex gap-2">
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <motion.button
-                                          onClick={(event) => {
-                                            event.preventDefault();
-                                            event.stopPropagation();
-                                            if (!isBusy)
-                                              void toggleWatchlist(rec);
-                                          }}
-                                          disabled={isBusy}
-                                          className={`flex h-9 w-9 items-center justify-center rounded-full shadow-xl transition hover:scale-110 ${
-                                            inList
-                                              ? "text-white"
-                                              : "bg-white text-black hover:text-white"
-                                          } ${isBusy ? "cursor-not-allowed opacity-70" : ""}`}
-                                          style={{
-                                            backgroundColor: inList
-                                              ? moodColor
-                                              : undefined,
-                                          }}
-                                          whileTap={{ scale: 0.9 }}
-                                          onMouseEnter={(event) => {
-                                            if (!inList)
-                                              event.currentTarget.style.backgroundColor =
-                                                moodColor;
-                                          }}
-                                          onMouseLeave={(event) => {
-                                            if (!inList)
-                                              event.currentTarget.style.backgroundColor =
-                                                "";
-                                          }}
-                                        >
-                                          {isBusy ? (
-                                            <motion.div
-                                              animate={{ rotate: 360 }}
-                                              transition={{
-                                                duration: 1,
-                                                repeat: Infinity,
-                                                ease: "linear",
-                                              }}
-                                              className="h-4 w-4 rounded-full border-2 border-current border-t-transparent"
-                                            />
-                                          ) : inList ? (
-                                            <BookmarkCheck className="h-4 w-4" />
-                                          ) : (
-                                            <Bookmark className="h-4 w-4" />
-                                          )}
-                                        </motion.button>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        side="bottom"
-                                        sideOffset={8}
-                                        className="rounded-lg border border-white/20 bg-black/90 px-3 py-2 shadow-xl backdrop-blur-md"
-                                      >
-                                        <div className="text-xs font-medium text-white">
-                                          {isBusy
-                                            ? "Updating..."
-                                            : inList
-                                              ? "Remove from My List"
-                                              : "Add to My List"}
-                                        </div>
-                                      </TooltipContent>
-                                    </Tooltip>
-
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <button
@@ -926,7 +854,7 @@ export default function MoodRecommendationsSection({
                                             event.stopPropagation();
                                             router.push(getMediaHref(rec));
                                           }}
-                                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black shadow-xl transition hover:scale-110 hover:text-white"
+                                          className="flex h-9 w-9 items-center justify-center rounded-sm border border-white/15 bg-white text-black transition-colors hover:text-white"
                                           onMouseEnter={(event) => {
                                             event.currentTarget.style.backgroundColor =
                                               moodColor;
@@ -957,22 +885,11 @@ export default function MoodRecommendationsSection({
 
                           <div className="px-1">
                             <div className="mb-1.5 flex items-start justify-between gap-2">
-                              <h4
-                                className="line-clamp-2 text-sm font-bold leading-tight text-white transition-colors duration-300"
-                                style={{ textShadow: `0 0 0 ${moodColor}` }}
-                                onMouseEnter={(event) => {
-                                  event.currentTarget.style.color = moodColor;
-                                  event.currentTarget.style.textShadow = `0 0 18px ${moodColor}66`;
-                                }}
-                                onMouseLeave={(event) => {
-                                  event.currentTarget.style.color = "";
-                                  event.currentTarget.style.textShadow = `0 0 0 ${moodColor}`;
-                                }}
-                              >
+                              <h4 className="line-clamp-2 text-sm font-bold leading-tight text-white transition-colors group-hover:text-[var(--brand-coral-strong)]">
                                 {rec.title}
                               </h4>
                               <span
-                                className="mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black text-white shadow-sm"
+                                className="mt-0.5 shrink-0 border-l px-2 py-0.5 text-[10px] font-black text-white"
                                 style={{ backgroundColor: `${moodColor}B8` }}
                               >
                                 {matchScore}%
@@ -983,21 +900,21 @@ export default function MoodRecommendationsSection({
                                 {visibleGenres.map((genre) => (
                                   <span
                                     key={genre}
-                                    className="max-w-[74px] shrink-0 truncate rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-zinc-400 ring-1 ring-white/10 sm:max-w-[92px]"
+                                    className="max-w-[74px] shrink-0 truncate text-[10px] font-semibold text-zinc-400 sm:max-w-[92px]"
                                     title={genre}
                                   >
                                     {genre}
                                   </span>
                                 ))}
                                 {hiddenGenreCount > 0 && (
-                                  <span className="shrink-0 rounded-full bg-white/[0.09] px-2 py-0.5 text-[10px] font-black text-zinc-300 ring-1 ring-white/10">
+                                  <span className="shrink-0 text-[10px] font-black text-zinc-300">
                                     +{hiddenGenreCount}
                                   </span>
                                 )}
                               </div>
                             ) : (
                               <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                                <span className="truncate rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-zinc-400 ring-1 ring-white/10">
+                                <span className="truncate text-[10px] font-semibold text-zinc-400">
                                   {getMediaLabel(rec)}
                                 </span>
                               </div>
@@ -1012,7 +929,7 @@ export default function MoodRecommendationsSection({
               </motion.div>
             ) : (
               <div className="flex items-center justify-center py-32">
-                <div className="max-w-md rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center shadow-2xl shadow-black/20 backdrop-blur">
+                <div className="max-w-md border border-[var(--surface-border)] bg-[var(--surface-1)] p-8 text-center">
                   <div
                     className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
                     style={{
@@ -1033,7 +950,7 @@ export default function MoodRecommendationsSection({
                   <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
                     <button
                       onClick={handleRefresh}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-black text-white transition hover:scale-105"
+                      className="inline-flex items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-black text-white transition-colors"
                       style={{ backgroundColor: selectedMood.color }}
                     >
                       <RefreshCw className="h-4 w-4" />
@@ -1041,7 +958,7 @@ export default function MoodRecommendationsSection({
                     </button>
                     <button
                       onClick={() => setSelectedMood(null)}
-                      className="rounded-xl border border-white/15 bg-white/[0.06] px-5 py-3 text-sm font-bold text-white transition hover:border-white/30 hover:bg-white/[0.1]"
+                      className="rounded-md border border-[var(--surface-border)] px-5 py-3 text-sm font-bold text-white transition-colors hover:border-[var(--brand-coral)]"
                     >
                       Change Mood
                     </button>

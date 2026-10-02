@@ -43,7 +43,7 @@ type ApiReply = {
 
 async function fetchReviews(id: string) {
   try {
-    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
     const res = await fetch(
       `${base}/reviews/media/MOVIE/${id}?page=1&limit=100`,
       {
@@ -68,7 +68,7 @@ async function fetchReviews(id: string) {
 
 async function fetchReviewStats(id: string, mediaType: string) {
   try {
-    const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+    const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
     const res = await fetch(`${base}/reviews/media/${mediaType}/${id}/stats`, {
       cache: "no-store",
     });
@@ -91,7 +91,7 @@ export async function generateMetadata({
 export default async function ReviewsPage({ params }: Props) {
   const { id } = await params;
 
-  const base = process.env.NEST_API_URL ?? "http://localhost:4000";
+  const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
 
   const res = await fetch(`${base}/movies/details/${id}`, {
     next: { revalidate: 60 },
