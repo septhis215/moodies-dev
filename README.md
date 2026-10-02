@@ -8,6 +8,8 @@ Moodies is a movie and TV recommendation platform built around mood-driven disco
 - `server`: NestJS, Prisma, PostgreSQL, Redis
 - Deployment references live in [ENVIRONMENTS.md](./ENVIRONMENTS.md)
 
+Full product, structure, and identity brief: [docs/project-context.md](./docs/project-context.md). Frontend text styles follow [docs/typography-spec.md](./docs/typography-spec.md).
+
 ## Requirements
 
 - Node.js 20+

@@ -32,7 +32,7 @@ environments and a one-command switch.
 
 | Command (run in `client/`) | Frontend talks to |
 |---|---|
-| `npm run env:local`   | `http://localhost:4000/api` (your local backend) |
+| `npm run env:local`   | `https://dev.api.moodies.tech/api` (hosted dev backend) |
 | `npm run env:staging` | The API URL in `MOODIES_STAGING_API_URL` |
 | `npm run env:prod`    | The API URL in `MOODIES_PROD_API_URL` |
 
@@ -44,7 +44,7 @@ reads env files at startup.
 | File | Purpose | Committed? |
 |---|---|---|
 | `.env` | Shared, non-URL values (e.g. TMDB key) | ❌ gitignored — get values from a teammate |
-| `.env.development` | Local API URLs (`localhost:4000`) — auto-loaded by `next dev` | ✅ yes |
+| `.env.development` | Dev API URLs (`dev.api.moodies.tech/api`) — auto-loaded by `next dev` | ✅ yes |
 | `.env.production` | Prod API URLs — auto-loaded by `next build`/`start` | ❌ gitignored |
 | `.env.local` | Active override; written by the `env:*` scripts | ❌ gitignored |
 
@@ -69,8 +69,9 @@ Two env vars exist, and they are **not** interchangeable:
 **must** use `process.env.NEXT_PUBLIC_API_URL`. Server components (`app/**/page.tsx` without
 `"use client"`) use `NEST_API_URL`.
 
-> Using `NEST_API_URL` in a client component "works" only when the backend happens to be on
-> `localhost:4000` (the fallback string). It silently breaks against any remote backend.
+> Using `NEST_API_URL` in a client component silently breaks in the browser because the var is
+> empty there, so the code falls back to the hardcoded `https://dev.api.moodies.tech/api` string
+> even when the app is pointed at another backend.
 > Several section components had this bug and were fixed on this branch.
 
 ---

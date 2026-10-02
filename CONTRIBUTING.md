@@ -1,5 +1,8 @@
 # Contributing
 
+Start with [docs/project-context.md](docs/project-context.md) for what Moodies is, how the
+repo is organised, and the identity rules a change has to respect.
+
 ## Local Workflow
 
 1. Pull the latest `trunk`.
@@ -19,6 +22,7 @@
 - Any database schema change includes a Prisma migration.
 - Any auth, cookie, CORS, rate-limit, token, or env change includes a manual security test note.
 - New environment variables are added to the relevant `.env.example`.
+- Frontend text styles follow [docs/typography-spec.md](docs/typography-spec.md); the landing page is the canonical reference.
 
 ## Branching
 

@@ -1,5 +1,19 @@
 # Agent Instructions
 
+## Project Context Brief
+
+Before answering questions about this repository, planning work, or editing code, read
+[docs/project-context.md](./docs/project-context.md). It defines what Moodies is, the
+current structure (routes, Nest modules, Prisma data model, environments), the brand and
+design identity, and a list of known drift where individual files should not be trusted as
+the intended pattern. Related contracts:
+
+- [docs/typography-spec.md](./docs/typography-spec.md) — text styles; the landing page is the canonical reference.
+- [ENVIRONMENTS.md](./ENVIRONMENTS.md) — env files and the `NEST_API_URL` / `NEXT_PUBLIC_API_URL` rules.
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — PR checklist and trunk-based branching.
+
+Note that `SECURITY.md` is an audit prompt, not a security policy.
+
 ## Context7 CLI
 
 Always use Context7 CLI before answering, planning, or editing code that depends on external libraries, frameworks, APIs, setup steps, configuration, migrations, dependency upgrades, or debugging.

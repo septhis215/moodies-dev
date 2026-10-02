@@ -41,3 +41,9 @@ The test script disables Storybook telemetry for repeatable local and CI runs.
 - Do not commit `.env`.
 
 See [../ENVIRONMENTS.md](../ENVIRONMENTS.md) for deployment-specific environment behavior.
+
+## Typography
+
+Font families, sizes, weights, and the section-header recipes are specified in
+[`docs/typography-spec.md`](../docs/typography-spec.md). The landing page (`app/page.tsx` and its
+sections) is the canonical implementation — copy from it rather than inventing new values.
