@@ -47,7 +47,7 @@ services:
       args:
         APP_ENV: staging
     env_file:
-      - path: ./client/.env.staging
+      - path: ./client/.env
         required: false
     environment:
       DOPPLER_TOKEN: ${DOPPLER_TOKEN:-}
