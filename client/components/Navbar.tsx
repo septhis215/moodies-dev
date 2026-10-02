@@ -223,6 +223,21 @@ export function NavbarComponent() {
       document.removeEventListener("mousedown", onDocumentPointerDown);
   }, []);
 
+  useEffect(() => {
+    // The navbar scrolls with the page, so the fixed-positioned profile
+    // dropdown would detach from its trigger — close it as soon as scrolling
+    // starts.
+    const onWindowScroll = () => {
+      if (hoverTimeoutRef.current) {
+        window.clearTimeout(hoverTimeoutRef.current);
+        hoverTimeoutRef.current = null;
+      }
+      setIsProfileOpen(false);
+    };
+    window.addEventListener("scroll", onWindowScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onWindowScroll);
+  }, []);
+
   const avatar = (size: "small" | "large" = "small") => {
     const dimensions = size === "large" ? "h-12 w-12" : "h-9 w-9";
     return (
