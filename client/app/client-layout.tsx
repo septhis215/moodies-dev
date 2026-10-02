@@ -33,9 +33,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     <>
       {shouldShowNavbar && (
         <Suspense fallback={null}>
-          <NavbarComponent
-            layoutMode={isSelectedContentPage ? "flow" : "overlay"}
-          />
+          <NavbarComponent />
         </Suspense>
       )}
       <main className={mainClassName}>{children}</main>
