@@ -21,7 +21,7 @@ COPY --from=deps /app/node_modules ./node_modules
 # Ensure no stale artifacts
 RUN rm -rf .next
 
-# Build with the env file for the target environment
+# Build with the single .env file and select the target environment.
 RUN npm run build:${APP_ENV}
 
 # Stage 3 — Production runner

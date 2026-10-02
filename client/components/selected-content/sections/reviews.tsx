@@ -101,7 +101,7 @@ function ReviewMoodPanel({ value }: { value?: string }) {
 
   return (
     <div className="flex min-w-0 items-center gap-2 text-white/35">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.04]">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04]">
         {isImage ? (
           <Image
             src={value}
@@ -251,14 +251,20 @@ export default function ReviewsSection({
 
   return (
     <>
-      <section className="space-y-6">
+      <section
+        className="ui-shell scroll-mt-24 py-8 sm:py-10"
+        aria-labelledby="reviews-heading"
+      >
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
+            <h2
+              id="reviews-heading"
+              className="mt-1 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
+            >
               Audience Reviews
             </h2>
-            <p className="text-white/45 text-sm mt-0.5">
+            <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
               {sorted.length > 0
                 ? `${sorted.length} review${sorted.length !== 1 ? "s" : ""} from the community`
                 : "No reviews yet"}
@@ -295,7 +301,7 @@ export default function ReviewsSection({
 
             <button
               onClick={openModal}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-[#e94f37]/40 bg-white/[0.04] px-3.5 py-1.5 text-xs font-semibold text-[#e94f37] transition-all duration-150 hover:border-[#e94f37]/70 hover:bg-[#e94f37]/[0.10] active:scale-95 cursor-pointer"
+              className="ui-primary-action"
             >
               <PenSquare size={11} strokeWidth={2.5} />
               Write a Review
@@ -303,7 +309,7 @@ export default function ReviewsSection({
 
             <Link
               href={viewAllHref}
-              className="text-xs text-white/40 hover:text-white transition-colors whitespace-nowrap"
+              className="ui-secondary-action"
             >
               View all →
             </Link>
@@ -323,7 +329,7 @@ export default function ReviewsSection({
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="col-span-full flex flex-col items-center justify-center py-16 gap-4 rounded-2xl bg-white/[0.03] border border-white/[0.07]"
+                className="col-span-full flex flex-col items-center justify-center gap-4 border-y border-[var(--surface-border)] py-16"
               >
                 <div className="text-4xl opacity-20 select-none">💬</div>
                 <div className="text-center">
@@ -336,7 +342,7 @@ export default function ReviewsSection({
                 </div>
                 <button
                   onClick={openModal}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white/[0.07] hover:bg-white/[0.11] border border-white/[0.10] text-white/60 hover:text-white text-xs font-medium transition-all duration-150 cursor-pointer"
+                    className="ui-secondary-action"
                 >
                   <PenSquare size={12} strokeWidth={2.5} />
                   Write a Review
@@ -369,7 +375,7 @@ export default function ReviewsSection({
                       layout: { duration: 0.3, ease: "easeInOut" },
                       opacity: { duration: 0.2 },
                     }}
-                    className="group flex flex-col rounded-2xl border border-white/[0.08] bg-[#0d0d0f] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)] transition-all duration-200 hover:border-[#e94f37]/30 hover:bg-[#111113]"
+                    className="group flex flex-col border-t border-[var(--surface-border)] py-5 transition-colors hover:border-brand-coral/50"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
@@ -427,7 +433,7 @@ export default function ReviewsSection({
 
                     {/* Review text — the hero */}
                     <div className="mt-4">
-                      <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.035] text-white/15">
+                      <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.035] text-white/15">
                         <svg
                           className="h-4 w-4"
                           viewBox="0 0 32 32"
@@ -600,7 +606,7 @@ function ReviewModal({
         aria-modal="true"
         aria-labelledby="review-dialog-title"
         aria-describedby="review-dialog-description"
-        className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-white/10 bg-[#0a0a0b]/96 shadow-2xl shadow-black/70 sm:max-h-[min(90dvh,780px)] sm:rounded-2xl"
+        className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-xl border border-white/10 bg-[#0a0a0b]/96 shadow-2xl shadow-black/70 sm:max-h-[min(90dvh,780px)] sm:rounded-xl"
         style={{
           boxShadow:
             "0 32px 90px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.04)",
@@ -609,20 +615,20 @@ function ReviewModal({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(233,79,55,0.18),transparent_34%),radial-gradient(circle_at_90%_12%,rgba(255,255,255,0.06),transparent_28%)]" />
         {/* Header — matches card top: quote glyph + title + close */}
         <div className="relative z-20 flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-black/35 px-4 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e94f37]/25 bg-[#e94f37]/10 text-[#ff8c79]">
               <PenSquare className="h-4.5 w-4.5" />
             </span>
-            <div>
+            <div className="min-w-0">
               <h2
                 id="review-dialog-title"
-                className="text-base font-black leading-tight text-white sm:text-lg"
+                className="text-sm font-black leading-tight text-white sm:text-lg"
               >
                 Share your viewing mood
               </h2>
               <p
                 id="review-dialog-description"
-                className="mt-0.5 text-xs text-white/45"
+                className="mt-0.5 max-w-[15rem] text-xs leading-4 text-white/45 sm:max-w-none"
               >
                 Rate it, name the feeling, and tell the community why.
               </p>
@@ -641,7 +647,7 @@ function ReviewModal({
         <div className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain mobile-native-scroll scrollbar-none">
           {!isAuthenticated ? (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl">
+              <div className="w-14 h-14 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl">
                 🔐
               </div>
               <div>
@@ -921,7 +927,7 @@ function ReviewForm({
     <form onSubmit={handleSubmit}>
       <div className="space-y-5 px-4 py-4 sm:px-6 sm:py-5">
       {/* ── Compose card — the hero ── */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+      <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03]">
         {selectedMoodImage && (
           <Image
             src={selectedMoodImage}
@@ -1057,7 +1063,7 @@ function ReviewForm({
       </div>
 
       {/* ── Mood grid ── */}
-      <section className="rounded-[18px] border border-white/[0.08] bg-white/[0.035] p-3.5 sm:p-4">
+      <section className="rounded-xl border border-white/[0.08] bg-white/[0.035] p-3.5 sm:p-4">
         <div className="mb-3 flex flex-col gap-1">
           <span className="text-[13px] font-bold text-[#f5f5f7]">
             How did it make you feel?
@@ -1091,7 +1097,7 @@ function ReviewForm({
                 }
                 onClick={() => setMood(m.value)}
                 onKeyDown={(event) => handleMoodKeyDown(event, index)}
-                className={`relative flex min-h-[84px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border px-2.5 py-3 text-center transition-[border-color,background-color,box-shadow,color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e3262a]/60 motion-safe:hover:-translate-y-px md:min-h-[76px] ${
+                className={`relative flex min-h-[84px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border px-2.5 py-3 text-center transition-[border-color,background-color,box-shadow,color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e3262a]/60 motion-safe:hover:-translate-y-px md:min-h-[76px] ${
                   isSelected
                     ? "border-[#e3262a] bg-[#e3262a]/[0.16] text-white shadow-[0_0_0_1px_rgba(227,38,42,0.25),0_12px_28px_rgba(227,38,42,0.18)]"
                     : "border-white/[0.10] bg-white/[0.045] text-white/70 hover:border-[#e3262a]/55 hover:bg-[#e3262a]/[0.08] hover:text-white"

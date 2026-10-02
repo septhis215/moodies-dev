@@ -1,63 +1,87 @@
 "use client";
 
-import { tmdbImage } from "@/lib/tmdb";
-import React, { useMemo, useState } from "react";
-import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
-import { Building2, ChevronDown, ChevronUp } from "lucide-react";
-import { motion } from "framer-motion";
+import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
+import { tmdbImage } from "@/lib/tmdb";
 import type {
   MovieDetailsData,
   ProviderCountry,
   TvDetailsData,
 } from "@/components/selected-content/types";
 
-interface DetailsProp {
+type DetailsProps = {
   data: MovieDetailsData | TvDetailsData;
   contentId?: string;
+};
+
+type CrewMember =
+  | MovieDetailsData["credits"]["crew"][number]
+  | TvDetailsData["credits"]["crew"][number];
+
+function crewRoles(person: CrewMember): string[] {
+  if ("jobs" in person && Array.isArray(person.jobs)) {
+    return person.jobs.map((job) => job.job).filter(Boolean);
+  }
+  return person.job ? [person.job] : [];
 }
 
-/* role → accent color mapping */
-function roleColor(role: string): string {
-  const r = role.toLowerCase();
-  if (r.includes("director")) return "#e94f37";
-  if (r.includes("produc")) return "#f59e0b";
-  if (r.includes("writ") || r.includes("story") || r.includes("screenplay"))
-    return "#38bdf8";
-  if (r.includes("music") || r.includes("composer")) return "#a78bfa";
-  if (r.includes("photograph")) return "#34d399";
-  return "#94a3b8";
+function initials(value: string): string {
+  return value
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }
 
-export default function ExtraDetails({ data, contentId }: DetailsProp) {
+export default function ExtraDetails({ data, contentId }: DetailsProps) {
   const [providerSearch, setProviderSearch] = useState("");
-  const INITIAL_CAST = 12;
-  const CAST_STEP = 12;
-  const [castLimit, setCastLimit] = useState(INITIAL_CAST);
-
+  const [castLimit, setCastLimit] = useState(12);
   const { info, credits, providers } = data;
+  const basePath = info.content_type === "tv" ? "tv" : "movies";
+  const creditsHref = contentId ? `/${basePath}/${contentId}/credits` : "#";
+
+  const keyCrew = useMemo(() => {
+    const priority = [
+      "Director",
+      "Creator",
+      "Executive Producer",
+      "Producer",
+      "Writer",
+      "Screenplay",
+      "Story",
+      "Original Music Composer",
+      "Director of Photography",
+    ];
+    const seen = new Set<string>();
+    return priority.flatMap((role) =>
+      credits.crew
+        .filter((person) => crewRoles(person).includes(role))
+        .filter((person) => {
+          const key = `${person.id}:${role}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .map((person) => ({ person, role })),
+    );
+  }, [credits.crew]);
 
   const allProviders = useMemo(() => {
-    const map = new Map<
-      string,
-      { provider_name: string; logo_path?: string }
-    >();
-    if (!providers?.results) return [];
-    Object.values(providers.results).forEach((countryEntry) => {
-      ["flatrate", "rent", "buy"].forEach((key) => {
+    const map = new Map<string, { provider_name: string; logo_path?: string }>();
+    Object.values(providers?.results ?? {}).forEach((countryEntry) => {
+      (["flatrate", "rent", "buy"] as const).forEach((key) => {
         const list = countryEntry[key as keyof ProviderCountry];
         if (!Array.isArray(list)) return;
-        list.forEach((p) => {
-          if (!map.has(p.provider_name)) {
-            map.set(p.provider_name, {
-              provider_name: p.provider_name,
-              logo_path: p.logo_path,
-            });
-          } else {
-            const existing = map.get(p.provider_name)!;
-            if (!existing.logo_path && p.logo_path)
-              existing.logo_path = p.logo_path;
-          }
+        list.forEach((provider) => {
+          const previous = map.get(provider.provider_name);
+          map.set(provider.provider_name, {
+            provider_name: provider.provider_name,
+            logo_path: previous?.logo_path ?? provider.logo_path,
+          });
         });
       });
     });
@@ -66,404 +90,275 @@ export default function ExtraDetails({ data, contentId }: DetailsProp) {
     );
   }, [providers]);
 
-  const filteredProviders = useMemo(() => {
-    if (!providerSearch.trim()) return allProviders;
-    const q = providerSearch.trim().toLowerCase();
-    return allProviders.filter((p) =>
-      p.provider_name.toLowerCase().includes(q),
-    );
-  }, [allProviders, providerSearch]);
-
-  const getKeyCrewMembers = () => {
-    const keyJobs = [
-      "Director",
-      "Producer",
-      "Executive Producer",
-      "Screenplay",
-      "Story",
-      "Writer",
-      "Original Music Composer",
-      "Director of Photography",
-    ];
-    return keyJobs
-      .map((job) => {
-        const people = credits.crew.filter((person) => {
-          if ("job" in person && person.job) return person.job === job;
-          if ("jobs" in person && Array.isArray(person.jobs))
-            return person.jobs.some((j) => j.job === job);
-          return false;
-        });
-        return { job, people };
-      })
-      .filter((item) => item.people.length > 0);
-  };
-
-  const resolvedContentType: "movie" | "tv" =
-    info.content_type === "tv" ? "tv" : "movie";
-  const basePath = resolvedContentType === "tv" ? "tv" : "movies";
-  const viewAllHref = contentId ? `/${basePath}/${contentId}/credits` : "#";
-
-  /* Flatten crew into individual credit cards */
-  const creditCards = getKeyCrewMembers().flatMap(({ job, people }) =>
-    people.map((person) => ({ ...person, role: job })),
+  const visibleProviders = allProviders.filter((provider) =>
+    provider.provider_name
+      .toLowerCase()
+      .includes(providerSearch.trim().toLowerCase()),
   );
+  const visibleCast = credits.cast.slice(0, castLimit);
+  const mobileCast = credits.cast.slice(0, 4);
+  const mobileCrew = keyCrew.slice(0, 4);
+  const hasDistribution =
+    info.production_countries.length > 0 || allProviders.length > 0;
 
-  return (
-    <>
-      {/* ═══════════════════════════════════════════════════
-          FEATURED CAST — Cinema roster with numbered stills
-          ═══════════════════════════════════════════════════ */}
-      <section>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-              Featured Cast
-            </h2>
-            <p className="text-slate-400 text-sm mt-0.5">
-              The faces behind the story
-            </p>
-          </div>
-          <Link
-            href={viewAllHref}
-            className="text-xs px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.09] text-slate-200 transition-colors duration-150"
-          >
-            View all →
-          </Link>
+  const renderCast = (people: typeof credits.cast) =>
+    people.map((actor) => (
+      <Link
+        key={actor.id}
+        href={`/celeb/${actor.id}`}
+        className="group min-w-0 border-b border-[var(--surface-border)] pb-4 transition-colors hover:border-brand-coral/60"
+      >
+        <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-[var(--surface-1)]">
+          <Image
+            src={
+              actor.profile_path
+                ? tmdbImage(actor.profile_path, "w185")
+                : "/placeholder-person.svg"
+            }
+            alt={actor.name}
+            fill
+            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 16vw"
+            className="object-cover"
+          />
         </div>
+        <p className="mt-3 truncate text-sm font-semibold leading-5 text-[var(--ink)]">
+          {actor.name}
+        </p>
+        <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">
+          {actor.character || "Cast"}
+        </p>
+      </Link>
+    ));
 
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5">
-          {credits.cast.slice(0, castLimit).map((actor) => (
-            <Link
-              key={actor.id}
-              href={`/celeb/${actor.id}`}
-              className="group block relative aspect-[3/4] rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.07] hover:border-[#e94f37]/45 transition-all duration-300 hover:scale-[1.025] hover:shadow-lg hover:shadow-black/40"
-            >
-              {/* Photo */}
-              <Image
-                src={
-                  actor.profile_path
-                    ? tmdbImage(actor.profile_path, "w185")
-                    : "/placeholder-person.svg"
-                }
-                alt={actor.name}
-                fill
-                sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 17vw"
-                className="object-cover transition-all duration-500 group-hover:scale-[1.07]"
-              />
-
-              {/* Base gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/15 to-transparent" />
-
-              {/* Red tint on hover */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#e94f37]/18 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
-
-              {/* Number stamp — top left */}
-             
-
-              {/* Info panel — slides up from bottom */}
-              <div className="absolute bottom-0 left-0 right-0 translate-y-[4px] group-hover:translate-y-0 transition-transform duration-300 ease-out">
-                <div className="px-2.5 pb-2.5 pt-6 bg-gradient-to-t from-black/98 to-transparent">
-                  <p className="text-white text-[13px] font-semibold leading-tight truncate">
-                    {actor.name}
-                  </p>
-                  <p className="text-[#e94f37]/75 text-[11.5px] truncate italic mt-0.5 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 delay-75">
-                    {actor.character}
-                  </p>
-                </div>
-              </div>
-            </Link>
-          ))}
+  const renderCrew = (people: typeof keyCrew) =>
+    people.map(({ person, role }, index) => (
+      <Link
+        key={`${person.id}-${role}-${index}`}
+        href={`/celeb/${person.id}`}
+        className="flex min-w-0 items-center gap-3 border-b border-[var(--surface-border)] py-3 transition-colors hover:border-brand-coral/60"
+      >
+        <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--surface-2)] text-xs font-bold text-[var(--ink-muted)]">
+          {person.profile_path ? (
+            <Image
+              src={tmdbImage(person.profile_path, "w92")}
+              alt={person.name}
+              width={40}
+              height={40}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            initials(person.name)
+          )}
         </div>
-
-        {/* Load more / collapse */}
-        {credits.cast.length > INITIAL_CAST && (
-          <div className="mt-5 flex items-center gap-3">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
-            {castLimit < credits.cast.length && (
-              <button
-                onClick={() =>
-                  setCastLimit((v) =>
-                    Math.min(v + CAST_STEP, credits.cast.length),
-                  )
-                }
-                className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white px-5 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] hover:border-[#e94f37]/30 transition-all duration-200"
-              >
-                <ChevronDown size={11} />
-                {Math.min(CAST_STEP, credits.cast.length - castLimit)} more
-                <span className="text-white/20 font-mono text-[10px]">
-                  · {credits.cast.length - castLimit} left
-                </span>
-              </button>
-            )}
-            {castLimit > INITIAL_CAST && (
-              <button
-                onClick={() => setCastLimit(INITIAL_CAST)}
-                className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white px-5 py-2 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.07] hover:border-[#e94f37]/30 transition-all duration-200"
-              >
-                <ChevronUp size={11} />
-                Collapse
-              </button>
-            )}
-            <div className="flex-1 h-px bg-gradient-to-l from-transparent via-white/[0.07] to-transparent" />
-          </div>
-        )}
-      </section>
-
-      <hr className="border-white/[0.06]" />
-
-      <section className="space-y-12">
-        {/* ═══════════════════════════════════════════════════
-            KEY PERSONNEL — Individual role-color credit cards
-            ═══════════════════════════════════════════════════ */}
-        {creditCards.length > 0 && (
-          <div>
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-                  Key Personnel
-                </h2>
-                <p className="text-slate-400 text-sm mt-0.5">
-                  The creative visionaries behind the film
-                </p>
-              </div>
-              <Link
-                href={viewAllHref}
-                className="text-xs px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.09] text-slate-200 transition-colors duration-150"
-              >
-                View all →
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-              {creditCards.map((person, idx) => {
-                const color = roleColor(person.role);
-                return (
-                  <motion.div
-                    key={`${person.id}-${person.role}-${idx}`}
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-40px" }}
-                    transition={{ delay: idx * 0.04, duration: 0.3 }}
-                  >
-                    <Link
-                      href={`/celeb/${person.id}`}
-                      className="group relative flex flex-col gap-2.5 p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:bg-white/[0.06] hover:border-white/[0.13] transition-all duration-200 overflow-hidden block"
-                    >
-                      {/* Left accent on hover */}
-                      <div
-                        className="pointer-events-none absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                        style={{
-                          background: `linear-gradient(to bottom, transparent, ${color}80, transparent)`,
-                        }}
-                      />
-
-                      {/* Role badge */}
-                      <div className="flex items-center min-w-0">
-                        <span
-                          className="inline-block text-[9px] font-semibold uppercase tracking-[0.14em] px-2 py-0.5 rounded-full truncate max-w-full"
-                          style={{
-                            color,
-                            background: `${color}14`,
-                            border: `1px solid ${color}28`,
-                          }}
-                        >
-                          {person.role}
-                        </span>
-                      </div>
-
-                      {/* Avatar + name row */}
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-white/[0.05] ring-1 ring-white/[0.08] group-hover:ring-white/[0.16] transition-all duration-200">
-                          <Image
-                            src={
-                              person.profile_path
-                                ? tmdbImage(person.profile_path, "w45")
-                                : "/placeholder-person.svg"
-                            }
-                            alt={person.name}
-                            width={40}
-                            height={40}
-                            className="object-cover w-full h-full"
-                          />
-                        </div>
-                        <p className="text-[12px] font-semibold text-white/75 group-hover:text-white transition-colors duration-200 leading-tight line-clamp-2">
-                          {person.name}
-                        </p>
-                      </div>
-                    </Link>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════════
-            STUDIO PARTNERS — Premium numbered logo showcase
-            ═══════════════════════════════════════════════════ */}
-        {info.production_companies?.length > 0 && (
-          <div>
-            <div className="mb-6">
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-                Studio Partners
-              </h2>
-              <p className="text-slate-400 text-sm mt-0.5">
-                In collaboration with industry leaders
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {info.production_companies.map((company, idx) => (
-                <div
-                  key={company.id}
-                  className="group relative flex flex-col rounded-xl overflow-hidden bg-white/[0.03] border border-white/[0.07] hover:border-[#e94f37]/30 hover:bg-white/[0.05] transition-all duration-300"
-                >
-                  {/* Number stamp */}
-                  <span className="absolute top-2.5 left-3 text-[9px] font-mono text-white/15 group-hover:text-[#e94f37]/50 transition-colors duration-300 select-none z-10">
-                    {String(idx + 1).padStart(2, "0")}
-                  </span>
-
-                  {/* Logo area */}
-                  <div className="relative flex items-center justify-center h-[88px] px-6 pt-6 pb-3">
-                    {company.logo_path ? (
-                      <div className="relative w-full h-full opacity-40 group-hover:opacity-85 transition-opacity duration-300">
-                        <Image
-                          src={tmdbImage(company.logo_path, "w300")}
-                          alt={company.name}
-                          fill
-                          sizes="180px"
-                          style={{
-                            objectFit: "contain",
-                            filter: "brightness(0) invert(1)",
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <Building2
-                        size={32}
-                        className="text-white/15 group-hover:text-white/30 transition-colors duration-300"
-                      />
-                    )}
-                  </div>
-
-                  {/* Name footer */}
-                  <div className="px-3 py-2.5 border-t border-white/[0.05]">
-                    <p className="text-[10px] font-mono text-white/25 group-hover:text-white/50 transition-colors duration-300 text-center truncate tracking-wide">
-                      {company.name}
-                    </p>
-                  </div>
-
-                  {/* Bottom red line on hover */}
-                  <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/0 to-transparent group-hover:via-[#e94f37]/45 transition-all duration-300" />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-
-      <hr className="border-white/[0.06]" />
-
-      {/* Global Distribution — unchanged */}
-      <section>
-        <div className="mb-6">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-            Global Distribution
-          </h2>
-          <p className="text-slate-400 text-sm">
-            International premieres & streaming availability
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold leading-5 text-[var(--ink)]">
+            {person.name}
+          </p>
+          <p className="truncate text-xs leading-5 text-[var(--ink-muted)]">
+            {role}
           </p>
         </div>
+      </Link>
+    ));
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Countries */}
-          <div className="flex flex-col gap-4 p-5 rounded-xl bg-white/[0.03] border border-white/[0.07]">
-            <p className="text-[11px] uppercase tracking-widest text-white/30">
-              Release Countries
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {info.production_countries.map((country) => (
-                <span
-                  key={country.iso_3166_1}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-[11px] text-white/60 bg-white/[0.05] border border-white/10 hover:bg-[#e94f37]/10 hover:border-[#e94f37]/30 hover:text-white transition-all duration-150"
-                >
-                  {country.name}
-                </span>
-              ))}
+  return (
+    <section
+      className="ui-shell scroll-mt-24 py-8 sm:py-10"
+      aria-labelledby="details-heading"
+    >
+      <header className="max-w-2xl">
+        <h2
+          id="details-heading"
+          className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
+        >
+          The making of it
+        </h2>
+        <p className="mt-3 text-base leading-7 text-[var(--ink-muted)]">
+          A useful credit trail, followed by where the title is made and where
+          it may be available.
+        </p>
+      </header>
+
+      {credits.cast.length > 0 ? (
+        <div className="mt-8 border-t border-[var(--surface-border)] pt-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-semibold text-[var(--ink)]">Cast</h3>
+              <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+                The performers most closely tied to the story.
+              </p>
             </div>
-            <p className="text-[11px] text-white/20 pt-3 border-t border-white/[0.06] mt-auto">
-              {info.production_countries.length} countr
-              {info.production_countries.length === 1 ? "y" : "ies"}
-            </p>
+            <Link href={creditsHref} className="ui-secondary-action">
+              Full credits
+            </Link>
           </div>
 
-          {/* Streaming Platforms */}
-          <div className="flex flex-col gap-4 p-5 rounded-xl bg-white/[0.03] border border-white/[0.07]">
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] uppercase tracking-widest text-white/30">
-                Streaming Platforms
+          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 sm:hidden">
+            {renderCast(mobileCast)}
+          </div>
+          <div className="mt-5 hidden gap-x-4 gap-y-5 sm:grid sm:grid-cols-3 lg:grid-cols-6">
+            {renderCast(visibleCast)}
+          </div>
+
+          {credits.cast.length > 12 ? (
+            <div className="mt-6 hidden flex-wrap gap-2 sm:flex">
+              {castLimit < credits.cast.length ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCastLimit((current) =>
+                      Math.min(current + 12, credits.cast.length),
+                    )
+                  }
+                  className="ui-secondary-action"
+                >
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                  Show more cast
+                </button>
+              ) : null}
+              {castLimit > 12 ? (
+                <button
+                  type="button"
+                  onClick={() => setCastLimit(12)}
+                  className="ui-secondary-action"
+                >
+                  <ChevronUp className="h-4 w-4" aria-hidden="true" />
+                  Show less
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {keyCrew.length > 0 ? (
+        <div className="mt-8 border-t border-[var(--surface-border)] pt-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-semibold text-[var(--ink)]">
+                Key crew
+              </h3>
+              <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+                The creative roles that shape the finished work.
               </p>
-              <span className="text-[11px] text-white/20">
-                {allProviders.length} providers
-              </span>
             </div>
+            <Link href={creditsHref} className="ui-secondary-action">
+              All credits
+            </Link>
+          </div>
 
-            <input
-              type="search"
-              value={providerSearch}
-              onChange={(e) => setProviderSearch(e.target.value)}
-              placeholder="Search Netflix, Prime…"
-              className="w-full bg-white/[0.05] border border-white/10 focus:border-[#e94f37]/40 rounded-lg px-3 py-2 text-[13px] text-white placeholder-white/25 outline-none transition-colors duration-150"
-            />
-
-            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto scrollbar-none">
-              {filteredProviders.length === 0 ? (
-                <p className="text-xs text-white/25">No providers match.</p>
-              ) : (
-                filteredProviders.map((provider, idx) => (
-                  <div
-                    key={`${provider.provider_name}-${idx}`}
-                    className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] text-white/60 bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:text-white transition-all duration-150 whitespace-nowrap"
-                  >
-                    {provider.logo_path ? (
-                      <div className="relative w-5 h-5 rounded overflow-hidden flex-shrink-0">
-                        <Image
-                          src={tmdbImage(provider.logo_path, "w92")}
-                          alt={provider.provider_name}
-                          fill
-                          style={{ objectFit: "cover" }}
-                          sizes="20px"
-                        />
-                      </div>
-                    ) : (
-                      <GlobeIconFallback />
-                    )}
-                    {provider.provider_name}
-                  </div>
-                ))
-              )}
-            </div>
+          <div className="mt-5 grid gap-x-8 sm:hidden">
+            {renderCrew(mobileCrew)}
+          </div>
+          <div className="mt-5 hidden gap-x-8 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+            {renderCrew(keyCrew)}
           </div>
         </div>
-      </section>
-    </>
-  );
-}
+      ) : null}
 
-function GlobeIconFallback() {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      className="text-slate-400"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12a8 8 0 0013.66 5.12L9.12 6.34A8 8 0 004 12z"
-        fill="currentColor"
-      />
-    </svg>
+      {hasDistribution ? (
+        <div className="mt-8 grid gap-8 border-t border-[var(--surface-border)] pt-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div>
+            <h3 className="text-xl font-semibold text-[var(--ink)]">Origin</h3>
+            <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+              Production countries and companies attached to the title.
+            </p>
+            <div className="mt-5 space-y-4">
+              {info.production_countries.length > 0 ? (
+                <div>
+                  <p className="text-xs font-semibold text-[var(--ink-muted)]">Production countries</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--ink)]">
+                    {info.production_countries
+                      .map((country) => country.name || country.iso_3166_1)
+                      .join(" · ")}
+                  </p>
+                </div>
+              ) : null}
+              {info.production_companies.length > 0 ? (
+                <div>
+                  <p className="text-xs font-semibold text-[var(--ink-muted)]">Production companies</p>
+                  <ul className="mt-2 space-y-2 text-sm leading-6 text-[var(--ink)]">
+                    {info.production_companies.map((company) => (
+                      <li key={company.id}>{company.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-semibold text-[var(--ink)]">
+                  Where to watch
+                </h3>
+                <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+                  Availability changes by country and time.
+                </p>
+              </div>
+              {allProviders.length > 0 ? (
+                <span className="text-xs text-[var(--ink-muted)]">
+                  {allProviders.length} listed
+                </span>
+              ) : null}
+            </div>
+            {allProviders.length > 0 ? (
+              <>
+                <label className="relative mt-5 block">
+                  <span className="sr-only">Search providers</span>
+                  <Search
+                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]"
+                    aria-hidden="true"
+                  />
+                  <input
+                    type="search"
+                    value={providerSearch}
+                    onChange={(event) => setProviderSearch(event.target.value)}
+                    placeholder="Search providers"
+                    className="h-10 w-full border-b border-[var(--surface-border)] bg-transparent pl-9 pr-3 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] focus:border-brand-coral-strong"
+                  />
+                </label>
+                <div className="mt-4 grid gap-x-6 sm:grid-cols-2">
+                  {visibleProviders.length > 0 ? (
+                    visibleProviders.map((provider) => (
+                      <div
+                        key={provider.provider_name}
+                        className="flex items-center gap-3 border-b border-[var(--surface-border)] py-3"
+                      >
+                        {provider.logo_path ? (
+                          <Image
+                            src={tmdbImage(provider.logo_path, "w92")}
+                            alt=""
+                            width={28}
+                            height={28}
+                            className="h-7 w-7 rounded-xl object-cover"
+                          />
+                        ) : (
+                          <span className="grid h-7 w-7 place-items-center rounded-xl bg-[var(--surface-2)] text-[10px] font-bold text-[var(--ink-muted)]">
+                            {initials(provider.provider_name).slice(0, 2)}
+                          </span>
+                        )}
+                        <span className="truncate text-sm text-[var(--ink)]">
+                          {provider.provider_name}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-[var(--ink-muted)]">
+                      No providers match that search.
+                    </p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="mt-5 text-sm leading-6 text-[var(--ink-muted)]">
+                No streaming availability was returned for this title.
+              </p>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }

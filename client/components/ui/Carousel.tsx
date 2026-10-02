@@ -51,7 +51,7 @@ export const Carousel = ({
       {canScrollLeft && (
         <button
           onClick={scrollLeft}
-          className="absolute left-0 top-1/2 z-10 hidden h-11 w-11 -translate-x-4 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] shadow-2xl ring-2 ring-white/10 transition-all hover:scale-110 group-hover/carousel:opacity-100 sm:flex md:opacity-0"
+          className="absolute left-0 top-1/2 z-10 hidden h-10 w-10 -translate-x-4 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--surface-border)] bg-[var(--surface-1)] text-[var(--ink)] shadow-lg shadow-black/20 transition-colors hover:border-brand-coral/60 hover:text-brand-coral-strong group-hover/carousel:opacity-100 sm:flex md:opacity-0"
           aria-label="Scroll left"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -61,7 +61,7 @@ export const Carousel = ({
       {canScrollRight && (
         <button
           onClick={scrollRight}
-          className="absolute right-0 top-1/2 z-10 hidden h-11 w-11 translate-x-4 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-r from-[#e94f37] to-[#ff6b58] shadow-2xl ring-2 ring-white/10 transition-all hover:scale-110 group-hover/carousel:opacity-100 sm:flex md:opacity-0"
+          className="absolute right-0 top-1/2 z-10 hidden h-10 w-10 translate-x-4 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--surface-border)] bg-[var(--surface-1)] text-[var(--ink)] shadow-lg shadow-black/20 transition-colors hover:border-brand-coral/60 hover:text-brand-coral-strong group-hover/carousel:opacity-100 sm:flex md:opacity-0"
           aria-label="Scroll right"
         >
           <ChevronRight className="h-5 w-5" />
@@ -69,7 +69,7 @@ export const Carousel = ({
       )}
 
       <div
-        className={`flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 scroll-smooth sm:hidden ${
+        className={`mobile-native-scroll scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 scroll-smooth sm:hidden ${
           mobileBleed ? "-mx-4 px-4" : "px-0"
         }`}
       >

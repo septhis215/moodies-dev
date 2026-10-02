@@ -7,17 +7,20 @@ Next.js frontend for Moodies.
 ```bash
 npm ci
 cp .env.example .env
-npm run env:local
+npm run dev:local
 ```
 
-`npm run env:local` removes `.env.local` so `.env.development` points the app at `http://localhost:4000`.
+The single `.env` file contains both backend URLs. Use `npm run dev:local` or
+`npm run dev:staging` to choose the target without editing the file.
 
 ## Scripts
 
-- `npm run dev`: start the Next.js dev server.
+- `npm run dev`: start the local-backend Next.js dev server.
+- `npm run dev:staging`: start Next.js against the staging backend.
 - `npm run lint:check`: run ESLint without modifying files.
 - `npm run typecheck`: run TypeScript checks.
-- `npm run build`: production build.
+- `npm run build`: staging build.
+- `npm run build:local`: build against the local backend.
 - `npm run verify`: lint, typecheck, and build.
 - `npm run test`: Storybook/Vitest browser tests.
 - `npm run storybook`: start Storybook.
@@ -32,8 +35,9 @@ The test script disables Storybook telemetry for repeatable local and CI runs.
 
 ## Environment Rules
 
-- Browser/client code must use `NEXT_PUBLIC_API_URL`.
-- Server components can use `NEST_API_URL`.
-- Do not commit real `.env`, `.env.local`, `.env.production`, or `.env.staging` files.
+- `LOCAL_API_URL`, `STAGING_API_URL`, and `PRODUCTION_API_URL` are the host settings.
+- Browser/client code uses the selected `NEXT_PUBLIC_API_URL`.
+- Server components use the selected `NEST_API_URL`.
+- Do not commit `.env`.
 
 See [../ENVIRONMENTS.md](../ENVIRONMENTS.md) for deployment-specific environment behavior.

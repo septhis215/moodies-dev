@@ -52,21 +52,21 @@ export function MediaCard({
 
   return (
     <article className={cn("group relative min-w-0", className)}>
-      <div className="relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/10 bg-surface-1 shadow-xl shadow-black/20">
+      <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-surface-1 shadow-xl shadow-black/20">
         <Link href={href} className="block h-full focus-visible:outline-none">
           <Image
             src={poster}
             alt={title}
             fill
             sizes="(max-width: 640px) 45vw, (max-width: 1024px) 23vw, 180px"
-            className="object-cover transition duration-500 group-hover:scale-105"
+            className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/20" />
           <div className="absolute right-2.5 top-2.5">
             <RatingBadge rating={item.vote_average} size="sm" />
           </div>
           <div className="absolute inset-x-0 bottom-0 p-3">
-            <p className="line-clamp-2 text-sm font-black leading-tight text-white">
+            <p className="line-clamp-2 text-sm font-semibold leading-5 text-white">
               {title}
             </p>
             <div className="mt-1 flex items-center gap-2 text-xs text-white/55">
@@ -112,9 +112,9 @@ export function MediaCard({
 export function MediaCardSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="aspect-[2/3] rounded-2xl bg-white/[0.07]" />
-      <div className="mt-3 h-4 w-4/5 rounded bg-white/[0.07]" />
-      <div className="mt-2 h-3 w-1/3 rounded bg-white/[0.05]" />
+      <div className="aspect-[2/3] rounded-xl bg-white/[0.07]" />
+      <div className="mt-3 h-4 w-4/5 rounded-xl bg-white/[0.07]" />
+      <div className="mt-2 h-3 w-1/3 rounded-xl bg-white/[0.05]" />
     </div>
   );
 }

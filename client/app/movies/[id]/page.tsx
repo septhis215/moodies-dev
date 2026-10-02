@@ -146,7 +146,7 @@ export default async function MoviePage({
       <main className="min-h-screen flex items-center justify-center p-8">
         <div className="text-center text-white">
           <h2 className="text-2xl font-bold">Not found</h2>
-          <p className="mt-2 text-gray-400">Unable to fetch details.</p>
+          <p className="mt-2 text-[var(--ink-muted)]">Unable to fetch details.</p>
         </div>
       </main>
     );
@@ -158,6 +158,7 @@ export default async function MoviePage({
         data={data}
         topMoods={reviews.topMoods || []}
         reviewStats={reviewStats}
+        trailers={videos?.videos ?? []}
       />
       <DecisionPanel
         data={data}
@@ -165,33 +166,27 @@ export default async function MoviePage({
         reviewStats={reviewStats}
       />
 
-      <div className="min-h-screen bg-black text-slate-100">
-        <div className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:space-y-14 sm:px-6 sm:py-16">
-          <ImageVideoCarousel
-            posters={images?.posters ?? []}
-            backdrops={images?.backdrops ?? []}
-            videos={videos?.videos ?? []}
-          />
+      <div className="bg-[var(--surface-0)]">
+        <ReviewsSection
+          reviews={reviews.reviews}
+          contentId={id}
+          contentType="movie"
+        />
 
-          <hr className="my-8 border-white/8 sm:my-14" />
+        <CommonCardCarousel
+          title="If this landed for you"
+          subtitle="A few next watches selected for the story, genre, and audience response."
+          type="movie"
+          items={recommendations ?? []}
+        />
 
-          <MovieDetails data={data} contentId={id} />
+        <MovieDetails data={data} contentId={id} />
 
-          <hr className="my-8 border-white/8 sm:my-14" />
-          <ReviewsSection
-            reviews={reviews.reviews}
-            contentId={id}
-            contentType="movie"
-          />
-
-          <hr className="my-8 border-white/8 sm:my-14" />
-          <CommonCardCarousel
-            title="Something Similar"
-            subtitle="Films you may also enjoy"
-            type="movie"
-            items={recommendations ?? []}
-          />
-        </div>
+        <ImageVideoCarousel
+          posters={images?.posters ?? []}
+          backdrops={images?.backdrops ?? []}
+          videos={videos?.videos ?? []}
+        />
       </div>
     </main>
   );

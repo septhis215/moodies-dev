@@ -23,8 +23,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const shouldShowNavbar =
     !NAVBAR_HIDDEN_PREFIXES.some((p) => pathname.startsWith(p)) &&
     !NAVBAR_HIDDEN_SEGMENTS.some((s) => pathname.includes(s));
+  const isSelectedContentPage = /^\/(movies|tv)\/[^/]+\/?$/.test(pathname);
 
-  const mainClassName = shouldShowNavbar
+  const mainClassName = shouldShowNavbar && !isSelectedContentPage
     ? "min-h-screen bg-black pt-[var(--mobile-nav-safe)] lg:pt-0"
     : "min-h-screen bg-black";
 
@@ -32,7 +33,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     <>
       {shouldShowNavbar && (
         <Suspense fallback={null}>
-          <NavbarComponent />
+          <NavbarComponent
+            layoutMode={isSelectedContentPage ? "flow" : "overlay"}
+          />
         </Suspense>
       )}
       <main className={mainClassName}>{children}</main>

@@ -138,12 +138,12 @@ export default function AllCredits({
           {/* Controls cluster */}
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             {/* Tab toggle */}
-            <div className="flex min-h-11 items-center gap-1 rounded-lg border border-white/[0.07] bg-white/[0.04] p-1">
+            <div className="flex min-h-11 items-center gap-1 rounded-xl border border-white/[0.07] bg-white/[0.04] p-1">
               {(["cast", "crew"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
-                  className={`min-h-9 rounded-md px-4 py-1.5 text-xs font-semibold capitalize transition-all duration-200 cursor-pointer ${
+                  className={`min-h-9 rounded-xl px-4 py-1.5 text-xs font-semibold capitalize transition-all duration-200 cursor-pointer ${
                     tab === t
                       ? "bg-[#e94f37] text-white"
                       : "text-slate-400 hover:text-white"
@@ -167,7 +167,7 @@ export default function AllCredits({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search name or role…"
-                className="min-h-11 w-full rounded-lg border border-white/[0.07] bg-white/[0.05] py-2 pl-8 pr-3 text-xs text-white outline-none transition-colors placeholder-white/25 focus:border-[#e94f37]/40 sm:w-56"
+                className="min-h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.05] py-2 pl-8 pr-3 text-xs text-white outline-none transition-colors placeholder-white/25 sm:w-56"
               />
             </div>
 
@@ -203,7 +203,7 @@ export default function AllCredits({
                 <a
                   key={d}
                   href={`#dept-${encodeURIComponent(d)}`}
-                  className="text-[11px] px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.08] hover:text-white text-white/40 transition-all whitespace-nowrap flex-shrink-0"
+                  className="text-[11px] px-2.5 py-1 rounded-xl bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.08] hover:text-white text-white/40 transition-all whitespace-nowrap flex-shrink-0"
                 >
                   {d.length > 14 ? d.slice(0, 14) + "…" : d}
                 </a>
@@ -232,7 +232,7 @@ export default function AllCredits({
                     className="group flex gap-4 p-3 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:bg-white/[0.05] hover:border-white/[0.12] transition-all duration-200"
                   >
                     {/* Photo */}
-                    <div className="w-16 h-20 sm:w-20 sm:h-28 rounded-lg overflow-hidden bg-white/[0.06] flex-shrink-0">
+                    <div className="w-16 h-20 sm:w-20 sm:h-28 rounded-xl overflow-hidden bg-white/[0.06] flex-shrink-0">
                       <Image
                         src={imageSrc(p.profile_path) ?? "/placeholder-person.svg"}
                         alt={p.name}
@@ -305,7 +305,7 @@ export default function AllCredits({
                       <div
                         id={`credit-${person.id}`}
                         key={`${group.dept}-${person.id}`}
-                        className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-150"
+                        className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-150"
                       >
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-white truncate">

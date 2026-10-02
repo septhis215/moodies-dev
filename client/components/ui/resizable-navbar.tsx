@@ -50,7 +50,7 @@ export const Navbar = ({ children, className }: NavbarProps) => {
     <div
       ref={ref}
       className={cn(
-        "fixed inset-x-0 top-0 z-[999] py-0 flex h-14 w-full items-start bg-gradient-to-b from-black/30 via-black/10 to-transparent px-0 backdrop-blur-[2px] md:h-24 lg:items-center lg:backdrop-blur-[3px]",
+        "fixed inset-x-0 top-0 z-[999] flex h-[var(--mobile-nav-safe)] w-full items-start bg-gradient-to-b from-black/30 via-black/10 to-transparent px-0 py-0 backdrop-blur-[2px] lg:h-24 lg:items-center lg:backdrop-blur-[3px]",
         "lg:[mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]",
         className,
       )}

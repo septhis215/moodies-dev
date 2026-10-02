@@ -1,7 +1,7 @@
 
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Barlow_Condensed, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "./client-layout";
 import { AppErrorProvider } from "./context/AppErrorProvider";
@@ -29,14 +29,18 @@ const AUTH_PREHIDE_SCRIPT = `
 })();
 `;
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const bodyFont = Source_Sans_3({
+  variable: "--font-body",
   subsets: ["latin"],
+  weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const displayFont = Barlow_Condensed({
+  variable: "--font-display",
   subsets: ["latin"],
+  weight: ["600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -89,7 +93,7 @@ export default async function RootLayout({
         </head>
       )}
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${bodyFont.variable} ${displayFont.variable} antialiased`}
         style={{ background: "#000" }}
       >
         <PerformanceMonitor />
