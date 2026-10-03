@@ -14,7 +14,7 @@ import {
   Film,
   Tv,
   Bookmark,
-  Settings,
+  Pencil,
   LogOut,
   Star,
   TrendingUp,
@@ -44,7 +44,6 @@ import { fetchMediaSummary } from "@/lib/mediaApi";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 const MASCOT_SRC = "/images/moodies-mascot.png";
-const LOGO_SRC = "/images/moodies-transparent.png";
 const PUBLIC_IMAGE_PATH_PATTERN =
   /^\/images\/.+\.(?:png|jpe?g|webp|gif|svg)(?:[?#].*)?$/i;
 const REVIEW_MOOD_LABELS: Record<string, string> = {
@@ -92,7 +91,7 @@ function ReviewMoodIcon({ value }: { value: string }) {
   const label = moodLabelFromValue(trimmedValue);
 
   if (!hasImage) {
-    return <span className="text-[0.7rem] leading-none">{trimmedValue}</span>;
+    return <span className="text-xs leading-none">{trimmedValue}</span>;
   }
 
   return (
@@ -193,7 +192,13 @@ type UserAchievementView = {
 };
 
 export default function ProfilePage() {
-  const { user: decodedUser, isAuthenticated, logout, logoutSilent } = useAuth();
+  const {
+    user: decodedUser,
+    isAuthenticated,
+    loading: authLoading,
+    logout,
+    logoutSilent,
+  } = useAuth();
 
   const [profile, setProfile] = useState<ServerUser | null>(null);
   const [watchlist, setWatchlist] = useState<Watchlist | null>(null);
@@ -655,9 +660,6 @@ export default function ProfilePage() {
       6) *
       100,
   );
-  const featuredAchievement =
-    unlockedAchievementRows[0] ?? visibleAchievementRows[0];
-
   const isBanned =
     !!user?.reviewBannedUntil && new Date(user.reviewBannedUntil) > new Date();
   const bannedUntil = user?.reviewBannedUntil
@@ -675,7 +677,7 @@ export default function ProfilePage() {
   }) {
     return (
       <div
-        className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${color} flex items-center gap-1.5 transition-all hover:scale-105`}
+        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold ${color}`}
       >
         {icon}
         <span>{name}</span>
@@ -699,7 +701,7 @@ export default function ProfilePage() {
 
     return (
       <div
-        className={`bg-white/5 p-4 rounded-xl border ${isComplete ? "border-[#e94f37]/40" : "border-white/10"} transition-all hover:scale-105`}
+        className={`border bg-[var(--surface-1)] p-4 ${isComplete ? "border-[var(--brand-coral)]/40" : "border-[var(--surface-border)]"}`}
       >
         <div className="flex items-start gap-3 mb-3">
           <div
@@ -709,7 +711,7 @@ export default function ProfilePage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm mb-1">{title}</p>
-            <p className="text-xs text-gray-400 line-clamp-2">{description}</p>
+            <p className="line-clamp-2 text-xs text-[var(--ink-muted)]">{description}</p>
           </div>
         </div>
         <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
@@ -720,7 +722,7 @@ export default function ProfilePage() {
             className="h-2 bg-[#e94f37] rounded-full"
           />
         </div>
-        <p className="text-xs mt-2 text-gray-400 font-semibold">
+        <p className="mt-2 text-xs font-semibold text-[var(--ink-muted)]">
           {percentage}% complete
         </p>
       </div>
@@ -786,152 +788,147 @@ export default function ProfilePage() {
     );
   }
 
-  return (
-    <main className="min-h-screen bg-black pb-8 text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(233,79,55,0.18),transparent_32%),radial-gradient(circle_at_88%_12%,rgba(255,255,255,0.07),transparent_24%),linear-gradient(180deg,#050505_0%,#000_58%)]" />
-      <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,0.65)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.65)_1px,transparent_1px)] [background-size:44px_44px]" />
-      <div className="relative mx-auto w-full max-w-7xl px-4 py-5 sm:px-8 sm:py-24 lg:px-10">
-        <section className="relative mb-5 overflow-hidden border-b border-white/10 pb-6 sm:mb-8 sm:pb-10">
-          <div className="pointer-events-none absolute right-0 top-0 hidden h-72 w-72 opacity-20 sm:block">
-            <Image
-              src={MASCOT_SRC}
-              alt=""
-              fill
-              sizes="288px"
-              className="object-contain"
-              priority
-            />
-          </div>
+  if (authLoading) {
+    return <ProfilePageSkeleton />;
+  }
 
-          <div className="relative grid gap-5 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-5">
-              <motion.div
-                initial={{ scale: 0.92, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
+        <div className="ui-shell flex min-h-[72vh] items-center justify-center py-12 text-center">
+          <section className="max-w-md" aria-labelledby="profile-sign-in-title">
+            <div className="relative mx-auto h-20 w-20">
+              <Image
+                src={MASCOT_SRC}
+                alt=""
+                fill
+                sizes="80px"
+                className="object-contain"
+                priority
+              />
+            </div>
+            <p className="ui-kicker mt-5">Your Moodies profile</p>
+            <h1
+              id="profile-sign-in-title"
+              className="mt-3 text-4xl font-bold leading-none text-[var(--ink)] sm:text-5xl"
+            >
+              Your taste deserves a home
+            </h1>
+            <p className="mt-4 text-sm leading-6 text-[var(--ink-muted)]">
+              Sign in to see your watchlist, reviews, achievements, and the
+              personality your picks are building.
+            </p>
+            <Link href="/auth/login" className="ui-primary-action mt-6 inline-flex">
+              Sign in to Moodies
+            </Link>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[var(--surface-0)] pb-10 text-[var(--ink)]">
+      <div className="ui-shell py-5 sm:py-10">
+        <section className="mb-5 border-b border-[var(--surface-border)] pb-6 sm:mb-8 sm:pb-8">
+          <div className="flex items-start gap-4 sm:items-center sm:gap-6">
+              <button
+                type="button"
                 onClick={() => user?.avatarUrl && setAvatarLightbox(true)}
-                className={`relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-zinc-900 shadow-2xl shadow-[#e94f37]/10 ring-2 ring-[#e94f37]/70 sm:h-32 sm:w-32 lg:h-36 lg:w-36${user?.avatarUrl ? " cursor-pointer transition-shadow hover:ring-[#ff8a78]" : ""}`}
+                aria-label={user?.avatarUrl ? "View profile avatar" : undefined}
+                disabled={!user?.avatarUrl}
+                className="relative h-[4.5rem] w-[4.5rem] flex-shrink-0 overflow-hidden rounded-xl bg-[var(--surface-2)] ring-1 ring-[var(--surface-border)] transition-[box-shadow] hover:ring-[var(--brand-coral)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)] disabled:cursor-default sm:h-28 sm:w-28"
               >
                 {user?.avatarUrl ? (
                   <Image
                     src={user.avatarUrl}
                     alt="Profile avatar"
                     fill
-                    sizes="128px"
+                    sizes="(max-width: 640px) 72px, 112px"
                     className="object-cover"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-[#e94f37] text-4xl font-black text-white sm:text-5xl">
+                  <div className="flex h-full w-full items-center justify-center bg-[var(--brand-coral)] text-3xl font-extrabold text-white sm:text-5xl">
                     {(user?.name || "U")[0]}
                   </div>
                 )}
-              </motion.div>
+              </button>
 
-              <div className="min-w-0 flex-1 pb-1">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#ff8a78]">
-                    <Image
-                      src={LOGO_SRC}
-                      alt=""
-                      width={18}
-                      height={18}
-                      className="h-4 w-4 object-contain"
-                    />
-                    Moodies Profile
-                  </span>
-                  <span className="rounded-lg bg-[#e94f37]/20 px-3 py-1.5 text-xs font-bold uppercase text-[#ff8a78]">
-                    {user?.role ?? "user"}
-                  </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="ui-kicker">{profilePersona.title}</p>
                   {isBanned && (
-                    <span className="rounded-lg bg-yellow-500/15 px-3 py-1.5 text-xs font-semibold text-yellow-300">
+                    <span className="text-xs font-semibold text-[var(--brand-gold)]">
                       Banned until {bannedUntil?.toLocaleDateString()}
                     </span>
                   )}
                 </div>
-                <h1 className="break-words text-[2rem] font-black leading-[1.05] tracking-tight sm:text-6xl">
+                <h1 className="mt-2 break-words text-4xl font-bold leading-none text-[var(--ink)] sm:text-6xl">
                   {user?.name || user?.username || "Your Profile"}
                 </h1>
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/55">
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--ink-muted)]">
                   <span>@{user?.username ?? "user"}</span>
-                  <span className="text-white/18">/</span>
-                  <span>{profilePersona.title}</span>
-                  <span className="text-white/18">/</span>
+                  <span aria-hidden="true">·</span>
                   <span>{profileCompletion}% complete</span>
                 </div>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/58 sm:mt-4 sm:text-base">
-                  A living read of what you save, rate, and return to, tuned for
-                  mood-first discovery.
+              </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 border-l-2 border-[var(--brand-coral)] pl-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="relative h-11 w-11 flex-shrink-0">
+                <Image src={MASCOT_SRC} alt="" fill sizes="44px" className="object-contain" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm leading-6 text-[var(--ink-muted)]">
+                  {profilePersona.detail}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-[var(--brand-coral-strong)]">
+                  {profilePersona.signal}
                 </p>
               </div>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.045] p-4 backdrop-blur sm:p-5 lg:p-4">
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#e94f37]/70 to-transparent" />
-              <div className="flex items-start gap-3">
-                <div className="relative h-16 w-16 flex-shrink-0 rounded-2xl bg-[#e94f37]/10 sm:h-20 sm:w-20">
-                  <Image
-                    src={MASCOT_SRC}
-                    alt="Moodies mascot"
-                    fill
-                    sizes="80px"
-                    className="object-contain p-1"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8a78]">
-                    Moodies read
-                  </p>
-                  <p className="mt-1 text-lg font-black text-white">
-                    {profilePersona.title}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-white/48">
-                    {profilePersona.detail}
-                  </p>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-[#e94f37]"
-                      style={{ width: `${profileCompletion}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                <button
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#e94f37] text-sm font-semibold text-white transition hover:bg-[#ff5746]"
-                  onClick={() => {
-                    setProfileName(user?.name ?? user?.username ?? "");
-                    setProfileUsername(user?.username ?? "");
-                    setProfileError(null);
-                    setEditOpen(true);
-                  }}
-                  title="Edit profile"
-                >
-                  <Settings className="h-4 w-4" />
-                </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                className="ui-primary-action inline-flex min-h-11 items-center gap-2"
+                onClick={() => {
+                  setProfileName(user?.name ?? user?.username ?? "");
+                  setProfileUsername(user?.username ?? "");
+                  setProfileError(null);
+                  setEditOpen(true);
+                }}
+              >
+                <Pencil className="h-4 w-4" />
+                Edit profile
+              </button>
+              {user?.id && (
                 <Link
-                  href="/settings"
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:bg-white/[0.08] hover:text-white"
-                  title="Settings"
+                  href={`/profile/${user.id}`}
+                  className="ui-secondary-action inline-flex min-h-11 items-center"
                 >
-                  <Shield className="h-4 w-4" />
+                  View public profile
                 </Link>
-                <button
-                  className="inline-flex min-h-11 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/5 text-red-300 transition hover:bg-red-500/10"
-                  onClick={async () => {
-                    await logout();
-                    window.location.href = "/";
-                  }}
-                  title="Log out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              </div>
+              )}
+              <button
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
+                onClick={async () => {
+                  await logout();
+                  window.location.href = "/";
+                }}
+              >
+                <LogOut className="h-4 w-4" />
+                Log out
+              </button>
             </div>
           </div>
         </section>
 
-        {/* Stats Grid */}
-        <div className="mb-5 grid grid-cols-2 gap-2.5 sm:mb-8 sm:gap-3 lg:grid-cols-4">
+        <section
+          aria-label="Profile statistics"
+          className="mb-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-border)] sm:mb-8 lg:grid-cols-4"
+        >
           <StatCard
             label="Movies"
             value={movieCount}
@@ -948,27 +945,27 @@ export default function ProfilePage() {
             icon={<Bookmark className="w-4 h-4 sm:w-5 sm:h-5" />}
           />
           <StatCard
-            label="Avg Rating"
+            label="Avg TMDB score"
             value={averageRating.toFixed(1)}
             icon={<Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />}
           />
-        </div>
+        </section>
 
-        <div className="mb-6 grid gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-6">
+        <div className="mb-6 grid gap-4 sm:mb-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <section className="border-t-2 border-[var(--brand-coral)] bg-[var(--surface-1)] p-4 sm:p-6" aria-labelledby="taste-insight-title">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8a78]">
+                <p className="ui-kicker">
                   Taste insight
                 </p>
-                <h2 className="mt-2 text-2xl font-black sm:text-3xl">
-                  {profilePersona.title}
+                <h2 id="taste-insight-title" className="mt-2 text-3xl font-bold leading-none sm:text-4xl">
+                  What your picks say
                 </h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
-                  {profilePersona.detail}
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+                  A concise read based on the collection and reviews you have actually added.
                 </p>
               </div>
-              <div className="hidden h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-[#e94f37]/15 text-[#ff8a78] sm:flex">
+              <div className="hidden h-11 w-11 flex-shrink-0 items-center justify-center text-[var(--brand-coral-strong)] sm:flex">
                 <Sparkles className="h-6 w-6" />
               </div>
             </div>
@@ -986,16 +983,16 @@ export default function ProfilePage() {
                 value={`${visibleDisclosureCount}/${disclosureItems.length} sections`}
               />
             </div>
-          </div>
+          </section>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-6">
+          <section className="border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:p-6" aria-labelledby="public-profile-title">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-[#ff8a78]" />
-                <h2 className="text-lg font-bold">Public profile</h2>
+                <Shield className="h-5 w-5 text-[var(--brand-coral-strong)]" />
+                <h2 id="public-profile-title" className="text-xl font-bold">Public profile</h2>
               </div>
               <button
-                className="inline-flex h-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-3 text-xs font-bold text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[var(--surface-border)] px-3 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--brand-coral)] hover:text-[var(--ink)]"
                 onClick={() => {
                   setProfileName(user?.name ?? user?.username ?? "");
                   setProfileUsername(user?.username ?? "");
@@ -1003,11 +1000,11 @@ export default function ProfilePage() {
                   setEditOpen(true);
                 }}
               >
-                <Settings className="mr-1.5 h-3.5 w-3.5" />
+                <Pencil className="mr-1.5 h-4 w-4" />
                 Edit
               </button>
             </div>
-            <p className="mt-2 text-sm leading-6 text-white/48">
+            <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
               {visibleDisclosureCount} of {disclosureItems.length} profile
               sections are visible on your public page.
             </p>
@@ -1015,37 +1012,36 @@ export default function ProfilePage() {
               {disclosureItems.map(([key, label]) => (
                 <div
                   key={key}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5"
+                  className="flex min-h-11 items-center justify-between gap-3 border-b border-[var(--surface-border)] px-1 py-2.5 last:border-b-0"
                 >
-                  <span className="flex items-center gap-2 text-sm font-semibold text-white/70">
+                  <span className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
                     {disclosure[key] ? (
                       <Unlock className="h-4 w-4 text-emerald-300" />
                     ) : (
-                      <Lock className="h-4 w-4 text-white/35" />
+                      <Lock className="h-4 w-4 text-[var(--ink-muted)]" />
                     )}
                     {label}
                   </span>
                   <span
-                    className={`text-[0.65rem] font-bold uppercase tracking-[0.12em] ${disclosure[key] ? "text-emerald-300/75" : "text-white/25"}`}
+                    className={`text-xs font-bold uppercase tracking-[0.12em] ${disclosure[key] ? "text-emerald-300" : "text-[var(--ink-muted)]"}`}
                   >
                     {disclosure[key] ? "Shown" : "Hidden"}
                   </span>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* Tabs – comfortable & touch-friendly */}
-        <div className="sticky top-2 z-20 mb-5 flex gap-1.5 overflow-x-auto rounded-2xl border border-white/10 bg-zinc-950/90 p-1.5 shadow-xl shadow-black/30 backdrop-blur mobile-native-scroll sm:static sm:mb-8 sm:gap-2 sm:bg-white/[0.035] sm:shadow-none">
+        <div className="sticky top-0 z-20 -mx-4 mb-6 flex overflow-x-auto border-y border-[var(--surface-border)] bg-[var(--surface-0)] px-4 mobile-native-scroll sm:static sm:mx-0 sm:mb-8 sm:border-x sm:px-0">
           {(["profile", "watchlist", "reviews"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`inline-flex min-h-11 min-w-[7.5rem] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-xs font-bold transition-all duration-200 sm:min-w-0 sm:px-4 sm:text-sm ${
+              className={`relative inline-flex min-h-12 min-w-28 flex-1 items-center justify-center gap-2 whitespace-nowrap px-3 text-sm font-semibold transition-colors ${
                 tab === t
-                  ? "bg-[#e94f37] text-white shadow-lg shadow-[#e94f37]/15"
-                  : "text-white/42 hover:bg-white/[0.06] hover:text-white"
+                  ? "text-[var(--ink)] after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-[var(--brand-coral)]"
+                  : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
               }`}
             >
               {t === "profile" && <Sparkles className="h-4 w-4" />}
@@ -1067,35 +1063,6 @@ export default function ProfilePage() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="mb-6 grid gap-3 sm:mb-8 md:grid-cols-3">
-                <OverviewCard
-                  icon={<Sparkles className="h-5 w-5" />}
-                  label="Profile pulse"
-                  title={profilePersona.title}
-                  detail={profilePersona.signal}
-                />
-                <OverviewCard
-                  icon={<Award className="h-5 w-5" />}
-                  label="Featured badge"
-                  title={
-                    featuredAchievement?.badge?.badgeName ??
-                    featuredAchievement?.achievement.title ??
-                    "No badge yet"
-                  }
-                  detail={
-                    featuredAchievement?.progress.unlocked
-                      ? "Unlocked and public-ready"
-                      : "Keep building progress"
-                  }
-                />
-                <OverviewCard
-                  icon={<Shield className="h-5 w-5" />}
-                  label="Public visibility"
-                  title={`${visibleDisclosureCount}/${disclosureItems.length} sections visible`}
-                  detail="Change this anytime from edit profile"
-                />
-              </div>
-
               {/* Achievements */}
               <div className="mb-7 sm:mb-10">
                 <SectionHeading
@@ -1165,29 +1132,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Activity Summary */}
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:rounded-2xl sm:p-6">
-                <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-3 sm:mb-4">
-                  Recent Activity
-                </h2>
-                <div className="space-y-2 sm:space-y-3">
-                  <ActivityItem
-                    icon={<Bookmark className="w-3 h-3 sm:w-4 sm:h-4" />}
-                    text="Added 3 new movies to watchlist"
-                    time="2 hours ago"
-                  />
-                  <ActivityItem
-                    icon={<Star className="w-3 h-3 sm:w-4 sm:h-4" />}
-                    text="Rated 'Inception' 5 stars"
-                    time="1 day ago"
-                  />
-                  <ActivityItem
-                    icon={<Heart className="w-3 h-3 sm:w-4 sm:h-4" />}
-                    text="Marked 'Breaking Bad' as favorite"
-                    time="3 days ago"
-                  />
-                </div>
-              </div>
             </motion.div>
           )}
 
@@ -1203,7 +1147,7 @@ export default function ProfilePage() {
               <div className="mb-4 sm:mb-6">
                 <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
                   <div className="relative flex-1 w-full">
-                    <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)] sm:left-4 sm:h-5 sm:w-5" />
                     <input
                       type="text"
                       placeholder="Search your watchlist..."
@@ -1244,7 +1188,7 @@ export default function ProfilePage() {
         ${
           viewMode === "grid"
             ? "bg-[#e94f37] text-white"
-            : "text-gray-400 hover:bg-white/5 hover:text-white"
+            : "text-[var(--ink-muted)] hover:bg-white/5 hover:text-[var(--ink)]"
         }
       `}
                       >
@@ -1258,7 +1202,7 @@ export default function ProfilePage() {
         ${
           viewMode === "list"
             ? "bg-[#e94f37] text-white"
-            : "text-gray-400 hover:bg-white/5 hover:text-white"
+            : "text-[var(--ink-muted)] hover:bg-white/5 hover:text-[var(--ink)]"
         }
       `}
                       >
@@ -1293,7 +1237,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between text-xs text-gray-400 sm:text-sm">
+                <div className="mt-2 flex items-center justify-between text-xs text-[var(--ink-muted)] sm:text-sm">
                   <p>
                     Showing {filteredAndSortedItems.length} of {totalCount}{" "}
                     items
@@ -1371,7 +1315,7 @@ export default function ProfilePage() {
                                 <p className="text-xs sm:text-sm font-bold line-clamp-2 mb-0.5 sm:mb-1">
                                   {title}
                                 </p>
-                                <p className="text-xs text-gray-400">
+                                <p className="text-xs text-[var(--ink-muted)]">
                                   {item.kind === "movie"
                                     ? item.release_date?.split("-")[0]
                                     : item.first_air_date?.split("-")[0]}
@@ -1438,7 +1382,7 @@ export default function ProfilePage() {
                                 <h3 className="font-semibold text-sm sm:text-lg mb-1 truncate group-hover:text-[#e94f37] transition">
                                   {title}
                                 </h3>
-                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-400">
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--ink-muted)] sm:gap-3 sm:text-sm">
                                   <span className="flex items-center gap-1">
                                     {item.kind === "movie" ? (
                                       <Film className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1479,12 +1423,12 @@ export default function ProfilePage() {
               {!loading && filteredAndSortedItems.length === 0 && (
                 <div className="text-center py-12 sm:py-16">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-                    <Bookmark className="w-8 h-8 sm:w-10 sm:h-10 text-gray-600" />
+                    <Bookmark className="h-8 w-8 text-[var(--ink-muted)] sm:h-10 sm:w-10" />
                   </div>
                   <h3 className="text-lg sm:text-xl font-semibold mb-2">
                     No items found
                   </h3>
-                  <p className="text-sm sm:text-base text-gray-400 px-4">
+                  <p className="px-4 text-sm text-[var(--ink-muted)] sm:text-base">
                     {searchQuery
                       ? "Try adjusting your search or filters"
                       : "Start adding movies and TV shows to your watchlist"}
@@ -1507,11 +1451,11 @@ export default function ProfilePage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-6 h-0.5 bg-[#e94f37]" />
-                    <span className="text-[0.62rem] font-bold tracking-[0.2em] uppercase text-white/30">
+                    <span className="ui-kicker">
                       Your Activity
                     </span>
                   </div>
-                  <h2 className="text-2xl sm:text-3xl font-black text-white">
+                  <h2 className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
                     My Reviews
                   </h2>
                 </div>
@@ -1543,7 +1487,7 @@ export default function ProfilePage() {
                       >
                         {label}
                         <span
-                          className={`ml-1.5 text-[0.55rem] ${reviewTypeFilter === f ? "text-white/40" : "text-white/15"}`}
+                          className={`ml-1.5 text-xs ${reviewTypeFilter === f ? "text-[var(--ink)]" : "text-[var(--ink-muted)]"}`}
                         >
                           {count}
                         </span>
@@ -1627,12 +1571,12 @@ export default function ProfilePage() {
                                 >
                                   <div className="flex items-baseline gap-1 sm:block sm:text-center">
                                     <span
-                                      className="text-2xl font-black leading-none"
+                                      className="text-2xl font-bold leading-none"
                                       style={{ color: accentHex }}
                                     >
                                       {stars}
                                     </span>
-                                    <span className="text-[0.5rem] font-semibold uppercase tracking-widest text-white/25 sm:block sm:text-[0.44rem]">
+                                    <span className="text-xs font-semibold uppercase tracking-widest text-[var(--ink-muted)] sm:block">
                                       / 10
                                     </span>
                                   </div>
@@ -1677,7 +1621,7 @@ export default function ProfilePage() {
                                   <div className="mb-3 relative">
                                     {/* Opening quote mark */}
                                     <span
-                                      className="absolute -top-1 -left-1 text-[1.4rem] font-black leading-none select-none pointer-events-none"
+                                      className="pointer-events-none absolute -left-1 -top-1 select-none text-2xl font-bold leading-none"
                                       style={{
                                         color: accentHex,
                                         opacity: 0.35,
@@ -1685,7 +1629,7 @@ export default function ProfilePage() {
                                     >
                                       &quot;
                                     </span>
-                                    <p className="text-[0.82rem] sm:text-[0.95rem] text-white/80 leading-relaxed line-clamp-4 sm:line-clamp-5 pl-4 font-medium tracking-wide">
+                                    <p className="line-clamp-4 pl-4 text-sm font-medium leading-relaxed text-white/80 sm:line-clamp-5 sm:text-base">
                                       {review.content}
                                     </p>
                                   </div>
@@ -1697,19 +1641,19 @@ export default function ProfilePage() {
                                       className="flex items-center gap-1.5 group/attr min-w-0"
                                     >
                                       <span
-                                        className="text-[0.58rem] font-bold uppercase tracking-[0.12em] flex-shrink-0"
+                                        className="flex-shrink-0 text-xs font-bold uppercase tracking-[0.12em]"
                                         style={{ color: `${accentHex}70` }}
                                       >
                                         {isMovie ? "Movie" : "TV"}
                                       </span>
-                                      <span className="text-white/15 text-[0.5rem]">
+                                      <span className="text-xs text-[var(--ink-muted)]">
                                         ·
                                       </span>
-                                      <span className="text-[0.85rem] sm:text-[0.95rem] font-semibold text-white/75 group-hover/attr:text-white transition-colors truncate">
+                                      <span className="truncate text-sm font-semibold text-white/75 transition-colors group-hover/attr:text-white sm:text-base">
                                         {rep.tmdbTitle || `#${rep.tmdbId}`}
                                       </span>
                                       {rep.tmdbYear && (
-                                        <span className="text-[0.7rem] text-white/45 flex-shrink-0">
+                                        <span className="flex-shrink-0 text-xs text-[var(--ink-muted)]">
                                           {rep.tmdbYear}
                                         </span>
                                       )}
@@ -1717,18 +1661,18 @@ export default function ProfilePage() {
 
                                     <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
                                       {review.status === "FLAGGED" && (
-                                        <span className="text-[0.48rem] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400/70 border border-yellow-500/15">
+                                        <span className="rounded border border-yellow-500/15 bg-yellow-500/10 px-1.5 py-0.5 text-xs font-bold uppercase tracking-widest text-yellow-300">
                                           flagged
                                         </span>
                                       )}
                                       {group.reviews.length > 1 &&
                                         rIdx === 0 &&
                                         !hasLess && (
-                                          <span className="text-[0.55rem] text-white/18 font-medium">
+                                          <span className="text-xs font-medium text-[var(--ink-muted)]">
                                             +{group.reviews.length - 1}
                                           </span>
                                         )}
-                                      <span className="text-[0.72rem] sm:text-[0.8rem] text-white/55 font-medium tabular-nums">
+                                      <span className="text-xs font-medium tabular-nums text-[var(--ink-muted)] sm:text-sm">
                                         {new Date(
                                           review.createdAt,
                                         ).toLocaleDateString("en-US", {
@@ -1768,7 +1712,7 @@ export default function ProfilePage() {
                                         ),
                                       }))
                                     }
-                                    className="flex items-center gap-1.5 text-[0.70rem] text-white/25 hover:text-white/55 font-medium transition-colors"
+                                    className="flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
                                   >
                                     <svg
                                       width="10"
@@ -1794,7 +1738,7 @@ export default function ProfilePage() {
                                           [group.key]: group.reviews.length,
                                         }))
                                       }
-                                      className="flex items-center gap-1.5 text-[0.70rem] text-white/18 hover:text-white/45 font-medium transition-colors"
+                                      className="flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
                                     >
                                       Show all {group.reviews.length}
                                     </button>
@@ -1809,7 +1753,7 @@ export default function ProfilePage() {
                                       [group.key]: 1,
                                     }))
                                   }
-                                  className="ml-auto flex items-center gap-1.5 text-[0.65rem] text-white/18 hover:text-white/45 font-medium transition-colors"
+                                  className="ml-auto flex items-center gap-1.5 text-xs font-medium text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)]"
                                 >
                                   <svg
                                     width="10"
@@ -1875,7 +1819,7 @@ export default function ProfilePage() {
                           <span>Collapse</span>
                         </button>
                       )}
-                      <span className="text-[0.70rem] text-white/20 font-medium ml-auto">
+                      <span className="ml-auto text-xs font-medium text-[var(--ink-muted)]">
                         {Math.min(reviewsVisible, filteredMediaGroups.length)}{" "}
                         of {filteredMediaGroups.length} titles
                       </span>
@@ -1894,14 +1838,14 @@ export default function ProfilePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/80 p-3 backdrop-blur-sm sm:items-center sm:p-4"
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-3 sm:items-center sm:p-4"
               onClick={() => setMobileFilterOpen(false)}
             >
               <motion.div
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}
-                className="max-h-[86svh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-white/10 bg-zinc-900 p-5 mobile-native-scroll sm:rounded-2xl sm:p-6"
+                className="max-h-[86svh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-5 mobile-native-scroll sm:rounded-2xl sm:p-6"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-6">
@@ -1916,7 +1860,7 @@ export default function ProfilePage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold mb-2 text-gray-400 uppercase tracking-wide">
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                       Filter by Type
                     </label>
 
@@ -1947,7 +1891,7 @@ export default function ProfilePage() {
                       </select>
 
                       {/* Arrow */}
-                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[var(--ink-muted)]">
                         <svg
                           width="16"
                           height="16"
@@ -1965,7 +1909,7 @@ export default function ProfilePage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold mb-2 text-gray-400 uppercase tracking-wide">
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                       Sort by
                     </label>
 
@@ -1995,7 +1939,7 @@ export default function ProfilePage() {
                         <option value="title">Title</option>
                       </select>
 
-                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[var(--ink-muted)]">
                         <svg
                           width="16"
                           height="16"
@@ -2031,7 +1975,7 @@ export default function ProfilePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[999] flex items-end justify-center bg-black/85 p-3 backdrop-blur-md sm:items-center sm:p-6"
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/85 p-3 sm:items-center sm:p-6"
               onClick={() => {
                 if (!profileSaving) {
                   setAvatarPreview(null);
@@ -2044,7 +1988,7 @@ export default function ProfilePage() {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 28, opacity: 0, scale: 0.98 }}
                 transition={{ duration: 0.18 }}
-                className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl shadow-black/60 sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl sm:p-8"
+                className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-6 shadow-2xl shadow-black/60 sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl sm:p-8"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-6 flex items-start justify-between gap-4">
@@ -2062,7 +2006,7 @@ export default function ProfilePage() {
                       <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8a78]">
                         Profile tune-up
                       </p>
-                      <h2 className="text-xl sm:text-2xl font-black">
+                      <h2 className="text-xl font-bold sm:text-2xl">
                         Edit profile
                       </h2>
                     </div>
@@ -2394,43 +2338,11 @@ function resolveBadgeIcon(icon?: string) {
 
 function InsightTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3">
-      <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/30">
+    <div className="border-l border-[var(--surface-border)] px-4 py-2 first:border-l-0">
+      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
         {label}
       </p>
-      <p className="mt-1 text-sm font-bold text-white/80">{value}</p>
-    </div>
-  );
-}
-
-function OverviewCard({
-  icon,
-  label,
-  title,
-  detail,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  title: string;
-  detail: string;
-}) {
-  return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition hover:border-[#e94f37]/30 hover:bg-white/[0.055]">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:via-[#e94f37]/60" />
-      <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[#e94f37]/14 text-[#ff8a78]">
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[0.65rem] font-bold uppercase tracking-[0.16em] text-white/32">
-            {label}
-          </p>
-          <h3 className="mt-1 truncate text-base font-black text-white">
-            {title}
-          </h3>
-          <p className="mt-1 text-xs leading-5 text-white/45">{detail}</p>
-        </div>
-      </div>
+      <p className="mt-1 text-sm font-bold text-[var(--ink)]">{value}</p>
     </div>
   );
 }
@@ -2448,9 +2360,9 @@ function SectionHeading({
     <div className="mb-4 flex items-end justify-between gap-4 sm:mb-6">
       <div className="flex items-center gap-3">
         {icon}
-        <h2 className="text-xl font-black sm:text-2xl md:text-3xl">{title}</h2>
+        <h2 className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">{title}</h2>
       </div>
-      <p className="hidden text-xs font-bold uppercase tracking-[0.16em] text-white/28 sm:block">
+      <p className="hidden text-xs font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)] sm:block">
         {caption}
       </p>
     </div>
@@ -2465,22 +2377,22 @@ function AchievementCard({ row }: { row: UserAchievementView }) {
 
   return (
     <div
-      className={`rounded-2xl border p-4 transition hover:-translate-y-0.5 ${unlocked ? "border-[#e94f37]/35 bg-[#e94f37]/10" : "border-white/10 bg-white/[0.04] hover:bg-white/[0.06]"}`}
+      className={`border p-4 ${unlocked ? "border-[var(--brand-coral)] bg-[var(--surface-2)]" : "border-[var(--surface-border)] bg-[var(--surface-1)]"}`}
     >
       <div className="flex items-start gap-3">
         <div
-          className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${unlocked ? "bg-[#e94f37] text-white" : "bg-white/10 text-white/45"}`}
+          className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg ${unlocked ? "bg-[var(--brand-coral)] text-white" : "bg-[var(--surface-2)] text-[var(--ink-muted)]"}`}
         >
           {resolveBadgeIcon(row.badge?.icon)}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-bold text-white">{row.achievement.title}</p>
-            <span className="rounded-md border border-white/10 px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide text-white/40">
+            <p className="font-bold text-[var(--ink)]">{row.achievement.title}</p>
+            <span className="rounded-md border border-[var(--surface-border)] px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-[var(--ink-muted)]">
               {row.achievement.category}
             </span>
           </div>
-          <p className="mt-1 text-xs leading-5 text-white/48">
+          <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
             {unlocked
               ? row.achievement.reasoningTemplate
               : row.achievement.lockedHint}
@@ -2489,18 +2401,18 @@ function AchievementCard({ row }: { row: UserAchievementView }) {
       </div>
       <div className="mt-4">
         <div className="mb-2 flex items-center justify-between text-xs">
-          <span className="font-semibold text-white/45">{badgeName}</span>
-          <span className="tabular-nums text-white/45">
+          <span className="font-semibold text-[var(--ink-muted)]">{badgeName}</span>
+          <span className="tabular-nums text-[var(--ink-muted)]">
             {row.progress.currentProgress}/{required}
           </span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-white/10">
+        <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
           <div
-            className="h-full rounded-full bg-[#e94f37]"
+            className="h-full rounded-full bg-[var(--brand-coral)]"
             style={{ width: `${percent}%` }}
           />
         </div>
-        <p className="mt-2 text-xs text-white/35">{percent}% complete</p>
+        <p className="mt-2 text-xs text-[var(--ink-muted)]">{percent}% complete</p>
       </div>
     </div>
   );
@@ -2509,7 +2421,7 @@ function AchievementCard({ row }: { row: UserAchievementView }) {
 function RewardBadgeCard({ row }: { row: UserAchievementView }) {
   const accent = row.badge?.colorTheme?.accent ?? "#e94f37";
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+    <div className="relative overflow-hidden border border-[var(--surface-border)] bg-[var(--surface-1)] p-4">
       <div className="absolute -right-6 -top-6 h-24 w-24 opacity-20">
         <Image
           src={MASCOT_SRC}
@@ -2527,19 +2439,19 @@ function RewardBadgeCard({ row }: { row: UserAchievementView }) {
           {resolveBadgeIcon(row.badge?.icon)}
         </div>
         <div className="min-w-0">
-          <p className="font-black text-white">
+          <p className="font-bold text-[var(--ink)]">
             {row.badge?.badgeName ?? row.achievement.title}
           </p>
-          <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-white/35">
+          <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
             {row.badge?.rarity ?? "Common"}
           </p>
         </div>
       </div>
-      <p className="relative mt-3 text-xs leading-5 text-white/55">
+      <p className="relative mt-3 text-xs leading-5 text-[var(--ink-muted)]">
         {row.achievement.reasoningTemplate}
       </p>
       {row.progress.unlockedAt && (
-        <p className="relative mt-3 text-xs text-white/35">
+        <p className="relative mt-3 text-xs text-[var(--ink-muted)]">
           Earned {new Date(row.progress.unlockedAt).toLocaleDateString()}
         </p>
       )}
@@ -2562,11 +2474,10 @@ function StatCard({
   trend?: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] p-3 transition-all hover:-translate-y-0.5 hover:border-[#e94f37]/25 hover:bg-white/[0.055] sm:rounded-2xl sm:p-5">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+    <div className="bg-[var(--surface-1)] p-3 sm:p-5">
       <div className="flex items-center justify-between">
         {icon && (
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-[#e94f37]/12 text-[#ff8a78] flex items-center justify-center">
+          <div className="flex h-8 w-8 items-center justify-center text-[var(--brand-coral-strong)] sm:h-10 sm:w-10">
             {icon}
           </div>
         )}
@@ -2578,33 +2489,33 @@ function StatCard({
         )}
       </div>
       <div className="mt-3">
-        <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-0.5 sm:mb-1">
+        <p className="mb-0.5 text-xs font-semibold uppercase tracking-wider text-[var(--ink-muted)] sm:mb-1">
           {label}
         </p>
-        <p className="text-2xl sm:text-3xl font-black">{value}</p>
+        <p className="text-2xl font-bold text-[var(--ink)] sm:text-3xl">{value}</p>
       </div>
     </div>
   );
 }
 
-function ActivityItem({
-  icon,
-  text,
-  time,
-}: {
-  icon: React.ReactNode;
-  text: string;
-  time: string;
-}) {
+function ProfilePageSkeleton() {
   return (
-    <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg hover:bg-white/5 transition">
-      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#e94f37]/20 flex items-center justify-center text-[#e94f37] flex-shrink-0">
-        {icon}
+    <main className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
+      <div className="ui-shell animate-pulse py-8 sm:py-10" aria-label="Loading profile">
+        <div className="flex items-center gap-4 border-b border-[var(--surface-border)] pb-8">
+          <div className="h-[4.5rem] w-[4.5rem] rounded-xl bg-[var(--surface-2)] sm:h-28 sm:w-28" />
+          <div className="flex-1 space-y-3">
+            <div className="h-3 w-24 rounded bg-[var(--surface-2)]" />
+            <div className="h-9 max-w-sm rounded bg-[var(--surface-2)]" />
+            <div className="h-4 w-48 rounded bg-[var(--surface-2)]" />
+          </div>
+        </div>
+        <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-border)] lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-24 bg-[var(--surface-1)]" />
+          ))}
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs sm:text-sm font-medium truncate">{text}</p>
-        <p className="text-xs text-gray-500">{time}</p>
-      </div>
-    </div>
+    </main>
   );
 }

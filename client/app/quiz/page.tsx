@@ -202,8 +202,8 @@ function getMoodMascotSrc(name?: string | null) {
 function getOptionMascot(option: QuizOption, index: number) {
   return getMoodMascotSrc(
     option.mood ||
-      option.genres[0] ||
-      optionMascots[index % optionMascots.length],
+    option.genres[0] ||
+    optionMascots[index % optionMascots.length],
   );
 }
 
@@ -496,10 +496,9 @@ export default function MovieQuizPage() {
   };
 
   return (
-    <main className="relative min-h-[calc(100svh-var(--mobile-nav-safe))] overflow-hidden bg-black px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 text-white sm:min-h-screen sm:px-6 sm:pb-10 sm:pt-32 lg:px-8">
+    <main className="relative min-h-[calc(100svh-var(--mobile-nav-safe))] overflow-hidden bg-[var(--surface-0)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 text-white sm:min-h-screen sm:px-6 sm:pb-10 sm:pt-24 lg:px-8">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(233,79,55,0.18),transparent_32%),radial-gradient(circle_at_88%_18%,rgba(34,211,238,0.10),transparent_28%),linear-gradient(180deg,#050505_0%,#000_70%)]" />
-        <div className="absolute inset-0 opacity-[0.04] [background-image:linear-gradient(rgba(255,255,255,0.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:42px_42px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(240,100,75,0.12),transparent_28%),radial-gradient(circle_at_top_right,rgba(255,255,255,0.04),transparent_24%)]" />
       </div>
 
       <AnimatePresence mode="wait">
@@ -511,23 +510,16 @@ export default function MovieQuizPage() {
             exit={{ opacity: 0, y: -12 }}
             className="relative z-10 mx-auto grid min-h-[calc(100svh-var(--mobile-nav-safe)-1rem)] max-w-6xl items-center gap-5 sm:min-h-0 sm:gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.75fr)]"
           >
-            <div className="rounded-2xl border border-white/10 bg-zinc-950/72 p-4 shadow-2xl shadow-black/25 backdrop-blur sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none sm:backdrop-blur-none">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#e94f37]/25 bg-[#e94f37]/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-[#ffb2a6]">
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[rgba(17,15,15,0.88)] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.25)] sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--brand-coral)]/20 bg-[rgba(240,100,75,0.08)] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--brand-coral-strong)]">
                 <MoodMascot name="happy" size="xs" />
                 Personality quiz
               </div>
-              <h1 className="mt-3 max-w-3xl text-[1.8rem] font-black leading-[1.06] tracking-tight text-white min-[390px]:text-[2rem] sm:mt-5 sm:text-6xl">
+              <h1 className="mt-3 max-w-3xl text-[2rem] font-bold leading-[0.98] text-white min-[390px]:text-[2.35rem] sm:mt-5 sm:text-[clamp(2.45rem,4.6vw,4rem)] sm:leading-[0.96]">
                 Let Moodies read the room before you pick.
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-5 text-zinc-400 sm:mt-5 sm:text-lg sm:leading-7">
-                <span className="sm:hidden">
-                  Five quick choices turn your mood into a movie or series match.
-                </span>
-                <span className="hidden sm:inline">
-                  Answer five quick prompts and the mascot will build a viewing
-                  profile from your mood, genre appetite, and movie-versus-series
-                  energy.
-                </span>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-muted)] sm:mt-5 sm:text-base">
+                Five quick choices turn your mood into a sharper movie or series match.
               </p>
 
               <div className="relative mt-3 flex items-center gap-3 overflow-hidden rounded-xl border border-white/10 bg-black/30 p-3 sm:hidden">
@@ -579,14 +571,12 @@ export default function MovieQuizPage() {
               </div>
 
               <div className="mt-4 flex flex-col gap-3 sm:mt-8 sm:flex-row">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <button
                   onClick={startQuiz}
-                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#e94f37] px-6 py-3 text-sm font-black text-white shadow-lg shadow-[#e94f37]/25 transition hover:bg-[#ff604b] sm:w-auto"
+                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--brand-coral)] px-6 py-3 text-sm font-extrabold text-white transition-colors hover:bg-[var(--brand-coral-strong)] sm:w-auto"
                 >
                   Start quiz
-                </motion.button>
+                </button>
                 <Link
                   href="/moods/explore"
                   className="hidden min-h-12 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-bold text-zinc-200 transition hover:border-white/20 hover:bg-white/[0.08] sm:inline-flex"
@@ -647,9 +637,8 @@ export default function MovieQuizPage() {
                 {selectedQuestions.map((question, index) => (
                   <div
                     key={question.id}
-                    className={`h-2 rounded-full ${
-                      index <= currentQuestion ? "bg-[#ff7b68]" : "bg-white/10"
-                    }`}
+                    className={`h-2 rounded-full ${index <= currentQuestion ? "bg-[#ff7b68]" : "bg-white/10"
+                      }`}
                   />
                 ))}
               </div>
@@ -690,16 +679,16 @@ export default function MovieQuizPage() {
                         transition={{ delay: index * 0.05 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleAnswer(option)}
-                        className="group min-h-16 rounded-lg border border-white/10 bg-white/[0.035] p-3 text-left transition hover:border-[#e94f37]/50 hover:bg-[#e94f37]/10 sm:p-4"
+                        className="group min-h-16 rounded-lg border border-[var(--surface-border)] bg-[rgba(255,255,255,0.02)] p-3 text-left transition-colors duration-200 hover:border-[var(--brand-coral)]/40 hover:bg-[rgba(240,100,75,0.03)] sm:p-4"
                       >
                         <div className="flex items-center gap-3 sm:gap-4">
-                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-black/35 ring-1 ring-white/10 transition group-hover:bg-[#e94f37]/20 sm:h-14 sm:w-14">
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-black/35 ring-1 ring-white/10 transition-colors group-hover:bg-[rgba(240,100,75,0.08)] sm:h-14 sm:w-14">
                             <Image
                               src={getOptionMascot(option, index)}
                               alt={`${option.mood} mood mascot`}
                               width={46}
                               height={46}
-                              className="object-contain transition group-hover:scale-110"
+                              className="object-contain"
                             />
                           </span>
                           <span className="min-w-0 flex-1">
@@ -711,7 +700,7 @@ export default function MovieQuizPage() {
                               {formatLabel(option.mood)}
                             </span>
                           </span>
-                          <span className="hidden shrink-0 text-sm font-black text-zinc-600 transition group-hover:translate-x-1 group-hover:text-white sm:inline">
+                          <span className="hidden shrink-0 text-sm font-bold text-[var(--ink-muted)] transition-colors group-hover:text-white sm:inline">
                             Pick
                           </span>
                         </div>
@@ -820,15 +809,15 @@ export default function MovieQuizPage() {
                     <div className="flex items-center gap-3">
                       <MoodMascot name={personalityInsight.mascot} size="md" />
                       <div>
-                        <div className="text-xs font-bold uppercase tracking-[0.16em] text-[#ffb2a6]">
-                          Moodies AI read
+                        <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--brand-coral-strong)]">
+                          Your vibe profile
                         </div>
                         <h2 className="mt-1 text-lg font-black text-white">
                           {personalityInsight.archetype}
                         </h2>
                       </div>
                     </div>
-                    <p className="mt-4 text-sm leading-6 text-zinc-200">
+                    <p className="mt-4 text-sm leading-6 text-[var(--ink-muted)]">
                       {personalityInsight.summary}
                     </p>
                     <div className="mt-4 grid gap-2">
@@ -852,7 +841,7 @@ export default function MovieQuizPage() {
                       ))}
                     </div>
                     <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3">
-                      <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
+                      <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
                         Watch style
                       </div>
                       <p className="mt-2 text-sm leading-6 text-zinc-300">
@@ -860,7 +849,7 @@ export default function MovieQuizPage() {
                       </p>
                     </div>
                     <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
-                      <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
+                      <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
                         Why these picks
                       </div>
                       <p className="mt-2 text-sm leading-6 text-zinc-300">
@@ -1188,7 +1177,7 @@ function TopPickCard({
   return (
     <button
       onClick={onOpen}
-      className="group relative w-full overflow-hidden rounded-xl border border-white/10 bg-zinc-950/85 text-left shadow-2xl shadow-black/30"
+      className="group relative w-full overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[rgba(17,15,15,0.9)] text-left shadow-[0_14px_35px_rgba(0,0,0,0.16)]"
     >
       <div className="absolute inset-0">
         {getBackdropSrc(item) && (
@@ -1200,7 +1189,7 @@ function TopPickCard({
             className="object-cover opacity-35 transition group-hover:scale-105"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/85 to-zinc-950/40" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#120f0f] via-[#120f0f]/90 to-[#120f0f]/50" />
       </div>
       <div className="relative grid gap-4 p-4 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-5 sm:p-6">
         <Image
@@ -1218,7 +1207,7 @@ function TopPickCard({
             />
             Top match
           </div>
-          <h2 className="mt-4 text-2xl font-black leading-tight text-white sm:text-4xl">
+          <h2 className="mt-4 text-2xl font-bold leading-tight text-white sm:text-4xl">
             {getTitle(item)}
           </h2>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1239,9 +1228,9 @@ function TopPickCard({
               {reasons[0].text}
             </p>
           )}
-          <div className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.055] px-3 text-sm font-black text-white sm:border-0 sm:bg-transparent sm:px-0">
+          <div className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--surface-border)] bg-white/[0.03] px-3 text-sm font-bold text-white sm:border-0 sm:bg-transparent sm:px-0">
             View match details
-            <span className="transition group-hover:translate-x-1">Go</span>
+            <span className="text-[var(--brand-coral-strong)]">→</span>
           </div>
         </div>
       </div>
@@ -1270,13 +1259,13 @@ function RecommendationCard({
       onClick={onOpen}
       className="group min-w-0 text-left"
     >
-      <div className="relative overflow-hidden rounded-lg border border-white/10 bg-zinc-950 shadow-xl transition group-hover:-translate-y-1 group-hover:border-[#e94f37]/50">
+      <div className="relative overflow-hidden rounded-lg border border-[var(--surface-border)] bg-zinc-950 shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition-colors group-hover:border-[var(--brand-coral)]/40">
         <Image
           src={getPosterSrc(item)}
           alt={getTitle(item)}
           width={360}
           height={540}
-          className="aspect-[2/3] w-full object-cover transition duration-500 group-hover:scale-105"
+          className="aspect-[2/3] w-full object-cover transition-transform duration-300"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80" />
         <div className="absolute left-2 top-2 flex gap-1.5">
