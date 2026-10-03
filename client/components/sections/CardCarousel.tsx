@@ -181,8 +181,19 @@ export default function CardCarousel<T extends MediaItem>({
   const scroll = (direction: -1 | 1) => {
     const element = containerRef.current;
     if (!element) return;
+
+    const cards = Array.from(element.children) as HTMLElement[];
+    const firstCard = cards[0];
+    const gapValue = Number.parseFloat(
+      window.getComputedStyle(element).columnGap ||
+      window.getComputedStyle(element).gap ||
+      "0",
+    );
+    const cardWidth = firstCard?.getBoundingClientRect().width ?? element.clientWidth * 0.7;
+    const step = cardWidth + (Number.isFinite(gapValue) ? gapValue : 0);
+
     element.scrollBy({
-      left: direction * Math.max(320, element.clientWidth * 0.72),
+      left: direction * step,
       behavior: "smooth",
     });
   };
@@ -353,11 +364,11 @@ export default function CardCarousel<T extends MediaItem>({
                                             src={
                                               rec.poster_path
                                                 ? tmdbImage(
-                                                    rec.poster_path,
-                                                    "w342",
-                                                  )
+                                                  rec.poster_path,
+                                                  "w342",
+                                                )
                                                 : rec.poster ||
-                                                  "/placeholder-poster.svg"
+                                                "/placeholder-poster.svg"
                                             }
                                             alt={itemTitle(rec)}
                                             fill
@@ -405,11 +416,10 @@ export default function CardCarousel<T extends MediaItem>({
                       type="button"
                       onClick={() => toggleSaved(item)}
                       disabled={loading}
-                      className={`absolute left-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-sm border border-white/25 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 ${
-                        saved
+                      className={`absolute left-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-sm border border-white/25 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 ${saved
                           ? "bg-[var(--brand-coral)] text-white"
                           : "bg-[#0b0909]/90 text-white hover:bg-[var(--ink)] hover:text-[var(--surface-0)]"
-                      }`}
+                        }`}
                       aria-label={
                         saved
                           ? `Remove ${titleText} from My List`

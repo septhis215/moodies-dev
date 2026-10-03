@@ -33,7 +33,7 @@ export function RatingBadge({
 
     return (
       <div
-        className={`flex items-center gap-1.5 rounded-full border border-[var(--surface-border)] bg-[var(--surface-2)] font-semibold text-[var(--ink)] ${sizeClasses} ${className}`}
+        className={`inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border border-[var(--surface-border)] bg-[var(--surface-2)] font-semibold text-[var(--ink)] ${sizeClasses} ${className}`}
       >
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-coral)]" />
         New
@@ -51,7 +51,7 @@ export function RatingBadge({
 
   return (
     <div
-      className={`flex items-center rounded-full font-semibold ${sizeClasses} ${colorClasses} ${className}`}
+      className={`inline-flex w-fit shrink-0 items-center rounded-full font-semibold ${sizeClasses} ${colorClasses} ${className}`}
     >
       <Star
         className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"}

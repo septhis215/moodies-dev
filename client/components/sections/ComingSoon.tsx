@@ -353,9 +353,8 @@ export function ComingSoonSection({
                       </div>
                     </div>
                     <ChevronDown
-                      className={`w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-all duration-300 ${
-                        openMonth === monthYear ? "rotate-180" : ""
-                      }`}
+                      className={`w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-all duration-300 ${openMonth === monthYear ? "rotate-180" : ""
+                        }`}
                     />
                   </button>
 
@@ -394,11 +393,16 @@ export function ComingSoonSection({
                                     <div className="line-clamp-2 text-xs font-bold leading-snug text-white group-hover:text-[#ff8b78]">
                                       {getTitle(item)}
                                     </div>
-                                    <div className="mt-1 text-[10px] font-medium text-gray-500">
-                                      {releaseDate.toLocaleDateString("en-US", {
-                                        month: "short",
-                                        day: "numeric",
-                                      })}
+                                    <div className="mt-1.5 flex items-center gap-2">
+                                      <span className="rounded border border-[var(--brand-coral)]/50 bg-[var(--brand-coral)]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--brand-coral-strong)]">
+                                        Premieres
+                                      </span>
+                                      <span className="text-[10px] font-medium text-gray-400">
+                                        {releaseDate.toLocaleDateString("en-US", {
+                                          month: "short",
+                                          day: "numeric",
+                                        })}
+                                      </span>
                                     </div>
                                   </div>
                                 </Link>
@@ -460,7 +464,7 @@ export function ComingSoonSection({
                                   );
                                   const daysUntil = Math.ceil(
                                     (releaseDate.getTime() - todayMs) /
-                                      (1000 * 60 * 60 * 24),
+                                    (1000 * 60 * 60 * 24),
                                   );
                                   const inWatchlist =
                                     _isInWatchlist(item) ??
@@ -481,9 +485,9 @@ export function ComingSoonSection({
                                             src={
                                               item.poster_path
                                                 ? tmdbImage(
-                                                    item.poster_path,
-                                                    "w500",
-                                                  )
+                                                  item.poster_path,
+                                                  "w500",
+                                                )
                                                 : "/placeholder-poster.svg"
                                             }
                                             alt={item.title || item.name || ""}
@@ -493,21 +497,28 @@ export function ComingSoonSection({
                                           />
                                         </Link>
 
-                                        <div className="absolute bottom-2 left-2 z-10 border border-white/15 bg-[#0b0909]/90 px-2 py-1.5">
-                                          <div className="text-[10px] sm:text-xs font-bold text-white">
-                                            {releaseDate.toLocaleDateString(
-                                              "en-US",
-                                              {
-                                                month: "short",
-                                                day: "numeric",
-                                              },
-                                            )}
-                                          </div>
-                                          {daysUntil > 0 && (
-                                            <div className="text-[9px] font-medium text-[var(--ink-muted)] sm:text-[10px]">
-                                              {daysUntil}d away
+                                        <div className="absolute inset-x-2 bottom-2 z-10 flex items-center justify-between gap-2 rounded-md border border-[var(--brand-coral)]/60 bg-[#0b0909]/85 px-2.5 py-2 shadow-[0_10px_25px_rgba(0,0,0,0.2)] backdrop-blur-[2px]">
+                                          <div className="min-w-0">
+                                            <div className="text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--brand-coral-strong)]">
+                                              Premieres
                                             </div>
-                                          )}
+                                            <div className="mt-0.5 text-[11px] font-bold text-white sm:text-xs">
+                                              {releaseDate.toLocaleDateString(
+                                                "en-US",
+                                                {
+                                                  month: "short",
+                                                  day: "numeric",
+                                                },
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="shrink-0 rounded border border-[var(--brand-coral)]/40 bg-[var(--brand-coral)]/10 px-1.5 py-1 text-[9px] font-bold text-[var(--brand-coral-strong)] sm:text-[10px]">
+                                            {daysUntil > 0
+                                              ? `${daysUntil}d`
+                                              : daysUntil === 0
+                                                ? "Today"
+                                                : "Now"}
+                                          </div>
                                         </div>
 
                                         <RatingBadge
@@ -522,11 +533,10 @@ export function ComingSoonSection({
                                             handleWatchlistToggle(item, event)
                                           }
                                           disabled={isLoading}
-                                          className={`absolute left-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-sm border border-white/25 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors disabled:opacity-60 ${
-                                            inWatchlist
+                                          className={`absolute left-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-sm border border-white/25 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors disabled:opacity-60 ${inWatchlist
                                               ? "bg-[var(--brand-coral)] text-white"
                                               : "bg-[#0b0909]/90 text-white hover:bg-white hover:text-black"
-                                          }`}
+                                            }`}
                                           aria-label={
                                             inWatchlist
                                               ? `Remove ${getTitle(item)} from My List`

@@ -20,14 +20,19 @@ export function SectionHeader({
   className,
 }: SectionHeaderProps) {
   return (
-    <div className={cn("flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between", className)}>
+    <div
+      className={cn(
+        "flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between",
+        className,
+      )}
+    >
       <div className="min-w-0">
         {eyebrow ? <p className="ui-kicker">{eyebrow}</p> : null}
-        <h2 className="mt-2 text-balance text-2xl font-black tracking-tight text-white sm:text-3xl">
+        <h2 className="mt-2 text-balance text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
           {title}
         </h2>
         {description ? (
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/55">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
             {description}
           </p>
         ) : null}
@@ -35,7 +40,7 @@ export function SectionHeader({
       {href ? (
         <Link
           href={href}
-          className="inline-flex min-h-11 shrink-0 items-center gap-2 self-start rounded-xl border border-white/10 px-3.5 text-sm font-bold text-white/65 transition hover:border-white/25 hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-coral-strong sm:self-auto"
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 self-start rounded-md border border-[var(--surface-border)] px-3.5 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--brand-coral)] hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] sm:self-auto"
         >
           {linkLabel}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />

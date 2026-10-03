@@ -13,6 +13,9 @@
     "typecheck": "npm run typecheck --prefix server && npm run typecheck --prefix client",
     "build": "npm run build --prefix server && npm run build --prefix client",
     "test": "npm run test --prefix server && npm run test --prefix client",
-    "verify": "npm run lint && npm run typecheck && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm run build",
+    "ctx7": "npx --yes ctx7",
+    "ctx7:library": "npx --yes ctx7 library",
+    "ctx7:docs": "npx --yes ctx7 docs"
   }
 }

@@ -1,38 +1,44 @@
 "use client";
 
-import { tmdbImage } from "@/lib/tmdb";
-import { useState, useMemo, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  Calendar,
-  Play,
+  useMemo,
+  useState,
+  useTransition,
+  type MouseEvent,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  ArrowUpRight,
   Award,
+  Bookmark,
+  BookmarkCheck,
+  Calendar,
   ChevronLeft,
   ChevronRight,
-  Loader2,
-  Tv,
   Film,
+  Tv,
 } from "lucide-react";
+import { tmdbImage } from "@/lib/tmdb";
+import { useWatchlist } from "@/hooks/useWatchlist";
 import RatingBadge from "../ui/rating-badge";
 
-// Unified interface for both movies and TV series
 interface MediaItem {
   id: number;
-  title?: string; // For movies
-  name?: string; // For TV series
+  title?: string;
+  name?: string;
   overview: string;
   poster_path?: string;
   backdrop_path?: string;
-  release_date?: string; // For movies
-  first_air_date?: string; // For TV series
+  release_date?: string;
+  first_air_date?: string;
   vote_average: number;
   vote_count: number;
   popularity: number;
   origin_country: string[];
   genres: string[];
   type: "movie" | "tv";
-  number_of_seasons?: number; // For TV series
+  number_of_seasons?: number;
 }
 
 interface CategoryContentProps {
@@ -44,442 +50,499 @@ interface CategoryContentProps {
   subtitle?: string;
 }
 
+const PAGE_WINDOW = 5;
+
 export function CategoryContent({
   data,
   currentPage,
   totalPages,
+  total,
   title,
   subtitle,
 }: CategoryContentProps) {
-  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { add, remove, isInWatchlist, ready } = useWatchlist();
+
+  // Category endpoints return items in their intended editorial order. Keeping that
+  // order ensures every displayed position matches the API result position.
+  const leadItem = data[0];
+  const supportingItems = data.slice(1, 3);
+  const restItems = data.slice(3);
+
+  const visiblePages = useMemo(() => {
+    const pageCount = Math.min(totalPages, PAGE_WINDOW);
+    const lastStart = Math.max(1, totalPages - pageCount + 1);
+    const start = Math.min(Math.max(1, currentPage - 2), lastStart);
+    return Array.from({ length: pageCount }, (_, index) => start + index);
+  }, [currentPage, totalPages]);
 
   const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+
     startTransition(() => {
       const params = new URLSearchParams(searchParams);
       params.set("page", newPage.toString());
       router.push(`?${params.toString()}`);
     });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   };
 
-  // Sort by release date in descending order
-  const sortedList = useMemo(() => {
-    return [...data].sort((a, b) => {
-      const dateA = a.release_date || a.first_air_date || "";
-      const dateB = b.release_date || b.first_air_date || "";
-      return dateB.localeCompare(dateA);
-    });
-  }, [data]);
-
-  const getImageUrl = (path?: string) =>
-    path ? tmdbImage(path, "original") : "/placeholder-backdrop.svg";
-
-  const getPosterUrl = (path?: string) =>
-    path ? tmdbImage(path, "w500") : "/placeholder-poster.svg";
-
   const getTitle = (item: MediaItem) => item.title || item.name || "Untitled";
+  const getDetailUrl = (item: MediaItem) =>
+    item.type === "movie" ? `/movies/${item.id}` : `/tv/${item.id}`;
+  const getReleaseYear = (item: MediaItem) =>
+    (item.release_date || item.first_air_date || "").slice(0, 4) || "Date TBA";
+  const getReleaseLabel = (item: MediaItem) => {
+    const dateValue = item.release_date || item.first_air_date;
+    if (!dateValue) return "Date TBA";
 
-  // returns JSX like: "Oct 21st" where "st" is small
-  const getReleaseDate = (item: MediaItem): React.ReactNode => {
-    const dateStr = item.release_date || item.first_air_date;
-    if (!dateStr) return "TBA";
+    const [year, month, day] = dateValue.split("-").map(Number);
+    if (!year || !month || !day) return "Date TBA";
 
-    // Expecting YYYY-MM-DD. Parse with UTC to avoid timezone rollovers.
-    const parts = dateStr.split("-").map((p) => Number(p));
-    if (parts.length < 3) return "TBA";
-    const [year, month, day] = parts;
-    if (!year || !month || !day) return "TBA";
-
-    const date = new Date(Date.UTC(year, month - 1, day));
-
-    const monthShort = date.toLocaleString("en-US", {
+    return new Intl.DateTimeFormat("en-US", {
+      day: "numeric",
       month: "short",
+      year: "numeric",
       timeZone: "UTC",
-    });
+    }).format(new Date(Date.UTC(year, month - 1, day)));
+  };
 
-    const ordinal = (n: number) => {
-      const v = n % 100;
-      if (v >= 11 && v <= 13) return "th";
-      switch (n % 10) {
-        case 1:
-          return "st";
-        case 2:
-          return "nd";
-        case 3:
-          return "rd";
-        default:
-          return "th";
+  const imageKey = (item: MediaItem, kind: "backdrop" | "poster") =>
+    `${item.type}:${item.id}:${kind}`;
+  const markImageError = (item: MediaItem, kind: "backdrop" | "poster") => {
+    const key = imageKey(item, kind);
+    setImageErrors((previous) => new Set(previous).add(key));
+  };
+  const getBackdropUrl = (item: MediaItem) =>
+    item.backdrop_path && !imageErrors.has(imageKey(item, "backdrop"))
+      ? tmdbImage(item.backdrop_path, "original")
+      : "/placeholder-backdrop.svg";
+  const getPosterUrl = (item: MediaItem) =>
+    item.poster_path && !imageErrors.has(imageKey(item, "poster"))
+      ? tmdbImage(item.poster_path, "w500")
+      : "/placeholder-poster.svg";
+
+  const mediaLabel = (item: MediaItem) =>
+    item.type === "tv" ? "Series" : "Movie";
+  const getWatchType = (item: MediaItem) =>
+    item.type === "tv" ? "series" : "movie";
+  const getItemKey = (item: MediaItem) => `${item.type}:${item.id}`;
+  const isSaved = (item: MediaItem) =>
+    isInWatchlist(item.id, getWatchType(item));
+
+  const toggleSaved = async (
+    event: MouseEvent<HTMLButtonElement>,
+    item: MediaItem,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!ready) {
+      router.push("/auth/login");
+      return;
+    }
+
+    const key = getItemKey(item);
+    setLoadingIds((previous) => new Set(previous).add(key));
+
+    try {
+      if (isSaved(item)) {
+        await remove(item.id, getWatchType(item), {
+          title: getTitle(item),
+          posterUrl: getPosterUrl(item),
+        });
+      } else {
+        await add(item.id, getWatchType(item), {
+          title: getTitle(item),
+          posterUrl: getPosterUrl(item),
+        });
       }
-    };
+    } finally {
+      setLoadingIds((previous) => {
+        const next = new Set(previous);
+        next.delete(key);
+        return next;
+      });
+    }
+  };
 
-    const suf = ordinal(day);
+  const MediaTypeIcon = ({ item }: { item: MediaItem }) =>
+    item.type === "tv" ? (
+      <Tv className="h-3.5 w-3.5" aria-hidden="true" />
+    ) : (
+      <Film className="h-3.5 w-3.5" aria-hidden="true" />
+    );
+
+  const BookmarkToggle = ({ item }: { item: MediaItem }) => {
+    const saved = isSaved(item);
+    const loading = loadingIds.has(getItemKey(item));
 
     return (
-      <span className="whitespace-nowrap">
-        {day}
-        <sup className="ml-0.5 mt-1 text-[0.65em]" aria-hidden>
-          {suf}{" "}
-        </sup>
-        <span className="font-semibold">
-          {monthShort} <span>{year}</span>
-        </span>
-      </span>
+      <button
+        type="button"
+        onClick={(event) => toggleSaved(event, item)}
+        disabled={loading}
+        aria-label={
+          saved ? `Remove ${getTitle(item)} from My List` : `Add ${getTitle(item)} to My List`
+        }
+        className={`absolute left-3 top-3 z-20 grid h-9 w-9 place-items-center rounded-sm border border-white/20 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 ${saved
+            ? "bg-[var(--brand-coral)] text-white"
+            : "bg-[#0b0909]/90 text-white hover:bg-[var(--ink)] hover:text-[var(--surface-0)]"
+          }`}
+      >
+        {loading ? (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" />
+        ) : saved ? (
+          <BookmarkCheck className="h-4 w-4" aria-hidden="true" />
+        ) : (
+          <Bookmark className="h-4 w-4" aria-hidden="true" />
+        )}
+      </button>
     );
   };
 
-  const getReleaseYear = (item: MediaItem) => {
-    const date = item.release_date || item.first_air_date;
-    return date ? date.split("-")[0] : "TBA";
-  };
-
-  const handleImageError = (id: number) => {
-    setImageErrors((prev) => new Set([...prev, id]));
-  };
-
-  const getDetailUrl = (item: MediaItem) =>
-    item.type === "movie" ? `/movies/${item.id}` : `/tv/${item.id}`;
-
-  const topThree = data.slice(0, 3);
-  const restItems = data.slice(3);
-
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-8 sm:py-16 lg:px-12">
-        {isPending && (
-          <div
-            className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md overflow-hidden"
-            style={{ inset: 0, position: "fixed" }}
-          >
-            <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 p-8 rounded-2xl shadow-2xl ring-1 ring-white/10 flex flex-col items-center gap-4">
-              <Loader2 className="w-18 h-18 text-[#ff6b58] animate-spin" />
-            </div>
-          </div>
-        )}
-        {/* Content with opacity when loading */}
+    <main className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
+      {isPending ? (
         <div
-          className={`transition-opacity duration-300 ${isPending ? "opacity-50 pointer-events-none" : "opacity-100"
-            }`}
+          className="fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden bg-[var(--surface-border)]"
+          role="status"
+          aria-live="polite"
         >
-          {/* Top 3 Featured Section */}
-          {topThree.length > 0 && (
-            <section className="space-y-6">
-              <section className="space-y-6">
-                {/* Header — matches watchlist/liked style */}
-                <div className="mb-8 mt-2 relative overflow-hidden sm:mb-12 sm:mt-10">
-                  {/* Ghost watermark */}
-                  <span className="absolute -top-3 left-0 text-[3.6rem] sm:text-[8rem] font-black text-white/[0.03] leading-none select-none pointer-events-none tracking-tight whitespace-nowrap">
-                    {title.toUpperCase()}
-                  </span>
+          <span className="block h-full w-2/3 animate-pulse bg-[var(--brand-coral)] motion-reduce:animate-none" />
+          <span className="sr-only">Loading the next page</span>
+        </div>
+      ) : null}
 
-                  <div className="relative">
-                    <div className="mb-2">
-                      <div className="w-8 h-0.5 bg-[rgb(233,79,55)] mb-2" />
-                      <span className="text-[0.62rem] font-bold tracking-[0.2em] uppercase text-white/30">
-                        Featured Collection
-                      </span>
-                    </div>
-                    <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-none">
-                      {title}
-                    </h1>
-                    {subtitle && (
-                      <p className="mt-3 max-w-2xl text-sm leading-6 text-white/45 font-medium tracking-wide">
-                        {subtitle}
-                      </p>
-                    )}
+      <div className="ui-shell pb-16 pt-24 sm:pt-32">
+        <header className="max-w-3xl">
+          <p className="ui-kicker">Featured collection</p>
+          <h1 className="mt-2 text-balance text-4xl font-bold leading-none text-[var(--ink)] sm:text-5xl">
+            {title}
+          </h1>
+          {subtitle ? (
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+              {subtitle}
+            </p>
+          ) : null}
+          {total > 0 ? (
+            <p className="mt-3 text-xs font-semibold text-[var(--ink-muted)]">
+              {total.toLocaleString()} {total === 1 ? "title" : "titles"}
+            </p>
+          ) : null}
+        </header>
+
+        <div className="mt-8 border-t border-[var(--surface-border)] pt-6 sm:mt-10 sm:pt-8">
+          <div
+            aria-busy={isPending}
+            className={isPending ? "opacity-70" : undefined}
+          >
+            {leadItem ? (
+              <section aria-labelledby="category-highlights-heading">
+                <h2 id="category-highlights-heading" className="sr-only">
+                  Collection highlights
+                </h2>
+
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(19rem,0.85fr)] lg:gap-4">
+                  <div className="group relative min-h-[19rem] overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] transition-[border-color,box-shadow] duration-200 ease-out hover:border-[var(--brand-coral)] hover:shadow-[0_18px_45px_rgba(0,0,0,0.34)] focus-within:border-[var(--brand-coral)] motion-reduce:transition-none sm:min-h-[26rem] lg:min-h-[32rem]">
+                    <BookmarkToggle item={leadItem} />
+                    <Link
+                      href={getDetailUrl(leadItem)}
+                      className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]"
+                      aria-label={`1. ${getTitle(leadItem)}, ${mediaLabel(leadItem)}`}
+                    >
+                      <div className="relative h-full min-h-[19rem] sm:min-h-[26rem] lg:min-h-[32rem]">
+                        <img
+                          src={getBackdropUrl(leadItem)}
+                          alt=""
+                          onError={() => markImageError(leadItem, "backdrop")}
+                          className="absolute inset-0 h-full w-full object-cover transition-[filter] duration-300 ease-out group-hover:brightness-110 group-hover:saturate-[1.06] motion-reduce:transition-none"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
+
+                        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 lg:p-8">
+                          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-white/88">
+                            <span className="inline-flex min-h-7 items-center border-l-2 border-[var(--brand-coral)] pl-2 text-sm font-bold text-white">
+                              01
+                            </span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <MediaTypeIcon item={leadItem} />
+                              {mediaLabel(leadItem)}
+                            </span>
+                            <span aria-hidden="true">·</span>
+                            <span>{getReleaseYear(leadItem)}</span>
+                          </div>
+
+                          <h3 className="max-w-2xl text-balance text-2xl font-bold leading-tight text-white transition-colors duration-200 group-hover:text-[var(--brand-coral-strong)] motion-reduce:transition-none sm:text-3xl">
+                            {getTitle(leadItem)}
+                          </h3>
+                          <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-6 text-white/80 sm:line-clamp-3">
+                            {leadItem.overview ||
+                              "Open this title to see more details."}
+                          </p>
+
+                          <div className="mt-4 flex flex-wrap items-center gap-3">
+                            <RatingBadge
+                              rating={leadItem.vote_average}
+                              variant="colored"
+                              size="md"
+                            />
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/78">
+                              <Calendar
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                              />
+                              {getReleaseLabel(leadItem)}
+                            </span>
+                            <span
+                              aria-hidden="true"
+                              className="ml-auto hidden items-center gap-1.5 text-xs font-bold text-white/80 opacity-0 transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none sm:inline-flex"
+                            >
+                              View details
+                              <ArrowUpRight
+                                className="h-4 w-4"
+                                aria-hidden="true"
+                              />
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
                   </div>
 
-                  {/* Gradient rule */}
-                  <div className="mt-6 h-px bg-gradient-to-r from-[rgb(233,79,55)]/30 via-white/[0.06] to-transparent sm:mt-8" />
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                    {supportingItems.map((item, index) => (
+                      <div
+                        key={`${item.type}:${item.id}`}
+                        className="group relative overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] transition-[border-color,background-color,box-shadow] duration-200 ease-out hover:border-[var(--brand-coral)] hover:bg-[var(--surface-2)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.28)] motion-reduce:transition-none"
+                      >
+                        <BookmarkToggle item={item} />
+                        <Link
+                          href={getDetailUrl(item)}
+                          className="grid min-h-32 grid-cols-[7.5rem_minmax(0,1fr)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] sm:min-h-44 sm:grid-cols-1 sm:grid-rows-[minmax(7rem,1fr)_auto] lg:min-h-0 lg:grid-cols-[9rem_minmax(0,1fr)] lg:grid-rows-1"
+                          aria-label={`${index + 2}. ${getTitle(item)}, ${mediaLabel(item)}`}
+                        >
+                          <div className="relative min-h-full overflow-hidden">
+                            <img
+                              src={getBackdropUrl(item)}
+                              alt=""
+                              onError={() => markImageError(item, "backdrop")}
+                              className="absolute inset-0 h-full w-full object-cover transition-[filter] duration-300 ease-out group-hover:brightness-110 group-hover:saturate-[1.06] motion-reduce:transition-none"
+                            />
+                            <div className="absolute inset-0 bg-black/15" />
+                            <span className="absolute left-2 top-2 border-l-2 border-[var(--brand-coral)] bg-black/70 px-2 py-1 text-xs font-bold text-white">
+                              {String(index + 2).padStart(2, "0")}
+                            </span>
+                          </div>
+
+                          <div className="flex min-w-0 flex-col justify-center p-3 sm:p-4">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--ink-muted)]">
+                              <span className="inline-flex items-center gap-1">
+                                <MediaTypeIcon item={item} />
+                                {mediaLabel(item)}
+                              </span>
+                              <span aria-hidden="true">·</span>
+                              <span>{getReleaseYear(item)}</span>
+                              <ArrowUpRight
+                                className="ml-auto h-4 w-4 text-[var(--brand-coral-strong)] opacity-40 transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none"
+                                aria-hidden="true"
+                              />
+                            </div>
+                            <h3 className="mt-1.5 line-clamp-2 text-base font-bold leading-tight text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                              {getTitle(item)}
+                            </h3>
+                            <p className="mt-2 hidden line-clamp-2 text-sm leading-5 text-[var(--ink-muted)] lg:block">
+                              {item.overview ||
+                                "Open this title to see more details."}
+                            </p>
+                            <div className="mt-2 self-start">
+                              <RatingBadge
+                                rating={item.vote_average}
+                                variant="colored"
+                                size="sm"
+                              />
+                            </div>
+                          </div>
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </section>
+            ) : null}
 
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
-                {topThree.map((item, idx) => (
-                  <Link
-                    key={item.id}
-                    href={getDetailUrl(item)}
-                    className="group relative rounded-xl sm:rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 ring-1 ring-white/10 shadow-2xl hover:ring-[#e94f37]/60 transition-all duration-500 flex flex-col"
+            {restItems.length > 0 ? (
+              <section
+                className="mt-10 border-t border-[var(--surface-border)] pt-8 sm:mt-12 sm:pt-10"
+                aria-labelledby="category-catalog-heading"
+              >
+                <div className="mb-5">
+                  <h2
+                    id="category-catalog-heading"
+                    className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
                   >
-                    {/* Rank Badge */}
-                    <div className="absolute top-3 left-3 z-20">
-                      <div
-                        className="
-                          px-3 py-1 
-                          rounded-md 
-                          bg-gradient-to-br from-neutral-900/80 to-neutral-800/60 
-                          border border-neutral-700/50 
-                        "
-                      >
-                        <span className="text-sm font-bold text-white tracking-wide">
-                          #{idx + 1}
-                        </span>
-                      </div>
-                    </div>
+                    Explore the collection
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+                    Open any title for details, reviews, and recommendations.
+                  </p>
+                </div>
 
-                    {/* Backdrop Image */}
-                    <div className="relative aspect-video overflow-hidden">
-                      <img
-                        src={getImageUrl(item.backdrop_path)}
-                        alt={getTitle(item)}
-                        onError={() => handleImageError(item.id)}
-                        className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ${imageErrors.has(item.id) ? "opacity-50" : ""
-                          }`}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-
-                      {/* Type Badge */}
-                      <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-40 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
-                        <div
-                          className={`
-                            flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-medium text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
-                            ${item.type === "tv"
-                              ? "bg-blue-500/90 text-white border-blue-400/50"
-                              : "bg-purple-500/90 text-white border-purple-400/50"
-                            }
-                          `}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 sm:gap-x-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                  {restItems.map((item) => (
+                    <article
+                      key={`${item.type}:${item.id}`}
+                      className="group min-w-0"
+                    >
+                      <div className="relative">
+                        <Link
+                          href={getDetailUrl(item)}
+                          className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--surface-0)]"
                         >
-                          {item.type === "tv" ? (
-                            <Tv size={10} className="sm:w-3 sm:h-3" />
-                          ) : (
-                            <Film size={10} className="sm:w-3 sm:h-3" />
-                          )}
-                          {item.type === "tv" ? "Series" : "Movie"}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="p-4 sm:p-6 flex flex-col">
-                      {/* Title - Fixed height with line clamp */}
-                      <h3 className="text-xl sm:text-2xl font-black line-clamp-2 sm:min-h-[2.5rem] group-hover:text-[#ff6b58] transition-colors">
-                        {getTitle(item)}
-                      </h3>
-
-                      {/* Description - Fixed height with line clamp */}
-                      <p className="text-sm text-gray-400 line-clamp-2 sm:line-clamp-3 leading-relaxed sm:min-h-[4.5rem] mt-2 sm:mt-3">
-                        {item.overview || "No description available"}
-                      </p>
-
-                      {/* Metadata section - Consistent spacing */}
-                      <div className="space-y-3 mt-4">
-                        {/* Rating and Date */}
-                        <div className="flex flex-wrap items-center gap-3">
-                          <div className="flex items-center gap-1.5 ">
-                            <RatingBadge rating={item.vote_average} variant="colored" size="md" />
-                          </div>
-
-                          <div className="flex items-center gap-1.5 text-sm text-gray-400">
-                            <Calendar className="w-4 h-4" />
-                            <span className="font-semibold">
-                              {getReleaseDate(item)}
-                            </span>
-                          </div>
-
-                          {item.number_of_seasons && (
-                            <span className="px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full text-xs font-bold">
-                              {item.number_of_seasons} Season
-                              {item.number_of_seasons > 1 ? "s" : ""}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Genres - Fixed height */}
-                        <div className="flex flex-wrap gap-2 min-h-[1.75rem] items-start">
-                          {item.genres && item.genres.length > 0 ? (
-                            item.genres.slice(0, 3).map((genre, i) => (
-                              <span
-                                key={i}
-                                className="px-2 py-1 bg-white/5 rounded-lg text-xs font-medium text-gray-300"
-                              >
-                                {genre}
+                          <div className="relative aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-[border-color,box-shadow] duration-200 ease-out group-hover:border-[var(--brand-coral)] group-hover:shadow-[0_14px_32px_rgba(0,0,0,0.3)] motion-reduce:transition-none">
+                            <img
+                              src={getPosterUrl(item)}
+                              alt={getTitle(item)}
+                              loading="lazy"
+                              onError={() => markImageError(item, "poster")}
+                              className="h-full w-full object-cover transition-[filter] duration-300 ease-out group-hover:brightness-110 group-hover:saturate-[1.05] motion-reduce:transition-none"
+                            />
+                            <RatingBadge
+                              rating={item.vote_average}
+                              variant="colored"
+                              size="sm"
+                              className="absolute right-2 top-2"
+                            />
+                            <div
+                              aria-hidden="true"
+                              className="pointer-events-none absolute inset-x-0 bottom-0 hidden bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none sm:block"
+                            >
+                              <span className="flex items-center justify-end gap-1 text-xs font-bold text-white/88">
+                                View details
+                                <ArrowUpRight
+                                  className="h-4 w-4"
+                                  aria-hidden="true"
+                                />
                               </span>
-                            ))
-                          ) : (
-                            <span className="h-0 w-0 invisible">-</span>
-                          )}
-                        </div>
-
-                        {/* Action Buttons */}
-                        {/* <div className="flex gap-3 pt-1">
-                          <Link
-                            href={getDetailUrl(item)}
-                            className="flex-1 px-4 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg hover:scale-105"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Info className="w-4 h-4" />
-                            More Info
-                          </Link>
-
-                        </div> */}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Rest of Items Grid */}
-          {restItems.length > 0 && (
-            <section className="space-y-6 mt-8 sm:mt-10">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {restItems.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={getDetailUrl(item)}
-                    className="group relative rounded-lg sm:rounded-xl overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-950 shadow-xl ring-1 ring-white/5 hover:ring-[#ff6b58]/50 transition-all duration-300 cursor-pointer"
-                  >
-                    {/* Poster */}
-                    <div className="relative aspect-[2/3] overflow-hidden">
-                      <img
-                        src={getPosterUrl(item.poster_path)}
-                        alt={getTitle(item)}
-                        onError={() => handleImageError(item.id)}
-                        className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ${imageErrors.has(item.id) ? "opacity-50" : ""
-                          }`}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                      {/* Rating Badge */}
-                      <div className="absolute top-2 right-2 ">
-                        <RatingBadge rating={item.vote_average} variant="colored" />
+                            </div>
+                          </div>
+                        </Link>
+                        <BookmarkToggle item={item} />
                       </div>
 
-                      {/* Content Type Badge - Bottom Left (hidden on hover) */}
-                      <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 z-40 opacity-100 group-hover:opacity-0 transition-opacity duration-300">
-                        <div
-                          className={`
-                            flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg font-medium text-[10px] sm:text-xs shadow-lg backdrop-blur-md border
-                            ${item.type === "tv"
-                              ? "bg-blue-500/90 text-white border-blue-400/50"
-                              : "bg-purple-500/90 text-white border-purple-400/50"
-                            }
-                          `}
-                        >
-                          {item.type === "tv" ? (
-                            <Tv size={10} className="sm:w-3 sm:h-3" />
-                          ) : (
-                            <Film size={10} className="sm:w-3 sm:h-3" />
-                          )}
-                          {item.type === "tv" ? "Series" : "Movie"}
-                        </div>
-                      </div>
+                      <Link
+                        href={getDetailUrl(item)}
+                        className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--surface-0)]"
+                      >
+                        <h3 className="mt-2.5 line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                          {getTitle(item)}
+                        </h3>
+                        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--ink-muted)]">
+                          <span>{getReleaseYear(item)}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{mediaLabel(item)}</span>
+                          {item.number_of_seasons ? (
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <span>
+                                {item.number_of_seasons} season
+                                {item.number_of_seasons === 1 ? "" : "s"}
+                              </span>
+                            </>
+                          ) : null}
+                        </p>
+                        {item.genres?.length ? (
+                          <p className="mt-1 line-clamp-1 text-xs text-[var(--ink-muted)]">
+                            {item.genres.slice(0, 2).join(" · ")}
+                          </p>
+                        ) : null}
+                      </Link>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </div>
 
-                      {/* Hover Overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-2xl">
-                          <Play className="w-5 h-5 text-black ml-0.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Info */}
-                    <div className="p-2.5 sm:p-3">
-                      <h4 className="font-bold text-sm line-clamp-2 mb-2 group-hover:text-[#ff6b58] transition-colors">
-                        {getTitle(item)}
-                      </h4>
-
-                      <div className="flex items-center justify-between text-xs text-gray-400">
-                        <span className="font-semibold">
-                          {getReleaseYear(item)}
-                        </span>
-                        {item.number_of_seasons && (
-                          <span className="font-semibold">
-                            {item.number_of_seasons}S
-                          </span>
-                        )}
-                      </div>
-
-                      {item.genres && item.genres.length > 0 && (
-                        <div className="mt-2 text-[10px] text-gray-500 line-clamp-1">
-                          {item.genres.slice(0, 2).join(" • ")}
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-
-        {/* Pagination Controls - Simplified Version */}
-        {totalPages > 1 && (
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 py-8">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1 || isPending}
-              className="min-h-11 px-3 sm:px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition-all flex items-center gap-2"
+          {totalPages > 1 ? (
+            <nav
+              className="mt-10 flex items-center justify-center gap-3 border-t border-[var(--surface-border)] pt-6 sm:mt-12 sm:gap-4 sm:pt-8"
+              aria-label="Collection pages"
             >
-              <ChevronLeft className="w-5 h-5" />
-              Previous
-            </button>
+              <button
+                type="button"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1 || isPending}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-md border border-[var(--surface-border)] px-3 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                <span className="hidden sm:inline">Previous</span>
+              </button>
 
-            <div className="flex max-w-full items-center gap-2 overflow-x-auto mobile-native-scroll px-1">
-              {/* Show first 3 pages or pages around current page */}
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                // Calculate which page number to show
-                let pageNum;
-                if (currentPage <= 3) {
-                  // If we're at the start, show pages 1-5
-                  pageNum = i + 1;
-                } else {
-                  // Otherwise, show current page and 2 before/after
-                  pageNum = currentPage - 2 + i;
-                }
+              <span className="min-w-20 text-center text-sm font-semibold text-[var(--ink-muted)] sm:hidden">
+                {currentPage} / {totalPages}
+              </span>
 
-                // Don't show if page number exceeds total pages
-                if (pageNum > totalPages) return null;
-
-                return (
+              <div className="hidden items-center gap-2 sm:flex">
+                {visiblePages.map((pageNumber) => (
                   <button
-                    key={pageNum}
-                    onClick={() => handlePageChange(pageNum)}
+                    key={pageNumber}
+                    type="button"
+                    onClick={() => handlePageChange(pageNumber)}
                     disabled={isPending}
-                    className={`h-10 w-10 shrink-0 rounded-lg font-bold transition-all disabled:cursor-not-allowed ${pageNum === currentPage
-                      ? "bg-gradient-to-r from-[#e94f37] to-[#ff6b58] text-white"
-                      : "bg-white/10 hover:bg-white/20"
-                      } ${isPending ? "opacity-50" : ""}`}
+                    aria-current={
+                      pageNumber === currentPage ? "page" : undefined
+                    }
+                    aria-label={`Page ${pageNumber}`}
+                    className={`inline-flex h-11 w-11 items-center justify-center rounded-md border text-sm font-bold transition-colors disabled:cursor-not-allowed ${pageNumber === currentPage
+                        ? "border-[var(--brand-coral)] bg-[var(--brand-coral)] text-white"
+                        : "border-[var(--surface-border)] text-[var(--ink-muted)] hover:border-[var(--brand-coral)] hover:text-[var(--ink)]"
+                      }`}
                   >
-                    {pageNum}
+                    {pageNumber}
                   </button>
-                );
-              })}
+                ))}
+              </div>
 
-              {/* Show ellipsis if there are more pages */}
-              {currentPage + 2 < totalPages && (
-                <span className="text-gray-500">...</span>
-              )}
+              <button
+                type="button"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages || isPending}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-md border border-[var(--surface-border)] px-3 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Next page"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </nav>
+          ) : null}
+
+          {data.length === 0 ? (
+            <div className="mx-auto flex max-w-lg flex-col items-center py-16 text-center sm:py-20">
+              <div className="grid h-14 w-14 place-items-center rounded-full border border-[var(--surface-border)] bg-[var(--surface-1)]">
+                <Award
+                  className="h-6 w-6 text-[var(--brand-gold)]"
+                  aria-hidden="true"
+                />
+              </div>
+              <h2 className="mt-5 text-2xl font-bold text-[var(--ink)]">
+                No titles here yet
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+                Check back soon for more movies and series in this collection.
+              </p>
             </div>
-
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages || isPending}
-              className="min-h-11 px-3 sm:px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold transition-all flex items-center gap-2"
-            >
-              Next
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {sortedList.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-full flex items-center justify-center mb-4">
-              <Award className="w-10 h-10 text-gray-600" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-400 mb-2">
-              No Content Available
-            </h3>
-            <p className="text-gray-500">
-              Check back later for trending movies and TV shows
-            </p>
-          </div>
-        )}
+          ) : null}
+        </div>
       </div>
     </main>
   );
