@@ -321,14 +321,6 @@ export default function MoodDiscoveryWheel() {
   useEffect(() => {
     let aborted = false;
     setLoadingMoods(true);
-    const requestedName = new URLSearchParams(window.location.search).get("mood")?.toLowerCase();
-    const applyInitialMoods = (list: MoodFromApi[]) => {
-      const requested = list.find((mood) => mood.name.toLowerCase() === requestedName);
-      const cluster = requested && moodClusters.find((item) => item.moodNames.some((name) => slugify(name) === slugify(requested.name)));
-      setMoods(list);
-      if (cluster) setActiveClusterId(cluster.id);
-      setSelectedMoodId((requested ?? list[0])?.id ?? null);
-    };
 
     fetch(`${API_BASE}/moods`)
       .then(async (res) => {
@@ -343,12 +335,14 @@ export default function MoodDiscoveryWheel() {
             )
           : [];
         const active = list.length > 0 ? list : fallbackMoods;
-        applyInitialMoods(active);
+        setMoods(active);
+        setSelectedMoodId(active[0]?.id ?? null);
       })
       .catch((error) => {
         if (aborted) return;
         console.error("Failed to load moods:", error);
-        applyInitialMoods(fallbackMoods);
+        setMoods(fallbackMoods);
+        setSelectedMoodId(fallbackMoods[0].id);
       })
       .finally(() => {
         if (!aborted) setLoadingMoods(false);

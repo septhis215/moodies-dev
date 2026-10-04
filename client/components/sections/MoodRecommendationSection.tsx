@@ -1,14 +1,7 @@
 "use client";
 
 import { tmdbImage } from "@/lib/tmdb";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import type { HeroMoodRequest } from "@/components/hero/HeroMoodGuide";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import {
@@ -75,7 +68,6 @@ interface Recommendation {
 interface MoodRecommendationsSectionProps {
   mediaType?: "movie" | "tv" | "both" | string;
   initialMoods?: unknown[];
-  requestedMood?: HeroMoodRequest | null;
 }
 
 const RECOMMENDATION_LIMIT = 18;
@@ -233,7 +225,6 @@ function shuffleWithSeed<T>(items: T[], seed: number) {
 export default function MoodRecommendationsSection({
   mediaType = "both",
   initialMoods,
-  requestedMood,
 }: MoodRecommendationsSectionProps) {
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
@@ -263,7 +254,6 @@ export default function MoodRecommendationsSection({
   );
   const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
   const requestIdRef = useRef(0);
-  const handledHeroRequest = useRef<number | null>(null);
   const initialMoodShuffleSeed = useRef(Date.now() + Math.random());
 
   const orderedMoods = useMemo(
@@ -339,77 +329,60 @@ export default function MoodRecommendationsSection({
     );
   };
 
-  const fetchRecommendations = useCallback(
-    async (mood: Mood) => {
-      const requestId = requestIdRef.current + 1;
-      requestIdRef.current = requestId;
+  const fetchRecommendations = async (mood: Mood) => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
 
-      setLoading(true);
-      setError(null);
-      setRecommendations([]);
+    setLoading(true);
+    setError(null);
+    setRecommendations([]);
 
-      try {
-        const data = await getMoodRecommendations(
-          mood.id,
-          RECOMMENDATION_LIMIT,
-          mediaType,
-          true,
-          true,
-          {
-            userId: isAuthenticated ? user?.id : undefined,
-            minRating: 5.8,
-            excludeViewed: true,
-          },
-        );
+    try {
+      const data = await getMoodRecommendations(
+        mood.id,
+        RECOMMENDATION_LIMIT,
+        mediaType,
+        true,
+        true,
+        {
+          userId: isAuthenticated ? user?.id : undefined,
+          minRating: 5.8,
+          excludeViewed: true,
+        },
+      );
 
-        const recs = Array.isArray(data?.recommendations)
-          ? data.recommendations
-          : Array.isArray(data)
-            ? data
-            : [];
+      const recs = Array.isArray(data?.recommendations)
+        ? data.recommendations
+        : Array.isArray(data)
+          ? data
+          : [];
 
-        if (recs.length === 0) {
-          throw new Error("No recommendations received from server");
-        }
-
-        if (requestIdRef.current === requestId) {
-          setRecommendations(recs);
-          setRefreshedAt(Date.now());
-        }
-      } catch (err) {
-        if (requestIdRef.current !== requestId) return;
-        const message =
-          err instanceof Error ? err.message : "Failed to load recommendations";
-        setError(message);
-        setRecommendations([]);
-      } finally {
-        if (requestIdRef.current === requestId) {
-          setLoading(false);
-        }
+      if (recs.length === 0) {
+        throw new Error("No recommendations received from server");
       }
-    },
-    [mediaType, isAuthenticated, user?.id],
-  );
 
-  const handleMoodClick = useCallback(
-    (mood: Mood) => {
-      setRefreshedAt(null);
-      setSelectedMood(mood);
-      void fetchRecommendations(mood);
-    },
-    [fetchRecommendations],
-  );
+      if (requestIdRef.current === requestId) {
+        setRecommendations(recs);
+        setRefreshedAt(Date.now());
+      }
+    } catch (err) {
+      if (requestIdRef.current !== requestId) return;
+      const message =
+        err instanceof Error ? err.message : "Failed to load recommendations";
+      setError(message);
+      setRecommendations([]);
+    } finally {
+      if (requestIdRef.current === requestId) {
+        setLoading(false);
+      }
+    }
+  };
 
-  useEffect(() => {
-    if (!requestedMood || handledHeroRequest.current === requestedMood.revision)
-      return;
-    const mood = moods.find(
-      (item) => item.name.toLowerCase() === requestedMood.name.toLowerCase(),
-    );
-    if (!mood) return;
-    handledHeroRequest.current = requestedMood.revision;
-    handleMoodClick(mood);
-  }, [requestedMood, moods, handleMoodClick]);
+  const handleMoodClick = (mood: Mood) => {
+    setRefreshedAt(null);
+    setSelectedMood(mood);
+    void fetchRecommendations(mood);
+  };
 
   const handleRefresh = () => {
     if (selectedMood) {
@@ -498,7 +471,7 @@ export default function MoodRecommendationsSection({
   return (
     <section
       id="moods"
-      className="relative mx-auto w-full max-w-7xl scroll-mt-24 overflow-hidden border-t border-[var(--surface-border)] pt-6 sm:pt-7"
+      className="relative mx-auto w-full max-w-7xl overflow-hidden border-t border-[var(--surface-border)] pt-6 sm:pt-7"
     >
       <div className="relative mb-5 sm:mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -507,18 +480,13 @@ export default function MoodRecommendationsSection({
               <div className="grid h-10 w-10 place-items-center rounded-md border border-[var(--surface-border)] text-[var(--brand-coral-strong)]">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <h2 className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
+              <h2 className="text-2xl font-bold leading-none text-[var(--ink)] sm:text-[28px]">
                 Mood Matcher
               </h2>
             </div>
             <p className="max-w-2xl text-sm leading-6 text-[var(--ink-muted)] sm:ml-[52px]">
-              Choose how you feel. Find{" "}
-              {mediaType === "movie"
-                ? "films"
-                : mediaType === "tv"
-                  ? "series"
-                  : "movies and series"}{" "}
-              to meet you there.
+              Discover content that matches your current vibe, now ranked with
+              stronger mood signals.
             </p>
           </div>
 

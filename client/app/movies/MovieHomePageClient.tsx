@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import type { HeroMoodRequest } from "@/components/hero/HeroMoodGuide";
 import { Film, Ticket } from "lucide-react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
@@ -169,12 +167,6 @@ export default function MoviesHomePageClient({
   communityPulse,
 }: MoviesHomePageClientProps) {
   useScrollToHash(100);
-  const [moodRequest, setMoodRequest] = useState<HeroMoodRequest | null>(null);
-  const selectHeroMood = (name: string) =>
-    setMoodRequest((previous) => ({
-      name,
-      revision: (previous?.revision ?? 0) + 1,
-    }));
 
   return (
     <main className="min-h-screen overflow-x-clip bg-[var(--surface-0)] text-[var(--ink)]">
@@ -183,20 +175,14 @@ export default function MoviesHomePageClient({
         mediaType="movie"
         icon={<Film className="h-5 w-5" />}
         eyebrow="Movies"
-        title="A film for the way you feel"
-        description="Comfort, laughter or a little suspense. Start with your mood, or explore tonight’s featured films."
-        onMoodSelect={selectHeroMood}
+        title="Tonight at the movies"
+        description="Choose a poster to update the marquee, then move into new releases, mood-led picks and the weekly chart."
         spotlightLabel="Selected feature"
         mediaLabel="Movie"
         primaryCta="View movie"
       />
 
       <div className="ui-shell space-y-12 py-10 sm:space-y-16 sm:py-14">
-        <MoodRecommendationsSection
-          mediaType="movie"
-          initialMoods={moods}
-          requestedMood={moodRequest}
-        />
         <BoxOfficeRanking items={popularMovies} />
 
         <MediaShelf
@@ -252,7 +238,7 @@ export default function MoviesHomePageClient({
           id="action-movies"
           eyebrow="High velocity"
           title="Action-packed"
-          description="Chases, fights and large-scale spectacle for a high-energy night."
+          description="Chases, fights and large-scale spectacle without a separate visual theme."
           items={actionMovies}
           hrefBase="/movies"
           watchType="movie"
@@ -263,7 +249,7 @@ export default function MoviesHomePageClient({
           id="award-winners"
           eyebrow="Recognised work"
           title="Award winners"
-          description="Celebrated performances and stories that stay with you."
+          description="Celebrated performances and filmmaking, marked by recognition rather than gold decoration."
           items={awardWinners}
           hrefBase="/movies"
           watchType="movie"
@@ -274,7 +260,7 @@ export default function MoviesHomePageClient({
           id="animated-movies"
           eyebrow="Illustrated worlds"
           title="Animated magic"
-          description="Playful adventures and imagined worlds for every age and mood."
+          description="Animation for every age and mood, presented with the same editorial system."
           items={animatedMovies}
           hrefBase="/movies"
           watchType="movie"
@@ -291,6 +277,8 @@ export default function MoviesHomePageClient({
           watchType="movie"
           viewAllHref="/movies/indie"
         />
+
+        <MoodRecommendationsSection mediaType="movie" initialMoods={moods} />
       </div>
     </main>
   );
