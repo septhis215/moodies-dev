@@ -1,10 +1,14 @@
-import { Controller, Post, Body, Get, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Query,
+  BadRequestException,
+} from '@nestjs/common';
 import { QuizRecommendationService } from './quiz.service';
-export interface QuizAnswerDto {
-  genres: string[];
-  mood: string;
-  mediaType?: string;
-}
+import type { QuizAnswer } from './quiz-ranking';
+export type QuizAnswerDto = QuizAnswer;
 
 export interface QuizRequestDto {
   answers: QuizAnswerDto[];
@@ -14,12 +18,12 @@ export interface QuizRequestDto {
 export class QuizRecommendationController {
   constructor(
     private readonly quizRecommendationService: QuizRecommendationService,
-  ) { }
+  ) {}
 
   @Post('recommendations')
   async getRecommendations(@Body() quizRequest: QuizRequestDto) {
     return this.quizRecommendationService.getRecommendations(
-      quizRequest.answers,
+      quizRequest?.answers,
     );
   }
 
@@ -41,13 +45,14 @@ export class QuizRecommendationController {
       },
     ];
 
-    const results = await this.quizRecommendationService.getRecommendations(
-      answers,
-    );
+    const results =
+      await this.quizRecommendationService.getRecommendations(answers);
 
     // Limit results if specified
     if (limit) {
       const limitNum = parseInt(limit, 10);
+      if (!/^\d+$/.test(limit) || limitNum < 1 || limitNum > 25)
+        throw new BadRequestException('Limit must be between 1 and 25.');
       return {
         ...results,
         results: results.results.slice(0, limitNum),
