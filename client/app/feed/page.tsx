@@ -2,27 +2,25 @@
 import { cn } from "@/lib/utils";
 import { tmdbImage } from "@/lib/tmdb";
 import { useState, useRef, useEffect, useCallback } from "react";
+import type { ReactNode } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowDown,
-  ArrowUp,
-  Bookmark,
-  Heart,
-  Info,
+  Calendar,
+  Clapperboard,
+  ExternalLink,
+  Maximize2,
   Play,
   RefreshCw,
+  Sparkles,
   Search,
   Star,
   User,
   X,
 } from "lucide-react";
-import styles from "./feed.module.css";
-import {
-  getReleaseStatus,
-  getSwipeDirection,
-  normalizeWheelDelta,
-} from "./feed-state";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ActionButtons from "@/components/ui/actionButtons";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useLiked } from "@/hooks/useLiked";
 import { useAuth } from "@/app/context/AuthProvider";
@@ -72,16 +70,26 @@ type FeedContentLike = Partial<VideoItem> & {
 type Category = "all" | "upcoming";
 type LoadingMode = "idle" | "initial" | "more" | "refresh";
 /** Playback signals the mounted player reports back to the page. */
-type FeedPlayerStatus =
-  | "playing"
-  | "paused"
-  | "buffering"
-  | "blocked"
-  | "error";
+type FeedPlayerStatus = "playing" | "paused" | "blocked" | "error";
 
-const feedTabs: { value: Category; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "upcoming", label: "Upcoming" },
+const feedTabs: Array<{
+  value: Category;
+  label: string;
+  shortLabel: string;
+  icon: ReactNode;
+}> = [
+  {
+    value: "all",
+    label: "All Videos",
+    shortLabel: "All",
+    icon: <Clapperboard className="h-4 w-4" />,
+  },
+  {
+    value: "upcoming",
+    label: "Upcoming",
+    shortLabel: "Soon",
+    icon: <Calendar className="h-4 w-4" />,
+  },
 ];
 
 export default function VideoFeedPage() {
@@ -95,9 +103,10 @@ export default function VideoFeedPage() {
   const INITIAL_FETCH_SIZE = 15;
   const PREFETCH_SIZE = 10;
 
+  const [expanded, setExpanded] = useState(false);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loadingMode, setLoadingMode] = useState<LoadingMode>("initial");
+  const [loadingMode, setLoadingMode] = useState<LoadingMode>("idle");
   const [hasMore, setHasMore] = useState(true);
   const [feedError, setFeedError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<Category>("all");
@@ -119,6 +128,7 @@ export default function VideoFeedPage() {
   // Treating any stray gesture as consent would unmute the next card and the
   // autoplay policy would then refuse to start it at all.
   const [muted, setMuted] = useState(true);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
 
   const [panelOpen, setPanelOpen] = useState(false);
   const {
@@ -127,11 +137,13 @@ export default function VideoFeedPage() {
     unlike: removeFromLiked,
     ready: likedReady,
   } = useLiked();
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [manuallyPaused, setManuallyPaused] = useState(false);
   const [playerError, setPlayerError] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [playerReloadKey, setPlayerReloadKey] = useState(0);
+  const [modalBackdropError, setModalBackdropError] = useState(false);
+  const [isMobileFullscreen, setIsMobileFullscreen] = useState(false);
   const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
   const {
     isInWatchlist,
@@ -139,19 +151,22 @@ export default function VideoFeedPage() {
     remove: removeFromWatchlist,
   } = useWatchlist();
 
-  const dialogRef = useRef<HTMLDialogElement | null>(null);
-  const stageRef = useRef<HTMLElement | null>(null);
-  const pendingNextRef = useRef(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   /** Live player instance, published by the mounted slide's own player. */
   const playerRef = useRef<YouTubePlayer | null>(null);
+  const isPlayingRef = useRef(true);
   const manuallyPausedRef = useRef(false);
   const autoplayBlockedRef = useRef(false);
   const gatesClearRef = useRef(true);
+  const recoveryTimerRef = useRef<number | null>(null);
+  const recoveryAttemptsRef = useRef(0);
+  const wasPlayingBeforeFullscreenRef = useRef(true);
   const [videoReady, setVideoReady] = useState(false);
   const [feedVisible, setFeedVisible] = useState(true);
 
   const currentVideo = videos[currentIndex];
+  const [showScrollHint, setShowScrollHint] = useState(true);
 
   useEffect(() => {
     if (user?.id) {
@@ -188,9 +203,7 @@ export default function VideoFeedPage() {
     [],
   );
 
-  const currentContentType = currentVideo
-    ? getContentType(currentVideo)
-    : "movie";
+  const currentContentType = currentVideo ? getContentType(currentVideo) : "movie";
   const watchType = currentContentType === "tv" ? "series" : "movie";
   const inWatchlist = currentVideo
     ? isInWatchlist(String(currentVideo.id), watchType)
@@ -301,8 +314,7 @@ export default function VideoFeedPage() {
       const requestGeneration = fetchGenerationRef.current;
 
       try {
-        const base =
-          process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
+        const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
         const limit = isInitial ? INITIAL_FETCH_SIZE : PREFETCH_SIZE;
         const currentPage = nextPageRef.current;
         const viewerParam = viewerIdRef.current
@@ -434,6 +446,7 @@ export default function VideoFeedPage() {
       setFeedError(null);
       setHasMore(true);
       setPanelOpen(false);
+      setExpanded(false);
       isFetchingRef.current = false;
       const timer = window.setTimeout(() => fetchMoreVideos(true, mode), 80);
       return () => window.clearTimeout(timer);
@@ -444,7 +457,6 @@ export default function VideoFeedPage() {
   useEffect(() => {
     const distanceFromEnd = videos.length - currentIndex - 1;
     if (
-      videos.length > 0 &&
       distanceFromEnd <= PREFETCH_THRESHOLD &&
       hasMore &&
       !isFetchingRef.current
@@ -474,39 +486,40 @@ export default function VideoFeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
 
-  // A native dialog supplies focus containment, Escape and background inertness.
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog || !panelOpen) return;
-    const trigger = document.activeElement as HTMLElement | null;
-    dialog.showModal();
-    return () => {
-      dialog.close();
-      if (trigger?.isConnected) trigger.focus();
+    const handleScroll = () => {
+      if (containerRef.current)
+        setShowScrollHint(containerRef.current.scrollTop <= 50);
     };
-  }, [panelOpen]);
+    const container = containerRef.current;
+    if (container) container.addEventListener("scroll", handleScroll);
+    return () => container?.removeEventListener("scroll", handleScroll);
+  }, []);
 
+  // Close panel when video changes
   useEffect(() => {
     setPanelOpen(false);
+    setExpanded(false);
     setVideoReady(false);
     setPlayerError(false);
     setAutoplayBlocked(false);
+    setModalBackdropError(false);
+    setIsMobileFullscreen(false);
     manuallyPausedRef.current = false;
     setManuallyPaused(false);
     setIsPlaying(false);
-    stageRef.current?.scrollTo({ top: 0 });
-  }, [currentVideoIdentity]);
+    if (recoveryTimerRef.current !== null) {
+      window.clearTimeout(recoveryTimerRef.current);
+      recoveryTimerRef.current = null;
+    }
+    recoveryAttemptsRef.current = 0;
+  }, [currentIndex]);
 
+  // Safety net for a player that never reaches PLAYING. `videoReady` is now
+  // derived from real player state, so this can finally fire on a video that is
+  // genuinely stuck instead of being disarmed the moment markup appeared.
   useEffect(() => {
-    if (
-      !currentVideo ||
-      videoReady ||
-      autoplayBlocked ||
-      manuallyPaused ||
-      panelOpen ||
-      !feedVisible
-    )
-      return;
+    if (!currentVideo || videoReady || autoplayBlocked) return;
     const timer = window.setTimeout(() => setPlayerError(true), 12000);
     return () => window.clearTimeout(timer);
   }, [
@@ -515,30 +528,18 @@ export default function VideoFeedPage() {
     playerReloadKey,
     videoReady,
     autoplayBlocked,
-    manuallyPaused,
-    panelOpen,
-    feedVisible,
   ]);
 
-  // Only uninterrupted, visible playback qualifies as watched.
   useEffect(() => {
-    if (
-      !currentVideo?.id ||
-      !currentVideo.primary_video?.key ||
-      !viewerIdRef.current ||
-      !isPlaying ||
-      !feedVisible ||
-      panelOpen ||
-      playerError ||
-      autoplayBlocked
-    )
-      return;
+    if (!currentVideo?.id || !currentVideo.primary_video?.key) return;
+    if (!viewerIdRef.current) return;
+
     const identity = getVideoIdentity(currentVideo);
     if (reportedViewsRef.current.has(identity)) return;
+
     const timer = window.setTimeout(() => {
       reportedViewsRef.current.add(identity);
-      const base =
-        process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
+      const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
       void fetch(`${base}/all/video-feed/viewed`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -549,572 +550,1154 @@ export default function VideoFeedPage() {
           videoKey: currentVideo.primary_video.key,
         }),
         keepalive: true,
-      })
-        .then((response) => {
-          if (!response.ok) reportedViewsRef.current.delete(identity);
-        })
-        .catch(() => reportedViewsRef.current.delete(identity));
+      }).catch(() => {
+        reportedViewsRef.current.delete(identity);
+      });
     }, 1800);
+
     return () => window.clearTimeout(timer);
   }, [
     currentVideo,
-    isPlaying,
-    feedVisible,
-    panelOpen,
-    playerError,
-    autoplayBlocked,
+    currentVideo?.id,
+    currentVideo?.primary_video?.key,
     getContentType,
     getVideoIdentity,
   ]);
 
   useEffect(() => {
-    gatesClearRef.current = feedVisible && !panelOpen;
-  }, [feedVisible, panelOpen]);
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
-  const attachPlayer = useCallback((player: YouTubePlayer | null) => {
-    playerRef.current = player;
-  }, []);
-
-  const handlePlayerStatus = useCallback((status: FeedPlayerStatus) => {
-    setIsPlaying(status === "playing");
-    if (status === "playing") {
-      manuallyPausedRef.current = false;
-      setManuallyPaused(false);
-      setAutoplayBlocked(false);
-      setVideoReady(true);
-      setPlayerError(false);
-    } else if (status === "paused" && gatesClearRef.current) {
-      // Native player pauses are intentional. Never fight the viewer.
-      manuallyPausedRef.current = true;
-      setManuallyPaused(true);
-      setVideoReady(true);
-    } else if (status === "blocked") {
-      setAutoplayBlocked(true);
-    } else if (status === "error") {
-      setPlayerError(true);
-      setVideoReady(false);
-    }
-  }, []);
-
-  const startPlaybackFromGesture = useCallback(() => {
-    manuallyPausedRef.current = false;
-    setManuallyPaused(false);
-    setAutoplayBlocked(false);
-    playerRef.current?.playVideo();
-  }, []);
+  useEffect(() => {
+    manuallyPausedRef.current = manuallyPaused;
+  }, [manuallyPaused]);
 
   useEffect(() => {
     autoplayBlockedRef.current = autoplayBlocked;
   }, [autoplayBlocked]);
 
   useEffect(() => {
-    const player = playerRef.current;
-    if (!player) return;
-    if (!feedVisible || panelOpen) {
-      gatesClearRef.current = false;
-      player.pauseVideo();
-    } else if (!manuallyPausedRef.current && !autoplayBlockedRef.current) {
-      player.playVideo();
-    }
-  }, [feedVisible, panelOpen, currentVideoIdentity]);
+    gatesClearRef.current = feedVisible && !panelOpen && !manuallyPaused;
+  }, [feedVisible, panelOpen, manuallyPaused]);
 
-  useEffect(() => {
-    const update = () => setFeedVisible(document.visibilityState === "visible");
-    update();
-    document.addEventListener("visibilitychange", update);
-    return () => document.removeEventListener("visibilitychange", update);
+  // ── PLAYER CONTROL LAYER ──────────────────────────────────────
+  // Every playback signal comes from the YouTube IFrame API. The feed no longer
+  // posts raw `postMessage` commands at an embed iframe: that protocol is
+  // undocumented, no message channel was ever bound here, so the page was
+  // driving a player it could not observe and calling a video "ready" as soon as
+  // its markup parsed.
+  const attachPlayer = useCallback((player: YouTubePlayer | null) => {
+    playerRef.current = player;
   }, []);
 
-  const navigateClip = useCallback(
-    (direction: -1 | 1) => {
-      if (panelOpen) return;
-      const next = currentIndex + direction;
-      if (next >= 0 && next < videos.length) {
-        pendingNextRef.current = false;
-        setCurrentIndex(next);
-      } else if (direction === 1 && hasMore) {
-        pendingNextRef.current = true;
-        if (!isFetchingRef.current) void fetchMoreVideos(false);
+  const handlePlayerStatus = useCallback((status: FeedPlayerStatus) => {
+    if (status === "playing") {
+      setAutoplayBlocked(false);
+      setVideoReady(true);
+      setPlayerError(false);
+      setIsPlaying(true);
+      return;
+    }
+    if (status === "paused") {
+      setIsPlaying(false);
+      // A pause nobody in this page asked for. Chrome quietly suspends muted
+      // autoplays it decides are background noise, so recover it a couple of
+      // times; if the browser keeps refusing, the forced play comes back as
+      // "blocked" and the viewer gets an explicit control instead of a freeze.
+      // The recovery never touches isPlaying: the player's own PLAYING event is
+      // what is allowed to claim the video came back.
+      if (
+        recoveryTimerRef.current !== null ||
+        recoveryAttemptsRef.current >= 2 ||
+        !gatesClearRef.current
+      ) {
+        return;
       }
+      recoveryTimerRef.current = window.setTimeout(() => {
+        recoveryTimerRef.current = null;
+        recoveryAttemptsRef.current += 1;
+        if (!gatesClearRef.current) return;
+        try {
+          playerRef.current?.playVideo();
+        } catch {
+          /* the player is mid-teardown */
+        }
+      }, 500);
+      return;
+    }
+    if (status === "blocked") {
+      // The browser refused to start the video. Show an explicit gesture
+      // instead of a loading spinner that will never resolve.
+      setAutoplayBlocked(true);
+      setVideoReady(false);
+      setIsPlaying(false);
+      return;
+    }
+    setPlayerError(true);
+    setVideoReady(false);
+    setAutoplayBlocked(false);
+    setIsPlaying(false);
+  }, []);
+
+  const pauseActiveVideo = useCallback(() => {
+    try {
+      playerRef.current?.pauseVideo();
+    } catch {
+      /* the player is mid-teardown */
+    }
+    setIsPlaying(false);
+  }, []);
+
+  const playActiveVideo = useCallback(
+    (force = false) => {
+      if (!currentVideo || !feedVisible || panelOpen) return;
+      if (manuallyPausedRef.current && !force) return;
+      // A video the browser blocked only restarts from a real gesture; retrying
+      // from an effect just bounces off the same autoplay policy.
+      if (autoplayBlockedRef.current && !force) return;
+      const player = playerRef.current;
+      if (!player) return;
+
+      setAutoplayBlocked(false);
+      player.playVideo();
+      setIsPlaying(true);
     },
-    [panelOpen, currentIndex, videos.length, hasMore, fetchMoreVideos],
+    [currentVideo, feedVisible, panelOpen],
   );
 
-  useEffect(() => {
-    if (!pendingNextRef.current) return;
-    if (currentIndex + 1 < videos.length) {
-      pendingNextRef.current = false;
-      setCurrentIndex((i) => i + 1);
-    } else if (!hasMore || feedError) {
-      pendingNextRef.current = false;
+  /**
+   * Recovers a video the browser refused to autoplay. Must be called directly
+   * from a click handler: the user gesture is what unlocks playback, and
+   * deferring the call (a timeout, an effect) loses it.
+   */
+  const startPlaybackFromGesture = useCallback(() => {
+    manuallyPausedRef.current = false;
+    setManuallyPaused(false);
+    playActiveVideo(true);
+  }, [playActiveVideo]);
+
+  const toggleMute = useCallback(() => {
+    setAudioUnlocked(true);
+    setMuted((prev) => !prev);
+  }, []);
+
+  /** Turns sound on from a deliberate tap, then keeps the video running. */
+  const enableAudio = useCallback(() => {
+    setAudioUnlocked(true);
+    setMuted(false);
+    const player = playerRef.current;
+    if (!player || manuallyPausedRef.current || panelOpen) return;
+    try {
+      player.setVolume(100);
+      player.unMute();
+      // Unmuting can flip a tolerated muted stream into a blocked one, so
+      // restart inside the same gesture rather than waiting to notice.
+      player.playVideo();
+      setAutoplayBlocked(false);
+      setIsPlaying(true);
+    } catch {
+      /* the player is mid-teardown */
     }
-  }, [videos.length, currentIndex, hasMore, feedError]);
+  }, [panelOpen]);
+
+  const handleScroll = useCallback(
+    (e: WheelEvent) => {
+      if (panelOpen) return;
+      if (panelRef.current?.contains(e.target as Node)) return;
+      e.preventDefault();
+      if (Math.abs(e.deltaY) < 50) return;
+      if (e.deltaY > 0 && currentIndex < videos.length - 1) {
+        setCurrentIndex((i) => i + 1);
+        setPanelOpen(false);
+      } else if (e.deltaY > 0 && hasMore && !isFetchingRef.current) {
+        fetchMoreVideos(false);
+      } else if (e.deltaY < 0 && currentIndex > 0) {
+        setCurrentIndex((i) => i - 1);
+        setPanelOpen(false);
+      }
+    },
+    [currentIndex, videos.length, hasMore, fetchMoreVideos, panelOpen],
+  );
+
+  const touchStartY = useRef(0);
+  const handleTouchStart = useCallback(
+    (e: TouchEvent) => {
+      if (panelOpen) return;
+      touchStartY.current = e.touches[0].clientY;
+    },
+    [panelOpen],
+  );
+  const handleTouchEnd = useCallback(
+    (e: TouchEvent) => {
+      if (panelOpen) return;
+      const diff = touchStartY.current - e.changedTouches[0].clientY;
+      if (Math.abs(diff) < 50) return;
+      if (diff > 0 && currentIndex < videos.length - 1) {
+        setCurrentIndex((prev) => prev + 1);
+        setPanelOpen(false);
+      } else if (diff > 0 && hasMore && !isFetchingRef.current) {
+        fetchMoreVideos(false);
+      } else if (diff < 0 && currentIndex > 0) {
+        setCurrentIndex((prev) => prev - 1);
+        setPanelOpen(false);
+      }
+    },
+    [currentIndex, videos.length, hasMore, fetchMoreVideos, panelOpen],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container || panelOpen) return;
-    let wheelTotal = 0;
-    let lastWheel = 0;
-    let lockedUntil = 0;
-    let touch: { x: number; y: number } | null = null;
-    const interactive = (target: EventTarget | null) =>
-      target instanceof Element &&
-      Boolean(
-        target.closest(
-          "button, a, input, select, textarea, iframe, dialog, [data-player]",
-        ),
-      );
-    const wheel = (event: WheelEvent) => {
-      if (
-        interactive(event.target) ||
-        event.ctrlKey ||
-        Math.abs(event.deltaX) > Math.abs(event.deltaY)
-      )
-        return;
-      const stage = stageRef.current;
-      // Short screens retain ordinary vertical scrolling before clip navigation.
-      if (stage && stage.scrollHeight > stage.clientHeight + 1) return;
-      event.preventDefault();
-      const now = performance.now();
-      if (now < lockedUntil) {
-        lastWheel = now;
-        return;
-      }
-      if (now - lastWheel < 180 && wheelTotal === 0) {
-        lastWheel = now;
-        return;
-      }
-      if (
-        now - lastWheel > 180 ||
-        Math.sign(event.deltaY) !== Math.sign(wheelTotal)
-      )
-        wheelTotal = 0;
-      lastWheel = now;
-      wheelTotal += normalizeWheelDelta(
-        event.deltaY,
-        event.deltaMode,
-        container.clientHeight,
-      );
-      if (Math.abs(wheelTotal) >= 90) {
-        navigateClip(wheelTotal > 0 ? 1 : -1);
-        wheelTotal = 0;
-        lockedUntil = now + 650;
-      }
-    };
-    const touchStart = (event: TouchEvent) => {
-      if (interactive(event.target) || event.touches.length !== 1) {
-        touch = null;
-        return;
-      }
-      const stage = stageRef.current;
-      if (stage && stage.scrollHeight > stage.clientHeight + 1) return;
-      touch = { x: event.touches[0].clientX, y: event.touches[0].clientY };
-    };
-    const touchEnd = (event: TouchEvent) => {
-      if (!touch || !event.changedTouches.length) return;
-      const end = event.changedTouches[0];
-      const direction = getSwipeDirection(
-        end.clientX - touch.x,
-        end.clientY - touch.y,
-      );
-      touch = null;
-      if (direction && performance.now() >= lockedUntil) {
-        lockedUntil = performance.now() + 650;
-        navigateClip(direction);
-      }
-    };
-    const cancel = () => {
-      touch = null;
-    };
-    const keyboard = (event: KeyboardEvent) => {
-      if (
-        interactive(event.target) ||
-        (event.target instanceof HTMLElement && event.target.isContentEditable)
-      )
-        return;
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-        event.preventDefault();
-        if (!event.repeat) navigateClip(event.key === "ArrowDown" ? 1 : -1);
-      }
-    };
-    container.addEventListener("wheel", wheel, { passive: false });
-    container.addEventListener("touchstart", touchStart, { passive: true });
-    container.addEventListener("touchend", touchEnd, { passive: true });
-    container.addEventListener("touchcancel", cancel);
-    window.addEventListener("keydown", keyboard);
+    container.addEventListener("wheel", handleScroll, { passive: false });
+    container.addEventListener("touchstart", handleTouchStart as EventListener);
+    container.addEventListener("touchend", handleTouchEnd as EventListener);
     return () => {
-      container.removeEventListener("wheel", wheel);
-      container.removeEventListener("touchstart", touchStart);
-      container.removeEventListener("touchend", touchEnd);
-      container.removeEventListener("touchcancel", cancel);
-      window.removeEventListener("keydown", keyboard);
+      container.removeEventListener("wheel", handleScroll);
+      container.removeEventListener(
+        "touchstart",
+        handleTouchStart as EventListener,
+      );
+      container.removeEventListener(
+        "touchend",
+        handleTouchEnd as EventListener,
+      );
     };
-  }, [panelOpen, navigateClip]);
+  }, [handleScroll, handleTouchStart, handleTouchEnd, panelOpen]);
 
-  const videoTitle = currentVideo?.title || currentVideo?.name || "Untitled";
-  const releaseDate =
-    currentVideo?.release_date || currentVideo?.first_air_date;
-  const releaseStatus = getReleaseStatus(releaseDate);
-  const releaseLabel =
-    releaseDate && releaseStatus !== "unknown"
-      ? new Date(`${releaseDate}T12:00:00`).toLocaleDateString(undefined, {
+  // Playback gate: a trailer only runs while the tab is visible, the details
+  // panel is closed, the user has not paused it and the browser has not blocked
+  // autoplay. Opening the panel pauses; closing it resumes.
+  useEffect(() => {
+    if (!currentVideo) return;
+    if (!feedVisible || panelOpen) {
+      pauseActiveVideo();
+      return;
+    }
+    if (manuallyPausedRef.current || autoplayBlocked) return;
+    const timer = window.setTimeout(() => playActiveVideo(), 260);
+    return () => window.clearTimeout(timer);
+  }, [
+    autoplayBlocked,
+    currentVideo,
+    feedVisible,
+    panelOpen,
+    pauseActiveVideo,
+    playActiveVideo,
+  ]);
+
+  useEffect(() => {
+    if (!panelOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscroll = document.body.style.overscrollBehavior;
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscroll;
+    };
+  }, [panelOpen]);
+
+  // Only tab visibility gates playback. The old `blur` handler marked the feed
+  // hidden whenever the window lost focus, and a window that never fires
+  // `focus` again (clicking into another monitor, a devtools focus steal) left
+  // every later play attempt early-returning for the rest of the session.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setFeedVisible(document.visibilityState === "visible");
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  const togglePlayPause = () => {
+    if (!currentVideo) return;
+    if (!playerRef.current) return;
+    if (isPlaying) {
+      manuallyPausedRef.current = true;
+      setManuallyPaused(true);
+      pauseActiveVideo();
+    } else {
+      startPlaybackFromGesture();
+    }
+  };
+
+  const videoTitle = currentVideo?.title || currentVideo?.name || "";
+  const currentPoster = currentVideo?.poster_path
+    ? tmdbImage(currentVideo.poster_path, "w342")
+    : null;
+  const currentBackdrop = currentVideo?.backdrop_path
+    ? tmdbImage(currentVideo.backdrop_path, "w1280")
+    : currentPoster;
+  const currentYear =
+    currentVideo?.release_date || currentVideo?.first_air_date
+      ? new Date(
+          currentVideo.release_date ?? currentVideo.first_air_date!,
+        ).getFullYear()
+      : null;
+  const currentReleaseDateLabel =
+    currentVideo?.release_date || currentVideo?.first_air_date
+      ? new Date(
+          currentVideo.release_date ?? currentVideo.first_air_date!,
+        ).toLocaleDateString(undefined, {
           month: "short",
           day: "numeric",
           year: "numeric",
         })
-      : "Date to be announced";
-  const videoType =
+      : null;
+  const currentVideoTypeLabel =
     currentVideo?.video_type_label ||
     currentVideo?.primary_video?.video_type_label ||
+    currentVideo?.video_type ||
+    currentVideo?.primary_video?.video_type ||
     currentVideo?.primary_video?.type ||
     "Video";
-  const aspectRatio =
+  const currentAspectRatio =
     currentVideo?.aspect_ratio ?? currentVideo?.primary_video?.aspect_ratio;
-  const isPortrait =
-    (currentVideo?.orientation ?? currentVideo?.primary_video?.orientation) ===
-      "portrait" ||
-    (typeof aspectRatio === "number" && aspectRatio > 0 && aspectRatio < 1);
-  const rating = Number(currentVideo?.vote_average);
-  const playbackAllowed = feedVisible && !panelOpen && !manuallyPaused;
-  const canGoNext = currentIndex < videos.length - 1 || hasMore;
+  const currentOrientation =
+    currentVideo?.orientation ?? currentVideo?.primary_video?.orientation;
+  const isPortraitVideo =
+    currentOrientation === "portrait" ||
+    (typeof currentAspectRatio === "number" && currentAspectRatio < 1);
+  const isLandscapeVideo = !isPortraitVideo;
+  // Escape hatch for landscape trailers on small screens: a stock YouTube
+  // player with native controls, opened from a tap, so the autoplay policy is
+  // satisfied by that gesture instead of being fought.
+  const fullscreenIframeSrc = currentVideo?.primary_video?.key
+    ? `https://www.youtube.com/embed/${currentVideo.primary_video.key}?autoplay=1&controls=1&fs=0&iv_load_policy=3&modestbranding=1&rel=0&playsinline=1&mute=${muted ? 1 : 0}&vq=hd1080`
+    : "";
 
-  const reloadPlayer = () => {
-    setPlayerError(false);
-    setVideoReady(false);
-    setAutoplayBlocked(false);
-    manuallyPausedRef.current = false;
-    setManuallyPaused(false);
-    setPlayerReloadKey((key) => key + 1);
+  const openMobileFullscreen = () => {
+    if (!currentVideo || !isLandscapeVideo) return;
+    wasPlayingBeforeFullscreenRef.current =
+      isPlayingRef.current && !manuallyPausedRef.current;
+    pauseActiveVideo();
+    setIsMobileFullscreen(true);
   };
 
-  return (
-    <div ref={containerRef} className={styles.shell}>
-      <header className={styles.header}>
-        <Link href="/" aria-label="Moodies home" className={styles.logo}>
-          <img src="/images/logo-b.png" alt="" width={28} height={28} />
-          <span className={styles.brand}>Moodies Feed</span>
-        </Link>
-        <nav aria-label="Feed category" className={styles.tabs}>
-          {feedTabs.map((tab) => (
-            <button
-              key={tab.value}
-              type="button"
-              aria-pressed={activeCategory === tab.value}
-              className={
-                activeCategory === tab.value ? styles.selectedTab : undefined
-              }
-              onClick={() => {
-                pendingNextRef.current = false;
-                setActiveCategory(tab.value);
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-        <div className={styles.headerActions}>
-          <button
-            type="button"
-            aria-label="Refresh feed"
-            disabled={loading}
-            onClick={() => {
-              pendingNextRef.current = false;
-              resetFeed("refresh");
-            }}
-          >
-            <RefreshCw size={20} />
-          </button>
-          <Link href="/search" aria-label="Search">
-            <Search size={20} />
-          </Link>
-          <Link
-            href={user ? "/profile" : "/auth/login"}
-            aria-label={user ? "Your profile" : "Sign in"}
-          >
-            <User size={20} />
-          </Link>
-        </div>
-      </header>
+  const closeMobileFullscreen = useCallback(() => {
+    setIsMobileFullscreen(false);
+    if (
+      wasPlayingBeforeFullscreenRef.current &&
+      !manuallyPausedRef.current &&
+      feedVisible
+    ) {
+      window.setTimeout(() => playActiveVideo(), 180);
+    }
+  }, [feedVisible, playActiveVideo]);
 
-      <main ref={stageRef} className={styles.stage} aria-label="Moodies Feed">
-        {currentVideo ? (
-          <section className={styles.screening} aria-labelledby="clip-title">
-            <div
-              data-player
-              className={cn(styles.player, isPortrait && styles.portrait)}
-              style={{
-                aspectRatio: isPortrait
-                  ? aspectRatio || 9 / 16
-                  : aspectRatio || 16 / 9,
-              }}
-            >
-              <FeedVideoPlayer
-                key={currentVideoIdentity}
-                videoKey={currentVideo.primary_video.key}
-                reloadKey={playerReloadKey}
-                muted={muted}
-                playbackAllowed={playbackAllowed}
-                onStatus={handlePlayerStatus}
-                attachPlayer={attachPlayer}
-                onMuteChange={setMuted}
-                title={videoTitle}
-                className={styles.playerHost}
-              />
-            </div>
-            <div className={styles.caption}>
-              <div className={styles.titleBlock}>
-                <p className="ui-kicker">{videoType}</p>
-                <h1
-                  id="clip-title"
-                  className="mt-1 text-3xl font-bold leading-none sm:text-4xl"
-                >
-                  {videoTitle}
-                </h1>
-                <p className={styles.meta}>
-                  <span>
-                    {getContentType(currentVideo) === "tv"
-                      ? "TV series"
-                      : "Movie"}
-                  </span>
-                  <span>
-                    {releaseStatus === "upcoming"
-                      ? "Upcoming"
-                      : releaseDate?.slice(0, 4) || "Date TBA"}
-                  </span>
-                  {Number.isFinite(rating) && rating > 0 ? (
-                    <span className={styles.rating}>
-                      <Star size={14} aria-hidden="true" /> {rating.toFixed(1)}
-                      <span className="sr-only"> out of 10</span>
-                    </span>
-                  ) : (
-                    <span>Not rated</span>
+  useEffect(() => {
+    if (!isMobileFullscreen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMobileFullscreen();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [closeMobileFullscreen, isMobileFullscreen]);
+
+  const videoFrameSizeClassName = cn(
+    isPortraitVideo
+      ? "h-[100svh] w-screen max-w-none lg:h-[calc(100svh-1rem)] lg:w-[calc((100svh-1rem)*0.5625)]"
+      : "h-[100svh] w-screen max-w-none lg:h-[100svh] lg:w-screen",
+  );
+  const videoFrameClassName = cn(
+    "relative isolate overflow-hidden bg-black",
+    videoFrameSizeClassName,
+  );
+
+  const playbackAllowed = feedVisible && !panelOpen && !manuallyPaused;
+
+  return (
+    <div
+      ref={containerRef}
+      className={cn(
+        "fixed inset-0 h-[100svh] w-full overflow-hidden overscroll-none bg-black",
+        panelOpen ? "touch-pan-y" : "touch-none",
+      )}
+    >
+      {/* ── TOP NAVBAR ──────────────────────────────────────────── */}
+      <motion.nav
+        initial={{ y: -56, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
+        className="pointer-events-none fixed left-0 right-0 top-0 z-50 border-b border-white/[0.06] bg-black px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] shadow-[0_12px_32px_rgba(0,0,0,0.45)] sm:px-5"
+      >
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+          <Link
+            href="/"
+            className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20 shadow-xl shadow-black/20 backdrop-blur-md transition hover:bg-black/35 sm:h-11 sm:w-11"
+          >
+            <Image
+              src="/images/moodies-transparent.png"
+              alt="Moodies"
+              width={30}
+              height={30}
+              className="h-7 w-7 object-contain sm:h-8 sm:w-8"
+            />
+          </Link>
+
+          <div className="flex min-w-0 justify-center">
+            <div className="pointer-events-auto grid w-full max-w-[21rem] grid-cols-2 gap-1 rounded-full border border-white/10 bg-black/20 p-1 shadow-xl shadow-black/20 backdrop-blur-md transition-colors hover:bg-black/30 sm:max-w-[24rem]">
+              {feedTabs.map((tab) => (
+                <motion.button
+                  key={tab.value}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => setActiveCategory(tab.value)}
+                  className={cn(
+                    "relative min-h-9 overflow-hidden rounded-full px-2 py-1.5 text-left transition-colors duration-200 sm:min-h-10 sm:px-3",
+                    activeCategory === tab.value
+                      ? "text-white"
+                      : "text-white/55 hover:bg-white/[0.04] hover:text-white/85",
                   )}
-                </p>
-              </div>
-              <div className={styles.actions} aria-label="Title actions">
-                <button
-                  type="button"
-                  aria-pressed={liked}
-                  onClick={handleLikeToggle}
                 >
-                  <Heart size={20} fill={liked ? "currentColor" : "none"} />{" "}
-                  <span>{liked ? "Liked" : "Like"}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={inWatchlist}
-                  disabled={isTogglingWatchlist}
-                  onClick={handleWatchlistToggle}
-                >
-                  <Bookmark
-                    size={20}
-                    fill={inWatchlist ? "currentColor" : "none"}
-                  />{" "}
-                  <span>{inWatchlist ? "Saved" : "Save"}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-haspopup="dialog"
-                  aria-expanded={panelOpen}
-                  aria-controls="clip-details"
-                  onClick={() => setPanelOpen(true)}
-                >
-                  <Info size={20} /> Details
-                </button>
-              </div>
+                  {activeCategory === tab.value && (
+                    <motion.span
+                      layoutId="pill"
+                      className="absolute inset-0 rounded-full bg-white/18 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)]"
+                      transition={{
+                        type: "spring",
+                        stiffness: 420,
+                        damping: 34,
+                      }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center justify-center gap-2 sm:justify-start">
+                    <span
+                      className={cn(
+                        "hidden text-white/70 sm:block",
+                        activeCategory === tab.value && "text-[#ff8a78]",
+                      )}
+                    >
+                      {tab.icon}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-center text-xs font-black sm:text-left">
+                        <span className="sm:hidden">{tab.shortLabel}</span>
+                        <span className="hidden sm:inline">{tab.label}</span>
+                      </span>
+                    </span>
+                  </span>
+                </motion.button>
+              ))}
             </div>
-            <div className={styles.playbackStatus} role="status">
-              {playerError ? (
-                <>
-                  <span>This clip could not play.</span>
-                  <button type="button" onClick={reloadPlayer}>
-                    Retry
-                  </button>
-                  {canGoNext && (
-                    <button type="button" onClick={() => navigateClip(1)}>
-                      Skip clip
+          </div>
+
+          <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-black/20 p-1 shadow-xl shadow-black/20 backdrop-blur-md transition-colors hover:bg-black/30">
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.93 }}
+              onClick={() => resetFeed("refresh")}
+              disabled={loading}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
+              aria-label="Refresh feed"
+            >
+              <RefreshCw
+                className={cn(
+                  "h-4 w-4 sm:h-5 sm:w-5",
+                  loadingMode === "refresh" && "animate-spin",
+                )}
+              />
+            </motion.button>
+            <Link href="/search" prefetch>
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.93 }}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white sm:h-9 sm:w-9"
+                aria-label="Search"
+              >
+                <Search className="h-4 w-4 sm:h-5 sm:w-5" />
+              </motion.button>
+            </Link>
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.93 }}
+              onClick={() => router.push("/profile")}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white sm:h-9 sm:w-9"
+              aria-label="Profile"
+            >
+              <User className="h-4 w-4 sm:h-5 sm:w-5" />
+            </motion.button>
+          </div>
+        </div>
+      </motion.nav>
+
+      {/* ── MAIN VIDEO AREA ─────────────────────────────────────── */}
+      <div className="relative flex h-[100svh] w-full items-center justify-center overflow-hidden bg-black">
+        {currentBackdrop && (
+          <div
+            className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center opacity-38 blur-2xl"
+            style={{ backgroundImage: `url(${currentBackdrop})` }}
+            aria-hidden="true"
+          />
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-black/24" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-18 bg-black" />
+        <AnimatePresence mode="wait">
+          {currentVideo && (
+            <motion.div
+              key={`${currentVideoIdentity}:${currentVideo.primary_video.key}`}
+              initial={{ opacity: 0, scale: 1.03 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.28, ease: "easeOut" }}
+              className="absolute inset-0 flex items-center justify-center"
+            >
+              {/* Video iframe */}
+              <div className="relative flex h-full w-full items-center justify-center bg-transparent">
+                <div className={videoFrameClassName}>
+                  {currentBackdrop && (
+                    <div
+                      className={cn(
+                        "absolute inset-0 bg-cover bg-center opacity-70 blur-sm scale-105 transition-opacity duration-500",
+                        videoReady && "opacity-0",
+                      )}
+                      style={{ backgroundImage: `url(${currentBackdrop})` }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {!currentBackdrop && (
+                    <div
+                      className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,rgba(233,79,55,0.22),transparent_38%),linear-gradient(180deg,#111_0%,#020202_65%,#000_100%)]"
+                      aria-hidden="true"
+                    />
+                  )}
+                  {!videoReady && !playerError && !autoplayBlocked && (
+                    <div className="absolute left-1/2 top-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3">
+                      <div className="h-9 w-9 rounded-full border-2 border-white/20 border-t-white/80 animate-spin" />
+                      <span className="rounded-full border border-white/10 bg-black/45 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/55 backdrop-blur">
+                        Loading video
+                      </span>
+                    </div>
+                  )}
+                  <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.10),transparent_58%)] mix-blend-screen" />
+                  <FeedVideoPlayer
+                    videoKey={currentVideo.primary_video.key}
+                    reloadKey={playerReloadKey}
+                    muted={muted}
+                    playbackAllowed={playbackAllowed}
+                    onStatus={handlePlayerStatus}
+                    attachPlayer={attachPlayer}
+                    title={videoTitle || `video-${currentVideo.id}`}
+                    className="absolute inset-0 h-full w-full bg-black brightness-[1.14] contrast-[1.03] saturate-[1.08]"
+                  />
+                  {/*
+                   * The feed keeps ownership of every gesture: the player host is
+                   * pointer-transparent so a tap lands here (where play/pause runs
+                   * inside a real user gesture) and a swipe still reaches the feed's
+                   * touch handlers instead of the player's own scroll chrome.
+                   */}
+                  <button
+                    type="button"
+                    onClick={togglePlayPause}
+                    aria-label={isPlaying ? "Pause video" : "Play video"}
+                    className="absolute inset-0 z-[12] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
+                  />
+                  {autoplayBlocked && !playerError && (
+                    <button
+                      type="button"
+                      onClick={startPlaybackFromGesture}
+                      aria-label={`Play ${videoTitle || "video"}`}
+                      className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/40 transition hover:bg-black/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
+                    >
+                      <span className="grid h-16 w-16 place-items-center rounded-full border border-white/20 bg-white/12 shadow-xl shadow-black/30 backdrop-blur">
+                        <Play
+                          className="h-7 w-7 translate-x-px text-white"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <span className="rounded-full border border-white/15 bg-black/55 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-white/85">
+                        Tap to play
+                      </span>
                     </button>
                   )}
-                  <a
-                    href={`https://www.youtube.com/watch?v=${currentVideo.primary_video.key}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  {playerError && (
+                    <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 px-6 text-center backdrop-blur-sm">
+                      <div className="max-w-xs">
+                        <p className="text-base font-bold text-white">
+                          Video could not start
+                        </p>
+                        <p className="mt-1 text-sm leading-relaxed text-white/55">
+                          Check your connection or reload this trailer.
+                        </p>
+                        <div className="mt-4 flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPlayerError(false);
+                              setVideoReady(false);
+                              setPlayerReloadKey((key) => key + 1);
+                            }}
+                            className="min-h-11 rounded-full bg-white px-4 text-sm font-bold text-black transition hover:bg-white/88"
+                          >
+                            Reload video
+                          </button>
+                          <a
+                            href={`https://www.youtube.com/watch?v=${currentVideo.primary_video.key}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-h-11 items-center rounded-full border border-white/20 px-4 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white"
+                          >
+                            Open YouTube
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {!audioUnlocked && muted && videoReady && (
+                    <button
+                      type="button"
+                      onClick={enableAudio}
+                      className="absolute left-1/2 top-24 z-30 -translate-x-1/2 rounded-full border border-white/15 bg-black/55 px-3.5 py-2 text-[11px] font-semibold text-white/85 shadow-lg backdrop-blur-md transition hover:bg-black/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                    >
+                      Tap for sound
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/*
+               * ── PERMANENT BOTTOM TITLE BAR ──────────────────────
+               * Always rendered. Uses a tall gradient scrim so it
+               * feels embedded in the video, not overlaid on top.
+               * Right side is padded to avoid the action buttons column.
+               */}
+              <motion.div
+                key={`titlebar-${currentVideo.id}`}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
+              >
+                <div
+                  className={cn(
+                    "relative flex items-end overflow-hidden",
+                    videoFrameSizeClassName,
+                  )}
+                >
+                {/* Layer 1 — tall ambient scrim: fades video into dark over a large area */}
+                <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-black/88 via-black/38 to-transparent lg:h-[42%]" />
+
+                {/* Layer 2 — tight bottom vignette: ensures the very bottom edge is fully dark */}
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/72 to-transparent" />
+
+                {/* Content */}
+                <div className="relative w-full px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pr-20 pt-28 sm:px-5 sm:pr-24 lg:max-w-4xl lg:px-8 lg:pb-8 lg:pr-32 lg:pt-32">
+                  <div className="mb-2.5 flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#ff725e] shadow-[0_0_10px_rgba(255,114,94,0.8)]" />
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/58 sm:text-[11px]">
+                      {currentVideoTypeLabel}
+                    </span>
+                  </div>
+                  <h2
+                    className="mb-3 line-clamp-2 max-w-2xl text-xl font-black leading-[1.08] tracking-[-0.025em] text-white sm:text-2xl lg:text-3xl"
+                    style={{
+                      textShadow:
+                        "0 2px 18px rgba(0,0,0,0.95), 0 1px 4px rgba(0,0,0,0.9)",
+                    }}
                   >
-                    Open YouTube
-                  </a>
-                </>
-              ) : autoplayBlocked ? (
-                <>
-                  <span>Autoplay is paused.</span>
-                  <button type="button" onClick={startPlaybackFromGesture}>
-                    <Play size={16} /> Play clip
-                  </button>
-                </>
-              ) : (
-                <span>
-                  {!videoReady
-                    ? "Loading clip…"
-                    : isPlaying
-                      ? "Playing · Sound and captions in player"
-                      : manuallyPaused
-                        ? "Paused · Resume in player"
-                        : "Buffering…"}
-                </span>
-              )}
-            </div>
-          </section>
-        ) : (
-          <section className={styles.empty} aria-labelledby="feed-state-title">
-            <p className="ui-kicker">Moodies Feed</p>
-            <h1
-              id="feed-state-title"
-              className="text-3xl font-bold sm:text-4xl"
+                    {videoTitle}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[11px] font-semibold text-white/68 sm:text-xs">
+                    {/* Rating / Upcoming badge */}
+                    {Number.isFinite(Number(currentVideo.vote_average)) &&
+                      (() => {
+                        const va = Number(currentVideo.vote_average);
+                        const isUpcomingItem = va === 0;
+                        return (
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1.5",
+                              isUpcomingItem
+                                ? "text-indigo-200"
+                                : "text-amber-200",
+                            )}
+                          >
+                            {!isUpcomingItem && (
+                              <Star
+                                className="h-3.5 w-3.5 text-amber-300"
+                                fill="currentColor"
+                              />
+                            )}
+                            {isUpcomingItem ? "Upcoming" : va.toFixed(1)}
+                          </span>
+                        );
+                      })()}
+
+                    <span className="h-1 w-1 rounded-full bg-white/30" />
+                    <span className="uppercase tracking-[0.12em] text-white/72">
+                      {currentContentType}
+                    </span>
+
+                    {activeCategory === "upcoming" &&
+                      currentReleaseDateLabel && (
+                        <>
+                          <span className="h-1 w-1 rounded-full bg-white/30" />
+                          <span className="inline-flex items-center gap-1.5 text-emerald-200">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {currentReleaseDateLabel}
+                          </span>
+                        </>
+                      )}
+                  </div>
+                </div>
+                </div>
+              </motion.div>
+
+              {/* Action Buttons — always visible, Info included */}
+              <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+                <div
+                  className={cn(
+                    "relative pointer-events-none",
+                    videoFrameSizeClassName,
+                  )}
+                >
+                  <ActionButtons
+                    isPlaying={isPlaying}
+                    liked={liked}
+                    saved={inWatchlist}
+                    muted={muted}
+                    panelOpen={panelOpen}
+                    togglePlayPause={togglePlayPause}
+                    onLike={handleLikeToggle}
+                    setSaved={handleWatchlistToggle}
+                    toggleMute={toggleMute}
+                    onInfo={() => setPanelOpen((p) => !p)}
+                    className="pointer-events-auto absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-2.5 sm:bottom-4 sm:right-4 lg:bottom-5 lg:right-5"
+                  />
+                  {isLandscapeVideo && (
+                    <button
+                      type="button"
+                      onClick={openMobileFullscreen}
+                      aria-label="Open landscape video fullscreen"
+                      className="pointer-events-auto absolute right-3 top-24 z-40 grid h-11 w-11 place-items-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur-sm transition active:scale-90 sm:right-4 lg:hidden"
+                    >
+                      <Maximize2 className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── LOADING INDICATOR ───────────────────────────────────── */}
+        <AnimatePresence>
+          {loading && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="absolute bottom-28 left-1/2 z-30 -translate-x-1/2 sm:bottom-24"
             >
-              {loading
-                ? "Preparing your screening"
-                : feedError
-                  ? "Couldn’t load the feed"
-                  : "You’re all caught up"}
-            </h1>
-            <p className="text-sm leading-6 text-[var(--ink-muted)]">
-              {loading
-                ? "Finding your next trailer."
-                : feedError ||
-                  "Try another category or refresh for more clips."}
-            </p>
-            {!loading && (
+              <div className="flex items-center gap-2.5 px-4 py-2.5 bg-black/60 backdrop-blur-xl rounded-full border border-white/15 shadow-xl">
+                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span className="text-white/80 text-xs font-semibold tracking-wide">
+                  {loadingMode === "refresh"
+                    ? "Refreshing"
+                    : videos.length === 0
+                      ? "Loading"
+                      : "Loading more"}
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── EMPTY STATE ─────────────────────────────────────────── */}
+        <AnimatePresence>
+          {feedError && !loading && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="absolute bottom-28 left-1/2 z-40 w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl border border-red-400/25 bg-black/70 p-4 text-center shadow-2xl shadow-black/40 backdrop-blur-xl"
+            >
+              <p className="mb-3 text-sm font-semibold text-white/80">
+                {feedError}
+              </p>
               <button
-                type="button"
-                className="ui-primary-action"
-                onClick={() => resetFeed("refresh")}
+                onClick={() =>
+                  videos.length === 0
+                    ? resetFeed("refresh")
+                    : fetchMoreVideos(false)
+                }
+                className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold text-white transition hover:bg-white/15"
               >
                 Try again
               </button>
-            )}
-          </section>
-        )}
-      </main>
-
-      <footer className={styles.footer}>
-        {feedError && currentVideo && (
-          <div role="alert" className={styles.feedError}>
-            <span>{feedError}</span>
-            <button type="button" onClick={() => fetchMoreVideos(false)}>
-              Retry loading
-            </button>
-          </div>
-        )}
-        <nav className={styles.navigation} aria-label="Clip navigation">
-          <button
-            type="button"
-            onClick={() => navigateClip(-1)}
-            disabled={!currentVideo || currentIndex === 0}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {!loading && !feedError && videos.length === 0 && (
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Video details"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 flex items-center justify-center px-6"
           >
-            <ArrowUp size={18} /> Previous<span className="sr-only"> clip</span>
-          </button>
-          <span className={styles.position}>
-            {loadingMode === "more"
-              ? "Loading more…"
-              : currentVideo
-                ? `Clip ${indexOffsetRef.current + currentIndex + 1}`
-                : "Trailers & clips"}
-          </span>
-          <button
-            type="button"
-            onClick={() => navigateClip(1)}
-            disabled={
-              !currentVideo ||
-              !canGoNext ||
-              (loading && currentIndex === videos.length - 1)
-            }
-          >
-            Next<span className="sr-only"> clip</span>
-            <ArrowDown size={18} />
-          </button>
-        </nav>
-        {currentVideo && !canGoNext && (
-          <p className={styles.endNote}>
-            You’ve reached the end. Try Upcoming or refresh the feed.
-          </p>
+            <div className="rounded-2xl border border-white/10 bg-black/45 p-8 text-center shadow-2xl shadow-black/40 backdrop-blur-xl">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 280, damping: 22 }}
+                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-red-600/40"
+              >
+                <Sparkles className="w-9 h-9 text-white" />
+              </motion.div>
+              <p className="text-white text-xl font-bold mb-2">
+                Nothing here yet
+              </p>
+              <p className="text-white/50 text-sm">
+                Check back soon for new content.
+              </p>
+            </div>
+          </motion.div>
         )}
-      </footer>
 
-      <p className="sr-only" aria-live="polite" aria-atomic="true">
-        {currentVideo ? `Now showing: ${videoTitle}. ${videoType}.` : ""}
-      </p>
-      <dialog
-        ref={dialogRef}
-        id="clip-details"
-        className={styles.dialog}
-        aria-labelledby="details-title"
-        aria-describedby="details-overview"
-        onCancel={() => setPanelOpen(false)}
-        onClose={() => setPanelOpen(false)}
-        onClick={(event) => {
-          if (event.target === event.currentTarget) setPanelOpen(false);
-        }}
-      >
-        <div className={styles.details}>
-          <div className={styles.detailsHeader}>
-            <p className="ui-kicker">About this title</p>
+        {/* ── SCROLL HINT ─────────────────────────────────────────── */}
+        <AnimatePresence>
+          {showScrollHint && videos.length > 1 && !panelOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 0.55, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-0.5 pointer-events-none sm:bottom-5 max-[760px]:hidden"
+            >
+              <motion.div
+                animate={{ y: [0, 4, 0] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 1.6,
+                  ease: "easeInOut",
+                }}
+              >
+                <svg
+                  className="w-4 h-6 text-white/42"
+                  viewBox="0 0 24 40"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <rect x="2" y="2" width="20" height="36" rx="10" />
+                  <circle cx="12" cy="10" r="2.5" fill="currentColor" />
+                </svg>
+              </motion.div>
+              <span className="text-[9px] text-white/35 tracking-widest uppercase">
+                Scroll
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── DETAIL PANEL ────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isMobileFullscreen && currentVideo && isLandscapeVideo && (
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Fullscreen video"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black lg:hidden"
+          >
+            <iframe
+              title={`${videoTitle} fullscreen`}
+              src={fullscreenIframeSrc}
+              className="aspect-video max-h-[100svh] w-full bg-black"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
             <button
               type="button"
-              autoFocus
-              aria-label="Close details"
-              onClick={() => setPanelOpen(false)}
+              onClick={closeMobileFullscreen}
+              aria-label="Exit fullscreen video"
+              className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] grid h-11 w-11 place-items-center rounded-full bg-black/65 text-white shadow-xl backdrop-blur-md transition active:scale-90"
             >
-              <X size={20} />
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
-          </div>
-          <h2 id="details-title" className="text-3xl font-bold leading-none">
-            {videoTitle}
-          </h2>
-          <p className={styles.meta}>
-            {currentContentType === "tv" ? "TV series" : "Movie"} ·{" "}
-            {releaseStatus === "upcoming" ? "Upcoming" : "Release"} ·{" "}
-            {releaseLabel}
-          </p>
-          <p id="details-overview" className={styles.overview}>
-            {currentVideo?.overview || "No synopsis available yet."}
-          </p>
-          <dl className={styles.facts}>
-            <div>
-              <dt>Clip</dt>
-              <dd>{videoType}</dd>
-            </div>
-            <div>
-              <dt>Language</dt>
-              <dd>
-                {currentVideo?.original_language?.toUpperCase() ||
-                  "Not specified"}
-              </dd>
-            </div>
-            <div>
-              <dt>Rating</dt>
-              <dd>
-                {Number.isFinite(rating) && rating > 0
-                  ? `${rating.toFixed(1)} / 10`
-                  : "Not rated"}
-              </dd>
-            </div>
-            {!!currentVideo?.genres?.length && (
-              <div>
-                <dt>Genres</dt>
-                <dd>{currentVideo.genres.join(", ")}</dd>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {panelOpen && currentVideo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] overscroll-none"
+            onWheel={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onTouchMove={(event) => event.stopPropagation()}
+            onTouchEnd={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="absolute inset-0 cursor-default bg-black/72 backdrop-blur-md"
+              onClick={() => setPanelOpen(false)}
+              aria-label="Dismiss details"
+            />
+            <motion.div
+              initial={{ x: 28, opacity: 0, scale: 0.98 }}
+              animate={{ x: 0, opacity: 1, scale: 1 }}
+              exit={{ x: 28, opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="absolute inset-x-0 bottom-0 top-[max(10svh,env(safe-area-inset-top))] flex overflow-hidden rounded-t-[30px]
+                         border border-white/12 bg-[#0b0c0f]/94 shadow-[0_-24px_80px_rgba(0,0,0,0.55)]
+                         backdrop-blur-2xl sm:inset-x-3 sm:bottom-3 sm:top-[max(5rem,env(safe-area-inset-top))] sm:rounded-3xl
+                         md:inset-y-6 md:left-auto md:right-6 md:w-[29rem] md:rounded-[28px] md:shadow-[0_24px_90px_rgba(0,0,0,0.62)]"
+            >
+              <div className="absolute left-1/2 top-2.5 z-20 h-1 w-10 -translate-x-1/2 rounded-full bg-white/25 md:hidden" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.035] via-transparent to-black/35" />
+
+              <div
+                ref={panelRef}
+                className="relative flex min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto overscroll-contain mobile-native-scroll"
+              >
+              <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/[0.08] bg-[#0b0c0f]/72 px-4 pb-3 pt-5 backdrop-blur-2xl sm:px-5 sm:pt-3">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-[#ff6f5c] shadow-[0_0_14px_rgba(255,111,92,0.75)]" />
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/70">
+                    Details
+                  </h3>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.93 }}
+                  onClick={() => setPanelOpen(false)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-black/35 text-white/70 transition-all hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff725e]/80"
+                  aria-label="Close details"
+                >
+                  <X className="h-5 w-5" />
+                </motion.button>
               </div>
-            )}
-          </dl>
-          {href && (
-            <Link href={href} className="ui-primary-action mt-6">
-              View full details
-            </Link>
-          )}
-        </div>
-      </dialog>
+
+              <div className="relative h-52 shrink-0 overflow-hidden border-b border-white/[0.08] sm:h-60 md:h-64">
+                {currentBackdrop && !modalBackdropError ? (
+                  <Image
+                    src={currentBackdrop}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes="(max-width: 767px) 100vw, 464px"
+                    className="object-cover object-center"
+                    onError={() => setModalBackdropError(true)}
+                  />
+                ) : currentPoster ? (
+                  <Image
+                    src={currentPoster}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes="(max-width: 767px) 100vw, 464px"
+                    className="scale-110 object-cover object-center blur-md"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(233,79,55,0.28),transparent_42%),linear-gradient(135deg,#18191e,#08090b)]" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0c0f] via-[#0b0c0f]/20 to-black/10" />
+                <div className="absolute inset-x-0 bottom-0 px-4 pb-5 sm:px-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#ff8a76]">
+                    {currentVideoTypeLabel}
+                  </p>
+                  <h2 className="mt-1 line-clamp-2 max-w-md text-2xl font-black leading-[1.05] tracking-[-0.025em] text-white drop-shadow-lg sm:text-3xl">
+                    {currentVideo.title || currentVideo.name}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="space-y-5 px-4 pb-5 pt-5 sm:px-5">
+                <div className="flex gap-4">
+                  <div
+                    className="h-36 w-24 shrink-0 rounded-2xl border border-white/12 bg-white/[0.06] bg-cover bg-center shadow-xl shadow-black/40"
+                    style={
+                      currentPoster
+                        ? { backgroundImage: `url(${currentPoster})` }
+                        : undefined
+                    }
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex-1 pt-1">
+                    <p className="mb-3 text-sm leading-6 text-white/55">
+                      {currentVideo.overview || "Discover more about this title."}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {currentYear && Number.isFinite(currentYear) && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.08] px-2.5 py-1 text-xs font-bold text-white/70">
+                          <Calendar className="h-3 w-3" />
+                          {currentYear}
+                        </span>
+                      )}
+                      {currentVideo.genres?.slice(0, 2).map((genre) => (
+                        <span
+                          key={genre}
+                          className="rounded-full border border-white/12 bg-white/[0.08] px-2.5 py-1 text-xs font-bold text-white/70"
+                        >
+                          {genre}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {Number.isFinite(Number(currentVideo.vote_average)) &&
+                    (() => {
+                      const va = Number(currentVideo.vote_average);
+                      const isUpcomingItem = va === 0;
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold
+                        ${
+                          isUpcomingItem
+                            ? "bg-indigo-500/25 text-indigo-200 border-indigo-400/35"
+                            : "bg-amber-500/25 text-amber-200 border-amber-400/35"
+                        }`}
+                        >
+                          {!isUpcomingItem && (
+                            <Star
+                              className="h-3 w-3 text-amber-300"
+                              fill="currentColor"
+                            />
+                          )}
+                          {isUpcomingItem ? "Upcoming" : va.toFixed(1)}
+                        </span>
+                      );
+                    })()}
+                  <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-xs font-bold uppercase text-white/70">
+                    {currentContentType}
+                  </span>
+                  {currentVideoTypeLabel && (
+                    <span className="rounded-full border border-red-400/25 bg-red-500/15 px-2.5 py-1 text-xs font-bold uppercase text-red-300">
+                      {currentVideoTypeLabel}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="mx-4 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 shadow-lg shadow-black/15 sm:mx-5">
+                <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
+                  <span className="inline-block h-3.5 w-0.5 rounded-full bg-gradient-to-b from-red-500 to-orange-500" />
+                  Overview
+                </h4>
+                <p
+                  className={`text-sm leading-6 text-white/[0.74] transition-all duration-300 ${expanded ? "" : "line-clamp-5"}`}
+                >
+                  {currentVideo.overview}
+                </p>
+                {currentVideo.overview?.length > 190 && (
+                  <button
+                    onClick={() => setExpanded(!expanded)}
+                    className="mt-3 text-xs font-bold text-red-300 transition-colors hover:text-red-200"
+                  >
+                    {expanded ? "Show less" : "Read more"}
+                  </button>
+                )}
+              </div>
+
+              <div className="mx-4 mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:mx-5">
+                <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
+                  <span className="inline-block h-3.5 w-0.5 rounded-full bg-gradient-to-b from-red-500 to-orange-500" />
+                  Info
+                </h4>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="col-span-2 rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                      Type
+                    </div>
+                    <div className="text-sm font-bold uppercase text-white">
+                      {currentContentType}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                      Video
+                    </div>
+                    <div className="text-sm font-bold uppercase text-white">
+                      {currentVideoTypeLabel}
+                    </div>
+                  </div>
+                  {(currentVideo.release_date ||
+                    currentVideo.first_air_date) && (
+                    <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
+                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                        Released
+                      </div>
+                      <div className="text-sm font-bold text-white">
+                        {new Date(
+                          currentVideo.release_date ??
+                            currentVideo.first_air_date!,
+                        ).toLocaleDateString()}
+                      </div>
+                    </div>
+                  )}
+                  {currentVideo.original_language && (
+                    <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
+                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
+                        Language
+                      </div>
+                      <div className="text-sm font-bold uppercase text-white">
+                        {currentVideo.original_language}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="sticky bottom-0 mt-auto border-t border-white/[0.08] bg-[#0b0c0f]/88 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-2xl sm:px-5 sm:pb-4">
+                {href ? (
+                  <Link href={href} prefetch shallow={false}>
+                    <motion.span
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl
+                                 bg-[#e94f37] px-4 py-3 text-sm font-bold text-white
+                                 shadow-[0_12px_30px_rgba(233,79,55,0.22)]
+                                 transition hover:bg-[#f05b43]"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      View Full Details
+                    </motion.span>
+                  </Link>
+                ) : (
+                  <div className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/5 px-4 py-3 text-sm font-semibold text-white/30">
+                    <ExternalLink className="h-4 w-4" />
+                    View Full Details
+                  </div>
+                )}
+              </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
+/**
+ * One slide, one `YT.Player`.
+ *
+ * The player lives in its own component so that its lifecycle is tied to the
+ * exact DOM node it renders into. An exiting slide stays mounted while the next
+ * one fades in, so a page-level effect can just as easily find the node that is
+ * about to disappear; owning the mount here makes that impossible.
+ *
+ * The instance is published upward through `attachPlayer` because the page still
+ * drives play/pause from its own gestures, and playback is reported through
+ * `onStatus` so the UI only claims a video is ready once the player says so.
+ */
 function FeedVideoPlayer({
   videoKey,
   reloadKey,
@@ -1122,7 +1705,6 @@ function FeedVideoPlayer({
   playbackAllowed,
   onStatus,
   attachPlayer,
-  onMuteChange,
   title,
   className,
 }: {
@@ -1132,7 +1714,6 @@ function FeedVideoPlayer({
   playbackAllowed: boolean;
   onStatus: (status: FeedPlayerStatus) => void;
   attachPlayer: (player: YouTubePlayer | null) => void;
-  onMuteChange: (muted: boolean) => void;
   title: string;
   className?: string;
 }) {
@@ -1166,7 +1747,6 @@ function FeedVideoPlayer({
     if (!host) return;
 
     let cancelled = false;
-    let soundTimer: number | undefined;
 
     const mount = async () => {
       let player: YouTubePlayer | null = null;
@@ -1178,14 +1758,18 @@ function FeedVideoPlayer({
             // Always start muted — it is the only setting every autoplay policy
             // tolerates. The user's real audio preference is applied in onReady.
             mute: 1,
-            controls: 1,
-            disablekb: 0,
-            fs: 1,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
             loop: 1,
             playlist: videoKey,
             rel: 0,
+            modestbranding: 1,
             iv_load_policy: 3,
+            cc_load_policy: 0,
+            autohide: 1,
             playsinline: 1,
+            vq: "hd1080",
           },
           events: {
             onReady: (event) => {
@@ -1202,15 +1786,14 @@ function FeedVideoPlayer({
               } catch {
                 /* the player is mid-teardown */
               }
-              soundTimer = window.setInterval(() => {
-                if (!cancelled) {
-                  try {
-                    onMuteChange(ready.isMuted());
-                  } catch {
-                    /* teardown */
-                  }
+              // onReady is not "playing". Give the browser's answer a beat, then
+              // trust the measured state over the request that was made.
+              window.setTimeout(() => {
+                if (cancelled) return;
+                if (ready.getPlayerState() !== YT_PLAYER_STATE.PLAYING) {
+                  onStatus("blocked");
                 }
-              }, 500);
+              }, 4000);
             },
             onStateChange: (event) => {
               if (cancelled) return;
@@ -1218,8 +1801,6 @@ function FeedVideoPlayer({
                 onStatus("playing");
               } else if (event.data === YT_PLAYER_STATE.PAUSED) {
                 onStatus("paused");
-              } else if (event.data === YT_PLAYER_STATE.BUFFERING) {
-                onStatus("buffering");
               }
               // ENDED is deliberately ignored: loop=1 restarts the trailer, and
               // honouring that boundary would flicker the play/pause state.
@@ -1260,11 +1841,8 @@ function FeedVideoPlayer({
         frame.setAttribute("title", title);
         frame.setAttribute(
           "allow",
-          "autoplay; encrypted-media; picture-in-picture; fullscreen",
+          "autoplay; encrypted-media; picture-in-picture",
         );
-        frame.setAttribute("allowfullscreen", "");
-        frame.style.width = "100%";
-        frame.style.height = "100%";
         frame.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
       }
     };
@@ -1273,7 +1851,6 @@ function FeedVideoPlayer({
 
     return () => {
       cancelled = true;
-      if (soundTimer !== undefined) window.clearInterval(soundTimer);
       const live = playerRef.current;
       playerRef.current = null;
       if (live) {
@@ -1286,7 +1863,12 @@ function FeedVideoPlayer({
       }
       host.replaceChildren();
     };
-  }, [videoKey, reloadKey, title, attachPlayer, onStatus, onMuteChange]);
+  }, [videoKey, reloadKey, title, attachPlayer, onStatus]);
 
-  return <div ref={hostRef} className={className} />;
+  return (
+    <div
+      ref={hostRef}
+      className={cn(className, "pointer-events-none select-none")}
+    />
+  );
 }
