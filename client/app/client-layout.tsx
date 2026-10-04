@@ -33,7 +33,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     <>
       {shouldShowNavbar && (
         <Suspense fallback={null}>
-          <NavbarComponent />
+          <NavbarComponent transparent={isSelectedContentPage} />
         </Suspense>
       )}
       <main className={mainClassName}>{children}</main>
