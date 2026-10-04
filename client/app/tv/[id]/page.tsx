@@ -220,12 +220,14 @@ export default async function TvPage({
           contentType="tv"
         />
 
-        <CommonCardCarousel
-          title="If this landed for you"
-          subtitle="A few next watches selected for the story, genre, and audience response."
-          type="tv"
-          items={recommendations ?? []}
-        />
+        <div className="ui-shell overflow-hidden [&>section>div:first-child]:mb-0">
+          <CommonCardCarousel
+            title="If this landed for you"
+            subtitle="A few next watches selected for the story, genre, and audience response."
+            type="tv"
+            items={recommendations ?? []}
+          />
+        </div>
 
           {/* Seasons / Episodes — placed after the decision signals */}
         <TvSeasonsEpisodes seasons={seasonsProp} />
