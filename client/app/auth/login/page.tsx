@@ -18,6 +18,7 @@ import {
   AuthSupportNote,
   GoogleButton,
 } from "../AuthFormUI";
+import { useTurnstileGate } from "@/hooks/useTurnstileGate";
 
 const API =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -30,10 +31,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { signIn, isLoading: authLoading } = useAuth();
+  const { isVerified } = useTurnstileGate();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr("");
+    if (!isVerified) {
+      setErr("Please complete the human verification.");
+      return;
+    }
 
     const result = await signIn(email, password);
 
@@ -105,6 +111,7 @@ export default function LoginPage() {
           </div>
 
           {err && <AuthMessage>{err}</AuthMessage>}
+
 
           <AuthButton loading={authLoading} loadingText="Logging in...">
             Login

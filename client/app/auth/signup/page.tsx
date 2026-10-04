@@ -16,6 +16,7 @@ import {
   AuthPasswordInput,
   GoogleIconButton,
 } from "../AuthFormUI";
+import { useTurnstileGate } from "@/hooks/useTurnstileGate";
 
 const API =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -31,6 +32,7 @@ export default function SignupPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const { isVerified } = useTurnstileGate();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +41,10 @@ export default function SignupPage() {
     const normalizedEmail = email.trim().toLowerCase();
     if (!agree) {
       setErr("Please agree to the Terms & Conditions.");
+      return;
+    }
+    if (!isVerified) {
+      setErr("Please complete the human verification.");
       return;
     }
     if (!/^[A-Za-z0-9_]{3,20}$/.test(normalizedUsername)) {
@@ -145,6 +151,7 @@ export default function SignupPage() {
           </label>
 
           {err && <AuthMessage>{err}</AuthMessage>}
+
 
           <AuthButton loading={loading} loadingText="Creating...">
             Create

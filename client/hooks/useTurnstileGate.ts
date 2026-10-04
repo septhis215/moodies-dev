@@ -5,6 +5,7 @@ import { createContext, useContext } from "react";
 export type TurnstileGateState = {
   isChecking: boolean;
   isVerified: boolean;
+  isReleasing: boolean;
   isBlocked: boolean;
   error: string | null;
   verifyToken: (token: string) => Promise<void>;

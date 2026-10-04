@@ -18,6 +18,7 @@ export function TurnstileGateProvider({
 }) {
   const [isChecking, setIsChecking] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
+  const [isReleasing, setIsReleasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const captchaEnabled = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
 
@@ -65,17 +66,20 @@ export function TurnstileGateProvider({
     }
     setIsVerified(true);
     setError(null);
+    setIsReleasing(true);
+    window.setTimeout(() => setIsReleasing(false), 1000);
   }, []);
 
   const value = useMemo<TurnstileGateState>(
     () => ({
       isChecking,
       isVerified,
-      isBlocked: !isChecking && !isVerified,
+      isReleasing,
+      isBlocked: !isChecking && (!isVerified || isReleasing),
       error,
       verifyToken,
     }),
-    [error, isChecking, isVerified, verifyToken],
+    [error, isChecking, isReleasing, isVerified, verifyToken],
   );
 
   return (
