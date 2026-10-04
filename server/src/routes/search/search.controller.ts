@@ -25,15 +25,15 @@ class SearchQueryDto {
     @IsOptional()
     @Type(() => Number)
     @IsNumber()
-    @Min(1900)
-    @Max(2030)
+    @Min(1888)
+    @Max(9999)
     year_min?: number;
 
     @IsOptional()
     @Type(() => Number)
     @IsNumber()
-    @Min(1900)
-    @Max(2030)
+    @Min(1888)
+    @Max(9999)
     year_max?: number;
 
     @IsOptional()
@@ -105,15 +105,15 @@ class DiscoverQueryDto {
     @IsOptional()
     @Type(() => Number)
     @IsNumber()
-    @Min(1900)
-    @Max(2030)
+    @Min(1888)
+    @Max(9999)
     year_min?: number;
 
     @IsOptional()
     @Type(() => Number)
     @IsNumber()
-    @Min(1900)
-    @Max(2030)
+    @Min(1888)
+    @Max(9999)
     year_max?: number;
 
     @IsOptional()

@@ -322,7 +322,8 @@ export class SearchService implements OnModuleInit {
                 .filter(id => id !== undefined);
 
             if (genreIds.length > 0) {
-                params.with_genres = genreIds.join(',');
+                // Match any selected genre, consistently with text-search filtering.
+                params.with_genres = genreIds.join('|');
             }
         }
 
@@ -583,18 +584,15 @@ export class SearchService implements OnModuleInit {
             }
             // Specific type searches
             else if (type === 'movie') {
-                const movieParams = this.buildTMDBParams(filters, 'movie');
-                const movieEndpoint = filters.year_min || filters.year_max || filters.rating_min ||
-                    filters.rating_max || filters.genres || filters.countries
-                    ? '/discover/movie'
-                    : '/search/movie';
-
-                const finalMovieParams = movieEndpoint === '/search/movie' ? {
+                // Discovery does not support a title query. Preserve text search and
+                // apply constraints to the returned search page instead.
+                const movieEndpoint = '/search/movie';
+                const finalMovieParams = {
                     query: searchQuery || query,
                     language: 'en-US',
                     include_adult: filters.include_adult || false,
                     page: safePage,
-                } : movieParams;
+                };
 
                 const movieSource = await this.tmdbSettled('movie', movieEndpoint, finalMovieParams);
                 sources.push({
@@ -616,18 +614,13 @@ export class SearchService implements OnModuleInit {
                 }
             }
             else if (type === 'tv') {
-                const tvParams = this.buildTMDBParams(filters, 'tv');
-                const tvEndpoint = filters.year_min || filters.year_max || filters.rating_min ||
-                    filters.rating_max || filters.genres || filters.countries
-                    ? '/discover/tv'
-                    : '/search/tv';
-
-                const finalTvParams = tvEndpoint === '/search/tv' ? {
+                const tvEndpoint = '/search/tv';
+                const finalTvParams = {
                     query: searchQuery || query,
                     language: 'en-US',
                     include_adult: filters.include_adult || false,
                     page: safePage,
-                } : tvParams;
+                };
 
                 const tvSource = await this.tmdbSettled('tv', tvEndpoint, finalTvParams);
                 sources.push({
@@ -702,7 +695,12 @@ export class SearchService implements OnModuleInit {
                 page,
                 total_results: totalResults,
                 total_pages: totalPages,
-                results: results.slice(0, 20),
+                // In All mode each source contributes a page. Truncating the merged
+                // page drops titles permanently when the user advances to page 2.
+                results,
+                filter_scope: 'page',
+                sort_scope: 'page',
+                total_results_scope: 'before_filters',
                 best_match: bestMatch,
                 sources,
                 applied_filters: {
@@ -788,9 +786,10 @@ export class SearchService implements OnModuleInit {
                 const releaseDate = item.release_date || item.first_air_date;
                 if (releaseDate) {
                     const year = new Date(releaseDate).getFullYear();
+                    if (!Number.isFinite(year)) return false;
                     if (filters.year_min && year < filters.year_min) return false;
                     if (filters.year_max && year > filters.year_max) return false;
-                }
+                } else return false;
             }
 
             if (filters.rating_min !== undefined && item.vote_average < filters.rating_min) return false;
