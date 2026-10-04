@@ -1,1298 +1,716 @@
 "use client";
 
-import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import questionsData from "@/data/questions.json";
+import { useEffect, useRef, useState } from "react";
+import { Check, ArrowLeft, ArrowRight, X } from "lucide-react";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { tmdbImage } from "@/lib/tmdb";
+import { apiRequest } from "@/lib/errors/api-client";
+import { handleAppError } from "@/lib/errors/handle-app-error";
+import { QUIZ_SIGNALS, getMoodMascotSrc } from "./quiz-signals";
 
-interface QuizOption {
-  text: string;
-  genres: string[];
-  mood: string;
-  mediaType?: string;
-}
-
-interface Question {
-  id: number;
-  question: string;
-  options: QuizOption[];
-}
-
-interface MovieItem {
+type Stage = "welcome" | "quiz" | "loading" | "results" | "error";
+type MovieItem = {
   id: number;
   title?: string;
   name?: string;
-  poster_path: string;
+  poster_path?: string;
   backdrop_path?: string;
   vote_average: number;
+  overview?: string;
   release_date?: string;
   first_air_date?: string;
-  vote_count: number;
-  popularity: number;
   media_type?: string;
-  tagline?: string;
-  runtime?: number;
-  status?: string;
-  episode_run_time?: number[];
-  original_language?: string;
-  overview?: string;
-  genre_ids?: number[];
-}
-
-interface RecommendationData {
+  matchScore?: number;
+  matchReasons?: string[];
+};
+type ResponseData = {
   results: MovieItem[];
-  analysis: {
-    topGenres: string[];
-    topMoods: string[];
-    preferredMediaType: string | null;
-  };
-}
-
-type Stage = "welcome" | "quiz" | "loading" | "results";
-type MatchReason = { mascot: string; text: string; priority: number };
-type PersonalityInsight = {
-  archetype: string;
-  headline: string;
-  summary: string;
-  traits: string[];
-  watchStyle: string;
-  recommendationLogic: string;
-  mascot: string;
+  partialResults?: boolean;
+  analysis?: { rankingVersion?: string };
 };
-
-const QUESTION_POOL = questionsData.questions as Question[];
-const MASCOT_SRC = "/images/moodies-mascot.png";
-const LOGO_SRC = "/images/moodies-transparent.png";
-
-const GENRE_NAMES: Record<number, string> = {
-  28: "Action",
-  12: "Adventure",
-  16: "Animation",
-  35: "Comedy",
-  80: "Crime",
-  99: "Documentary",
-  18: "Drama",
-  10751: "Family",
-  14: "Fantasy",
-  36: "History",
-  27: "Horror",
-  10402: "Music",
-  9648: "Mystery",
-  10749: "Romance",
-  878: "Science Fiction",
-  10770: "TV Movie",
-  53: "Thriller",
-  10752: "War",
-  37: "Western",
-  10759: "Action & Adventure",
-  10762: "Kids",
-  10763: "News",
-  10764: "Reality",
-  10765: "Sci-Fi & Fantasy",
-  10766: "Soap",
-  10767: "Talk",
-  10768: "War & Politics",
-};
-
-const MOOD_DESCRIPTORS: Record<string, string> = {
-  relaxing: "unwinding",
-  exciting: "thrilling",
-  thoughtful: "contemplative",
-  fun: "playful",
-  intense: "gripping",
-  emotional: "moving",
-  lighthearted: "bright",
-  serious: "thought-provoking",
-  energetic: "high-energy",
-  adventurous: "adventurous",
-  epic: "epic",
-  realistic: "grounded",
-  thrilling: "tense",
-};
-
-const welcomeHighlights = [
-  { mascot: "epic", label: "Movies", text: "Standalone picks" },
-  { mascot: "cozy", label: "Series", text: "Binge-ready shows" },
-  { mascot: "mind-bending", label: "Mood fit", text: "Vibe-aware scoring" },
-];
-
-const optionMascots = ["romantic", "epic", "mind-bending", "funny"];
-
-const moodMascotMap: Record<string, string> = {
-  adventurous: "epic",
-  calm: "serenity",
-  contemplative: "mind-bending",
-  emotional: "bittersweet",
-  energetic: "thrilling",
-  epic: "epic",
-  exciting: "thrilling",
-  fun: "funny",
-  lighthearted: "happy",
-  realistic: "gritty",
-  relaxed: "cozy",
-  relaxing: "chill",
-  serious: "dark",
-  thoughtful: "mind-bending",
-  thrilling: "thrilling",
-};
-
-const genreMascotMap: Record<string, string> = {
-  action: "thrilling",
-  adventure: "epic",
-  animation: "whimsy",
-  comedy: "funny",
-  crime: "gritty",
-  documentary: "documentary",
-  drama: "bittersweet",
-  family: "cozy",
-  fantasy: "whimsy",
-  horror: "horror",
-  mystery: "mind-bending",
-  romance: "romantic",
-  "sci-fi": "sci-fi",
-  thriller: "thrilling",
-};
-
-function getTitle(item: MovieItem) {
-  return item.title || item.name || "Untitled";
-}
-
-function getPosterSrc(item: MovieItem) {
-  return item.poster_path
+const STORAGE_KEY = "moodies:quiz:signal-reel:v1";
+const emptyAnswers = () => QUIZ_SIGNALS.map(() => null as number | null);
+const titleOf = (item: MovieItem) => item.title || item.name || "Untitled";
+const detailUrl = (item: MovieItem) =>
+  `/${item.media_type === "tv" ? "tv" : "movies"}/${item.id}`;
+const posterOf = (item: MovieItem) =>
+  item.poster_path
     ? tmdbImage(item.poster_path, "w500")
     : "/placeholder-poster.svg";
-}
-
-function getBackdropSrc(item?: MovieItem | null) {
-  return item?.backdrop_path ? tmdbImage(item.backdrop_path, "w780") : null;
-}
-
-function getDetailUrl(item?: MovieItem | null) {
-  if (!item) return "#";
-  return item.media_type === "tv" ? `/tv/${item.id}` : `/movies/${item.id}`;
-}
-
-function getYear(item: MovieItem) {
-  const date = item.release_date || item.first_air_date;
-  return date ? date.slice(0, 4) : "New";
-}
-
-function getMediaLabel(item: MovieItem) {
-  return item.media_type === "tv" ? "Series" : "Movie";
-}
-
-function formatLabel(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function getGenreNames(item: MovieItem) {
-  return (item.genre_ids ?? []).map((id) => GENRE_NAMES[id]).filter(Boolean);
-}
-
-function getMoodMascotSrc(name?: string | null) {
-  const normalized = (name ?? "").toLowerCase().trim();
-  const mascot =
-    moodMascotMap[normalized] ?? genreMascotMap[normalized] ?? normalized;
-  return mascot ? `/images/moods/${mascot}.png` : MASCOT_SRC;
-}
-
-function getOptionMascot(option: QuizOption, index: number) {
-  return getMoodMascotSrc(
-    option.mood ||
-    option.genres[0] ||
-    optionMascots[index % optionMascots.length],
-  );
-}
-
-function buildPersonalityInsight(
-  answers: QuizOption[],
-  analysis: RecommendationData["analysis"] | null,
-): PersonalityInsight {
-  const moodCounts = new Map<string, number>();
-  const genreCounts = new Map<string, number>();
-
-  for (const answer of answers) {
-    if (answer.mood)
-      moodCounts.set(answer.mood, (moodCounts.get(answer.mood) ?? 0) + 1);
-    for (const genre of answer.genres) {
-      genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
-    }
-  }
-
-  const primaryMood =
-    analysis?.topMoods[0] ??
-    [...moodCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
-    "curious";
-  const secondaryMood =
-    analysis?.topMoods[1] ??
-    [...moodCounts.entries()].sort((a, b) => b[1] - a[1])[1]?.[0] ??
-    "open";
-  const primaryGenre =
-    analysis?.topGenres[0] ??
-    [...genreCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
-    "story";
-  const secondaryGenre =
-    analysis?.topGenres[1] ??
-    [...genreCounts.entries()].sort((a, b) => b[1] - a[1])[1]?.[0] ??
-    "character";
-  const format = analysis?.preferredMediaType?.toLowerCase() ?? "mixed";
-  const totalSignals = answers.length || 1;
-  const genreVariety = genreCounts.size;
-  const moodVariety = moodCounts.size;
-
-  const highEnergy = [
-    "energetic",
-    "adventurous",
-    "epic",
-    "thrilling",
-    "exciting",
-  ].some((mood) => moodCounts.has(mood));
-  const reflective = ["thoughtful", "serious", "emotional", "realistic"].some(
-    (mood) => moodCounts.has(mood),
-  );
-  const comfort = ["relaxed", "relaxing", "lighthearted", "fun"].some((mood) =>
-    moodCounts.has(mood),
-  );
-  const archetype = highEnergy
-    ? "Momentum Seeker"
-    : reflective
-      ? "Meaning Hunter"
-      : comfort
-        ? "Comfort Curator"
-        : "Genre Explorer";
-
-  const formatText = format.includes("tv")
-    ? "You seem to enjoy stories with room to breathe, so series with evolving characters should land well."
-    : format.includes("movie")
-      ? "You lean toward complete, satisfying arcs, so strong standalone films should feel especially rewarding."
-      : "You are flexible on format, so the recommendations mix compact movie payoffs with longer series arcs.";
-
-  return {
-    archetype,
-    headline: `${formatLabel(primaryMood)} ${formatLabel(primaryGenre)} personality`,
-    summary: `Moodies AI reads your answers as a ${primaryMood} viewer who gravitates toward ${primaryGenre} with a ${secondaryMood} undercurrent. Your choices suggest you care about how a story feels first, then use genre as the shortcut to find the right pace.`,
-    traits: [
-      `${genreVariety > 3 ? "Broad" : "Focused"} genre appetite across ${genreVariety} signal${genreVariety === 1 ? "" : "s"}`,
-      `${moodVariety > 2 ? "Layered" : "Clear"} emotional intent from ${totalSignals} answers`,
-      `${format.includes("tv") ? "Series-friendly" : format.includes("movie") ? "Movie-night focused" : "Format-flexible"} watch rhythm`,
-      `${formatLabel(primaryGenre)} with ${formatLabel(secondaryGenre)} support`,
-    ],
-    watchStyle: formatText,
-    recommendationLogic: `The result set prioritizes titles that share your strongest genre signals, then boosts picks that match your ${primaryMood} mood and your preferred viewing format.`,
-    mascot: primaryMood,
-  };
-}
+const reasonOf = (item: MovieItem) =>
+  item.matchReasons?.[0] ||
+  "A genre-led suggestion from the available catalogue.";
+const focusClass =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral)]";
 
 export default function MovieQuizPage() {
   const [stage, setStage] = useState<Stage>("welcome");
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedQuestions, setSelectedQuestions] = useState<Question[]>([]);
-  const [answers, setAnswers] = useState<QuizOption[]>([]);
-  const [recommendations, setRecommendations] = useState<MovieItem[]>([]);
-  const [analysis, setAnalysis] = useState<
-    RecommendationData["analysis"] | null
-  >(null);
+  const [current, setCurrent] = useState(0);
+  const [answers, setAnswers] = useState<(number | null)[]>(emptyAnswers);
+  const [ready, setReady] = useState(false);
+  const [resumed, setResumed] = useState(false);
+  const [result, setResult] = useState<ResponseData | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const [selectedMovie, setSelectedMovie] = useState<MovieItem | null>(null);
-
-  const modalRef = useRef<HTMLDivElement | null>(null);
-  const firstFocusableRef = useRef<HTMLButtonElement | null>(null);
-
-  const progress = selectedQuestions.length
-    ? Math.round(((currentQuestion + 1) / selectedQuestions.length) * 100)
-    : 0;
-  const topPick = recommendations[0] ?? null;
-  const profileTitle = useMemo(() => {
-    if (!analysis) return "Your Moodies profile";
-    const mood = analysis.topMoods[0]
-      ? formatLabel(analysis.topMoods[0])
-      : "Curious";
-    const genre = analysis.topGenres[0]
-      ? formatLabel(analysis.topGenres[0])
-      : "Story";
-    return `${mood} ${genre} seeker`;
-  }, [analysis]);
-  const personalityInsight = useMemo(
-    () => buildPersonalityInsight(answers, analysis),
-    [answers, analysis],
-  );
-
-  const startQuiz = () => {
-    const shuffled = [...QUESTION_POOL].sort(() => Math.random() - 0.5);
-    setSelectedQuestions(shuffled.slice(0, 5));
-    setAnswers([]);
-    setRecommendations([]);
-    setAnalysis(null);
-    setSelectedMovie(null);
-    setCurrentQuestion(0);
-    setStage("quiz");
-  };
-
-  const handleAnswer = (option: QuizOption) => {
-    const newAnswers = [...answers, option];
-    setAnswers(newAnswers);
-
-    if (currentQuestion < selectedQuestions.length - 1) {
-      setCurrentQuestion((current) => current + 1);
-      return;
-    }
-
-    void fetchRecommendations(newAnswers);
-  };
-
-  const fetchRecommendations = async (userAnswers: QuizOption[]) => {
-    setStage("loading");
-
-    try {
-      const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
-      const response = await fetch(`${base}/quiz/recommendations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: userAnswers }),
-      });
-
-      if (!response.ok)
-        throw new Error(`Quiz recommendations failed (${response.status})`);
-      const data = (await response.json()) as RecommendationData;
-
-      setRecommendations(
-        Array.isArray(data.results) ? data.results.slice(0, 12) : [],
-      );
-      setAnalysis(data.analysis ?? null);
-    } catch (error) {
-      console.error("Error fetching recommendations:", error);
-      setRecommendations([]);
-      setAnalysis(null);
-    } finally {
-      setStage("results");
-    }
-  };
-
-  const resetQuiz = () => {
-    setStage("welcome");
-    setCurrentQuestion(0);
-    setAnswers([]);
-    setRecommendations([]);
-    setAnalysis(null);
-    setSelectedMovie(null);
-  };
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!selectedMovie) return;
-
-    firstFocusableRef.current?.focus();
-
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setSelectedMovie(null);
-      if (event.key !== "Tab" || !modalRef.current) return;
-
-      const focusable = modalRef.current.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusable.length) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
+    try {
+      const saved = JSON.parse(
+        sessionStorage.getItem(STORAGE_KEY) || "null",
+      ) as { answers?: unknown; current?: unknown } | null;
+      if (
+        saved &&
+        Array.isArray(saved.answers) &&
+        saved.answers.length === QUIZ_SIGNALS.length &&
+        saved.answers.every(
+          (value, i) =>
+            value === null ||
+            (Number.isInteger(value) &&
+              Number(value) >= 0 &&
+              Number(value) < QUIZ_SIGNALS[i].options.length),
+        ) &&
+        Number.isInteger(saved.current) &&
+        Number(saved.current) >= 0 &&
+        Number(saved.current) < QUIZ_SIGNALS.length
+      ) {
+        setAnswers(saved.answers as (number | null)[]);
+        setCurrent(Number(saved.current));
+        setResumed(true);
+        setStage("quiz");
       }
+    } catch {
+      /* Storage is optional; private browsing must still work. */
     }
+    setReady(true);
+    return () => {
+      requestRef.current?.abort();
+      requestRef.current = null;
+    };
+  }, []);
 
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+  useEffect(() => {
+    if (!ready || stage === "welcome") return;
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ answers, current }));
+    } catch {
+      /* Optional persistence. */
+    }
+  }, [answers, current, ready, stage]);
+
+  useEffect(() => {
+    if (stage !== "welcome") headingRef.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [stage, current]);
+
+  useEffect(() => {
+    if (!selectedMovie || !dialogRef.current) return;
+    const dialog = dialogRef.current;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog.showModal();
+    closeRef.current?.focus();
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus({ preventScroll: true });
+    };
   }, [selectedMovie]);
 
-  const getPersonalizationReasons = (item: MovieItem): MatchReason[] => {
-    if (!analysis) return [];
-
-    const reasons: MatchReason[] = [];
-    const itemGenres = getGenreNames(item);
-    const matchedGenres = analysis.topGenres.filter((genre) =>
-      itemGenres.some((itemGenre) =>
-        itemGenre.toLowerCase().includes(genre.toLowerCase()),
-      ),
-    );
-
-    if (matchedGenres.length >= 2) {
-      reasons.push({
-        mascot: matchedGenres[0],
-        text: `Blends ${matchedGenres.slice(0, 2).map(formatLabel).join(" and ")} in your lane.`,
-        priority: 10,
-      });
-    } else if (matchedGenres.length === 1) {
-      reasons.push({
-        mascot: matchedGenres[0],
-        text: `Leans into the ${formatLabel(matchedGenres[0])} taste you chose.`,
-        priority: 8,
-      });
-    }
-
-    if (analysis.topMoods.length > 0) {
-      const mood = analysis.topMoods[0];
-      const descriptor = MOOD_DESCRIPTORS[mood.toLowerCase()] || mood;
-      reasons.push({
-        mascot: mood,
-        text: `Matches your ${descriptor} mood profile.`,
-        priority: 7,
-      });
-    }
-
-    if (item.vote_average >= 8.0) {
-      reasons.push({
-        mascot: "inspirational",
-        text: `A high-confidence pick at ${item.vote_average.toFixed(1)}/10.`,
-        priority: 9,
-      });
-    } else if (item.vote_average >= 7.5) {
-      reasons.push({
-        mascot: "happy",
-        text: `Strong viewer score: ${item.vote_average.toFixed(1)}/10.`,
-        priority: 6,
-      });
-    }
-
-    if (item.popularity > 100) {
-      reasons.push({
-        mascot: "chaos",
-        text: "Currently carrying real audience heat.",
-        priority: 5,
-      });
-    }
-
-    const releaseYear = getYear(item);
-    if (Number(releaseYear) >= 2023) {
-      reasons.push({
-        mascot: "whimsy",
-        text: `Fresh ${releaseYear} release energy.`,
-        priority: 4,
-      });
-    }
-
-    if (analysis.preferredMediaType) {
-      const preference = analysis.preferredMediaType.toLowerCase();
-      const isTv = item.media_type === "tv";
-      if (
-        (isTv && preference.includes("tv")) ||
-        (!isTv && preference.includes("movie"))
-      ) {
-        reasons.push({
-          mascot: isTv ? "cozy" : "epic",
-          text: isTv
-            ? "Fits your series-watching preference."
-            : "Fits your movie-night preference.",
-          priority: 6,
-        });
-      }
-    }
-
-    return reasons.sort((a, b) => b.priority - a.priority).slice(0, 3);
+  const allAnswered = answers.every((answer) => answer !== null);
+  const choice = (index: number) =>
+    answers[index] === null
+      ? null
+      : QUIZ_SIGNALS[index].options[answers[index]!];
+  const start = () => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setAnswers(emptyAnswers());
+    setCurrent(0);
+    setResult(null);
+    setResumed(false);
+    setStage("quiz");
   };
+  const exit = () => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* Optional persistence. */
+    }
+    setStage("welcome");
+    setAnswers(emptyAnswers());
+    setCurrent(0);
+    setResumed(false);
+  };
+  const submit = async () => {
+    if (!allAnswered) return;
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    setStage("loading");
+    try {
+      const base =
+        process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
+      const data = await apiRequest<ResponseData>(
+        `${base}/quiz/recommendations`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            answers: QUIZ_SIGNALS.map((signal, i) => ({
+              ...choice(i),
+              category: signal.category,
+            })),
+          }),
+        },
+      );
+      if (
+        !Array.isArray(data.results) ||
+        data.results.some((item) => !item || typeof item.id !== "number")
+      )
+        throw new Error("Invalid recommendations");
+      if (requestRef.current !== controller) return;
+      const unique = new Map(
+        data.results
+          .filter(
+            (item) => item.media_type === "movie" || item.media_type === "tv",
+          )
+          .map((item) => [`${item.media_type}-${item.id}`, item]),
+      );
+      setResult({ ...data, results: [...unique.values()].slice(0, 12) });
+      setStage("results");
+    } catch (error) {
+      if (requestRef.current === controller) {
+        const normalized = handleAppError(error, {
+          showToast: false,
+          log: false,
+        });
+        setErrorMessage(
+          controller.signal.aborted
+            ? "The request took too long. Please retry."
+            : normalized.userMessage,
+        );
+        setStage("error");
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+  const question = QUIZ_SIGNALS[current];
+  const topPick = result?.results[0];
+  const remainingPicks = result?.results.slice(1) ?? [];
+  const ranked = result?.analysis?.rankingVersion === "genre-proxy-v1";
 
   return (
-    <main className="relative min-h-[calc(100svh-var(--mobile-nav-safe))] overflow-hidden bg-[var(--surface-0)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 text-white sm:min-h-screen sm:px-6 sm:pb-10 sm:pt-24 lg:px-8">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(240,100,75,0.12),transparent_28%),radial-gradient(circle_at_top_right,rgba(255,255,255,0.04),transparent_24%)]" />
-      </div>
-
-      <AnimatePresence mode="wait">
+    <div className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
+      <div className="ui-shell py-6 sm:py-10 lg:pt-24">
         {stage === "welcome" && (
-          <motion.section
-            key="welcome"
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            className="relative z-10 mx-auto grid min-h-[calc(100svh-var(--mobile-nav-safe)-1rem)] max-w-6xl items-center gap-5 sm:min-h-0 sm:gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.75fr)]"
+          <section
+            aria-labelledby="quiz-welcome"
+            className="mx-auto grid max-w-4xl items-center gap-6 py-6 sm:grid-cols-[minmax(0,1fr)_240px] sm:py-12"
           >
-            <div className="rounded-xl border border-[var(--surface-border)] bg-[rgba(17,15,15,0.88)] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.25)] sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--brand-coral)]/20 bg-[rgba(240,100,75,0.08)] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--brand-coral-strong)]">
-                <MoodMascot name="happy" size="xs" />
-                Personality quiz
-              </div>
-              <h1 className="mt-3 max-w-3xl text-[2rem] font-bold leading-[0.98] text-white min-[390px]:text-[2.35rem] sm:mt-5 sm:text-[clamp(2.45rem,4.6vw,4rem)] sm:leading-[0.96]">
-                Let Moodies read the room before you pick.
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-muted)] sm:mt-5 sm:text-base">
-                Five quick choices turn your mood into a sharper movie or series match.
+            <div>
+              <p className="ui-kicker">
+                Personality Quiz · five viewing signals
               </p>
-
-              <div className="relative mt-3 flex items-center gap-3 overflow-hidden rounded-xl border border-white/10 bg-black/30 p-3 sm:hidden">
-                <motion.div
-                  animate={{ y: [0, -4, 0], rotate: [0, 1.5, -1.5, 0] }}
-                  transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
-                  className="relative h-20 w-20 shrink-0"
-                >
-                  <Image
-                    src={MASCOT_SRC}
-                    alt="Moodies mascot"
-                    fill
-                    sizes="80px"
-                    className="object-contain"
-                    priority
-                  />
-                </motion.div>
-                <div className="min-w-0">
-                  <div className="text-sm font-black text-white">
-                    Your next watch, decoded
-                  </div>
-                  <div className="mt-1 text-xs leading-5 text-zinc-500">
-                    Mood, genre, and format signals in about a minute.
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-3 grid grid-cols-3 gap-2 sm:mt-6 sm:gap-3">
-                {welcomeHighlights.map((item) => {
-                  return (
-                    <div
-                      key={item.label}
-                      className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] p-2.5 text-center sm:p-4 sm:text-left"
-                    >
-                      <MoodMascot
-                        name={item.mascot}
-                        size="sm"
-                        className="mx-auto sm:mx-0"
-                      />
-                      <div className="mt-2 truncate text-xs font-black text-white sm:mt-3 sm:text-sm">
-                        {item.label}
-                      </div>
-                      <div className="mt-1 hidden text-xs text-zinc-500 sm:block">
-                        {item.text}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="mt-4 flex flex-col gap-3 sm:mt-8 sm:flex-row">
-                <button
-                  onClick={startQuiz}
-                  className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--brand-coral)] px-6 py-3 text-sm font-extrabold text-white transition-colors hover:bg-[var(--brand-coral-strong)] sm:w-auto"
-                >
-                  Start quiz
-                </button>
-                <Link
-                  href="/moods/explore"
-                  className="hidden min-h-12 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-bold text-zinc-200 transition hover:border-white/20 hover:bg-white/[0.08] sm:inline-flex"
-                >
-                  Browse mood tools
-                </Link>
-              </div>
-            </div>
-
-            <div className="hidden lg:block">
-              <MascotPanel
-                title="Moodies is listening"
-                body="Tiny choices become a watchlist signal. No pressure, just a better first pick."
-              />
-            </div>
-          </motion.section>
-        )}
-
-        {stage === "quiz" && selectedQuestions[currentQuestion] && (
-          <motion.section
-            key={`quiz-${currentQuestion}`}
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 }}
-            className="relative z-10 mx-auto grid max-w-6xl gap-3 sm:gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start"
-          >
-            <aside className="rounded-xl border border-white/10 bg-zinc-950/80 p-3 sm:p-5">
-              <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 shrink-0 sm:h-16 sm:w-16">
-                  <Image
-                    src={MASCOT_SRC}
-                    alt="Moodies mascot"
-                    fill
-                    sizes="(max-width: 640px) 48px, 64px"
-                    className="object-contain"
-                  />
-                </div>
-                <div>
-                  <div className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
-                    Signal scan
-                  </div>
-                  <div className="mt-0.5 text-xl font-black text-white sm:mt-1 sm:text-2xl">
-                    {progress}%
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10 sm:mt-5">
-                <motion.div
-                  initial={{
-                    width: `${(currentQuestion / selectedQuestions.length) * 100}%`,
-                  }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.35 }}
-                  className="h-full rounded-full bg-[#e94f37]"
-                />
-              </div>
-              <div className="mt-3 grid grid-cols-5 gap-1.5 sm:mt-5 sm:block sm:space-y-2">
-                {selectedQuestions.map((question, index) => (
-                  <div
-                    key={question.id}
-                    className={`h-2 rounded-full ${index <= currentQuestion ? "bg-[#ff7b68]" : "bg-white/10"
-                      }`}
-                  />
-                ))}
-              </div>
-              {answers.length > 0 && (
-                <div className="mt-5 hidden rounded-lg border border-white/10 bg-white/[0.035] p-3 sm:block">
-                  <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
-                    Last cue
-                  </div>
-                  <div className="mt-2 line-clamp-2 text-sm text-zinc-300">
-                    {answers[answers.length - 1].text}
-                  </div>
-                </div>
-              )}
-            </aside>
-
-            <div className="rounded-xl border border-white/10 bg-zinc-950/85 p-3.5 shadow-2xl shadow-black/30 sm:p-7">
-              <div className="mb-4 flex items-center justify-between gap-3 sm:mb-6">
-                <span className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-bold text-zinc-300 ring-1 ring-white/10">
-                  Question {currentQuestion + 1} of {selectedQuestions.length}
-                </span>
-                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#ff9b8b]">
-                  Choose one
-                </span>
-              </div>
-
-              <h2 className="max-w-3xl text-[1.35rem] font-black leading-tight text-white min-[390px]:text-[1.5rem] sm:text-4xl">
-                {selectedQuestions[currentQuestion].question}
-              </h2>
-
-              <div className="mt-4 grid gap-2 sm:mt-7 sm:gap-3">
-                {selectedQuestions[currentQuestion].options.map(
-                  (option, index) => {
-                    return (
-                      <motion.button
-                        key={`${option.text}-${index}`}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleAnswer(option)}
-                        className="group min-h-16 rounded-lg border border-[var(--surface-border)] bg-[rgba(255,255,255,0.02)] p-3 text-left transition-colors duration-200 hover:border-[var(--brand-coral)]/40 hover:bg-[rgba(240,100,75,0.03)] sm:p-4"
-                      >
-                        <div className="flex items-center gap-3 sm:gap-4">
-                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-black/35 ring-1 ring-white/10 transition-colors group-hover:bg-[rgba(240,100,75,0.08)] sm:h-14 sm:w-14">
-                            <Image
-                              src={getOptionMascot(option, index)}
-                              alt={`${option.mood} mood mascot`}
-                              width={46}
-                              height={46}
-                              className="object-contain"
-                            />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-bold leading-5 text-white sm:text-base">
-                              {option.text}
-                            </span>
-                            <span className="mt-1 block text-xs text-zinc-500">
-                              {option.genres.map(formatLabel).join(" / ")} ·{" "}
-                              {formatLabel(option.mood)}
-                            </span>
-                          </span>
-                          <span className="hidden shrink-0 text-sm font-bold text-[var(--ink-muted)] transition-colors group-hover:text-white sm:inline">
-                            Pick
-                          </span>
-                        </div>
-                      </motion.button>
-                    );
-                  },
-                )}
-              </div>
-            </div>
-          </motion.section>
-        )}
-
-        {stage === "loading" && (
-          <motion.section
-            key="loading"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            className="relative z-10 mx-auto max-w-lg text-center"
-          >
-            <div className="rounded-xl border border-white/10 bg-zinc-950/85 p-5 shadow-2xl shadow-black/30 sm:p-8">
-              <motion.div
-                animate={{ y: [0, -8, 0], rotate: [0, 2, -2, 0] }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="relative mx-auto h-28 w-28"
+              <h1
+                id="quiz-welcome"
+                className="mt-3 text-balance text-[2.1rem] font-bold leading-[0.98] min-[390px]:text-[2.45rem] sm:text-[clamp(2.45rem,4.6vw,4rem)]"
               >
-                <Image
-                  src={MASCOT_SRC}
-                  alt="Moodies mascot analyzing results"
-                  fill
-                  sizes="112px"
-                  className="object-contain"
-                />
-              </motion.div>
-              <h2 className="mt-4 text-2xl font-black text-white sm:mt-5 sm:text-3xl">
-                Building your taste map
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Matching your answers against mood, genre, quality, and watch
-                format signals.
+                A little about you.
+                <br />A better next watch.
+              </h1>
+              <p className="mt-4 max-w-xl text-base leading-7 text-[var(--ink-muted)]">
+                Choose a feeling, pace, story, format and time window. We’ll
+                turn those choices into a shortlist.
               </p>
-              <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
-                <motion.div
-                  animate={{ x: ["-100%", "120%"] }}
-                  transition={{
-                    duration: 1.4,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  className="h-full w-1/2 rounded-full bg-[#e94f37]"
-                />
-              </div>
+              <button
+                onClick={start}
+                disabled={!ready}
+                className={`ui-primary-action mt-6 min-h-11 ${focusClass}`}
+              >
+                Start quiz <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <p className="mt-4 text-xs text-[var(--ink-muted)]">
+                Playful guide, not a diagnosis.
+              </p>
+              <Link
+                href="/moods"
+                className={`mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] ${focusClass}`}
+              >
+                Browse mood tools instead
+              </Link>
             </div>
-          </motion.section>
+            <Image
+              src="/images/moodies-mascot.png"
+              alt="Moodies guide"
+              width={240}
+              height={280}
+              priority
+              className="mx-auto w-36 object-contain sm:w-60"
+            />
+          </section>
+        )}
+
+        {stage === "quiz" && (
+          <section
+            aria-labelledby="quiz-question"
+            className="mx-auto max-w-2xl"
+          >
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <p className="ui-kicker">Your signal reel</p>
+              <button
+                onClick={exit}
+                className={`min-h-11 px-2 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)] ${focusClass}`}
+              >
+                Exit quiz
+              </button>
+            </div>
+            <ol
+              className="grid grid-cols-5 gap-1.5 sm:gap-3"
+              aria-label={`${answers.filter((a) => a !== null).length} of 5 signals answered`}
+            >
+              {QUIZ_SIGNALS.map((signal, i) => (
+                <li key={signal.category}>
+                  <button
+                    onClick={() => setCurrent(i)}
+                    disabled={answers[i] === null && i !== current}
+                    aria-current={i === current ? "step" : undefined}
+                    aria-label={`${signal.label}: ${choice(i)?.text ?? "not answered"}`}
+                    className={`flex min-h-20 w-full min-w-0 flex-col justify-between rounded-md border px-1.5 py-2 text-left sm:px-3 ${focusClass} ${i === current ? "border-[var(--brand-coral)] bg-[var(--surface-2)]" : "border-[var(--surface-border)] bg-[var(--surface-1)]"}`}
+                  >
+                    <span className="flex items-center justify-between gap-1 text-xs text-[var(--ink-muted)]">
+                      {i + 1}
+                      {answers[i] !== null && (
+                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                    </span>
+                    <span className="truncate text-xs font-semibold">
+                      {signal.label}
+                    </span>
+                    <span className="w-full truncate text-xs text-[var(--ink-muted)]">
+                      {choice(i)?.label ?? (i === current ? "Now" : "—")}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+            {resumed && (
+              <p className="mt-3 text-xs text-[var(--ink-muted)]">
+                Your saved answers are here. Continue or change any completed
+                signal.
+              </p>
+            )}
+            <p className="mt-6 text-sm text-[var(--ink-muted)]">
+              Question {current + 1} of 5 · Choose one
+            </p>
+            <h1
+              ref={headingRef}
+              tabIndex={-1}
+              id="quiz-question"
+              className="mt-2 text-3xl font-bold leading-tight outline-none sm:text-4xl"
+            >
+              {question.question}
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+              {question.hint}
+            </p>
+            <div
+              className="mt-5 grid gap-3"
+              role="group"
+              aria-label="Answer choices"
+            >
+              {question.options.map((option, i) => (
+                <button
+                  key={`${question.category}-${i}`}
+                  aria-pressed={answers[current] === i}
+                  onClick={() =>
+                    setAnswers((old) =>
+                      old.map((answer, index) =>
+                        index === current ? i : answer,
+                      ),
+                    )
+                  }
+                  className={`flex min-h-16 items-center gap-3 rounded-md border px-4 py-3 text-left text-base transition-colors motion-reduce:transition-none ${focusClass} ${answers[current] === i ? "border-[var(--brand-coral)] bg-[var(--surface-2)]" : "border-[var(--surface-border)] bg-[var(--surface-1)] hover:border-[var(--ink-muted)]"}`}
+                >
+                  {option.mood && (
+                    <Image
+                      src={getMoodMascotSrc(option.mood)}
+                      alt=""
+                      width={40}
+                      height={40}
+                      className="shrink-0 object-contain"
+                    />
+                  )}
+                  <span className="flex-1">{option.text}</span>
+                  {answers[current] === i && (
+                    <Check
+                      className="h-5 w-5 shrink-0 text-[var(--brand-coral-strong)]"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <button
+                disabled={current === 0}
+                onClick={() => setCurrent((step) => step - 1)}
+                className={`ui-secondary-action min-h-11 disabled:cursor-default disabled:opacity-40 ${focusClass}`}
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back
+              </button>
+              <button
+                disabled={answers[current] === null}
+                onClick={() =>
+                  current === 4 ? void submit() : setCurrent((step) => step + 1)
+                }
+                className={`ui-primary-action min-h-11 disabled:cursor-default disabled:opacity-40 ${focusClass}`}
+              >
+                {current === 4 ? "Find my matches" : "Continue"}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </button>
+              {allAnswered && current !== 4 && (
+                <button
+                  onClick={() => void submit()}
+                  className={`min-h-11 text-sm font-semibold text-[var(--brand-coral-strong)] ${focusClass}`}
+                >
+                  Update matches
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
+        {(stage === "loading" || stage === "error") && (
+          <section
+            className="mx-auto max-w-xl py-8"
+            aria-labelledby="quiz-status"
+            aria-busy={stage === "loading"}
+          >
+            <Image
+              src={getMoodMascotSrc(
+                stage === "error" ? "sad" : choice(0)?.mood,
+              )}
+              alt=""
+              width={96}
+              height={96}
+            />
+            <h1
+              id="quiz-status"
+              ref={headingRef}
+              tabIndex={-1}
+              className="mt-4 text-3xl font-bold outline-none sm:text-4xl"
+            >
+              {stage === "loading"
+                ? "Finding your next watch"
+                : "We couldn’t load your matches"}
+            </h1>
+            <p
+              className="mt-3 text-sm leading-6 text-[var(--ink-muted)]"
+              role={stage === "error" ? "alert" : "status"}
+            >
+              {stage === "loading"
+                ? "Comparing your viewing signals with the available catalogue."
+                : `Your answers are safe. ${errorMessage || "Please retry in a moment."}`}
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              {stage === "error" && (
+                <button
+                  onClick={() => void submit()}
+                  className={`ui-primary-action min-h-11 ${focusClass}`}
+                >
+                  Retry matches
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  requestRef.current?.abort();
+                  requestRef.current = null;
+                  setStage("quiz");
+                }}
+                className={`ui-secondary-action min-h-11 ${focusClass}`}
+              >
+                Back to answers
+              </button>
+            </div>
+          </section>
         )}
 
         {stage === "results" && (
-          <motion.section
-            key="results"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            className="relative z-10 mx-auto max-w-7xl"
-          >
-            <div className="grid gap-5 sm:gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
-              <aside className="space-y-3 sm:space-y-4">
-                <div className="rounded-xl border border-white/10 bg-zinc-950/85 p-5">
-                  <div className="flex items-center gap-4">
-                    <div className="relative h-20 w-20 shrink-0">
-                      <Image
-                        src={LOGO_SRC}
-                        alt="Moodies logo"
-                        fill
-                        sizes="80px"
-                        className="object-contain"
-                      />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold uppercase tracking-[0.16em] text-[#ff9b8b]">
-                        Quiz result
-                      </div>
-                      <h1 className="mt-1 text-2xl font-black text-white">
-                        {profileTitle}
-                      </h1>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-sm leading-6 text-zinc-400">
-                    Your matches are ranked from the answer profile you just
-                    built. Open any card for why it fits.
-                  </p>
-                  <button
-                    onClick={resetQuiz}
-                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-zinc-200 transition hover:bg-white/[0.08]"
-                  >
-                    <MoodMascot name="nostalgic" size="xs" />
-                    Retake quiz
-                  </button>
-                </div>
-
-                {analysis && (
-                  <div className="rounded-xl border border-[#e94f37]/25 bg-[#e94f37]/10 p-5">
-                    <div className="flex items-center gap-3">
-                      <MoodMascot name={personalityInsight.mascot} size="md" />
-                      <div>
-                        <div className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[var(--brand-coral-strong)]">
-                          Your vibe profile
-                        </div>
-                        <h2 className="mt-1 text-lg font-black text-white">
-                          {personalityInsight.archetype}
-                        </h2>
-                      </div>
-                    </div>
-                    <p className="mt-4 text-sm leading-6 text-[var(--ink-muted)]">
-                      {personalityInsight.summary}
-                    </p>
-                    <div className="mt-4 grid gap-2">
-                      {personalityInsight.traits.map((trait, index) => (
-                        <div
-                          key={trait}
-                          className="flex items-start gap-2 rounded-lg bg-black/25 p-2.5"
-                        >
-                          <MoodMascot
-                            name={
-                              analysis.topMoods[index] ??
-                              analysis.topGenres[index] ??
-                              "happy"
-                            }
-                            size="xs"
-                          />
-                          <span className="text-xs leading-5 text-zinc-300">
-                            {trait}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3">
-                      <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                        Watch style
-                      </div>
-                      <p className="mt-2 text-sm leading-6 text-zinc-300">
-                        {personalityInsight.watchStyle}
-                      </p>
-                    </div>
-                    <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
-                      <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                        Why these picks
-                      </div>
-                      <p className="mt-2 text-sm leading-6 text-zinc-300">
-                        {personalityInsight.recommendationLogic}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {analysis && (
-                  <div className="rounded-xl border border-white/10 bg-zinc-950/85 p-4 sm:p-5">
-                    <h2 className="text-sm font-black text-white">
-                      Signal breakdown
-                    </h2>
-                    <div className="mt-4 space-y-4">
-                      <ProfileChips
-                        title="Genres"
-                        values={analysis.topGenres}
-                      />
-                      <ProfileChips title="Moods" values={analysis.topMoods} />
-                      <div>
-                        <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
-                          Format
-                        </div>
-                        <div className="mt-2 rounded-lg bg-black/25 px-3 py-2 text-sm font-bold text-white ring-1 ring-white/10">
-                          {analysis.preferredMediaType || "Movies and series"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </aside>
-
+          <section aria-labelledby="quiz-results">
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="ui-kicker">Your viewing shortlist</p>
+                <h1
+                  id="quiz-results"
+                  ref={headingRef}
+                  tabIndex={-1}
+                  className="mt-2 text-3xl font-bold outline-none sm:text-4xl"
+                >
+                  {choice(0)?.label} · {choice(2)?.label} · {choice(3)?.label}
+                </h1>
+              </div>
+              <button
+                onClick={start}
+                className={`min-h-11 text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] ${focusClass}`}
+              >
+                Start again
+              </button>
+            </div>
+            {result?.partialResults && (
+              <p role="status" className="mb-4 text-sm text-[var(--ink-muted)]">
+                Some catalogue requests were unavailable. These are the matches
+                we could load.
+              </p>
+            )}
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
               <div className="min-w-0">
-                {topPick && (
-                  <TopPickCard
-                    item={topPick}
-                    reasons={getPersonalizationReasons(topPick)}
-                    onOpen={() => setSelectedMovie(topPick)}
-                  />
-                )}
-
-                {recommendations.length > 0 ? (
-                  <div className="mt-4 grid grid-cols-2 gap-3 sm:mt-5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-                    {recommendations.map((item, index) => (
-                      <RecommendationCard
-                        key={`${item.media_type ?? "movie"}-${item.id}`}
-                        item={item}
-                        index={index}
-                        reasons={getPersonalizationReasons(item)}
-                        onOpen={() => setSelectedMovie(item)}
+                {topPick ? (
+                  <>
+                    <button
+                      onClick={() => setSelectedMovie(topPick)}
+                      className={`group flex w-full items-start gap-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 text-left transition-colors hover:border-[var(--brand-coral)] motion-reduce:transition-none sm:gap-6 sm:p-6 ${focusClass}`}
+                    >
+                      <Image
+                        src={posterOf(topPick)}
+                        alt=""
+                        width={240}
+                        height={360}
+                        className="aspect-[2/3] w-24 shrink-0 rounded-md object-cover sm:w-36"
                       />
-                    ))}
-                  </div>
+                      <div className="min-w-0">
+                        <p className="ui-kicker">
+                          {ranked && typeof topPick.matchScore === "number"
+                            ? "Top match"
+                            : "Start here"}
+                        </p>
+                        <h2 className="mt-2 text-xl font-bold leading-tight sm:text-3xl">
+                          {titleOf(topPick)}
+                        </h2>
+                        <Metadata item={topPick} />
+                        <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+                          {reasonOf(topPick)}
+                        </p>
+                        <span className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--brand-coral-strong)]">
+                          View details{" "}
+                          <ArrowRight
+                            className="ml-2 h-4 w-4"
+                            aria-hidden="true"
+                          />
+                        </span>
+                      </div>
+                    </button>
+                    {remainingPicks.length > 0 && (
+                      <div className="mt-6">
+                        <h2 className="mb-4 text-2xl font-bold">
+                          More to watch
+                        </h2>
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-5 xl:grid-cols-4">
+                          {remainingPicks.map((item) => (
+                            <button
+                              key={`${item.media_type}-${item.id}`}
+                              onClick={() => setSelectedMovie(item)}
+                              className={`group min-w-0 text-left ${focusClass}`}
+                            >
+                              <div className="relative overflow-hidden rounded-md border border-[var(--surface-border)] transition-colors group-hover:border-[var(--brand-coral)] motion-reduce:transition-none">
+                                <Image
+                                  src={posterOf(item)}
+                                  alt=""
+                                  width={360}
+                                  height={540}
+                                  className="aspect-[2/3] w-full object-cover"
+                                />
+                                <div className="absolute left-2 top-2">
+                                  <RatingBadge
+                                    rating={item.vote_average}
+                                    size="sm"
+                                  />
+                                </div>
+                              </div>
+                              <h3 className="mt-2 line-clamp-2 text-sm font-semibold leading-5">
+                                {titleOf(item)}
+                              </h3>
+                              <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                                {item.media_type === "tv" ? "Series" : "Movie"}{" "}
+                                ·{" "}
+                                {(
+                                  item.release_date ||
+                                  item.first_air_date ||
+                                  ""
+                                ).slice(0, 4) || "Date TBA"}
+                              </p>
+                              <p className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
+                                {reasonOf(item)}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
-                  <div className="rounded-xl border border-white/10 bg-zinc-950/85 p-10 text-center">
-                    <MoodMascot name="sad" size="lg" className="mx-auto" />
-                    <h2 className="mt-4 text-xl font-black text-white">
-                      No recommendations found
+                  <div className="py-8">
+                    <h2 className="text-2xl font-bold">
+                      No titles in this shortlist yet
                     </h2>
-                    <p className="mt-2 text-sm text-zinc-400">
-                      Try retaking the quiz with different preferences.
+                    <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+                      The available catalogue didn’t return titles for this
+                      combination. You can retry or widen the time window.
                     </p>
                     <button
-                      onClick={resetQuiz}
-                      className="mt-6 rounded-lg bg-[#e94f37] px-6 py-3 text-sm font-black text-white"
+                      onClick={() => void submit()}
+                      className={`ui-secondary-action mt-4 min-h-11 ${focusClass}`}
                     >
-                      Retake quiz
+                      Try again
                     </button>
                   </div>
                 )}
               </div>
-            </div>
-          </motion.section>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {selectedMovie && (
-          <motion.div
-            key="modal-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/80 p-3 backdrop-blur-md sm:items-center sm:p-4"
-            onClick={() => setSelectedMovie(null)}
-          >
-            <motion.div
-              key="modal"
-              initial={{ opacity: 0, y: 18, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 18, scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 320, damping: 30 }}
-              className="relative flex max-h-[88svh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-950 shadow-2xl sm:max-h-[92vh]"
-              onClick={(event) => event.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="movie-title"
-              aria-describedby="movie-overview"
-              ref={modalRef}
-              tabIndex={-1}
-            >
-              <div className="relative h-44 shrink-0 bg-zinc-900 sm:h-56">
-                {getBackdropSrc(selectedMovie) && (
-                  <Image
-                    src={getBackdropSrc(selectedMovie) ?? ""}
-                    alt=""
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 1024px"
-                    className="object-cover opacity-45"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/45 to-transparent" />
-                <button
-                  ref={firstFocusableRef}
-                  onClick={() => setSelectedMovie(null)}
-                  className="absolute right-3 top-3 z-20 inline-flex min-h-11 items-center justify-center rounded-lg border border-white/15 bg-black/60 px-3 py-2 text-xs font-black text-white backdrop-blur transition hover:bg-black/80 sm:right-4 sm:top-4"
-                  aria-label="Close dialog"
-                >
-                  Close
-                </button>
-              </div>
-
-              <div className="-mt-14 grid min-h-0 gap-5 overflow-y-auto p-4 mobile-native-scroll sm:-mt-20 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-6 sm:p-7">
-                <Link
-                  href={getDetailUrl(selectedMovie)}
-                  className="relative z-10 mx-auto block w-36 overflow-hidden rounded-lg shadow-2xl sm:mx-0 sm:w-full"
-                >
-                  <Image
-                    src={getPosterSrc(selectedMovie)}
-                    alt={getTitle(selectedMovie)}
-                    width={360}
-                    height={540}
-                    className="aspect-[2/3] w-full object-cover"
-                  />
-                </Link>
-
-                <div className="relative z-10 min-w-0 pt-12 sm:pt-20">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <h2
-                        id="movie-title"
-                        className="text-3xl font-black leading-tight text-white sm:text-4xl"
-                      >
-                        {getTitle(selectedMovie)}
-                      </h2>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <RatingBadge
-                          rating={selectedMovie.vote_average}
-                          variant="colored"
-                          size="sm"
-                        />
-                        <span className="rounded-full bg-white/[0.08] px-3 py-1 text-xs font-bold text-zinc-200 ring-1 ring-white/10">
-                          {getMediaLabel(selectedMovie)}
-                        </span>
-                        <span className="rounded-full bg-white/[0.08] px-3 py-1 text-xs font-bold text-zinc-200 ring-1 ring-white/10">
-                          {getYear(selectedMovie)}
-                        </span>
-                      </div>
-                    </div>
-                    <Link
-                      href={getDetailUrl(selectedMovie)}
-                      className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#e94f37] px-4 py-2.5 text-sm font-black text-white transition hover:bg-[#ff604b]"
-                    >
-                      Open details
-                    </Link>
-                  </div>
-
-                  {getGenreNames(selectedMovie).length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {getGenreNames(selectedMovie)
-                        .slice(0, 6)
-                        .map((genre) => (
-                          <span
-                            key={genre}
-                            className="rounded-full bg-white/[0.06] px-3 py-1 text-xs font-semibold text-zinc-300 ring-1 ring-white/10"
-                          >
-                            {genre}
+              <aside className="border-t border-[var(--surface-border)] pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                <details>
+                  <summary
+                    className={`cursor-pointer py-3 text-sm font-semibold ${focusClass}`}
+                  >
+                    How we matched this · edit answers
+                  </summary>
+                  <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+                    {ranked
+                      ? "Genre choices drive the score. Mood and pace use editorial genre associations as rough guides. Format filters the pool, and time limits apply to movie or episode runtime. Ratings only break ties in fit; they do not prove a personal match."
+                      : "These are genre-led suggestions. Detailed scoring needs the updated quiz service."}
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+                    We compare a limited TMDB candidate pool, not every title. A
+                    score is not a percentage chance you’ll like a title.
+                    Episode length does not indicate season commitment.
+                  </p>
+                  <ul className="mt-4 divide-y divide-[var(--surface-border)]">
+                    {QUIZ_SIGNALS.map((signal, i) => (
+                      <li key={signal.category}>
+                        <button
+                          onClick={() => {
+                            setCurrent(i);
+                            setStage("quiz");
+                          }}
+                          className={`flex min-h-14 w-full items-center justify-between gap-3 py-3 text-left text-sm ${focusClass}`}
+                        >
+                          <span>
+                            <span className="block text-xs text-[var(--ink-muted)]">
+                              {signal.label}
+                            </span>
+                            {choice(i)?.text}
                           </span>
-                        ))}
-                    </div>
-                  )}
+                          <span className="shrink-0 text-[var(--brand-coral-strong)]">
+                            Edit
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-4 text-xs text-[var(--ink-muted)]">
+                    Playful guide, not a diagnosis.
+                  </p>
+                </details>
+              </aside>
+            </div>
+          </section>
+        )}
+      </div>
 
-                  <div className="mt-6 rounded-lg border border-[#e94f37]/25 bg-[#e94f37]/10 p-4">
-                    <div className="mb-3 flex items-center gap-2 text-sm font-black text-white">
-                      <MoodMascot name={personalityInsight.mascot} size="xs" />
-                      Why this matches you
-                    </div>
-                    <div className="grid gap-2">
-                      {getPersonalizationReasons(selectedMovie).map(
-                        (reason) => {
-                          return (
-                            <div
-                              key={reason.text}
-                              className="flex items-start gap-3 rounded-lg bg-black/25 p-3"
-                            >
-                              <MoodMascot name={reason.mascot} size="xs" />
-                              <p className="text-sm leading-5 text-zinc-200">
-                                {reason.text}
-                              </p>
-                            </div>
-                          );
-                        },
-                      )}
-                    </div>
-                  </div>
-
-                  {selectedMovie.overview && (
-                    <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.035] p-4">
-                      <h3 className="flex items-center gap-2 text-sm font-black text-white">
-                        <MoodMascot name="documentary" size="xs" />
-                        Overview
-                      </h3>
-                      <p
-                        id="movie-overview"
-                        className="mt-3 text-sm leading-6 text-zinc-400"
-                      >
-                        {selectedMovie.overview}
-                      </p>
-                    </div>
-                  )}
+      {selectedMovie && (
+        <dialog
+          ref={dialogRef}
+          aria-labelledby="quiz-movie-title"
+          aria-describedby="quiz-movie-overview"
+          onCancel={() => setSelectedMovie(null)}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setSelectedMovie(null);
+          }}
+          className="fixed inset-0 m-auto h-[100dvh] max-h-[100dvh] w-full max-w-none overflow-hidden border-0 bg-[var(--surface-1)] p-0 text-[var(--ink)] backdrop:bg-black/80 sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-lg sm:border sm:border-[var(--surface-border)]"
+        >
+          <div className="flex h-full max-h-[100dvh] flex-col sm:max-h-[90dvh]">
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--surface-border)] bg-[var(--surface-1)] p-4 pt-[max(1rem,env(safe-area-inset-top))]">
+              <span className="text-sm font-semibold">
+                Your shortlist · details
+              </span>
+              <button
+                ref={closeRef}
+                onClick={() => setSelectedMovie(null)}
+                aria-label="Close details"
+                className={`flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md border border-[var(--surface-border)] px-3 ${focusClass}`}
+              >
+                <X className="h-4 w-4" aria-hidden="true" /> Close
+              </button>
+            </div>
+            <div className="min-h-0 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+              <div className="flex items-start gap-4">
+                <Image
+                  src={posterOf(selectedMovie)}
+                  alt=""
+                  width={240}
+                  height={360}
+                  className="aspect-[2/3] w-24 shrink-0 rounded-md object-cover sm:w-32"
+                />
+                <div className="min-w-0">
+                  <h2
+                    id="quiz-movie-title"
+                    className="text-2xl font-bold leading-tight sm:text-3xl"
+                  >
+                    {titleOf(selectedMovie)}
+                  </h2>
+                  <Metadata item={selectedMovie} />
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </main>
-  );
-}
-
-function MoodMascot({
-  name,
-  size = "sm",
-  className = "",
-}: {
-  name?: string | null;
-  size?: "xs" | "sm" | "md" | "lg";
-  className?: string;
-}) {
-  const dimensions = {
-    xs: "h-5 w-5",
-    sm: "h-9 w-9",
-    md: "h-12 w-12",
-    lg: "h-16 w-16",
-  };
-  const pixelSize = {
-    xs: 20,
-    sm: 36,
-    md: 48,
-    lg: 64,
-  };
-
-  return (
-    <span
-      className={`relative inline-flex shrink-0 ${dimensions[size]} ${className}`}
-    >
-      <Image
-        src={getMoodMascotSrc(name)}
-        alt={`${name ?? "Moodies"} mood mascot`}
-        width={pixelSize[size]}
-        height={pixelSize[size]}
-        className="h-full w-full object-contain"
-      />
-    </span>
-  );
-}
-
-function MascotPanel({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="relative min-h-[300px] overflow-hidden rounded-xl border border-white/10 bg-zinc-950/85 p-5 shadow-2xl shadow-black/30 sm:min-h-[420px] sm:p-6">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(233,79,55,0.20),transparent_42%)]" />
-      <motion.div
-        animate={{ y: [0, -10, 0], rotate: [0, 1.5, -1.5, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute -bottom-4 -right-4 h-56 w-56 sm:bottom-2 sm:right-2 sm:h-80 sm:w-80"
-      >
-        <Image
-          src={MASCOT_SRC}
-          alt="Moodies mascot"
-          fill
-          sizes="320px"
-          className="object-contain"
-        />
-      </motion.div>
-      <div className="relative z-10 max-w-xs">
-        <MoodMascot name="happy" size="lg" />
-        <h2 className="mt-5 text-2xl font-black text-white">{title}</h2>
-        <p className="mt-3 text-sm leading-6 text-zinc-400">{body}</p>
-      </div>
-    </div>
-  );
-}
-
-function ProfileChips({ title, values }: { title: string; values: string[] }) {
-  return (
-    <div>
-      <div className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-500">
-        {title}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {values.slice(0, 5).map((value) => (
-          <span
-            key={value}
-            className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-xs font-bold text-white ring-1 ring-white/10"
-          >
-            <MoodMascot name={value} size="xs" />
-            {formatLabel(value)}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TopPickCard({
-  item,
-  reasons,
-  onOpen,
-}: {
-  item: MovieItem;
-  reasons: MatchReason[];
-  onOpen: () => void;
-}) {
-  return (
-    <button
-      onClick={onOpen}
-      className="group relative w-full overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[rgba(17,15,15,0.9)] text-left shadow-[0_14px_35px_rgba(0,0,0,0.16)]"
-    >
-      <div className="absolute inset-0">
-        {getBackdropSrc(item) && (
-          <Image
-            src={getBackdropSrc(item) ?? ""}
-            alt=""
-            fill
-            sizes="(max-width: 1024px) 100vw, 900px"
-            className="object-cover opacity-35 transition group-hover:scale-105"
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#120f0f] via-[#120f0f]/90 to-[#120f0f]/50" />
-      </div>
-      <div className="relative grid gap-4 p-4 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-5 sm:p-6">
-        <Image
-          src={getPosterSrc(item)}
-          alt={getTitle(item)}
-          width={240}
-          height={360}
-          className="hidden aspect-[2/3] rounded-lg object-cover shadow-xl sm:block"
-        />
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-[#e94f37] px-3 py-1 text-xs font-black text-white">
-            <MoodMascot
-              name={reasons[0]?.mascot ?? "inspirational"}
-              size="xs"
-            />
-            Top match
+              <h3 className="mt-6 text-base font-semibold">Why it’s here</h3>
+              <ul className="mt-2 list-inside list-disc space-y-2 text-sm leading-6 text-[var(--ink-muted)]">
+                {(selectedMovie.matchReasons?.length
+                  ? selectedMovie.matchReasons
+                  : [reasonOf(selectedMovie)]
+                ).map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+              <p
+                id="quiz-movie-overview"
+                className="mt-5 text-base leading-7 text-[var(--ink-muted)]"
+              >
+                {selectedMovie.overview ||
+                  "A synopsis is not available for this title."}
+              </p>
+              <Link
+                href={detailUrl(selectedMovie)}
+                className={`ui-primary-action mt-6 min-h-11 ${focusClass}`}
+              >
+                Open full details{" "}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
           </div>
-          <h2 className="mt-4 text-2xl font-bold leading-tight text-white sm:text-4xl">
-            {getTitle(item)}
-          </h2>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <RatingBadge
-              rating={item.vote_average}
-              variant="colored"
-              size="sm"
-            />
-            <span className="rounded-full bg-white/[0.08] px-3 py-1 text-xs font-bold text-zinc-200 ring-1 ring-white/10">
-              {getMediaLabel(item)}
-            </span>
-            <span className="rounded-full bg-white/[0.08] px-3 py-1 text-xs font-bold text-zinc-200 ring-1 ring-white/10">
-              {getYear(item)}
-            </span>
-          </div>
-          {reasons[0] && (
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-300">
-              {reasons[0].text}
-            </p>
-          )}
-          <div className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--surface-border)] bg-white/[0.03] px-3 text-sm font-bold text-white sm:border-0 sm:bg-transparent sm:px-0">
-            View match details
-            <span className="text-[var(--brand-coral-strong)]">→</span>
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-function RecommendationCard({
-  item,
-  index,
-  reasons,
-  onOpen,
-}: {
-  item: MovieItem;
-  index: number;
-  reasons: MatchReason[];
-  onOpen: () => void;
-}) {
-  const firstReason = reasons[0];
-
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.035 }}
-      onClick={onOpen}
-      className="group min-w-0 text-left"
-    >
-      <div className="relative overflow-hidden rounded-lg border border-[var(--surface-border)] bg-zinc-950 shadow-[0_10px_24px_rgba(0,0,0,0.16)] transition-colors group-hover:border-[var(--brand-coral)]/40">
-        <Image
-          src={getPosterSrc(item)}
-          alt={getTitle(item)}
-          width={360}
-          height={540}
-          className="aspect-[2/3] w-full object-cover transition-transform duration-300"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80" />
-        <div className="absolute left-2 top-2 flex gap-1.5">
-          <RatingBadge rating={item.vote_average} variant="colored" size="sm" />
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 p-3">
-          <div className="flex flex-wrap gap-1.5">
-            <span className="rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold text-white ring-1 ring-white/10">
-              {getMediaLabel(item)}
-            </span>
-            <span className="rounded-full bg-black/70 px-2 py-1 text-[10px] font-bold text-zinc-200 ring-1 ring-white/10">
-              {getYear(item)}
-            </span>
-          </div>
-          <h3 className="mt-2 line-clamp-2 text-sm font-black leading-tight text-white">
-            {getTitle(item)}
-          </h3>
-        </div>
-      </div>
-      {firstReason && (
-        <div className="mt-2 hidden gap-2 rounded-lg border border-white/10 bg-white/[0.035] p-2 sm:flex">
-          <MoodMascot name={firstReason.mascot} size="xs" />
-          <p className="line-clamp-2 text-xs leading-5 text-zinc-400">
-            {firstReason.text}
-          </p>
-        </div>
+        </dialog>
       )}
-    </motion.button>
+    </div>
+  );
+}
+
+function Metadata({ item }: { item: MovieItem }) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--ink-muted)]">
+      <RatingBadge rating={item.vote_average} size="sm" />
+      <span>
+        {item.media_type === "tv" ? "Series" : "Movie"} ·{" "}
+        {(item.release_date || item.first_air_date || "").slice(0, 4) ||
+          "Date TBA"}
+      </span>
+    </div>
   );
 }
