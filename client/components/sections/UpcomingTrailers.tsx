@@ -225,8 +225,8 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
 
   return (
     <section id="upcoming" className="ui-shell scroll-mt-24 py-8 sm:py-10">
-      <div className="mb-4 flex items-end justify-between sm:mb-8">
-        <div>
+      <div className="mb-4 flex items-end justify-between gap-4 sm:mb-8">
+        <div className="min-w-0">
           <Link href="/coming-soon" className="group">
             <h2 className="text-3xl font-bold leading-none text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)] sm:text-4xl">
               {title}
@@ -239,25 +239,28 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
             </p>
           )}
         </div>
+        <div
+          className="hidden shrink-0 gap-2 lg:flex"
+          role="group"
+          aria-label={`${title} navigation`}
+        >
+          <CarouselNavButton
+            direction="previous"
+            onClick={scrollLeft}
+            disabled={!canScrollLeft}
+            aria-label={`Previous ${title}`}
+          />
+
+          <CarouselNavButton
+            direction="next"
+            onClick={scrollRight}
+            disabled={!canScrollRight}
+            aria-label={`Next ${title}`}
+          />
+        </div>
       </div>
 
       <div className="relative group/carousel">
-        <CarouselNavButton
-          direction="previous"
-          onClick={scrollLeft}
-          disabled={!canScrollLeft}
-          className="absolute left-0 top-1/2 z-20 hidden -translate-x-4 -translate-y-1/2 lg:grid"
-          aria-label="Previous"
-        />
-
-        <CarouselNavButton
-          direction="next"
-          onClick={scrollRight}
-          disabled={!canScrollRight}
-          className="absolute right-0 top-1/2 z-20 hidden translate-x-4 -translate-y-1/2 lg:grid"
-          aria-label="Next"
-        />
-
         <div
           className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 [overscroll-behavior-x:contain] [scrollbar-width:none] sm:gap-4 lg:hidden [&::-webkit-scrollbar]:hidden"
           style={{ WebkitOverflowScrolling: "touch" }}

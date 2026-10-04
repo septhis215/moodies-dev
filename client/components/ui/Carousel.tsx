@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+"use client";
+
+import React, { useId } from "react";
 import type { All } from "@/types/all";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useCarouselScroll } from "@/hooks/useCarouselScroll";
 import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 
 interface CarouselProps {
@@ -16,73 +18,42 @@ export const Carousel = ({
   CardComponent,
   mobileBleed = true,
 }: CarouselProps) => {
-  const [startIndex, setStartIndex] = useState(0);
-  const isSm = useMediaQuery("(min-width: 640px)");
-  const isMd = useMediaQuery("(min-width: 768px)");
-  const isLg = useMediaQuery("(min-width: 1024px)");
-  const isXl = useMediaQuery("(min-width: 1280px)");
-  const itemsPerView = useMemo(() => {
-    if (isXl) return 6;
-    if (isLg) return 5;
-    if (isMd) return 4;
-    if (isSm) return 3;
-    return 2;
-  }, [isLg, isMd, isSm, isXl]);
-
-  // Clamp startIndex whenever items length or itemsPerView changes
-  useEffect(() => {
-    setStartIndex((prev) =>
-      Math.min(prev, Math.max(0, items.length - itemsPerView)),
-    );
-  }, [items.length, itemsPerView]);
-
-  const maxStart = Math.max(0, items.length - itemsPerView);
-  const canScrollLeft = startIndex > 0;
-  const canScrollRight = startIndex < maxStart;
-
-  const scrollLeft = () =>
-    setStartIndex((prev) => Math.max(0, prev - itemsPerView));
-  const scrollRight = () =>
-    setStartIndex((prev) => Math.min(maxStart, prev + itemsPerView));
-  const visibleItems = items.slice(startIndex, startIndex + itemsPerView);
+  const railId = useId();
+  const { containerRef, canScrollLeft, canScrollRight, scroll } =
+    useCarouselScroll(items.length);
 
   return (
-    <div className="relative group/carousel">
-      <CarouselNavButton
-        direction="previous"
-        onClick={scrollLeft}
-        disabled={!canScrollLeft}
-        className="absolute left-0 top-1/2 z-10 hidden -translate-x-4 -translate-y-1/2 sm:grid"
-        aria-label="Scroll left"
-      />
-
-      <CarouselNavButton
-        direction="next"
-        onClick={scrollRight}
-        disabled={!canScrollRight}
-        className="absolute right-0 top-1/2 z-10 hidden translate-x-4 -translate-y-1/2 sm:grid"
-        aria-label="Scroll right"
-      />
-
+    <div className="min-w-0">
       <div
-        className={`mobile-native-scroll scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 scroll-smooth sm:hidden ${
-          mobileBleed ? "-mx-4 px-4" : "px-0"
-        }`}
+        className="mb-3 flex justify-end gap-2"
+        role="group"
+        aria-label="Card navigation"
+      >
+        <CarouselNavButton
+          direction="previous"
+          onClick={() => scroll(-1)}
+          disabled={!canScrollLeft}
+          aria-controls={railId}
+        />
+        <CarouselNavButton
+          direction="next"
+          onClick={() => scroll(1)}
+          disabled={!canScrollRight}
+          aria-controls={railId}
+        />
+      </div>
+      <div
+        id={railId}
+        ref={containerRef}
+        className={`mobile-native-scroll scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 sm:mx-0 sm:scroll-pl-0 sm:gap-4 sm:px-0 ${mobileBleed ? "-mx-4 scroll-pl-4 px-4" : "px-0"}`}
       >
         {items.map((item) => (
           <div
             key={item.id}
-            className="w-[42vw] min-w-[145px] max-w-[176px] flex-shrink-0 snap-start"
+            className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-[calc((100%-2rem)/3)] sm:min-w-0 sm:max-w-none md:w-[calc((100%-3rem)/4)] lg:w-[calc((100%-4rem)/5)] xl:w-[calc((100%-5rem)/6)]"
           >
             <CardComponent show={item} />
           </div>
-        ))}
-        <div className="w-1 flex-shrink-0 sm:hidden" aria-hidden="true" />
-      </div>
-
-      <div className="hidden sm:grid sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {visibleItems.map((item) => (
-          <CardComponent key={item.id} show={item} />
         ))}
       </div>
     </div>

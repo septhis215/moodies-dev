@@ -18,7 +18,8 @@ export function CarouselNavButton({
   return (
     <button
       type="button"
-      className={`grid h-11 w-11 place-items-center rounded-md border border-white/20 bg-[#0b0909]/88 text-white shadow-[0_8px_24px_rgba(0,0,0,0.28)] backdrop-blur-md transition-[background-color,border-color,transform,opacity] duration-150 hover:border-[var(--brand-coral)] hover:bg-[#171111] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)] disabled:cursor-default disabled:opacity-30 disabled:pointer-events-none ${className}`}
+      aria-label={direction === "previous" ? "Previous cards" : "Next cards"}
+      className={`grid h-11 w-11 shrink-0 place-items-center rounded-md border border-white/20 bg-[#0b0909]/88 text-white transition-[background-color,border-color,color,opacity] duration-150 enabled:cursor-pointer enabled:hover:border-[var(--brand-coral)] enabled:hover:bg-[#171111] enabled:hover:text-[var(--brand-coral-strong)] enabled:active:bg-[var(--surface-2)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)] disabled:cursor-default disabled:opacity-30 motion-reduce:transition-none ${className}`}
       {...props}
     >
       <Icon className="h-5 w-5" aria-hidden="true" />

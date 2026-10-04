@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useId, useState } from "react";
+import { useCarouselScroll } from "@/hooks/useCarouselScroll";
 import Link from "next/link";
 import {
   Bookmark,
@@ -72,34 +73,12 @@ export default function CardCarousel<T extends MediaItem>({
   onRemoveFromWatchlist,
   isInWatchlist,
 }: CardCarouselProps<T>) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const railId = useId();
+  const { containerRef, canScrollLeft, canScrollRight, scroll } =
+    useCarouselScroll(items.length);
   const [loadingId, setLoadingId] = useState<string | number | null>(null);
   const router = useRouter();
   const watchlist = useWatchlist();
-
-  const updateScrollState = useCallback(() => {
-    const element = containerRef.current;
-    if (!element) return;
-    setCanScrollLeft(element.scrollLeft > 4);
-    setCanScrollRight(
-      element.scrollLeft < element.scrollWidth - element.clientWidth - 4,
-    );
-  }, []);
-
-  useEffect(() => {
-    const element = containerRef.current;
-    if (!element) return;
-    updateScrollState();
-    const resizeObserver = new ResizeObserver(updateScrollState);
-    resizeObserver.observe(element);
-    element.addEventListener("scroll", updateScrollState, { passive: true });
-    return () => {
-      resizeObserver.disconnect();
-      element.removeEventListener("scroll", updateScrollState);
-    };
-  }, [items.length, updateScrollState]);
 
   const mediaType = (item: MediaItem): "movie" | "tv" => {
     if (item.media_type === "tv" || item.type === "tv") return "tv";
@@ -178,34 +157,14 @@ export default function CardCarousel<T extends MediaItem>({
     }
   };
 
-  const scroll = (direction: -1 | 1) => {
-    const element = containerRef.current;
-    if (!element) return;
-
-    const cards = Array.from(element.children) as HTMLElement[];
-    const firstCard = cards[0];
-    const gapValue = Number.parseFloat(
-      window.getComputedStyle(element).columnGap ||
-      window.getComputedStyle(element).gap ||
-      "0",
-    );
-    const cardWidth = firstCard?.getBoundingClientRect().width ?? element.clientWidth * 0.7;
-    const step = cardWidth + (Number.isFinite(gapValue) ? gapValue : 0);
-
-    element.scrollBy({
-      left: direction * step,
-      behavior: "smooth",
-    });
-  };
-
   return (
     <section
       id={sectionId}
       className="ui-shell scroll-mt-24 border-b border-[var(--surface-border)] py-8 sm:py-10"
       aria-labelledby={`${sectionId || "media"}-heading`}
     >
-      <div className="mb-5">
-        <div>
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0 flex-1 basis-48">
           {titleLink ? (
             <Link href={titleLink} className="group inline-block">
               <h2
@@ -229,28 +188,36 @@ export default function CardCarousel<T extends MediaItem>({
             </p>
           ) : null}
         </div>
+        {items.length > 0 && (
+          <div
+            className="flex shrink-0 gap-2"
+            role="group"
+            aria-label={`${title} navigation`}
+          >
+            <CarouselNavButton
+              direction="previous"
+              onClick={() => scroll(-1)}
+              disabled={!canScrollLeft}
+              aria-controls={railId}
+              aria-label={`Scroll ${title} left`}
+            />
+            <CarouselNavButton
+              direction="next"
+              onClick={() => scroll(1)}
+              disabled={!canScrollRight}
+              aria-controls={railId}
+              aria-label={`Scroll ${title} right`}
+            />
+          </div>
+        )}
       </div>
 
       {items.length ? (
         <div className="group/carousel relative">
-          <CarouselNavButton
-            direction="previous"
-            onClick={() => scroll(-1)}
-            disabled={!canScrollLeft}
-            className="absolute -left-5 top-[42%] z-30 hidden -translate-y-1/2 sm:grid"
-            aria-label={`Scroll ${title} left`}
-          />
-          <CarouselNavButton
-            direction="next"
-            onClick={() => scroll(1)}
-            disabled={!canScrollRight}
-            className="absolute -right-5 top-[42%] z-30 hidden -translate-y-1/2 sm:grid"
-            aria-label={`Scroll ${title} right`}
-          />
-
           <div
+            id={railId}
             ref={containerRef}
-            className="mobile-native-scroll -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:gap-5 sm:px-0"
+            className="mobile-native-scroll -mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:scroll-pl-0 sm:gap-5 sm:px-0"
           >
             {items.map((item) => {
               const type = mediaType(item);
@@ -364,11 +331,11 @@ export default function CardCarousel<T extends MediaItem>({
                                             src={
                                               rec.poster_path
                                                 ? tmdbImage(
-                                                  rec.poster_path,
-                                                  "w342",
-                                                )
+                                                    rec.poster_path,
+                                                    "w342",
+                                                  )
                                                 : rec.poster ||
-                                                "/placeholder-poster.svg"
+                                                  "/placeholder-poster.svg"
                                             }
                                             alt={itemTitle(rec)}
                                             fill
@@ -416,10 +383,11 @@ export default function CardCarousel<T extends MediaItem>({
                       type="button"
                       onClick={() => toggleSaved(item)}
                       disabled={loading}
-                      className={`absolute left-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-sm border border-white/25 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 ${saved
+                      className={`absolute left-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-sm border border-white/25 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 ${
+                        saved
                           ? "bg-[var(--brand-coral)] text-white"
                           : "bg-[#0b0909]/90 text-white hover:bg-[var(--ink)] hover:text-[var(--surface-0)]"
-                        }`}
+                      }`}
                       aria-label={
                         saved
                           ? `Remove ${titleText} from My List`

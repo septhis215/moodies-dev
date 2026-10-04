@@ -3,10 +3,11 @@
 import { tmdbImage } from "@/lib/tmdb";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Award, ChevronRight, Film, Info, Star, Tv, Users } from "lucide-react";
 import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 import { useRouter } from "next/navigation";
+import { useCarouselScroll } from "@/hooks/useCarouselScroll";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export interface Person {
@@ -49,17 +50,10 @@ export default function CelebSection() {
   const itemsPerView = isLg ? 4.5 : isMd ? 3.5 : isSm ? 2.5 : 1.75;
   const router = useRouter();
 
-  // DOM ref for scroll container
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  // tailwind 'gap-6' -> 1.5rem = 24px
-  const GAP_PX = 24;
-
-  // pixel measurements for scroll math
-  const [cardWidthPx, setCardWidthPx] = useState<number>(240); // safe initial fallback
-  const [maxScrollLeft, setMaxScrollLeft] = useState<number>(0);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const railId = useId();
+  const { containerRef, canScrollLeft, canScrollRight, scroll } =
+    useCarouselScroll(celebs.length, Math.max(1, Math.floor(itemsPerView - 1)));
+  const GAP_PX = isSm ? 24 : 12;
 
   useEffect(() => {
     fetchPeople()
@@ -91,75 +85,6 @@ export default function CelebSection() {
   const getWorkYear = (work: KnownForWork) => {
     const date = work.release_date || work.first_air_date;
     return date ? date.slice(0, 4) : "";
-  };
-
-  // compute sizes & scroll limits using the actual DOM measurements
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const compute = () => {
-      const containerWidth = el.clientWidth || 0;
-
-      // compute card width (px) from container width and gaps; clamp with a sensible min
-      const computed = Math.max(
-        152,
-        (containerWidth - Math.max(0, itemsPerView - 1) * GAP_PX) /
-          itemsPerView,
-      );
-      setCardWidthPx(Math.round(computed));
-
-      // compute max scroll from DOM (accurate)
-      const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
-      setMaxScrollLeft(maxScroll);
-
-      const sLeft = el.scrollLeft || 0;
-      setCanScrollLeft(sLeft > 5);
-      setCanScrollRight(sLeft < Math.max(0, maxScroll - 5));
-    };
-
-    compute();
-
-    const ro = new ResizeObserver(() => compute());
-    ro.observe(el);
-
-    // also observe when images/fonts settle:
-    const t = setTimeout(() => compute(), 100);
-
-    const onScroll = () => {
-      const sLeft = el.scrollLeft || 0;
-      setCanScrollLeft(sLeft > 5);
-      setCanScrollRight(
-        sLeft < Math.max(0, el.scrollWidth - el.clientWidth - 5),
-      );
-    };
-    el.addEventListener("scroll", onScroll, { passive: true });
-
-    return () => {
-      ro.disconnect();
-      clearTimeout(t);
-      el.removeEventListener("scroll", onScroll);
-    };
-  }, [celebs.length, itemsPerView]);
-
-  // step in items (brings the peek into full view), use floor(itemsPerView - 1) but at least 1
-  const stepCount = Math.max(1, Math.floor(itemsPerView - 1));
-  const stepPx = Math.round(stepCount * (cardWidthPx + GAP_PX));
-
-  const scrollLeft = () => {
-    const el = containerRef.current;
-    if (!el) return;
-    const next = Math.max(0, el.scrollLeft - stepPx);
-    el.scrollTo({ left: next, behavior: "smooth" });
-  };
-
-  const scrollRight = () => {
-    const el = containerRef.current;
-    if (!el) return;
-    // clamp to maxScrollLeft so last item fully visible
-    const desired = el.scrollLeft + stepPx;
-    const next = Math.min(maxScrollLeft, desired);
-    el.scrollTo({ left: next, behavior: "smooth" });
   };
 
   // CSS flex-basis calc (percentage + gap) so initial render has correct layout even before JS measurement
@@ -236,24 +161,30 @@ export default function CelebSection() {
           </p>
         </motion.div>
 
-        <div className="relative group/carousel">
+        <div
+          className="mb-3 flex justify-end gap-2"
+          role="group"
+          aria-label="Celebrity navigation"
+        >
           <CarouselNavButton
             direction="previous"
-            onClick={scrollLeft}
+            onClick={() => scroll(-1)}
             disabled={!canScrollLeft}
-            className="absolute left-0 top-1/2 z-50 hidden -translate-x-4 -translate-y-1/2 md:grid"
+            aria-controls={railId}
             aria-label="Previous celebrities"
           />
 
           <CarouselNavButton
             direction="next"
-            onClick={scrollRight}
+            onClick={() => scroll(1)}
             disabled={!canScrollRight}
-            className="absolute right-0 top-1/2 z-50 hidden translate-x-4 -translate-y-1/2 md:grid"
+            aria-controls={railId}
             aria-label="Next celebrities"
           />
-
+        </div>
+        <div className="relative group/carousel">
           <motion.div
+            id={railId}
             ref={containerRef}
             className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 mobile-native-scroll sm:gap-6"
             initial={{ opacity: 0 }}
@@ -270,8 +201,7 @@ export default function CelebSection() {
                   className="group relative flex-shrink-0 snap-start"
                   style={{
                     flex: `0 0 ${cardBasisCss}`,
-                    minWidth: `${cardWidthPx}px`,
-                    maxWidth: `${Math.max(cardWidthPx, 200)}px`,
+                    minWidth: "152px",
                     minHeight: "360px",
                     maxHeight: "470px",
                     width: cardBasisCss,
