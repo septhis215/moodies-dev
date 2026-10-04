@@ -111,7 +111,13 @@ const MOODIES_SIZE = { width: 30, height: 30 };
 const focusRing =
   "outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]/75 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0f]";
 
-export function NavbarComponent() {
+export function NavbarComponent({
+  sticky = false,
+  transparent = false,
+}: {
+  sticky?: boolean;
+  transparent?: boolean;
+}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
@@ -499,7 +505,7 @@ export function NavbarComponent() {
   );
 
   return (
-    <Navbar>
+    <Navbar sticky={sticky} transparent={transparent}>
       <NavBody className="hidden lg:flex">
         <NavbarLogo />
 
@@ -683,7 +689,7 @@ export function NavbarComponent() {
         </div>
       </NavBody>
 
-      <MobileNav visible>
+      <MobileNav visible transparent={transparent}>
         <MobileNavHeader>
           <NavbarLogo className="mr-0 px-1" />
           <div className="flex items-center gap-1.5">

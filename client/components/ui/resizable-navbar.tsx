@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 interface NavbarProps {
   children: React.ReactNode;
   className?: string;
+  sticky?: boolean;
+  transparent?: boolean;
 }
 
 interface NavBodyProps {
@@ -29,6 +31,7 @@ interface MobileNavProps {
   children: React.ReactNode;
   className?: string;
   visible?: boolean;
+  transparent?: boolean;
 }
 
 interface MobileNavHeaderProps {
@@ -43,14 +46,23 @@ interface MobileNavMenuProps {
   onClose: () => void;
 }
 
-export const Navbar = ({ children, className }: NavbarProps) => {
+export const Navbar = ({
+  children,
+  className,
+  sticky = false,
+  transparent = false,
+}: NavbarProps) => {
   const ref = useRef<HTMLDivElement>(null);
 
   return (
     <div
       ref={ref}
       className={cn(
-        "absolute inset-x-0 top-0 z-[999] flex h-[var(--mobile-nav-safe)] w-full items-start bg-gradient-to-b from-black/30 via-black/10 to-transparent px-0 py-0 backdrop-blur-[2px] lg:h-24 lg:items-center lg:backdrop-blur-[3px]",
+        `${sticky ? "sticky" : "absolute"} inset-x-0 top-0 z-[999] flex h-[var(--mobile-nav-safe)] w-full items-start px-0 py-0 lg:h-24 lg:items-center ${
+          transparent
+            ? "bg-transparent backdrop-blur-none"
+            : "bg-gradient-to-b from-black/30 via-black/10 to-transparent backdrop-blur-[2px] lg:backdrop-blur-[3px]"
+        }`,
         "lg:[mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)] lg:[-webkit-mask-image:linear-gradient(to_bottom,black_70%,transparent_100%)]",
         className,
       )}
@@ -95,7 +107,12 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => (
   </nav>
 );
 
-export const MobileNav = ({ children, className, visible }: MobileNavProps) => (
+export const MobileNav = ({
+  children,
+  className,
+  visible,
+  transparent = false,
+}: MobileNavProps) => (
   <motion.div
     animate={{
       backdropFilter: visible ? "blur(16px)" : "blur(10px)",
@@ -105,7 +122,11 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => (
     }}
     transition={{ type: "spring", stiffness: 200, damping: 50 }}
     className={cn(
-      "absolute inset-x-0 top-0 z-50 flex w-full flex-col items-center justify-between border-b border-white/[0.08] bg-[#090a0d]/88 px-2.5 py-2 backdrop-blur-xl lg:hidden",
+      `absolute inset-x-0 top-0 z-50 flex w-full flex-col items-center justify-between px-2.5 py-2 lg:hidden ${
+        transparent
+          ? "border-b border-transparent bg-transparent backdrop-blur-none"
+          : "border-b border-white/[0.08] bg-[#090a0d]/88 backdrop-blur-xl"
+      }`,
       "pt-[max(0.5rem,env(safe-area-inset-top))]",
       className,
     )}

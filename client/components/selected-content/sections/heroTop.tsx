@@ -477,7 +477,7 @@ export function HeroContentCard({
         <div className="absolute inset-0 bg-gradient-to-b from-surface-0/55 via-transparent to-surface-0" />
       </div>
 
-      <div className="ui-shell relative py-8 sm:py-10 lg:py-12">
+      <div className="ui-shell relative pt-[calc(2rem+var(--mobile-nav-safe))] pb-8 sm:pt-[calc(2.5rem+var(--mobile-nav-safe))] sm:pb-10 lg:pt-[calc(3rem+6rem)] lg:pb-12">
         <div className="hidden" aria-hidden="true">
           <p className="ui-kicker">
             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
