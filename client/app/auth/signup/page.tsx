@@ -35,27 +35,40 @@ export default function SignupPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr("");
+    const normalizedUsername = username.trim();
+    const normalizedEmail = email.trim().toLowerCase();
     if (!agree) {
       setErr("Please agree to the Terms & Conditions.");
       return;
     }
-    if (password.length < 8) {
-      setErr("Password must be at least 8 characters.");
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(normalizedUsername)) {
+      setErr("Username must be 3–20 characters using only letters, numbers, or underscores.");
       return;
     }
-
     if (password.length < 8) {
       setErr("Password must be at least 8 characters.");
       return;
     }
 
     setLoading(true);
-    sessionStorage.setItem(
-      "pendingSignup",
-      JSON.stringify({ username, email, password }),
-    );
-    router.push("/auth/onboarding");
-    setLoading(false);
+    try {
+      const response = await fetch(`${API}/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username: normalizedUsername, email: normalizedEmail, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message = Array.isArray(data.message) ? data.message[0] : data.message;
+        throw new Error(message || "Sign up failed. Please try again.");
+      }
+      router.push("/auth/onboarding");
+    } catch (error) {
+      setErr(error instanceof Error ? error.message : "Sign up failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignup = () => {

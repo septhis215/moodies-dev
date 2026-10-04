@@ -14,26 +14,32 @@ import {
   IsUUID, // REMAIN!!! will use later developments
   Length,
   IsNotEmpty,
+  Matches,
 } from 'class-validator';
 
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 
 export class RegisterDto {
 
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @Length(3, 20, {
     message:
       'Username must be between 3 and 20 characters',
   })
-  username: string;
+  @Matches(/^[A-Za-z0-9_]+$/, {
+    message: 'Username may contain only letters, numbers, and underscores',
+  })
+  username!: string;
 
   @IsEmail(
     {},
     { message: 'Invalid email address' },
   )
   @IsNotEmpty()
-  email: string;
+  @Transform(({ value }) => typeof value === 'string' ? value.trim().toLowerCase() : value)
+  email!: string;
 
   @IsString()
   @IsNotEmpty()
@@ -41,7 +47,7 @@ export class RegisterDto {
     message:
       'Password must be at least 8 characters long',
   })
-  password: string;
+  password!: string;
   @IsOptional()
   @IsUrl({}, { message: 'Invalid URL' })
   avatarUrl?: string;

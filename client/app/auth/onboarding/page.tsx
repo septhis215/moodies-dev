@@ -167,24 +167,44 @@ export default function OnboardingPage() {
   const handleSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    const pendingSignup = sessionStorage.getItem("pendingSignup");
+    // Credentials are no longer staged in browser storage. Remove any value
+    // left by an older client before continuing with the authenticated session.
+    sessionStorage.removeItem("pendingSignup");
+    const pendingSignup = null;
     try {
       if (pendingSignup) {
-        const { username, email, password } = JSON.parse(pendingSignup);
+        const pending = JSON.parse(pendingSignup) as {
+          username?: string;
+          email?: string;
+          password?: string;
+          accountCreated?: boolean;
+        };
+        if (!pending.username || !pending.email || !pending.password) {
+          throw new Error("Your signup details are incomplete. Please start again.");
+        }
         appToast.loading("Creating your account...", {
           id: "onboarding-account-create",
           title: "Almost there!",
         });
-        // signup sets the session cookie on this response.
-        const signupRes = await fetch(`${API_BASE}/auth/signup`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ username, email, password }),
-        });
-        const signupData = await signupRes.json();
-        if (!signupRes.ok)
-          throw new Error(signupData.message || "Sign up failed");
+        if (!pending.accountCreated) {
+          const signupRes = await fetch(`${API_BASE}/auth/signup`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              username: pending.username,
+              email: pending.email,
+              password: pending.password,
+            }),
+          });
+          const signupData = await signupRes.json();
+          if (!signupRes.ok)
+            throw new Error(signupData.message || "Sign up failed");
+          sessionStorage.setItem(
+            "pendingSignup",
+            JSON.stringify({ ...pending, accountCreated: true }),
+          );
+        }
         // Authenticated via cookie now — save prefs with credentials.
         const prefsRes = await fetch(`${API_BASE}/auth/me/preferences`, {
           method: "PUT",
