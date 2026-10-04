@@ -95,7 +95,7 @@ export default function ActionButtons({
   return (
     <div
       className={cn(
-        "flex flex-col items-center gap-1.5 sm:gap-2.5 lg:gap-3",
+        "flex flex-col items-center gap-1 rounded-full border border-white/10 bg-black/25 p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:gap-1.5 sm:p-2",
         className,
       )}
       aria-label="Video actions"
@@ -119,13 +119,13 @@ export default function ActionButtons({
             onClick={button.onClick}
             aria-label={button.label}
             aria-pressed={button.active}
-            className="group flex min-h-14 min-w-12 flex-col items-center justify-center gap-0.5 rounded-xl outline-none transition focus-visible:ring-2 focus-visible:ring-white/85 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:min-h-16 sm:min-w-14 sm:gap-1"
+            className="group flex min-h-14 min-w-12 flex-col items-center justify-center gap-0.5 rounded-full outline-none transition hover:bg-white/[0.08] focus-visible:ring-2 focus-visible:ring-white/85 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:min-h-16 sm:min-w-14 sm:gap-1"
           >
             <motion.span
               animate={button.active ? { scale: [1, 1.18, 1] } : { scale: 1 }}
               transition={{ duration: 0.28, ease: "easeOut" }}
               className={cn(
-                "grid h-9 w-10 place-items-center transition-colors duration-200 sm:h-10 sm:w-11",
+                "grid h-9 w-10 place-items-center rounded-full border border-white/10 bg-black/20 transition-colors duration-200 group-hover:border-white/20 group-hover:bg-white/10 sm:h-10 sm:w-11",
                 "drop-shadow-[0_2px_5px_rgba(0,0,0,0.95)]",
                 button.active
                   ? button.activeClass

@@ -239,16 +239,16 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
             </p>
           )}
         </div>
-        <div
-          className="hidden shrink-0 gap-2 lg:flex"
-          role="group"
-          aria-label={`${title} navigation`}
-        >
+      </div>
+
+      <div className="relative group/carousel">
+        <div role="group" aria-label={`${title} navigation`}>
           <CarouselNavButton
             direction="previous"
             onClick={scrollLeft}
             disabled={!canScrollLeft}
             aria-label={`Previous ${title}`}
+            className="absolute -left-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-left-6"
           />
 
           <CarouselNavButton
@@ -256,11 +256,9 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
             onClick={scrollRight}
             disabled={!canScrollRight}
             aria-label={`Next ${title}`}
+            className="absolute -right-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-right-6"
           />
         </div>
-      </div>
-
-      <div className="relative group/carousel">
         <div
           className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 [overscroll-behavior-x:contain] [scrollbar-width:none] sm:gap-4 lg:hidden [&::-webkit-scrollbar]:hidden"
           style={{ WebkitOverflowScrolling: "touch" }}

@@ -907,6 +907,8 @@ export default function VideoFeedPage() {
   );
   const videoFrameClassName = cn(
     "relative isolate overflow-hidden bg-black",
+    isPortraitVideo &&
+      "lg:rounded-[1.5rem] lg:ring-1 lg:ring-white/10 lg:shadow-[0_30px_110px_rgba(0,0,0,0.78)]",
     videoFrameSizeClassName,
   );
 
@@ -925,12 +927,12 @@ export default function VideoFeedPage() {
         initial={{ y: -56, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
-        className="pointer-events-none fixed left-0 right-0 top-0 z-50 border-b border-white/[0.06] bg-black px-3 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] shadow-[0_12px_32px_rgba(0,0,0,0.45)] sm:px-5"
+        className="pointer-events-none fixed left-0 right-0 top-0 z-50 bg-gradient-to-b from-black/88 via-black/55 to-transparent px-3 pb-10 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-14"
       >
-        <div className="mx-auto grid w-full max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
           <Link
             href="/"
-            className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20 shadow-xl shadow-black/20 backdrop-blur-md transition hover:bg-black/35 sm:h-11 sm:w-11"
+            className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/35 shadow-xl shadow-black/25 backdrop-blur-xl transition hover:border-white/25 hover:bg-black/50 sm:h-11 sm:w-11"
           >
             <Image
               src="/images/moodies-transparent.png"
@@ -942,7 +944,7 @@ export default function VideoFeedPage() {
           </Link>
 
           <div className="flex min-w-0 justify-center">
-            <div className="pointer-events-auto grid w-full max-w-[21rem] grid-cols-2 gap-1 rounded-full border border-white/10 bg-black/20 p-1 shadow-xl shadow-black/20 backdrop-blur-md transition-colors hover:bg-black/30 sm:max-w-[24rem]">
+            <div className="pointer-events-auto grid w-full max-w-[21rem] grid-cols-2 gap-1 rounded-full border border-white/15 bg-black/35 p-1 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/45 sm:max-w-[24rem]">
               {feedTabs.map((tab) => (
                 <motion.button
                   key={tab.value}
@@ -969,8 +971,9 @@ export default function VideoFeedPage() {
                   <span className="relative z-10 flex items-center justify-center gap-2 sm:justify-start">
                     <span
                       className={cn(
-                        "hidden text-white/70 sm:block",
-                        activeCategory === tab.value && "text-[#ff8a78]",
+                        "hidden text-white/80 sm:block",
+                        activeCategory === tab.value &&
+                          "text-[var(--brand-coral-strong)]",
                       )}
                     >
                       {tab.icon}
@@ -987,7 +990,7 @@ export default function VideoFeedPage() {
             </div>
           </div>
 
-          <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-black/20 p-1 shadow-xl shadow-black/20 backdrop-blur-md transition-colors hover:bg-black/30">
+          <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full border border-white/15 bg-black/35 p-1 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/45">
             <motion.button
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.93 }}
@@ -1030,13 +1033,14 @@ export default function VideoFeedPage() {
       <div className="relative flex h-[100svh] w-full items-center justify-center overflow-hidden bg-black">
         {currentBackdrop && (
           <div
-            className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center opacity-38 blur-2xl"
+            className="pointer-events-none absolute inset-0 scale-110 bg-cover bg-center opacity-50 blur-3xl saturate-125"
             style={{ backgroundImage: `url(${currentBackdrop})` }}
             aria-hidden="true"
           />
         )}
-        <div className="pointer-events-none absolute inset-0 bg-black/24" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-18 bg-black" />
+        <div className="pointer-events-none absolute inset-0 bg-black/30" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_44%,transparent_20%,rgba(0,0,0,0.14)_58%,rgba(0,0,0,0.72)_100%)]" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-36 bg-gradient-to-b from-black/82 via-black/28 to-transparent" />
         <AnimatePresence mode="wait">
           {currentVideo && (
             <motion.div
@@ -1083,7 +1087,7 @@ export default function VideoFeedPage() {
                     onStatus={handlePlayerStatus}
                     attachPlayer={attachPlayer}
                     title={videoTitle || `video-${currentVideo.id}`}
-                    className="absolute inset-0 h-full w-full bg-black brightness-[1.14] contrast-[1.03] saturate-[1.08]"
+                    className="absolute inset-0 h-full w-full bg-black brightness-[1.08] contrast-[1.08] saturate-[1.12]"
                   />
                   {/*
                    * The feed keeps ownership of every gesture: the player host is
@@ -1180,72 +1184,82 @@ export default function VideoFeedPage() {
                     videoFrameSizeClassName,
                   )}
                 >
-                {/* Layer 1 — tall ambient scrim: fades video into dark over a large area */}
-                <div className="absolute inset-x-0 bottom-0 h-[48%] bg-gradient-to-t from-black/88 via-black/38 to-transparent lg:h-[42%]" />
+                  {/* Layer 1 — tall ambient scrim: fades video into dark over a large area */}
+                  <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black via-black/68 via-[42%] to-transparent sm:h-[58%]" />
 
-                {/* Layer 2 — tight bottom vignette: ensures the very bottom edge is fully dark */}
-                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/72 to-transparent" />
+                  {/* Layer 2 — tight bottom vignette: ensures the very bottom edge is fully dark */}
+                  <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black to-transparent" />
 
-                {/* Content */}
-                <div className="relative w-full px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pr-20 pt-28 sm:px-5 sm:pr-24 lg:max-w-4xl lg:px-8 lg:pb-8 lg:pr-32 lg:pt-32">
-                  <div className="mb-2.5 flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#ff725e] shadow-[0_0_10px_rgba(255,114,94,0.8)]" />
-                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/58 sm:text-[11px]">
-                      {currentVideoTypeLabel}
-                    </span>
-                  </div>
-                  <h2
-                    className="mb-3 line-clamp-2 max-w-2xl text-xl font-black leading-[1.08] tracking-[-0.025em] text-white sm:text-2xl lg:text-3xl"
-                    style={{
-                      textShadow:
-                        "0 2px 18px rgba(0,0,0,0.95), 0 1px 4px rgba(0,0,0,0.9)",
-                    }}
-                  >
-                    {videoTitle}
-                  </h2>
-                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[11px] font-semibold text-white/68 sm:text-xs">
-                    {/* Rating / Upcoming badge */}
-                    {Number.isFinite(Number(currentVideo.vote_average)) &&
-                      (() => {
-                        const va = Number(currentVideo.vote_average);
-                        const isUpcomingItem = va === 0;
-                        return (
-                          <span
-                            className={cn(
-                              "inline-flex items-center gap-1.5",
-                              isUpcomingItem
-                                ? "text-indigo-200"
-                                : "text-amber-200",
-                            )}
-                          >
-                            {!isUpcomingItem && (
-                              <Star
-                                className="h-3.5 w-3.5 text-amber-300"
-                                fill="currentColor"
-                              />
-                            )}
-                            {isUpcomingItem ? "Upcoming" : va.toFixed(1)}
-                          </span>
-                        );
-                      })()}
+                  {/* Content */}
+                  <div className="relative w-full px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pr-20 pt-36 sm:px-6 sm:pb-7 sm:pr-28 sm:pt-40 lg:max-w-5xl lg:px-10 lg:pb-10 lg:pr-36">
+                    <div className="mb-3 flex items-center gap-2.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#ff725e] shadow-[0_0_10px_rgba(255,114,94,0.8)]" />
+                      <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/80">
+                        {currentVideoTypeLabel}
+                      </span>
+                      <span className="text-[10px] font-semibold tabular-nums text-white/80">
+                        {String(currentIndex + 1).padStart(2, "0")} /{" "}
+                        {String(videos.length).padStart(2, "0")}
+                      </span>
+                    </div>
+                    <h2
+                      className={cn(
+                        "mb-4 line-clamp-3 text-balance font-bold leading-[0.95] tracking-normal text-white sm:line-clamp-2",
+                        isPortraitVideo
+                          ? "max-w-md text-3xl sm:text-4xl"
+                          : "max-w-4xl text-4xl sm:text-6xl",
+                      )}
+                      style={{
+                        textShadow:
+                          "0 10px 36px rgba(0,0,0,0.85), 0 2px 8px rgba(0,0,0,0.98)",
+                      }}
+                    >
+                      {videoTitle}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-white/80">
+                      {/* Rating / Upcoming badge */}
+                      {Number.isFinite(Number(currentVideo.vote_average)) &&
+                        (() => {
+                          const va = Number(currentVideo.vote_average);
+                          const isUpcomingItem = va === 0;
+                          return (
+                            <span
+                              className={cn(
+                                "inline-flex min-h-7 items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-2.5 backdrop-blur-md",
+                                isUpcomingItem
+                                  ? "text-indigo-200"
+                                  : "text-amber-200",
+                              )}
+                            >
+                              {!isUpcomingItem && (
+                                <Star
+                                  className="h-3.5 w-3.5 text-amber-300"
+                                  fill="currentColor"
+                                />
+                              )}
+                              {isUpcomingItem ? "Upcoming" : va.toFixed(1)}
+                            </span>
+                          );
+                        })()}
 
-                    <span className="h-1 w-1 rounded-full bg-white/30" />
-                    <span className="uppercase tracking-[0.12em] text-white/72">
-                      {currentContentType}
-                    </span>
+                      <span className="inline-flex min-h-7 items-center rounded-full border border-white/15 bg-black/30 px-2.5 uppercase tracking-[0.12em] text-white/80 backdrop-blur-md">
+                        {currentContentType}
+                      </span>
 
-                    {activeCategory === "upcoming" &&
-                      currentReleaseDateLabel && (
-                        <>
-                          <span className="h-1 w-1 rounded-full bg-white/30" />
-                          <span className="inline-flex items-center gap-1.5 text-emerald-200">
+                      {activeCategory === "upcoming" &&
+                        currentReleaseDateLabel && (
+                          <span className="inline-flex min-h-7 items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-2.5 text-emerald-200 backdrop-blur-md">
                             <Calendar className="h-3.5 w-3.5" />
                             {currentReleaseDateLabel}
                           </span>
-                        </>
-                      )}
+                        )}
+                    </div>
+                    {isLandscapeVideo && currentVideo.overview && (
+                      <p className="mt-4 hidden max-w-2xl text-sm leading-6 text-white/80 sm:line-clamp-2">
+                        {currentVideo.overview}
+                      </p>
+                    )}
                   </div>
-                </div>
                 </div>
               </motion.div>
 
@@ -1268,7 +1282,7 @@ export default function VideoFeedPage() {
                     setSaved={handleWatchlistToggle}
                     toggleMute={toggleMute}
                     onInfo={() => setPanelOpen((p) => !p)}
-                    className="pointer-events-auto absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-2.5 sm:bottom-4 sm:right-4 lg:bottom-5 lg:right-5"
+                    className="pointer-events-auto absolute bottom-[max(1rem,env(safe-area-inset-bottom))] right-2.5 sm:bottom-6 sm:right-5 lg:bottom-8 lg:right-7"
                   />
                   {isLandscapeVideo && (
                     <button

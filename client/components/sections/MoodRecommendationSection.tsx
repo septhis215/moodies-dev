@@ -6,7 +6,6 @@ import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import {
   Bookmark,
-  Info,
   Layers,
   Sparkles,
   RefreshCw,
@@ -19,12 +18,6 @@ import { useAuth } from "@/app/context/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { RatingBadge } from "@/components/ui/rating-badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface Mood {
   id: string;
@@ -480,7 +473,7 @@ export default function MoodRecommendationsSection({
               <div className="grid h-10 w-10 place-items-center rounded-md border border-[var(--surface-border)] text-[var(--brand-coral-strong)]">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <h2 className="text-2xl font-bold leading-none text-[var(--ink)] sm:text-[28px]">
+              <h2 className="text-2xl font-bold leading-none text-[var(--ink)] sm:text-3xl">
                 Mood Matcher
               </h2>
             </div>
@@ -490,35 +483,6 @@ export default function MoodRecommendationsSection({
             </p>
           </div>
 
-          {selectedMood && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              onClick={handleRefresh}
-              disabled={loading}
-              className="group flex items-center gap-2.5 rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 py-2 text-left transition-colors hover:border-[var(--brand-coral)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--surface-2)] text-[var(--brand-coral-strong)]">
-                <RefreshCw
-                  className={`h-4 w-4 ${
-                    loading
-                      ? "animate-spin"
-                      : "transition-transform duration-500 group-hover:rotate-180"
-                  }`}
-                />
-              </span>
-              <span>
-                <span className="block text-sm font-semibold text-[var(--ink)]">
-                  {loading ? "Refreshing..." : "Refresh Picks"}
-                </span>
-                <span className="block text-[11px] text-[var(--ink-muted)]">
-                  {refreshedAt
-                    ? "Fresh set requested"
-                    : `Regenerate for ${selectedMood.name.toLowerCase()}`}
-                </span>
-              </span>
-            </motion.button>
-          )}
         </div>
       </div>
 
@@ -528,27 +492,27 @@ export default function MoodRecommendationsSection({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mb-4 overflow-hidden border-y border-[var(--surface-border)] bg-[var(--surface-1)]"
+            className="mb-4 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)]"
           >
-            <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--surface-border)] text-[var(--brand-coral-strong)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-coral)]/10 text-[var(--brand-coral-strong)]">
                   <Layers className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-[var(--ink)]">
-                    {displayedMoods.length} moods in view
-                  </div>
-                  <div className="text-xs text-[var(--ink-muted)]">
-                    Pick the emotional lane for your next watch.
-                  </div>
+                  <h3 className="text-base font-bold text-[var(--ink)]">
+                    Choose how you want to feel
+                  </h3>
+                  <p className="mt-0.5 text-sm text-[var(--ink-muted)]">
+                    Pick one below, or shuffle for a fresh set.
+                  </p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                 <button
                   onClick={toggleMoodCount}
-                  className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)]"
+                  className="min-h-11 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 py-2 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)]"
                 >
                   {moodCount === DEFAULT_MOOD_COUNT
                     ? "Show more moods"
@@ -556,7 +520,7 @@ export default function MoodRecommendationsSection({
                 </button>
                 <button
                   onClick={handleShuffleMoods}
-                  className="group flex items-center gap-2 rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)]"
+                  className="group flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 py-2 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)]"
                 >
                   <Shuffle className="h-4 w-4 text-[var(--brand-coral-strong)]" />
                   Shuffle moods
@@ -574,13 +538,17 @@ export default function MoodRecommendationsSection({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="-mx-4 mb-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 xl:grid-cols-6"
+            className={`mb-6 grid grid-cols-2 gap-2.5 sm:gap-3 ${
+              moodCount === DEFAULT_MOOD_COUNT
+                ? "sm:grid-cols-4"
+                : "sm:grid-cols-3 lg:grid-cols-6"
+            }`}
           >
             {moodsLoading
               ? Array.from({ length: DEFAULT_MOOD_COUNT }).map((_, index) => (
                   <div
                     key={index}
-                    className="h-36 w-[44vw] min-w-[150px] max-w-[178px] shrink-0 snap-start animate-pulse rounded-md bg-white/[0.06] sm:w-auto sm:min-w-0 sm:max-w-none"
+                    className="h-40 animate-pulse rounded-xl border border-[var(--surface-border)] bg-white/[0.06]"
                   />
                 ))
               : displayedMoods.map((mood, index) => (
@@ -593,13 +561,13 @@ export default function MoodRecommendationsSection({
                       duration: 0.18,
                     }}
                     onClick={() => handleMoodClick(mood)}
-                    className="group relative w-[44vw] min-w-[150px] max-w-[178px] shrink-0 snap-start rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 transition-colors hover:border-[var(--brand-coral)] sm:w-auto sm:min-w-0 sm:max-w-none sm:p-4"
+                    className="group relative min-h-40 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 text-left transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:bg-[var(--surface-2)] sm:p-4"
                     style={{
-                      borderLeftColor: mood.color,
+                      borderTopColor: mood.color,
                     }}
                   >
-                    <div className="relative flex flex-col items-center gap-3 text-center">
-                      <div className="relative h-14 w-14 sm:h-16 sm:w-16">
+                    <div className="flex h-full flex-col">
+                      <div className="relative h-14 w-14 self-center sm:h-16 sm:w-16">
                         <Image
                           src={getMoodImageSrc(mood)}
                           alt={`${mood.name} mood mascot`}
@@ -608,14 +576,11 @@ export default function MoodRecommendationsSection({
                           className="object-contain"
                         />
                       </div>
-                      <div>
-                        <h3
-                          className="mb-1 text-sm font-bold"
-                          style={{ color: mood.color }}
-                        >
+                      <div className="mt-2 text-center">
+                        <h3 className="mb-1 text-sm font-bold text-[var(--ink)]">
                           {mood.name}
                         </h3>
-                        <p className="line-clamp-2 text-xs leading-relaxed text-[var(--ink-muted)]">
+                        <p className="line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">
                           {mood.description}
                         </p>
                       </div>
@@ -632,46 +597,82 @@ export default function MoodRecommendationsSection({
             className="mb-8"
           >
             <div
-              className="mb-5 flex flex-col gap-3 border-y border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="mb-5 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:p-5"
               style={{ borderLeft: `3px solid ${selectedMood.color}` }}
             >
-              <div className="flex items-center gap-4">
-                <div className="relative h-14 w-14 shrink-0">
-                  <Image
-                    src={getMoodImageSrc(selectedMood)}
-                    alt={`${selectedMood.name} mood mascot`}
-                    fill
-                    sizes="56px"
-                    className="object-contain"
-                  />
-                </div>
-                <div>
-                  <h3 className="mb-1 text-xl font-black text-white">
-                    {selectedMood.name} Mode
-                  </h3>
-                  <p className="text-sm font-medium text-gray-300">
-                    {selectedMood.description}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
-                    <span>
-                      {recommendations.length || RECOMMENDATION_LIMIT} picks
-                    </span>
-                    <span>{movieCount} movies</span>
-                    <span>{tvCount} series</span>
-                    {topMatch && (
-                      <span className="text-[var(--ink)]">
-                        Top match {getMatchScore(topMatch)}%
-                      </span>
-                    )}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                  <div
+                    className="relative h-16 w-16 shrink-0 rounded-xl"
+                    style={{ backgroundColor: `${getMoodColor(selectedMood)}16` }}
+                  >
+                    <Image
+                      src={getMoodImageSrc(selectedMood)}
+                      alt={`${selectedMood.name} mood mascot`}
+                      fill
+                      sizes="64px"
+                      className="object-contain p-1"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="ui-kicker">Your mood</p>
+                    <h3 className="mt-1 text-xl font-bold text-[var(--ink)] sm:text-2xl">
+                      {selectedMood.name} picks
+                    </h3>
+                    <p className="mt-1 line-clamp-2 text-sm leading-5 text-[var(--ink-muted)]">
+                      {selectedMood.description}
+                    </p>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+                  <button
+                    onClick={() => setSelectedMood(null)}
+                    className="ui-secondary-action min-h-11 justify-center"
+                  >
+                    Change mood
+                  </button>
+                  <button
+                    onClick={handleRefresh}
+                    disabled={loading}
+                    className="ui-primary-action min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-55"
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                    />
+                    {loading ? "Refreshing" : "Refresh picks"}
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => setSelectedMood(null)}
-                className="rounded-md border border-[var(--surface-border)] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:border-[var(--brand-coral)]"
-              >
-                Change Mood
-              </button>
+              <div className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-border)]">
+                <div className="bg-[var(--surface-2)] px-3 py-2.5">
+                  <p className="text-xs text-[var(--ink-muted)]">Suggestions</p>
+                  <p className="mt-0.5 text-sm font-bold text-[var(--ink)]">
+                    {recommendations.length || RECOMMENDATION_LIMIT}
+                  </p>
+                </div>
+                <div className="bg-[var(--surface-2)] px-3 py-2.5">
+                  <p className="text-xs text-[var(--ink-muted)]">
+                    {mediaType === "tv"
+                      ? "Series"
+                      : mediaType === "movie"
+                        ? "Movies"
+                        : "Movies / series"}
+                  </p>
+                  <p className="mt-0.5 text-sm font-bold text-[var(--ink)]">
+                    {mediaType === "tv"
+                      ? tvCount
+                      : mediaType === "movie"
+                        ? movieCount
+                        : `${movieCount} / ${tvCount}`}
+                  </p>
+                </div>
+                <div className="bg-[var(--surface-2)] px-3 py-2.5">
+                  <p className="text-xs text-[var(--ink-muted)]">Best match</p>
+                  <p className="mt-0.5 text-sm font-bold text-[var(--ink)]">
+                    {topMatch ? `${getMatchScore(topMatch)}%` : "—"}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {loading ? (
@@ -715,7 +716,7 @@ export default function MoodRecommendationsSection({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7"
+                className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6"
               >
                 {recommendations.map((rec) => {
                   const id = String(rec.tmdbId);
@@ -724,103 +725,29 @@ export default function MoodRecommendationsSection({
                   const isBusy = loadingStates[id];
                   const matchScore = getMatchScore(rec);
                   const genres = rec.genreNames?.filter(Boolean) ?? [];
-                  const visibleGenres = genres.slice(0, 2);
-                  const hiddenGenreCount = Math.max(
-                    0,
-                    genres.length - visibleGenres.length,
-                  );
                   const moodColor = getMoodColor(selectedMood);
 
                   return (
-                    <motion.div
+                    <motion.article
                       key={`${rec.mediaType}-${rec.tmdbId}`}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.18 }}
-                      className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                      className="relative w-[46vw] min-w-[156px] max-w-[190px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
                     >
-                      <Link href={getMediaHref(rec)}>
-                        <div className="group relative block">
-                          <div className="relative mb-3 aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-colors group-hover:border-[var(--brand-coral)]">
+                      <Link
+                        href={getMediaHref(rec)}
+                        className="group flex h-full flex-col overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] transition-[border-color,transform,box-shadow] hover:-translate-y-0.5 hover:border-[var(--brand-coral)] hover:shadow-xl hover:shadow-black/20"
+                      >
+                          <div className="relative aspect-[2/3] overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-2)]">
                             <Image
                               src={getPosterUrl(rec.posterPath)}
                               alt={rec.title}
                               fill
                               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
-                              className="object-cover"
+                              className="object-cover transition-transform duration-300 group-hover:scale-[1.025]"
                             />
-                            <div
-                              className="pointer-events-none absolute inset-0 rounded-md border opacity-0 transition-opacity group-hover:opacity-100"
-                              style={{
-                                borderColor: `${moodColor}B8`,
-                              }}
-                            />
-
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <motion.button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.preventDefault();
-                                      event.stopPropagation();
-                                      if (!isBusy) void toggleWatchlist(rec);
-                                    }}
-                                    disabled={isBusy}
-                                    aria-label={
-                                      inList
-                                        ? "Remove from My List"
-                                        : "Add to My List"
-                                    }
-                                    className={`absolute left-2 top-2 z-30 flex h-9 w-9 items-center justify-center rounded-sm border border-white/25 bg-[#0b0909]/90 text-white shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors ${isBusy ? "cursor-not-allowed opacity-70" : ""}`}
-                                    style={{
-                                      backgroundColor: inList
-                                        ? moodColor
-                                        : undefined,
-                                    }}
-                                    onMouseEnter={(event) => {
-                                      if (!inList)
-                                        event.currentTarget.style.backgroundColor =
-                                          moodColor;
-                                    }}
-                                    onMouseLeave={(event) => {
-                                      if (!inList)
-                                        event.currentTarget.style.backgroundColor =
-                                          "";
-                                    }}
-                                  >
-                                    {isBusy ? (
-                                      <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{
-                                          duration: 1,
-                                          repeat: Infinity,
-                                          ease: "linear",
-                                        }}
-                                        className="h-4 w-4 rounded-full border-2 border-current border-t-transparent"
-                                      />
-                                    ) : inList ? (
-                                      <BookmarkCheck className="h-4 w-4" />
-                                    ) : (
-                                      <Bookmark className="h-4 w-4" />
-                                    )}
-                                  </motion.button>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  side="bottom"
-                                  sideOffset={8}
-                                  className="rounded-lg border border-white/20 bg-black/90 px-3 py-2 shadow-xl backdrop-blur-md"
-                                >
-                                  <div className="text-xs font-medium text-white">
-                                    {isBusy
-                                      ? "Updating..."
-                                      : inList
-                                        ? "Remove from My List"
-                                        : "Add to My List"}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/75 to-transparent" />
 
                             <div className="absolute right-2 top-2">
                               <RatingBadge
@@ -830,99 +757,54 @@ export default function MoodRecommendationsSection({
                               />
                             </div>
 
-                            <div className="absolute bottom-2 left-2 right-2 flex flex-wrap items-end gap-1.5 transition-opacity duration-300 group-hover:opacity-0">
-                              <span className="border border-white/15 bg-[#0b0909]/90 px-2 py-1 text-[10px] font-bold text-white">
+                            <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+                              <span
+                                className="rounded-full px-2 py-1 text-[10px] font-bold text-white shadow-lg"
+                                style={{ backgroundColor: moodColor }}
+                              >
                                 Match {matchScore}%
                               </span>
-                              <span className="border border-white/15 bg-[#0b0909]/90 px-2 py-1 text-[10px] font-bold text-white">
-                                {getMediaLabel(rec)}
-                              </span>
-                              <span className="border border-white/15 bg-[#0b0909]/90 px-2 py-1 text-[10px] font-bold text-zinc-200">
-                                {getYear(rec.releaseDate)}
-                              </span>
-                            </div>
-
-                            <div className="absolute inset-0 bg-[#0b0909]/94 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                              <div className="absolute inset-0 flex items-end justify-center p-3">
-                                <TooltipProvider>
-                                  <div className="flex gap-2">
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <button
-                                          onClick={(event) => {
-                                            event.preventDefault();
-                                            event.stopPropagation();
-                                            router.push(getMediaHref(rec));
-                                          }}
-                                          className="flex h-9 w-9 items-center justify-center rounded-sm border border-white/15 bg-white text-black transition-colors hover:text-white"
-                                          onMouseEnter={(event) => {
-                                            event.currentTarget.style.backgroundColor =
-                                              moodColor;
-                                          }}
-                                          onMouseLeave={(event) => {
-                                            event.currentTarget.style.backgroundColor =
-                                              "";
-                                          }}
-                                        >
-                                          <Info className="h-4 w-4" />
-                                        </button>
-                                      </TooltipTrigger>
-                                      <TooltipContent
-                                        side="bottom"
-                                        sideOffset={8}
-                                        className="rounded-lg border border-white/20 bg-black/90 px-3 py-2 shadow-xl backdrop-blur-md"
-                                      >
-                                        <div className="text-xs font-medium text-white">
-                                          More Info
-                                        </div>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                </TooltipProvider>
-                              </div>
                             </div>
                           </div>
 
-                          <div className="px-1">
-                            <div className="mb-1.5 flex items-start justify-between gap-2">
-                              <h4 className="line-clamp-2 text-sm font-bold leading-tight text-white transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                          <div className="flex flex-1 flex-col p-3">
+                              <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
                                 {rec.title}
-                              </h4>
-                              <span
-                                className="mt-0.5 shrink-0 border-l px-2 py-0.5 text-[10px] font-black text-white"
-                                style={{ backgroundColor: `${moodColor}B8` }}
-                              >
-                                {matchScore}%
-                              </span>
-                            </div>
-                            {visibleGenres.length > 0 ? (
-                              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                                {visibleGenres.map((genre) => (
-                                  <span
-                                    key={genre}
-                                    className="max-w-[74px] shrink-0 truncate text-[10px] font-semibold text-zinc-400 sm:max-w-[92px]"
-                                    title={genre}
-                                  >
-                                    {genre}
-                                  </span>
-                                ))}
-                                {hiddenGenreCount > 0 && (
-                                  <span className="shrink-0 text-[10px] font-black text-zinc-300">
-                                    +{hiddenGenreCount}
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                                <span className="truncate text-[10px] font-semibold text-zinc-400">
-                                  {getMediaLabel(rec)}
-                                </span>
-                              </div>
+                              </h3>
+                            <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                              {getMediaLabel(rec)} · {getYear(rec.releaseDate)}
+                            </p>
+                            {genres.length > 0 && (
+                              <p className="mt-1 truncate text-xs text-[var(--ink-muted)]">
+                                {genres.slice(0, 2).join(" · ")}
+                              </p>
                             )}
+                            <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">
+                              {rec.reason || `A ${selectedMood.name.toLowerCase()} match for your next watch.`}
+                            </p>
                           </div>
-                        </div>
                       </Link>
-                    </motion.div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!isBusy) void toggleWatchlist(rec);
+                        }}
+                        disabled={isBusy}
+                        aria-label={
+                          inList ? "Remove from My List" : "Add to My List"
+                        }
+                        className={`absolute left-2 top-2 z-20 flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-black/80 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-[var(--brand-coral)] disabled:cursor-not-allowed disabled:opacity-70`}
+                        style={{ backgroundColor: inList ? moodColor : undefined }}
+                      >
+                        {isBusy ? (
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        ) : inList ? (
+                          <BookmarkCheck className="h-4 w-4" />
+                        ) : (
+                          <Bookmark className="h-4 w-4" />
+                        )}
+                      </button>
+                    </motion.article>
                   );
                 })}
                 <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />

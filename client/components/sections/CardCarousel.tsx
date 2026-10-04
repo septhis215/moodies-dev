@@ -188,18 +188,18 @@ export default function CardCarousel<T extends MediaItem>({
             </p>
           ) : null}
         </div>
-        {items.length > 0 && (
-          <div
-            className="flex shrink-0 gap-2"
-            role="group"
-            aria-label={`${title} navigation`}
-          >
+      </div>
+
+      {items.length ? (
+        <div className="group/carousel relative">
+          <div role="group" aria-label={`${title} navigation`}>
             <CarouselNavButton
               direction="previous"
               onClick={() => scroll(-1)}
               disabled={!canScrollLeft}
               aria-controls={railId}
               aria-label={`Scroll ${title} left`}
+              className="absolute -left-5 top-[42%] z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-left-6"
             />
             <CarouselNavButton
               direction="next"
@@ -207,13 +207,9 @@ export default function CardCarousel<T extends MediaItem>({
               disabled={!canScrollRight}
               aria-controls={railId}
               aria-label={`Scroll ${title} right`}
+              className="absolute -right-5 top-[42%] z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-right-6"
             />
           </div>
-        )}
-      </div>
-
-      {items.length ? (
-        <div className="group/carousel relative">
           <div
             id={railId}
             ref={containerRef}

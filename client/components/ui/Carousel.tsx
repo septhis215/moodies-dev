@@ -23,23 +23,21 @@ export const Carousel = ({
     useCarouselScroll(items.length);
 
   return (
-    <div className="min-w-0">
-      <div
-        className="mb-3 flex justify-end gap-2"
-        role="group"
-        aria-label="Card navigation"
-      >
+    <div className="group/carousel relative min-w-0">
+      <div role="group" aria-label="Card navigation">
         <CarouselNavButton
           direction="previous"
           onClick={() => scroll(-1)}
           disabled={!canScrollLeft}
           aria-controls={railId}
+          className="absolute -left-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-left-6"
         />
         <CarouselNavButton
           direction="next"
           onClick={() => scroll(1)}
           disabled={!canScrollRight}
           aria-controls={railId}
+          className="absolute -right-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-right-6"
         />
       </div>
       <div

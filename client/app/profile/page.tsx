@@ -828,16 +828,18 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--surface-0)] pb-10 text-[var(--ink)]">
+    <main className="min-h-screen bg-[var(--surface-0)] bg-[radial-gradient(circle_at_12%_0%,rgba(233,79,55,0.12),transparent_26rem)] pb-14 text-[var(--ink)]">
       <div className="ui-shell py-5 sm:py-10">
-        <section className="mb-5 border-b border-[var(--surface-border)] pb-6 sm:mb-8 sm:pb-8">
-          <div className="flex items-start gap-4 sm:items-center sm:gap-6">
+        <section className="relative mb-5 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 shadow-2xl shadow-black/10 sm:mb-6 sm:p-7 lg:p-8">
+          <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-[var(--brand-coral)]/10 blur-3xl" />
+          <div className="relative flex items-start gap-4 sm:items-center sm:gap-6">
+            <div className="relative flex-shrink-0">
               <button
                 type="button"
                 onClick={() => user?.avatarUrl && setAvatarLightbox(true)}
                 aria-label={user?.avatarUrl ? "View profile avatar" : undefined}
                 disabled={!user?.avatarUrl}
-                className="relative h-[4.5rem] w-[4.5rem] flex-shrink-0 overflow-hidden rounded-xl bg-[var(--surface-2)] ring-1 ring-[var(--surface-border)] transition-[box-shadow] hover:ring-[var(--brand-coral)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)] disabled:cursor-default sm:h-28 sm:w-28"
+                className="relative h-[4.75rem] w-[4.75rem] overflow-hidden rounded-2xl bg-[var(--surface-2)] ring-1 ring-[var(--surface-border)] transition-[box-shadow,transform] hover:scale-[1.02] hover:ring-[var(--brand-coral)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)] disabled:cursor-default sm:h-28 sm:w-28"
               >
                 {user?.avatarUrl ? (
                   <Image
@@ -854,34 +856,38 @@ export default function ProfilePage() {
                   </div>
                 )}
               </button>
+              <span className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full border-4 border-[var(--surface-1)] bg-[var(--brand-coral)] text-xs font-extrabold text-white shadow-lg">
+                {profileCompletion}
+              </span>
+            </div>
 
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <p className="ui-kicker">{profilePersona.title}</p>
-                  {isBanned && (
-                    <span className="text-xs font-semibold text-[var(--brand-gold)]">
-                      Banned until {bannedUntil?.toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-                <h1 className="mt-2 break-words text-4xl font-bold leading-none text-[var(--ink)] sm:text-6xl">
-                  {user?.name || user?.username || "Your Profile"}
-                </h1>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--ink-muted)]">
-                  <span>@{user?.username ?? "user"}</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{profileCompletion}% complete</span>
-                </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <p className="ui-kicker">{profilePersona.title}</p>
+                {isBanned && (
+                  <span className="text-xs font-semibold text-[var(--brand-gold)]">
+                    Banned until {bannedUntil?.toLocaleDateString()}
+                  </span>
+                )}
               </div>
+              <h1 className="mt-2 break-words text-4xl font-bold leading-none text-[var(--ink)] sm:text-5xl lg:text-6xl">
+                {user?.name || user?.username || "Your Profile"}
+              </h1>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--ink-muted)]">
+                <span>@{user?.username ?? "user"}</span>
+                <span aria-hidden="true">·</span>
+                <span>{profileCompletion}% complete</span>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-5 grid gap-4 border-l-2 border-[var(--brand-coral)] pl-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="relative h-11 w-11 flex-shrink-0">
+          <div className="relative mt-6 grid gap-4 border-t border-[var(--surface-border)] pt-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6">
+            <div className="flex min-w-0 items-center gap-3 rounded-xl bg-[var(--surface-2)]/70 p-3.5 sm:max-w-2xl">
+              <div className="relative h-12 w-12 flex-shrink-0">
                 <Image src={MASCOT_SRC} alt="" fill sizes="44px" className="object-contain" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm leading-6 text-[var(--ink-muted)]">
+                <p className="text-sm font-medium leading-5 text-[var(--ink)]">
                   {profilePersona.detail}
                 </p>
                 <p className="mt-1 text-xs font-semibold text-[var(--brand-coral-strong)]">
@@ -890,7 +896,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               <button
                 className="ui-primary-action inline-flex min-h-11 items-center gap-2"
                 onClick={() => {
@@ -912,7 +918,7 @@ export default function ProfilePage() {
                 </Link>
               )}
               <button
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:bg-white/5 hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
                 onClick={async () => {
                   await logout();
                   window.location.href = "/";
@@ -927,7 +933,7 @@ export default function ProfilePage() {
 
         <section
           aria-label="Profile statistics"
-          className="mb-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-border)] sm:mb-8 lg:grid-cols-4"
+          className="mb-5 grid grid-cols-2 gap-3 sm:mb-6 lg:grid-cols-4"
         >
           <StatCard
             label="Movies"
@@ -951,8 +957,8 @@ export default function ProfilePage() {
           />
         </section>
 
-        <div className="mb-6 grid gap-4 sm:mb-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <section className="border-t-2 border-[var(--brand-coral)] bg-[var(--surface-1)] p-4 sm:p-6" aria-labelledby="taste-insight-title">
+        <div className="mb-6 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <section className="overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:p-6" aria-labelledby="taste-insight-title">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="ui-kicker">
@@ -965,11 +971,11 @@ export default function ProfilePage() {
                   A concise read based on the collection and reviews you have actually added.
                 </p>
               </div>
-              <div className="hidden h-11 w-11 flex-shrink-0 items-center justify-center text-[var(--brand-coral-strong)] sm:flex">
+              <div className="hidden h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--brand-coral)]/10 text-[var(--brand-coral-strong)] sm:flex">
                 <Sparkles className="h-6 w-6" />
               </div>
             </div>
-            <div className="grid gap-2.5 sm:grid-cols-3 sm:gap-3">
+            <div className="grid gap-2.5 sm:grid-cols-3">
               <InsightTile
                 label="Primary signal"
                 value={profilePersona.signal}
@@ -985,14 +991,14 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          <section className="border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:p-6" aria-labelledby="public-profile-title">
+          <section className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:p-6" aria-labelledby="public-profile-title">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-[var(--brand-coral-strong)]" />
                 <h2 id="public-profile-title" className="text-xl font-bold">Public profile</h2>
               </div>
               <button
-                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[var(--surface-border)] px-3 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--brand-coral)] hover:text-[var(--ink)]"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:border-[var(--brand-coral)] hover:text-[var(--ink)]"
                 onClick={() => {
                   setProfileName(user?.name ?? user?.username ?? "");
                   setProfileUsername(user?.username ?? "");
@@ -1012,7 +1018,7 @@ export default function ProfilePage() {
               {disclosureItems.map(([key, label]) => (
                 <div
                   key={key}
-                  className="flex min-h-11 items-center justify-between gap-3 border-b border-[var(--surface-border)] px-1 py-2.5 last:border-b-0"
+                  className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)]/60 px-3 py-2.5"
                 >
                   <span className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
                     {disclosure[key] ? (
@@ -1033,15 +1039,15 @@ export default function ProfilePage() {
           </section>
         </div>
 
-        <div className="sticky top-0 z-20 -mx-4 mb-6 flex overflow-x-auto border-y border-[var(--surface-border)] bg-[var(--surface-0)] px-4 mobile-native-scroll sm:static sm:mx-0 sm:mb-8 sm:border-x sm:px-0">
+        <div className="sticky top-2 z-20 mb-6 flex overflow-x-auto rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)]/95 p-1.5 shadow-xl shadow-black/15 backdrop-blur-xl mobile-native-scroll sm:static sm:mb-8 sm:w-fit sm:min-w-[32rem]">
           {(["profile", "watchlist", "reviews"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`relative inline-flex min-h-12 min-w-28 flex-1 items-center justify-center gap-2 whitespace-nowrap px-3 text-sm font-semibold transition-colors ${
+              className={`relative inline-flex min-h-11 min-w-28 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 text-sm font-semibold transition-all ${
                 tab === t
-                  ? "text-[var(--ink)] after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-[var(--brand-coral)]"
-                  : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                  ? "bg-[var(--brand-coral)] text-white shadow-lg shadow-[var(--brand-coral)]/15"
+                  : "text-[var(--ink-muted)] hover:bg-white/5 hover:text-[var(--ink)]"
               }`}
             >
               {t === "profile" && <Sparkles className="h-4 w-4" />}
@@ -1064,7 +1070,7 @@ export default function ProfilePage() {
               transition={{ duration: 0.3 }}
             >
               {/* Achievements */}
-              <div className="mb-7 sm:mb-10">
+              <section className="mb-4 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:p-6">
                 <SectionHeading
                   icon={<Award className="h-6 w-6 text-[#e94f37]" />}
                   title="Achievements"
@@ -1098,10 +1104,10 @@ export default function ProfilePage() {
                     </>
                   )}
                 </div>
-              </div>
+              </section>
 
               {/* Badges */}
-              <div className="mb-7 sm:mb-10">
+              <section className="mb-7 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:mb-10 sm:p-6">
                 <SectionHeading
                   icon={<TrendingUp className="h-6 w-6 text-[#e94f37]" />}
                   title="Earned Badges"
@@ -1130,7 +1136,7 @@ export default function ProfilePage() {
                         />
                       ))}
                 </div>
-              </div>
+              </section>
 
             </motion.div>
           )}
@@ -1143,9 +1149,17 @@ export default function ProfilePage() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              {/* Search and Filters - now same row on desktop */}
-              <div className="mb-4 sm:mb-6">
-                <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <section className="mb-5 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 sm:mb-6 sm:p-4" aria-label="Watchlist controls">
+                <div className="mb-3 flex items-end justify-between gap-4 px-1">
+                  <div>
+                    <p className="ui-kicker">Saved for later</p>
+                    <h2 className="mt-1 text-2xl font-bold text-[var(--ink)] sm:text-3xl">Your watchlist</h2>
+                  </div>
+                  <p className="hidden text-sm text-[var(--ink-muted)] sm:block">
+                    {filteredAndSortedItems.length} of {totalCount} titles
+                  </p>
+                </div>
+                <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center">
                   <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)] sm:left-4 sm:h-5 sm:w-5" />
                     <input
@@ -1153,12 +1167,12 @@ export default function ProfilePage() {
                       placeholder="Search your watchlist..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 text-sm sm:text-base bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e94f37]/50 transition"
+                      className="min-h-12 w-full rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] py-2.5 pl-10 pr-4 text-sm text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--brand-coral)] focus:ring-2 focus:ring-[var(--brand-coral)]/20 sm:pl-12 sm:text-base"
                     />
                   </div>
 
                   {/* Desktop Filters inline */}
-                  <div className="hidden sm:flex items-center gap-3">
+                  <div className="hidden items-center gap-2 sm:flex">
                     <FilterDropdown
                       value={filterType}
                       onChange={setFilterType}
@@ -1180,14 +1194,16 @@ export default function ProfilePage() {
                     />
 
                     {/* View toggle */}
-                    <div className="flex items-center gap-1 bg-neutral-900/80 border border-white/10 rounded-xl p-1">
+                    <div className="flex min-h-12 items-center gap-1 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] p-1" aria-label="Watchlist layout">
                       <button
                         onClick={() => setViewMode("grid")}
+                        aria-label="Grid view"
+                        aria-pressed={viewMode === "grid"}
                         className={`
         p-2 rounded-lg transition
         ${
           viewMode === "grid"
-            ? "bg-[#e94f37] text-white"
+            ? "bg-[var(--brand-coral)] text-white shadow-sm"
             : "text-[var(--ink-muted)] hover:bg-white/5 hover:text-[var(--ink)]"
         }
       `}
@@ -1197,11 +1213,13 @@ export default function ProfilePage() {
 
                       <button
                         onClick={() => setViewMode("list")}
+                        aria-label="List view"
+                        aria-pressed={viewMode === "list"}
                         className={`
         p-2 rounded-lg transition
         ${
           viewMode === "list"
-            ? "bg-[#e94f37] text-white"
+            ? "bg-[var(--brand-coral)] text-white shadow-sm"
             : "text-[var(--ink-muted)] hover:bg-white/5 hover:text-[var(--ink)]"
         }
       `}
@@ -1215,7 +1233,7 @@ export default function ProfilePage() {
                   <div className="flex w-full gap-2 sm:hidden">
                     <button
                       onClick={() => setMobileFilterOpen(true)}
-                      className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+                      className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] px-4 py-2.5 text-sm font-semibold"
                     >
                       <Filter className="w-4 h-4" />
                       Filters & Sort
@@ -1223,13 +1241,17 @@ export default function ProfilePage() {
                     <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
                       <button
                         onClick={() => setViewMode("grid")}
-                        className={`p-2 rounded-lg transition ${viewMode === "grid" ? "bg-[#e94f37]" : ""}`}
+                        aria-label="Grid view"
+                        aria-pressed={viewMode === "grid"}
+                        className={`p-2 rounded-lg transition ${viewMode === "grid" ? "bg-[var(--brand-coral)]" : ""}`}
                       >
                         <Grid className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setViewMode("list")}
-                        className={`p-2 rounded-lg transition ${viewMode === "list" ? "bg-[#e94f37]" : ""}`}
+                        aria-label="List view"
+                        aria-pressed={viewMode === "list"}
+                        className={`p-2 rounded-lg transition ${viewMode === "list" ? "bg-[var(--brand-coral)]" : ""}`}
                       >
                         <List className="w-4 h-4" />
                       </button>
@@ -1237,13 +1259,13 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between text-xs text-[var(--ink-muted)] sm:text-sm">
+                <div className="mt-3 flex items-center justify-between px-1 text-xs text-[var(--ink-muted)] sm:hidden">
                   <p>
                     Showing {filteredAndSortedItems.length} of {totalCount}{" "}
                     items
                   </p>
                 </div>
-              </div>
+              </section>
 
               {/* Watchlist Grid/List */}
               <AnimatePresence mode="wait">
@@ -1283,8 +1305,8 @@ export default function ProfilePage() {
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
-                            whileHover={{ scale: 1.05, y: -5 }}
-                            className="group relative aspect-[2/3] cursor-pointer overflow-hidden rounded-xl bg-zinc-900 shadow-lg transition-shadow hover:shadow-2xl hover:shadow-[#e94f37]/20 sm:rounded-2xl"
+                            whileHover={{ y: -4 }}
+                            className="group relative aspect-[2/3] cursor-pointer overflow-hidden rounded-xl border border-[var(--surface-border)] bg-zinc-900 shadow-lg transition-[border-color,box-shadow] hover:border-[var(--brand-coral)]/60 hover:shadow-2xl hover:shadow-[#e94f37]/15 sm:rounded-2xl"
                           >
                             <Link href={href} className="block h-full w-full">
                               <Image
@@ -1363,7 +1385,7 @@ export default function ProfilePage() {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
                             transition={{ duration: 0.15, ease: "easeOut" }}
-                            className="group rounded-xl border border-white/10 bg-white/5 p-3 transition-all hover:bg-white/10 sm:p-4"
+                            className="group rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 transition-all hover:border-[var(--brand-coral)]/50 hover:bg-[var(--surface-2)] sm:p-4"
                           >
                             <Link
                               href={href}
@@ -2338,7 +2360,7 @@ function resolveBadgeIcon(icon?: string) {
 
 function InsightTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-l border-[var(--surface-border)] px-4 py-2 first:border-l-0">
+    <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)]/60 px-3.5 py-3">
       <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
         {label}
       </p>
@@ -2357,10 +2379,12 @@ function SectionHeading({
   caption: string;
 }) {
   return (
-    <div className="mb-4 flex items-end justify-between gap-4 sm:mb-6">
+    <div className="mb-4 flex items-end justify-between gap-4 sm:mb-5">
       <div className="flex items-center gap-3">
-        {icon}
-        <h2 className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">{title}</h2>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-coral)]/10">
+          {icon}
+        </div>
+        <h2 className="text-2xl font-bold leading-none text-[var(--ink)] sm:text-3xl">{title}</h2>
       </div>
       <p className="hidden text-xs font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)] sm:block">
         {caption}
@@ -2377,7 +2401,7 @@ function AchievementCard({ row }: { row: UserAchievementView }) {
 
   return (
     <div
-      className={`border p-4 ${unlocked ? "border-[var(--brand-coral)] bg-[var(--surface-2)]" : "border-[var(--surface-border)] bg-[var(--surface-1)]"}`}
+      className={`rounded-xl border p-4 transition-colors ${unlocked ? "border-[var(--brand-coral)]/70 bg-[var(--brand-coral)]/[0.06]" : "border-[var(--surface-border)] bg-[var(--surface-2)]/50 hover:border-white/15"}`}
     >
       <div className="flex items-start gap-3">
         <div
@@ -2421,7 +2445,7 @@ function AchievementCard({ row }: { row: UserAchievementView }) {
 function RewardBadgeCard({ row }: { row: UserAchievementView }) {
   const accent = row.badge?.colorTheme?.accent ?? "#e94f37";
   return (
-    <div className="relative overflow-hidden border border-[var(--surface-border)] bg-[var(--surface-1)] p-4">
+    <div className="relative overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)]/50 p-4 transition-colors hover:border-white/15">
       <div className="absolute -right-6 -top-6 h-24 w-24 opacity-20">
         <Image
           src={MASCOT_SRC}
@@ -2474,10 +2498,10 @@ function StatCard({
   trend?: string;
 }) {
   return (
-    <div className="bg-[var(--surface-1)] p-3 sm:p-5">
+    <div className="group rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3.5 transition-[border-color,transform] hover:-translate-y-0.5 hover:border-[var(--brand-coral)]/40 sm:p-5">
       <div className="flex items-center justify-between">
         {icon && (
-          <div className="flex h-8 w-8 items-center justify-center text-[var(--brand-coral-strong)] sm:h-10 sm:w-10">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--brand-coral)]/10 text-[var(--brand-coral-strong)] transition-colors group-hover:bg-[var(--brand-coral)] group-hover:text-white sm:h-10 sm:w-10">
             {icon}
           </div>
         )}
@@ -2502,17 +2526,20 @@ function ProfilePageSkeleton() {
   return (
     <main className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
       <div className="ui-shell animate-pulse py-8 sm:py-10" aria-label="Loading profile">
-        <div className="flex items-center gap-4 border-b border-[var(--surface-border)] pb-8">
-          <div className="h-[4.5rem] w-[4.5rem] rounded-xl bg-[var(--surface-2)] sm:h-28 sm:w-28" />
-          <div className="flex-1 space-y-3">
-            <div className="h-3 w-24 rounded bg-[var(--surface-2)]" />
-            <div className="h-9 max-w-sm rounded bg-[var(--surface-2)]" />
-            <div className="h-4 w-48 rounded bg-[var(--surface-2)]" />
+        <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:p-8">
+          <div className="flex items-center gap-4">
+            <div className="h-[4.5rem] w-[4.5rem] rounded-2xl bg-[var(--surface-2)] sm:h-28 sm:w-28" />
+            <div className="flex-1 space-y-3">
+              <div className="h-3 w-24 rounded bg-[var(--surface-2)]" />
+              <div className="h-9 max-w-sm rounded bg-[var(--surface-2)]" />
+              <div className="h-4 w-48 rounded bg-[var(--surface-2)]" />
+            </div>
           </div>
+          <div className="mt-6 h-16 rounded-xl bg-[var(--surface-2)]" />
         </div>
-        <div className="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-border)] lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-24 bg-[var(--surface-1)]" />
+            <div key={index} className="h-24 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)]" />
           ))}
         </div>
       </div>

@@ -20,6 +20,7 @@ import {
   type SearchSort,
 } from "./search-state";
 import styles from "./search.module.css";
+import { SearchCustomSelect, SearchSortSelect } from "./SearchSortSelect";
 
 interface SearchResult {
   id: number;
@@ -410,118 +411,121 @@ export default function SearchResultsPage() {
             </button>
           </form>
         </header>
-        <div className={styles.types} role="group" aria-label="Result type">
-          {TYPES.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              className={control}
-              aria-pressed={applied.type === value}
-              disabled={!query && value === "person"}
-              onClick={() => commit(forType(applied, value))}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {!query && (
-          <p className={`${styles.muted} mb-4`}>
-            Search a name to find people, or choose filters to explore the
-            catalogue.
-          </p>
-        )}
-        <div className={styles.toolbar}>
-          <button
-            ref={filterTrigger}
-            type="button"
-            className={control}
-            aria-haspopup="dialog"
-            aria-controls="search-filters"
-            onClick={openFilters}
-          >
-            <SlidersHorizontal size={18} aria-hidden="true" />
-            Filters
-            {constraints.length > 0 && <span>({constraints.length})</span>}
-          </button>
-          <label className={`${styles.field} ${styles.sort}`}>
-            Sort{query && " this page"}
-            <select
-              className={styles.input}
-              value={applied.sort}
-              onChange={(event) =>
-                commit({ ...applied, sort: event.target.value as SearchSort })
-              }
-            >
-              <option value="relevance">
-                {query ? "Most relevant" : "Popular"}
-              </option>
-              {applied.type !== "person" && (
-                <>
-                  <option value="rating">Highest rated</option>
-                  <option value="date">Newest releases</option>
-                </>
-              )}
-              <option value="popularity">Most popular</option>
-            </select>
-          </label>
-          <div
-            className={styles.views}
-            role="group"
-            aria-label="Results layout"
-          >
-            <button
-              type="button"
-              className={control}
-              aria-label="Grid view"
-              aria-pressed={view === "grid"}
-              onClick={() => setView("grid")}
-            >
-              <Grid3X3 size={18} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className={control}
-              aria-label="List view"
-              aria-pressed={view === "list"}
-              onClick={() => setView("list")}
-            >
-              <List size={18} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-        {constraints.length > 0 && (
-          <div
-            className={styles.constraints}
-            role="group"
-            aria-label="Applied filters"
-          >
-            {constraints.map(({ label, clear }) => (
+        <section className={styles.controls} aria-label="Search controls">
+          <div className={styles.types} role="group" aria-label="Result type">
+            {TYPES.map(({ value, label }) => (
               <button
+                key={value}
                 type="button"
-                key={label}
                 className={control}
-                onClick={clear}
-                aria-label={`Remove filter: ${label}`}
+                aria-pressed={applied.type === value}
+                disabled={!query && value === "person"}
+                onClick={() => commit(forType(applied, value))}
               >
                 {label}
-                <X size={14} aria-hidden="true" />
               </button>
             ))}
-            <button
-              type="button"
-              className={control}
-              onClick={() =>
-                commit({
-                  ...emptyFilters(),
-                  type: applied.type,
-                  sort: applied.sort,
-                })
-              }
-            >
-              Clear all filters
-            </button>
           </div>
-        )}
+          {!query && (
+            <p className={styles.muted}>
+              Search a name to find people, or choose filters to explore the
+              catalogue.
+            </p>
+          )}
+          <div className={styles.toolbar}>
+            <button
+              ref={filterTrigger}
+              type="button"
+              className={`${control} ${styles.filterButton}`}
+              aria-haspopup="dialog"
+              aria-controls="search-filters"
+              onClick={openFilters}
+            >
+              <SlidersHorizontal size={18} aria-hidden="true" />
+              Filters
+              {constraints.length > 0 && (
+                <span className={styles.filterCount}>{constraints.length}</span>
+              )}
+            </button>
+            <SearchSortSelect
+              label={`Sort${query ? " this page" : ""}`}
+              value={applied.sort}
+              options={[
+                {
+                  value: "relevance",
+                  label: query ? "Most relevant" : "Popular",
+                },
+                ...(applied.type !== "person"
+                  ? [
+                      { value: "rating" as SearchSort, label: "Highest rated" },
+                      { value: "date" as SearchSort, label: "Newest releases" },
+                    ]
+                  : []),
+                { value: "popularity", label: "Most popular" },
+              ]}
+              onChange={(sort) => commit({ ...applied, sort })}
+            />
+            <div
+              className={styles.views}
+              role="group"
+              aria-label="Results layout"
+            >
+              <button
+                type="button"
+                className={control}
+                aria-label="Grid view"
+                aria-pressed={view === "grid"}
+                onClick={() => setView("grid")}
+              >
+                <Grid3X3 size={18} aria-hidden="true" />
+                <span className={styles.viewLabel}>Grid</span>
+              </button>
+              <button
+                type="button"
+                className={control}
+                aria-label="List view"
+                aria-pressed={view === "list"}
+                onClick={() => setView("list")}
+              >
+                <List size={18} aria-hidden="true" />
+                <span className={styles.viewLabel}>List</span>
+              </button>
+            </div>
+          </div>
+          {constraints.length > 0 && (
+            <div
+              className={styles.constraints}
+              role="group"
+              aria-label="Applied filters"
+            >
+              {constraints.map(({ label, clear }) => (
+                <button
+                  type="button"
+                  key={label}
+                  className={control}
+                  onClick={clear}
+                  aria-label={`Remove filter: ${label}`}
+                >
+                  {label}
+                  <X size={14} aria-hidden="true" />
+                </button>
+              ))}
+              <button
+                type="button"
+                className={control}
+                onClick={() =>
+                  commit({
+                    ...emptyFilters(),
+                    type: applied.type,
+                    sort: applied.sort,
+                  })
+                }
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
+        </section>
         <section
           ref={resultsRef}
           aria-labelledby="results-heading"
@@ -620,8 +624,15 @@ export default function SearchResultsPage() {
                           <RatingBadge rating={item.vote_average} />
                         </div>
                       )}
+                      <span className={styles.mediaKind}>
+                        {item.type === "person"
+                          ? "Person"
+                          : item.type === "movie"
+                            ? "Movie"
+                            : "Series"}
+                      </span>
                     </div>
-                    <div>
+                    <div className={styles.cardBody}>
                       <h3>{title}</h3>
                       <p className={styles.meta}>
                         {item.type === "person"
@@ -630,6 +641,9 @@ export default function SearchResultsPage() {
                       </p>
                       {view === "list" && item.overview && (
                         <p className={styles.overview}>{item.overview}</p>
+                      )}
+                      {view === "list" && (
+                        <span className={styles.cardAction}>View details →</span>
                       )}
                     </div>
                   </Link>
@@ -708,7 +722,13 @@ export default function SearchResultsPage() {
           }}
         >
           <header className={styles.drawerHeader}>
-            <h2 id="filter-heading">Filters</h2>
+            <div>
+              <p className="ui-kicker">Refine your results</p>
+              <h2 id="filter-heading">Filters</h2>
+              <p className={styles.muted}>
+                Narrow the catalogue without losing your search.
+              </p>
+            </div>
             <button
               autoFocus
               type="button"
@@ -769,6 +789,7 @@ export default function SearchResultsPage() {
                         step={1}
                         placeholder="Any year"
                         value={draft.yearMin}
+                        aria-invalid={Boolean(validation)}
                         onChange={(event) => {
                           setValidation(null);
                           setDraft({ ...draft, yearMin: event.target.value });
@@ -785,6 +806,7 @@ export default function SearchResultsPage() {
                         step={1}
                         placeholder="Any year"
                         value={draft.yearMax}
+                        aria-invalid={Boolean(validation)}
                         onChange={(event) => {
                           setValidation(null);
                           setDraft({ ...draft, yearMax: event.target.value });
@@ -793,31 +815,34 @@ export default function SearchResultsPage() {
                     </label>
                   </div>
                 </fieldset>
-                <label className={`${styles.field} mb-6`}>
-                  Minimum TMDB rating
-                  <span className={styles.muted}>Out of 10</span>
-                  <select
-                    className={styles.input}
+                <div className={styles.drawerControlGroup}>
+                  <SearchCustomSelect
+                    variant="field"
+                    label="Minimum TMDB rating"
                     value={draft.ratingMin}
-                    onChange={(event) => {
+                    options={[
+                      { value: "", label: "Any rating" },
+                      ...(draft.ratingMin &&
+                      !Number.isInteger(Number(draft.ratingMin))
+                        ? [
+                            {
+                              value: draft.ratingMin,
+                              label: `${draft.ratingMin}+ / 10`,
+                            },
+                          ]
+                        : []),
+                      ...Array.from({ length: 11 }, (_, rating) => ({
+                        value: String(rating),
+                        label: `${rating}+ / 10`,
+                      })),
+                    ]}
+                    onChange={(ratingMin) => {
                       setValidation(null);
-                      setDraft({ ...draft, ratingMin: event.target.value });
+                      setDraft({ ...draft, ratingMin });
                     }}
-                  >
-                    <option value="">Any rating</option>
-                    {draft.ratingMin &&
-                      !Number.isInteger(Number(draft.ratingMin)) && (
-                        <option value={draft.ratingMin}>
-                          {draft.ratingMin}+ / 10
-                        </option>
-                      )}
-                    {Array.from({ length: 11 }, (_, rating) => (
-                      <option key={rating} value={rating}>
-                        {rating}+ / 10
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                  />
+                  <p className={styles.controlHint}>Only titles at or above this score.</p>
+                </div>
                 <details className={styles.more}>
                   <summary>More options</summary>
                   <fieldset className={`${styles.group} ${styles.countries}`}>
@@ -852,30 +877,31 @@ export default function SearchResultsPage() {
                       </p>
                     )}
                   </fieldset>
-                  <label className={styles.field}>
-                    Maximum rating
-                    <select
-                      className={styles.input}
-                      value={draft.ratingMax}
-                      onChange={(event) => {
-                        setValidation(null);
-                        setDraft({ ...draft, ratingMax: event.target.value });
-                      }}
-                    >
-                      <option value="">No maximum</option>
-                      {draft.ratingMax &&
-                        !Number.isInteger(Number(draft.ratingMax)) && (
-                          <option value={draft.ratingMax}>
-                            {draft.ratingMax} / 10
-                          </option>
-                        )}
-                      {Array.from({ length: 11 }, (_, rating) => (
-                        <option key={rating} value={rating}>
-                          {rating} / 10
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <SearchCustomSelect
+                    variant="field"
+                    label="Maximum rating"
+                    value={draft.ratingMax}
+                    options={[
+                      { value: "", label: "No maximum" },
+                      ...(draft.ratingMax &&
+                      !Number.isInteger(Number(draft.ratingMax))
+                        ? [
+                            {
+                              value: draft.ratingMax,
+                              label: `${draft.ratingMax} / 10`,
+                            },
+                          ]
+                        : []),
+                      ...Array.from({ length: 11 }, (_, rating) => ({
+                        value: String(rating),
+                        label: `${rating} / 10`,
+                      })),
+                    ]}
+                    onChange={(ratingMax) => {
+                      setValidation(null);
+                      setDraft({ ...draft, ratingMax });
+                    }}
+                  />
                 </details>
               </>
             )}

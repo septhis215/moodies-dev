@@ -194,17 +194,14 @@ export default function FootballStoriesSection() {
           ) : (
             <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_176px] lg:items-stretch">
               <div className="group/carousel relative min-w-0">
-                <div
-                  className="mb-3 flex justify-end gap-2"
-                  role="group"
-                  aria-label="World Cup documentary navigation"
-                >
+                <div role="group" aria-label="World Cup documentary navigation">
                   <CarouselNavButton
                     direction="previous"
                     onClick={() => scroll(-1)}
                     disabled={!canScrollLeft || loading}
                     aria-controls={railId}
                     aria-label="Previous World Cup documentary picks"
+                    className="absolute -left-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100"
                   />
                   <CarouselNavButton
                     direction="next"
@@ -212,6 +209,7 @@ export default function FootballStoriesSection() {
                     disabled={!canScrollRight || loading}
                     aria-controls={railId}
                     aria-label="Next World Cup documentary picks"
+                    className="absolute -right-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100"
                   />
                 </div>
                 <div

@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Bookmark, Heart, Search, SlidersHorizontal, X } from "lucide-react";
+import {
+  Bookmark,
+  Heart,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import { LibraryCard } from "./LibraryCard";
 import { useLibrary } from "./useLibrary";
 import {
@@ -15,9 +21,9 @@ import {
 } from "./library-state";
 
 const controlClass =
-  "min-h-11 min-w-0 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]";
+  "min-h-11 min-w-0 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-0)] px-3 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] transition-colors hover:border-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]";
 const gridClass =
-  "grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
+  "grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6";
 const sorts = [
   { value: "date_desc", label: "Newest release" },
   { value: "date_asc", label: "Oldest release" },
@@ -70,33 +76,45 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
   return (
     <section
       aria-labelledby="library-heading"
-      className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]"
+      className="min-h-screen bg-[radial-gradient(circle_at_82%_4%,rgba(240,100,75,0.09),transparent_30rem)] text-[var(--ink)]"
     >
       <div className="ui-shell pb-12 pt-6 sm:pt-10 lg:pt-24">
-        <header className="mb-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1
-              id="library-heading"
-              className="flex items-center gap-3 text-3xl font-bold leading-none sm:text-4xl"
-            >
-              <Icon
-                className="h-6 w-6 text-[var(--brand-coral-strong)]"
-                aria-hidden="true"
-              />
-              {title}
-            </h1>
-            <Link
-              href={kind === "watchlist" ? "/liked" : "/watchlist"}
-              className="inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-[var(--brand-coral-strong)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
-            >
-              {kind === "watchlist" ? "Liked titles" : "Watchlist"}
-            </Link>
+        <header className="relative mb-6 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[linear-gradient(120deg,rgba(255,255,255,0.045),transparent_55%),var(--surface-1)] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:p-7 lg:p-8">
+          <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[var(--brand-coral)]/10 blur-3xl" aria-hidden="true" />
+          <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div className="max-w-2xl">
+              <div className="mb-4 grid h-11 w-11 place-items-center rounded-xl border border-[var(--brand-coral)]/30 bg-[var(--brand-coral)]/10 text-[var(--brand-coral-strong)]">
+                <Icon className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <p className="ui-kicker">Your private collection</p>
+              <h1
+                id="library-heading"
+                className="mt-2 text-3xl font-bold leading-none sm:text-4xl"
+              >
+                {title}
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
+                {kind === "watchlist"
+                  ? "Keep the films and series you want to watch next in one calm, easy-to-scan shelf."
+                  : "A personal shelf for the stories you enjoyed and would happily return to."}
+              </p>
+              <Link
+                href={kind === "watchlist" ? "/liked" : "/watchlist"}
+                className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-0)] px-4 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)] hover:text-[var(--brand-coral-strong)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]"
+              >
+                View {kind === "watchlist" ? "liked titles" : "watchlist"}
+                <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+
+            {library.signedIn ? (
+              <div className="grid grid-cols-3 gap-2 sm:gap-3" aria-label="Library summary">
+                <LibraryStat label="Total" value={library.entries.length} />
+                <LibraryStat label="Movies" value={movieCount} />
+                <LibraryStat label="Series" value={seriesCount} />
+              </div>
+            ) : null}
           </div>
-          <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-            {kind === "watchlist"
-              ? "Saved for your next movie night."
-              : "The stories you would come back to."}
-          </p>
         </header>
 
         {library.authLoading ? (
@@ -126,7 +144,7 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
             <div
               role="search"
               aria-label={"Search " + title.toLowerCase()}
-              className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+              className="grid gap-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 shadow-[0_14px_40px_rgba(0,0,0,0.16)] sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:p-4 lg:sticky lg:top-3 lg:z-20"
             >
               <div className="relative min-w-0">
                 <label htmlFor="library-search" className="sr-only">
@@ -159,32 +177,43 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
                 )}
               </div>
               <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:contents">
-                <label className="sr-only" htmlFor="library-sort">
-                  Sort titles
-                </label>
-                <select
-                  id="library-sort"
-                  value={filters.sort}
-                  onChange={(event) =>
-                    change("sort", event.target.value as LibraryFilters["sort"])
-                  }
-                  className={controlClass + " w-full sm:w-44"}
-                >
-                  {sorts.map((sort) => (
-                    <option key={sort.value} value={sort.value}>
-                      {sort.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <label className="sr-only" htmlFor="library-sort">
+                    Sort titles
+                  </label>
+                  <select
+                    id="library-sort"
+                    value={filters.sort}
+                    onChange={(event) =>
+                      change(
+                        "sort",
+                        event.target.value as LibraryFilters["sort"],
+                      )
+                    }
+                    className={
+                      controlClass +
+                      " w-full appearance-none pr-9 sm:w-44"
+                    }
+                  >
+                    {sorts.map((sort) => (
+                      <option key={sort.value} value={sort.value}>
+                        {sort.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--brand-coral-strong)]"
+                  >
+                    ▾
+                  </span>
+                </div>
                 <button
                   type="button"
                   aria-expanded={expanded}
                   aria-controls="library-ranges"
                   onClick={() => setExpanded((current) => !current)}
-                  className={
-                    controlClass +
-                    " inline-flex items-center justify-center gap-2 font-semibold"
-                  }
+                  className={`${controlClass} inline-flex items-center justify-center gap-2 font-semibold ${expanded ? "border-[var(--brand-coral)] bg-[var(--surface-2)] text-[var(--brand-coral-strong)]" : ""}`}
                 >
                   <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                   Filters
@@ -199,7 +228,7 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
             <div
               id="library-ranges"
               hidden={!expanded}
-              className="mt-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4"
+              className="mt-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 shadow-[0_14px_40px_rgba(0,0,0,0.14)] sm:p-5"
             >
               <div className="grid gap-4 sm:grid-cols-2">
                 <RangeFields
@@ -250,11 +279,11 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
                 </p>
               )}
             </div>
-            <div className="mb-5 mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="mb-6 mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-[var(--surface-border)] pb-4">
               <div
                 role="group"
                 aria-label="Filter by format"
-                className="flex min-w-0 gap-1"
+                className="flex min-w-0 gap-1 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-1"
               >
                 {(
                   [
@@ -269,9 +298,9 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
                     aria-pressed={filters.format === value}
                     onClick={() => change("format", value)}
                     className={
-                      "min-h-11 rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] " +
+                      "min-h-10 rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] " +
                       (filters.format === value
-                        ? "bg-[var(--surface-2)] text-[var(--brand-coral-strong)]"
+                        ? "bg-[var(--brand-coral)] text-white shadow-sm"
                         : "text-[var(--ink-muted)] hover:text-[var(--ink)]")
                     }
                   >
@@ -367,6 +396,27 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
                       Showing {Math.min(visibleCount, filtered.length)} of{" "}
                       {filtered.length} titles
                     </p>
+                    <div className="mb-5 flex items-end justify-between gap-4">
+                      <div>
+                        <p className="ui-kicker">Your shelf</p>
+                        <h2 className="mt-2 text-2xl font-bold leading-none text-[var(--ink)] sm:text-3xl">
+                          {filters.format === "movie"
+                            ? kind === "watchlist"
+                              ? "Saved movies"
+                              : "Movies you liked"
+                            : filters.format === "tv"
+                              ? kind === "watchlist"
+                                ? "Saved series"
+                                : "Series you liked"
+                              : kind === "watchlist"
+                                ? "Ready when you are"
+                                : "Stories you loved"}
+                        </h2>
+                      </div>
+                      <p className="shrink-0 text-sm text-[var(--ink-muted)]">
+                        {filtered.length} {filtered.length === 1 ? "title" : "titles"}
+                      </p>
+                    </div>
                     <div className={gridClass}>
                       {filtered.slice(0, visibleCount).map((entry) => (
                         <LibraryCard
@@ -463,6 +513,29 @@ function RangeFields({
     </fieldset>
   );
 }
+
+function LibraryStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="min-w-[5.5rem] rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)]/75 p-3 sm:min-w-28 sm:p-4">
+      <div className="flex items-center gap-2">
+        <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-coral)]" aria-hidden="true" />
+        <span className="text-xs font-semibold text-[var(--ink-muted)]">
+          {label}
+        </span>
+      </div>
+      <p className="mt-2 text-2xl font-bold leading-none text-[var(--ink)]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function LibraryState({
   title,
   note,
@@ -478,10 +551,13 @@ function LibraryState({
 }) {
   return (
     <section
-      className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-6 sm:p-8"
+      className="relative overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[linear-gradient(120deg,rgba(255,255,255,0.035),transparent_60%),var(--surface-1)] p-7 shadow-[0_20px_55px_rgba(0,0,0,0.18)] sm:p-10"
       aria-label={title}
     >
-      <h2 className="text-2xl font-bold">{title}</h2>
+      <div className="mb-5 grid h-11 w-11 place-items-center rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] text-[var(--brand-coral-strong)]">
+        <Bookmark className="h-5 w-5" aria-hidden="true" />
+      </div>
+      <h2 className="text-2xl font-bold sm:text-3xl">{title}</h2>
       <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
         {note}
       </p>

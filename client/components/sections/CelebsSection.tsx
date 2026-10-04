@@ -161,28 +161,26 @@ export default function CelebSection() {
           </p>
         </motion.div>
 
-        <div
-          className="mb-3 flex justify-end gap-2"
-          role="group"
-          aria-label="Celebrity navigation"
-        >
-          <CarouselNavButton
-            direction="previous"
-            onClick={() => scroll(-1)}
-            disabled={!canScrollLeft}
-            aria-controls={railId}
-            aria-label="Previous celebrities"
-          />
-
-          <CarouselNavButton
-            direction="next"
-            onClick={() => scroll(1)}
-            disabled={!canScrollRight}
-            aria-controls={railId}
-            aria-label="Next celebrities"
-          />
-        </div>
         <div className="relative group/carousel">
+          <div role="group" aria-label="Celebrity navigation">
+            <CarouselNavButton
+              direction="previous"
+              onClick={() => scroll(-1)}
+              disabled={!canScrollLeft}
+              aria-controls={railId}
+              aria-label="Previous celebrities"
+              className="absolute -left-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-left-6"
+            />
+
+            <CarouselNavButton
+              direction="next"
+              onClick={() => scroll(1)}
+              disabled={!canScrollRight}
+              aria-controls={railId}
+              aria-label="Next celebrities"
+              className="absolute -right-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-right-6"
+            />
+          </div>
           <motion.div
             id={railId}
             ref={containerRef}

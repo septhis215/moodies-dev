@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -281,6 +281,17 @@ const getPointerAlignedRotation = (
   return currentRotation + extraSpins * 360 + delta;
 };
 
+const getMoodsForCluster = (
+  moods: MoodFromApi[],
+  cluster: MoodCluster,
+) => {
+  const clusterNames = new Set(cluster.moodNames.map((name) => slugify(name)));
+  const filtered = moods.filter((mood) =>
+    clusterNames.has(slugify(mood.name)),
+  );
+  return filtered.length > 0 ? filtered : moods.slice(0, 8);
+};
+
 export default function MoodDiscoveryWheel() {
   const [moods, setMoods] = useState<MoodFromApi[]>([]);
   const [loadingMoods, setLoadingMoods] = useState(true);
@@ -294,28 +305,22 @@ export default function MoodDiscoveryWheel() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [currentRotation, setCurrentRotation] = useState(0);
   const [showMoodBubble, setShowMoodBubble] = useState(true);
+  const recommendationRequestRef = useRef(0);
 
   const activeCluster =
     moodClusters.find((cluster) => cluster.id === activeClusterId) ??
     moodClusters[0];
-  const activeClusterNameSet = useMemo(
-    () => new Set(activeCluster.moodNames.map((name) => slugify(name))),
-    [activeCluster],
+  const activeMoods = useMemo(
+    () => getMoodsForCluster(moods, activeCluster),
+    [activeCluster, moods],
   );
-
-  const activeMoods = useMemo(() => {
-    const filtered = moods.filter((mood) =>
-      activeClusterNameSet.has(slugify(mood.name)),
-    );
-    return filtered.length > 0 ? filtered : moods.slice(0, 8);
-  }, [activeClusterNameSet, moods]);
 
   const selectedMood = useMemo(
     () =>
-      moods.find((mood) => mood.id === selectedMoodId) ??
+      activeMoods.find((mood) => mood.id === selectedMoodId) ??
       activeMoods[0] ??
       null,
-    [activeMoods, moods, selectedMoodId],
+    [activeMoods, selectedMoodId],
   );
 
   useEffect(() => {
@@ -386,6 +391,7 @@ export default function MoodDiscoveryWheel() {
     forceRefresh = false,
     limit = 8,
   ) {
+    const requestId = ++recommendationRequestRef.current;
     setLoadingRecs(true);
     setRecError(null);
 
@@ -412,6 +418,7 @@ export default function MoodDiscoveryWheel() {
             `Failed to fetch recommendations (${response.status})`,
           );
         const data = await response.json();
+        if (requestId !== recommendationRequestRef.current) return;
         setRecommendations(
           normalizeRecommendations(data?.recommendations ?? []),
         );
@@ -429,19 +436,22 @@ export default function MoodDiscoveryWheel() {
       if (!response.ok)
         throw new Error(`Failed to fetch recommendations (${response.status})`);
       const data = await response.json();
+      if (requestId !== recommendationRequestRef.current) return;
       setRecommendations(
         normalizeRecommendations(data?.recommendations ?? data?.results ?? []),
       );
     } catch (error) {
+      if (requestId !== recommendationRequestRef.current) return;
       console.error("fetchRecommendationsForMood error:", error);
       setRecError("Unable to load recommendations");
       setRecommendations([]);
     } finally {
-      setLoadingRecs(false);
+      if (requestId === recommendationRequestRef.current) setLoadingRecs(false);
     }
   }
 
   const selectMood = (mood: MoodFromApi, alignWheel = true) => {
+    if (isSpinning) return;
     setSelectedMoodId(mood.id);
     setShowMoodBubble(true);
     const cluster = moodClusters.find((item) =>
@@ -450,13 +460,31 @@ export default function MoodDiscoveryWheel() {
     if (cluster) setActiveClusterId(cluster.id);
 
     if (alignWheel) {
-      const index = activeMoods.findIndex((item) => item.id === mood.id);
+      const targetMoods = cluster
+        ? getMoodsForCluster(moods, cluster)
+        : activeMoods;
+      const index = targetMoods.findIndex((item) => item.id === mood.id);
       if (index >= 0) {
         setCurrentRotation((rotation) =>
-          getPointerAlignedRotation(rotation, index, activeMoods.length),
+          getPointerAlignedRotation(rotation, index, targetMoods.length),
         );
       }
     }
+  };
+
+  const selectCluster = (cluster: MoodCluster) => {
+    if (isSpinning || cluster.id === activeClusterId) return;
+    const clusterMoods = getMoodsForCluster(moods, cluster);
+    const nextMood = clusterMoods[0];
+
+    setActiveClusterId(cluster.id);
+    setSelectedMoodId(nextMood?.id ?? null);
+    setShowMoodBubble(Boolean(nextMood));
+    setCurrentRotation((rotation) =>
+      nextMood
+        ? getPointerAlignedRotation(rotation, 0, clusterMoods.length)
+        : rotation,
+    );
   };
 
   const spinWheel = () => {
@@ -481,7 +509,6 @@ export default function MoodDiscoveryWheel() {
       if (mood) {
         setSelectedMoodId(mood.id);
         setShowMoodBubble(true);
-        fetchRecommendationsForMood(mood.id, true, 8);
       }
       setIsSpinning(false);
     }, 2600);
@@ -497,20 +524,18 @@ export default function MoodDiscoveryWheel() {
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(520px,1.2fr)] lg:items-end">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--brand-coral-strong)]">
-                Mood wheel
-              </p>
-              <h1 className="mt-1 max-w-2xl text-3xl font-black leading-none tracking-tight sm:text-4xl">
+              <p className="ui-kicker">Mood wheel</p>
+              <h1 className="mt-2 max-w-2xl text-3xl font-bold leading-none sm:text-4xl">
                 What feels right tonight?
               </h1>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
+              <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
                 Pick a mood directly or spin once. We’ll turn the result into a
                 short watchlist.
               </p>
             </div>
 
             <div
-              className="flex snap-x gap-2 overflow-x-auto pb-1 mobile-native-scroll sm:grid sm:grid-cols-4 sm:overflow-visible"
+              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
               role="tablist"
               aria-label="Mood families"
             >
@@ -519,13 +544,14 @@ export default function MoodDiscoveryWheel() {
                 return (
                   <button
                     key={cluster.id}
-                    onClick={() => setActiveClusterId(cluster.id)}
+                    onClick={() => selectCluster(cluster)}
+                    disabled={isSpinning || loadingMoods}
                     role="tab"
                     aria-selected={isActive}
-                    className={`min-w-[138px] snap-start rounded-md border px-3 py-2.5 text-left transition-colors sm:min-w-0 ${
+                    className={`min-w-0 rounded-xl border px-3 py-3 text-left transition-[border-color,background-color,box-shadow] disabled:cursor-not-allowed disabled:opacity-55 ${
                       isActive
-                        ? "border-[var(--brand-coral)] bg-[var(--surface-2)]"
-                        : "border-white/10 bg-[var(--surface-1)] hover:border-white/25"
+                        ? "border-[var(--brand-coral)] bg-[var(--brand-coral)]/10 shadow-lg shadow-black/15"
+                        : "border-white/10 bg-[var(--surface-1)] hover:border-white/25 hover:bg-[var(--surface-2)]"
                     }`}
                   >
                     <div className="flex items-center gap-2">
@@ -533,10 +559,13 @@ export default function MoodDiscoveryWheel() {
                         className="h-2 w-2 shrink-0 rounded-full"
                         style={{ backgroundColor: cluster.color }}
                       />
-                      <span className="text-sm font-black text-white">
+                      <span className="text-sm font-bold text-white">
                         {cluster.label}
                       </span>
                     </div>
+                    <span className="mt-1.5 line-clamp-2 block text-xs leading-4 text-[var(--ink-muted)]">
+                      {cluster.description}
+                    </span>
                   </button>
                 );
               })}
@@ -547,20 +576,23 @@ export default function MoodDiscoveryWheel() {
 
       <section className="py-5 sm:py-6">
         <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_390px]">
-          <div className="min-w-0 rounded-md border border-white/10 bg-[var(--surface-1)] p-3 sm:p-5">
-            <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="min-w-0 rounded-xl border border-white/10 bg-[var(--surface-1)] p-3 sm:p-5">
+            <div className="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--brand-coral-strong)]">
+                <p className="ui-kicker">
                   {activeCluster.label} moods
                 </p>
-                <h2 className="mt-1 text-xl font-black sm:text-2xl">
+                <h2 className="mt-1 text-2xl font-bold leading-tight">
                   Choose or leave it to chance
                 </h2>
+                <p className="mt-1 text-sm leading-5 text-[var(--ink-muted)]">
+                  Tap a mood below, or let the wheel choose one for you.
+                </p>
               </div>
               <button
                 onClick={spinWheel}
                 disabled={isSpinning || loadingMoods}
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-[var(--brand-coral)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-coral-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[var(--brand-coral)] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-[var(--brand-coral)]/15 transition-colors hover:bg-[var(--brand-coral-strong)] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {isSpinning ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -571,18 +603,20 @@ export default function MoodDiscoveryWheel() {
               </button>
             </div>
 
-            <div className="mb-3 flex snap-x gap-2 overflow-x-auto pb-1 mobile-native-scroll">
+            <p className="ui-kicker mb-2">Pick directly</p>
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:flex sm:overflow-x-auto sm:pb-1 mobile-native-scroll">
               {activeMoods.map((mood) => {
                 const isSelected = mood.id === selectedMoodId;
                 return (
                   <button
                     key={mood.id}
                     onClick={() => selectMood(mood)}
+                    disabled={isSpinning}
                     aria-pressed={isSelected}
-                    className={`flex min-w-fit snap-start items-center gap-2 rounded-md border py-1.5 pl-1.5 pr-3 text-left transition-colors ${
+                    className={`flex min-h-12 min-w-0 items-center gap-2 rounded-xl border p-1.5 pr-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-55 sm:min-w-fit sm:pr-3 ${
                       isSelected
-                        ? "border-white/35 bg-white/[0.09]"
-                        : "border-white/10 bg-black/20 hover:border-white/25"
+                        ? "border-[var(--brand-coral)] bg-[var(--brand-coral)]/10"
+                        : "border-white/10 bg-black/20 hover:border-white/25 hover:bg-white/[0.04]"
                     }`}
                   >
                     <span className="relative h-8 w-8 shrink-0 rounded-sm bg-black/30">
@@ -594,7 +628,7 @@ export default function MoodDiscoveryWheel() {
                         className="object-contain"
                       />
                     </span>
-                    <span className="text-xs font-bold text-white">
+                    <span className="truncate text-xs font-bold text-white">
                       {mood.name}
                     </span>
                   </button>
@@ -603,7 +637,7 @@ export default function MoodDiscoveryWheel() {
             </div>
 
             <div className="grid place-items-center">
-              <div className="relative size-[min(calc(100vw-88px),430px)] sm:size-[430px]">
+              <div className="relative size-[min(calc(100vw-58px),430px)] sm:size-[430px]">
                 <motion.div
                   className="absolute inset-0"
                   animate={{ rotate: currentRotation }}
@@ -636,8 +670,9 @@ export default function MoodDiscoveryWheel() {
                           key={mood.id}
                           className="cursor-pointer outline-none"
                           onClick={() => selectMood(mood)}
-                          tabIndex={0}
+                          tabIndex={isSpinning ? -1 : 0}
                           role="button"
+                          aria-disabled={isSpinning}
                           aria-label={`Select ${mood.name} mood`}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
@@ -716,7 +751,7 @@ export default function MoodDiscoveryWheel() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="mx-auto mt-2 flex max-w-xl items-center gap-3 border-t border-white/10 pt-3"
+                  className="mx-auto mt-3 flex max-w-xl items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3"
                   aria-live="polite"
                 >
                   <span className="relative h-11 w-11 shrink-0 rounded-sm bg-black/30">
@@ -732,16 +767,16 @@ export default function MoodDiscoveryWheel() {
                     <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--brand-coral-strong)]">
                       Selected mood
                     </span>
-                    <span className="mt-0.5 block text-lg font-black text-white">
+                    <span className="mt-0.5 block text-lg font-bold text-white">
                       {selectedMood.name}
                     </span>
-                    <span className="line-clamp-1 block text-xs text-zinc-400">
+                    <span className="line-clamp-2 block text-xs leading-4 text-[var(--ink-muted)]">
                       {selectedMood.description}
                     </span>
                   </span>
                 </motion.div>
               ) : (
-                <div className="mt-2 border-t border-white/10 pt-3 text-center text-sm text-zinc-400">
+                <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 text-center text-sm text-[var(--ink-muted)]">
                   The wheel is choosing…
                 </div>
               )}
