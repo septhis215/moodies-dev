@@ -105,10 +105,10 @@ try {
       "Top pick is not duplicated",
     );
     assert.equal(submitted[1].answers.length, 5);
-    assert.equal(
-      submitted[1].answers[0].mood,
-      "thrilling",
-      "Back replaces the answer rather than appending",
+    assert.deepEqual(
+      submitted[1].answers.map((answer) => answer.category).sort(),
+      ["commitment", "feeling", "format", "genre", "pace"],
+      "Every randomized session retains all recommendation signals",
     );
     assert.deepEqual(submitted[0], submitted[1], "Retry preserves answers");
     const top = page.getByRole("button", { name: /Top match Quiz fixture 1/ });
@@ -136,9 +136,9 @@ try {
       "hidden",
     );
     await page
-      .getByText("How we matched this · edit answers", { exact: true })
-      .click();
-    await page.getByRole("button", { name: /^Format/ }).click();
+      .getByRole("heading", { name: "How we matched this", exact: true })
+      .waitFor();
+    await page.getByRole("button", { name: /^Edit Format:/ }).click();
     await answer(1);
     await page
       .getByRole("button", { name: "Update matches", exact: true })
@@ -147,14 +147,15 @@ try {
       .getByRole("heading", { name: "Quiz fixture 1", exact: true })
       .waitFor();
     assert.equal(
-      submitted[2].answers[3].mediaType,
+      submitted[2].answers.find((answer) => answer.category === "format")
+        ?.mediaType,
       "tv",
       "One answer can be edited from results",
     );
-    assert.equal(
-      submitted[2].answers[0].mood,
-      "thrilling",
-      "Unedited answers remain intact",
+    assert.deepEqual(
+      submitted[2].answers.filter((answer) => answer.category !== "format"),
+      submitted[1].answers.filter((answer) => answer.category !== "format"),
+      "Unedited randomized answers remain intact",
     );
     assert.ok(
       await page.evaluate(

@@ -8,7 +8,12 @@ import { RatingBadge } from "@/components/ui/rating-badge";
 import { tmdbImage } from "@/lib/tmdb";
 import { apiRequest } from "@/lib/errors/api-client";
 import { handleAppError } from "@/lib/errors/handle-app-error";
-import { QUIZ_SIGNALS, getMoodMascotSrc } from "./quiz-signals";
+import {
+  QUIZ_SIGNALS,
+  createQuizSessionQuestions,
+  getMoodMascotSrc,
+  getQuizSessionQuestions,
+} from "./quiz-signals";
 
 type Stage = "welcome" | "quiz" | "loading" | "results" | "error";
 type MovieItem = {
@@ -30,8 +35,9 @@ type ResponseData = {
   partialResults?: boolean;
   analysis?: { rankingVersion?: string };
 };
-const STORAGE_KEY = "moodies:quiz:signal-reel:v1";
-const emptyAnswers = () => QUIZ_SIGNALS.map(() => null as number | null);
+const STORAGE_KEY = "moodies:quiz:signal-reel:v2";
+const emptyAnswers = (length: number) =>
+  Array.from({ length }, () => null as number | null);
 const titleOf = (item: MovieItem) => item.title || item.name || "Untitled";
 const detailUrl = (item: MovieItem) =>
   `/${item.media_type === "tv" ? "tv" : "movies"}/${item.id}`;
@@ -47,8 +53,11 @@ const focusClass =
 
 export default function MovieQuizPage() {
   const [stage, setStage] = useState<Stage>("welcome");
+  const [questions, setQuestions] = useState(QUIZ_SIGNALS);
   const [current, setCurrent] = useState(0);
-  const [answers, setAnswers] = useState<(number | null)[]>(emptyAnswers);
+  const [answers, setAnswers] = useState<(number | null)[]>(() =>
+    emptyAnswers(QUIZ_SIGNALS.length),
+  );
   const [ready, setReady] = useState(false);
   const [resumed, setResumed] = useState(false);
   const [result, setResult] = useState<ResponseData | null>(null);
@@ -63,22 +72,34 @@ export default function MovieQuizPage() {
     try {
       const saved = JSON.parse(
         sessionStorage.getItem(STORAGE_KEY) || "null",
-      ) as { answers?: unknown; current?: unknown } | null;
+      ) as {
+        answers?: unknown;
+        current?: unknown;
+        questionIds?: unknown;
+      } | null;
+      const savedQuestions =
+        saved &&
+        Array.isArray(saved.questionIds) &&
+        saved.questionIds.every((id) => typeof id === "string")
+          ? getQuizSessionQuestions(saved.questionIds)
+          : null;
       if (
         saved &&
+        savedQuestions &&
         Array.isArray(saved.answers) &&
-        saved.answers.length === QUIZ_SIGNALS.length &&
+        saved.answers.length === savedQuestions.length &&
         saved.answers.every(
           (value, i) =>
             value === null ||
             (Number.isInteger(value) &&
               Number(value) >= 0 &&
-              Number(value) < QUIZ_SIGNALS[i].options.length),
+              Number(value) < savedQuestions[i].options.length),
         ) &&
         Number.isInteger(saved.current) &&
         Number(saved.current) >= 0 &&
-        Number(saved.current) < QUIZ_SIGNALS.length
+        Number(saved.current) < savedQuestions.length
       ) {
+        setQuestions(savedQuestions);
         setAnswers(saved.answers as (number | null)[]);
         setCurrent(Number(saved.current));
         setResumed(true);
@@ -97,11 +118,18 @@ export default function MovieQuizPage() {
   useEffect(() => {
     if (!ready || stage === "welcome") return;
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ answers, current }));
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          answers,
+          current,
+          questionIds: questions.map((question) => question.id),
+        }),
+      );
     } catch {
       /* Optional persistence. */
     }
-  }, [answers, current, ready, stage]);
+  }, [answers, current, questions, ready, stage]);
 
   useEffect(() => {
     if (stage !== "welcome") headingRef.current?.focus({ preventScroll: true });
@@ -127,11 +155,19 @@ export default function MovieQuizPage() {
   const choice = (index: number) =>
     answers[index] === null
       ? null
-      : QUIZ_SIGNALS[index].options[answers[index]!];
+      : questions[index].options[answers[index]!];
+  const choiceByCategory = (category: string) => {
+    const index = questions.findIndex(
+      (question) => question.category === category,
+    );
+    return index < 0 ? null : choice(index);
+  };
   const start = () => {
     requestRef.current?.abort();
     requestRef.current = null;
-    setAnswers(emptyAnswers());
+    const randomizedQuestions = createQuizSessionQuestions();
+    setQuestions(randomizedQuestions);
+    setAnswers(emptyAnswers(randomizedQuestions.length));
     setCurrent(0);
     setResult(null);
     setResumed(false);
@@ -146,7 +182,7 @@ export default function MovieQuizPage() {
       /* Optional persistence. */
     }
     setStage("welcome");
-    setAnswers(emptyAnswers());
+    setAnswers(emptyAnswers(questions.length));
     setCurrent(0);
     setResumed(false);
   };
@@ -167,7 +203,7 @@ export default function MovieQuizPage() {
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
-            answers: QUIZ_SIGNALS.map((signal, i) => ({
+            answers: questions.map((signal, i) => ({
               ...choice(i),
               category: signal.category,
             })),
@@ -206,7 +242,8 @@ export default function MovieQuizPage() {
       clearTimeout(timeout);
     }
   };
-  const question = QUIZ_SIGNALS[current];
+  const question = questions[current];
+  const questionCount = questions.length;
   const topPick = result?.results[0];
   const remainingPicks = result?.results.slice(1) ?? [];
   const ranked = result?.analysis?.rankingVersion === "genre-proxy-v1";
@@ -221,7 +258,7 @@ export default function MovieQuizPage() {
           >
             <div>
               <p className="ui-kicker">
-                Personality Quiz · five viewing signals
+                Personality Quiz · a different mix every time
               </p>
               <h1
                 id="quiz-welcome"
@@ -231,8 +268,8 @@ export default function MovieQuizPage() {
                 <br />A better next watch.
               </h1>
               <p className="mt-4 max-w-xl text-base leading-7 text-[var(--ink-muted)]">
-                Choose a feeling, pace, story, format and time window. We’ll
-                turn those choices into a shortlist.
+                Five essential viewing signals, drawn from a larger question
+                pool and reshuffled for every new session.
               </p>
               <button
                 onClick={start}
@@ -278,10 +315,10 @@ export default function MovieQuizPage() {
             </div>
             <ol
               className="grid grid-cols-5 gap-1.5 sm:gap-3"
-              aria-label={`${answers.filter((a) => a !== null).length} of 5 signals answered`}
+              aria-label={`${answers.filter((a) => a !== null).length} of ${questionCount} signals answered`}
             >
-              {QUIZ_SIGNALS.map((signal, i) => (
-                <li key={signal.category}>
+              {questions.map((signal, i) => (
+                <li key={signal.id}>
                   <button
                     onClick={() => setCurrent(i)}
                     disabled={answers[i] === null && i !== current}
@@ -312,7 +349,7 @@ export default function MovieQuizPage() {
               </p>
             )}
             <p className="mt-6 text-sm text-[var(--ink-muted)]">
-              Question {current + 1} of 5 · Choose one
+              Question {current + 1} of {questionCount} · Choose one
             </p>
             <h1
               ref={headingRef}
@@ -373,14 +410,16 @@ export default function MovieQuizPage() {
               <button
                 disabled={answers[current] === null}
                 onClick={() =>
-                  current === 4 ? void submit() : setCurrent((step) => step + 1)
+                  current === questionCount - 1
+                    ? void submit()
+                    : setCurrent((step) => step + 1)
                 }
                 className={`ui-primary-action min-h-11 disabled:cursor-default disabled:opacity-40 ${focusClass}`}
               >
-                {current === 4 ? "Find my matches" : "Continue"}
+                {current === questionCount - 1 ? "Find my matches" : "Continue"}
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </button>
-              {allAnswered && current !== 4 && (
+              {allAnswered && current !== questionCount - 1 && (
                 <button
                   onClick={() => void submit()}
                   className={`min-h-11 text-sm font-semibold text-[var(--brand-coral-strong)] ${focusClass}`}
@@ -400,7 +439,9 @@ export default function MovieQuizPage() {
           >
             <Image
               src={getMoodMascotSrc(
-                stage === "error" ? "sad" : choice(0)?.mood,
+                stage === "error"
+                  ? "sad"
+                  : choiceByCategory("feeling")?.mood,
               )}
               alt=""
               width={96}
@@ -458,7 +499,9 @@ export default function MovieQuizPage() {
                   tabIndex={-1}
                   className="mt-2 text-3xl font-bold outline-none sm:text-4xl"
                 >
-                  {choice(0)?.label} · {choice(2)?.label} · {choice(3)?.label}
+                  {choiceByCategory("feeling")?.label} ·{" "}
+                  {choiceByCategory("genre")?.label} ·{" "}
+                  {choiceByCategory("format")?.label}
                 </h1>
               </div>
               <button
@@ -577,50 +620,85 @@ export default function MovieQuizPage() {
                   </div>
                 )}
               </div>
-              <aside className="border-t border-[var(--surface-border)] pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-                <details>
-                  <summary
-                    className={`cursor-pointer py-3 text-sm font-semibold ${focusClass}`}
-                  >
-                    How we matched this · edit answers
-                  </summary>
-                  <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
-                    {ranked
-                      ? "Genre choices drive the score. Mood and pace use editorial genre associations as rough guides. Format filters the pool, and time limits apply to movie or episode runtime. Ratings only break ties in fit; they do not prove a personal match."
-                      : "These are genre-led suggestions. Detailed scoring needs the updated quiz service."}
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
-                    We compare a limited TMDB candidate pool, not every title. A
-                    score is not a percentage chance you’ll like a title.
-                    Episode length does not indicate season commitment.
-                  </p>
-                  <ul className="mt-4 divide-y divide-[var(--surface-border)]">
-                    {QUIZ_SIGNALS.map((signal, i) => (
-                      <li key={signal.category}>
-                        <button
-                          onClick={() => {
-                            setCurrent(i);
-                            setStage("quiz");
-                          }}
-                          className={`flex min-h-14 w-full items-center justify-between gap-3 py-3 text-left text-sm ${focusClass}`}
+              <aside
+                className="order-first lg:order-last"
+                aria-labelledby="match-recipe-heading"
+              >
+                <div className="overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] shadow-xl shadow-black/10 lg:sticky lg:top-24">
+                  <div className="border-b border-[var(--surface-border)] bg-[radial-gradient(circle_at_100%_0%,rgba(240,100,75,0.16),transparent_13rem)] p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="ui-kicker">Your match recipe</p>
+                        <h2
+                          id="match-recipe-heading"
+                          className="mt-2 text-2xl font-bold leading-tight text-[var(--ink)]"
                         >
-                          <span>
-                            <span className="block text-xs text-[var(--ink-muted)]">
-                              {signal.label}
+                          How we matched this
+                        </h2>
+                      </div>
+                      <span className="rounded-full border border-[var(--brand-coral)]/35 bg-[var(--brand-coral)]/10 px-2.5 py-1 text-xs font-bold text-[var(--brand-coral-strong)]">
+                        {questions.length} signals
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+                      {ranked
+                        ? "Your story and mood choices shape the strongest matches. Pace, format and time help refine the shortlist."
+                        : "Your answers guide a broader genre-led shortlist from the available catalogue."}
+                    </p>
+                  </div>
+
+                  <div className="p-3 sm:p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3 px-1">
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+                        Your answers
+                      </p>
+                      <span className="text-xs text-[var(--ink-muted)]">
+                        Select one to edit
+                      </span>
+                    </div>
+                    <ul className="grid gap-2">
+                      {questions.map((signal, i) => (
+                        <li key={signal.id}>
+                          <button
+                            onClick={() => {
+                              setCurrent(i);
+                              setStage("quiz");
+                            }}
+                            aria-label={`Edit ${signal.label}: ${choice(i)?.text ?? "No answer"}`}
+                            className={`group flex min-h-16 w-full items-center gap-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)]/55 px-3 py-2.5 text-left transition-colors hover:border-[var(--brand-coral)] hover:bg-[var(--surface-2)] ${focusClass}`}
+                          >
+                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--surface-0)] text-xs font-bold text-[var(--brand-coral-strong)] ring-1 ring-[var(--surface-border)]">
+                              {i + 1}
                             </span>
-                            {choice(i)?.text}
-                          </span>
-                          <span className="shrink-0 text-[var(--brand-coral-strong)]">
-                            Edit
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-4 text-xs text-[var(--ink-muted)]">
-                    Playful guide, not a diagnosis.
-                  </p>
-                </details>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-xs font-semibold text-[var(--ink-muted)]">
+                                {signal.label}
+                              </span>
+                              <span className="mt-0.5 block truncate text-sm font-semibold text-[var(--ink)]">
+                                {choice(i)?.text}
+                              </span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-[var(--brand-coral-strong)]">
+                              Edit
+                              <ArrowRight
+                                className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                                aria-hidden="true"
+                              />
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="border-t border-[var(--surface-border)] px-5 py-4">
+                    <p className="text-xs leading-5 text-[var(--ink-muted)]">
+                      Ratings only break ties in fit. Results come from a
+                      limited TMDB candidate pool, so a score is not a promise
+                      that you will like a title.
+                    </p>
+                  </div>
+                </div>
               </aside>
             </div>
           </section>
