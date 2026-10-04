@@ -4,6 +4,7 @@ import { useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { ArrowRight, Brain, Compass, Film, Tv } from "lucide-react";
+import { heroMoods } from "@/components/hero/HeroMoodGuide";
 
 type MoodDiscoverySectionProps = {
   variant?: "full" | "teaser";
@@ -20,7 +21,7 @@ const cards = [
     icon: Compass,
     image: "/images/moods/whimsy.png",
     accent: "#e94f37",
-    stats: "50+ moods",
+    stats: "21 moods",
   },
   {
     id: "tv-moods",
@@ -60,33 +61,11 @@ const cards = [
   },
 ];
 
-const landingMoods = [
-  {
-    id: "easy",
-    label: "Easy",
-    note: "Low-stakes, comforting watches for a quiet night.",
-  },
-  {
-    id: "tense",
-    label: "Tense",
-    note: "Pressure, suspense, and stories that keep moving.",
-  },
-  {
-    id: "tender",
-    label: "Tender",
-    note: "Warm, intimate stories with something human at the center.",
-  },
-  {
-    id: "strange",
-    label: "Strange",
-    note: "Unfamiliar worlds, odd turns, and singular ideas.",
-  },
-  {
-    id: "electric",
-    label: "Electric",
-    note: "Fast, loud, kinetic picks for a high-energy watch.",
-  },
-];
+const landingMoods = heroMoods.map((mood) => ({
+  id: mood.slug,
+  label: mood.name,
+  note: mood.note,
+}));
 
 export default function MoodDiscoverySection({
   variant = "full",
@@ -114,17 +93,17 @@ export default function MoodDiscoverySection({
               id="mood-shelf-heading"
               className="mt-3 max-w-lg text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
             >
-              What kind of night is this?
+              Meet your moods.
             </h2>
             <p className="mt-3 max-w-md text-sm leading-6 text-[var(--ink-muted)]">
-              Pick a feeling first. Moodies will take you to a focused set of
-              movies and series instead of another endless catalogue.
+              From a quiet night to a gripping escape, each Moodies character
+              opens a different path to movies and series. Choose yours.
             </p>
           </div>
 
           <div>
             <div
-              className="flex gap-5 overflow-x-auto border-b border-[var(--surface-border)] pb-3 mobile-native-scroll sm:gap-7"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-4"
               aria-label="Choose a mood"
             >
               {landingMoods.map((mood) => {
@@ -134,28 +113,33 @@ export default function MoodDiscoverySection({
                     key={mood.id}
                     type="button"
                     onClick={() => setActiveLandingMood(mood.id)}
-                    onMouseEnter={() => setActiveLandingMood(mood.id)}
-                    onFocus={() => setActiveLandingMood(mood.id)}
-                    className={`shrink-0 border-b-2 pb-2 text-lg font-semibold transition-colors sm:text-xl ${
+                    className={`flex min-h-28 flex-col items-center justify-center rounded-xl border p-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] ${
                       isActive
-                        ? "border-[var(--brand-coral)] text-[var(--ink)]"
-                        : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                        ? "border-[var(--brand-coral)] bg-[var(--surface-2)] text-[var(--ink)]"
+                        : "border-[var(--surface-border)] text-[var(--ink-muted)] hover:text-[var(--ink)]"
                     }`}
                     aria-pressed={isActive}
                   >
+                    <Image
+                      src={`/images/moods/${mood.id}.png`}
+                      alt={`${mood.label} mood mascot`}
+                      width={80}
+                      height={80}
+                      className="mb-2 h-20 w-20 object-contain"
+                    />
                     {mood.label}
                   </button>
                 );
               })}
             </div>
 
-            <div className="mt-4 flex min-h-12 items-start justify-between gap-5">
+            <div className="mt-4 flex min-h-12 flex-wrap items-center justify-between gap-3">
               <p className="max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
                 {activeMood.note}
               </p>
               <Link
-                href="/moods"
-                className="inline-flex shrink-0 items-center gap-2 border-b border-[var(--brand-coral)] pb-1 text-sm font-semibold text-[var(--ink)] transition-colors hover:text-[var(--brand-coral-strong)]"
+                href={`/moods?mood=${encodeURIComponent(activeMood.label)}`}
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 text-sm font-semibold text-[var(--brand-coral-strong)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]"
               >
                 Find my watch
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />

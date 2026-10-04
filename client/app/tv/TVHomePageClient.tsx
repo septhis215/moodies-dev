@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import type { HeroMoodRequest } from "@/components/hero/HeroMoodGuide";
 import { CalendarDays, Tv } from "lucide-react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
@@ -148,6 +150,12 @@ export default function TVHomePageClient({
   communityPulse,
 }: TVHomePageClientProps) {
   useScrollToHash(100);
+  const [moodRequest, setMoodRequest] = useState<HeroMoodRequest | null>(null);
+  const selectHeroMood = (name: string) =>
+    setMoodRequest((previous) => ({
+      name,
+      revision: (previous?.revision ?? 0) + 1,
+    }));
   const marqueeItems = popularTV.length ? popularTV : trendingTV;
 
   return (
@@ -157,14 +165,20 @@ export default function TVHomePageClient({
         mediaType="tv"
         icon={<Tv className="h-5 w-5" />}
         eyebrow="Series"
-        title="What’s on tonight"
-        description="Use the marquee to choose a series, then check today’s episodes and the shows people are saving this week."
+        title="A series for your kind of night"
+        description="Settle into something comforting or get caught up in a thriller. Let your mood choose the next episode."
+        onMoodSelect={selectHeroMood}
         spotlightLabel="Selected series"
         mediaLabel="Series"
         primaryCta="View series"
       />
 
       <div className="ui-shell space-y-12 py-10 sm:space-y-16 sm:py-14">
+        <MoodRecommendationsSection
+          mediaType="tv"
+          initialMoods={moods}
+          requestedMood={moodRequest}
+        />
         <AiringSchedule today={airingToday} />
 
         <MediaShelf
@@ -237,8 +251,6 @@ export default function TVHomePageClient({
           items={NewTVTrailer}
           type="tv"
         />
-
-        <MoodRecommendationsSection mediaType="tv" initialMoods={moods} />
       </div>
     </main>
   );

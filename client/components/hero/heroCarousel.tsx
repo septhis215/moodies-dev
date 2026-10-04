@@ -21,6 +21,7 @@ import { useWatchlist } from "@/hooks/useWatchlist";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import HeroThumbnail from "./heroThumbnail";
 import RatingBadge from "@/components/ui/rating-badge";
+import { HeroMoodGuide } from "./HeroMoodGuide";
 
 type Props = { all: All[]; cycleMs?: number };
 type ContentKind = "movie" | "tv";
@@ -125,10 +126,13 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
   if (!all || all.length === 0 || !current) {
     return (
-      <section className="flex h-[60vh] min-h-[420px] items-center justify-center bg-[#09090a] px-6 text-center text-white">
-        <p className="text-sm font-semibold text-white/70">
-          Featured titles are loading.
-        </p>
+      <section className="ui-shell pt-[calc(var(--mobile-nav-safe)+2rem)]">
+        <h1 className="mb-5 text-4xl font-bold text-[var(--ink)] sm:text-5xl">
+          Find a watch that feels right.
+        </h1>
+        <div className="max-w-xl">
+          <HeroMoodGuide />
+        </div>
       </section>
     );
   }
@@ -185,7 +189,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
   return (
     <section
-      className="relative isolate h-[88svh] min-h-[620px] w-full overflow-hidden bg-[#080808] text-white sm:min-h-[680px] lg:h-screen lg:min-h-[720px] lg:max-h-[1080px]"
+      className="relative isolate min-h-[88svh] w-full overflow-hidden bg-[var(--surface-0)] text-white lg:min-h-[720px]"
       onMouseEnter={pause}
       onMouseLeave={resume}
       onFocusCapture={pause}
@@ -219,7 +223,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
         </motion.div>
       </AnimatePresence>
 
-      <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col justify-end px-5 pb-6 pt-[calc(var(--mobile-nav-safe)+1rem)] sm:px-6 sm:pb-7 sm:pt-24 lg:px-8 lg:pb-9 xl:px-12">
+      <div className="relative z-10 mx-auto flex min-h-[88svh] max-w-7xl flex-col justify-end px-4 pb-6 pt-[calc(var(--mobile-nav-safe)+1rem)] sm:px-6 sm:pb-7 sm:pt-24 lg:min-h-[720px] lg:px-8 lg:pb-9">
         <div className="grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-8 xl:gap-10">
           <AnimatePresence initial={false} mode="wait">
             <motion.div
@@ -267,7 +271,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                   duration: reduceMotion ? 0 : 0.38,
                   delay: reduceMotion ? 0 : 0.07,
                 }}
-                className="max-w-[13ch] text-balance text-[2.55rem] font-black leading-[0.92] tracking-[-0.035em] text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.5)] min-[390px]:text-[3rem] sm:text-[clamp(3.2rem,7vw,5.8rem)] lg:text-[clamp(4rem,6vw,6.4rem)]"
+                className="max-w-[13ch] text-balance text-[2.1rem] font-bold leading-[0.98] tracking-normal text-white min-[390px]:text-[2.45rem] sm:text-[clamp(2.45rem,4.6vw,4rem)] xl:text-[clamp(2.45rem,4.2vw,4.8rem)]"
               >
                 {currentTitle}
               </motion.h1>
@@ -336,90 +340,94 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                   {currentInWatchlist ? "Saved" : "My List"}
                 </button>
               </motion.div>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="hidden min-w-[392px] flex-col items-end gap-3 lg:flex xl:min-w-[420px] xl:gap-4">
-            <div className="flex w-full items-center justify-between border-b border-white/15 pb-3">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
-                  Up next
-                </p>
-                <p className="mt-1 text-xs font-semibold tabular-nums text-white/75">
-                  {String(index + 1).padStart(2, "0")} /{" "}
-                  {String(all.length).padStart(2, "0")}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
+              <div className="mt-6 flex items-center gap-3 lg:hidden">
                 <button
                   type="button"
                   onClick={() => goToSlide(index - 1)}
-                  className="grid h-10 w-10 place-items-center rounded-sm border border-white/20 bg-black/35 text-white/80 transition-colors hover:border-white/50 hover:bg-black/55 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70"
+                  disabled={all.length < 2}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-white/20 bg-black/38 text-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
                   aria-label="Previous featured title"
                 >
-                  <ChevronLeft className="h-4 w-4 xl:h-5 xl:w-5" />
+                  <ChevronLeft className="h-4 w-4" />
                 </button>
+                <div
+                  className="h-px flex-1 overflow-hidden bg-white/20"
+                  aria-hidden="true"
+                >
+                  <div
+                    className="h-full bg-[var(--brand-coral)]"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <span className="text-xs font-semibold text-white/80">
+                  {index + 1}/{all.length}
+                </span>
                 <button
                   type="button"
                   onClick={() => goToSlide(index + 1)}
-                  className="grid h-10 w-10 place-items-center rounded-sm border border-white/20 bg-black/35 text-white/80 transition-colors hover:border-white/50 hover:bg-black/55 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70"
+                  disabled={all.length < 2}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-white/20 bg-black/38 text-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
                   aria-label="Next featured title"
                 >
-                  <ChevronRight className="h-4 w-4 xl:h-5 xl:w-5" />
+                  <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
-            </div>
+            </motion.div>
+          </AnimatePresence>
 
-            <div className="flex gap-3 xl:gap-4">
-              {mounted &&
-                thumbnailWindow.map((item) => {
-                  const slideIndex = all.findIndex(
-                    (entry) => entry.id === item.id,
-                  );
-                  return (
-                    <HeroThumbnail
-                      key={item.id}
-                      all={item}
-                      active={slideIndex === index}
-                      onClick={() => goToSlide(slideIndex)}
-                      width={94}
-                      height={142}
-                    />
-                  );
-                })}
+          <div className="min-w-0 lg:w-[420px]">
+            <HeroMoodGuide />
+            <div className="mt-5 hidden flex-col items-end gap-3 lg:flex xl:gap-4">
+              <div className="flex w-full items-center justify-between border-b border-white/15 pb-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
+                    Up next
+                  </p>
+                  <p className="mt-1 text-xs font-semibold tabular-nums text-white/75">
+                    {String(index + 1).padStart(2, "0")} /{" "}
+                    {String(all.length).padStart(2, "0")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => goToSlide(index - 1)}
+                    className="grid h-10 w-10 place-items-center rounded-sm border border-white/20 bg-black/35 text-white/80 transition-colors hover:border-white/50 hover:bg-black/55 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70"
+                    aria-label="Previous featured title"
+                  >
+                    <ChevronLeft className="h-4 w-4 xl:h-5 xl:w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToSlide(index + 1)}
+                    className="grid h-10 w-10 place-items-center rounded-sm border border-white/20 bg-black/35 text-white/80 transition-colors hover:border-white/50 hover:bg-black/55 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70"
+                    aria-label="Next featured title"
+                  >
+                    <ChevronRight className="h-4 w-4 xl:h-5 xl:w-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex w-full justify-between gap-2">
+                {mounted &&
+                  thumbnailWindow.map((item) => {
+                    const slideIndex = all.findIndex(
+                      (entry) => entry.id === item.id,
+                    );
+                    return (
+                      <HeroThumbnail
+                        key={item.id}
+                        all={item}
+                        active={slideIndex === index}
+                        onClick={() => goToSlide(slideIndex)}
+                        width={74}
+                        height={111}
+                      />
+                    );
+                  })}
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-8 flex items-center gap-3 lg:hidden">
-          <button
-            type="button"
-            onClick={() => goToSlide(index - 1)}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border border-white/20 bg-black/38 text-white/80 backdrop-blur-sm"
-            aria-label="Previous featured title"
-          >
-            <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
-
-          <div className="h-px flex-1 overflow-hidden bg-white/20">
-            <motion.div
-              className="h-full origin-left bg-[#ff725e]"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-
-          <span className="min-w-9 text-center text-[11px] font-bold text-white/62 sm:min-w-10 sm:text-xs">
-            {index + 1}/{all.length}
-          </span>
-
-          <button
-            type="button"
-            onClick={() => goToSlide(index + 1)}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border border-white/20 bg-black/38 text-white/80 backdrop-blur-sm"
-            aria-label="Next featured title"
-          >
-            <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
-          </button>
         </div>
       </div>
     </section>
