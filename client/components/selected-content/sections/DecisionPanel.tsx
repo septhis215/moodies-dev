@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalendarDays, Clock3, Heart, MessageSquare } from "lucide-react";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import type { MovieDetailsData, TvDetailsData } from "@/components/selected-content/types";
 
 type DecisionPanelProps = {
@@ -17,6 +18,10 @@ function formatRuntime(minutes: number): string {
 
 function yearOf(date: string): string | null {
   return date ? date.slice(0, 4) : null;
+}
+
+function isImagePath(value: string): boolean {
+  return value.startsWith("/") || value.startsWith("http://") || value.startsWith("https://");
 }
 
 export default function DecisionPanel({
@@ -70,8 +75,24 @@ export default function DecisionPanel({
                 Audience mood
               </span>
               {moodLabels.map((mood) => (
-                <span key={mood.emoji} className="text-xs font-semibold text-brand-coral-strong">
-                  {mood.emoji} {mood.count}
+                <span
+                  key={mood.emoji}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-brand-coral/25 bg-brand-coral/[0.08] py-1 pl-1.5 pr-2 text-xs font-semibold text-brand-coral-strong"
+                >
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.08] p-1">
+                    {isImagePath(mood.emoji) ? (
+                      <Image
+                        src={mood.emoji}
+                        alt=""
+                        width={32}
+                        height={32}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      mood.emoji
+                    )}
+                  </span>
+                  <span>{mood.count}</span>
                 </span>
               ))}
             </div>
