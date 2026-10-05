@@ -1108,7 +1108,7 @@ export default function VideoFeedPage() {
                       aria-label={`Play ${videoTitle || "video"}`}
                       className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/40 transition hover:bg-black/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
                     >
-                      <span className="grid h-16 w-16 place-items-center rounded-full border border-white/20 bg-white/12 shadow-xl shadow-black/30 backdrop-blur">
+                      <span className="grid h-16 w-16 place-items-center rounded-full border border-white/20 bg-black/25 shadow-xl shadow-black/30">
                         <Play
                           className="h-7 w-7 translate-x-px text-white"
                           fill="currentColor"
@@ -1275,7 +1275,7 @@ export default function VideoFeedPage() {
                       type="button"
                       onClick={openMobileFullscreen}
                       aria-label="Open landscape video fullscreen"
-                      className="pointer-events-auto absolute right-3 top-24 z-40 grid h-11 w-11 place-items-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur-sm transition active:scale-90 sm:right-4 lg:hidden"
+                      className="pointer-events-auto absolute right-3 top-24 z-40 grid h-11 w-11 place-items-center rounded-full bg-black/35 text-white shadow-lg transition active:scale-90 sm:right-4 lg:hidden"
                     >
                       <Maximize2 className="h-5 w-5" aria-hidden="true" />
                     </button>
