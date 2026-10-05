@@ -96,6 +96,12 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
 
 const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };
+const NAVIGATION_ICON_SOURCES: Record<string, string> = {
+  "/movies": "/images/badges/movie-buff.png",
+  "/tv": "/images/badges/binge-legend.png",
+  "/moods/explore": "/images/badges/mood-starter.png",
+  "/feed": "/images/mascot-feed.png",
+};
 const sectionIntroductions: Record<
   string,
   { title: string; description: string; mascot: string }
@@ -999,7 +1005,10 @@ function NavigationMascot({
 }) {
   return (
     <Image
-      src={`/images/moods/${sectionIntroductions[href].mascot}.png`}
+      src={
+        NAVIGATION_ICON_SOURCES[href] ??
+        `/images/moods/${sectionIntroductions[href].mascot}.png`
+      }
       alt=""
       aria-hidden="true"
       width={48}
