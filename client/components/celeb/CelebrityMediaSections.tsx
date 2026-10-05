@@ -5,6 +5,7 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, Play, X } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { tmdbImage } from "@/lib/tmdb";
 import type {
+  MediaSource,
   CelebrityMedia,
   CelebrityPhoto,
   CelebrityVideo,
@@ -25,6 +26,12 @@ const categories: Record<VideoCategory, string> = {
   fancam: "Fan content",
   live: "Live & radio",
   other: "Other",
+};
+const sourceNames: Record<MediaSource, string> = {
+  tmdb: "TMDB",
+  youtube: "YouTube",
+  wikimedia: "Wikimedia Commons",
+  openverse: "Openverse",
 };
 type Profile = {
   id: number;
@@ -81,62 +88,59 @@ function Thumbnail({ video }: { video: CelebrityVideo }) {
 }
 function VideoCard({
   video,
-  featured,
   onPlay,
 }: {
   video: CelebrityVideo;
-  featured?: boolean;
   onPlay: () => void;
 }) {
   const duration = durationLabel(video.duration);
   return (
-    <article
-      className={`ui-panel overflow-hidden ${featured ? "" : "w-[86%] shrink-0 snap-start sm:w-80"}`}
-    >
+    <article className="group min-w-0">
       <button
         type="button"
-        className="group relative block aspect-video w-full overflow-hidden bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
         onClick={onPlay}
-        aria-label={`Play ${video.title}`}
+        aria-label={"Play " + video.title}
+        className="relative block aspect-video w-full overflow-hidden rounded-lg bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)]"
       >
         <Thumbnail key={video.id} video={video} />
-        <span className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <span className="absolute left-3 top-3 rounded-md bg-black/80 px-2 py-1 text-xs font-semibold text-white">
-          {categories[video.category]}
-        </span>
+        <span className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
         <span className="absolute inset-0 grid place-items-center">
-          <span className="grid h-12 w-12 place-items-center rounded-full border border-white/40 bg-black/50 text-white backdrop-blur">
+          <span className="grid h-12 w-12 place-items-center rounded-full bg-black/65 text-white transition-colors group-hover:bg-[var(--brand-coral)]">
             <Play className="h-5 w-5 fill-current" aria-hidden="true" />
           </span>
         </span>
         {duration && (
-          <span className="absolute bottom-3 right-3 rounded bg-black/80 px-2 py-1 text-xs text-white">
+          <span className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-1 text-xs text-white">
             {duration}
           </span>
         )}
       </button>
-      <div className="p-4">
-        <h3
-          className={`line-clamp-2 font-bold leading-tight text-[var(--ink)] ${featured ? "text-lg sm:text-xl" : "text-base"}`}
-        >
-          {video.title}
-        </h3>
-        <p className="mt-2 line-clamp-1 text-xs text-[var(--ink-muted)]">
-          {video.channel}
-          {video.official ? " · Official source" : ""}
-        </p>
-        {video.context && (
-          <p className="mt-1 line-clamp-1 text-xs text-[var(--ink-muted)]">
-            From {video.context}
+      <div className="mt-3 flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="mb-1 text-xs text-[var(--brand-coral-strong)]">
+            {categories[video.category]}
           </p>
-        )}
+          <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)]">
+            {video.title}
+          </h3>
+          <p className="mt-1 line-clamp-1 text-xs leading-5 text-[var(--ink-muted)]">
+            {video.channel}
+            {video.official ? " · Official" : ""}
+          </p>
+          {video.context && (
+            <p className="line-clamp-1 text-xs leading-5 text-[var(--ink-muted)]">
+              From {video.context}
+            </p>
+          )}
+        </div>
         <a
           href={video.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--brand-coral-strong)]"
+          aria-label={"Watch " + video.title + " on YouTube"}
+          title="Watch on YouTube"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[var(--ink-muted)] hover:bg-[var(--surface-1)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
         >
-          Watch on YouTube{" "}
           <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
         </a>
       </div>
@@ -151,13 +155,18 @@ export default function CelebrityMediaSections({
   person: Profile;
   onPhotosReady?: (photos: CelebrityPhoto[]) => void;
 }) {
-  const [media, setMedia] = useState<CelebrityMedia | null>(null);
+  const [response, setResponse] = useState<{
+    personId: number;
+    data: CelebrityMedia;
+  } | null>(null);
+  const media = response?.personId === person.id ? response.data : null;
   const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(Boolean(onPhotosReady));
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
   const [category, setCategory] = useState<VideoCategory | "all">("all");
-  const [photoLimit, setPhotoLimit] = useState(12);
+  const [photoSource, setPhotoSource] = useState<MediaSource | "all">("all");
+  const [photoLimit, setPhotoLimit] = useState(5);
   const [videoLimit, setVideoLimit] = useState(8);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [brokenPhotos, setBrokenPhotos] = useState<Set<string>>(new Set());
@@ -196,7 +205,7 @@ export default function CelebrityMediaSections({
         )
           throw new Error("Invalid media response");
         if (!controller.signal.aborted) {
-          setMedia(data);
+          setResponse({ personId: person.id, data });
           onPhotosReady?.(
             data.photos.length ? data.photos : fallbackPhotos(person),
           );
@@ -228,13 +237,21 @@ export default function CelebrityMediaSections({
     };
   }, [selection]);
 
-  const photos = (
+  const allPhotos = (
     media?.photos.length ? media.photos : fallbackPhotos(person)
   ).filter((photo) => !brokenPhotos.has(photo.id));
+  const photoSources = [...new Set(allPhotos.map((photo) => photo.source))];
+  const activeSource =
+    photoSource === "all" || photoSources.includes(photoSource)
+      ? photoSource
+      : "all";
+  const photos = allPhotos.filter(
+    (photo) => activeSource === "all" || photo.source === activeSource,
+  );
   const videos = (media?.videos || []).filter(
     (video) => category === "all" || video.category === category,
   );
-  const [featured, ...supporting] = videos.slice(0, videoLimit);
+  const shownVideos = videos.slice(0, videoLimit);
   const unavailable =
     failed ||
     (media &&
@@ -272,8 +289,8 @@ export default function CelebrityMediaSections({
         {unavailable && (
           <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--ink-muted)]">
             <p>
-              Some additional media is temporarily unavailable. Available media
-              is shown below.
+              Some photos and videos couldn’t load. You can still browse the
+              moments available below.
             </p>
             <button
               type="button"
@@ -288,7 +305,7 @@ export default function CelebrityMediaSections({
         <div
           role="group"
           aria-label="Filter on-screen moments"
-          className="mobile-native-scroll flex gap-2 overflow-x-auto pb-2"
+          className="mobile-native-scroll flex gap-5 overflow-x-auto border-b border-[var(--surface-border)] sm:flex-wrap sm:gap-x-6"
         >
           {(
             [
@@ -306,7 +323,7 @@ export default function CelebrityMediaSections({
                 setCategory(value);
                 setVideoLimit(8);
               }}
-              className={`min-h-11 shrink-0 rounded-full border px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] ${category === value ? "border-[var(--brand-coral)] bg-[var(--brand-coral)] text-white" : "border-[var(--surface-border)] text-[var(--ink-muted)]"}`}
+              className={`min-h-11 shrink-0 border-b-2 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] ${category === value ? "border-[var(--brand-coral)] text-[var(--ink)]" : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
             >
               {value === "all" ? "All moments" : categories[value]}
             </button>
@@ -321,30 +338,16 @@ export default function CelebrityMediaSections({
             <div className="ui-panel aspect-video motion-safe:animate-pulse" />
             <div className="ui-panel aspect-video motion-safe:animate-pulse" />
           </div>
-        ) : featured ? (
+        ) : shownVideos.length > 0 ? (
           <>
-            <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-              <VideoCard
-                video={featured}
-                featured
-                onPlay={() => setSelection({ kind: "video", video: featured })}
-              />
-              {supporting.length > 0 && (
-                <div className="min-w-0">
-                  <p className="mb-3 text-sm font-semibold text-[var(--ink-muted)]">
-                    More moments · swipe to explore
-                  </p>
-                  <div className="mobile-native-scroll flex min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-3">
-                    {supporting.map((video) => (
-                      <VideoCard
-                        key={video.id}
-                        video={video}
-                        onPlay={() => setSelection({ kind: "video", video })}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div className="grid min-w-0 grid-cols-1 gap-x-5 gap-y-7 sm:grid-cols-2 xl:grid-cols-3">
+              {shownVideos.map((video) => (
+                <VideoCard
+                  key={video.id}
+                  video={video}
+                  onPlay={() => setSelection({ kind: "video", video })}
+                />
+              ))}
             </div>
             {videos.length > videoLimit && (
               <button
@@ -382,28 +385,54 @@ export default function CelebrityMediaSections({
             source credits.
           </p>
         </header>
+        {allPhotos.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--surface-border)] pb-4">
+            <p role="status" className="text-sm text-[var(--ink-muted)]">
+              {photos.length} {photos.length === 1 ? "photo" : "photos"}
+            </p>
+            {photoSources.length > 1 && (
+              <label className="flex items-center gap-3 text-sm text-[var(--ink-muted)]">
+                Source
+                <select
+                  aria-label="Photo source"
+                  value={activeSource}
+                  onChange={(event) => {
+                    setPhotoSource(event.target.value as MediaSource | "all");
+                    setPhotoLimit(5);
+                  }}
+                  className="min-h-11 max-w-[12rem] rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
+                >
+                  <option value="all">All sources</option>
+                  {photoSources.map((source) => (
+                    <option key={source} value={source}>
+                      {sourceNames[source]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        )}
         {photos.length > 0 ? (
           <>
-            <div className="columns-2 gap-3 sm:columns-3 lg:columns-4">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4 xl:grid-cols-5">
               {photos.slice(0, photoLimit).map((photo, index) => (
-                <article
-                  key={photo.id}
-                  className="ui-panel mb-3 break-inside-avoid overflow-hidden"
-                >
+                <article key={photo.id} className="min-w-0">
                   <button
                     type="button"
                     onClick={() => setSelection({ kind: "photo", photo })}
-                    className="group block w-full overflow-hidden focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
-                    aria-label={`Open photo ${index + 1}: ${photo.title}`}
+                    className="group relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)]"
+                    aria-label={
+                      "Open photo " + (index + 1) + ": " + photo.title
+                    }
                   >
                     <Image
                       src={photo.thumbnail}
                       alt={photo.title}
-                      width={photo.width}
-                      height={photo.height}
+                      fill
                       unoptimized
-                      sizes="(max-width: 639px) 45vw, (max-width: 1023px) 30vw, 300px"
-                      className="h-auto w-full transition-transform duration-500 motion-safe:group-hover:scale-105"
+                      sizes="(max-width: 639px) 45vw, (max-width: 1023px) 30vw, 240px"
+                      className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-105"
                       onError={() =>
                         setBrokenPhotos(
                           (previous) => new Set([...previous, photo.id]),
@@ -411,23 +440,26 @@ export default function CelebrityMediaSections({
                       }
                     />
                   </button>
-                  <div className="p-3">
-                    <p className="line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">
-                      {photo.attribution}
-                    </p>
-                    <a
-                      href={photo.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1 inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-[var(--brand-coral-strong)]"
-                    >
-                      {photo.source === "wikimedia" ? photo.license : "TMDB"}
-                      <ArrowUpRight
-                        className="h-3.5 w-3.5"
-                        aria-hidden="true"
-                      />
-                    </a>
-                  </div>
+                  <a
+                    href={photo.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={photo.attribution + " · " + photo.license}
+                    className="mt-2 flex min-h-11 items-start gap-1.5 rounded-sm py-1 text-xs leading-5 text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">
+                        {photo.attribution}
+                      </span>
+                      <span className="block truncate">
+                        {sourceNames[photo.source]} · {photo.license}
+                      </span>
+                    </span>
+                    <ArrowUpRight
+                      className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                      aria-hidden="true"
+                    />
+                  </a>
                 </article>
               ))}
             </div>
@@ -435,7 +467,7 @@ export default function CelebrityMediaSections({
               <button
                 type="button"
                 className="ui-secondary-action"
-                onClick={() => setPhotoLimit((value) => value + 12)}
+                onClick={() => setPhotoLimit((value) => value + 5)}
               >
                 Load more photos ({photos.length - photoLimit})
               </button>
@@ -470,7 +502,7 @@ export default function CelebrityMediaSections({
             movePhoto(event.key === "ArrowLeft" ? -1 : 1);
           }
         }}
-        className="fixed m-auto max-h-[94dvh] w-[94vw] max-w-5xl overflow-y-auto rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-0)] p-0 text-[var(--ink)] backdrop:bg-black/90"
+        className="fixed m-auto max-h-[94dvh] w-[94vw] max-w-5xl overflow-y-auto rounded-lg border border-[var(--surface-border)] bg-[var(--surface-0)] p-0 text-[var(--ink)] backdrop:bg-black/90"
       >
         {selection && (
           <>
@@ -525,7 +557,7 @@ export default function CelebrityMediaSections({
               </>
             ) : (
               <>
-                <div className="relative h-[65dvh] w-full">
+                <div className="relative h-[60dvh] w-full bg-black/30">
                   <Image
                     key={selection.photo.id}
                     src={selection.photo.url}
@@ -535,6 +567,12 @@ export default function CelebrityMediaSections({
                     sizes="94vw"
                     className="object-contain"
                   />
+                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/75 px-3 py-1 text-xs text-white">
+                    {photos.findIndex(
+                      (photo) => photo.id === selection.photo.id,
+                    ) + 1}{" "}
+                    of {photos.length}
+                  </span>
                   {photos.length > 1 && (
                     <>
                       <button
@@ -564,10 +602,7 @@ export default function CelebrityMediaSections({
                     rel="noopener noreferrer"
                     className="inline-flex min-h-11 items-center gap-1 text-[var(--brand-coral-strong)]"
                   >
-                    Source:{" "}
-                    {selection.photo.source === "wikimedia"
-                      ? "Wikimedia Commons"
-                      : "TMDB"}
+                    Source: {sourceNames[selection.photo.source]}
                     <ArrowUpRight className="h-4 w-4" />
                   </a>
                   {selection.photo.licenseUrl ? (

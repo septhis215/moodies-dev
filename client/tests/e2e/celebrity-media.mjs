@@ -23,7 +23,7 @@ const photos = Array.from({ length: 18 }, (_, index) => ({
   thumbnail: `/fixture.svg?thumb=${index}`,
   width: 720,
   height: index % 3 ? 960 : 600,
-  source: "wikimedia",
+  source: index % 2 ? "openverse" : "wikimedia",
   sourceUrl: "https://commons.wikimedia.org/wiki/File:Example.jpg",
   attribution: "Example photographer",
   license: "CC BY-SA 4.0",
@@ -46,7 +46,12 @@ const videos = Array.from({ length: 15 }, (_, index) => ({
 const fixture = {
   photos,
   videos,
-  sources: { tmdb: "ready", youtube: "ready", wikimedia: "ready" },
+  sources: {
+    tmdb: "ready",
+    youtube: "ready",
+    wikimedia: "ready",
+    openverse: "ready",
+  },
   totalPhotos: photos.length,
   totalVideos: videos.length,
   updatedAt: "2026-10-05",
@@ -256,12 +261,12 @@ try {
     await viewer.waitFor({ state: "hidden" });
     assert.equal(
       await gallery.getByRole("button", { name: /^Open photo/ }).count(),
-      12,
+      5,
     );
     await gallery.getByRole("button", { name: /Load more photos/ }).click();
     assert.equal(
       await gallery.getByRole("button", { name: /^Open photo/ }).count(),
-      18,
+      10,
     );
     await gallery
       .getByRole("button", {
@@ -282,6 +287,30 @@ try {
       .waitFor();
     await viewer.getByRole("button", { name: "Close media viewer" }).click();
     await viewer.waitFor({ state: "hidden" });
+    await gallery
+      .getByRole("combobox", { name: "Photo source" })
+      .selectOption("openverse");
+    assert.equal(
+      await gallery.getByRole("button", { name: /^Open photo/ }).count(),
+      5,
+    );
+    await gallery
+      .getByRole("button", {
+        name: "Open photo 1: Celebrity portrait 2",
+        exact: true,
+      })
+      .click();
+    await viewer.waitFor();
+    await viewer.getByRole("link", { name: /Source: Openverse/ }).waitFor();
+    await page.keyboard.press("ArrowRight");
+    await viewer
+      .getByRole("heading", { name: "Celebrity portrait 4", exact: true })
+      .waitFor();
+    await page.keyboard.press("Escape");
+    await viewer.waitFor({ state: "hidden" });
+    await gallery
+      .getByRole("combobox", { name: "Photo source" })
+      .selectOption("all");
     if (output && [390, 1440].includes(width)) {
       await moments.screenshot({
         path: resolve(output, `moments-${width}.png`),
@@ -295,7 +324,7 @@ try {
   fail = true;
   await page.goto(base);
   await page
-    .getByText("Some additional media is temporarily unavailable.", {
+    .getByText("Some photos and videos couldn’t load.", {
       exact: false,
     })
     .waitFor();

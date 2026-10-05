@@ -10,7 +10,7 @@ export type VideoCategory =
   | "fancam"
   | "live"
   | "other";
-export type MediaSource = "tmdb" | "youtube" | "wikimedia";
+export type MediaSource = "tmdb" | "youtube" | "wikimedia" | "openverse";
 export interface CelebrityPhoto {
   id: string;
   url: string;

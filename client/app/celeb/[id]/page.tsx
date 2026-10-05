@@ -110,6 +110,7 @@ interface SimilarPerson {
   profile_path?: string | null;
   known_for_department?: string;
   popularity?: number;
+  relationship?: string;
 }
 
 interface Collaboration {
@@ -583,7 +584,7 @@ function PersonCard({ person }: { person: SimilarPerson }) {
         {person.name}
       </h3>
       <p className="mt-0.5 line-clamp-1 text-[11px] text-zinc-500 sm:mt-1 sm:text-xs">
-        {person.known_for_department || "Entertainment"}
+        {person.relationship || person.known_for_department || "Entertainment"}
       </p>
     </Link>
   );
