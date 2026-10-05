@@ -18,12 +18,10 @@ import {
   Tv,
   UserRound,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
 import { fetchMediaSummary } from "@/lib/mediaApi";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
-const MASCOT_SRC = "/images/moodies-mascot.png";
 const PUBLIC_IMAGE_PATH_PATTERN =
   /^\/images\/.+\.(?:png|jpe?g|webp|gif|svg)(?:[?#].*)?$/i;
 const REVIEW_MOOD_LABELS: Record<string, string> = {
@@ -189,7 +187,7 @@ function MoodBadge({
   return (
     <span
       title={label}
-      className={`inline-flex max-w-full items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] ${
+      className={`inline-flex max-w-full items-center gap-2 border border-[var(--surface-border)] bg-[var(--surface-1)] ${
         compact ? "py-1 pl-1 pr-2" : "py-1.5 pl-1.5 pr-3"
       } text-white/80`}
     >
@@ -215,7 +213,7 @@ function MoodBadge({
       )}
       {hasImage && (
         <span
-          className={`truncate font-semibold text-white/75 ${
+          className={`truncate font-semibold text-[var(--ink)] ${
             compact ? "max-w-[7rem] text-xs" : "max-w-[9rem] text-xs"
           }`}
         >
@@ -223,7 +221,7 @@ function MoodBadge({
         </span>
       )}
       {typeof count === "number" && (
-        <span className="text-xs text-white/45">{count}</span>
+        <span className="text-xs text-[var(--ink-muted)]">{count}</span>
       )}
     </span>
   );
@@ -281,7 +279,7 @@ function getMoodPersona(profile: PublicProfile): MoodPersona {
       description:
         "They are still shaping their public taste profile, so every new review will move the needle.",
       signal: "Fresh profile",
-      tone: "text-white/70",
+    tone: "text-[var(--ink-muted)]",
     };
   }
 
@@ -291,7 +289,7 @@ function getMoodPersona(profile: PublicProfile): MoodPersona {
       description:
         "This viewer gravitates toward titles that land well and leaves a warm trail of high-confidence picks.",
       signal: `${rating.toFixed(1)} avg score`,
-      tone: "text-yellow-300",
+      tone: "text-[var(--brand-coral-strong)]",
     };
   }
 
@@ -301,7 +299,7 @@ function getMoodPersona(profile: PublicProfile): MoodPersona {
       description:
         "They lean into long-form stories, character turns, and the slow burn of a good season.",
       signal: `${tvReviews} TV reviews`,
-      tone: "text-sky-300",
+      tone: "text-[var(--brand-coral-strong)]",
     };
   }
 
@@ -311,7 +309,7 @@ function getMoodPersona(profile: PublicProfile): MoodPersona {
       description:
         "They move through films with pace, chasing strong premises, memorable scenes, and quick emotional payoff.",
       signal: `${movieReviews} movie reviews`,
-      tone: "text-[#ff8a78]",
+      tone: "text-[var(--brand-coral-strong)]",
     };
   }
 
@@ -321,7 +319,7 @@ function getMoodPersona(profile: PublicProfile): MoodPersona {
       ? `Their reviews cluster around ${favoriteMood}, with a balanced spread across movies and TV.`
       : "They sample across formats and let the story decide where their attention goes next.",
     signal: favoriteMood ? `Top mood ${favoriteMood}` : "Balanced taste",
-    tone: "text-emerald-300",
+    tone: "text-[var(--brand-coral-strong)]",
   };
 }
 
@@ -502,7 +500,7 @@ export default function PublicProfilePage() {
           description:
             "This user keeps their taste signals private, so only disclosed profile sections are shown.",
           signal: "Private taste profile",
-          tone: "text-white/55",
+          tone: "text-[var(--ink-muted)]",
         }
       : persona;
   const badges = profile ? getBadges(profile) : [];
@@ -587,9 +585,10 @@ export default function PublicProfilePage() {
             Back to Moodies
           </Link>
 
-          <div className="border-b border-[var(--surface-border)] pb-6 sm:pb-8">
-            <div className="flex items-start gap-4 sm:items-center sm:gap-6">
-                <div className="h-[4.5rem] w-[4.5rem] flex-shrink-0 overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] sm:h-28 sm:w-28">
+          <div className="border-b border-[var(--surface-border)] pb-8 sm:pb-10">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex items-start gap-4 sm:gap-6">
+                <div className="h-20 w-20 flex-shrink-0 overflow-hidden border border-[var(--surface-border)] bg-[var(--surface-2)] sm:h-28 sm:w-28">
                   {avatar ? (
                     <img
                       src={avatar}
@@ -604,9 +603,9 @@ export default function PublicProfilePage() {
                   )}
                 </div>
 
-                <div className="min-w-0 flex-1">
-                  <p className="ui-kicker">{visiblePersona?.title ?? "Moodies user"}</p>
-                  <h1 className="mt-2 break-words text-4xl font-bold leading-none sm:text-6xl">
+                <div className="min-w-0">
+                  <p className="ui-kicker">Public profile · {visiblePersona?.title ?? "Moodies user"}</p>
+                  <h1 className="mt-2 break-words text-3xl font-bold leading-none text-[var(--ink)] sm:text-5xl">
                     {displayName}
                   </h1>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-sm leading-6 text-[var(--ink-muted)]">
@@ -625,31 +624,28 @@ export default function PublicProfilePage() {
                     </p>
                   )}
                 </div>
-            </div>
-
-            <div className="mt-5 grid gap-4 border-l-2 border-[var(--brand-coral)] pl-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-              <div className="flex items-center gap-3">
-                <div className="relative h-11 w-11 flex-shrink-0">
-                  <Image src={MASCOT_SRC} alt="" fill sizes="44px" className="object-contain" />
-                </div>
-                <div>
-                  <p className="text-sm leading-6 text-[var(--ink-muted)]">
-                    {visiblePersona?.description ?? "A public view of this member's Moodies taste."}
-                  </p>
-                  <p className="mt-1 text-xs font-semibold text-[var(--brand-coral-strong)]">
-                    {visiblePersona?.signal ?? "Public taste profile"}
-                  </p>
-                </div>
               </div>
               {ownProfile && (
-                <Link href="/profile" className="ui-secondary-action inline-flex min-h-11 items-center justify-center">
-                  Edit my profile
+                <Link href="/profile" className="ui-secondary-action inline-flex min-h-11 items-center justify-center sm:self-auto">
+                  View my profile
                 </Link>
               )}
             </div>
+
+            <div className="mt-8 max-w-2xl border-l-2 border-[var(--brand-coral)] pl-4">
+              <p className="text-xl font-bold leading-tight text-[var(--ink)]">A window into their taste</p>
+              <div>
+                <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+                    {visiblePersona?.description ?? "A public view of this member's Moodies taste."}
+                </p>
+                <p className="mt-2 text-sm font-semibold text-[var(--brand-coral-strong)]">
+                    {visiblePersona?.signal ?? "Public taste profile"}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-border)] sm:mt-6 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5 border-b border-[var(--surface-border)] py-6 sm:grid-cols-4 sm:py-8">
             <StatTile
               label="Reviews"
               value={disclosure.reviews ? profile.stats.totalReviews : "Hidden"}
@@ -686,10 +682,11 @@ export default function PublicProfilePage() {
 
       <section className="ui-shell">
         <div className="grid gap-5 sm:gap-6 lg:grid-cols-[320px_1fr]">
-          <aside className="space-y-3 sm:space-y-4">
+          <aside className="space-y-8 sm:space-y-10">
             {disclosure.reviews && (
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
-                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
+              <section className="border-t border-[var(--surface-border)] pt-5" aria-labelledby="mood-pattern-heading">
+                <p className="ui-kicker">Community signal</p>
+                <h2 id="mood-pattern-heading" className="mt-2 text-2xl font-bold leading-tight text-[var(--ink)]">
                   Mood pattern
                 </h2>
                 {profile.stats.topMoods.length > 0 ? (
@@ -703,16 +700,17 @@ export default function PublicProfilePage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-4 text-sm text-white/45">
+                  <p className="mt-4 text-sm leading-6 text-[var(--ink-muted)]">
                     No public mood tags yet.
                   </p>
                 )}
-              </div>
+              </section>
             )}
 
             {disclosure.badges && (
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
-                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
+              <section className="border-t border-[var(--surface-border)] pt-5" aria-labelledby="achievements-heading">
+                <p className="ui-kicker">Progress earned</p>
+                <h2 id="achievements-heading" className="mt-2 text-2xl font-bold leading-tight text-[var(--ink)]">
                   Achievements
                 </h2>
                 <div className="mt-4 space-y-2">
@@ -720,17 +718,17 @@ export default function PublicProfilePage() {
                     ? profile.achievements.slice(0, 6).map((row) => (
                         <div
                           key={row.achievement.key}
-                          className="rounded-lg border border-[#e94f37]/25 bg-[#e94f37]/10 px-3 py-2 text-sm text-white"
+                          className="border-b border-[var(--surface-border)] py-3 text-sm text-[var(--ink)]"
                         >
                           <div className="flex items-center justify-between gap-3">
                             <span className="font-semibold">
                               {row.badge?.badgeName ?? row.achievement.title}
                             </span>
-                            <span className="text-xs font-bold uppercase tracking-wide text-[var(--brand-coral-strong)]">
+                            <span className="text-xs font-semibold text-[var(--brand-coral-strong)]">
                               {row.badge?.rarity ?? "Common"}
                             </span>
                           </div>
-                          <p className="mt-1 text-xs leading-5 text-white/50">
+                          <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
                             {row.achievement.reasoningTemplate}
                           </p>
                         </div>
@@ -740,7 +738,7 @@ export default function PublicProfilePage() {
                           key={badge.name}
                           className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm ${
                             badge.earned
-                              ? "border-[#e94f37]/25 bg-[#e94f37]/10 text-white"
+                              ? "border-[var(--brand-coral)]/25 bg-[var(--brand-coral)]/10 text-[var(--ink)]"
                               : "border-[var(--surface-border)] bg-[var(--surface-1)] text-[var(--ink-muted)]"
                           }`}
                         >
@@ -755,18 +753,19 @@ export default function PublicProfilePage() {
                         </div>
                       ))}
                   {profile.badges.length > 0 && (
-                    <p className="pt-2 text-xs text-white/35">
+                    <p className="pt-2 text-sm text-[var(--ink-muted)]">
                       {profile.badges.length} account badge
                       {profile.badges.length === 1 ? "" : "s"} shared
                     </p>
                   )}
                 </div>
-              </div>
+              </section>
             )}
 
             {(disclosure.watchlist || disclosure.liked) && (
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
-                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
+              <section className="border-t border-[var(--surface-border)] pt-5" aria-labelledby="shared-lists-heading">
+                <p className="ui-kicker">Shared archive</p>
+                <h2 id="shared-lists-heading" className="mt-2 text-2xl font-bold leading-tight text-[var(--ink)]">
                   Shared lists
                 </h2>
                 <div className="mt-4 grid grid-cols-2 gap-3">
@@ -783,7 +782,7 @@ export default function PublicProfilePage() {
                     />
                   )}
                 </div>
-              </div>
+              </section>
             )}
 
             {(disclosure.badges || disclosure.recentActivity) && (
@@ -804,30 +803,31 @@ export default function PublicProfilePage() {
             )}
 
             {disclosure.recentActivity && profile.recentActivity.length > 0 && (
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-5">
-                <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-white/45">
+              <section className="border-t border-[var(--surface-border)] pt-5" aria-labelledby="recent-activity-heading">
+                <p className="ui-kicker">Latest signal</p>
+                <h2 id="recent-activity-heading" className="mt-2 text-2xl font-bold leading-tight text-[var(--ink)]">
                   Recent activity
                 </h2>
                 <div className="mt-4 space-y-2">
                   {profile.recentActivity.map((activity, index) => (
                     <div
                       key={`${activity.type}-${index}`}
-                      className="rounded-lg bg-white/[0.04] px-3 py-2"
+                      className="border-b border-[var(--surface-border)] py-3"
                     >
-                      <p className="text-sm font-semibold text-white/75">
+                      <p className="text-sm font-semibold text-[var(--ink)]">
                         {activity.label}
                       </p>
-                      <p className="mt-0.5 text-xs text-white/35">
+                      <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
                         {new Date(activity.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
             )}
           </aside>
 
-          <div className="space-y-5">
+          <div className="space-y-8 sm:space-y-10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-3xl font-bold leading-none sm:text-4xl">
@@ -835,14 +835,14 @@ export default function PublicProfilePage() {
                     ? "Public reviews"
                     : "Reviews are private"}
                 </h2>
-                <p className="mt-1 text-sm text-white/45">
+                <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
                   {disclosure.reviews
                     ? "Recent thoughts this user shared with the community."
                     : "This user has chosen not to show reviews on their public profile."}
                 </p>
               </div>
               {disclosure.reviews && (
-                <div className="inline-flex w-full rounded-lg border border-white/10 bg-white/[0.05] p-1 sm:w-auto">
+                <div className="inline-flex w-full border border-[var(--surface-border)] bg-[var(--surface-1)] p-1 sm:w-auto">
                   {(["all", "MOVIE", "TV"] as const).map((filter) => (
                     <button
                       key={filter}
@@ -850,8 +850,8 @@ export default function PublicProfilePage() {
                       onClick={() => setReviewFilter(filter)}
                       className={`min-h-9 flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition sm:flex-none ${
                         reviewFilter === filter
-                          ? "bg-[#e94f37] text-white"
-                          : "text-white/55 hover:text-white"
+                          ? "bg-[var(--brand-coral)] text-white"
+                          : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
                       }`}
                     >
                       {filter === "all"
@@ -866,17 +866,17 @@ export default function PublicProfilePage() {
             </div>
 
             {!disclosure.reviews ? (
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-10 text-center text-sm text-white/45">
+              <div className="border-y border-[var(--surface-border)] p-10 text-center text-sm text-[var(--ink-muted)]">
                 Hidden by this user&apos;s disclosure settings.
               </div>
             ) : filteredReviews.length === 0 ? (
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-10 text-center text-sm text-white/45">
+              <div className="border-y border-[var(--surface-border)] p-10 text-center text-sm text-[var(--ink-muted)]">
                 No reviews in this filter yet.
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredReviews.map((review, index) => (
-                  <ReviewRow key={review.id} review={review} index={index} />
+                {filteredReviews.map((review) => (
+                  <ReviewRow key={review.id} review={review} />
                 ))}
               </div>
             )}
@@ -917,12 +917,12 @@ function StatTile({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="bg-[var(--surface-1)] p-4">
-      <div className="mb-3 flex h-9 w-9 items-center justify-center text-[var(--brand-coral-strong)]">
+    <div>
+      <div className="flex items-center gap-2 text-[var(--brand-coral-strong)]">
         {icon}
       </div>
-      <p className="text-2xl font-bold text-[var(--ink)]">{value}</p>
-      <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+      <p className="mt-2 text-2xl font-bold leading-none text-[var(--ink)]">{value}</p>
+      <p className="mt-1 text-xs font-semibold text-[var(--ink-muted)]">
         {label}
       </p>
     </div>
@@ -995,9 +995,9 @@ function PublicListCard({ item }: { item: PublicListItem }) {
   return (
     <Link
       href={href}
-      className="group min-w-0 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] p-2 transition-[border-color,background-color] hover:border-[var(--brand-coral)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
+      className="group min-w-0 border border-[var(--surface-border)] bg-[var(--surface-1)] p-2 transition-[border-color,background-color] hover:border-[var(--brand-coral)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
     >
-      <div className="relative aspect-[2/3] overflow-hidden rounded-lg bg-white/[0.08]">
+      <div className="relative aspect-[2/3] overflow-hidden bg-[var(--surface-2)]">
         {poster ? (
           <img
             src={poster}
@@ -1009,33 +1009,28 @@ function PublicListCard({ item }: { item: PublicListItem }) {
             {item.mediaType === "TV" ? <Tv size={24} /> : <Film size={24} />}
           </div>
         )}
-        <span className="absolute left-2 top-2 rounded-md bg-black/70 px-2 py-1 text-xs font-bold text-white/80">
+        <span className="absolute left-2 top-2 bg-black/70 px-2 py-1 text-xs font-semibold text-white/88">
           {item.mediaType === "TV" ? "TV" : "Movie"}
         </span>
       </div>
-      <p className="mt-2 line-clamp-2 text-sm font-bold leading-5 text-white group-hover:text-[#ff8a78]">
+      <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] group-hover:text-[var(--brand-coral-strong)]">
         {item.title}
       </p>
-      {item.year && <p className="mt-0.5 text-xs text-white/35">{item.year}</p>}
+      {item.year && <p className="mt-0.5 text-xs text-[var(--ink-muted)]">{item.year}</p>}
     </Link>
   );
 }
 
-function ReviewRow({ review, index }: { review: PublicReview; index: number }) {
+function ReviewRow({ review }: { review: PublicReview }) {
   const type = review.mediaType === "TV" ? "tv" : "movies";
   const poster = posterSrc(review.tmdbPoster);
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.035, 0.25) }}
-      className="rounded-xl border border-white/10 bg-white/[0.04] p-3 transition hover:border-white/20 hover:bg-white/[0.06] sm:p-4"
-    >
+    <article className="border-t border-[var(--surface-border)] py-4 transition-colors hover:border-[var(--brand-coral)] sm:py-5">
       <div className="flex gap-3 sm:gap-4">
         <Link
           href={`/${type}/${review.tmdbId}`}
-          className="h-24 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-white/[0.08] sm:h-28 sm:w-20"
+          className="h-24 w-16 flex-shrink-0 overflow-hidden bg-[var(--surface-2)] sm:h-28 sm:w-20"
         >
           {poster ? (
             <img
@@ -1059,11 +1054,11 @@ function ReviewRow({ review, index }: { review: PublicReview; index: number }) {
             <div className="min-w-0">
               <Link
                 href={`/${type}/${review.tmdbId}`}
-                className="line-clamp-2 block text-sm font-bold text-white transition hover:text-[#ff8a78] sm:truncate sm:text-base"
+                className="line-clamp-2 block text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--brand-coral-strong)] sm:truncate sm:text-base"
               >
                 {review.tmdbTitle}
               </Link>
-              <p className="mt-1 text-xs text-white/40">
+              <p className="mt-1 text-xs text-[var(--ink-muted)]">
                 {review.mediaType === "TV" ? "TV Show" : "Movie"}
                 {review.tmdbYear ? ` - ${review.tmdbYear}` : ""}
                 {" - "}
@@ -1071,8 +1066,8 @@ function ReviewRow({ review, index }: { review: PublicReview; index: number }) {
               </p>
             </div>
 
-            <div className="inline-flex w-fit items-center gap-1 rounded-lg border border-white/10 bg-white/[0.06] px-2 py-1">
-              <Star size={12} className="fill-yellow-400 text-yellow-400" />
+            <div className="inline-flex w-fit items-center gap-1 border border-[var(--surface-border)] bg-[var(--surface-1)] px-2 py-1">
+              <Star size={12} className="fill-[var(--brand-coral)] text-[var(--brand-coral)]" />
               <span className="text-xs font-bold">
                 {(review.rating / 2).toFixed(1)}
               </span>
@@ -1091,11 +1086,11 @@ function ReviewRow({ review, index }: { review: PublicReview; index: number }) {
             </div>
           )}
 
-          <p className="mt-3 line-clamp-3 text-sm leading-5 text-white/68 sm:leading-6">
+          <p className="mt-3 line-clamp-3 text-sm leading-6 text-[var(--ink-muted)]">
             {review.content}
           </p>
         </div>
       </div>
-    </motion.article>
+    </article>
   );
 }
