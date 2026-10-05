@@ -1,10 +1,11 @@
 import { Controller, Get, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { PeopleService } from './people.service';
 import { CelebrityMediaService } from './media/celebrity-media.service';
+import { PeopleRecommendationsService } from './people-recommendations.service';
 
 @Controller('people')
 export class PeopleController {
-  constructor(private readonly peopleService: PeopleService, private readonly mediaService: CelebrityMediaService) {}
+  constructor(private readonly peopleService: PeopleService, private readonly mediaService: CelebrityMediaService, private readonly recommendations: PeopleRecommendationsService) {}
 
   @Get('trending/:type')
   async getTrending(@Param('type') type: string) {
@@ -76,7 +77,7 @@ export class PeopleController {
 
   @Get(':id/similar')
   async getSimilar(@Param('id', ParseIntPipe) id: number) {
-    return this.peopleService.getSimilarPeople(id);
+    return this.recommendations.getSimilarPeople(id);
   }
 
   @Get(':id/upcoming')

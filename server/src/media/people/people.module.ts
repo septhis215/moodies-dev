@@ -9,10 +9,23 @@ import { TmdbMediaProvider } from './media/tmdb-media.provider';
 import { YoutubeMediaProvider } from './media/youtube-media.provider';
 import { WikimediaMediaProvider } from './media/wikimedia-media.provider';
 import { CelebrityMediaService } from './media/celebrity-media.service';
+import { OpenverseMediaProvider } from './media/openverse-media.provider';
+import { PeopleRecommendationsService } from './people-recommendations.service';
 
 @Module({
   imports: [RedisModule],
-  providers: [PeopleService, MediaCacheService, MediaHttpService, CelebrityIdentityService, TmdbMediaProvider, YoutubeMediaProvider, WikimediaMediaProvider, CelebrityMediaService],
+  providers: [
+    PeopleService,
+    MediaCacheService,
+    MediaHttpService,
+    CelebrityIdentityService,
+    TmdbMediaProvider,
+    YoutubeMediaProvider,
+    WikimediaMediaProvider,
+    OpenverseMediaProvider,
+    CelebrityMediaService,
+    PeopleRecommendationsService,
+  ],
   controllers: [PeopleController],
 })
 export class PeopleModule {}

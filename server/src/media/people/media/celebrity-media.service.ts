@@ -6,6 +6,7 @@ import { MediaCacheService } from './media-cache.service';
 import { TmdbMediaProvider } from './tmdb-media.provider';
 import { YoutubeMediaProvider } from './youtube-media.provider';
 import { WikimediaMediaProvider } from './wikimedia-media.provider';
+import { OpenverseMediaProvider } from './openverse-media.provider';
 import { dedupePhotos, dedupeVideos } from './celebrity-media.types';
 import type {
   CelebrityMedia,
@@ -23,6 +24,7 @@ export class CelebrityMediaService {
     private readonly youtube: YoutubeMediaProvider,
     private readonly wikimedia: WikimediaMediaProvider,
     private readonly config: ConfigService,
+    private readonly openverse: OpenverseMediaProvider,
   ) {}
   async getMedia(id: number): Promise<CelebrityMedia> {
     // Operator identity hints / region changes must not reuse a differently filtered feed.
@@ -36,7 +38,7 @@ export class CelebrityMediaService {
       )
       .digest('hex')
       .slice(0, 12);
-    const key = `celebrity:${id}:media:v1:${version}`;
+    const key = `celebrity:${id}:media:v3:${version}`;
     const cached = await this.cache.get<CelebrityMedia>(
       key,
       (response) =>
@@ -52,11 +54,13 @@ export class CelebrityMediaService {
             ['tmdb', this.tmdb, 6 * 3600],
             ['youtube', this.youtube, 12 * 3600],
             ['wikimedia', this.wikimedia, 24 * 3600],
+            ['openverse', this.openverse, 12 * 3600],
           ];
         const sources: CelebrityMedia['sources'] = {
           tmdb: 'unavailable',
           youtube: this.youtube.enabled ? 'unavailable' : 'disabled',
           wikimedia: 'unavailable',
+          openverse: 'unavailable',
         };
         const results = await Promise.all(
           providers.map(async ([source, provider, ttl]) => {
@@ -64,7 +68,7 @@ export class CelebrityMediaService {
               return { photos: [], videos: [] };
             try {
               const result = await this.cache.get<ProviderMedia>(
-                `celebrity:${id}:${source}:v1:${version}`,
+                `celebrity:${id}:${source}:v2:${version}`,
                 ttl,
                 () => provider.discover(identity),
               );

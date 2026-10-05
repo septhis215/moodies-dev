@@ -8,6 +8,7 @@ import { MediaHttpService, MediaProviderError } from './media-http.service';
 import { YoutubeMediaProvider } from './youtube-media.provider';
 import { TmdbMediaProvider } from './tmdb-media.provider';
 import { WikimediaMediaProvider } from './wikimedia-media.provider';
+import { OpenverseMediaProvider } from './openverse-media.provider';
 import {
   dedupePhotos,
   dedupeVideos,
@@ -310,27 +311,23 @@ describe('YouTube provider', () => {
 describe('celebrity identity resolution', () => {
   it('uses TMDB biography group context and rejects conflicting Wikidata identifiers', async () => {
     const people = {
-      getPersonDetails: jest
-        .fn()
-        .mockResolvedValue({
-          id: 123,
-          name: 'Woni',
-          biography: 'Woni is a member of the South Korean girl group RESCENE.',
-          also_known_as: ['Won-i'],
-          external_ids: { imdb_id: 'nm16380468' },
-        }),
+      getPersonDetails: jest.fn().mockResolvedValue({
+        id: 123,
+        name: 'Woni',
+        biography: 'Woni is a member of the South Korean girl group RESCENE.',
+        also_known_as: ['Won-i'],
+        external_ids: { imdb_id: 'nm16380468' },
+      }),
     };
     const http = {
-      json: jest
-        .fn()
-        .mockResolvedValue({
-          results: {
-            bindings: [
-              { person: { value: 'http://www.wikidata.org/entity/Q1' } },
-              { person: { value: 'http://www.wikidata.org/entity/Q2' } },
-            ],
-          },
-        }),
+      json: jest.fn().mockResolvedValue({
+        results: {
+          bindings: [
+            { person: { value: 'http://www.wikidata.org/entity/Q1' } },
+            { person: { value: 'http://www.wikidata.org/entity/Q2' } },
+          ],
+        },
+      }),
     };
     const resolver = new CelebrityIdentityService(
       people as unknown as PeopleService,
@@ -350,28 +347,24 @@ describe('celebrity identity resolution', () => {
     'resolves exact identifiers and photo credits for $name',
     async (profile) => {
       const people = {
-        getPersonDetails: jest
-          .fn()
-          .mockResolvedValue({
-            id: profile.id,
-            name: profile.name,
-            also_known_as: profile.aliases,
-            combined_credits: { cast: [{ title: profile.contexts[0] }] },
-          }),
+        getPersonDetails: jest.fn().mockResolvedValue({
+          id: profile.id,
+          name: profile.name,
+          also_known_as: profile.aliases,
+          combined_credits: { cast: [{ title: profile.contexts[0] }] },
+        }),
       };
       const http = {
-        json: jest
-          .fn()
-          .mockResolvedValue({
-            results: {
-              bindings: [
-                {
-                  person: { value: 'http://www.wikidata.org/entity/Q123' },
-                  category: { value: profile.name },
-                },
-              ],
-            },
-          }),
+        json: jest.fn().mockResolvedValue({
+          results: {
+            bindings: [
+              {
+                person: { value: 'http://www.wikidata.org/entity/Q123' },
+                category: { value: profile.name },
+              },
+            ],
+          },
+        }),
       };
       const resolver = new CelebrityIdentityService(
         people as unknown as PeopleService,
@@ -460,12 +453,10 @@ describe('media aggregation', () => {
     const identity = { resolve: jest.fn().mockResolvedValue(woni) };
     const cache = new MediaCacheService(redisMock() as unknown as RedisService);
     const tmdb = {
-      discover: jest
-        .fn()
-        .mockResolvedValue({
-          photos: [photo('https://image.tmdb.org/t/p/original/a.jpg')],
-          videos: [video()],
-        }),
+      discover: jest.fn().mockResolvedValue({
+        photos: [photo('https://image.tmdb.org/t/p/original/a.jpg')],
+        videos: [video()],
+      }),
     };
     const youtube = {
       enabled: true,
@@ -481,6 +472,9 @@ describe('media aggregation', () => {
       youtube as unknown as YoutubeMediaProvider,
       wikimedia as unknown as WikimediaMediaProvider,
       new ConfigService(),
+      {
+        discover: jest.fn().mockResolvedValue({ photos: [], videos: [] }),
+      } as unknown as OpenverseMediaProvider,
     );
     const result = await service.getMedia(123);
     expect(result).toMatchObject({

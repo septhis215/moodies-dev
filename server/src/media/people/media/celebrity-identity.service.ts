@@ -3,7 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { PeopleService } from '../people.service';
 import { MediaCacheService } from './media-cache.service';
 import { MediaHttpService } from './media-http.service';
-import type { CelebrityIdentity } from './celebrity-media.types';
+import { normalize, type CelebrityIdentity } from './celebrity-media.types';
+import { affiliations } from './celebrity-affiliations';
 
 type Hints = {
   aliases?: string[];
@@ -56,6 +57,7 @@ export class CelebrityIdentityService {
       contexts: [
         ...new Set([
           ...strings(hints.contexts),
+          ...affiliations(person),
           ...(group ? [group] : []),
           ...(person.combined_credits?.cast || [])
             .slice(0, 5)
@@ -134,6 +136,8 @@ export class CelebrityIdentityService {
     } catch {
       /* TMDB and explicit identity hints remain usable. */
     }
+    identity.aliases = identity.aliases.filter((alias) =>
+      !identity.contexts.some((context) => normalize(context) === normalize(alias)));
     return identity;
   }
 }

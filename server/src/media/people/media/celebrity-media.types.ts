@@ -1,4 +1,4 @@
-export type MediaSource = 'tmdb' | 'youtube' | 'wikimedia';
+export type MediaSource = 'tmdb' | 'youtube' | 'wikimedia' | 'openverse';
 export type VideoCategory =
   | 'trailer'
   | 'clip'
@@ -86,7 +86,12 @@ export function identityRelevance(
   description = '',
   confirmedChannel = false,
 ) {
-  const name = identity.aliases.find((alias) => mentions(title, alias));
+  const name = identity.aliases.find(
+    (alias) =>
+      !identity.contexts.some(
+        (context) => normalize(context) === normalize(alias),
+      ) && mentions(title, alias),
+  );
   if (!name) return 0;
   const context = identity.contexts.some((value) =>
     mentions(`${title} ${description}`, value),
@@ -134,6 +139,10 @@ export function dedupePhotos(photos: CelebrityPhoto[]) {
         .split('?')[0];
       const keys = [
         canonical,
+        ...(photo.url.includes('staticflickr.com/') &&
+        photo.url.match(/\/(\d+)_/)
+          ? [`flickr:${photo.url.match(/\/(\d+)_/)![1]}`]
+          : []),
         ...(photo.contentHash ? [`hash:${photo.contentHash}`] : []),
       ];
       if (keys.some((key) => seen.has(key))) return false;

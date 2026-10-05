@@ -11,11 +11,12 @@ export class MediaProviderError extends Error {
 export class MediaHttpService {
   private limiter = new Bottleneck({ maxConcurrent: 2, minTime: 150 });
   constructor(private readonly config: ConfigService) {}
-  async json<T>(url: URL): Promise<T> {
+  async json<T>(url: URL, headers: Record<string, string> = {}): Promise<T> {
     return this.limiter.schedule(async () => {
       const response = await fetch(url, {
         signal: AbortSignal.timeout(6000),
         headers: {
+          ...headers,
           accept: 'application/json',
           'User-Agent':
             this.config.get<string>('CELEBRITY_MEDIA_USER_AGENT') ||
