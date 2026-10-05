@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { LockKeyhole, Mail } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -12,7 +11,6 @@ import {
   AuthHeader,
   AuthInput,
   AuthLink,
-  AuthMascotCallout,
   AuthMessage,
   AuthPasswordInput,
   AuthSupportNote,
@@ -35,13 +33,14 @@ export default function LoginPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (authLoading) return;
     setErr("");
     if (!isVerified) {
       setErr("Please complete the human verification.");
       return;
     }
 
-    const result = await signIn(email, password);
+    const result = await signIn(email.trim().toLowerCase(), password);
 
     if (!result.success) {
       setErr(result.error || "Login failed");
@@ -59,23 +58,18 @@ export default function LoginPage() {
   };
 
   return (
-    <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style>
-
       <AuthFrame>
         <AuthBrand />
         <AuthHeader title="Welcome back">
-          New here? <AuthLink href="/auth/signup">Create an account</AuthLink>
+          Log in to your watchlist and personalised picks.
         </AuthHeader>
-
-        <AuthMascotCallout />
 
         <form
           onSubmit={onSubmit}
-          className="space-y-5 [@media(max-height:700px)]:space-y-4"
+          className="space-y-5"
         >
           <AuthInput
-            label="Email Address"
+            label="Email address"
             type="email"
             placeholder="name@example.com"
             value={email}
@@ -85,20 +79,9 @@ export default function LoginPage() {
             required
           />
 
-          <div className="space-y-2">
-            <div className="ml-1 flex items-center justify-between gap-3">
-              <label className="block text-sm font-semibold text-white/85">
-                Password
-              </label>
-              <Link
-                href="/auth/forgot-password"
-                className="text-xs font-medium text-white/52 transition-colors hover:text-amber-200"
-              >
-                Forgot password?
-              </Link>
-            </div>
             <AuthPasswordInput
-              label=""
+              label="Password"
+              labelSide={<span className="text-xs"><AuthLink href="/auth/forgot-password">Forgot password?</AuthLink></span>}
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -108,24 +91,23 @@ export default function LoginPage() {
               onToggle={() => setShowPassword((s) => !s)}
               required
             />
-          </div>
 
           {err && <AuthMessage>{err}</AuthMessage>}
 
 
-          <AuthButton loading={authLoading} loadingText="Logging in...">
-            Login
+          <AuthButton loading={authLoading} loadingText="Logging in…">
+            Log in
           </AuthButton>
         </form>
 
-        <AuthDivider>Or continue with</AuthDivider>
+        <AuthDivider>or</AuthDivider>
 
         <GoogleButton loading={googleLoading} onClick={handleGoogleLogin}>
           Continue with Google
         </GoogleButton>
 
-        <AuthSupportNote className="mt-5 [@media(max-height:700px)]:mt-4" />
+        <p className="mt-6 text-center text-sm text-[var(--ink-muted)]">New to Moodies? <AuthLink href="/auth/signup">Create an account</AuthLink></p>
+        <AuthSupportNote className="mt-6 border-t border-[var(--surface-border)] pt-5" />
       </AuthFrame>
-    </>
   );
 }

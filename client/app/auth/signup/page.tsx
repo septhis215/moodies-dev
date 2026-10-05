@@ -14,9 +14,10 @@ import {
   AuthLink,
   AuthMessage,
   AuthPasswordInput,
-  GoogleIconButton,
+  GoogleButton,
 } from "../AuthFormUI";
 import { useTurnstileGate } from "@/hooks/useTurnstileGate";
+import { useAuth } from "@/app/context/AuthProvider";
 
 const API =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -33,9 +34,11 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { isVerified } = useTurnstileGate();
+  const { login } = useAuth();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setErr("");
     const normalizedUsername = username.trim();
     const normalizedEmail = email.trim().toLowerCase();
@@ -69,7 +72,8 @@ export default function SignupPage() {
         const message = Array.isArray(data.message) ? data.message[0] : data.message;
         throw new Error(message || "Sign up failed. Please try again.");
       }
-      router.push("/auth/onboarding");
+      await login(data.user);
+      router.replace("/auth/intro");
     } catch (error) {
       setErr(error instanceof Error ? error.message : "Sign up failed. Please try again.");
     } finally {
@@ -84,19 +88,15 @@ export default function SignupPage() {
   };
 
   return (
-    <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style>
-
-      <AuthFrame className="py-1 sm:py-2">
+      <AuthFrame>
         <AuthBrand compact />
         <AuthHeader title="Create an account" compact>
-          Already have an account?{" "}
-          <AuthLink href="/auth/login">Log in</AuthLink>
+          Save your picks and find stories for your taste.
         </AuthHeader>
 
         <form
           onSubmit={onSubmit}
-          className="space-y-2.5 [&_.auth-field]:space-y-1 [&_.auth-field-label]:text-[0.76rem] [&_button[type='submit']]:!h-10 [&_input:not([type='checkbox'])]:!h-10"
+          className="space-y-5"
         >
           <AuthInput
             label="Username"
@@ -105,12 +105,16 @@ export default function SignupPage() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoComplete="username"
+            minLength={3}
+            maxLength={20}
+            pattern="[A-Za-z0-9_]{3,20}"
+            hint="3–20 letters, numbers or underscores."
             icon={<User className="h-4 w-4" aria-hidden />}
             required
           />
 
           <AuthInput
-            label="Email Address"
+            label="Email address"
             type="email"
             placeholder="name@example.com"
             value={email}
@@ -122,49 +126,58 @@ export default function SignupPage() {
 
           <AuthPasswordInput
             label="Password"
-            placeholder="Enter your password"
+            placeholder="Create a password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
+            minLength={8}
+            hint="At least 8 characters."
             icon={<LockKeyhole className="h-4 w-4" aria-hidden />}
             shown={showPassword}
             onToggle={() => setShowPassword((s) => !s)}
             required
           />
 
-          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-2.5 py-1.5 text-[0.72rem] leading-4 text-white/62 transition hover:border-white/18 hover:bg-white/[0.06]">
+          <div className="flex items-start gap-3 text-sm leading-6 text-[var(--ink-muted)]">
             <input
+              id="signup-terms"
               type="checkbox"
               checked={agree}
               onChange={(e) => setAgree(e.target.checked)}
-              className="h-3 w-3 cursor-pointer accent-[rgb(233,79,55)]"
+              required
+              className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-[var(--brand-coral)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]"
             />
-            <span>
-              I agree to the{" "}
+            <div>
+              <label htmlFor="signup-terms" className="cursor-pointer">I agree to the Terms &amp; Conditions.</label>{" "}
               <Link
                 href="/terms"
-                className="font-medium text-amber-300 underline-offset-4 hover:text-amber-200 hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Terms and Conditions (opens in a new tab)"
+                className="rounded-sm font-semibold text-[var(--brand-coral-strong)] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
               >
-                Terms &amp; Conditions
+                Read terms
               </Link>
-            </span>
-          </label>
+            </div>
+          </div>
 
           {err && <AuthMessage>{err}</AuthMessage>}
 
 
-          <AuthButton loading={loading} loadingText="Creating...">
-            Create
+          <AuthButton loading={loading} loadingText="Creating your account…">
+            Create account
           </AuthButton>
         </form>
 
-        <AuthDivider compact>Or register with</AuthDivider>
+        <AuthDivider compact>or</AuthDivider>
 
-        <GoogleIconButton
+        <GoogleButton
           loading={googleLoading}
           onClick={handleGoogleSignup}
         />
+        <p className="mt-6 text-center text-sm text-[var(--ink-muted)]">
+          Already have an account? <AuthLink href="/auth/login">Log in</AuthLink>
+        </p>
       </AuthFrame>
-    </>
   );
 }

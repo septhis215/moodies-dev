@@ -23,9 +23,6 @@ export function useAuth() {
             });
 
             try {
-                // 3-second delay
-                await new Promise((resolve) => setTimeout(resolve, 3000));
-
                 // Perform sign-in. The server sets the session as HttpOnly
                 // cookies on this response — credentials:include is required for
                 // the browser to store them, and there is no token to persist.
@@ -57,9 +54,6 @@ export function useAuth() {
                     posterUrl: data.user?.avatarUrl || MOODIES_LOGO,
                     imageSize: data.user?.avatarUrl ? undefined : MOODIES_SIZE,
                 });
-
-                // Small delay before redirect to let user see success
-                await new Promise((resolve) => setTimeout(resolve, 500));
 
                 // Redirect to home
                 window.location.href = "/";

@@ -28,6 +28,7 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setMsg("");
     setLoading(true);
     try {
@@ -35,7 +36,7 @@ export default function ForgotPasswordPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -52,7 +53,7 @@ export default function ForgotPasswordPage() {
         id: "password-reset-code-sent",
         title: "Check your email",
       });
-      router.push(`/auth/verify-code?email=${encodeURIComponent(email)}`);
+      router.push(`/auth/verify-code?email=${encodeURIComponent(email.trim().toLowerCase())}`);
     } catch (e: unknown) {
       const appError = normalizeApiError(
         e,
@@ -69,22 +70,18 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');`}</style>
-
       <AuthFrame>
         <AuthBrand />
-        <AuthHeader title="Reset password">
-          Enter your email and we&apos;ll send a recovery code.{" "}
-          <AuthLink href="/auth/login">Back to login</AuthLink>
+        <AuthHeader title="Forgot your password?">
+          Enter the email you use for Moodies. We&apos;ll send a code to help you reset your password.
         </AuthHeader>
 
         <form
           onSubmit={onSubmit}
-          className="space-y-5 [@media(max-height:700px)]:space-y-4"
+          className="space-y-5"
         >
           <AuthInput
-            label="Email Address"
+            label="Email address"
             type="email"
             placeholder="name@example.com"
             value={email}
@@ -94,15 +91,15 @@ export default function ForgotPasswordPage() {
             required
           />
 
-          {msg && <AuthMessage tone="info">{msg}</AuthMessage>}
+          {msg && <AuthMessage>{msg}</AuthMessage>}
 
-          <AuthButton loading={loading} loadingText="Checking...">
-            Continue
+          <AuthButton loading={loading} loadingText="Sending code…">
+            Send reset code
           </AuthButton>
         </form>
 
-        <AuthSupportNote className="mt-5 [@media(max-height:700px)]:mt-4" />
+        <p className="mt-6 text-center text-sm"><AuthLink href="/auth/login">Back to log in</AuthLink></p>
+        <AuthSupportNote className="mt-8 border-t border-[var(--surface-border)] pt-5" />
       </AuthFrame>
-    </>
   );
 }

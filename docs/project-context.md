@@ -238,7 +238,7 @@ empty list.
 | Group | Routes |
 |---|---|
 | Landing | `/` |
-| Auth | `/auth/login`, `/auth/signup`, `/auth/forgot-password`, `/auth/verify-code`, `/auth/change-password`, `/auth/onboarding` (all under a dedicated auth layout with its own background/poster treatment; navbar hidden) |
+| Auth | `/auth/login`, `/auth/signup`, `/auth/intro`, `/auth/forgot-password`, `/auth/verify-code`, `/auth/change-password`, `/auth/onboarding` (all under a dedicated auth layout with its own background/poster treatment; navbar hidden). Email signup establishes the session, then opens `/auth/intro` before the preferences onboarding. |
 | Moods ★ | `/moods`, `/moods/explore` |
 | Movies | `/movies` (hub), `/movies/[id]`, `/movies/[id]/credits`, `/movies/[id]/reviews`, plus rails: `/movies/featured`, `/movies/new-releases`, `/movies/box-office`, `/movies/award-winners`, `/movies/indie`, `/movies/animated`, `/movies/korean-cinema`, `/movies/action` (Action genre) |
 | TV | `/tv`, `/tv/[id]`, `/tv/[id]/credits`, `/tv/[id]/reviews`, `/tv/trending`, `/tv/top-rated`, `/tv/new-releases`, `/tv/airing/today`, `/tv/airing/week`, `/tv/k-drama` |

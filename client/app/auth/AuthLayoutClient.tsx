@@ -22,6 +22,14 @@ export default function AuthLayoutClient({ slides, children }: Props) {
   const isOnboarding = pathname.includes("onboarding");
   void slides;
 
+  if (pathname === "/auth/intro") {
+    return (
+      <div className="relative z-10 mx-auto max-h-[calc(100dvh-2rem)] w-full max-w-3xl overflow-y-auto rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)]/95 p-5 sm:p-8">
+        {children}
+      </div>
+    );
+  }
+
   if (isOnboarding) {
     return (
       <div
@@ -35,25 +43,18 @@ export default function AuthLayoutClient({ slides, children }: Props) {
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 z-10 flex w-full animate-fadeIn md:w-[min(58vw,520px)] lg:w-[min(44vw,580px)]">
+    <div className="fixed inset-y-0 right-0 z-10 flex w-full md:w-[min(58vw,520px)] lg:w-[min(44vw,580px)]">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-y-0 -left-24 hidden w-24
-                   bg-gradient-to-l from-black/40 to-transparent md:block"
+                   bg-gradient-to-l from-[var(--surface-0)]/60 to-transparent md:block"
       />
 
       <div
         className={`relative flex min-h-[100dvh] w-full overflow-y-auto
-                   border-l border-white/12 bg-black/58 px-4 py-4
-                   shadow-[-28px_0_90px_-40px_rgba(0,0,0,0.95)]
-                   backdrop-blur-xl sm:px-8 sm:py-6 lg:px-12`}
+                   border-l border-[var(--surface-border)] bg-[var(--surface-0)]/95 px-6 py-8
+                   sm:px-8 sm:py-10 lg:px-12`}
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0
-                     bg-[radial-gradient(72%_48%_at_50%_12%,rgba(233,79,55,0.18),transparent_72%)]"
-        />
-
         <div className="relative mx-auto flex min-h-full w-full max-w-md items-center py-3 sm:py-0">
           {children}
         </div>
