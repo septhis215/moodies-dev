@@ -38,24 +38,26 @@ export default function MoodiesIntro({
   return (
     <section
       aria-labelledby={headingId}
-      className={compact ? "w-full" : "ui-shell py-8 sm:py-10"}
+      className={compact ? "w-full" : "ui-shell py-6 sm:py-10"}
     >
       <div
-        className={`ui-panel overflow-hidden ${compact ? "p-4 sm:p-5" : "p-5 sm:p-7 lg:p-8"}`}
+        className={`ui-panel overflow-hidden ${compact ? "p-4 sm:p-5" : "p-4 sm:p-7 lg:p-8"}`}
       >
         <div
           className={
-            compact ? "" : "grid gap-7 lg:grid-cols-2 lg:items-center lg:gap-12"
+            compact
+              ? ""
+              : "grid gap-5 sm:gap-7 lg:grid-cols-2 lg:items-center lg:gap-12"
           }
         >
           <div
-            className={`grid items-center gap-x-4 gap-y-2 ${compact ? "grid-cols-[minmax(0,1fr)_4rem]" : "grid-cols-[minmax(0,1fr)_5rem] sm:grid-cols-[minmax(0,1fr)_8rem]"}`}
+            className={`grid items-center gap-x-4 gap-y-2 ${compact ? "grid-cols-[minmax(0,1fr)_4rem]" : "grid-cols-[minmax(0,1fr)_3rem] sm:grid-cols-[minmax(0,1fr)_8rem]"}`}
           >
-            <div className={compact ? "" : "contents sm:block"}>
+            <div className="min-w-0">
               <p className="ui-kicker">What is Moodies?</p>
               <h2
                 id={headingId}
-                className={`mt-2 font-bold text-[var(--ink)] ${compact ? "text-xl leading-tight sm:text-2xl" : "col-span-2 max-w-3xl text-balance text-3xl leading-none sm:text-4xl"}`}
+                className={`mt-2 font-bold text-[var(--ink)] ${compact ? "text-xl leading-tight sm:text-2xl" : "max-w-3xl text-balance text-2xl leading-tight sm:text-4xl sm:leading-none"}`}
               >
                 Your mood. Your taste. Your next watch.
               </h2>
@@ -66,17 +68,28 @@ export default function MoodiesIntro({
               width={160}
               height={160}
               unoptimized
-              sizes={compact ? "64px" : "(max-width: 639px) 80px, 128px"}
-              className={`object-contain ${compact ? "h-16 w-16" : "col-start-2 row-start-1 h-20 w-20 sm:h-32 sm:w-32"}`}
+              sizes={compact ? "64px" : "(max-width: 639px) 48px, 128px"}
+              className={`object-contain ${compact ? "h-16 w-16" : "col-start-2 row-start-1 h-12 w-12 self-start sm:h-32 sm:w-32 sm:self-center"}`}
             />
             <p className="col-span-2 mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-              {compact
-                ? "Moodies helps you discover movies and TV shows for your mood and taste. Your favourite genres and languages personalise your picks."
-                : "Moodies is your movie and TV recommendation guide. Discover stories curated around how you feel and personalised to your favourite genres and languages."}
+              {compact ? (
+                "Moodies helps you discover movies and TV shows for your mood and taste. Your favourite genres and languages personalise your picks."
+              ) : (
+                <>
+                  <span className="sm:hidden">
+                    Discover movies and series for your mood and taste.
+                  </span>
+                  <span className="hidden sm:inline">
+                    Moodies is your movie and TV recommendation guide. Discover
+                    stories curated around how you feel and personalised to your
+                    favourite genres and languages.
+                  </span>
+                </>
+              )}
             </p>
           </div>
           {!compact && (
-            <ul className="grid gap-5">
+            <ul className="hidden gap-5 sm:grid">
               {discoveryFeatures.map(
                 ({ title, description, mascot, mascotName }) => (
                   <li key={title} className="flex items-start gap-4">
@@ -103,14 +116,20 @@ export default function MoodiesIntro({
           )}
         </div>
         <p
-          className={`border-t border-[var(--surface-border)] text-sm leading-6 text-[var(--ink-muted)] ${compact ? "mt-3 pt-3" : "mt-6 pt-4"}`}
+          className={`border-t border-[var(--surface-border)] text-sm leading-6 text-[var(--ink-muted)] ${compact ? "mt-3 pt-3" : "mt-4 pt-3 sm:mt-6 sm:pt-4"}`}
         >
           <span className="font-semibold text-[var(--ink)]">
             Discover here. Watch on your favourite service.
           </span>{" "}
-          {compact
-            ? "We provide recommendations and title information, without hosting or streaming full movies or TV episodes."
-            : "Moodies provides recommendations and information; we don't host or stream full movies or TV episodes. Enjoy your picks through licensed streaming services or in cinemas."}
+          {compact ? (
+            "We provide recommendations and title information, without hosting or streaming full movies or TV episodes."
+          ) : (
+            <span className="hidden sm:inline">
+              Moodies provides recommendations and information; we don&apos;t
+              host or stream full movies or TV episodes. Enjoy your picks
+              through licensed streaming services or in cinemas.
+            </span>
+          )}
         </p>
       </div>
     </section>
