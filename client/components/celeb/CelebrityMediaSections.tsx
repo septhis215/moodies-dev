@@ -275,10 +275,9 @@ export default function CelebrityMediaSections({
         className="mt-10 min-w-0 scroll-mt-24 space-y-5 border-t border-[var(--surface-border)] pt-8 sm:mt-12 sm:pt-10"
       >
         <header>
-          <p className="ui-kicker">In the spotlight</p>
           <h2
             id="celebrity-moments-heading"
-            className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
+            className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
           >
             On-Screen Moments
           </h2>
@@ -363,7 +362,7 @@ export default function CelebrityMediaSections({
           <div className="ui-panel p-5 text-sm leading-6 text-[var(--ink-muted)]">
             {failed
               ? "We couldn’t load these moments. You can still explore the profile and photos."
-              : "No confidently matched moments are available yet. Explore the filmography below for more of their work."}
+              : "No moments are available yet. Explore the filmography for more of their work."}
           </div>
         )}
       </section>
@@ -373,10 +372,9 @@ export default function CelebrityMediaSections({
         className="mt-10 scroll-mt-24 space-y-5 border-t border-[var(--surface-border)] pt-8 sm:mt-12 sm:pt-10"
       >
         <header>
-          <p className="ui-kicker">Through the lens</p>
           <h2
             id="celebrity-gallery-heading"
-            className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
+            className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
           >
             Photo Gallery
           </h2>
