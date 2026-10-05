@@ -9,19 +9,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   IconArrowUpRight,
   IconChevronDown,
-  IconHome,
   IconLogin,
   IconLogout,
   IconMenu2,
-  IconMoodSmile,
-  IconMovie,
-  IconPhoto,
   IconSparkles,
   IconUser,
   IconUserPlus,
   IconX,
 } from "@tabler/icons-react";
-import { Bookmark, Heart, MouseIcon, Tv, Users } from "lucide-react";
+import { Bookmark, Heart } from "lucide-react";
 import { useAuth } from "@/app/context/AuthProvider";
 import { appToast } from "@/lib/toast";
 import DropdownPortal from "./ui/dropdownPortal";
@@ -98,53 +94,49 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
   ],
 };
 
-const routeIcons: Record<
-  string,
-  React.ComponentType<{ className?: string }>
-> = {
-  "/": IconHome,
-  "/movies": IconMovie,
-  "/tv": Tv,
-  "/celeb": Users,
-  "/moods/explore": IconMoodSmile,
-  "/collection": Bookmark,
-};
-
 const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };
 const sectionIntroductions: Record<
   string,
-  { title: string; description: string; mascot?: string }
+  { title: string; description: string; mascot: string }
 > = {
   "/": {
     title: "Moodies home",
     description:
       "A little of everything: movies, TV shows, and mood-led picks.",
+    mascot: "happy",
   },
   "/movies": {
     title: "Movies homepage",
     description:
       "Find your next film: fresh releases, favourites, and picks for your mood.",
-    mascot: "epic",
+    mascot: "thrilling",
   },
   "/tv": {
     title: "TV shows homepage",
     description:
       "Find a series to settle into, from new arrivals to returning favourites.",
-    mascot: "cozy",
+    mascot: "chill",
   },
   "/moods/explore": {
     title: "Explore your moods",
     description: "Let how you feel guide your next movie or TV show.",
-    mascot: "whimsy",
+    mascot: "mind-bending",
   },
   "/collection": {
     title: "My collection",
     description: "Keep your discoveries together: saved titles and favourites.",
+    mascot: "nostalgic",
   },
   "/celeb": {
     title: "Explore people",
     description: "Discover the people behind your favourite stories.",
+    mascot: "inspirational",
+  },
+  "/feed": {
+    title: "Moodies Feed",
+    description: "See what the Moodies community is sharing.",
+    mascot: "funny",
   },
 };
 const focusRing =
@@ -421,7 +413,6 @@ export function NavbarComponent({
               >
                 {routes.map((route, index) => {
                   const isActive = activeRoute === route.href;
-                  const RouteIcon = routeIcons[route.href] || IconPhoto;
 
                   return (
                     <motion.div
@@ -439,20 +430,12 @@ export function NavbarComponent({
                         type="button"
                         onClick={() => setActiveRoute(route.href)}
                         aria-pressed={isActive}
-                        className={`flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl px-3 text-left ${focusRing}`}
+                        className={`flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-1 text-left ${focusRing}`}
                       >
-                        <span
-                          className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border ${
-                            isActive
-                              ? "border-[#e94f37]/25 bg-[#e94f37]/10 text-[#f2836d]"
-                              : "border-white/[0.08] bg-white/[0.035] text-white/55 group-hover:text-white/80"
-                          }`}
-                        >
-                          <RouteIcon
-                            className="h-[18px] w-[18px]"
-                            aria-hidden="true"
-                          />
-                        </span>
+                        <NavigationMascot
+                          href={route.href}
+                          className="h-12 w-12"
+                        />
                         <span
                           className={`truncate text-sm font-medium ${
                             isActive ? "text-white" : "text-white/68"
@@ -639,15 +622,14 @@ export function NavbarComponent({
           className="flex items-center gap-1"
         >
           {[
-            { label: "Movies", href: "/movies", icon: IconMovie },
-            { label: "TV shows", href: "/tv", icon: Tv },
+            { label: "Movies", href: "/movies" },
+            { label: "TV shows", href: "/tv" },
             ...(process.env.NEXT_PUBLIC_APP_ENV === "staging"
               ? []
-              : [{ label: "Celebs", href: "/celeb", icon: Users }]),
-            { label: "Feed", href: "/feed", icon: MouseIcon },
-            { label: "Moods", href: "/moods/explore", icon: IconMoodSmile },
+              : [{ label: "Celebs", href: "/celeb" }]),
+            { label: "Feed", href: "/feed" },
+            { label: "Moods", href: "/moods/explore" },
           ].map((item) => {
-            const ItemIcon = item.icon;
             return (
               <Link
                 key={item.href}
@@ -655,7 +637,7 @@ export function NavbarComponent({
                 aria-current={pathname === item.href ? "page" : undefined}
                 className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-2.5 text-sm font-semibold transition-colors hover:bg-white/[0.055] hover:text-[var(--ink)] ${pathname === item.href || pathname.startsWith(`${item.href}/`) ? "bg-[var(--surface-2)] text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"} ${focusRing}`}
               >
-                <ItemIcon className="h-5 w-5" aria-hidden="true" />
+                <NavigationMascot href={item.href} className="h-8 w-8" />
                 {item.label}
               </Link>
             );
@@ -872,7 +854,6 @@ export function NavbarComponent({
             {routes.map((route) => {
               const subOptions = routeOptions[route.href] || [];
               const isExpanded = mobileExpandedRoute === route.href;
-              const RouteIcon = routeIcons[route.href] || IconPhoto;
 
               return (
                 <div
@@ -892,29 +873,10 @@ export function NavbarComponent({
                       }
                       className={`flex min-h-14 min-w-0 flex-1 items-center gap-3 px-3.5 text-left ${focusRing}`}
                     >
-                      <span
-                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border ${
-                          isExpanded
-                            ? "border-[#e94f37]/25 bg-[#e94f37]/10 text-[#f2836d]"
-                            : "border-white/[0.08] bg-white/[0.035] text-white/55"
-                        }`}
-                      >
-                        {route.href === "/movies" || route.href === "/tv" ? (
-                          <Image
-                            src={`/images/moods/${sectionIntroductions[route.href].mascot}.png`}
-                            alt={`${sectionIntroductions[route.href].mascot} mood mascot`}
-                            width={40}
-                            height={40}
-                            unoptimized
-                            className="h-10 w-10 shrink-0 object-contain"
-                          />
-                        ) : (
-                          <RouteIcon
-                            className="h-[18px] w-[18px]"
-                            aria-hidden="true"
-                          />
-                        )}
-                      </span>
+                      <NavigationMascot
+                        href={route.href}
+                        className="h-10 w-10"
+                      />
                       <span className="min-w-0">
                         <span className="block text-sm font-semibold text-[var(--ink)]">
                           {route.name}
@@ -1025,6 +987,26 @@ export function NavbarComponent({
 
       {portalRoot ? createPortal(desktopMenu, portalRoot) : null}
     </Navbar>
+  );
+}
+
+function NavigationMascot({
+  href,
+  className,
+}: {
+  href: string;
+  className: string;
+}) {
+  return (
+    <Image
+      src={`/images/moods/${sectionIntroductions[href].mascot}.png`}
+      alt=""
+      aria-hidden="true"
+      width={48}
+      height={48}
+      unoptimized
+      className={`shrink-0 object-contain ${className}`}
+    />
   );
 }
 
