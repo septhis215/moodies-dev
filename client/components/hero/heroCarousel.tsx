@@ -231,7 +231,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                 duration: reduceMotion ? 0 : 0.34,
                 ease: "easeOut",
               }}
-              className="max-w-[34rem] sm:max-w-2xl xl:max-w-3xl"
+              className="min-w-0 max-w-[34rem] sm:max-w-2xl xl:max-w-3xl"
             >
               <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#ff9b8a] sm:text-[11px]">
                 Moodies spotlight
@@ -267,7 +267,9 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                   duration: reduceMotion ? 0 : 0.38,
                   delay: reduceMotion ? 0 : 0.07,
                 }}
-                className="max-w-[13ch] text-balance text-[2.55rem] font-black leading-[0.92] tracking-[-0.035em] text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.5)] min-[390px]:text-[3rem] sm:text-[clamp(3.2rem,7vw,5.8rem)] lg:text-[clamp(4rem,6vw,6.4rem)]"
+                aria-label={currentTitle}
+                title={currentTitle}
+                className="line-clamp-2 max-w-[20ch] break-words text-balance text-[2.55rem] font-bold leading-[0.92] tracking-[-0.035em] text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.5)] min-[390px]:text-[3rem] sm:text-[clamp(3.2rem,7vw,5.8rem)] lg:text-[clamp(4rem,6vw,6.4rem)]"
               >
                 {currentTitle}
               </motion.h1>

@@ -187,7 +187,7 @@ export function HomepageMediaHero({
               }}
               className="grid min-h-0 items-center gap-5 pb-5 sm:grid-cols-[minmax(0,1fr)_140px] lg:grid-cols-[minmax(0,620px)_160px] lg:gap-9"
             >
-              <div className="max-w-2xl self-center pt-5 sm:pt-0">
+              <div className="min-w-0 max-w-2xl self-center pt-5 sm:pt-0">
                 <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/65">
                   <span className="text-[#ff8b78]">{spotlightLabel}</span>
                   <span aria-hidden="true">/</span>
@@ -203,7 +203,9 @@ export function HomepageMediaHero({
                     duration: reduceMotion ? 0 : 0.36,
                     delay: reduceMotion ? 0 : 0.08,
                   }}
-                  className="mt-3 max-w-[14ch] text-4xl font-bold leading-[0.95] tracking-[-0.035em] text-white sm:text-5xl"
+                  aria-label={getTitle(featured)}
+                  title={getTitle(featured)}
+                  className="mt-3 line-clamp-2 max-w-[20ch] break-words text-4xl font-bold leading-[0.95] tracking-[-0.035em] text-white sm:text-5xl"
                 >
                   {getTitle(featured)}
                 </motion.h2>
