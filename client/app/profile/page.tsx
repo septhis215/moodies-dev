@@ -825,7 +825,7 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-[var(--surface-0)] pb-10 text-[var(--ink)]">
-      <div className="ui-shell py-5 sm:py-10">
+      <div className="ui-shell py-5 sm:py-10 lg:pt-[calc(3rem+6rem)]">
         <section className="border-b border-[var(--surface-border)] pb-8 sm:pb-10" aria-labelledby="profile-heading">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-start gap-4 sm:gap-6">

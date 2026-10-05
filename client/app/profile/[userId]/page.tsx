@@ -576,7 +576,7 @@ export default function PublicProfilePage() {
   return (
     <main className="min-h-screen bg-[var(--surface-0)] pb-10 text-[var(--ink)]">
       <section>
-        <div className="ui-shell py-5 sm:py-10">
+        <div className="ui-shell py-5 sm:py-10 lg:pt-[calc(3rem+6rem)]">
           <Link
             href="/"
             className="mb-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] sm:mb-8"
