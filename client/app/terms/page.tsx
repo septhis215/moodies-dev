@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Film, ShieldCheck } from "lucide-react";
-import { TmdbImage as Image } from "@/components/ui/TmdbImage";
+import { ArrowLeft } from "lucide-react";
 import { TermsPdfButton } from "./TermsPdfButton";
 
 export const metadata: Metadata = {
@@ -53,9 +52,48 @@ const termsSections = [
   },
 ];
 
+const termsFocusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]";
+const termsTextLink = `rounded-sm text-[var(--brand-coral-strong)] underline underline-offset-4 hover:text-[var(--ink)] ${termsFocusRing}`;
+
+function TermsContents() {
+  return (
+    <nav aria-label="Terms sections">
+      <ol className="space-y-1">
+        {termsSections.map((section, index) => (
+          <li key={section.title}>
+            <a
+              href={`#terms-section-${index + 1}`}
+              className={`flex min-h-11 items-center rounded-lg px-2 py-2 text-sm leading-5 text-[var(--ink-muted)] transition-colors hover:bg-[var(--surface-1)] hover:text-[var(--ink)] ${termsFocusRing}`}
+            >
+              {section.title}
+            </a>
+          </li>
+        ))}
+        <li>
+          <a
+            href="#terms-support"
+            className={`flex min-h-11 items-center rounded-lg px-2 py-2 text-sm text-[var(--ink-muted)] hover:bg-[var(--surface-1)] hover:text-[var(--ink)] ${termsFocusRing}`}
+          >
+            Questions or Support
+          </a>
+        </li>
+        <li>
+          <a
+            href="#terms-credits"
+            className={`flex min-h-11 items-center rounded-lg px-2 py-2 text-sm text-[var(--ink-muted)] hover:bg-[var(--surface-1)] hover:text-[var(--ink)] ${termsFocusRing}`}
+          >
+            Credits
+          </a>
+        </li>
+      </ol>
+    </nav>
+  );
+}
+
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
       <style>{`
         @media print {
           @page {
@@ -131,155 +169,162 @@ export default function TermsPage() {
           }
         }
       `}</style>
-      <div className="terms-screen">
-        <section className="relative overflow-hidden border-b border-white/10">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(233,79,55,0.22),transparent_34%),radial-gradient(circle_at_80%_0%,rgba(245,158,11,0.14),transparent_30%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.18),#000_92%)]" />
-
-          <div className="relative mx-auto flex min-h-[36rem] max-w-6xl flex-col justify-between px-4 pb-10 pt-24 sm:px-6 lg:px-8 lg:pt-28">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <Link
-                href="/auth/signup"
-                className="inline-flex w-fit items-center gap-2 rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-sm font-medium text-white/72 transition hover:border-[rgb(233,79,55)]/35 hover:bg-white/[0.07] hover:text-white"
-              >
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-                Back to signup
-              </Link>
-              <TermsPdfButton />
-            </div>
-
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-end">
-              <div className="max-w-3xl">
-                <div className="mb-5 inline-flex items-center gap-2 rounded-lg border border-[rgb(233,79,55)]/25 bg-[rgb(233,79,55)]/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#ffb09f]">
-                  <ShieldCheck className="h-4 w-4" aria-hidden />
-                  Moodies account terms
-                </div>
-                <h1 className="text-4xl font-semibold tracking-normal text-white sm:text-5xl lg:text-6xl">
-                  Terms & Conditions
-                </h1>
-                <p className="mt-5 max-w-2xl text-base leading-7 text-white/62 sm:text-lg">
-                  These terms explain the expectations for using Moodies, creating
-                  an account, saving your watchlist, sharing reviews, and receiving
-                  personalized movie and series recommendations.
-                </p>
-                <p className="mt-4 text-sm text-white/42">
-                  Last updated: June 29, 2026
-                </p>
-              </div>
-
-              <div className="hidden rounded-lg border border-white/10 bg-white/[0.045] p-5 shadow-[0_22px_70px_rgba(0,0,0,0.45)] lg:block">
-                <div className="relative mx-auto h-32 w-32">
-                  <Image
-                    src="/images/moodies-transparent.png"
-                    alt="Moodies"
-                    fill
-                    sizes="128px"
-                    className="object-contain drop-shadow-[0_14px_24px_rgba(0,0,0,0.45)]"
-                    priority
-                  />
-                </div>
-                <div className="mt-5 space-y-3 text-sm text-white/58">
-                  <p className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#ef775f]" aria-hidden />
-                    Keep your account details secure.
-                  </p>
-                  <p className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#ef775f]" aria-hidden />
-                    Share reviews respectfully.
-                  </p>
-                  <p className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#ef775f]" aria-hidden />
-                    Use recommendations as discovery guidance.
-                  </p>
-                </div>
-              </div>
-            </div>
+      <div
+        id="terms-top"
+        className="terms-screen ui-shell pb-12 pt-6 sm:pb-16 sm:pt-8 lg:pt-28"
+      >
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+            <Link
+              href="/auth/signup"
+              className={`inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] ${termsFocusRing}`}
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              Back to signup
+            </Link>
+            <TermsPdfButton />
           </div>
-        </section>
 
-        <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
-            <aside className="lg:sticky lg:top-24 lg:self-start">
-              <div className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                  <Film className="h-4 w-4 text-[#ef775f]" aria-hidden />
-                  Quick note
-                </div>
-                <p className="mt-3 text-sm leading-6 text-white/52">
-                  These terms are drafted for this Moodies project and should be
-                  reviewed by a qualified legal professional before production use.
-                </p>
-              </div>
-            </aside>
+          <header className="max-w-3xl">
+            <p className="ui-kicker">Using Moodies</p>
+            <h1 className="mt-3 text-4xl font-bold leading-none text-[var(--ink)] sm:text-5xl">
+              Terms &amp; Conditions
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--ink-muted)]">
+              These terms explain the expectations for using Moodies, creating
+              an account, saving your watchlist, sharing reviews, and receiving
+              personalized movie and series recommendations.
+            </p>
+            <p className="mt-4 text-sm text-[var(--ink-muted)]">
+              Last updated: <time dateTime="2026-06-29">June 29, 2026</time>
+            </p>
+          </header>
 
-            <div className="space-y-4">
-              {termsSections.map((section) => (
-                <article
-                  key={section.title}
-                  className="rounded-lg border border-white/10 bg-white/[0.035] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-6"
-                >
-                  <h2 className="text-lg font-semibold text-white">
-                    {section.title}
-                  </h2>
-                  <p className="mt-3 text-sm leading-7 text-white/60 sm:text-base">
-                    {section.body}
-                  </p>
-                </article>
-              ))}
+          <aside
+            aria-label="Legal review notice"
+            className="mt-6 max-w-3xl border-l-2 border-[var(--brand-gold)] pl-4"
+          >
+            <p className="text-sm leading-6 text-[var(--ink-muted)]">
+              These terms are drafted for this Moodies project and should be
+              reviewed by a qualified legal professional before production use.
+            </p>
+          </aside>
 
-              <div className="rounded-lg border border-[rgb(233,79,55)]/25 bg-[rgb(233,79,55)]/10 p-5 sm:p-6">
-                <h2 className="text-lg font-semibold text-white">
-                  Questions or Support
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-white/62 sm:text-base">
-                  If you have questions about these terms or need account support,
-                  contact the Moodies team through the support channels provided
-                  in the app.
-                </p>
-                <Link
-                  href="/auth/signup"
-                  className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[rgb(233,79,55)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[rgb(215,65,42)]"
-                >
-                  Return to signup
-                </Link>
-              </div>
-
-              <section className="rounded-lg border border-white/10 bg-white/[0.035] p-5 text-center sm:p-6">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ef775f]">
-                Credits
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-white">
-                Developed by the Moodies team
+          <div className="mt-10 grid items-start gap-8 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-12">
+            <aside className="hidden lg:sticky lg:top-8 lg:block lg:max-h-[calc(100svh-4rem)] lg:overflow-y-auto">
+              <h2 className="mb-3 text-xl font-bold leading-tight text-[var(--ink)]">
+                On this page
               </h2>
-              <p className="mt-3 text-sm leading-6 text-white/58">
-                <Link
-                  href="https://github.com/yl1010ng"
-                  className="font-medium text-amber-300 underline-offset-4 transition hover:text-amber-200 hover:underline"
+              <TermsContents />
+            </aside>
+            <div className="min-w-0">
+              <details className="mb-8 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] lg:hidden">
+                <summary
+                  className={`cursor-pointer rounded-xl px-4 py-3 text-sm font-semibold text-[var(--ink)] ${termsFocusRing}`}
                 >
-                  Ng Yong Lin
-                </Link>{" "}
-                and{" "}
-                <Link
-                  href="https://github.com/septhis215"
-                  className="font-medium text-amber-300 underline-offset-4 transition hover:text-amber-200 hover:underline"
+                  On this page
+                </summary>
+                <div className="px-3 pb-3">
+                  <TermsContents />
+                </div>
+              </details>
+              <div className="max-w-[65ch] space-y-8 sm:space-y-10">
+                {termsSections.map((section, index) => (
+                  <section
+                    key={section.title}
+                    id={`terms-section-${index + 1}`}
+                    aria-labelledby={`terms-heading-${index + 1}`}
+                    className={`scroll-mt-28 rounded-sm target:bg-[var(--surface-1)] ${termsFocusRing}`}
+                    tabIndex={-1}
+                  >
+                    <h2
+                      id={`terms-heading-${index + 1}`}
+                      className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
+                    >
+                      {section.title}
+                    </h2>
+                    <p className="mt-3 text-base leading-7 text-[var(--ink-muted)]">
+                      {section.body}
+                    </p>
+                  </section>
+                ))}
+
+                <section
+                  id="terms-support"
+                  aria-labelledby="terms-support-heading"
+                  className={`scroll-mt-28 rounded-sm target:bg-[var(--surface-1)] ${termsFocusRing}`}
+                  tabIndex={-1}
                 >
-                  Teh Yan Yang
-                </Link>
-              </p>
-              <p className="mx-auto mt-4 max-w-2xl border-t border-white/10 pt-4 text-xs leading-6 text-white/45">
-                Movie and TV metadata is powered in part by{" "}
-                <Link
-                  href="https://www.themoviedb.org/"
-                  className="font-medium text-amber-300 underline-offset-4 transition hover:text-amber-200 hover:underline"
+                  <h2
+                    id="terms-support-heading"
+                    className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
+                  >
+                    Questions or Support
+                  </h2>
+                  <p className="mt-3 text-base leading-7 text-[var(--ink-muted)]">
+                    If you have questions about these terms or need account
+                    support, contact the Moodies team through the support
+                    channels provided in the app.
+                  </p>
+                  <a
+                    href="mailto:moodies.support@gmail.com"
+                    className={`mt-2 inline-flex min-h-11 max-w-full items-center rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] underline decoration-[var(--brand-coral)]/50 underline-offset-4 hover:text-[var(--ink)] ${termsFocusRing}`}
+                  >
+                    moodies.support@gmail.com
+                  </a>
+                </section>
+
+                <footer
+                  id="terms-credits"
+                  className="scroll-mt-28 border-t border-[var(--surface-border)] pt-6"
                 >
-                  The Movie Database (TMDB)
-                </Link>
-                . Moodies is not endorsed or certified by TMDB.
-              </p>
-              </section>
+                  <h2 className="text-xl font-bold leading-tight text-[var(--ink)]">
+                    Developed by the Moodies team
+                  </h2>
+                  <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+                    <a
+                      href="https://github.com/yl1010ng"
+                      className={termsTextLink}
+                    >
+                      Ng Yong Lin
+                    </a>{" "}
+                    and{" "}
+                    <a
+                      href="https://github.com/septhis215"
+                      className={termsTextLink}
+                    >
+                      Teh Yan Yang
+                    </a>
+                  </p>
+                  <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+                    Movie and TV metadata is powered in part by{" "}
+                    <a
+                      href="https://www.themoviedb.org/"
+                      className={termsTextLink}
+                    >
+                      The Movie Database (TMDB)
+                    </a>
+                    . Moodies is not endorsed or certified by TMDB.
+                  </p>
+                  <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+                    <Link
+                      href="/auth/signup"
+                      className={`inline-flex min-h-11 items-center rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] hover:text-[var(--ink)] ${termsFocusRing}`}
+                    >
+                      Return to signup
+                    </Link>
+                    <a
+                      href="#terms-top"
+                      className={`inline-flex min-h-11 items-center rounded-sm text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] ${termsFocusRing}`}
+                    >
+                      Back to top
+                    </a>
+                  </div>
+                </footer>
+              </div>
             </div>
           </div>
-        </section>
+        </div>
       </div>
 
       <section id="terms-pdf-document" className="hidden">
@@ -288,7 +333,8 @@ export default function TermsPage() {
           <p>
             Last updated: June 29, 2026. These terms explain the expectations
             for using Moodies, creating an account, saving a watchlist, sharing
-            reviews, and receiving personalized movie and series recommendations.
+            reviews, and receiving personalized movie and series
+            recommendations.
           </p>
           <p>
             This document is drafted for the Moodies project and should be

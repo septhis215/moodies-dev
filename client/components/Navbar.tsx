@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -18,6 +19,7 @@ import {
   IconSparkles,
   IconUser,
   IconUserPlus,
+  IconX,
 } from "@tabler/icons-react";
 import { Bookmark, Heart, MouseIcon, Tv, Users } from "lucide-react";
 import { useAuth } from "@/app/context/AuthProvider";
@@ -37,19 +39,21 @@ import {
 const routes = [
   { name: "Home", href: "/" },
   { name: "Movies", href: "/movies" },
-  { name: "Series", href: "/tv" },
+  { name: "TV shows", href: "/tv" },
   ...(process.env.NEXT_PUBLIC_APP_ENV === "staging"
     ? []
     : [{ name: "Celebrities", href: "/celeb" }]),
-  { name: "Your Moods", href: "/moods/explore", noLink: true },
-  { name: "My Collection", href: "/collection", noLink: true },
+  { name: "Your Moods", href: "/moods/explore" },
+  { name: "My Collection", href: "/collection" },
 ];
 
 const routeOptions: Record<string, { label: string; path: string }[]> = {
   "/": [
+    { label: "Movies homepage", path: "/movies" },
+    { label: "TV shows homepage", path: "/tv" },
     { label: "Trending", path: "/trending" },
-    { label: "New Releases", path: "/new-releases" },
-    { label: "Korean Hits", path: "/korea-hits" },
+    { label: "New Releases", path: "/fresh-off-the-screen" },
+    { label: "Korean Hits", path: "/korean-hits" },
     { label: "Moods", path: "/moods/explore" },
     { label: "Coming Soon", path: "/coming-soon" },
   ],
@@ -108,8 +112,43 @@ const routeIcons: Record<
 
 const MOODIES_LOGO = "/images/moodies-transparent.png";
 const MOODIES_SIZE = { width: 30, height: 30 };
+const sectionIntroductions: Record<
+  string,
+  { title: string; description: string; mascot?: string }
+> = {
+  "/": {
+    title: "Moodies home",
+    description:
+      "A little of everything: movies, TV shows, and mood-led picks.",
+  },
+  "/movies": {
+    title: "Movies homepage",
+    description:
+      "Find your next film: fresh releases, favourites, and picks for your mood.",
+    mascot: "epic",
+  },
+  "/tv": {
+    title: "TV shows homepage",
+    description:
+      "Find a series to settle into, from new arrivals to returning favourites.",
+    mascot: "cozy",
+  },
+  "/moods/explore": {
+    title: "Explore your moods",
+    description: "Let how you feel guide your next movie or TV show.",
+    mascot: "whimsy",
+  },
+  "/collection": {
+    title: "My collection",
+    description: "Keep your discoveries together: saved titles and favourites.",
+  },
+  "/celeb": {
+    title: "Explore people",
+    description: "Discover the people behind your favourite stories.",
+  },
+};
 const focusRing =
-  "outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]/75 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0c0f]";
+  "outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]";
 
 export function NavbarComponent({
   sticky = false,
@@ -118,13 +157,20 @@ export function NavbarComponent({
   sticky?: boolean;
   transparent?: boolean;
 }) {
+  const pathname = usePathname();
+  const currentRoute =
+    routes.find((route) =>
+      route.href === "/"
+        ? pathname === "/"
+        : pathname === route.href || pathname.startsWith(`${route.href}/`),
+    )?.href ?? (pathname === "/moods" ? "/moods/explore" : "/");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [activeRoute, setActiveRoute] = useState(routes[0].href);
+  const [activeRoute, setActiveRoute] = useState(currentRoute);
   const [mobileExpandedRoute, setMobileExpandedRoute] = useState<string | null>(
-    routes[0].href,
+    null,
   );
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const createdPortalRef = useRef(false);
@@ -137,6 +183,11 @@ export function NavbarComponent({
   const profileHref = isAuthenticated ? "/profile" : "/auth/login";
   const displayName = user?.username ?? user?.name ?? "Guest";
   const initial = (user?.username?.[0] || user?.name?.[0] || "M").toUpperCase();
+  const activeIntroduction = sectionIntroductions[activeRoute];
+  const openExploreMenu = () => {
+    setActiveRoute(currentRoute);
+    setIsMenuOpen((open) => !open);
+  };
 
   const openProfile = () => {
     if (!dropdownTriggerRef.current) return;
@@ -210,6 +261,51 @@ export function NavbarComponent({
     if (isMenuOpen || isMobileOpen) document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previousOverflow;
+    };
+  }, [isMenuOpen, isMobileOpen]);
+
+  useEffect(() => {
+    if (!isMenuOpen && !isMobileOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = document.querySelector<HTMLElement>(
+      isMenuOpen
+        ? "#site-menu"
+        : '[role="dialog"][aria-label="Mobile navigation"]',
+    );
+    if (!dialog) return;
+    const focusable = () =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex="0"]',
+        ),
+      ).filter((element) => element.getClientRects().length > 0);
+    focusable()[0]?.focus();
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (!first || !last) return;
+      if (
+        event.shiftKey &&
+        (document.activeElement === first ||
+          !dialog.contains(document.activeElement))
+      ) {
+        event.preventDefault();
+        last.focus();
+      } else if (
+        !event.shiftKey &&
+        (document.activeElement === last ||
+          !dialog.contains(document.activeElement))
+      ) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", trapFocus);
+    return () => {
+      document.removeEventListener("keydown", trapFocus);
+      if (previousFocus?.isConnected) previousFocus.focus();
     };
   }, [isMenuOpen, isMobileOpen]);
 
@@ -289,7 +385,7 @@ export function NavbarComponent({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.985 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
-            className="relative grid h-[min(720px,88svh)] min-h-0 w-full max-w-5xl grid-cols-[minmax(230px,0.78fr)_minmax(0,1.45fr)] overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0c0f]/95 text-white shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+            className="relative grid h-[min(640px,88svh)] min-h-0 w-full max-w-5xl grid-cols-[minmax(230px,0.78fr)_minmax(0,1.45fr)] overflow-hidden rounded-[28px] border border-[var(--surface-border)] bg-[var(--surface-0)] text-[var(--ink)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
             onClick={(event) => event.stopPropagation()}
           >
             <aside className="flex min-h-0 flex-col border-r border-white/[0.08] bg-white/[0.025] p-5 xl:p-6">
@@ -299,10 +395,8 @@ export function NavbarComponent({
                     <IconSparkles className="h-4 w-4" aria-hidden="true" />
                     Moodies guide
                   </div>
-                  <h2 className="text-2xl font-semibold tracking-tight">
-                    Explore
-                  </h2>
-                  <p className="mt-1 text-sm text-white/45">
+                  <h2 className="text-2xl font-bold">Explore</h2>
+                  <p className="mt-1 text-sm text-[var(--ink-muted)]">
                     Find your next watch by story or mood.
                   </p>
                 </div>
@@ -367,19 +461,10 @@ export function NavbarComponent({
                           {route.name}
                         </span>
                       </button>
-                      {!route.noLink && (
-                        <Link
-                          href={route.href}
-                          onClick={() => setIsMenuOpen(false)}
-                          aria-label={`Go to ${route.name}`}
-                          className={`mr-2 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-white/35 transition hover:bg-white/[0.06] hover:text-[#f2836d] ${focusRing}`}
-                        >
-                          <IconArrowUpRight
-                            className="h-4 w-4"
-                            aria-hidden="true"
-                          />
-                        </Link>
-                      )}
+                      <IconChevronDown
+                        className="mr-3 h-4 w-4 -rotate-90 text-[var(--ink-muted)]"
+                        aria-hidden="true"
+                      />
                     </motion.div>
                   );
                 })}
@@ -391,18 +476,28 @@ export function NavbarComponent({
             </aside>
 
             <section className="flex min-h-0 min-w-0 flex-col overflow-hidden p-5 xl:p-6">
-              <div className="mb-4 flex shrink-0 items-end justify-between gap-4">
+              <div className="mb-4 flex shrink-0 items-center justify-between gap-4">
                 <div>
                   <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#ef775f]">
                     {routes.find((route) => route.href === activeRoute)?.name}
                   </p>
-                  <h3 className="text-xl font-semibold tracking-tight">
-                    Pick a destination
+                  <h3 className="text-xl font-bold">
+                    Explore{" "}
+                    {activeRoute === "/tv"
+                      ? "TV shows"
+                      : routes
+                          .find((route) => route.href === activeRoute)
+                          ?.name.toLowerCase()}
                   </h3>
                 </div>
-                <span className="hidden text-xs text-white/35 sm:block">
-                  {routeOptions[activeRoute]?.length || 0} places to explore
-                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsMenuOpen(false)}
+                  aria-label="Close explore menu"
+                  className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[var(--ink-muted)] hover:bg-white/5 ${focusRing}`}
+                >
+                  <IconX className="h-5 w-5" aria-hidden="true" />
+                </button>
               </div>
 
               <motion.div
@@ -410,11 +505,44 @@ export function NavbarComponent({
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
-                role="tabpanel"
                 aria-label={`${routes.find((route) => route.href === activeRoute)?.name} destinations`}
                 tabIndex={0}
                 className={`min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-2xl border border-white/[0.07] bg-black/10 p-2 pr-1.5 [scrollbar-color:rgba(233,79,55,0.38)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin] ${focusRing}`}
               >
+                <Link
+                  href={activeRoute}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`mb-4 flex min-h-28 items-center gap-4 rounded-xl border border-[var(--brand-coral)]/35 bg-[var(--surface-2)] p-4 transition-colors hover:border-[var(--brand-coral-strong)] ${focusRing}`}
+                >
+                  {activeIntroduction.mascot && (
+                    <Image
+                      src={`/images/moods/${activeIntroduction.mascot}.png`}
+                      alt={`${activeIntroduction.mascot} mood mascot`}
+                      width={80}
+                      height={80}
+                      unoptimized
+                      className="h-20 w-20 shrink-0 object-contain"
+                    />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-base font-bold text-[var(--ink)]">
+                      {activeIntroduction.title}
+                    </span>
+                    <span className="mt-1 block text-sm leading-5 text-[var(--ink-muted)]">
+                      {activeIntroduction.description}
+                    </span>
+                    <span className="mt-2 block text-sm font-semibold text-[var(--brand-coral-strong)]">
+                      Go to {activeIntroduction.title.toLowerCase()}
+                    </span>
+                  </span>
+                  <IconArrowUpRight
+                    className="h-5 w-5 shrink-0 text-[var(--brand-coral-strong)]"
+                    aria-hidden="true"
+                  />
+                </Link>
+                <p className="mb-2 px-2 text-xs font-semibold text-[var(--ink-muted)]">
+                  Browse collections
+                </p>
                 <div className="grid grid-cols-2 gap-2.5">
                   {(routeOptions[activeRoute] || []).map((option, index) => (
                     <motion.div
@@ -426,14 +554,11 @@ export function NavbarComponent({
                       <Link
                         href={option.path}
                         onClick={() => setIsMenuOpen(false)}
-                        className={`group flex min-h-[76px] items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 transition duration-200 hover:-translate-y-0.5 hover:border-[#e94f37]/25 hover:bg-white/[0.055] ${focusRing}`}
+                        className={`group flex min-h-14 items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--surface-2)] ${focusRing}`}
                       >
                         <div className="min-w-0">
-                          <span className="block truncate text-sm font-medium text-white/82 transition-colors group-hover:text-white">
+                          <span className="block text-sm font-medium text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
                             {option.label}
-                          </span>
-                          <span className="mt-1 block text-xs text-white/35">
-                            Explore this collection
                           </span>
                         </div>
                         <IconArrowUpRight
@@ -515,7 +640,7 @@ export function NavbarComponent({
         >
           {[
             { label: "Movies", href: "/movies", icon: IconMovie },
-            { label: "Series", href: "/tv", icon: Tv },
+            { label: "TV shows", href: "/tv", icon: Tv },
             ...(process.env.NEXT_PUBLIC_APP_ENV === "staging"
               ? []
               : [{ label: "Celebs", href: "/celeb", icon: Users }]),
@@ -527,7 +652,8 @@ export function NavbarComponent({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-white/68 transition hover:bg-white/[0.055] hover:text-white ${focusRing}`}
+                aria-current={pathname === item.href ? "page" : undefined}
+                className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-2.5 text-sm font-semibold transition-colors hover:bg-white/[0.055] hover:text-[var(--ink)] ${pathname === item.href || pathname.startsWith(`${item.href}/`) ? "bg-[var(--surface-2)] text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"} ${focusRing}`}
               >
                 <ItemIcon className="h-5 w-5" aria-hidden="true" />
                 {item.label}
@@ -546,7 +672,7 @@ export function NavbarComponent({
             aria-expanded={isMenuOpen}
             aria-controls="site-menu"
             aria-label={isMenuOpen ? "Close explore menu" : "Open explore menu"}
-            onClick={() => setIsMenuOpen((open) => !open)}
+            onClick={openExploreMenu}
             className={`grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white/70 transition hover:border-[#e94f37]/25 hover:bg-white/[0.075] hover:text-white ${focusRing}`}
           >
             <IconMenu2 className="h-5 w-5" aria-hidden="true" />
@@ -733,9 +859,12 @@ export function NavbarComponent({
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ef775f]">
                 Moodies guide
               </p>
-              <h2 className="text-xl font-semibold text-white">
+              <h2 className="text-xl font-bold text-[var(--ink)]">
                 Where to next?
               </h2>
+              <p className="mt-1 text-sm text-[var(--ink-muted)]">
+                Browse a homepage or open its collections.
+              </p>
             </div>
           </div>
 
@@ -755,11 +884,11 @@ export function NavbarComponent({
                   }`}
                 >
                   <div className="flex min-h-14 items-center">
-                    <button
-                      type="button"
-                      aria-expanded={isExpanded}
-                      onClick={() =>
-                        setMobileExpandedRoute(isExpanded ? null : route.href)
+                    <Link
+                      href={route.href}
+                      onClick={() => setIsMobileOpen(false)}
+                      aria-current={
+                        pathname === route.href ? "page" : undefined
                       }
                       className={`flex min-h-14 min-w-0 flex-1 items-center gap-3 px-3.5 text-left ${focusRing}`}
                     >
@@ -770,39 +899,55 @@ export function NavbarComponent({
                             : "border-white/[0.08] bg-white/[0.035] text-white/55"
                         }`}
                       >
-                        <RouteIcon
-                          className="h-[18px] w-[18px]"
-                          aria-hidden="true"
-                        />
+                        {route.href === "/movies" || route.href === "/tv" ? (
+                          <Image
+                            src={`/images/moods/${sectionIntroductions[route.href].mascot}.png`}
+                            alt={`${sectionIntroductions[route.href].mascot} mood mascot`}
+                            width={40}
+                            height={40}
+                            unoptimized
+                            className="h-10 w-10 shrink-0 object-contain"
+                          />
+                        ) : (
+                          <RouteIcon
+                            className="h-[18px] w-[18px]"
+                            aria-hidden="true"
+                          />
+                        )}
                       </span>
-                      <span className="truncate text-sm font-semibold text-white/85">
-                        {route.name}
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-[var(--ink)]">
+                          {route.name}
+                        </span>
+                        {(route.href === "/movies" || route.href === "/tv") && (
+                          <span className="block text-xs text-[var(--ink-muted)]">
+                            Explore the homepage
+                          </span>
+                        )}
                       </span>
+                    </Link>
+                    <button
+                      type="button"
+                      aria-label={`${isExpanded ? "Hide" : "Show"} ${route.name} collections`}
+                      aria-expanded={isExpanded}
+                      aria-controls={`mobile-collections-${route.href.replaceAll("/", "-")}`}
+                      onClick={() =>
+                        setMobileExpandedRoute(isExpanded ? null : route.href)
+                      }
+                      className={`mr-2 flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-2 text-xs font-semibold text-[var(--ink-muted)] hover:bg-white/5 ${focusRing}`}
+                    >
+                      Collections
                       <IconChevronDown
-                        className={`ml-auto h-4 w-4 text-white/38 transition-transform ${
-                          isExpanded ? "rotate-180" : ""
-                        }`}
+                        className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                         aria-hidden="true"
                       />
                     </button>
-                    {!route.noLink && (
-                      <Link
-                        href={route.href}
-                        onClick={() => setIsMobileOpen(false)}
-                        aria-label={`Go to ${route.name}`}
-                        className={`mr-2 grid h-10 w-10 place-items-center rounded-xl text-white/45 transition hover:bg-white/[0.06] hover:text-[#f2836d] ${focusRing}`}
-                      >
-                        <IconArrowUpRight
-                          className="h-4 w-4"
-                          aria-hidden="true"
-                        />
-                      </Link>
-                    )}
                   </div>
 
                   <AnimatePresence initial={false}>
                     {isExpanded && (
                       <motion.div
+                        id={`mobile-collections-${route.href.replaceAll("/", "-")}`}
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
@@ -815,7 +960,7 @@ export function NavbarComponent({
                               key={option.path}
                               href={option.path}
                               onClick={() => setIsMobileOpen(false)}
-                              className={`flex min-h-12 items-center justify-between rounded-xl border border-white/[0.06] bg-black/15 px-3 text-sm font-medium text-white/72 transition hover:border-[#e94f37]/20 hover:bg-white/[0.045] hover:text-white ${focusRing}`}
+                              className={`flex min-h-12 items-center justify-between rounded-xl px-3 text-sm font-medium text-[var(--ink-muted)] transition-colors hover:bg-white/[0.045] hover:text-[var(--ink)] ${focusRing}`}
                             >
                               {option.label}
                               <IconArrowUpRight

@@ -3,60 +3,30 @@
 import { useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
-import { ArrowRight, Brain, Compass, Film, Tv } from "lucide-react";
+import { ArrowRight, Brain, Film, Tv } from "lucide-react";
 
 type MoodDiscoverySectionProps = {
   variant?: "full" | "teaser";
 };
 
-const cards = [
+const discoveryPaths = [
   {
-    id: "wheel",
-    title: "Mood Wheels",
-    subtitle: "Start with a feeling",
-    description:
-      "Spin through emotional cues and land on a watchlist-ready vibe.",
-    href: "/moods",
-    icon: Compass,
-    image: "/images/moods/whimsy.png",
-    accent: "#e94f37",
-    stats: "50+ moods",
-  },
-  {
-    id: "tv-moods",
-    title: "TV Matcher",
-    subtitle: "Settle into a series",
-    description:
-      "Find shows that match your current energy, pace, and comfort zone.",
-    href: "/tv#moods",
-    icon: Tv,
-    image: "/images/moods/cozy.png",
-    accent: "#38bdf8",
-    stats: "series picks",
-  },
-  {
-    id: "movie-moods",
-    title: "Movie Matcher",
-    subtitle: "Pick tonight's tone",
-    description:
-      "Move from chaos, comfort, romance, or thrills into the right film.",
+    title: "Movie mood matcher",
+    description: "Find a film for tonight’s feeling.",
     href: "/movies#moods",
     icon: Film,
-    image: "/images/moods/epic.png",
-    accent: "#f59e0b",
-    stats: "film picks",
   },
   {
-    id: "quiz",
+    title: "TV mood matcher",
+    description: "Find a series to settle into.",
+    href: "/tv#moods",
+    icon: Tv,
+  },
+  {
     title: "Personality Quiz",
-    subtitle: "Let Moodies read the room",
-    description:
-      "Answer quick prompts and get recommendations tuned to your taste.",
+    description: "Not sure? Let your taste lead the way.",
     href: "/quiz",
     icon: Brain,
-    image: "/images/moods/mind-bending.png",
-    accent: "#a78bfa",
-    stats: "guided match",
   },
 ];
 
@@ -64,26 +34,36 @@ const landingMoods = [
   {
     id: "easy",
     label: "Easy",
+    mascot: "cozy",
+    mascotName: "Cozy",
     note: "Low-stakes, comforting watches for a quiet night.",
   },
   {
     id: "tense",
     label: "Tense",
+    mascot: "thrilling",
+    mascotName: "Thrilling",
     note: "Pressure, suspense, and stories that keep moving.",
   },
   {
     id: "tender",
     label: "Tender",
+    mascot: "romantic",
+    mascotName: "Romantic",
     note: "Warm, intimate stories with something human at the center.",
   },
   {
     id: "strange",
     label: "Strange",
+    mascot: "mind-bending",
+    mascotName: "Mind-Bending",
     note: "Unfamiliar worlds, odd turns, and singular ideas.",
   },
   {
     id: "electric",
     label: "Electric",
+    mascot: "epic",
+    mascotName: "Epic",
     note: "Fast, loud, kinetic picks for a high-energy watch.",
   },
 ];
@@ -91,11 +71,9 @@ const landingMoods = [
 export default function MoodDiscoverySection({
   variant = "full",
 }: MoodDiscoverySectionProps) {
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [activeLandingMood, setActiveLandingMood] = useState(
     landingMoods[0].id,
   );
-  const activeCard = cards.find((card) => card.id === hoveredCard) ?? cards[0];
   const activeMood =
     landingMoods.find((mood) => mood.id === activeLandingMood) ??
     landingMoods[0];
@@ -107,7 +85,7 @@ export default function MoodDiscoverySection({
         className="ui-shell scroll-mt-24 border-b border-[var(--surface-border)] py-8 sm:py-10"
         aria-labelledby="mood-shelf-heading"
       >
-        <div className="grid gap-6 lg:grid-cols-[minmax(15rem,0.72fr)_minmax(0,1.28fr)] lg:items-end lg:gap-12">
+        <div className="grid items-center gap-6 lg:grid-cols-[minmax(15rem,0.72fr)_minmax(0,1.28fr)] lg:gap-12">
           <div>
             <p className="ui-kicker">Choose by mood</p>
             <h2
@@ -122,9 +100,10 @@ export default function MoodDiscoverySection({
             </p>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <div
-              className="flex gap-5 overflow-x-auto border-b border-[var(--surface-border)] pb-3 mobile-native-scroll sm:gap-7"
+              className="flex flex-wrap gap-x-5 gap-y-1 border-b border-[var(--surface-border)] pb-2 sm:gap-x-7"
+              role="group"
               aria-label="Choose a mood"
             >
               {landingMoods.map((mood) => {
@@ -134,9 +113,8 @@ export default function MoodDiscoverySection({
                     key={mood.id}
                     type="button"
                     onClick={() => setActiveLandingMood(mood.id)}
-                    onMouseEnter={() => setActiveLandingMood(mood.id)}
-                    onFocus={() => setActiveLandingMood(mood.id)}
-                    className={`shrink-0 border-b-2 pb-2 text-lg font-semibold transition-colors sm:text-xl ${
+                    aria-controls="landing-mood-preview"
+                    className={`min-h-11 shrink-0 rounded-sm border-b-2 px-1 py-2 text-lg font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] motion-reduce:transition-none sm:text-xl ${
                       isActive
                         ? "border-[var(--brand-coral)] text-[var(--ink)]"
                         : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"
@@ -149,17 +127,41 @@ export default function MoodDiscoverySection({
               })}
             </div>
 
-            <div className="mt-4 flex min-h-12 items-start justify-between gap-5">
-              <p className="max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
-                {activeMood.note}
-              </p>
-              <Link
-                href="/moods"
-                className="inline-flex shrink-0 items-center gap-2 border-b border-[var(--brand-coral)] pb-1 text-sm font-semibold text-[var(--ink)] transition-colors hover:text-[var(--brand-coral-strong)]"
-              >
-                Find my watch
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
+            <div
+              id="landing-mood-preview"
+              className="mt-5 grid min-h-36 grid-cols-[5rem_minmax(0,1fr)] items-center gap-4 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-5"
+            >
+              <div className="relative h-20 w-20 sm:h-32 sm:w-32">
+                <Image
+                  src={`/images/moods/${activeMood.mascot}.png`}
+                  alt={`${activeMood.mascotName} mood mascot`}
+                  width={160}
+                  height={160}
+                  sizes="(max-width: 639px) 80px, 128px"
+                  unoptimized
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <div>
+                <div aria-live="polite" aria-atomic="true">
+                  <h3 className="text-base font-bold text-[var(--ink)] sm:text-lg">
+                    {activeMood.id === "easy" || activeMood.id === "electric"
+                      ? "An"
+                      : "A"}{" "}
+                    {activeMood.label.toLowerCase()} night
+                  </h3>
+                  <p className="mt-1 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
+                    {activeMood.note}
+                  </p>
+                </div>
+                <Link
+                  href="/moods"
+                  className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] motion-reduce:transition-none"
+                >
+                  Explore the mood wheel
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -170,120 +172,116 @@ export default function MoodDiscoverySection({
   return (
     <section
       id="your-moods"
-      className="relative mx-auto max-w-7xl overflow-hidden bg-black px-4 py-12 sm:px-6 sm:py-16 lg:px-8"
+      className="ui-shell py-8 sm:py-10"
+      aria-labelledby="mood-discovery-heading"
     >
-      <div className="grid gap-8 rounded-2xl border border-white/10 bg-neutral-950/75 p-4 shadow-2xl shadow-black/30 sm:p-6 lg:grid-cols-[0.95fr_1.35fr] lg:p-8">
-        <div className="flex flex-col justify-between gap-8">
-          <div>
-            <h2 className="mt-5 max-w-xl text-2xl font-extrabold tracking-tight text-white sm:text-4xl">
-              Find what fits the mood before you search by title.
-            </h2>
+      <header className="mb-6 max-w-3xl sm:mb-8">
+        <p className="ui-kicker">Find your next watch</p>
+        <h1
+          id="mood-discovery-heading"
+          className="mt-2 text-balance text-4xl font-bold leading-none text-[var(--ink)] sm:text-5xl"
+        >
+          What are you in the mood for?
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+          Find a movie or TV show that fits tonight. Let a feeling lead the way.
+        </p>
+      </header>
 
-            <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-400 sm:text-base">
-              Moodies turns feelings into watchable paths: quick prompts, mascot
-              cues, and recommendations that match how you actually want the
-              night to feel.
-            </p>
-          </div>
-
-          <div className="relative min-h-[220px] overflow-hidden rounded-xl border border-white/10 bg-black/40 sm:min-h-[260px]">
-            <Image
-              src={activeCard.image}
-              alt="Moodies mascot"
-              fill
-              sizes="(max-width: 1024px) 100vw, 420px"
-              className="object-contain object-right-bottom opacity-90"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/65 to-transparent" />
-            <div className="absolute left-4 top-4 max-w-[220px] sm:left-5 sm:top-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
-                Current signal
-              </p>
-              <h3 className="mt-2 text-xl font-bold text-white">
-                {activeCard.subtitle}
-              </h3>
-              <p className="mt-2 text-sm leading-5 text-gray-400">
-                {activeCard.description}
-              </p>
-            </div>
-            <div
-              className="absolute bottom-4 left-4 h-1.5 w-28 overflow-hidden rounded-full bg-white/10 sm:left-5"
-              aria-hidden="true"
-            >
-              <div
-                className="h-full rounded-full transition-all duration-300"
-                style={{
-                  width: hoveredCard ? "100%" : "42%",
-                  backgroundColor: activeCard.accent,
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {cards.map((card) => {
-            const Icon = card.icon;
-            const isHovered = hoveredCard === card.id;
-
-            return (
-              <Link
-                key={card.id}
-                href={card.href}
-                className="group relative min-h-[190px] overflow-hidden rounded-xl border border-white/10 bg-white/[0.035] p-4 transition duration-200 hover:border-white/25 hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-[#e94f37]/40 sm:min-h-[220px] sm:p-5"
-                onMouseEnter={() => setHoveredCard(card.id)}
-                onMouseLeave={() => setHoveredCard(null)}
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-10">
+        <section
+          className="min-w-0 py-2 sm:py-4"
+          aria-labelledby="mood-wheel-heading"
+        >
+          <div className="grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-x-4 gap-y-3 sm:grid-cols-[minmax(0,1fr)_12rem] sm:gap-x-6">
+            <div>
+              <p className="ui-kicker">Start here</p>
+              <h2
+                id="mood-wheel-heading"
+                className="mt-2 text-2xl font-bold leading-none text-[var(--ink)] sm:text-3xl"
               >
-                <div
-                  className="absolute inset-x-0 top-0 h-1 transition-opacity"
-                  style={{
-                    backgroundColor: card.accent,
-                    opacity: isHovered ? 1 : 0.55,
-                  }}
-                />
-                <Image
-                  src={card.image}
-                  alt={`${card.title} mood`}
-                  width={108}
-                  height={108}
-                  className="absolute bottom-3 right-3 h-20 w-20 object-contain opacity-25 transition duration-200 group-hover:opacity-45 sm:h-24 sm:w-24"
-                />
-
-                <div className="relative flex h-full flex-col">
-                  <div className="flex items-start justify-between gap-3">
-                    <div
-                      className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/10 bg-black/35"
-                      style={{ color: card.accent }}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <span className="rounded-full bg-black/35 px-2 py-1 text-[11px] font-semibold text-gray-300 ring-1 ring-white/10">
-                      {card.stats}
-                    </span>
-                  </div>
-
-                  <div className="mt-5 flex-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">
-                      {card.subtitle}
-                    </p>
-                    <h3 className="mt-2 text-xl font-black leading-tight text-white">
-                      {card.title}
-                    </h3>
-                    <p className="mt-2 max-w-[28ch] text-sm leading-5 text-gray-400">
-                      {card.description}
-                    </p>
-                  </div>
-
-                  <div className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold text-white">
-                    Explore
-                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
-                  </div>
-                </div>
+                Mood wheel
+              </h2>
+            </div>
+            <Image
+              src="/images/moods/whimsy.png"
+              alt="Whimsy mood mascot"
+              width={240}
+              height={240}
+              sizes="(max-width: 639px) 96px, 192px"
+              className="mx-auto h-24 w-24 object-contain sm:col-start-2 sm:row-span-3 sm:row-start-1 sm:h-48 sm:w-48"
+              priority
+              unoptimized
+            />
+            <p className="col-span-2 max-w-md text-sm leading-6 text-[var(--ink-muted)] sm:col-span-1">
+              Cozy, thrilling, or a little out of the ordinary? Pick your mood,
+              or spin the wheel when you want a surprise.
+            </p>
+            <div className="col-span-2 mt-2 flex flex-col items-start gap-3 sm:col-span-1 sm:mt-3">
+              <Link
+                href="/moods"
+                className="ui-primary-action w-full justify-center text-[var(--surface-0)] shadow-none transition-colors hover:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ink)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--surface-0)] motion-reduce:transition-none sm:w-auto"
+              >
+                Find a watch by mood
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
-            );
-          })}
-        </div>
+              <p className="text-sm leading-6 text-[var(--ink-muted)]">
+                Movie and TV recommendations. No account needed.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="border-t border-[var(--surface-border)] pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-4"
+          aria-labelledby="discovery-paths-heading"
+        >
+          <h2
+            id="discovery-paths-heading"
+            className="mb-1 text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
+          >
+            Other ways to explore
+          </h2>
+          <ul>
+            {discoveryPaths.map(({ title, description, href, icon: Icon }) => (
+              <li key={href}>
+                <Link
+                  href={href}
+                  className="group flex min-h-20 items-center gap-3 rounded-lg px-2 py-3 transition-colors hover:bg-[var(--surface-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] motion-reduce:transition-none"
+                >
+                  <Icon
+                    className="h-5 w-5 shrink-0 text-[var(--ink-muted)] group-hover:text-[var(--brand-coral-strong)]"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base font-bold leading-tight text-[var(--ink)] group-hover:text-[var(--brand-coral-strong)]">
+                      {title}
+                    </h3>
+                    <p className="mt-1 text-sm leading-5 text-[var(--ink-muted)]">
+                      {description}
+                    </p>
+                  </div>
+                  <ArrowRight
+                    className="h-4 w-4 shrink-0 text-[var(--ink-muted)]"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
+
+      <footer className="mt-8 border-t border-[var(--surface-border)] pt-5 sm:mt-10">
+        <p className="max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+          <span className="font-semibold text-[var(--ink)]">
+            Discover here. Watch on your favourite service.
+          </span>{" "}
+          Moodies recommends movies and TV shows; it does not stream full movies
+          or episodes.
+        </p>
+      </footer>
     </section>
   );
 }
