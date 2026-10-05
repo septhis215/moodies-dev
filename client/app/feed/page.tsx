@@ -1192,23 +1192,14 @@ export default function VideoFeedPage() {
 
                   {/* Content */}
                   <div className="relative w-full px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pr-20 pt-36 sm:px-6 sm:pb-7 sm:pr-28 sm:pt-40 lg:max-w-5xl lg:px-10 lg:pb-10 lg:pr-36">
-                    <div className="mb-3 flex items-center gap-2.5">
+                    <div className="mb-2 flex items-center gap-2.5">
                       <span className="h-1.5 w-1.5 rounded-full bg-[#ff725e] shadow-[0_0_10px_rgba(255,114,94,0.8)]" />
                       <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/80">
                         {currentVideoTypeLabel}
                       </span>
-                      <span className="text-[10px] font-semibold tabular-nums text-white/80">
-                        {String(currentIndex + 1).padStart(2, "0")} /{" "}
-                        {String(videos.length).padStart(2, "0")}
-                      </span>
                     </div>
                     <h2
-                      className={cn(
-                        "mb-4 line-clamp-3 text-balance font-bold leading-[0.95] tracking-normal text-white sm:line-clamp-2",
-                        isPortraitVideo
-                          ? "max-w-md text-3xl sm:text-4xl"
-                          : "max-w-4xl text-4xl sm:text-6xl",
-                      )}
+                      className="mb-3 line-clamp-2 max-w-xl text-xl font-bold leading-tight tracking-normal text-white sm:text-2xl"
                       style={{
                         textShadow:
                           "0 10px 36px rgba(0,0,0,0.85), 0 2px 8px rgba(0,0,0,0.98)",
@@ -1254,11 +1245,6 @@ export default function VideoFeedPage() {
                           </span>
                         )}
                     </div>
-                    {isLandscapeVideo && currentVideo.overview && (
-                      <p className="mt-4 hidden max-w-2xl text-sm leading-6 text-white/80 sm:line-clamp-2">
-                        {currentVideo.overview}
-                      </p>
-                    )}
                   </div>
                 </div>
               </motion.div>
