@@ -1,5 +1,7 @@
 "use client";
 
+import CelebrityMediaSections from "@/components/celeb/CelebrityMediaSections";
+import type { CelebrityPhoto } from "@/types/celebrityMedia";
 import { tmdbImage } from "@/lib/tmdb";
 import AppLoading from "@/components/ui/AppLoading";
 import RatingBadge from "@/components/ui/rating-badge";
@@ -8,7 +10,6 @@ import {
   BookmarkCheck,
   Briefcase,
   Calendar,
-  Camera,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -21,7 +22,6 @@ import {
   Instagram,
   Layers,
   MapPin,
-  Play,
   Plus,
   SearchX,
   Sparkles,
@@ -38,6 +38,7 @@ import {
   type ElementType,
   type ReactNode,
   use,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -119,47 +120,13 @@ interface Collaboration {
   profile_path?: string | null;
 }
 
-interface RelatedVideo {
-  id: string;
-  media_id: number;
-  media_type: "movie" | "tv";
-  media_title: string;
-  media_poster_path?: string | null;
-  media_backdrop_path?: string | null;
-  media_vote_average?: number | null;
-  release_year?: number | null;
-  role?: string | null;
-  video_id?: string | null;
-  video_key: string;
-  video_source?: string;
-  youtube_url: string;
-  thumbnail_url: string;
-  video_title: string;
-  video_type: string;
-  official: boolean;
-  celebrity_relevance_score?: number;
-  relevance_label?: string;
-  relevance_reason?: string;
-  published_at?: string | null;
-}
-
 type FilmographyTab = "all" | "movies" | "tv";
 type SortMode = "notable" | "latest" | "rating" | "oldest";
-type VideoFilter = "all" | "trailer" | "clip" | "interview" | "behind" | "show";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   process.env.NEXT_PUBLIC_NEST_API_URL ||
   "https://dev.api.moodies.tech/api";
-
-const videoFilters: Array<{ value: VideoFilter; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "trailer", label: "Trailers" },
-  { value: "clip", label: "Clips" },
-  { value: "interview", label: "Interviews" },
-  { value: "behind", label: "Behind" },
-  { value: "show", label: "Shows" },
-];
 
 const sortOptions: Array<{
   value: SortMode;
@@ -224,19 +191,13 @@ const genreMap: Record<number, string> = {
 };
 
 const getImageUrl = (path?: string | null, size = "original") =>
-  path
-    ? tmdbImage(path, size)
-    : "/placeholder-backdrop.svg";
+  path ? tmdbImage(path, size) : "/placeholder-backdrop.svg";
 
 const getPosterUrl = (path?: string | null, size = "w500") =>
-  path
-    ? tmdbImage(path, size)
-    : "/placeholder-poster.svg";
+  path ? tmdbImage(path, size) : "/placeholder-poster.svg";
 
 const getProfileUrl = (path?: string | null, size = "w500") =>
-  path
-    ? tmdbImage(path, size)
-    : "/placeholder-person.svg";
+  path ? tmdbImage(path, size) : "/placeholder-person.svg";
 
 const getTitle = (credit?: Credit) =>
   credit?.title || credit?.name || "Untitled";
@@ -339,9 +300,7 @@ function ProfilePill({
       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500">
         {label}
       </p>
-      <p className="mt-1 line-clamp-1 text-sm font-black text-white">
-        {value}
-      </p>
+      <p className="mt-1 line-clamp-1 text-sm font-black text-white">{value}</p>
     </div>
   );
 }
@@ -564,9 +523,7 @@ function FilmographyGridCard({
           onClick={() => onWatchlistToggle(credit)}
           disabled={isLoading}
           className={`absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full border border-black/10 shadow-lg transition hover:scale-105 sm:h-9 sm:w-9 ${
-            inWatchlist
-              ? "bg-emerald-500 text-white"
-              : "bg-white text-black"
+            inWatchlist ? "bg-emerald-500 text-white" : "bg-white text-black"
           } ${isLoading ? "cursor-not-allowed opacity-70" : ""}`}
           aria-label={
             inWatchlist ? "Remove from watchlist" : "Add to watchlist"
@@ -596,208 +553,13 @@ function FilmographyGridCard({
               as {credit.character}
             </p>
           ) : (
-            <p className="text-[10px] text-zinc-600 sm:text-[11px]">Tap to open</p>
+            <p className="text-[10px] text-zinc-600 sm:text-[11px]">
+              Tap to open
+            </p>
           )}
         </div>
       </Link>
     </article>
-  );
-}
-
-function getVideoTypeLabel(video: RelatedVideo) {
-  const type = video.video_type?.trim() || "Video";
-  if (type.toLowerCase() === "featurette") return "Featurette";
-  return type;
-}
-
-function getVideoFilterGroup(video: RelatedVideo): Exclude<VideoFilter, "all"> {
-  const type = getVideoTypeLabel(video).toLowerCase();
-  const label = video.relevance_label?.toLowerCase() || "";
-
-  if (type === "trailer" || type === "teaser" || type.includes("preview")) {
-    return "trailer";
-  }
-  if (type === "clip") return "clip";
-  if (type.includes("interview")) return "interview";
-  if (type.includes("behind") || type === "featurette") return "behind";
-  if (
-    type.includes("variety") ||
-    type.includes("appearance") ||
-    label.includes("variety") ||
-    label.includes("show") ||
-    video.media_type === "tv"
-  ) {
-    return "show";
-  }
-
-  return "behind";
-}
-
-function getVideoContextLabel(video: RelatedVideo) {
-  const type = getVideoTypeLabel(video).toLowerCase();
-  const label = video.relevance_label || "";
-
-  if (type === "trailer" && video.official) return "Official Trailer";
-  if (type === "teaser" && video.official) return "Official Teaser";
-  if (type.includes("interview")) return "Interview";
-  if (type.includes("behind")) return "Behind the Scenes";
-  if (type === "featurette") return "Featurette";
-  if (type.includes("variety") || label.includes("Variety")) {
-    return "Variety Appearance";
-  }
-  if (label.includes("Known")) return "Known For";
-  if (label.includes("Main")) return "Main Cast Work";
-  if (label.includes("Featured")) return "Featured Role";
-  if (type === "clip") return "Clip";
-  return video.official ? "Official Video" : "Video";
-}
-
-function getVideoRoleLabel(video: RelatedVideo) {
-  if (!video.role) return null;
-  const role = video.role.trim();
-  if (!role) return null;
-  const normalized = role.toLowerCase();
-  if (["self", "himself", "herself", "guest"].includes(normalized)) {
-    return "Appearance";
-  }
-  return `as ${role}`;
-}
-
-function VideoPlayButton({ compact = false }: { compact?: boolean }) {
-  return (
-    <span
-      className={`flex items-center justify-center rounded-full bg-white text-black shadow-2xl transition group-hover:scale-105 ${
-        compact ? "h-9 w-9" : "h-12 w-12 sm:h-14 sm:w-14"
-      }`}
-    >
-      <Play
-        className={`fill-current ${compact ? "h-3.5 w-3.5" : "h-5 w-5"}`}
-      />
-    </span>
-  );
-}
-
-function VideoSectionSkeleton() {
-  return (
-    <div className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 mobile-native-scroll sm:mx-0 sm:px-0">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <div
-          key={index}
-          className="w-[72vw] min-w-[228px] max-w-[270px] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] sm:w-[236px] sm:min-w-[236px] md:w-[252px] md:min-w-[252px]"
-        >
-          <div className="aspect-video animate-pulse bg-zinc-900" />
-          <div className="space-y-2 p-3">
-            <div className="flex gap-1.5">
-              <div className="h-5 w-16 animate-pulse rounded-full bg-zinc-800" />
-              <div className="h-5 w-12 animate-pulse rounded-full bg-zinc-800" />
-            </div>
-            <div className="h-4 w-full animate-pulse rounded bg-zinc-800" />
-            <div className="h-3 w-3/5 animate-pulse rounded bg-zinc-800" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function VideoCarouselCard({
-  video,
-  onPlay,
-}: {
-  video: RelatedVideo;
-  onPlay: (video: RelatedVideo) => void;
-}) {
-  const role = getVideoRoleLabel(video);
-
-  return (
-    <button
-      type="button"
-      onClick={() => onPlay(video)}
-      className="group flex h-full w-[72vw] min-w-[228px] max-w-[270px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] text-left shadow-xl shadow-black/20 transition hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/[0.07] sm:w-[236px] sm:min-w-[236px] md:w-[252px] md:min-w-[252px]"
-    >
-      <div className="relative aspect-video overflow-hidden bg-zinc-950">
-        <Image
-          src={
-            video.thumbnail_url ||
-            getImageUrl(video.media_backdrop_path, "w780")
-          }
-          alt={video.video_title}
-          fill
-          sizes="(max-width: 640px) 76vw, 260px"
-          className="object-cover transition duration-500 group-hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-transparent" />
-        <div className="absolute left-2 top-2 flex max-w-[calc(100%-1rem)] flex-wrap gap-1.5">
-          <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-black">
-            {getVideoContextLabel(video)}
-          </span>
-          <span className="rounded-full bg-black/65 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white backdrop-blur">
-            {video.media_type === "tv" ? "TV" : "Movie"}
-          </span>
-        </div>
-        {video.official && (
-          <span className="absolute right-2 top-2 rounded-full bg-[#e94f37]/90 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-black">
-            Official
-          </span>
-        )}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <VideoPlayButton compact />
-        </div>
-      </div>
-
-      <div className="flex min-h-[104px] flex-1 flex-col justify-between p-3">
-        <div>
-          <h3 className="line-clamp-2 text-sm font-black leading-snug text-white transition group-hover:text-[#ffb0a3]">
-            {video.video_title}
-          </h3>
-          <p className="mt-1 line-clamp-1 text-xs font-semibold text-zinc-400">
-            {video.media_title}
-          </p>
-        </div>
-        <div className="mt-3 flex min-w-0 items-center gap-2 text-[11px] font-semibold text-zinc-500">
-          <span>{video.release_year || "TBA"}</span>
-          <span className="h-1 w-1 rounded-full bg-zinc-700" />
-          <span>{getVideoTypeLabel(video)}</span>
-          {role && (
-            <>
-              <span className="h-1 w-1 rounded-full bg-zinc-700" />
-              <span className="line-clamp-1 min-w-0">{role}</span>
-            </>
-          )}
-        </div>
-      </div>
-    </button>
-  );
-}
-
-function VideoEmptyPanel({
-  error,
-  hasFilteredVideos,
-}: {
-  error?: string | null;
-  hasFilteredVideos?: boolean;
-}) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/70 p-5 shadow-2xl shadow-black/20 sm:p-7">
-      <div className="mx-auto max-w-xl text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[#ff8b78]">
-          <Play className="h-5 w-5 fill-current" />
-        </div>
-        <h3 className="text-lg font-black text-white">
-          {error
-            ? "The video room is offline"
-            : hasFilteredVideos
-              ? "No videos in this lane"
-              : "No related videos yet"}
-        </h3>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-zinc-400">
-          {error ||
-            (hasFilteredVideos
-              ? "Try another video type to browse trailers, interviews, clips, and show appearances."
-              : "Moodies could not find trailers, interviews, clips, or behind-the-scenes videos connected to this profile yet.")}
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -904,35 +666,34 @@ export default function CelebrityDetailPage({
   const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
   const [similarPeople, setSimilarPeople] = useState<SimilarPerson[]>([]);
   const [upcomingProjects, setUpcomingProjects] = useState<Credit[]>([]);
-  const [relatedVideos, setRelatedVideos] = useState<RelatedVideo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [videosLoading, setVideosLoading] = useState(false);
   const [collaborationsLoading, setCollaborationsLoading] = useState(false);
   const [similarLoading, setSimilarLoading] = useState(false);
   const [upcomingLoading, setUpcomingLoading] = useState(false);
-  const [videosError, setVideosError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<FilmographyTab>("all");
   const [sortMode, setSortMode] = useState<SortMode>("notable");
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
-  const [videoFilter, setVideoFilter] = useState<VideoFilter>("all");
   const [bioExpanded, setBioExpanded] = useState(false);
   const [showAllCredits, setShowAllCredits] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedVideo, setSelectedVideo] = useState<RelatedVideo | null>(null);
-  const [galleryPage, setGalleryPage] = useState(0);
-  const [shouldLoadVideos, setShouldLoadVideos] = useState(false);
-  const relatedVideosSectionRef = useRef<HTMLElement | null>(null);
-  const videoCarouselRef = useRef<HTMLDivElement | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState<CelebrityPhoto | null>(null);
+  const profilePhotoChosenFor = useRef<string | null>(null);
+  const chooseProfilePhoto = useCallback(
+    (photos: CelebrityPhoto[]) => {
+      if (!photos.length || profilePhotoChosenFor.current === resolvedParams.id)
+        return;
+      const photo = photos[Math.floor(Math.random() * photos.length)];
+      profilePhotoChosenFor.current = resolvedParams.id;
+      setProfilePhoto(photo);
+    },
+    [resolvedParams.id],
+  );
   const similarCarouselRef = useRef<HTMLDivElement | null>(null);
   const sortMenuRef = useRef<HTMLDivElement | null>(null);
   const [loadingStates, setLoadingStates] = useState<
     Record<string | number, boolean>
   >({});
-  const [videoCarouselState, setVideoCarouselState] = useState({
-    canScrollPrev: false,
-    canScrollNext: false,
-  });
   const [similarCarouselState, setSimilarCarouselState] = useState({
     canScrollPrev: false,
     canScrollNext: false,
@@ -944,11 +705,10 @@ export default function CelebrityDetailPage({
     const fetchPerson = async () => {
       setLoading(true);
       setError(null);
-      setVideosError(null);
       setPerson(null);
-      setRelatedVideos([]);
-      setShouldLoadVideos(false);
-      setVideosLoading(false);
+      setProfilePhoto(null);
+      profilePhotoChosenFor.current = null;
+      setSelectedImage(null);
       setCollaborationsLoading(false);
       setSimilarLoading(false);
       setUpcomingLoading(false);
@@ -1046,7 +806,6 @@ export default function CelebrityDetailPage({
             : "Something went wrong while loading this profile.",
         );
         setPerson(null);
-        setVideosLoading(false);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -1070,65 +829,6 @@ export default function CelebrityDetailPage({
     document.addEventListener("pointerdown", closeSortMenu);
     return () => document.removeEventListener("pointerdown", closeSortMenu);
   }, []);
-
-  useEffect(() => {
-    if (!person) return;
-
-    const section = relatedVideosSectionRef.current;
-    if (!section || !("IntersectionObserver" in window)) {
-      setShouldLoadVideos(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShouldLoadVideos(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "600px 0px" },
-    );
-
-    observer.observe(section);
-    return () => observer.disconnect();
-  }, [person, resolvedParams.id]);
-
-  useEffect(() => {
-    if (!person || !shouldLoadVideos) return;
-
-    const controller = new AbortController();
-    const base = API_BASE;
-
-    setVideosLoading(true);
-    setVideosError(null);
-    fetch(`${base}/people/${resolvedParams.id}/videos`, {
-      signal: controller.signal,
-    })
-      .then(async (videoRes) => {
-        if (!videoRes.ok) {
-          throw new Error("Related videos are unavailable right now.");
-        }
-        const videoData = await videoRes.json();
-        if (!controller.signal.aborted) {
-          setRelatedVideos(Array.isArray(videoData) ? videoData : []);
-        }
-      })
-      .catch((videoError) => {
-        if (controller.signal.aborted) return;
-        console.error("Error fetching celebrity videos:", videoError);
-        setVideosError(
-          videoError instanceof Error
-            ? videoError.message
-            : "Related videos are unavailable right now.",
-        );
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setVideosLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [person, resolvedParams.id, shouldLoadVideos]);
 
   const credits = useMemo(() => person?.combined_credits?.cast || [], [person]);
   const movieCredits = useMemo(
@@ -1182,39 +882,6 @@ export default function CelebrityDetailPage({
       return (getYear(b) || 0) - (getYear(a) || 0);
     });
   }, [credits, movieCredits, selectedTab, sortMode, tvCredits]);
-
-  const filteredVideos = useMemo(() => {
-    return relatedVideos.filter((video) => {
-      if (videoFilter === "all") return true;
-      return getVideoFilterGroup(video) === videoFilter;
-    });
-  }, [relatedVideos, videoFilter]);
-
-  useEffect(() => {
-    const carousel = videoCarouselRef.current;
-    if (!carousel) return;
-
-    const updateVideoCarouselState = () => {
-      const { scrollLeft, scrollWidth, clientWidth } = carousel;
-      const atStart = scrollLeft <= 1;
-      const atEnd = Math.ceil(scrollLeft + clientWidth) >= scrollWidth - 1;
-      setVideoCarouselState({
-        canScrollPrev: !atStart,
-        canScrollNext: !atEnd,
-      });
-    };
-
-    updateVideoCarouselState();
-    carousel.addEventListener("scroll", updateVideoCarouselState, {
-      passive: true,
-    });
-    window.addEventListener("resize", updateVideoCarouselState);
-
-    return () => {
-      carousel.removeEventListener("scroll", updateVideoCarouselState);
-      window.removeEventListener("resize", updateVideoCarouselState);
-    };
-  }, [relatedVideos.length, videoFilter, videosLoading, shouldLoadVideos]);
 
   useEffect(() => {
     const carousel = similarCarouselRef.current;
@@ -1302,17 +969,6 @@ export default function CelebrityDetailPage({
   ].filter(Boolean);
   const filmographyLimit = showAllCredits ? 36 : 12;
   const visibleCredits = filteredCredits.slice(0, filmographyLimit);
-  const galleryItems =
-    profiles.length > 0
-      ? profiles
-      : person.profile_path
-        ? [{ file_path: person.profile_path }]
-        : [];
-  const galleryPages = Math.max(1, Math.ceil(galleryItems.length / 8));
-  const currentGalleryItems = galleryItems.slice(
-    galleryPage * 8,
-    galleryPage * 8 + 8,
-  );
   const biographyLead =
     person.biography?.split(/(?<=[.!?])\s+/).find((sentence) => sentence) ||
     (knownForSummary.length > 0
@@ -1324,15 +980,6 @@ export default function CelebrityDetailPage({
   const SelectedSortIcon = selectedSortOption.icon;
   const heroFeature = latestWork || notableWorks[0] || topRatedWorks[0];
 
-  const scrollVideoCarousel = (direction: "prev" | "next") => {
-    const carousel = videoCarouselRef.current;
-    if (!carousel) return;
-    const distance = Math.min(carousel.clientWidth * 0.86, 720);
-    carousel.scrollBy({
-      left: direction === "next" ? distance : -distance,
-      behavior: "smooth",
-    });
-  };
   const scrollSimilarCarousel = (direction: "prev" | "next") => {
     const carousel = similarCarouselRef.current;
     if (!carousel) return;
@@ -1396,16 +1043,22 @@ export default function CelebrityDetailPage({
               <button
                 onClick={() =>
                   setSelectedImage(
-                    getProfileUrl(person.profile_path, "original"),
+                    profilePhoto?.url ||
+                      getProfileUrl(person.profile_path, "original"),
                   )
                 }
                 className="group relative block aspect-[3/4] w-full overflow-hidden rounded-xl border border-white/10 bg-zinc-900 shadow-xl shadow-black/40 sm:rounded-2xl"
               >
                 <Image
-                  src={getProfileUrl(person.profile_path)}
+                  src={
+                    profilePhoto?.thumbnail ||
+                    getProfileUrl(person.profile_path)
+                  }
                   alt={person.name}
                   fill
                   priority
+                  unoptimized
+                  onError={() => setProfilePhoto(null)}
                   sizes="(max-width: 640px) 88px, (max-width: 1024px) 128px, 148px"
                   className="object-cover transition duration-700 group-hover:scale-105"
                 />
@@ -1414,6 +1067,29 @@ export default function CelebrityDetailPage({
                   Portrait
                 </div>
               </button>
+
+              {profilePhoto?.source === "wikimedia" && (
+                <div className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
+                  <p>{profilePhoto.attribution}</p>
+                  <a
+                    href={profilePhoto.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--brand-coral-strong)] underline"
+                  >
+                    Source
+                  </a>
+                  {" · "}
+                  <a
+                    href={profilePhoto.licenseUrl || profilePhoto.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--brand-coral-strong)] underline"
+                  >
+                    {profilePhoto.license}
+                  </a>
+                </div>
+              )}
 
               <div className="mt-2 hidden grid-cols-3 gap-1.5 self-start lg:grid">
                 {profiles.slice(1, 4).map((image, index) => (
@@ -1588,10 +1264,7 @@ export default function CelebrityDetailPage({
             </motion.aside>
           </header>
 
-          <section
-            id="biography"
-            className="mt-6 scroll-mt-24 sm:mt-8"
-          >
+          <section id="biography" className="mt-6 scroll-mt-24 sm:mt-8">
             <div className="overflow-hidden rounded-[1.25rem] border border-zinc-800 bg-zinc-900/55 shadow-2xl shadow-black/20 sm:rounded-2xl">
               <div className="border-b border-white/10 bg-white/[0.025] p-3.5 sm:p-4">
                 <SectionHeader
@@ -1619,9 +1292,7 @@ export default function CelebrityDetailPage({
                   <ProfilePill
                     label="Top rated"
                     value={
-                      topRatedWorks[0]
-                        ? getTitle(topRatedWorks[0])
-                        : "Pending"
+                      topRatedWorks[0] ? getTitle(topRatedWorks[0]) : "Pending"
                     }
                   />
                   <ProfilePill
@@ -1687,11 +1358,11 @@ export default function CelebrityDetailPage({
                   />
                 )}
                 <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-                  <ProfilePill label="Credits" value={`${credits.length} total`} />
                   <ProfilePill
-                    label="Movies"
-                    value={movieCredits.length}
+                    label="Credits"
+                    value={`${credits.length} total`}
                   />
+                  <ProfilePill label="Movies" value={movieCredits.length} />
                   <ProfilePill label="TV" value={tvCredits.length} />
                 </div>
               </div>
@@ -1726,127 +1397,11 @@ export default function CelebrityDetailPage({
             </section>
           )}
 
-          <section
-            ref={relatedVideosSectionRef}
-            className="mt-10 scroll-mt-24 space-y-4 sm:mt-12"
-          >
-            <div className="overflow-hidden rounded-[1.25rem] border border-white/10 bg-zinc-950/55 shadow-2xl shadow-black/25 backdrop-blur sm:rounded-2xl">
-              <div className="border-b border-white/10 p-4 sm:p-5">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                  <SectionHeader
-                    icon={Play}
-                    title="On-Screen Moments"
-                    subtitle="Trailers, clips, interviews, behind-the-scenes videos, and appearances."
-                    action={
-                      relatedVideos.length > 0 && (
-                        <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-zinc-300 sm:inline-flex">
-                          {relatedVideos.length} moments
-                        </span>
-                      )
-                    }
-                  />
-
-                  {relatedVideos.length > 0 && (
-                    <div className="-mx-1 flex max-w-[calc(100vw-2rem)] overflow-x-auto rounded-xl border border-white/10 bg-black/30 p-1 mobile-native-scroll sm:mx-0 sm:max-w-full">
-                      {videoFilters.map((filter) => {
-                        const count =
-                          filter.value === "all"
-                            ? relatedVideos.length
-                            : relatedVideos.filter(
-                                (video) =>
-                                  getVideoFilterGroup(video) === filter.value,
-                              ).length;
-
-                        return (
-                          <button
-                            key={filter.value}
-                            type="button"
-                            onClick={() => setVideoFilter(filter.value)}
-                            className={`min-h-9 cursor-pointer whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-black transition ${
-                              videoFilter === filter.value
-                                ? "bg-white text-black shadow-lg shadow-black/30"
-                                : "text-zinc-400 hover:bg-white/5 hover:text-white"
-                            }`}
-                          >
-                            {filter.label}
-                            {count > 0 && (
-                              <span className="ml-1.5 text-[10px] opacity-65">
-                                {count}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="overflow-visible p-3.5 sm:p-4">
-                {!shouldLoadVideos || videosLoading ? (
-                  <VideoSectionSkeleton />
-                ) : videosError ? (
-                  <VideoEmptyPanel error={videosError} />
-                ) : filteredVideos.length > 0 ? (
-                  <>
-                    <div className="group/video-carousel relative isolate">
-                      {filteredVideos.length > 1 && (
-                        <>
-                          {videoCarouselState.canScrollPrev && (
-                            <button
-                              type="button"
-                              onClick={() => scrollVideoCarousel("prev")}
-                              className="absolute left-0 top-1/2 z-30 hidden h-11 w-11 -translate-x-4 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-zinc-950/90 text-white shadow-2xl shadow-black/50 backdrop-blur transition hover:scale-105 hover:border-[#ff8b78]/50 hover:bg-[#e94f37] hover:text-black group-hover/video-carousel:opacity-100 sm:flex"
-                              aria-label="Previous videos"
-                            >
-                              <ChevronLeft className="h-5 w-5" />
-                            </button>
-                          )}
-                          {videoCarouselState.canScrollNext && (
-                            <button
-                              type="button"
-                              onClick={() => scrollVideoCarousel("next")}
-                              className="absolute right-0 top-1/2 z-30 hidden h-11 w-11 -translate-y-1/2 translate-x-4 items-center justify-center rounded-full border border-white/15 bg-zinc-950/90 text-white shadow-2xl shadow-black/50 backdrop-blur transition hover:scale-105 hover:border-[#ff8b78]/50 hover:bg-[#e94f37] hover:text-black group-hover/video-carousel:opacity-100 sm:flex"
-                              aria-label="Next videos"
-                            >
-                              <ChevronRight className="h-5 w-5" />
-                            </button>
-                          )}
-                        </>
-                      )}
-                      <div
-                        ref={videoCarouselRef}
-                        className="-mx-2 flex snap-x snap-mandatory gap-2 overflow-x-auto px-2 pb-1.5 mobile-native-scroll sm:mx-0 sm:gap-3 sm:px-1 sm:pb-2"
-                      >
-                        {filteredVideos.slice(0, 12).map((video) => (
-                          <VideoCarouselCard
-                            key={video.id}
-                            video={video}
-                            onPlay={setSelectedVideo}
-                          />
-                        ))}
-                        {filteredVideos.length > 12 && (
-                          <div className="flex w-[180px] min-w-[180px] snap-start items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.025] p-4 text-center text-xs font-semibold leading-5 text-zinc-500">
-                            {filteredVideos.length - 12} more videos available
-                            in this lane.
-                          </div>
-                        )}
-                      </div>
-                      <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-10 bg-gradient-to-r from-zinc-950/80 to-transparent sm:block" />
-                      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-10 bg-gradient-to-l from-zinc-950/80 to-transparent sm:block" />
-                    </div>
-                    <div className="mt-2 px-1 text-[11px] font-semibold text-zinc-600">
-                      <span>{filteredVideos.length} videos</span>
-                    </div>
-                  </>
-                ) : (
-                  <VideoEmptyPanel
-                    hasFilteredVideos={relatedVideos.length > 0}
-                  />
-                )}
-              </div>
-            </div>
-          </section>
+          <CelebrityMediaSections
+            key={person.id}
+            person={person}
+            onPhotosReady={chooseProfilePhoto}
+          />
 
           <section
             id="genre-identity"
@@ -1991,7 +1546,8 @@ export default function CelebrityDetailPage({
                           </Link>
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <span className="rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-[11px] font-black text-zinc-200">
-                              {collab.count} shared {collab.count === 1 ? "credit" : "credits"}
+                              {collab.count} shared{" "}
+                              {collab.count === 1 ? "credit" : "credits"}
                             </span>
                             <Link
                               href={`/celeb/${collab.id}`}
@@ -2063,78 +1619,6 @@ export default function CelebrityDetailPage({
             </section>
           )}
 
-          <section className="mt-10 space-y-4 sm:mt-12">
-            <SectionHeader
-              icon={Camera}
-              title="Photo Gallery"
-              subtitle="Portraits and profile imagery from TMDB."
-              action={
-                galleryItems.length > 8 && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() =>
-                        setGalleryPage((page) => Math.max(0, page - 1))
-                      }
-                      disabled={galleryPage === 0}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
-                      aria-label="Previous gallery page"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <span className="text-xs font-semibold text-zinc-500">
-                      {galleryPage + 1} / {galleryPages}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setGalleryPage((page) =>
-                          Math.min(galleryPages - 1, page + 1),
-                        )
-                      }
-                      disabled={galleryPage >= galleryPages - 1}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-zinc-400 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
-                      aria-label="Next gallery page"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                )
-              }
-            />
-            {galleryItems.length > 0 ? (
-              <div
-                id="gallery"
-                className="flex snap-x snap-mandatory scroll-mt-24 gap-2.5 overflow-x-auto px-3 pb-2 mobile-native-scroll sm:mx-0 sm:grid sm:grid-cols-8 sm:overflow-visible sm:px-0 sm:pb-0"
-              >
-                {currentGalleryItems.map((image, index) => (
-                  <button
-                    key={`${image.file_path}-${index}`}
-                    onClick={() =>
-                      setSelectedImage(getImageUrl(image.file_path))
-                    }
-                    className="group relative aspect-[2/3] w-[29vw] min-w-[96px] max-w-[126px] shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] p-1 transition hover:-translate-y-1 hover:border-white/30 sm:w-auto sm:min-w-0 sm:max-w-none"
-                  >
-                    <Image
-                      src={getProfileUrl(image.file_path)}
-                      alt={`${person.name} photo ${index + 1}`}
-                      fill
-                      sizes="(max-width: 640px) 29vw, 126px"
-                      className="object-cover transition duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/45">
-                      <ExternalLink className="h-5 w-5 opacity-0 transition group-hover:opacity-100" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={Camera}
-                title="No gallery images"
-                text="This profile does not include additional images yet."
-              />
-            )}
-          </section>
-
           <section
             className="mt-10 scroll-mt-24 rounded-[1.25rem] border border-zinc-800 bg-zinc-900/45 p-4 shadow-2xl shadow-black/20 sm:mt-12 sm:rounded-2xl sm:p-5"
             id="filmography"
@@ -2182,7 +1666,10 @@ export default function CelebrityDetailPage({
                     </button>
                   ))}
                 </div>
-                <div ref={sortMenuRef} className="relative z-30 w-full sm:w-[260px]">
+                <div
+                  ref={sortMenuRef}
+                  className="relative z-30 w-full sm:w-[260px]"
+                >
                   <button
                     type="button"
                     onClick={() => setSortMenuOpen((open) => !open)}
@@ -2344,7 +1831,8 @@ export default function CelebrityDetailPage({
                     </button>
                     {filteredCredits.length > 36 && showAllCredits && (
                       <p className="mt-3 text-xs text-zinc-500">
-                        Showing the top 36 credits to keep the page quick and readable.
+                        Showing the top 36 credits to keep the page quick and
+                        readable.
                       </p>
                     )}
                   </div>
@@ -2443,71 +1931,6 @@ export default function CelebrityDetailPage({
       </div>
 
       <AnimatePresence>
-        {selectedVideo && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] flex items-end justify-center overflow-hidden bg-black/90 p-3 backdrop-blur-md sm:items-center sm:p-6"
-            onClick={() => setSelectedVideo(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.96, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              className="relative w-full max-w-5xl sm:pt-0"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/95 shadow-2xl shadow-black/60 ring-1 ring-white/5 sm:rounded-3xl">
-                <div className="border-b border-white/10 bg-white/[0.03] px-4 py-3 sm:px-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                        <span className="rounded-full bg-[#e94f37] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-black">
-                          {getVideoContextLabel(selectedVideo)}
-                        </span>
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-200">
-                          {selectedVideo.media_type === "tv" ? "TV" : "Movie"}
-                        </span>
-                        {selectedVideo.official && (
-                          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-200">
-                            Official
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="line-clamp-1 text-sm font-black text-white sm:text-base">
-                        {selectedVideo.video_title}
-                      </h3>
-                      <p className="mt-0.5 line-clamp-1 text-xs font-semibold text-zinc-500">
-                        {selectedVideo.media_title}
-                        {selectedVideo.release_year
-                          ? ` | ${selectedVideo.release_year}`
-                          : ""}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setSelectedVideo(null)}
-                      className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/10 text-white shadow-xl shadow-black/40 backdrop-blur transition hover:border-white/40 hover:bg-white/20"
-                      aria-label="Close video"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="aspect-video max-h-[80dvh] min-h-0 w-full shrink bg-black">
-                  <iframe
-                    src={`https://www.youtube.com/embed/${selectedVideo.video_key}?autoplay=1&rel=0`}
-                    title={selectedVideo.video_title}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    className="h-full w-full"
-                  />
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-
         {selectedImage && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -2535,10 +1958,35 @@ export default function CelebrityDetailPage({
                   src={selectedImage}
                   alt={`${person.name} enlarged`}
                   fill
+                  unoptimized
                   sizes="(max-width: 1024px) 94vw, 896px"
                   className="rounded-2xl object-contain"
                 />
               </div>
+              {profilePhoto?.source === "wikimedia" &&
+                selectedImage === profilePhoto.url && (
+                  <p className="mt-2 text-center text-xs leading-5 text-[var(--ink-muted)]">
+                    {profilePhoto.attribution}
+                    {" · "}
+                    <a
+                      href={profilePhoto.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[var(--brand-coral-strong)] underline"
+                    >
+                      Source
+                    </a>
+                    {" · "}
+                    <a
+                      href={profilePhoto.licenseUrl || profilePhoto.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[var(--brand-coral-strong)] underline"
+                    >
+                      {profilePhoto.license}
+                    </a>
+                  </p>
+                )}
             </motion.div>
           </motion.div>
         )}

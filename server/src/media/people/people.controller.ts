@@ -1,9 +1,10 @@
 import { Controller, Get, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { PeopleService } from './people.service';
+import { CelebrityMediaService } from './media/celebrity-media.service';
 
 @Controller('people')
 export class PeopleController {
-  constructor(private readonly peopleService: PeopleService) {}
+  constructor(private readonly peopleService: PeopleService, private readonly mediaService: CelebrityMediaService) {}
 
   @Get('trending/:type')
   async getTrending(@Param('type') type: string) {
@@ -36,6 +37,11 @@ export class PeopleController {
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 20,
     });
+  }
+
+  @Get(':id/media')
+  async getMedia(@Param('id', ParseIntPipe) id: number) {
+    return this.mediaService.getMedia(id);
   }
 
   @Get(':id/videos')
