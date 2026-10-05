@@ -74,11 +74,14 @@ export function SearchCustomSelect<T extends string>({
       ref={rootRef}
       className={`${styles.sortMenu} ${variant === "field" ? styles.fieldSelectMenu : ""}`}
     >
-      <span className={styles.sortLabel}>{label}</span>
+      <span className={variant === "toolbar" ? "sr-only" : styles.sortLabel}>
+        {label}
+      </span>
       <button
         ref={triggerRef}
         type="button"
         className={styles.sortTrigger}
+        aria-label={`${label}: ${selected?.label}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listboxId}

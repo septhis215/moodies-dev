@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Grid3X3, List, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, Grid3X3, List, Search, SlidersHorizontal, X } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import Pagination from "@/components/ui/pagination";
@@ -34,6 +34,7 @@ interface SearchResult {
   first_air_date?: string;
   vote_average?: number;
   known_for_department?: string;
+  known_for?: { id: number; title?: string; name?: string }[];
   genres?: string[];
   origin_country?: string[];
 }
@@ -82,7 +83,7 @@ const COUNTRIES: Country[] = [
 const TYPES: { value: ResultType; label: string }[] = [
   { value: "all", label: "All" },
   { value: "movie", label: "Movies" },
-  { value: "tv", label: "TV" },
+  { value: "tv", label: "TV shows" },
   { value: "person", label: "People" },
 ];
 const hrefFor = (item: SearchResult) =>
@@ -107,7 +108,7 @@ export default function SearchResultsPage() {
   const requestParams = searchParamsFor(query, applied, page).toString();
   const [searchText, setSearchText] = useState(query);
   const [draft, setDraft] = useState<SearchFilters>(applied);
-  const [view, setView] = useState<"grid" | "list">("grid");
+  const view = params.get("view") === "list" ? "list" : "grid";
   const [response, setResponse] = useState<{
     key: string;
     data: SearchResponse;
@@ -246,9 +247,17 @@ export default function SearchResultsPage() {
       nextQuery,
       forType(next, next.type),
       nextPage,
-    ).toString();
-    if (nextParams !== requestParams)
+    );
+    if (nextParams.toString() !== requestParams) {
+      if (view === "list") nextParams.set("view", "list");
       router.push(`/search?${nextParams}`, { scroll: false });
+    }
+  }
+  function changeView(next: "grid" | "list") {
+    const nextParams = new URLSearchParams(routeKey);
+    if (next === "list") nextParams.set("view", "list");
+    else nextParams.delete("view");
+    router.replace(`/search?${nextParams}`, { scroll: false });
   }
   function closeFilters() {
     dialogRef.current?.close();
@@ -376,10 +385,10 @@ export default function SearchResultsPage() {
     <main className={styles.page}>
       <div className="ui-shell">
         <header className={styles.header}>
-          <p className="ui-kicker mb-2">Find your next watch</p>
+          <p className="ui-kicker mb-2">Search Moodies</p>
           <h1 className={styles.heading}>
             {query
-              ? `Search results for “${query}”`
+              ? `Results for “${query}”`
               : "Find movies, TV and people"}
           </h1>
           <form
@@ -448,7 +457,7 @@ export default function SearchResultsPage() {
               )}
             </button>
             <SearchSortSelect
-              label={`Sort${query ? " this page" : ""}`}
+              label="Sort results"
               value={applied.sort}
               options={[
                 {
@@ -465,32 +474,6 @@ export default function SearchResultsPage() {
               ]}
               onChange={(sort) => commit({ ...applied, sort })}
             />
-            <div
-              className={styles.views}
-              role="group"
-              aria-label="Results layout"
-            >
-              <button
-                type="button"
-                className={control}
-                aria-label="Grid view"
-                aria-pressed={view === "grid"}
-                onClick={() => setView("grid")}
-              >
-                <Grid3X3 size={18} aria-hidden="true" />
-                <span className={styles.viewLabel}>Grid</span>
-              </button>
-              <button
-                type="button"
-                className={control}
-                aria-label="List view"
-                aria-pressed={view === "list"}
-                onClick={() => setView("list")}
-              >
-                <List size={18} aria-hidden="true" />
-                <span className={styles.viewLabel}>List</span>
-              </button>
-            </div>
           </div>
           {constraints.length > 0 && (
             <div
@@ -532,23 +515,49 @@ export default function SearchResultsPage() {
           aria-busy={loading}
         >
           <div className={styles.resultsHeader}>
-            <h2 id="results-heading">
-              {query ? "Results" : "Explore the catalogue"}
-            </h2>
-            <p className={styles.muted} role="status" aria-live="polite">
-              {loading
-                ? "Searching…"
-                : currentError
-                  ? "Search unavailable"
-                  : data
-                    ? `${results.length} ${results.length === 1 ? "match" : "matches"} on page ${page}`
-                    : "Ready when you are"}
-            </p>
+            <div className={styles.resultsSummary} role="status" aria-live="polite">
+              <h2 id="results-heading">
+                {loading
+                  ? "Searching…"
+                  : currentError
+                    ? "Search unavailable"
+                    : data
+                      ? `${results.length} ${results.length === 1 ? "result" : "results"}${availablePages > 1 ? " on this page" : ""}`
+                      : "Explore the catalogue"}
+              </h2>
+              {data && availablePages > 1 && (
+                <p className={styles.muted}>
+                  {data.total_results >= 500 ? "500+" : data.total_results} matches
+                  {" · "}Page {page} of {availablePages}
+                </p>
+              )}
+            </div>
+            <div className={styles.views} role="group" aria-label="Results layout">
+              <button
+                type="button"
+                className={control}
+                aria-label="Grid view"
+                title="Grid view"
+                aria-pressed={view === "grid"}
+                onClick={() => changeView("grid")}
+              >
+                <Grid3X3 size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className={control}
+                aria-label="List view"
+                title="List view"
+                aria-pressed={view === "list"}
+                onClick={() => changeView("list")}
+              >
+                <List size={18} aria-hidden="true" />
+              </button>
+            </div>
           </div>
-          {query && data && (
-            <p className={`${styles.muted} mb-5`}>
-              {data.total_results >= 500 ? "500+" : data.total_results} upstream
-              matches before filters. Filters and sorting apply to this page
+          {query && data && (availablePages > 1 || hasTitleFilters) && (
+            <p className={styles.scopeNote}>
+              Filters and sorting apply to this page
               {applied.type === "all" && hasTitleFilters
                 ? "; title filters do not apply to people"
                 : ""}
@@ -576,7 +585,10 @@ export default function SearchResultsPage() {
               </button>
             </div>
           ) : loading ? (
-            <div className={styles.grid} aria-hidden="true">
+            <div
+              className={view === "grid" ? styles.grid : styles.list}
+              aria-hidden="true"
+            >
               {Array.from({ length: 10 }, (_, index) => (
                 <div key={index} className={styles.skeleton} />
               ))}
@@ -599,11 +611,22 @@ export default function SearchResultsPage() {
                   0,
                   4,
                 );
+                const rating = item.vote_average ?? 0;
+                const hasRating =
+                  item.type !== "person" &&
+                  typeof rating === "number" &&
+                  rating > 0;
+                const knownFor = item.known_for
+                  ?.map((credit) => credit.title || credit.name)
+                  .filter(Boolean)
+                  .slice(0, 3)
+                  .join(", ");
                 return (
                   <Link
                     key={`${item.type}-${item.id}`}
                     href={hrefFor(item)}
                     className={styles.card}
+                    aria-label={`View ${item.type === "person" ? "profile" : "details"} for ${title}`}
                   >
                     <div className={styles.poster}>
                       <Image
@@ -612,38 +635,47 @@ export default function SearchResultsPage() {
                         fill
                         sizes={
                           view === "list"
-                            ? "80px"
+                            ? "(max-width: 767px) 72px, 112px"
                             : "(max-width: 639px) 50vw, (max-width: 1023px) 33vw, 20vw"
                         }
                       />
-                      {item.type !== "person" && (
+                      {view === "grid" && hasRating && (
                         <div
                           className={styles.rating}
-                          aria-label={`TMDB rating ${item.vote_average || 0} out of 10`}
+                          aria-label={`TMDB rating ${rating.toFixed(1)} out of 10`}
                         >
-                          <RatingBadge rating={item.vote_average} />
+                          <RatingBadge rating={rating} />
                         </div>
                       )}
-                      <span className={styles.mediaKind}>
-                        {item.type === "person"
-                          ? "Person"
-                          : item.type === "movie"
-                            ? "Movie"
-                            : "Series"}
-                      </span>
                     </div>
                     <div className={styles.cardBody}>
                       <h3>{title}</h3>
-                      <p className={styles.meta}>
-                        {item.type === "person"
-                          ? item.known_for_department || "Person"
-                          : `${item.type === "movie" ? "Movie" : "TV series"} · ${year || "Date TBA"}`}
-                      </p>
+                      <div className={styles.cardFacts}>
+                        <p className={styles.meta}>
+                          {item.type === "person"
+                            ? `Person${item.known_for_department ? ` · ${item.known_for_department}` : ""}`
+                            : `${item.type === "movie" ? "Movie" : "TV series"} · ${year || "Date TBA"}`}
+                        </p>
+                        {view === "list" && hasRating && (
+                          <span aria-label={`TMDB rating ${rating.toFixed(1)} out of 10`}>
+                            <RatingBadge rating={rating} variant="minimal" size="md" />
+                          </span>
+                        )}
+                      </div>
                       {view === "list" && item.overview && (
                         <p className={styles.overview}>{item.overview}</p>
                       )}
+                      {view === "list" && item.type === "person" && knownFor && (
+                        <p className={styles.overview}>
+                          <span className={styles.knownFor}>Known for </span>
+                          {knownFor}
+                        </p>
+                      )}
                       {view === "list" && (
-                        <span className={styles.cardAction}>View details →</span>
+                        <span className={styles.cardAction}>
+                          {item.type === "person" ? "View profile" : "View details"}
+                          <ArrowRight size={14} aria-hidden="true" />
+                        </span>
                       )}
                     </div>
                   </Link>
@@ -654,13 +686,17 @@ export default function SearchResultsPage() {
             <div className={styles.empty}>
               <h2>
                 {data
-                  ? "No matches on this page"
-                  : "Start with a title or a feeling"}
+                  ? data.total_results > 0
+                    ? "No matches on this page"
+                    : "No results found"
+                  : "Find your next watch"}
               </h2>
               <p className={styles.muted}>
                 {data
-                  ? "Try another page, remove a filter, or edit your search."
-                  : "Search for something you know, or choose a genre to discover something new."}
+                  ? data.total_results > 0
+                    ? "Try another page, remove a filter, or edit your search."
+                    : "Check the spelling or try a different title or name."
+                  : "Search for a movie, series or person, or choose filters to explore."}
               </p>
               {constraints.length > 0 && (
                 <button
@@ -682,7 +718,7 @@ export default function SearchResultsPage() {
             <Pagination
               currentPage={page}
               totalPages={availablePages}
-              className="mt-8"
+              className={`${styles.pagination} mt-8`}
               onPageChange={(nextPage) => {
                 commit(applied, nextPage);
                 resultsRef.current?.scrollIntoView({
