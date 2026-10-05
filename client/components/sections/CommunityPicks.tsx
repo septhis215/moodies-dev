@@ -279,15 +279,16 @@ export default function CommunityPicks({
   return (
     <section
       id="community"
+      aria-labelledby="community-heading"
       className="ui-shell scroll-mt-24 border-b border-[var(--surface-border)] py-8 sm:py-10"
     >
       <div>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#ff8b78]">
+            <p className="ui-kicker">
               Community signal
             </p>
-            <h2 className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
+            <h2 id="community-heading" className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
               {title}
             </h2>
 
@@ -298,7 +299,7 @@ export default function CommunityPicks({
             )}
           </div>
 
-          <div className="flex w-fit items-center gap-2 border-l border-[var(--surface-border)] pl-3 text-xs font-semibold text-[var(--ink-muted)]">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[var(--ink-muted)] lg:border-l lg:border-[var(--surface-border)] lg:pl-3">
             <MessageCircle className="h-3.5 w-3.5 text-[var(--brand-coral-strong)]" />
             {Math.min(reviews.length, 5)} featured reviews
             {averageRating !== null && (
@@ -309,24 +310,24 @@ export default function CommunityPicks({
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 lg:grid-cols-12">
+        <div className="mt-5 grid min-w-0 gap-3 sm:mt-6 lg:grid-cols-12">
           {featuredReview ? (
             <Link
               href={reviewHref(featuredReview) || "#community"}
-              className="group grid min-h-[420px] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:grid-cols-[42%_1fr] lg:col-span-5 lg:grid-cols-[44%_1fr]"
+              className="group grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] items-start overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:min-h-[420px] sm:grid-cols-[42%_minmax(0,1fr)] sm:items-stretch lg:col-span-5 lg:grid-cols-[44%_minmax(0,1fr)]"
               aria-label={`Read the community review for ${featuredReview.movieTitle || featuredReview.title}`}
             >
-              <div className="relative min-h-64 overflow-hidden bg-[var(--surface-2)] sm:min-h-full">
+              <div className="relative ml-3 mt-4 aspect-[2/3] overflow-hidden rounded-sm bg-[var(--surface-2)] sm:m-0 sm:aspect-auto sm:min-h-full sm:rounded-none">
                 <Image
                   src={reviewPoster(featuredReview)}
                   alt={`${featuredReview.movieTitle || featuredReview.title} poster`}
                   fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 42vw, 220px"
+                  sizes="(max-width: 639px) 68px, (max-width: 1024px) 42vw, 220px"
                   className="object-cover"
                 />
               </div>
-              <blockquote className="flex min-w-0 flex-col p-5 sm:p-6">
-                <div className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ink-muted)]">
+              <blockquote className="flex min-w-0 flex-col p-4 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-[var(--ink-muted)]">
                   <span>
                     {featuredReview.mediaType === "TV" ? "Series" : "Movie"}
                     {featuredReview.movieYear
@@ -339,10 +340,10 @@ export default function CommunityPicks({
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-5 line-clamp-7 text-xl font-semibold leading-7 text-[var(--ink)]">
+                <p className="mt-3 line-clamp-5 text-base font-semibold leading-6 text-[var(--ink)] sm:mt-5 sm:line-clamp-7 sm:text-xl sm:leading-7">
                   “{featuredReview.quote}”
                 </p>
-                <footer className="mt-auto pt-6">
+                <footer className="mt-auto pt-4 sm:pt-6">
                   <p className="line-clamp-2 text-lg font-bold leading-5 text-[var(--ink)]">
                     {featuredReview.movieTitle || featuredReview.title}
                   </p>
@@ -362,25 +363,25 @@ export default function CommunityPicks({
             </Link>
           ) : null}
 
-          <div className="mobile-native-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto lg:col-span-7 lg:grid lg:grid-cols-2 lg:overflow-visible">
+          <div className="mobile-native-scroll flex min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-2 lg:col-span-7 lg:grid lg:grid-cols-2 lg:overflow-visible lg:pb-0">
             {supportingReviews.map((review, index) => (
               <Link
                 key={`${review.tmdbId || "review"}-${index}`}
                 href={reviewHref(review) || "#community"}
-                className="group grid min-h-48 w-[86vw] max-w-[360px] shrink-0 snap-start grid-cols-[104px_1fr] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:w-[48vw] lg:w-auto lg:max-w-none"
+                className="group grid min-h-48 w-[92%] min-w-0 shrink-0 snap-start grid-cols-[5rem_minmax(0,1fr)] items-start overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:w-[48%] sm:grid-cols-[104px_minmax(0,1fr)] sm:items-stretch lg:w-auto"
                 aria-label={`Read the community review for ${review.movieTitle || review.title}`}
               >
-                <div className="relative bg-[var(--surface-2)]">
+                <div className="relative ml-3 mt-4 aspect-[2/3] overflow-hidden rounded-sm bg-[var(--surface-2)] sm:m-0 sm:aspect-auto sm:rounded-none">
                   <Image
                     src={reviewPoster(review)}
                     alt={`${review.movieTitle || review.title} poster`}
                     fill
-                    sizes="104px"
+                    sizes="(max-width: 639px) 68px, 104px"
                     className="object-cover"
                   />
                 </div>
                 <blockquote className="flex min-w-0 flex-col p-4">
-                  <div className="flex items-center justify-between gap-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[var(--ink-muted)]">
+                  <div className="flex items-center justify-between gap-2 text-xs font-semibold text-[var(--ink-muted)]">
                     <span>
                       {review.mediaType === "TV" ? "Series" : "Movie"}
                     </span>
@@ -398,7 +399,7 @@ export default function CommunityPicks({
                       {review.movieTitle || review.title}
                     </p>
                     <div className="mt-2 flex items-center justify-between gap-2">
-                      <span className="truncate text-[10px] text-[var(--ink-muted)]">
+                      <span className="truncate text-xs text-[var(--ink-muted)]">
                         {review.name}
                       </span>
                       <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[var(--ink-muted)] transition-colors group-hover:text-[var(--brand-coral-strong)]" />

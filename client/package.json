@@ -21,6 +21,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node scripts/test.mjs",
     "test:e2e": "node tests/e2e/smoke.mjs",
+    "test:e2e:landing": "node tests/e2e/landing.mjs",
     "verify": "npm run lint:check && npm run typecheck && npm run build",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"

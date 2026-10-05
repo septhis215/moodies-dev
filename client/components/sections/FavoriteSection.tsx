@@ -1,840 +1,213 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowRight, Bookmark, BookmarkCheck, ChevronRight, Star } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import { useRouter } from "next/navigation";
-import {
-  Bookmark,
-  BookmarkCheck,
-  ChevronRight,
-  Film,
-  Info,
-  Languages,
-  Play,
-  Plus,
-  Star,
-  Tv,
-} from "lucide-react";
-import type { All } from "@/types/all";
-import { tmdbImage } from "@/lib/tmdb";
-import { useWatchlist } from "@/hooks/useWatchlist";
 import { useAuth } from "@/app/context/AuthProvider";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { handleAppError, normalizeResponseError } from "@/lib/errors";
+import { tmdbImage } from "@/lib/tmdb";
+import type { All } from "@/types/all";
 
-interface MoodiesMixProps {
+interface FavoriteSectionProps {
   data?: All[];
   title?: string;
   subtitle?: string;
   endpoint?: string;
 }
 
-type FavoriteContent = Omit<Partial<All>, "type"> & {
-  media_type?: "movie" | "tv";
-  type?: All["type"] | "movies";
-};
-
-type TasteSignal = {
-  topGenres: string[];
-  topCountries: string[];
-  averageRating: number | null;
-};
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
-async function fetchFavorites(endpoint?: string): Promise<All[]> {
-  try {
-    const res = await fetch(endpoint || `${API_BASE}/all/favorites`, {
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      next: { revalidate: 60 },
-    });
-
-    if (!res.ok) {
-      console.error("Favorites fetch failed:", res.status, res.statusText);
-      return [];
-    }
-
-    return (await res.json()) as All[];
-  } catch (err) {
-    console.error("Failed to fetch favorites:", err);
-    return [];
-  }
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
+function mediaType(item: All): "movie" | "tv" {
+  return item.type === "tv" || item.first_air_date ? "tv" : "movie";
 }
-
-function getContentType(item: FavoriteContent): "movie" | "tv" {
-  if (item.media_type) return item.media_type;
-  if (item.type === "movies" || item.type === "movie") return "movie";
-  if (item.type === "tv") return "tv";
-  if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
-  return "movie";
-}
-
-function getTitle(item: All) {
+function titleOf(item: All) {
   return item.title || item.name || "Untitled pick";
 }
-
-function getYear(item: All) {
+function hrefOf(item: All) {
+  return `/${mediaType(item) === "tv" ? "tv" : "movies"}/${item.id}`;
+}
+function PickMeta({ item }: { item: All }) {
+  const year = item.year || (item.release_date || item.first_air_date)?.split("-")[0];
   return (
-    item.year ||
-    item.release_date?.split("-")[0] ||
-    item.first_air_date?.split("-")[0] ||
-    null
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--ink-muted)]">
+      <span>{mediaType(item) === "tv" ? "Series" : "Movie"}</span>
+      {year && <span>{year}</span>}
+      {typeof item.vote_average === "number" && item.vote_average > 0 && (
+        <span className="inline-flex items-center gap-1 text-[var(--brand-gold)]" aria-label={`TMDB rating ${item.vote_average.toFixed(1)} out of 10`}>
+          <Star className="h-3.5 w-3.5" aria-hidden="true" />{item.vote_average.toFixed(1)}
+        </span>
+      )}
+    </div>
   );
 }
 
-function getBackdrop(item: All) {
-  return (
-    tmdbImage(item.backdrop_path || item.poster_path, "w1280") ||
-    "/placeholder-backdrop.svg"
-  );
-}
-
-function getPoster(item: All, size: "w154" | "w342" | "w500" = "w342") {
-  return (
-    tmdbImage(item.poster_path || item.backdrop_path, size) ||
-    "/placeholder-poster.svg"
-  );
-}
-
-function countValues(values: string[]) {
-  return values.reduce<Record<string, number>>((acc, value) => {
-    acc[value] = (acc[value] || 0) + 1;
-    return acc;
-  }, {});
-}
-
-function topValues(values: string[], limit: number) {
-  return Object.entries(countValues(values))
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([value]) => value);
-}
-
-function buildTasteSignal(items: All[]): TasteSignal {
-  const genres = items.flatMap((item) => item.genres || []);
-  const countries = items.flatMap((item) => item.origin_country || []);
-  const ratings = items
-    .map((item) => item.vote_average)
-    .filter((rating): rating is number => typeof rating === "number");
-
-  return {
-    topGenres: topValues(genres, 4),
-    topCountries: topValues(countries, 3),
-    averageRating: ratings.length
-      ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
-      : null,
-  };
-}
-
-function getMatchScore(item: All, signal: TasteSignal, saved: boolean) {
-  let score = 78;
-
-  if (saved) score += 8;
-  if (item.genres?.some((genre) => signal.topGenres.includes(genre)))
-    score += 8;
-  if (
-    item.origin_country?.some((country) =>
-      signal.topCountries.includes(country),
-    )
-  ) {
-    score += 4;
-  }
-  if (typeof item.vote_average === "number" && item.vote_average >= 7.5) {
-    score += 4;
-  }
-
-  return Math.min(score, 98);
-}
-
-function getShortReason(item: All, signal: TasteSignal, saved: boolean) {
-  const matchedGenre = item.genres?.find((genre) =>
-    signal.topGenres.includes(genre),
-  );
-  const matchedCountry = item.origin_country?.find((country) =>
-    signal.topCountries.includes(country),
-  );
-
-  if (saved) return "From your saved list";
-  if (matchedGenre) return `Matches ${matchedGenre}`;
-  if (matchedCountry) return `${matchedCountry} preference`;
-  if (typeof item.vote_average === "number" && item.vote_average >= 7.5) {
-    return "Highly rated nearby";
-  }
-  return "Expands your taste";
-}
-
-function toWatchType(item: All): "movie" | "series" {
-  return getContentType(item) === "tv" ? "series" : "movie";
-}
-
-export default function MoodiesMix({
+export default function FavoriteSection({
   data,
-  title = "Your curated picks",
-  subtitle = "A compact Moodies shelf shaped by your genres, saves, languages, and recent taste signals.",
+  title = "Curated for you",
+  subtitle = "A personal mix of movies and series, chosen for your favourite genres and languages.",
   endpoint,
-}: MoodiesMixProps) {
+}: FavoriteSectionProps) {
+  const { isAuthenticated, loading: authLoading, refreshSession, logoutSilent, user } = useAuth();
+  const { add, remove, isInWatchlist } = useWatchlist();
   const [items, setItems] = useState<All[]>(data || []);
   const [loading, setLoading] = useState(!data);
+  const [status, setStatus] = useState<"ready" | "preferences" | "error">("ready");
+  const [retry, setRetry] = useState(0);
   const [offset, setOffset] = useState(0);
-  const [loadingStates, setLoadingStates] = useState<Record<number, boolean>>(
-    {},
-  );
-  const router = useRouter();
-  const { add, remove, isInWatchlist } = useWatchlist();
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const [saving, setSaving] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
     if (data) {
       setItems(data);
       setLoading(false);
       return;
     }
-
-    if (authLoading) return; // wait until the session check resolves
-
-    if (!isAuthenticated) {
-      setLoading(false);
-      return;
-    }
-
-    const load = async () => {
+    const controller = new AbortController();
+    async function load() {
       setLoading(true);
-
+      setStatus("ready");
+      setItems([]);
+      setOffset(0);
       try {
-        const result = await fetchFavorites(endpoint);
-        setItems(Array.isArray(result) ? result : []);
-      } catch {
-        setItems([]);
+        const url = endpoint || `${API_BASE}/all/favorites`;
+        const options: RequestInit = { credentials: "include", cache: "no-store", signal: controller.signal };
+        let response = await fetch(url, options);
+        if (response.status === 401 || response.status === 498) {
+          if (await refreshSession()) response = await fetch(url, options);
+          if (controller.signal.aborted) return;
+          if (response.status === 401 || response.status === 498) {
+            logoutSilent();
+            return;
+          }
+        }
+        if (response.status === 400) {
+          if (!controller.signal.aborted) setStatus("preferences");
+          return;
+        }
+        if (!response.ok) throw await normalizeResponseError(response);
+        const result = await response.json();
+        if (!Array.isArray(result)) throw new Error("Invalid curated picks response");
+        if (!controller.signal.aborted) setItems(result);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setStatus("error");
+        handleAppError(error, {
+          fallbackMessage: "Could not load your curated picks. Please try again.",
+          toastTitle: "Curated for you",
+          toastKey: "curated-picks-error",
+        });
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
-    };
-
-    load();
-  }, [data, endpoint, authLoading, isAuthenticated]);
-
-  const ordered = useMemo(
-    () => items.map((_, index) => items[(offset + index) % items.length]),
-    [items, offset],
-  );
-
-  const tasteSignal = useMemo(() => buildTasteSignal(items), [items]);
-  const primary = ordered[0];
-
-  const handleClick = (item: All) => {
-    const type = getContentType(item);
-    router.push(`/${type === "tv" ? "tv" : "movies"}/${item.id}`);
-  };
-
-  const toggleWatchlist = async (item: All) => {
-    if (!item?.id) return;
-
-    setLoadingStates((prev) => ({ ...prev, [item.id]: true }));
-
-    try {
-      const title = getTitle(item);
-      const posterUrl = getPoster(item, "w154");
-      const saved = isInWatchlist(String(item.id), toWatchType(item));
-
-      if (saved) {
-        await remove(String(item.id), toWatchType(item), { title, posterUrl });
-      } else {
-        await add(String(item.id), toWatchType(item), { title, posterUrl });
-      }
-    } catch (error) {
-      console.error("Watchlist toggle failed:", error);
-    } finally {
-      setLoadingStates((prev) => ({ ...prev, [item.id]: false }));
     }
-  };
+    void load();
+    return () => controller.abort();
+  }, [data, endpoint, authLoading, isAuthenticated, user?.id, retry, refreshSession, logoutSilent]);
 
-  if (authLoading) return null;
+  async function toggleSave(item: All) {
+    const type = mediaType(item) === "tv" ? "series" : "movie";
+    const key = `${type}-${item.id}`;
+    if (saving[key]) return;
+    setSaving((prev) => ({ ...prev, [key]: true }));
+    const meta = { title: titleOf(item), posterUrl: tmdbImage(item.poster_path, "w154") };
+    try {
+      if (isInWatchlist(String(item.id), type)) await remove(String(item.id), type, meta);
+      else await add(String(item.id), type, meta);
+    } catch {
+      // The watchlist hook owns rollback and the shared error toast.
+    } finally {
+      setSaving((prev) => ({ ...prev, [key]: false }));
+    }
+  }
 
-  if (!isAuthenticated) {
+  function saveButton(item: All, compact = false) {
+    const type = mediaType(item) === "tv" ? "series" : "movie";
+    const saved = isInWatchlist(String(item.id), type);
+    const busy = !!saving[`${type}-${item.id}`];
     return (
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <CuratedGuestPanel routerPush={router.push} />
-      </section>
+      <button type="button" disabled={busy} onClick={() => void toggleSave(item)}
+        aria-label={`${saved ? "Remove" : "Save"} ${titleOf(item)} ${saved ? "from" : "to"} your watchlist`} aria-pressed={saved}
+        className={`${compact ? "grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]" : "ui-secondary-action"} disabled:cursor-wait disabled:opacity-60`}>
+        {saved ? <BookmarkCheck className="h-4 w-4" aria-hidden="true" /> : <Bookmark className="h-4 w-4" aria-hidden="true" />}
+        {!compact && (busy ? "Updating…" : saved ? "Saved" : "Save to watchlist")}
+      </button>
     );
   }
 
-  if (loading) {
-    return <FavoriteLoadingState />;
-  }
-
-  if (!primary || items.length === 0) {
-    return (
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <EmptyTasteState routerPush={router.push} />
-      </section>
-    );
-  }
-
-  const primarySaved = isInWatchlist(String(primary.id), toWatchType(primary));
-  const primaryMatch = getMatchScore(primary, tasteSignal, primarySaved);
-  const visibleCards = ordered.slice(1, 7);
-
+  if (authLoading || !isAuthenticated) return null;
+  const ordered = items.length ? items.map((_, index) => items[(index + offset) % items.length]) : [];
+  const [featured, ...more] = ordered;
   return (
-    <section className="mx-auto max-w-7xl overflow-hidden px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-16">
-      <div className="mb-4 flex items-end justify-between gap-3 sm:mb-5">
+    <section className="ui-shell border-b border-[var(--surface-border)] py-8 sm:py-10" aria-labelledby="curated-picks-heading">
+      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="mb-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#ff8b78]">
-            For your taste
-          </p>
-          <h2 className="text-xl font-black tracking-normal text-[#e94f37] sm:text-2xl lg:text-3xl">
-            {title}
-          </h2>
-          {subtitle ? (
-            <p className="mt-1 line-clamp-2 max-w-2xl text-xs leading-5 text-white/50 sm:text-sm sm:leading-6">
-              {subtitle}
-            </p>
-          ) : null}
+          <p className="ui-kicker">Your Moodies mix</p>
+          <h2 id="curated-picks-heading" className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">{title}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">{subtitle}</p>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setOffset((prev) => (prev + 1) % items.length)}
-          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-[11px] font-black text-white/78 transition hover:bg-white/[0.1] active:scale-[0.98] sm:gap-2 sm:px-4 sm:text-xs"
-          aria-label="Refresh your curated favorites"
-        >
-          <span className="hidden sm:inline">Refresh the mix</span>
-          <span className="sm:hidden">Refresh</span>
-          <ChevronRight className="h-4 w-4 text-[#e94f37]" />
-        </button>
-      </div>
-
-      <div className="md:hidden">
-        <MobileFeaturedCard
-          item={primary}
-          signal={tasteSignal}
-          saved={primarySaved}
-          loading={!!loadingStates[primary.id]}
-          onOpen={() => handleClick(primary)}
-          onToggle={() => toggleWatchlist(primary)}
-        />
-
-        {visibleCards.length ? (
-          <div className="mt-4">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-white/48">
-                More for you
-              </p>
-              <p className="text-[10px] font-semibold text-white/32">
-                Swipe to browse
-              </p>
-            </div>
-            <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {visibleCards.map((item, index) => {
-                const saved = isInWatchlist(
-                  String(item.id),
-                  toWatchType(item),
-                );
-                return (
-                  <MobileFavoriteCard
-                    key={`${item.id}-${index}`}
-                    item={item}
-                    signal={tasteSignal}
-                    saved={saved}
-                    loading={!!loadingStates[item.id]}
-                    onOpen={() => handleClick(item)}
-                    onToggle={() => toggleWatchlist(item)}
-                  />
-                );
-              })}
-              <div aria-hidden="true" className="w-1 shrink-0" />
-            </div>
+        <Link href="/auth/onboarding" className="inline-flex min-h-11 shrink-0 items-center gap-2 text-sm font-semibold text-[var(--brand-coral-strong)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]">Edit your taste <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+      </header>
+      {loading ? (
+        <div role="status" aria-label="Loading your curated picks" className="ui-panel h-80 motion-safe:animate-pulse" />
+      ) : status === "error" ? (
+        <div className="ui-panel p-5 sm:p-7">
+          <h3 className="text-xl font-bold text-[var(--ink)]">Couldn’t load your mix</h3>
+          <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">Try again to see the picks chosen for you.</p>
+          <button type="button" className="ui-primary-action mt-4" onClick={() => setRetry((value) => value + 1)}>Try again</button>
+        </div>
+      ) : !featured ? (
+        <div className="ui-panel flex items-start gap-4 p-5 sm:p-7">
+          <Image src="/images/moods/sci-fi.png" alt="Sci-Fi mood mascot" width={80} height={80} unoptimized className="h-16 w-16 shrink-0 object-contain sm:h-20 sm:w-20" />
+          <div className="min-w-0">
+            <h3 className="text-xl font-bold text-[var(--ink)]">{status === "preferences" ? "Make this mix yours" : "Your next favourites are on their way"}</h3>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">{status === "preferences" ? "Choose your favourite genres and languages so we can find stories for your taste." : "Try updating your genres and languages, or explore a mood while we find more picks."}</p>
+            <Link href="/auth/onboarding" className="ui-primary-action mt-4">Choose your preferences <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
           </div>
-        ) : null}
-      </div>
-
-      <div className="hidden rounded-2xl border border-white/10 bg-white/[0.025] p-3 md:block">
-        <div className="grid gap-3 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)]">
-          <article className="group grid overflow-hidden rounded-xl border border-white/10 bg-[#0c0c0d] sm:grid-cols-[170px_minmax(0,1fr)] lg:grid-cols-1">
-            <button
-              type="button"
-              onClick={() => handleClick(primary)}
-              className="relative min-h-[174px] overflow-hidden bg-zinc-900 sm:min-h-full lg:h-[168px]"
-              aria-label={`Open ${getTitle(primary)}`}
-            >
-              <Image
-                src={getBackdrop(primary)}
-                alt={getTitle(primary)}
-                fill
-                sizes="(max-width: 1024px) 100vw, 45vw"
-                className="object-cover transition duration-500 group-hover:scale-[1.03]"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/24 to-transparent" />
-              <div className="absolute left-3 top-3 rounded-full bg-black/64 px-2.5 py-1 text-[11px] font-black text-white">
-                {primaryMatch}% match
-              </div>
-            </button>
-
-            <div className="p-3.5 lg:p-4">
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                <ContentTypeBadge item={primary} />
-                {getYear(primary) ? (
-                  <span className="rounded-full bg-white/[0.07] px-2.5 py-1 text-[11px] font-bold text-white/58">
-                    {getYear(primary)}
-                  </span>
-                ) : null}
-                {typeof primary.vote_average === "number" ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#f6b73c]/10 px-2.5 py-1 text-[11px] font-bold text-[#ffd78a]">
-                    <Star className="h-3 w-3 fill-current" />
-                    {primary.vote_average.toFixed(1)}
-                  </span>
-                ) : null}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleClick(primary)}
-                className="line-clamp-2 text-left text-lg font-black leading-tight text-white transition group-hover:text-[#ff9b8a] sm:text-xl"
-              >
-                {getTitle(primary)}
-              </button>
-
-              <p className="mt-2 line-clamp-2 text-xs leading-5 text-white/54">
-                {getShortReason(primary, tasteSignal, primarySaved)}
-              </p>
-
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {primary.genres?.slice(0, 3).map((genre) => (
-                  <span
-                    key={genre}
-                    className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-semibold text-white/54"
-                  >
-                    {genre}
-                  </span>
-                ))}
-              </div>
-
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleClick(primary)}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#e94f37] px-4 py-2 text-xs font-black text-white transition hover:bg-[#ff5a42]"
-                >
-                  <Info className="h-3.5 w-3.5" />
-                  Details
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toggleWatchlist(primary)}
-                  disabled={loadingStates[primary.id]}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-white/12 bg-white/[0.06] px-4 py-2 text-xs font-black text-white/78 transition hover:bg-white/[0.1]"
-                >
-                  {loadingStates[primary.id] ? (
-                    <span className="h-3.5 w-3.5 rounded-full border-2 border-white/60 border-t-transparent motion-safe:animate-spin" />
-                  ) : primarySaved ? (
-                    <BookmarkCheck className="h-3.5 w-3.5" />
-                  ) : (
-                    <Bookmark className="h-3.5 w-3.5" />
-                  )}
-                  {primarySaved ? "Saved" : "Save"}
-                </button>
+        </div>
+      ) : (
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+          <article className="ui-panel min-w-0 overflow-hidden">
+            <Link href={hrefOf(featured)} className="group relative block aspect-video overflow-hidden bg-[var(--surface-2)]" aria-label={`Explore ${titleOf(featured)}`}>
+              <Image src={tmdbImage(featured.backdrop_path || featured.poster_path, "w1280") || "/placeholder-backdrop.svg"} alt={titleOf(featured)} fill sizes="(max-width: 1023px) 100vw, 640px" className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-105" />
+            </Link>
+            <div className="p-5 sm:p-6">
+              <p className="ui-kicker">Start with this one</p>
+              <h3 className="mt-3 text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"><Link href={hrefOf(featured)}>{titleOf(featured)}</Link></h3>
+              <div className="mt-2"><PickMeta item={featured} /></div>
+              <p className="mt-3 line-clamp-3 text-sm leading-6 text-[var(--ink-muted)]">{featured.overview || "Explore this pick to see its cast, trailers and community reviews."}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link href={hrefOf(featured)} className="ui-primary-action">Explore this pick <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+                {saveButton(featured)}
               </div>
             </div>
           </article>
-
-          <div className="grid gap-2.5 sm:grid-cols-2 xl:gap-3">
-            {visibleCards.map((item, index) => {
-              const saved = isInWatchlist(String(item.id), toWatchType(item));
-              return (
-                <PersonalPickCard
-                  key={`${item.id}-${index}`}
-                  item={item}
-                  signal={tasteSignal}
-                  saved={saved}
-                  loading={!!loadingStates[item.id]}
-                  onOpen={() => handleClick(item)}
-                  onToggle={() => toggleWatchlist(item)}
-                />
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function MobileFeaturedCard({
-  item,
-  signal,
-  saved,
-  loading,
-  onOpen,
-  onToggle,
-}: {
-  item: All;
-  signal: TasteSignal;
-  saved: boolean;
-  loading: boolean;
-  onOpen: () => void;
-  onToggle: () => void;
-}) {
-  return (
-    <article className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[#0c0c0d] shadow-[0_16px_50px_rgba(0,0,0,0.22)]">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="relative block aspect-[16/8.6] w-full overflow-hidden bg-zinc-900"
-        aria-label={`Open ${getTitle(item)}`}
-      >
-        <Image
-          src={getBackdrop(item)}
-          alt={getTitle(item)}
-          fill
-          sizes="(max-width: 767px) 100vw, 50vw"
-          className="object-cover transition duration-500 group-hover:scale-[1.03]"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-        <div className="absolute left-3 top-3 rounded-full border border-white/10 bg-black/65 px-2.5 py-1 text-[10px] font-black text-white backdrop-blur-md">
-          {getMatchScore(item, signal, saved)}% match
-        </div>
-      </button>
-
-      <div className="relative -mt-12 flex items-end justify-between gap-3 p-3.5 pt-0">
-        <button type="button" onClick={onOpen} className="min-w-0 text-left">
-          <div className="mb-1.5 flex items-center gap-1.5">
-            <ContentTypeBadge item={item} />
-            {typeof item.vote_average === "number" ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[10px] font-bold text-[#ffd78a] backdrop-blur-md">
-                <Star className="h-3 w-3 fill-current" />
-                {item.vote_average.toFixed(1)}
-              </span>
-            ) : null}
-          </div>
-          <h3 className="line-clamp-1 text-lg font-black leading-tight text-white">
-            {getTitle(item)}
-          </h3>
-          <p className="mt-1 line-clamp-1 text-[11px] font-semibold text-[#ff9b8a]/80">
-            {getShortReason(item, signal, saved)}
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={onToggle}
-          disabled={loading}
-          className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-xl border border-white/12 bg-black/55 text-white/80 backdrop-blur-md transition hover:bg-white/15 active:scale-95"
-          aria-label={saved ? "Remove from watchlist" : "Save to watchlist"}
-        >
-          {loading ? (
-            <span className="h-4 w-4 rounded-full border-2 border-white/60 border-t-transparent motion-safe:animate-spin" />
-          ) : saved ? (
-            <BookmarkCheck className="h-5 w-5 text-emerald-300" />
-          ) : (
-            <Bookmark className="h-5 w-5" />
-          )}
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function MobileFavoriteCard({
-  item,
-  signal,
-  saved,
-  loading,
-  onOpen,
-  onToggle,
-}: {
-  item: All;
-  signal: TasteSignal;
-  saved: boolean;
-  loading: boolean;
-  onOpen: () => void;
-  onToggle: () => void;
-}) {
-  return (
-    <article className="group w-[132px] shrink-0 snap-start sm:w-[148px]">
-      <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-zinc-900">
-        <button
-          type="button"
-          onClick={onOpen}
-          className="absolute inset-0"
-          aria-label={`Open ${getTitle(item)}`}
-        >
-          <Image
-            src={getPoster(item, "w342")}
-            alt={getTitle(item)}
-            fill
-            sizes="148px"
-            className="object-cover transition duration-500 group-hover:scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-transparent to-black/10" />
-        </button>
-        <span className="absolute left-2 top-2 rounded-full bg-black/68 px-2 py-1 text-[9px] font-black text-white backdrop-blur-sm">
-          {getMatchScore(item, signal, saved)}%
-        </span>
-        <button
-          type="button"
-          onClick={onToggle}
-          disabled={loading}
-          className="absolute bottom-2 right-2 grid min-h-9 min-w-9 place-items-center rounded-full border border-white/15 bg-black/65 text-white backdrop-blur-md transition active:scale-95"
-          aria-label={saved ? "Remove from watchlist" : "Save to watchlist"}
-        >
-          {loading ? (
-            <span className="h-3.5 w-3.5 rounded-full border-2 border-white/60 border-t-transparent motion-safe:animate-spin" />
-          ) : saved ? (
-            <BookmarkCheck className="h-4 w-4 text-emerald-300" />
-          ) : (
-            <Bookmark className="h-4 w-4" />
-          )}
-        </button>
-      </div>
-      <button type="button" onClick={onOpen} className="mt-2 block w-full text-left">
-        <h3 className="line-clamp-2 min-h-9 text-xs font-black leading-[1.15rem] text-white">
-          {getTitle(item)}
-        </h3>
-        <div className="mt-1 flex items-center gap-1.5 text-[10px] font-semibold text-white/42">
-          {getYear(item) ? <span>{getYear(item)}</span> : null}
-          {getYear(item) && typeof item.vote_average === "number" ? (
-            <span className="h-1 w-1 rounded-full bg-white/25" />
-          ) : null}
-          {typeof item.vote_average === "number" ? (
-            <span className="inline-flex items-center gap-0.5 text-[#ffd78a]">
-              <Star className="h-2.5 w-2.5 fill-current" />
-              {item.vote_average.toFixed(1)}
-            </span>
-          ) : null}
-        </div>
-      </button>
-    </article>
-  );
-}
-
-function ContentTypeBadge({ item }: { item: All }) {
-  const type = getContentType(item);
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-[#e94f37]/10 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#ff9b8a]">
-      {type === "tv" ? (
-        <Tv className="h-3 w-3" />
-      ) : (
-        <Film className="h-3 w-3" />
-      )}
-      {type === "tv" ? "Series" : "Movie"}
-    </span>
-  );
-}
-
-function PersonalPickCard({
-  item,
-  signal,
-  saved,
-  loading,
-  onOpen,
-  onToggle,
-}: {
-  item: All;
-  signal: TasteSignal;
-  saved: boolean;
-  loading: boolean;
-  onOpen: () => void;
-  onToggle: () => void;
-}) {
-  const match = getMatchScore(item, signal, saved);
-  const shortReason = getShortReason(item, signal, saved);
-
-  return (
-    <article className="group grid grid-cols-[58px_minmax(0,1fr)] gap-2.5 rounded-xl border border-white/10 bg-[#101012] p-2 transition hover:border-[#e94f37]/30 hover:bg-white/[0.055] sm:grid-cols-[64px_minmax(0,1fr)]">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="relative aspect-[2/3] overflow-hidden rounded-lg bg-zinc-900"
-        aria-label={`Open ${getTitle(item)}`}
-      >
-        <Image
-          src={getPoster(item, "w342")}
-          alt={getTitle(item)}
-          fill
-          sizes="120px"
-          className="object-cover transition duration-500 group-hover:scale-105"
-        />
-        <div className="absolute left-1 top-1 rounded-full bg-black/72 px-1.5 py-0.5 text-[8px] font-black text-white">
-          {match}%
-        </div>
-      </button>
-
-      <div className="min-w-0">
-        <div className="mb-1 flex items-center gap-1 overflow-hidden">
-          <ContentTypeBadge item={item} />
-          {item.origin_country?.[0] ? (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/[0.055] px-1.5 py-0.5 text-[9px] font-bold text-white/50">
-              <Languages className="h-2.5 w-2.5" />
-              {item.origin_country[0]}
-            </span>
-          ) : null}
-        </div>
-
-        <button
-          type="button"
-          onClick={onOpen}
-          className="line-clamp-2 text-left text-[13px] font-black leading-tight text-white transition group-hover:text-[#ff9b8a] sm:text-sm"
-        >
-          {getTitle(item)}
-        </button>
-
-        <p className="mt-1 line-clamp-1 text-[10px] font-semibold leading-4 text-[#ff9b8a]/76">
-          {shortReason}
-        </p>
-
-        <div className="mt-1.5 flex items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap gap-1">
-            {item.genres?.slice(0, 1).map((genre) => (
-              <span
-                key={genre}
-                className="truncate rounded-full bg-black/24 px-1.5 py-0.5 text-[9px] font-semibold text-white/42"
-              >
-                {genre}
-              </span>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={onToggle}
-            disabled={loading}
-            className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-white/10 bg-black/24 text-white/64 transition hover:bg-white/10 hover:text-white"
-            aria-label={saved ? "Remove from watchlist" : "Save to watchlist"}
-          >
-            {loading ? (
-              <span className="h-3 w-3 rounded-full border-2 border-white/60 border-t-transparent motion-safe:animate-spin" />
-            ) : saved ? (
-              <BookmarkCheck className="h-3.5 w-3.5 text-emerald-300" />
-            ) : (
-              <Bookmark className="h-3.5 w-3.5" />
-            )}
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function FavoriteLoadingState() {
-  return (
-    <section className="mx-auto max-w-7xl overflow-hidden px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-4 flex flex-col gap-2">
-        <div className="h-4 w-28 animate-pulse rounded-full bg-[#e94f37]/16" />
-        <div className="h-7 w-64 max-w-full animate-pulse rounded bg-zinc-900" />
-        <div className="h-4 w-full max-w-lg animate-pulse rounded bg-zinc-900/80" />
-      </div>
-      <div className="md:hidden">
-        <div className="aspect-[16/8.6] animate-pulse rounded-2xl bg-zinc-900" />
-        <div className="-mx-4 mt-4 flex gap-3 overflow-hidden px-4">
-          {[...Array(3)].map((_, index) => (
-            <div key={index} className="w-[132px] shrink-0">
-              <div className="aspect-[2/3] animate-pulse rounded-xl bg-zinc-900" />
-              <div className="mt-2 h-4 animate-pulse rounded bg-zinc-900/80" />
+          {more.length > 0 && (
+            <div className="min-w-0">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-base font-bold text-[var(--ink)]">More for your taste</h3>
+                <button type="button" onClick={() => setOffset((value) => (value + 1) % items.length)} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--brand-coral-strong)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]">Next picks <ChevronRight className="h-4 w-4" aria-hidden="true" /></button>
+              </div>
+              <div className="mobile-native-scroll flex min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-1">
+                {more.slice(0, 4).map((item) => (
+                  <article key={`${mediaType(item)}-${item.id}`} className="ui-panel flex w-[88%] min-w-0 shrink-0 snap-start gap-3 p-3 sm:w-auto">
+                    <Link href={hrefOf(item)} className="relative block aspect-[2/3] w-16 shrink-0 overflow-hidden rounded-sm bg-[var(--surface-2)]" aria-label={`Explore ${titleOf(item)}`}>
+                      <Image src={tmdbImage(item.poster_path, "w342") || "/placeholder-poster.svg"} alt={titleOf(item)} fill sizes="64px" className="object-cover" />
+                    </Link>
+                    <div className="min-w-0 flex-1 self-center">
+                      <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)]"><Link href={hrefOf(item)}>{titleOf(item)}</Link></h3>
+                      <div className="mt-2"><PickMeta item={item} /></div>
+                      {item.genres?.length ? <p className="mt-2 line-clamp-1 text-xs text-[var(--ink-muted)]">{item.genres.slice(0, 2).join(" · ")}</p> : null}
+                    </div>
+                    <div className="self-center">{saveButton(item, true)}</div>
+                  </article>
+                ))}
+              </div>
             </div>
-          ))}
+          )}
         </div>
-      </div>
-      <div className="hidden rounded-2xl border border-white/10 bg-white/[0.025] p-3 md:block">
-        <div className="grid gap-3 lg:grid-cols-[minmax(300px,0.42fr)_minmax(0,1fr)]">
-          <div className="h-[300px] animate-pulse rounded-xl bg-zinc-900" />
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            {[...Array(6)].map((_, index) => (
-              <div
-                key={index}
-                className="h-[92px] animate-pulse rounded-xl bg-zinc-900"
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+      )}
     </section>
-  );
-}
-
-function CuratedGuestPanel({
-  routerPush,
-}: {
-  routerPush: (href: string) => void;
-}) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-[#0b0b0c] p-4 sm:p-5">
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-        <div>
-          <p className="mb-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#e94f37]">
-            Popular picks to learn your taste
-          </p>
-          <h2 className="max-w-2xl text-xl font-black leading-tight text-white sm:text-2xl">
-            Sign in for a quieter, more personal mix.
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-white/56">
-            Sign in to unlock recommendations shaped by your favorite genres,
-            saved titles, and languages.
-          </p>
-
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {["Trending now", "Highly rated", "Easy starters"].map((label) => (
-              <span
-                key={label}
-                className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold text-white/54"
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 sm:flex">
-          <button
-            type="button"
-            onClick={() => routerPush("/auth/login")}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#e94f37] px-4 py-2 text-xs font-black text-white transition hover:bg-[#ff5a42]"
-          >
-            <Play className="h-3.5 w-3.5 fill-white" />
-            Sign in
-          </button>
-          <button
-            type="button"
-            onClick={() => routerPush("/auth/signup")}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-white/12 bg-white/[0.06] px-4 py-2 text-xs font-black text-white/78 transition hover:bg-white/[0.1]"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Create
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EmptyTasteState({
-  routerPush,
-}: {
-  routerPush: (href: string) => void;
-}) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-[#0a0a0b] p-4 sm:p-5">
-      <div className="max-w-2xl">
-        <p className="mb-1 text-[11px] font-black uppercase tracking-[0.16em] text-[#e94f37]">
-          Popular picks to help us learn your taste
-        </p>
-        <h2 className="text-xl font-black text-white sm:text-2xl">
-          Your personal mix is almost ready.
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-white/58">
-          Save or favorite a few titles and Moodies will turn them into a
-          sharper recommendation lane with genre, language, and mood reasoning.
-        </p>
-        <button
-          type="button"
-          onClick={() => routerPush("/moods/explore")}
-          className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#e94f37] px-4 py-2 text-xs font-black text-white transition hover:bg-[#ff5a42]"
-        >
-          Explore moods
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
   );
 }

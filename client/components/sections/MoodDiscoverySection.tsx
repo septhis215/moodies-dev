@@ -102,7 +102,7 @@ export default function MoodDiscoverySection({
 
           <div className="min-w-0">
             <div
-              className="flex flex-wrap gap-x-5 gap-y-1 border-b border-[var(--surface-border)] pb-2 sm:gap-x-7"
+              className="grid grid-cols-5 gap-1 border-b border-[var(--surface-border)] pb-2 sm:gap-4"
               role="group"
               aria-label="Choose a mood"
             >
@@ -114,7 +114,7 @@ export default function MoodDiscoverySection({
                     type="button"
                     onClick={() => setActiveLandingMood(mood.id)}
                     aria-controls="landing-mood-preview"
-                    className={`min-h-11 shrink-0 rounded-sm border-b-2 px-1 py-2 text-lg font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] motion-reduce:transition-none sm:text-xl ${
+                    className={`min-h-11 min-w-0 rounded-sm border-b-2 px-1 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] motion-reduce:transition-none sm:text-xl ${
                       isActive
                         ? "border-[var(--brand-coral)] text-[var(--ink)]"
                         : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"
@@ -129,7 +129,7 @@ export default function MoodDiscoverySection({
 
             <div
               id="landing-mood-preview"
-              className="mt-5 grid min-h-36 grid-cols-[5rem_minmax(0,1fr)] items-center gap-4 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-5"
+              className="mt-5 grid grid-cols-[5rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:min-h-36 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-center sm:gap-5"
             >
               <div className="relative h-20 w-20 sm:h-32 sm:w-32">
                 <Image
@@ -142,7 +142,7 @@ export default function MoodDiscoverySection({
                   className="h-full w-full object-contain"
                 />
               </div>
-              <div>
+              <div className="contents sm:block">
                 <div aria-live="polite" aria-atomic="true">
                   <h3 className="text-base font-bold text-[var(--ink)] sm:text-lg">
                     {activeMood.id === "easy" || activeMood.id === "electric"
@@ -156,7 +156,7 @@ export default function MoodDiscoverySection({
                 </div>
                 <Link
                   href="/moods"
-                  className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] motion-reduce:transition-none"
+                  className="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-[var(--surface-border)] px-3 text-sm font-semibold text-[var(--brand-coral-strong)] transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] motion-reduce:transition-none sm:mt-3 sm:justify-start sm:border-0 sm:px-0"
                 >
                   Explore the mood wheel
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
