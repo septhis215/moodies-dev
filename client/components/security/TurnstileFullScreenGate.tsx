@@ -1,87 +1,71 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import { TurnstileCaptcha } from "@/components/ui/TurnstileCaptcha";
 import { useTurnstileGate } from "@/hooks/useTurnstileGate";
+import { TurnstileCaptcha } from "@/components/ui/TurnstileCaptcha";
+import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 
+/** Site-entry protection using only Cloudflare's standard widget UI. */
 export function TurnstileFullScreenGate() {
-  const { error, verifyToken } = useTurnstileGate();
-  const [resetSignal, setResetSignal] = useState(0);
-  const [verifying, setVerifying] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    cardRef.current?.focus();
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, []);
-
-  const handleVerify = async (token: string) => {
-    setVerifying(true);
-    try {
-      await verifyToken(token);
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  useEffect(() => {
-    if (error) setResetSignal((value) => value + 1);
-  }, [error]);
+  const { isReleasing, verifyToken } = useTurnstileGate();
 
   return (
     <div
-      className="fixed inset-0 z-[1000000] flex items-center justify-center bg-black/82 px-4 py-6 backdrop-blur-xl"
+      className="fixed inset-0 z-[1000000] grid place-items-center overflow-y-auto bg-[#07090d]/96 px-4 py-8 backdrop-blur-xl"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="turnstile-gate-title"
+      aria-label="Security verification"
     >
-      <div
-        ref={cardRef}
-        tabIndex={-1}
-        className="w-full max-w-md rounded-2xl border border-white/12 bg-[#101012]/95 p-6 text-center shadow-[0_30px_100px_rgba(0,0,0,0.72)] outline-none"
-      >
-        <div className="mx-auto mb-4 flex items-center justify-center gap-3">
+      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#101216]/95 p-6 shadow-[0_30px_100px_rgba(0,0,0,0.6)] sm:p-8">
+        <div className="flex items-center gap-3">
           <Image
             src="/images/moodies-transparent.png"
             alt="Moodies"
-            width={34}
-            height={34}
-            className="h-8 w-auto"
+            width={44}
+            height={44}
+            className="h-10 w-10 object-contain"
             priority
           />
-          <span className="font-['Bebas_Neue'] text-xl tracking-[0.24em] text-white/90">
-            MOODIES
-          </span>
+          <div>
+            <p className="text-[0.65rem] font-bold uppercase tracking-[0.22em] text-[#ef775f]">
+              Welcome to Moodies
+            </p>
+            <h1 className="text-2xl font-bold leading-none text-white sm:text-3xl">
+              Quick security check
+            </h1>
+          </div>
         </div>
 
-        <h2
-          id="turnstile-gate-title"
-          className="text-xl font-black tracking-tight text-white"
-        >
-          Checking your browser before entering Moodies...
-        </h2>
-        <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/55">
-          This helps us protect the community from spam and bots.
-        </p>
-
-        <div className="mt-6 flex justify-center">
-          <TurnstileCaptcha
-            action="app_entry"
-            onVerify={handleVerify}
-            onClear={() => undefined}
-            resetSignal={resetSignal}
-          />
+        <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-5">
+          {isReleasing ? (
+            <div className="flex min-h-[78px] flex-col items-center justify-center gap-2 text-center">
+              <span className="grid h-9 w-9 place-items-center rounded-full border border-[#ef775f]/45 bg-[#e94f37]/15 text-xl font-bold text-[#ff9a86] shadow-[0_0_22px_rgba(233,79,55,0.2)]">
+                ✓
+              </span>
+              <h2 className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
+                Verified
+              </h2>
+              <span className="text-xs font-medium text-white/45">
+                Welcome to Moodies
+              </span>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm leading-6 text-white/60">
+                Please verify that you are human to continue to Moodies.
+              </p>
+              <div className="mt-5 flex justify-center">
+                <TurnstileCaptcha
+                  action="app_entry"
+                  onVerify={(token) => void verifyToken(token)}
+                  onClear={() => undefined}
+                />
+              </div>
+            </>
+          )}
         </div>
 
-        <p className="mt-4 min-h-5 text-sm font-medium text-white/50">
-          {verifying
-            ? "Verifying with Cloudflare..."
-            : error || "Complete the security check to continue."}
+        <p className="mt-4 text-center text-xs text-white/35">
+          Protected by Cloudflare Turnstile
         </p>
       </div>
     </div>

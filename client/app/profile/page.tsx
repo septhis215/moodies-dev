@@ -705,7 +705,7 @@ export default function ProfilePage() {
       >
         <div className="flex items-start gap-3 mb-3">
           <div
-            className={`w-10 h-10 rounded-lg ${isComplete ? "bg-[#e94f37]" : "bg-white/10"} flex items-center justify-center flex-shrink-0`}
+            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center ${isComplete ? "bg-[var(--brand-coral)] text-white" : "bg-[var(--surface-2)] text-[var(--ink-muted)]"}`}
           >
             {icon}
           </div>
@@ -719,7 +719,7 @@ export default function ProfilePage() {
             initial={{ width: 0 }}
             animate={{ width: `${percentage}%` }}
             transition={{ duration: 1, ease: "easeOut" }}
-            className="h-2 bg-[#e94f37] rounded-full"
+            className="h-1.5 bg-[var(--brand-coral)]"
           />
         </div>
         <p className="mt-2 text-xs font-semibold text-[var(--ink-muted)]">
@@ -744,32 +744,28 @@ export default function ProfilePage() {
         : "You haven’t reviewed anything yet. Rate a movie or series and your reviews will collect here.";
 
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-transparent px-6 py-10 sm:px-10 sm:py-14">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-12 -right-12 w-44 h-44 rounded-full bg-[#e94f37]/15 blur-3xl"
-        />
-        <div className="relative flex flex-col items-center text-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-[#e94f37]/15 border border-[#e94f37]/25 flex items-center justify-center">
+      <div className="border-y border-[var(--surface-border)] px-4 py-10 sm:px-8 sm:py-12">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex h-14 w-14 items-center justify-center border border-[var(--brand-coral)]/30 bg-[var(--surface-2)]">
             {isTv ? (
-              <Tv className="w-7 h-7 text-[#e94f37]" />
+              <Tv className="h-7 w-7 text-[var(--brand-coral-strong)]" />
             ) : (
-              <Film className="w-7 h-7 text-[#e94f37]" />
+              <Film className="h-7 w-7 text-[var(--brand-coral-strong)]" />
             )}
           </div>
-          <div className="space-y-1.5 max-w-md">
-            <h3 className="text-lg sm:text-xl font-bold text-white">
+          <div className="max-w-md space-y-1.5">
+            <h3 className="text-xl font-bold leading-tight text-[var(--ink)]">
               {heading}
             </h3>
-            <p className="text-sm sm:text-base text-white/50 leading-relaxed">
+            <p className="text-sm leading-6 text-[var(--ink-muted)]">
               {sub}
             </p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2.5 mt-1">
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-2.5">
             {!isTv && (
               <Link
                 href="/movies"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#e94f37] hover:bg-[#ff5746] text-white text-sm font-semibold transition"
+                className="ui-primary-action inline-flex items-center gap-2"
               >
                 <Film className="w-4 h-4" /> Review a movie
               </Link>
@@ -777,7 +773,7 @@ export default function ProfilePage() {
             {!isMovie && (
               <Link
                 href="/tv"
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${isTv ? "bg-[#e94f37] hover:bg-[#ff5746] text-white" : "border border-white/15 text-white/80 hover:bg-white/5"}`}
+                className={isTv ? "ui-primary-action inline-flex items-center gap-2" : "ui-secondary-action inline-flex items-center gap-2"}
               >
                 <Tv className="w-4 h-4" /> Review a series
               </Link>
@@ -829,8 +825,8 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-[var(--surface-0)] bg-[radial-gradient(circle_at_12%_0%,rgba(233,79,55,0.12),transparent_26rem)] pb-14 text-[var(--ink)]">
-      <div className="ui-shell py-5 sm:py-10">
-        <section className="relative mb-5 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 shadow-2xl shadow-black/10 sm:mb-6 sm:p-7 lg:p-8">
+      <div className="ui-shell py-5 sm:py-10 lg:pt-[calc(3rem+6rem)]">
+        <section className="relative mb-5 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 shadow-2xl shadow-black/10 sm:mb-6 sm:p-7 lg:p-8" aria-labelledby="profile-heading">
           <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-[var(--brand-coral)]/10 blur-3xl" />
           <div className="relative flex items-start gap-4 sm:items-center sm:gap-6">
             <div className="relative flex-shrink-0">
@@ -870,7 +866,7 @@ export default function ProfilePage() {
                   </span>
                 )}
               </div>
-              <h1 className="mt-2 break-words text-4xl font-bold leading-none text-[var(--ink)] sm:text-5xl lg:text-6xl">
+              <h1 id="profile-heading" className="mt-2 break-words text-4xl font-bold leading-none text-[var(--ink)] sm:text-5xl lg:text-6xl">
                 {user?.name || user?.username || "Your Profile"}
               </h1>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--ink-muted)]">
@@ -1060,19 +1056,13 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        <AnimatePresence mode="wait">
+        <div>
           {tab === "profile" && (
-            <motion.div
-              key="profile"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <div>
               {/* Achievements */}
               <section className="mb-4 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:p-6">
                 <SectionHeading
-                  icon={<Award className="h-6 w-6 text-[#e94f37]" />}
+                  icon={<Award className="h-6 w-6 text-[var(--brand-coral-strong)]" />}
                   title="Achievements"
                   caption={`${visibleAchievementRows.length || 3} active goals`}
                 />
@@ -1109,7 +1099,7 @@ export default function ProfilePage() {
               {/* Badges */}
               <section className="mb-7 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:mb-10 sm:p-6">
                 <SectionHeading
-                  icon={<TrendingUp className="h-6 w-6 text-[#e94f37]" />}
+                  icon={<TrendingUp className="h-6 w-6 text-[var(--brand-coral-strong)]" />}
                   title="Earned Badges"
                   caption={`${unlockedAchievementRows.length} unlocked`}
                 />
@@ -1129,8 +1119,8 @@ export default function ProfilePage() {
                           name={badge.name}
                           color={
                             badge.earned
-                              ? "bg-[#e94f37]/15 text-[#ff8a78] border border-[#e94f37]/30"
-                              : "bg-white/[0.03] text-white/30 border border-white/10"
+                              ? "bg-[var(--brand-coral)]/15 text-[var(--brand-coral-strong)] border border-[var(--brand-coral)]/30"
+                              : "bg-[var(--surface-2)] text-[var(--ink-muted)] border border-[var(--surface-border)]"
                           }
                           icon={badge.icon}
                         />
@@ -1138,17 +1128,11 @@ export default function ProfilePage() {
                 </div>
               </section>
 
-            </motion.div>
+            </div>
           )}
 
           {tab === "watchlist" && (
-            <motion.div
-              key="watchlist"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <div>
               <section className="mb-5 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 sm:mb-6 sm:p-4" aria-label="Watchlist controls">
                 <div className="mb-3 flex items-end justify-between gap-4 px-1">
                   <div>
@@ -1282,7 +1266,7 @@ export default function ProfilePage() {
                       Array.from({ length: 12 }).map((_, i) => (
                         <div
                           key={i}
-                          className="aspect-[2/3] rounded-xl sm:rounded-2xl bg-zinc-900 animate-pulse"
+                          className="aspect-[2/3] bg-[var(--surface-2)] animate-pulse"
                         />
                       ))}
 
@@ -1316,7 +1300,7 @@ export default function ProfilePage() {
                                 sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
                                 className="object-cover transition-transform duration-700 group-hover:scale-110"
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <div className="absolute inset-0 bg-black/45 opacity-0 transition-opacity group-hover:opacity-100" />
 
                               {item.vote_average && (
                                 <div className="absolute right-2 top-2 flex items-center gap-1 rounded-lg bg-black/90 px-1.5 py-1 text-xs font-semibold text-yellow-400 sm:right-3 sm:top-3 sm:gap-1.5 sm:px-2.5 sm:py-1.5">
@@ -1333,7 +1317,7 @@ export default function ProfilePage() {
                                 )}
                               </div>
 
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2.5 sm:p-4">
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/75 p-2.5 sm:p-4">
                                 <p className="text-xs sm:text-sm font-bold line-clamp-2 mb-0.5 sm:mb-1">
                                   {title}
                                 </p>
@@ -1361,7 +1345,7 @@ export default function ProfilePage() {
                       Array.from({ length: 6 }).map((_, i) => (
                         <div
                           key={i}
-                          className="h-20 sm:h-24 rounded-xl bg-zinc-900 animate-pulse"
+                          className="h-20 bg-[var(--surface-2)] animate-pulse sm:h-24"
                         />
                       ))}
 
@@ -1391,7 +1375,7 @@ export default function ProfilePage() {
                               href={href}
                               className="flex items-center gap-3 sm:gap-4"
                             >
-                              <div className="relative h-[4.75rem] w-12 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-900 sm:h-24 sm:w-16">
+                              <div className="relative h-[4.75rem] w-12 flex-shrink-0 overflow-hidden bg-[var(--surface-2)] sm:h-24 sm:w-16">
                                 <Image
                                   src={poster}
                                   alt={title || "Poster"}
@@ -1401,7 +1385,7 @@ export default function ProfilePage() {
                                 />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-sm sm:text-lg mb-1 truncate group-hover:text-[#e94f37] transition">
+                                <h3 className="mb-1 truncate text-sm font-semibold transition group-hover:text-[var(--brand-coral-strong)] sm:text-lg">
                                   {title}
                                 </h3>
                                 <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--ink-muted)] sm:gap-3 sm:text-sm">
@@ -1457,22 +1441,16 @@ export default function ProfilePage() {
                   </p>
                 </div>
               )}
-            </motion.div>
+            </div>
           )}
 
           {tab === "reviews" && (
-            <motion.div
-              key="reviews"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+            <div>
               {/* Header row */}
               <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="w-6 h-0.5 bg-[#e94f37]" />
+                    <div className="h-0.5 w-6 bg-[var(--brand-coral)]" />
                     <span className="ui-kicker">
                       Your Activity
                     </span>
@@ -1520,7 +1498,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Gradient rule */}
-              <div className="mb-5 h-px bg-gradient-to-r from-[rgb(233,79,55)]/30 via-white/[0.06] to-transparent sm:mb-8" />
+              <div className="mb-5 h-px bg-[var(--surface-border)] sm:mb-8" />
 
               {/* Loading skeletons */}
               {reviewsLoading && (
@@ -1849,9 +1827,9 @@ export default function ProfilePage() {
                   )}
                 </div>
               )}
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
+        </div>
 
         {/* Mobile Filter Modal */}
         <AnimatePresence>
@@ -1898,11 +1876,11 @@ export default function ProfilePage() {
         w-full appearance-none
         px-4 py-3 pr-10
         rounded-xl
-        bg-neutral-900/80
+        bg-[var(--surface-1)]
         border border-white/10
         text-white
         hover:border-white/20
-        focus:outline-none focus:ring-2 focus:ring-[#e94f37]/50
+        focus:outline-none focus:ring-2 focus:ring-[var(--brand-coral)]/50
         transition
         cursor-pointer
       "
@@ -1947,11 +1925,11 @@ export default function ProfilePage() {
         w-full appearance-none
         px-4 py-3 pr-10
         rounded-xl
-        bg-neutral-900/80
+        bg-[var(--surface-1)]
         border border-white/10
         text-white
         hover:border-white/20
-        focus:outline-none focus:ring-2 focus:ring-[#e94f37]/50
+        focus:outline-none focus:ring-2 focus:ring-[var(--brand-coral)]/50
         transition
         cursor-pointer
       "
@@ -1980,7 +1958,7 @@ export default function ProfilePage() {
                 </div>
 
                 <button
-                  className="w-full mt-6 px-4 py-3 rounded-xl bg-[#e94f37] hover:bg-[#ff5746] transition font-semibold"
+                  className="ui-primary-action mt-6 w-full justify-center"
                   onClick={() => setMobileFilterOpen(false)}
                 >
                   Apply Filters
@@ -2025,7 +2003,7 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#ff8a78]">
+                      <p className="ui-kicker">
                         Profile tune-up
                       </p>
                       <h2 className="text-xl font-bold sm:text-2xl">
@@ -2058,7 +2036,7 @@ export default function ProfilePage() {
                       <button
                         type="button"
                         onClick={() => avatarInputRef.current?.click()}
-                        className="group relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-zinc-900 ring-2 ring-[#e94f37]/50 transition hover:ring-[#ff8a78]"
+                        className="group relative h-24 w-24 flex-shrink-0 overflow-hidden bg-[var(--surface-2)] ring-2 ring-[var(--brand-coral)]/50 transition hover:ring-[var(--brand-coral-strong)]"
                       >
                         {avatarPreview ? (
                           <img
@@ -2123,7 +2101,7 @@ export default function ProfilePage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="flex items-center gap-2 text-sm font-semibold text-white/80">
-                        <UserRound className="h-4 w-4 text-[#ff8a78]" />
+                        <UserRound className="h-4 w-4 text-[var(--brand-coral-strong)]" />
                         Display name
                       </label>
                       <span
@@ -2139,7 +2117,7 @@ export default function ProfilePage() {
                         setProfileName(e.target.value.slice(0, 50))
                       }
                       maxLength={50}
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[#e94f37]/60 focus:ring-2 focus:ring-[#e94f37]/25 sm:text-base"
+                      className="w-full border-b border-[var(--surface-border)] bg-transparent px-1 py-3 text-sm text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--brand-coral)] focus:ring-0 sm:text-base"
                       placeholder="Enter your name"
                     />
                     <p className="text-xs text-white/35 mt-1">
@@ -2150,7 +2128,7 @@ export default function ProfilePage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="flex items-center gap-2 text-sm font-semibold text-white/80">
-                        <Sparkles className="h-4 w-4 text-[#ff8a78]" />
+                        <Sparkles className="h-4 w-4 text-[var(--brand-coral-strong)]" />
                         Username
                       </label>
                       <span
@@ -2175,7 +2153,7 @@ export default function ProfilePage() {
                           )
                         }
                         maxLength={20}
-                        className="w-full rounded-xl border border-white/10 bg-white/[0.055] py-3 pl-8 pr-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[#e94f37]/60 focus:ring-2 focus:ring-[#e94f37]/25 sm:text-base"
+                        className="w-full border-b border-[var(--surface-border)] bg-transparent py-3 pl-8 pr-1 text-sm text-[var(--ink)] outline-none transition placeholder:text-[var(--ink-muted)] focus:border-[var(--brand-coral)] focus:ring-0 sm:text-base"
                         placeholder="username"
                       />
                     </div>
@@ -2186,7 +2164,7 @@ export default function ProfilePage() {
 
                   <div>
                     <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
-                      <Mail className="h-4 w-4 text-[#ff8a78]" />
+                      <Mail className="h-4 w-4 text-[var(--brand-coral-strong)]" />
                       Email
                     </label>
                     <input
@@ -2203,7 +2181,7 @@ export default function ProfilePage() {
                   <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4 text-[#ff8a78]" />
+                        <Shield className="h-4 w-4 text-[var(--brand-coral-strong)]" />
                         <h3 className="text-sm font-bold text-white">
                           Public visibility
                         </h3>
@@ -2244,7 +2222,7 @@ export default function ProfilePage() {
                                 [key]: !prev[key],
                               }))
                             }
-                            className="h-4 w-4 accent-[#e94f37]"
+                            className="h-4 w-4 accent-[var(--brand-coral)]"
                           />
                         </label>
                       ))}
@@ -2272,7 +2250,7 @@ export default function ProfilePage() {
                   </button>
                   <button
                     type="button"
-                    className="order-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#e94f37] px-5 py-3 font-semibold text-white transition hover:bg-[#ff5746] disabled:cursor-not-allowed disabled:opacity-50 sm:order-2 sm:w-auto"
+                    className="ui-primary-action order-1 w-full justify-center disabled:cursor-not-allowed disabled:opacity-50 sm:order-2 sm:w-auto"
                     onClick={saveProfile}
                     disabled={profileSaving}
                   >
@@ -2292,7 +2270,7 @@ export default function ProfilePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] flex items-center justify-center p-4 sm:p-8"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
             onClick={() => setAvatarLightbox(false)}
           >
             {/* Backdrop */}
@@ -2443,7 +2421,7 @@ function AchievementCard({ row }: { row: UserAchievementView }) {
 }
 
 function RewardBadgeCard({ row }: { row: UserAchievementView }) {
-  const accent = row.badge?.colorTheme?.accent ?? "#e94f37";
+  const accent = row.badge?.colorTheme?.accent ?? "var(--brand-coral)";
   return (
     <div className="relative overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)]/50 p-4 transition-colors hover:border-white/15">
       <div className="absolute -right-6 -top-6 h-24 w-24 opacity-20">
@@ -2479,7 +2457,7 @@ function RewardBadgeCard({ row }: { row: UserAchievementView }) {
           Earned {new Date(row.progress.unlockedAt).toLocaleDateString()}
         </p>
       )}
-      <p className="relative mt-2 text-xs text-[#ff8a78]">
+      <p className="relative mt-2 text-xs text-[var(--brand-coral-strong)]">
         {row.badge?.mascotMood}: {row.badge?.mascotMotion}
       </p>
     </div>
