@@ -27,7 +27,7 @@ export default function AuthLayoutClient({ slides, children }: Props) {
       <div
         className="relative z-10 mx-auto h-[calc(100dvh-2rem)] w-full max-w-5xl overflow-hidden rounded-2xl
                    border border-white/12 bg-black/58 p-0 shadow-[0_24px_100px_-28px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.08)]
-                   backdrop-blur-xl animate-fadeIn md:h-auto md:max-h-[calc(100dvh-2rem)] md:rounded-3xl md:p-5 lg:p-7"
+                   backdrop-blur-xl animate-fadeIn md:h-auto md:max-h-[calc(100dvh-2rem)] md:overflow-y-auto md:rounded-3xl md:p-5 lg:p-7"
       >
         {children}
       </div>

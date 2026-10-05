@@ -7,6 +7,7 @@ import PremiereHighlights from "@/components/sections/PremiereHighlights";
 import CommunityPicks from "@/components/sections/CommunityPicks";
 import { UpcomingTrailers } from "@/components/sections/UpcomingTrailers";
 import MoodDiscoverySection from "@/components/sections/MoodDiscoverySection";
+import MoodiesIntro from "@/components/sections/MoodiesIntro";
 
 async function fetchFeatured() {
   const base = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
@@ -27,6 +28,7 @@ export default async function LandingPage() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[var(--surface-0)] text-[var(--ink)] [scroll-padding-top:var(--mobile-nav-safe)]">
       <HeroCarousel all={all} />
+      <MoodiesIntro />
       <MoodDiscoverySection variant="teaser" />
       <TrendingSection />
       <PremiereHighlights />

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { handleAppError } from "@/lib/errors";
 import { appToast, TOAST_IDS } from "@/lib/toast";
+import MoodiesIntro from "@/components/sections/MoodiesIntro";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
@@ -345,6 +346,9 @@ export default function OnboardingPage() {
         </div>
 
         {/* 3-column card */}
+        <div className="mb-5">
+          <MoodiesIntro variant="onboarding" headingId="onboarding-intro-desktop-heading" />
+        </div>
         <div
           className="overflow-hidden rounded-3xl border border-white/12 border-t-white/18 shadow-[0_24px_80px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.06)]"
           style={{
@@ -455,7 +459,7 @@ export default function OnboardingPage() {
           MOBILE (< 768px) — 3-step vertical wizard
       ═══════════════════════════════════════════════ */}
       <div
-        className="ob-fadein relative flex min-h-full flex-col bg-[#090909] font-['DM_Sans'] md:hidden"
+        className="ob-fadein relative flex h-full min-h-0 flex-col bg-[#090909] font-['DM_Sans'] md:hidden"
         style={{
           backgroundImage:
             "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), radial-gradient(circle at 50% 0%, rgba(233,79,55,0.16), transparent 42%)",
@@ -490,6 +494,11 @@ export default function OnboardingPage() {
 
         {/* Step content */}
         <div className="ob-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-4 pt-7">
+          {mobileStep === "age" && (
+            <div className="mb-6 shrink-0">
+              <MoodiesIntro variant="onboarding" headingId="onboarding-intro-mobile-heading" />
+            </div>
+          )}
           {/* Step 1 — Age */}
           {mobileStep === "age" && (
             <div className="ob-stepin flex flex-1 flex-col">
