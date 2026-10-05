@@ -1529,9 +1529,6 @@ export default function VideoFeedPage() {
                     aria-hidden="true"
                   />
                   <div className="min-w-0 flex-1 pt-1">
-                    <p className="mb-3 text-sm leading-6 text-white/55">
-                      {currentVideo.overview || "Discover more about this title."}
-                    </p>
                     <div className="flex flex-wrap items-center gap-2">
                       {currentYear && Number.isFinite(currentYear) && (
                         <span className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.08] px-2.5 py-1 text-xs font-bold text-white/70">
