@@ -22,6 +22,12 @@ build/
 out/
 coverage/
 
+# Local browser runs, screenshots, and agent scratch files
+.playwright-cli/
+.qoder-scratch/
+/output/playwright/
+/client/output/
+
 # Logs
 *.log
 npm-debug.log*
