@@ -43,12 +43,12 @@ export const Carousel = ({
       <div
         id={railId}
         ref={containerRef}
-        className={`mobile-native-scroll scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 sm:mx-0 sm:scroll-pl-0 sm:gap-4 sm:px-0 ${mobileBleed ? "-mx-4 scroll-pl-4 px-4" : "px-0"}`}
+        className={`mobile-native-scroll scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 sm:mx-0 sm:scroll-px-0 sm:gap-4 sm:px-0 ${mobileBleed ? "-mx-4 scroll-px-4 px-4" : "px-0"} ${items.length === 1 ? "justify-center sm:justify-start" : ""}`}
       >
         {items.map((item) => (
           <div
             key={item.id}
-            className="w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-[calc((100%-2rem)/3)] sm:min-w-0 sm:max-w-none md:w-[calc((100%-3rem)/4)] lg:w-[calc((100%-4rem)/5)] xl:w-[calc((100%-5rem)/6)]"
+            className="w-[calc((100%-0.75rem)/2)] min-w-0 shrink-0 snap-start sm:w-[calc((100%-2rem)/3)] md:w-[calc((100%-3rem)/4)] lg:w-[calc((100%-4rem)/5)] xl:w-[calc((100%-5rem)/6)]"
           >
             <CardComponent show={item} />
           </div>

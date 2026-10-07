@@ -373,7 +373,9 @@ export default function TrailerModal({
                       </div>
                     )}
 
-                    <div className="mobile-native-scroll -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:-mx-5 sm:px-5 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0 2xl:grid-cols-3">
+                    <div
+                      className={`mobile-native-scroll -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:-mx-5 sm:scroll-px-5 sm:px-5 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:scroll-px-0 lg:px-0 2xl:grid-cols-3 ${trailer.recommendations.length === 1 ? "justify-center lg:justify-normal" : ""}`}
+                    >
                       {trailer.recommendations.slice(0, 20).map((rec) => {
                         const isPending = pendingTrailerId === rec.id;
                         const isBlocked =
@@ -386,7 +388,7 @@ export default function TrailerModal({
                             onClick={() => handleRecommendationSelect(rec)}
                             disabled={pendingTrailerId !== null}
                             title={rec.title}
-                            className={`group w-[38vw] min-w-[140px] max-w-[178px] shrink-0 snap-start overflow-hidden rounded-sm border bg-white/[0.03] text-left transition-colors hover:border-[#e94f37]/65 hover:bg-white/[0.06] disabled:cursor-wait lg:w-auto lg:min-w-0 lg:max-w-none ${isBlocked ? "border-white/10 opacity-45" : "border-white/15"} ${isPending ? "border-[#e94f37]" : ""}`}
+                            className={`group w-[calc((100%-0.75rem)/2)] min-w-0 shrink-0 snap-start overflow-hidden rounded-sm border bg-white/[0.03] text-left transition-colors hover:border-[#e94f37]/65 hover:bg-white/[0.06] disabled:cursor-wait sm:w-[calc((100%-1.5rem)/3)] lg:w-auto ${isBlocked ? "border-white/10 opacity-45" : "border-white/15"} ${isPending ? "border-[#e94f37]" : ""}`}
                           >
                             {/* Poster */}
                             <div className="aspect-[2/3] relative overflow-hidden">

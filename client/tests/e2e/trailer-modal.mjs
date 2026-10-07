@@ -50,7 +50,7 @@ let browser;
 try {
   const result = await build({
     stdin: {
-      contents: `import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import Modal from './client/components/sections/TrailerModal';const next={id:2,title:'The next trailer',trailer_key:'next1234567',overview:'A new story.',type:'tv'};const first={id:1,title:'A very long movie title for a full screen trailer experience',trailer_key:'first123456',overview:'An expansive story of friendship and finding a place to call home. '.repeat(10),recommendations:[next],type:'movie',genres:['Drama'],runtime:120,vote_average:8.2};function App(){const[open,setOpen]=useState(false);const[item,setItem]=useState(first);return <><button onClick={()=>{setItem(first);setOpen(true)}}>Open trailer</button>{open&&<Modal trailer={item} onClose={()=>setOpen(false)} onSelectTrailer={async(next)=>setItem(next)}/>}</>}createRoot(document.getElementById('root')).render(<App/>);`,
+      contents: `import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import Modal from './client/components/sections/TrailerModal';import {Carousel} from './client/components/ui/Carousel';const next={id:2,title:'The next trailer',trailer_key:'next1234567',overview:'A new story.',type:'tv'};const first={id:1,title:'A very long movie title for a full screen trailer experience',trailer_key:'first123456',overview:'An expansive story of friendship and finding a place to call home. '.repeat(10),recommendations:new URLSearchParams(location.search).has('single')?[next]:[next,{...next,id:3,title:'Another recommendation'},{...next,id:4,title:'One more recommendation'}],type:'movie',genres:['Drama'],runtime:120,vote_average:8.2};const cards=Array.from({length:6},(_,i)=>({...first,id:i+10,title:'Card '+i}));const Card=({show})=><article className='aspect-[2/3] w-full bg-black'>{show.title}</article>;function App(){const[open,setOpen]=useState(false);const[item,setItem]=useState(first);return <><div id='carousel-fixture'><Carousel items={cards} CardComponent={Card}/></div><button onClick={()=>{setItem(first);setOpen(true)}}>Open trailer</button>{open&&<Modal trailer={item} onClose={()=>setOpen(false)} onSelectTrailer={async(next)=>setItem(next)}/>}</>}createRoot(document.getElementById('root')).render(<App/>);`,
       resolveDir: root,
       loader: "tsx",
     },
@@ -193,6 +193,16 @@ try {
   ]) {
     await page.setViewportSize({ width, height });
     await page.goto(base);
+    if (width < 640) {
+      const rail = page.locator('#carousel-fixture [class*="overflow-x-auto"]');
+      const first = await rail.locator(":scope > div").nth(0).boundingBox();
+      const second = await rail.locator(":scope > div").nth(1).boundingBox();
+      assert.ok(
+        Math.abs(first.x - (width - second.x - second.width)) < 2,
+        "Shared carousel has equal mobile gutters",
+      );
+      assert.ok(first.x >= 15, "Shared carousel keeps its left gutter");
+    }
     const opener = page.getByRole("button", {
       name: "Open trailer",
       exact: true,
@@ -229,6 +239,39 @@ try {
       await close.evaluate((element) => document.activeElement === element),
       true,
     );
+    const recommendation = dialog.getByRole("button", {
+      name: /The next trailer/,
+    });
+    await recommendation.scrollIntoViewIfNeeded();
+    const recommendations = recommendation.locator("..");
+    if (width < 640) {
+      const first = await recommendation.boundingBox();
+      const second = await dialog
+        .getByRole("button", { name: /Another recommendation/ })
+        .boundingBox();
+      assert.ok(
+        Math.abs(first.x - (width - second.x - second.width)) < 2,
+        "Trailer recommendations have equal mobile gutters",
+      );
+      assert.ok(
+        first.x >= 15,
+        "Trailer recommendation does not stick to the left edge",
+      );
+      await recommendations.evaluate((element) =>
+        element.scrollTo({ left: element.scrollWidth, behavior: "instant" }),
+      );
+      await page.waitForTimeout(200);
+      const last = await dialog
+        .getByRole("button", { name: /One more recommendation/ })
+        .boundingBox();
+      assert.ok(
+        Math.abs(width - last.x - last.width - 16) < 2,
+        "Trailer rail keeps its right gutter after scrolling",
+      );
+      await recommendations.evaluate((element) =>
+        element.scrollTo({ left: 0, behavior: "instant" }),
+      );
+    }
     if (output && [390, 1366].includes(width))
       await dialog.screenshot({
         path: resolve(output, "modal-" + width + ".png"),
@@ -244,6 +287,24 @@ try {
     );
     await page.keyboard.press("Escape");
     await dialog.waitFor({ state: "hidden" });
+    if (width < 640) {
+      await page.goto(base + "?single=1");
+      await page
+        .getByRole("button", { name: "Open trailer", exact: true })
+        .click();
+      const single = page
+        .getByRole("dialog")
+        .getByRole("button", { name: /The next trailer/ });
+      await single.scrollIntoViewIfNeeded();
+      const box = await single.boundingBox();
+      assert.ok(
+        Math.abs(box.x + box.width / 2 - width / 2) < 2,
+        "Single trailer recommendation is centered",
+      );
+      await page
+        .getByRole("button", { name: "Close trailer", exact: true })
+        .click();
+    }
     assert.equal(await page.evaluate(() => document.body.style.overflow), "");
     assert.equal(
       await opener.evaluate((element) => document.activeElement === element),
