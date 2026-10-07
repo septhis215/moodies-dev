@@ -233,7 +233,7 @@ export default function TVHomePageClient({
 
       <div className="ui-shell space-y-12 pb-14 pt-10 sm:space-y-16">
         <ComingSoonSection
-          title="Premiering Soon"
+          title="Premiering soon"
           items={NewTVTrailer}
           type="tv"
         />

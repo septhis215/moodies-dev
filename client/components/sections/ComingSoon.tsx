@@ -1,11 +1,5 @@
 import { tmdbImage } from "@/lib/tmdb";
-import {
-  Calendar,
-  ChevronDown,
-  Bookmark,
-  BookmarkCheck,
-  Sparkles,
-} from "lucide-react";
+import { ChevronDown, Bookmark, BookmarkCheck, Sparkles } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import React, {
@@ -17,7 +11,6 @@ import React, {
 } from "react";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
-import { RatingBadge } from "@/components/ui/rating-badge";
 
 type MovieLike = {
   id: string | number;
@@ -36,6 +29,7 @@ type MovieLike = {
 };
 
 const INITIAL_WEEK_ITEMS = 6;
+const MOBILE_WEEK_ITEMS = 3;
 
 const getReleaseDate = (item: MovieLike) =>
   item.release_date || item.first_air_date || null;
@@ -71,6 +65,9 @@ export function ComingSoonSection({
   const [expandedWeeks, setExpandedWeeks] = useState<Record<string, number>>(
     {},
   );
+  const [mobileExpandedWeeks, setMobileExpandedWeeks] = useState<
+    Record<string, number>
+  >({});
   const [openWeeks, setOpenWeeks] = useState<Record<string, boolean>>({});
   const hasAutoOpenedMonth = useRef(false);
   const monthRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -277,35 +274,24 @@ export function ComingSoonSection({
       className="relative mx-auto w-full max-w-7xl border-t border-[var(--surface-border)] py-6 sm:py-7"
     >
       <div>
-        <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex items-start gap-3 sm:gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-[var(--surface-border)] text-[var(--brand-coral-strong)] sm:h-12 sm:w-12">
-              <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#ff8b78]">
-                Release radar
-              </p>
-              <h2 className="text-2xl font-bold leading-none text-[var(--ink)] sm:text-[28px]">
-                {title}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-                Curated by date and audience signal so busy months stay easy to
-                scan.
-              </p>
-            </div>
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3 sm:mb-6">
+          <div className="min-w-0 flex-1 basis-64">
+            <p className="ui-kicker">Release radar</p>
+            <h2 className="mt-2 text-balance text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
+              {title}
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+              {type === "tv"
+                ? "Upcoming series premieres, organised by week. Save a show for later."
+                : "Upcoming movie releases, organised by week. Save a film for later."}
+            </p>
           </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-            <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 py-2">
-              <div className="text-xl font-bold leading-none text-white">
-                {totalReleases}
-              </div>
-              <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500">
-                Total
-              </div>
-            </div>
-          </div>
+          <p className="shrink-0 text-sm text-[var(--ink-muted)]">
+            <span className="font-semibold text-[var(--ink)]">
+              {totalReleases}
+            </span>{" "}
+            upcoming {type === "tv" ? "shows" : "films"}
+          </p>
         </div>
 
         {totalVisible === 0 ? (
@@ -333,42 +319,43 @@ export function ComingSoonSection({
                 >
                   <button
                     onClick={() => handleMonthToggle(monthYear)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-5 sm:py-3.5
+                    aria-expanded={openMonth === monthYear}
+                    className="flex min-h-14 w-full items-center justify-between gap-3 text-left focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)] px-4 py-3 sm:gap-4 sm:px-5 sm:py-3.5
                          bg-[var(--surface-1)] hover:bg-[var(--surface-2)] transition-colors
                          border-b border-[var(--surface-border)] group cursor-pointer"
                   >
-                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                      <div className="w-2 h-2 shrink-0 rounded-full bg-[#e94f37] transition-colors" />
-                      <h3 className="truncate text-base font-bold text-white sm:text-xl">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 sm:gap-x-4">
+                      <h3 className="w-full text-base font-bold text-[var(--ink)] sm:w-auto sm:text-xl">
                         {monthYear}
                       </h3>
                       <div className="flex shrink-0 items-center gap-2 text-sm sm:gap-3">
-                        <span className="rounded bg-white/[0.06] px-2 py-1 text-xs font-medium text-slate-300 sm:text-sm">
+                        <span className="rounded bg-white/[0.06] px-2 py-1 text-xs font-medium text-[var(--ink-muted)] sm:text-sm">
                           {groupedItems.length} showing
                         </span>
-                        <span className="text-gray-500 hidden sm:inline">
+                        <span className="text-[var(--ink-muted)] hidden sm:inline">
                           • {Object.keys(weeks).length}{" "}
                           {Object.keys(weeks).length === 1 ? "week" : "weeks"}
                         </span>
                       </div>
                     </div>
                     <ChevronDown
-                      className={`w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-all duration-300 ${openMonth === monthYear ? "rotate-180" : ""
-                        }`}
+                      className={`w-5 h-5 text-slate-400 group-hover:text-[var(--ink-muted)] transition-all duration-300 ${
+                        openMonth === monthYear ? "rotate-180" : ""
+                      }`}
                     />
                   </button>
 
                   {openMonth === monthYear && (
-                    <div className="space-y-4 p-4 sm:p-5">
+                    <div className="space-y-4 p-3 sm:p-5">
                       {topPicks.length > 0 && (
-                        <div className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] p-3">
+                        <div className="border-b border-[var(--surface-border)] pb-4 sm:rounded-md sm:border sm:bg-[var(--surface-2)] sm:p-3">
                           <div className="mb-2.5 flex items-center gap-2">
                             <Sparkles className="h-4 w-4 text-[#ff7a66]" />
                             <h4 className="text-sm font-bold text-white">
                               Most anticipated this month
                             </h4>
                           </div>
-                          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scroll-smooth sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
+                          <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
                             {topPicks.map((item) => {
                               const releaseDate = new Date(
                                 getReleaseDate(item) ?? "",
@@ -378,40 +365,36 @@ export function ComingSoonSection({
                                 <Link
                                   key={`top-${item.id}`}
                                   href={`/${type}/${item.id}`}
-                                  className="group flex w-[72vw] max-w-[270px] shrink-0 snap-start gap-3 border-l border-[var(--surface-border)] py-1 pl-3 transition-colors hover:border-[var(--brand-coral)] sm:w-auto sm:max-w-none"
+                                  className="group flex w-[calc((100%-1rem)/3)] min-w-0 shrink-0 snap-start flex-col gap-2 py-1 outline-offset-2 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)] sm:w-auto sm:flex-row"
                                 >
-                                  <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-sm bg-white/[0.06]">
+                                  <div className="relative aspect-[2/3] w-full shrink-0 overflow-hidden rounded-md bg-[var(--surface-1)] sm:aspect-auto sm:h-14 sm:w-10 sm:rounded-sm">
                                     <Image
                                       src={posterGetter(item)}
                                       alt={getTitle(item)}
                                       fill
-                                      sizes="44px"
+                                      sizes="(max-width: 640px) 30vw, 44px"
                                       className="object-cover"
                                     />
                                   </div>
                                   <div className="min-w-0 py-0.5">
-                                    <div className="line-clamp-2 text-xs font-bold leading-snug text-white group-hover:text-[#ff8b78]">
+                                    <div className="line-clamp-2 text-xs font-semibold leading-4 text-[var(--ink)] sm:font-bold sm:leading-snug sm:group-hover:text-[#ff8b78]">
                                       {getTitle(item)}
                                     </div>
                                     <div className="mt-1.5 flex items-center gap-2">
-                                      <span className="rounded border border-[var(--brand-coral)]/50 bg-[var(--brand-coral)]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--brand-coral-strong)]">
-                                        Premieres
-                                      </span>
-                                      <span className="text-[10px] font-medium text-gray-400">
-                                        {releaseDate.toLocaleDateString("en-US", {
-                                          month: "short",
-                                          day: "numeric",
-                                        })}
+                                      <span className="text-xs font-medium text-[var(--ink-muted)]">
+                                        {releaseDate.toLocaleDateString(
+                                          "en-US",
+                                          {
+                                            month: "short",
+                                            day: "numeric",
+                                          },
+                                        )}
                                       </span>
                                     </div>
                                   </div>
                                 </Link>
                               );
                             })}
-                            <div
-                              className="w-1 shrink-0 sm:hidden"
-                              aria-hidden="true"
-                            />
                           </div>
                         </div>
                       )}
@@ -421,12 +404,20 @@ export function ComingSoonSection({
                           const weekKey = `${monthYear}-${range}`;
                           const visibleCount =
                             expandedWeeks[weekKey] ?? INITIAL_WEEK_ITEMS;
+                          const mobileVisibleCount =
+                            mobileExpandedWeeks[weekKey] ?? MOBILE_WEEK_ITEMS;
                           const visibleWeekItems = weekItems.slice(
                             0,
-                            visibleCount,
+                            Math.max(visibleCount, mobileVisibleCount),
                           );
-                          const hiddenCount =
-                            weekItems.length - visibleWeekItems.length;
+                          const hiddenCount = Math.max(
+                            0,
+                            weekItems.length - visibleCount,
+                          );
+                          const mobileHiddenCount = Math.max(
+                            0,
+                            weekItems.length - mobileVisibleCount,
+                          );
 
                           return (
                             <details
@@ -441,9 +432,9 @@ export function ComingSoonSection({
                                 }));
                               }}
                             >
-                              <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 py-2.5 marker:hidden">
+                              <summary className="flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 py-3 marker:hidden focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)]">
                                 <div>
-                                  <span className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-coral-strong)] sm:text-sm">
+                                  <span className="text-xs font-semibold text-[var(--ink)] sm:text-sm">
                                     Week {index + 1}
                                   </span>
                                 </div>
@@ -457,14 +448,14 @@ export function ComingSoonSection({
                                 <ChevronDown className="ml-auto h-4 w-4 text-[var(--ink-muted)] transition-transform group-open/week:rotate-180" />
                               </summary>
 
-                              <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 scroll-smooth sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                                {visibleWeekItems.map((item) => {
+                              <div className="grid grid-cols-1 gap-3 pb-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                                {visibleWeekItems.map((item, itemIndex) => {
                                   const releaseDate = new Date(
                                     getReleaseDate(item) ?? "",
                                   );
                                   const daysUntil = Math.ceil(
                                     (releaseDate.getTime() - todayMs) /
-                                    (1000 * 60 * 60 * 24),
+                                      (1000 * 60 * 60 * 24),
                                   );
                                   const inWatchlist =
                                     _isInWatchlist(item) ??
@@ -474,9 +465,9 @@ export function ComingSoonSection({
                                   return (
                                     <article
                                       key={item.id}
-                                      className="group w-[42vw] min-w-[145px] max-w-[176px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                                      className={`group relative min-w-0 items-start gap-3 border-b border-[var(--surface-border)] pb-3 pr-14 last:border-b-0 sm:border-0 sm:pb-0 sm:pr-0 ${itemIndex < mobileVisibleCount ? "flex" : "hidden"} ${itemIndex < visibleCount ? "sm:block" : "sm:hidden"}`}
                                     >
-                                      <div className="relative aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-colors group-hover:border-[var(--brand-coral)]">
+                                      <div className="relative aspect-[2/3] w-16 shrink-0 overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-colors group-hover:border-[var(--brand-coral)] sm:w-auto">
                                         <Link
                                           href={`/${type}/${item.id}`}
                                           className="block h-full w-full"
@@ -485,101 +476,102 @@ export function ComingSoonSection({
                                             src={
                                               item.poster_path
                                                 ? tmdbImage(
-                                                  item.poster_path,
-                                                  "w500",
-                                                )
+                                                    item.poster_path,
+                                                    "w500",
+                                                  )
                                                 : "/placeholder-poster.svg"
                                             }
                                             alt={item.title || item.name || ""}
                                             fill
-                                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                                            sizes="(max-width: 640px) 64px, (max-width: 1024px) 33vw, 20vw"
                                             className="object-cover"
                                           />
                                         </Link>
-
-                                        <div className="absolute inset-x-2 bottom-2 z-10 flex items-center justify-between gap-2 rounded-md border border-[var(--brand-coral)]/60 bg-[#0b0909]/85 px-2.5 py-2 shadow-[0_10px_25px_rgba(0,0,0,0.2)] backdrop-blur-[2px]">
-                                          <div className="min-w-0">
-                                            <div className="text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--brand-coral-strong)]">
-                                              Premieres
-                                            </div>
-                                            <div className="mt-0.5 text-[11px] font-bold text-white sm:text-xs">
-                                              {releaseDate.toLocaleDateString(
-                                                "en-US",
-                                                {
-                                                  month: "short",
-                                                  day: "numeric",
-                                                },
-                                              )}
-                                            </div>
-                                          </div>
-                                          <div className="shrink-0 rounded border border-[var(--brand-coral)]/40 bg-[var(--brand-coral)]/10 px-1.5 py-1 text-[9px] font-bold text-[var(--brand-coral-strong)] sm:text-[10px]">
-                                            {daysUntil > 0
-                                              ? `${daysUntil}d`
-                                              : daysUntil === 0
-                                                ? "Today"
-                                                : "Now"}
-                                          </div>
-                                        </div>
-
-                                        <RatingBadge
-                                          rating={item.vote_average ?? 0}
-                                          variant="colored"
-                                          size="sm"
-                                          className="absolute right-2 top-2 z-10"
-                                        />
-                                        <button
-                                          type="button"
-                                          onClick={(event) =>
-                                            handleWatchlistToggle(item, event)
-                                          }
-                                          disabled={isLoading}
-                                          className={`absolute left-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-sm border border-white/25 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors disabled:opacity-60 ${inWatchlist
-                                              ? "bg-[var(--brand-coral)] text-white"
-                                              : "bg-[#0b0909]/90 text-white hover:bg-white hover:text-black"
-                                            }`}
-                                          aria-label={
-                                            inWatchlist
-                                              ? `Remove ${getTitle(item)} from My List`
-                                              : `Add ${getTitle(item)} to My List`
-                                          }
-                                        >
-                                          {isLoading ? (
-                                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" />
-                                          ) : inWatchlist ? (
-                                            <BookmarkCheck className="h-4 w-4" />
-                                          ) : (
-                                            <Bookmark className="h-4 w-4" />
-                                          )}
-                                        </button>
                                       </div>
+                                      <button
+                                        type="button"
+                                        onClick={(event) =>
+                                          handleWatchlistToggle(item, event)
+                                        }
+                                        disabled={isLoading}
+                                        className={`absolute right-0 top-0 z-20 grid h-11 w-11 sm:left-2 sm:right-auto sm:top-2 place-items-center rounded-sm border border-white/25 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors disabled:opacity-60 ${
+                                          inWatchlist
+                                            ? "bg-[var(--brand-coral)] text-white"
+                                            : "bg-[#0b0909]/90 text-white hover:bg-white hover:text-black"
+                                        }`}
+                                        aria-label={
+                                          inWatchlist
+                                            ? `Remove ${getTitle(item)} from My List`
+                                            : `Add ${getTitle(item)} to My List`
+                                        }
+                                      >
+                                        {isLoading ? (
+                                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" />
+                                        ) : inWatchlist ? (
+                                          <BookmarkCheck className="h-4 w-4" />
+                                        ) : (
+                                          <Bookmark className="h-4 w-4" />
+                                        )}
+                                      </button>
                                       <Link
                                         href={`/${type}/${item.id}`}
-                                        className="block pt-2.5"
+                                        className="min-w-0 flex-1 py-0.5 sm:block sm:pt-2.5 sm:pb-0"
                                       >
                                         <h4 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
                                           {getTitle(item)}
                                         </h4>
-                                        <p className="mt-0.5 text-xs text-[var(--ink-muted)]">
-                                          {releaseDate.toLocaleDateString(
-                                            "en-US",
-                                            {
-                                              weekday: "short",
-                                              month: "short",
-                                              day: "numeric",
-                                            },
-                                          )}
-                                        </p>
+                                        <div className="mt-1 flex flex-col items-start gap-y-0.5 text-xs leading-5 text-[var(--ink-muted)] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-2 sm:gap-y-1">
+                                          <time
+                                            dateTime={
+                                              getReleaseDate(item) ?? undefined
+                                            }
+                                          >
+                                            {releaseDate.toLocaleDateString(
+                                              "en-US",
+                                              {
+                                                weekday: "short",
+                                                month: "short",
+                                                day: "numeric",
+                                              },
+                                            )}
+                                          </time>
+                                          <span className="font-semibold text-[var(--ink)]">
+                                            {daysUntil > 0
+                                              ? `In ${daysUntil} ${daysUntil === 1 ? "day" : "days"}`
+                                              : daysUntil === 0
+                                                ? "Today"
+                                                : "Released"}
+                                          </span>
+                                        </div>
                                       </Link>
                                     </article>
                                   );
                                 })}
-                                <div
-                                  className="w-1 shrink-0 sm:hidden"
-                                  aria-hidden="true"
-                                />
                               </div>
+                              {mobileHiddenCount > 0 && (
+                                <div className="pb-3 sm:hidden">
+                                  <button
+                                    onClick={() =>
+                                      setMobileExpandedWeeks((prev) => ({
+                                        ...prev,
+                                        [weekKey]:
+                                          mobileVisibleCount +
+                                          MOBILE_WEEK_ITEMS,
+                                      }))
+                                    }
+                                    className="min-h-11 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] px-4 py-2 text-sm font-semibold text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)]"
+                                  >
+                                    Show{" "}
+                                    {Math.min(
+                                      mobileHiddenCount,
+                                      MOBILE_WEEK_ITEMS,
+                                    )}{" "}
+                                    more
+                                  </button>
+                                </div>
+                              )}
                               {hiddenCount > 0 && (
-                                <div className="flex justify-center pb-3">
+                                <div className="hidden justify-center pb-3 sm:flex">
                                   <button
                                     onClick={() =>
                                       setExpandedWeeks((prev) => ({
@@ -588,7 +580,7 @@ export function ComingSoonSection({
                                           visibleCount + INITIAL_WEEK_ITEMS,
                                       }))
                                     }
-                                    className="cursor-pointer rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-bold text-gray-200 transition hover:bg-white/[0.1]"
+                                    className="min-h-11 w-full cursor-pointer rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] px-4 py-2 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)] sm:w-auto"
                                   >
                                     Show{" "}
                                     {Math.min(hiddenCount, INITIAL_WEEK_ITEMS)}{" "}

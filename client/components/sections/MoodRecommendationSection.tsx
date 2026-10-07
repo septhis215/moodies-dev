@@ -253,14 +253,6 @@ export default function MoodRecommendationsSection({
     () => shuffleWithSeed(orderMoods(moods), initialMoodShuffleSeed.current),
     [moods],
   );
-  const topMatch = recommendations[0];
-  const movieCount = recommendations.filter(
-    (rec) => rec.mediaType === "MOVIE",
-  ).length;
-  const tvCount = recommendations.filter(
-    (rec) => rec.mediaType === "TV",
-  ).length;
-
   const toHookType = (type: "MOVIE" | "TV") =>
     (type === "TV" ? "series" : "movie") as "movie" | "series";
 
@@ -445,7 +437,7 @@ export default function MoodRecommendationsSection({
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/20">
               <Sparkles className="h-9 w-9 text-red-300" />
             </div>
-            <h3 className="mb-2 text-2xl font-black text-white">
+            <h3 className="mb-2 text-xl font-bold text-[var(--ink)]">
               Error Loading Moods
             </h3>
             <p className="mb-6 text-lg text-gray-400">{moodsError}</p>
@@ -466,24 +458,20 @@ export default function MoodRecommendationsSection({
       id="moods"
       className="relative mx-auto w-full max-w-7xl overflow-hidden border-t border-[var(--surface-border)] pt-6 sm:pt-7"
     >
-      <div className="relative mb-5 sm:mb-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-3">
-              <div className="grid h-10 w-10 place-items-center rounded-md border border-[var(--surface-border)] text-[var(--brand-coral-strong)]">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <h2 className="text-2xl font-bold leading-none text-[var(--ink)] sm:text-3xl">
-                Mood Matcher
-              </h2>
-            </div>
-            <p className="max-w-2xl text-sm leading-6 text-[var(--ink-muted)] sm:ml-[52px]">
-              Discover content that matches your current vibe, now ranked with
-              stronger mood signals.
-            </p>
-          </div>
-
-        </div>
+      <div className="mb-5 max-w-2xl sm:mb-6">
+        <p className="ui-kicker">Find your mood</p>
+        <h2 className="mt-2 text-balance text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
+          Mood matcher
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+          Pick how you feel and find{" "}
+          {mediaType === "tv"
+            ? "a series"
+            : mediaType === "movie"
+              ? "a movie"
+              : "something"}{" "}
+          to watch.
+        </p>
       </div>
 
       <AnimatePresence mode="wait">
@@ -594,37 +582,21 @@ export default function MoodRecommendationsSection({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="mb-8"
+            className="relative mb-8 isolate"
           >
-            <div
-              className="mb-5 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:p-5"
-              style={{ borderLeft: `3px solid ${selectedMood.color}` }}
-            >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                  <div
-                    className="relative h-16 w-16 shrink-0 rounded-xl"
-                    style={{ backgroundColor: `${getMoodColor(selectedMood)}16` }}
-                  >
-                    <Image
-                      src={getMoodImageSrc(selectedMood)}
-                      alt={`${selectedMood.name} mood mascot`}
-                      fill
-                      sizes="64px"
-                      className="object-contain p-1"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="ui-kicker">Your mood</p>
-                    <h3 className="mt-1 text-xl font-bold text-[var(--ink)] sm:text-2xl">
-                      {selectedMood.name} picks
-                    </h3>
-                    <p className="mt-1 line-clamp-2 text-sm leading-5 text-[var(--ink-muted)]">
-                      {selectedMood.description}
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+            <div className="relative mb-6 border-b border-[var(--surface-border)] pb-5 sm:pb-6">
+              <div className="min-w-0 flex-1">
+                <p className="ui-kicker pr-20 sm:pr-48">Selected mood</p>
+                <h3
+                  data-display
+                  className="mt-2 pr-20 text-3xl font-bold text-[var(--ink)] sm:pr-48 sm:text-4xl"
+                >
+                  {selectedMood.name} picks
+                </h3>
+                <p className="mt-2 max-w-lg pr-20 text-sm leading-6 text-[var(--ink-muted)] sm:pr-36">
+                  {selectedMood.description}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => setSelectedMood(null)}
                     className="ui-secondary-action min-h-11 justify-center"
@@ -634,44 +606,23 @@ export default function MoodRecommendationsSection({
                   <button
                     onClick={handleRefresh}
                     disabled={loading}
-                    className="ui-primary-action min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-55"
+                    className="ui-secondary-action min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-55"
                   >
                     <RefreshCw
-                      className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                      className={`h-4 w-4 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`}
                     />
                     {loading ? "Refreshing" : "Refresh picks"}
                   </button>
                 </div>
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-border)]">
-                <div className="bg-[var(--surface-2)] px-3 py-2.5">
-                  <p className="text-xs text-[var(--ink-muted)]">Suggestions</p>
-                  <p className="mt-0.5 text-sm font-bold text-[var(--ink)]">
-                    {recommendations.length || RECOMMENDATION_LIMIT}
-                  </p>
-                </div>
-                <div className="bg-[var(--surface-2)] px-3 py-2.5">
-                  <p className="text-xs text-[var(--ink-muted)]">
-                    {mediaType === "tv"
-                      ? "Series"
-                      : mediaType === "movie"
-                        ? "Movies"
-                        : "Movies / series"}
-                  </p>
-                  <p className="mt-0.5 text-sm font-bold text-[var(--ink)]">
-                    {mediaType === "tv"
-                      ? tvCount
-                      : mediaType === "movie"
-                        ? movieCount
-                        : `${movieCount} / ${tvCount}`}
-                  </p>
-                </div>
-                <div className="bg-[var(--surface-2)] px-3 py-2.5">
-                  <p className="text-xs text-[var(--ink-muted)]">Best match</p>
-                  <p className="mt-0.5 text-sm font-bold text-[var(--ink)]">
-                    {topMatch ? `${getMatchScore(topMatch)}%` : "—"}
-                  </p>
-                </div>
+              <div className="absolute right-0 top-0 h-16 w-16 sm:h-40 sm:w-40">
+                <Image
+                  src={getMoodImageSrc(selectedMood)}
+                  alt={`${selectedMood.name} mood mascot`}
+                  fill
+                  sizes="(max-width: 640px) 64px, 160px"
+                  className="object-contain"
+                />
               </div>
             </div>
 
@@ -686,10 +637,10 @@ export default function MoodRecommendationsSection({
                     }}
                   />
                 </div>
-                <p className="mb-2 text-2xl font-black text-white">
-                  Curating your perfect matches
+                <p className="mb-2 text-xl font-bold text-[var(--ink)]">
+                  Finding your picks
                 </p>
-                <p className="text-lg text-gray-400">
+                <p className="text-sm text-[var(--ink-muted)]">
                   Finding content that fits your{" "}
                   {selectedMood.name.toLowerCase()} mood...
                 </p>
@@ -700,7 +651,9 @@ export default function MoodRecommendationsSection({
                   <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/20">
                     <Sparkles className="h-9 w-9 text-red-300" />
                   </div>
-                  <h3 className="mb-2 text-2xl font-black text-white">Oops!</h3>
+                  <h3 className="mb-2 text-xl font-bold text-[var(--ink)]">
+                    Oops!
+                  </h3>
                   <p className="mb-6 text-lg text-gray-400">{error}</p>
                   <button
                     onClick={handleRefresh}
@@ -716,9 +669,9 @@ export default function MoodRecommendationsSection({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 scroll-smooth sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 md:grid-cols-4 lg:grid-cols-6"
+                className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4 xl:grid-cols-6"
               >
-                {recommendations.map((rec) => {
+                {recommendations.map((rec, index) => {
                   const id = String(rec.tmdbId);
                   const kind = toHookType(rec.mediaType);
                   const inList = isInWatchlist(id, kind) ?? watchlistStates[id];
@@ -726,6 +679,7 @@ export default function MoodRecommendationsSection({
                   const matchScore = getMatchScore(rec);
                   const genres = rec.genreNames?.filter(Boolean) ?? [];
                   const moodColor = getMoodColor(selectedMood);
+                  const isFeatured = index === 0;
 
                   return (
                     <motion.article
@@ -733,56 +687,64 @@ export default function MoodRecommendationsSection({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.18 }}
-                      className="relative w-[46vw] min-w-[156px] max-w-[190px] shrink-0 snap-start sm:w-auto sm:min-w-0 sm:max-w-none"
+                      className={`relative min-w-0 ${isFeatured ? "col-span-2" : ""}`}
                     >
                       <Link
                         href={getMediaHref(rec)}
-                        className="group flex h-full flex-col overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] transition-[border-color,transform,box-shadow] hover:-translate-y-0.5 hover:border-[var(--brand-coral)] hover:shadow-xl hover:shadow-black/20"
+                        className="group flex h-full flex-col rounded-xl outline-offset-4 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)]"
                       >
-                          <div className="relative aspect-[2/3] overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-2)]">
-                            <Image
-                              src={getPosterUrl(rec.posterPath)}
-                              alt={rec.title}
-                              fill
-                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
-                              className="object-cover transition-transform duration-300 group-hover:scale-[1.025]"
+                        <div
+                          className={`relative overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] ${isFeatured ? "aspect-video sm:aspect-[4/3]" : "aspect-[2/3]"}`}
+                        >
+                          <Image
+                            src={
+                              isFeatured && rec.backdropPath
+                                ? tmdbImage(rec.backdropPath, "w780")
+                                : getPosterUrl(rec.posterPath)
+                            }
+                            alt={rec.title}
+                            fill
+                            sizes={
+                              isFeatured
+                                ? "(max-width: 640px) 100vw, (max-width: 1024px) 66vw, 40vw"
+                                : "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                            }
+                            className="object-cover transition-transform duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
+                          />
+
+                          <div className="absolute right-2 top-2">
+                            <RatingBadge
+                              rating={rec.voteAverage}
+                              variant="colored"
+                              size="sm"
                             />
-                            <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/75 to-transparent" />
+                          </div>
 
-                            <div className="absolute right-2 top-2">
-                              <RatingBadge
-                                rating={rec.voteAverage}
-                                variant="colored"
-                                size="sm"
-                              />
-                            </div>
-
-                            <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+                          <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/65 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-md">
                               <span
-                                className="rounded-full px-2 py-1 text-[10px] font-bold text-white shadow-lg"
+                                aria-hidden="true"
+                                className="h-1.5 w-1.5 rounded-full"
                                 style={{ backgroundColor: moodColor }}
-                              >
-                                Match {matchScore}%
-                              </span>
-                            </div>
+                              />
+                              {matchScore}% match
+                            </span>
                           </div>
+                        </div>
 
-                          <div className="flex flex-1 flex-col p-3">
-                              <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
-                                {rec.title}
-                              </h3>
-                            <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                              {getMediaLabel(rec)} · {getYear(rec.releaseDate)}
+                        <div className="flex flex-1 flex-col px-0.5 pt-3">
+                          <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                            {rec.title}
+                          </h3>
+                          <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                            {getMediaLabel(rec)} · {getYear(rec.releaseDate)}
+                          </p>
+                          {genres.length > 0 && (
+                            <p className="mt-1 truncate text-xs text-[var(--ink-muted)]">
+                              {genres.slice(0, 2).join(" · ")}
                             </p>
-                            {genres.length > 0 && (
-                              <p className="mt-1 truncate text-xs text-[var(--ink-muted)]">
-                                {genres.slice(0, 2).join(" · ")}
-                              </p>
-                            )}
-                            <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">
-                              {rec.reason || `A ${selectedMood.name.toLowerCase()} match for your next watch.`}
-                            </p>
-                          </div>
+                          )}
+                        </div>
                       </Link>
                       <button
                         type="button"
@@ -791,10 +753,13 @@ export default function MoodRecommendationsSection({
                         }}
                         disabled={isBusy}
                         aria-label={
-                          inList ? "Remove from My List" : "Add to My List"
+                          inList
+                            ? `Remove ${rec.title} from My List`
+                            : `Add ${rec.title} to My List`
                         }
                         className={`absolute left-2 top-2 z-20 flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-black/80 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-[var(--brand-coral)] disabled:cursor-not-allowed disabled:opacity-70`}
-                        style={{ backgroundColor: inList ? moodColor : undefined }}
+                        aria-pressed={Boolean(inList)}
+                        style={{ borderColor: inList ? moodColor : undefined }}
                       >
                         {isBusy ? (
                           <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -807,7 +772,6 @@ export default function MoodRecommendationsSection({
                     </motion.article>
                   );
                 })}
-                <div className="w-1 shrink-0 sm:hidden" aria-hidden="true" />
               </motion.div>
             ) : (
               <div className="flex items-center justify-center py-32">
@@ -821,7 +785,7 @@ export default function MoodRecommendationsSection({
                   >
                     <Sparkles className="h-8 w-8" />
                   </div>
-                  <h3 className="mb-2 text-2xl font-black text-white">
+                  <h3 className="mb-2 text-xl font-bold text-[var(--ink)]">
                     No matches found
                   </h3>
                   <p className="mb-6 text-sm leading-6 text-gray-400">

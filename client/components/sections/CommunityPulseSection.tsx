@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  AlertCircle,
-  Bookmark,
-  Heart,
-  MessageSquare,
-  Users,
-} from "lucide-react";
+import { AlertCircle, Bookmark, Heart, MessageSquare } from "lucide-react";
 import type {
   CommunityPulseData,
   CommunityPulseItem,
@@ -119,19 +113,15 @@ export function CommunityPulseSection({
       aria-labelledby={`${mediaType}-community-pulse-heading`}
     >
       <div className="mb-4 max-w-2xl">
-        <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--brand-coral-strong)]">
-          <Users className="h-3.5 w-3.5" />
-          Community signal
-        </p>
+        <p className="ui-kicker">Community signal</p>
         <h2
           id={`${mediaType}-community-pulse-heading`}
-          className="mt-1 text-2xl font-bold leading-none text-[var(--ink)] sm:text-[28px]"
+          className="mt-2 text-balance text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
         >
           Community pulse
         </h2>
-        <p className="mt-1.5 text-sm leading-5 text-[var(--ink-muted)]">
-          The {mediaLabel} Moodies members are saving, discussing and responding
-          to right now.
+        <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+          The {mediaLabel} members are saving, reviewing and enjoying right now.
         </p>
       </div>
 
