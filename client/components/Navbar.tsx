@@ -36,9 +36,7 @@ const routes = [
   { name: "Home", href: "/" },
   { name: "Movies", href: "/movies" },
   { name: "TV shows", href: "/tv" },
-  ...(process.env.NEXT_PUBLIC_APP_ENV === "staging"
-    ? []
-    : [{ name: "Celebrities", href: "/celeb" }]),
+  { name: "Celebrities", href: "/celeb" },
   { name: "Your Moods", href: "/moods/explore" },
   { name: "My Collection", href: "/collection" },
 ];
@@ -630,9 +628,7 @@ export function NavbarComponent({
           {[
             { label: "Movies", href: "/movies" },
             { label: "TV shows", href: "/tv" },
-            ...(process.env.NEXT_PUBLIC_APP_ENV === "staging"
-              ? []
-              : [{ label: "Celebs", href: "/celeb" }]),
+            { label: "Celebs", href: "/celeb" },
             { label: "Feed", href: "/feed" },
             { label: "Moods", href: "/moods/explore" },
           ].map((item) => {
