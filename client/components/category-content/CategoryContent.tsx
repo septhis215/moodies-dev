@@ -252,14 +252,14 @@ export function CategoryContent({
                 </h2>
 
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(19rem,0.85fr)] lg:gap-4">
-                  <div className="group relative min-h-[19rem] overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] transition-[border-color,box-shadow] duration-200 ease-out hover:border-[var(--brand-coral)] hover:shadow-[0_18px_45px_rgba(0,0,0,0.34)] focus-within:border-[var(--brand-coral)] motion-reduce:transition-none sm:min-h-[26rem] lg:min-h-[32rem]">
+                  <div className="group relative min-h-[19rem] overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] transition-[border-color,box-shadow] duration-200 ease-out hover:border-[var(--brand-coral)] hover:shadow-[0_18px_45px_rgba(0,0,0,0.34)] focus-within:border-[var(--brand-coral)] motion-reduce:transition-none sm:min-h-[26rem] lg:min-h-[28rem]">
                     <BookmarkToggle item={leadItem} />
                     <Link
                       href={getDetailUrl(leadItem)}
                       className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]"
                       aria-label={`1. ${getTitle(leadItem)}, ${mediaLabel(leadItem)}`}
                     >
-                      <div className="relative h-full min-h-[19rem] sm:min-h-[26rem] lg:min-h-[32rem]">
+                      <div className="relative h-full min-h-[19rem] sm:min-h-[26rem] lg:min-h-[28rem]">
                         <img
                           src={getBackdropUrl(leadItem)}
                           alt=""
@@ -284,7 +284,7 @@ export function CategoryContent({
                           <h3 className="max-w-2xl text-balance text-2xl font-bold leading-tight text-white transition-colors duration-200 group-hover:text-[var(--brand-coral-strong)] motion-reduce:transition-none sm:text-3xl">
                             {getTitle(leadItem)}
                           </h3>
-                          <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-6 text-white/80 sm:line-clamp-3">
+                          <p className="mt-3 line-clamp-2 max-w-xl text-sm leading-6 text-white/80">
                             {leadItem.overview ||
                               "Open this title to see more details."}
                           </p>
@@ -338,12 +338,12 @@ export function CategoryContent({
                               className="absolute inset-0 h-full w-full object-cover transition-[filter] duration-300 ease-out group-hover:brightness-110 group-hover:saturate-[1.06] motion-reduce:transition-none"
                             />
                             <div className="absolute inset-0 bg-black/15" />
-                            <span className="absolute left-2 top-2 border-l-2 border-[var(--brand-coral)] bg-black/70 px-2 py-1 text-xs font-bold text-white">
+                            <span className="absolute bottom-2 left-2 border-l-2 border-[var(--brand-coral)] bg-black/80 px-2 py-1 text-xs font-bold tabular-nums text-white">
                               {String(index + 2).padStart(2, "0")}
                             </span>
                           </div>
 
-                          <div className="flex min-w-0 flex-col justify-center p-3 sm:p-4">
+                          <div className="flex min-w-0 flex-col justify-center p-4 lg:p-5">
                             <div className="flex items-center gap-2 text-xs font-semibold text-[var(--ink-muted)]">
                               <span className="inline-flex items-center gap-1">
                                 <MediaTypeIcon item={item} />
@@ -356,14 +356,14 @@ export function CategoryContent({
                                 aria-hidden="true"
                               />
                             </div>
-                            <h3 className="mt-1.5 line-clamp-2 text-base font-bold leading-tight text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                            <h3 className="mt-2 line-clamp-2 text-base font-bold leading-tight text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
                               {getTitle(item)}
                             </h3>
-                            <p className="mt-2 hidden line-clamp-2 text-sm leading-5 text-[var(--ink-muted)] lg:block">
+                            <p className="mt-3 hidden text-sm leading-6 text-[var(--ink-muted)] lg:line-clamp-2">
                               {item.overview ||
                                 "Open this title to see more details."}
                             </p>
-                            <div className="mt-2 self-start">
+                            <div className="mt-4 self-start">
                               <RatingBadge
                                 rating={item.vote_average}
                                 variant="colored"
