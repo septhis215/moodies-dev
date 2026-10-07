@@ -34,6 +34,7 @@ const landingMoods = [
   {
     id: "easy",
     label: "Easy",
+    color: "#FFDEAD",
     mascot: "cozy",
     mascotName: "Cozy",
     note: "Low-stakes, comforting watches for a quiet night.",
@@ -41,6 +42,7 @@ const landingMoods = [
   {
     id: "tense",
     label: "Tense",
+    color: "#FF6B35",
     mascot: "thrilling",
     mascotName: "Thrilling",
     note: "Pressure, suspense, and stories that keep moving.",
@@ -48,6 +50,7 @@ const landingMoods = [
   {
     id: "tender",
     label: "Tender",
+    color: "#FF69B4",
     mascot: "romantic",
     mascotName: "Romantic",
     note: "Warm, intimate stories with something human at the center.",
@@ -55,6 +58,7 @@ const landingMoods = [
   {
     id: "strange",
     label: "Strange",
+    color: "#BA55D3",
     mascot: "mind-bending",
     mascotName: "Mind-Bending",
     note: "Unfamiliar worlds, odd turns, and singular ideas.",
@@ -62,6 +66,7 @@ const landingMoods = [
   {
     id: "electric",
     label: "Electric",
+    color: "#8A2BE2",
     mascot: "epic",
     mascotName: "Epic",
     note: "Fast, loud, kinetic picks for a high-energy watch.",
@@ -82,10 +87,21 @@ export default function MoodDiscoverySection({
     return (
       <section
         id="your-moods"
-        className="ui-shell scroll-mt-24 border-b border-[var(--surface-border)] py-8 sm:py-10"
+        className="relative isolate scroll-mt-24 overflow-hidden border-b border-[var(--surface-border)]"
         aria-labelledby="mood-shelf-heading"
       >
-        <div className="grid items-center gap-6 lg:grid-cols-[minmax(15rem,0.72fr)_minmax(0,1.28fr)] lg:gap-12">
+        {landingMoods.map((mood) => (
+          <div
+            key={mood.id}
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 transition-opacity duration-700 motion-reduce:transition-none"
+            style={{
+              opacity: activeMood.id === mood.id ? 1 : 0,
+              background: `radial-gradient(ellipse at 78% 100%, ${mood.color}26, transparent 70%)`,
+            }}
+          />
+        ))}
+        <div className="ui-shell grid items-center gap-6 py-8 sm:py-10 lg:grid-cols-[minmax(15rem,0.72fr)_minmax(0,1.28fr)] lg:gap-12">
           <div>
             <p className="ui-kicker">Choose by mood</p>
             <h2
@@ -102,7 +118,7 @@ export default function MoodDiscoverySection({
 
           <div className="min-w-0">
             <div
-              className="grid grid-cols-5 gap-1 border-b border-[var(--surface-border)] pb-2 sm:gap-4"
+              className="grid grid-cols-5 gap-1 border-b border-[var(--surface-border)] sm:gap-4"
               role="group"
               aria-label="Choose a mood"
             >
@@ -114,14 +130,19 @@ export default function MoodDiscoverySection({
                     type="button"
                     onClick={() => setActiveLandingMood(mood.id)}
                     aria-controls="landing-mood-preview"
-                    className={`min-h-11 min-w-0 rounded-sm border-b-2 px-1 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] motion-reduce:transition-none sm:text-xl ${
+                    className={`relative min-h-12 min-w-0 px-1 py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] motion-reduce:transition-none sm:text-xl ${
                       isActive
-                        ? "border-[var(--brand-coral)] text-[var(--ink)]"
-                        : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                        ? "text-[var(--ink)]"
+                        : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
                     }`}
                     aria-pressed={isActive}
                   >
                     {mood.label}
+                    <span
+                      aria-hidden="true"
+                      className={`absolute inset-x-0 bottom-0 h-0.5 origin-left transition-transform duration-300 motion-reduce:transition-none ${isActive ? "scale-x-100" : "scale-x-0"}`}
+                      style={{ backgroundColor: mood.color }}
+                    />
                   </button>
                 );
               })}

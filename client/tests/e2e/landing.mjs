@@ -39,6 +39,39 @@ const browser = await chromium.launch({
   headless: true,
   channel: process.env.PLAYWRIGHT_CHANNEL || undefined,
 });
+async function checkMobileRail(section, width) {
+  const rail = section.locator('[class*="overflow-x-auto"]').first();
+  await rail.locator("article").first().waitFor();
+  const spacing = await rail.evaluate((element) => {
+    const cards = element.querySelectorAll("article");
+    return {
+      left: cards[0].getBoundingClientRect().left,
+      right: window.innerWidth - cards[1].getBoundingClientRect().right,
+    };
+  });
+  assert.ok(spacing.left >= 15, `Missing leading gutter at ${width}px`);
+  assert.ok(
+    Math.abs(spacing.left - spacing.right) <= 1,
+    `Unbalanced card gutters at ${width}px: ${JSON.stringify(spacing)}`,
+  );
+  await rail.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await rail.page().waitForTimeout(250);
+  const endGutter = await rail
+    .locator("article")
+    .last()
+    .evaluate(
+      (element) => window.innerWidth - element.getBoundingClientRect().right,
+    );
+  assert.ok(
+    Math.abs(endGutter - spacing.left) <= 1,
+    `Missing trailing gutter at ${width}px: ${endGutter}`,
+  );
+  await rail.evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+}
 try {
   for (const member of [false, true]) {
     const context = await browser.newContext();
@@ -106,6 +139,9 @@ try {
         0,
       );
       await page.locator("#community-heading").waitFor();
+      if (width < 640) {
+        await checkMobileRail(page.locator("#trending"), width);
+      }
       await page.locator("#your-moods button", { hasText: "Electric" }).click();
       assert.equal(
         await page
@@ -118,6 +154,14 @@ try {
           .locator("#landing-mood-preview")
           .textContent()
           .then((text) => text.includes("An electric night")),
+      );
+      await page.getByRole("button", { name: "Tender", exact: true }).hover();
+      assert.equal(
+        await page
+          .getByRole("button", { name: "Electric", exact: true })
+          .getAttribute("aria-pressed"),
+        "true",
+        "Hovering another mood replaced the chosen mood",
       );
       const layout = await page.evaluate(() => {
         const section = document.querySelector("#your-moods");
@@ -149,6 +193,12 @@ try {
       );
       if (member) {
         const curated = page.getByRole("region", { name: "Curated for you" });
+        assert.equal(
+          await curated
+            .getByText("Picked for Test member", { exact: true })
+            .count(),
+          1,
+        );
         await curated
           .getByRole("link", { name: "Explore Personal pick 1", exact: true })
           .waitFor();
@@ -161,36 +211,37 @@ try {
         if (width === 375) {
           await curated
             .getByRole("button", {
-              name: "Save Personal pick 1 to your watchlist",
+              name: "Add Personal pick 1 to My List",
               exact: true,
             })
             .click();
           await curated
             .getByRole("button", {
-              name: "Remove Personal pick 1 from your watchlist",
+              name: "Remove Personal pick 1 from My List",
               exact: true,
             })
             .waitFor();
           assert.ok(saved);
           await curated
             .getByRole("button", {
-              name: "Remove Personal pick 1 from your watchlist",
+              name: "Remove Personal pick 1 from My List",
               exact: true,
             })
             .click();
           await curated
             .getByRole("button", {
-              name: "Save Personal pick 1 to your watchlist",
+              name: "Add Personal pick 1 to My List",
               exact: true,
             })
             .waitFor();
           assert.equal(saved, false);
         }
-        assert.equal(await curated.getByRole("listitem").count(), 6);
+        assert.equal(await curated.getByRole("article").count(), 6);
+        if (width < 640) await checkMobileRail(curated, width);
         await curated
           .getByRole("button", { name: "Series", exact: true })
           .click();
-        assert.equal(await curated.getByRole("listitem").count(), 3);
+        assert.equal(await curated.getByRole("article").count(), 3);
         assert.equal(
           await curated
             .getByRole("link", { name: "Explore Personal pick 1", exact: true })
@@ -200,14 +251,14 @@ try {
         await curated
           .getByRole("button", { name: "Movies", exact: true })
           .click();
-        assert.equal(await curated.getByRole("listitem").count(), 4);
+        assert.equal(await curated.getByRole("article").count(), 4);
         await curated
           .getByRole("button", { name: "All picks", exact: true })
           .click();
         await curated
           .getByRole("button", { name: "More picks", exact: true })
           .click();
-        assert.equal(await curated.getByRole("listitem").count(), 7);
+        assert.equal(await curated.getByRole("article").count(), 7);
         assert.equal(
           await curated
             .getByRole("link", { name: "Adjust your taste" })
@@ -269,6 +320,7 @@ try {
         }
         if (status !== 400)
           await page
+            .getByRole("region", { name: "Curated for you" })
             .getByRole("link", { name: "Explore Personal pick 1", exact: true })
             .waitFor();
       }

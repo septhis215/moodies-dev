@@ -181,8 +181,9 @@ try {
       5,
     ),
   ];
-  for (const width of [320, 390, 768, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
+  for (const width of [320, 390, 768, 1024, 1280, 1366, 1440]) {
+    const height = width === 1024 ? 600 : width >= 1280 ? 720 : 900;
+    await page.setViewportSize({ width, height });
     for (const [caseIndex, title] of titles.entries()) {
       await page.goto(base + "?title=" + encodeURIComponent(title));
       for (const id of ["landing", "movie", "tv"]) {
@@ -213,7 +214,13 @@ try {
             actionBox.y + actionBox.height <= sectionBox.y + sectionBox.height,
           id + " actions clipped",
         );
-        if (output && caseIndex === 0 && [390, 1440].includes(width))
+        if (id === "landing" && width >= 1024) {
+          assert.ok(
+            sectionBox.y + sectionBox.height <= height + 1,
+            "Landing hero exceeds laptop viewport at " + width,
+          );
+        }
+        if (output && caseIndex === 0 && [390, 1366, 1440].includes(width))
           await wrapper.screenshot({
             path: resolve(output, id + "-" + width + ".png"),
           });

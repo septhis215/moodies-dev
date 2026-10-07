@@ -54,6 +54,7 @@ interface CardCarouselProps<T extends MediaItem> {
   items: T[];
   sectionId?: string;
   titleLink?: string;
+  embedded?: boolean;
   getPoster?: (item: T) => string;
   onAddToWatchlist?: (item: T) => void | Promise<void>;
   onRemoveFromWatchlist?: (item: T) => void | Promise<void>;
@@ -68,6 +69,7 @@ export default function CardCarousel<T extends MediaItem>({
   items,
   sectionId = "",
   titleLink,
+  embedded = false,
   getPoster,
   onAddToWatchlist,
   onRemoveFromWatchlist,
@@ -157,38 +159,45 @@ export default function CardCarousel<T extends MediaItem>({
     }
   };
 
+  const Container = embedded ? "div" : "section";
   return (
-    <section
+    <Container
       id={sectionId}
-      className="ui-shell scroll-mt-24 border-b border-[var(--surface-border)] py-8 sm:py-10"
-      aria-labelledby={`${sectionId || "media"}-heading`}
+      className={
+        embedded
+          ? "min-w-0"
+          : "ui-shell scroll-mt-24 border-b border-[var(--surface-border)] py-8 sm:py-10"
+      }
+      aria-labelledby={embedded ? undefined : `${sectionId || "media"}-heading`}
     >
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0 flex-1 basis-48">
-          {titleLink ? (
-            <Link href={titleLink} className="group inline-block">
+      {!embedded && (
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0 flex-1 basis-48">
+            {titleLink ? (
+              <Link href={titleLink} className="group inline-block">
+                <h2
+                  id={`${sectionId || "media"}-heading`}
+                  className="text-3xl font-bold leading-none text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)] sm:text-4xl"
+                >
+                  {title}
+                </h2>
+              </Link>
+            ) : (
               <h2
                 id={`${sectionId || "media"}-heading`}
-                className="text-3xl font-bold leading-none text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)] sm:text-4xl"
+                className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
               >
                 {title}
               </h2>
-            </Link>
-          ) : (
-            <h2
-              id={`${sectionId || "media"}-heading`}
-              className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
-            >
-              {title}
-            </h2>
-          )}
-          {subtitle ? (
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-              {subtitle}
-            </p>
-          ) : null}
+            )}
+            {subtitle ? (
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+                {subtitle}
+              </p>
+            ) : null}
+          </div>
         </div>
-      </div>
+      )}
 
       {items.length ? (
         <div className="group/carousel relative">
@@ -213,7 +222,7 @@ export default function CardCarousel<T extends MediaItem>({
           <div
             id={railId}
             ref={containerRef}
-            className="mobile-native-scroll -mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:scroll-pl-0 sm:gap-5 sm:px-0"
+            className={`mobile-native-scroll -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:scroll-px-0 sm:gap-5 sm:px-0 ${items.length === 1 ? "justify-center sm:justify-start" : ""}`}
           >
             {items.map((item) => {
               const type = mediaType(item);
@@ -227,10 +236,14 @@ export default function CardCarousel<T extends MediaItem>({
               return (
                 <article
                   key={`${type}-${item.id}`}
-                  className="group w-[44vw] min-w-[158px] max-w-[184px] shrink-0 snap-start sm:w-[31vw] sm:min-w-[204px] sm:max-w-[220px] md:w-[25vw] lg:w-[20vw] xl:max-w-[228px]"
+                  className="group w-[calc((100%-0.75rem)/2)] min-w-0 shrink-0 snap-start sm:w-[31vw] sm:min-w-[204px] sm:max-w-[220px] md:w-[25vw] lg:w-[20vw] xl:max-w-[228px]"
                 >
                   <div className="relative aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-colors group-hover:border-white/25 group-focus-within:border-white/25">
-                    <Link href={href} className="block h-full w-full">
+                    <Link
+                      href={href}
+                      aria-label={`Explore ${titleText}`}
+                      className="block h-full w-full"
+                    >
                       <Image
                         src={itemPoster(item)}
                         alt={titleText}
@@ -423,6 +436,6 @@ export default function CardCarousel<T extends MediaItem>({
           No titles available.
         </p>
       )}
-    </section>
+    </Container>
   );
 }

@@ -185,7 +185,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
   return (
     <section
-      className="relative isolate h-[88svh] min-h-[620px] w-full overflow-hidden bg-[#080808] text-white sm:min-h-[680px] lg:h-screen lg:min-h-[720px] lg:max-h-[1080px]"
+      className="landing-hero relative isolate flex w-full overflow-hidden bg-[var(--surface-0)] text-white"
       onMouseEnter={pause}
       onMouseLeave={resume}
       onFocusCapture={pause}
@@ -219,8 +219,8 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
         </motion.div>
       </AnimatePresence>
 
-      <div className="relative z-10 mx-auto flex h-full max-w-7xl flex-col justify-end px-5 pb-6 pt-[calc(var(--mobile-nav-safe)+1rem)] sm:px-6 sm:pb-7 sm:pt-24 lg:px-8 lg:pb-9 xl:px-12">
-        <div className="grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-8 xl:gap-10">
+      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col justify-end px-5 pb-6 pt-10 sm:px-6 sm:pb-7 sm:pt-24 lg:px-8 lg:pb-9">
+        <div className="grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-8">
           <AnimatePresence initial={false} mode="wait">
             <motion.div
               key={`landing-copy-${current.id}`}
@@ -233,7 +233,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
               }}
               className="min-w-0 max-w-[34rem] sm:max-w-2xl xl:max-w-3xl"
             >
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#ff9b8a] sm:text-[11px]">
+              <p className="ui-kicker mb-3">
                 Moodies spotlight
               </p>
               <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/65 sm:text-xs">
@@ -269,7 +269,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                 }}
                 aria-label={currentTitle}
                 title={currentTitle}
-                className="line-clamp-2 max-w-[20ch] break-words text-balance text-[2.55rem] font-bold leading-[0.92] tracking-[-0.035em] text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.5)] min-[390px]:text-[3rem] sm:text-[clamp(3.2rem,7vw,5.8rem)] lg:text-[clamp(4rem,6vw,6.4rem)]"
+                className="line-clamp-2 max-w-[20ch] break-words text-balance text-[2.1rem] font-bold leading-[0.98] tracking-normal text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.5)] min-[390px]:text-[2.45rem] sm:text-[clamp(2.45rem,4.6vw,4rem)] sm:leading-[0.96]"
               >
                 {currentTitle}
               </motion.h1>
@@ -294,7 +294,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                   duration: reduceMotion ? 0 : 0.32,
                   delay: reduceMotion ? 0 : 0.14,
                 }}
-                className="mt-4 line-clamp-3 max-w-[31rem] text-sm leading-6 text-white/78 sm:max-w-xl sm:text-[15px] sm:leading-7 lg:max-w-2xl lg:text-base"
+                className="mt-4 line-clamp-3 max-w-xl text-sm leading-6 text-white/80"
               >
                 <span className="sm:hidden">{mobileOverview}</span>
                 <span className="hidden sm:inline">{desktopOverview}</span>
@@ -312,7 +312,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                 <button
                   type="button"
                   onClick={goToDetails}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[#e94f37] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#d9412b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff9c8d] sm:min-h-11"
+                  className="ui-primary-action min-h-11"
                 >
                   <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Explore
@@ -322,7 +322,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                   type="button"
                   onClick={toggleWatchlist}
                   disabled={wlLoading}
-                  className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-md border px-5 py-3 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-11 ${
+                  className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border px-5 py-3 text-sm font-extrabold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
                     currentInWatchlist
                       ? "border-emerald-300/45 bg-emerald-400/18 text-emerald-100 hover:bg-emerald-400/24 focus-visible:outline-emerald-200"
                       : "border-white/18 bg-white/10 text-white hover:bg-white/16 focus-visible:outline-white/70"
@@ -341,17 +341,8 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
             </motion.div>
           </AnimatePresence>
 
-          <div className="hidden min-w-[392px] flex-col items-end gap-3 lg:flex xl:min-w-[420px] xl:gap-4">
-            <div className="flex w-full items-center justify-between border-b border-white/15 pb-3">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/50">
-                  Up next
-                </p>
-                <p className="mt-1 text-xs font-semibold tabular-nums text-white/75">
-                  {String(index + 1).padStart(2, "0")} /{" "}
-                  {String(all.length).padStart(2, "0")}
-                </p>
-              </div>
+          <div className="hidden flex-col items-end gap-3 lg:flex">
+            <div className="flex w-full justify-end">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -372,7 +363,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
               </div>
             </div>
 
-            <div className="flex gap-3 xl:gap-4">
+            <div className="flex gap-2">
               {mounted &&
                 thumbnailWindow.map((item) => {
                   const slideIndex = all.findIndex(
@@ -384,8 +375,8 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                       all={item}
                       active={slideIndex === index}
                       onClick={() => goToSlide(slideIndex)}
-                      width={94}
-                      height={142}
+                      width={72}
+                      height={108}
                     />
                   );
                 })}

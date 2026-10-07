@@ -3,6 +3,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Keep the spotlight and its actions visible on short laptop viewports.
+   Content can grow naturally on phones, landscape screens, and at text zoom. */
+.landing-hero {
+  min-height: min(640px, 82svh);
+}
+
+@media (min-width: 1024px) {
+  .landing-hero {
+    min-height: min(780px, 84svh);
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
