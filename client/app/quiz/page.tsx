@@ -153,9 +153,7 @@ export default function MovieQuizPage() {
 
   const allAnswered = answers.every((answer) => answer !== null);
   const choice = (index: number) =>
-    answers[index] === null
-      ? null
-      : questions[index].options[answers[index]!];
+    answers[index] === null ? null : questions[index].options[answers[index]!];
   const choiceByCategory = (category: string) => {
     const index = questions.findIndex(
       (question) => question.category === category,
@@ -247,6 +245,84 @@ export default function MovieQuizPage() {
   const topPick = result?.results[0];
   const remainingPicks = result?.results.slice(1) ?? [];
   const ranked = result?.analysis?.rankingVersion === "genre-proxy-v1";
+
+  const renderMatchRecipe = (headingId: string) => (
+    <div className="overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)]">
+      <div className="border-b border-[var(--surface-border)] bg-[radial-gradient(circle_at_100%_0%,rgba(240,100,75,0.16),transparent_13rem)] p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="ui-kicker">Your match recipe</p>
+            <h2
+              id={headingId}
+              className="mt-2 text-2xl font-bold leading-tight text-[var(--ink)]"
+            >
+              How we matched this
+            </h2>
+          </div>
+          <span className="rounded-full border border-[var(--brand-coral)]/35 bg-[var(--brand-coral)]/10 px-2.5 py-1 text-xs font-bold text-[var(--brand-coral-strong)]">
+            {questions.length} signals
+          </span>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+          {ranked
+            ? "Your story and mood choices shape the strongest matches. Pace, format and time help refine the shortlist."
+            : "Your answers guide a broader genre-led shortlist from the available catalogue."}
+        </p>
+      </div>
+
+      <div className="p-3 sm:p-4">
+        <div className="mb-3 flex items-center justify-between gap-3 px-1">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+            Your answers
+          </p>
+          <span className="text-xs text-[var(--ink-muted)]">
+            Select one to edit
+          </span>
+        </div>
+        <ul className="grid min-w-0 grid-cols-1 gap-2">
+          {questions.map((signal, i) => (
+            <li key={signal.id} className="min-w-0">
+              <button
+                onClick={() => {
+                  setCurrent(i);
+                  setStage("quiz");
+                }}
+                aria-label={`Edit ${signal.label}: ${choice(i)?.text ?? "No answer"}`}
+                className={`group flex min-h-12 min-w-0 w-full items-center gap-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-2)]/55 px-3 py-2.5 text-left transition-colors hover:border-[var(--brand-coral)] hover:bg-[var(--surface-2)] ${focusClass}`}
+              >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--surface-0)] text-xs font-bold text-[var(--brand-coral-strong)] ring-1 ring-[var(--surface-border)]">
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-semibold text-[var(--ink-muted)]">
+                    {signal.label}
+                  </span>
+                  <span className="mt-0.5 block truncate text-sm font-semibold text-[var(--ink)]">
+                    {choice(i)?.text}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-[var(--brand-coral-strong)]">
+                  Edit
+                  <ArrowRight
+                    className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                  />
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="border-t border-[var(--surface-border)] px-5 py-4">
+        <p className="text-xs leading-5 text-[var(--ink-muted)]">
+          Ratings only break ties in fit. Results come from a limited TMDB
+          candidate pool, so a score is not a promise that you will like a
+          title.
+        </p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
@@ -410,16 +486,20 @@ export default function MovieQuizPage() {
               <button
                 disabled={answers[current] === null}
                 onClick={() =>
-                  current === questionCount - 1
+                  current === questionCount - 1 || (result && allAnswered)
                     ? void submit()
                     : setCurrent((step) => step + 1)
                 }
                 className={`ui-primary-action min-h-11 disabled:cursor-default disabled:opacity-40 ${focusClass}`}
               >
-                {current === questionCount - 1 ? "Find my matches" : "Continue"}
+                {result && allAnswered
+                  ? "Update matches"
+                  : current === questionCount - 1
+                    ? "Find my matches"
+                    : "Continue"}
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </button>
-              {allAnswered && current !== questionCount - 1 && (
+              {!result && allAnswered && current !== questionCount - 1 && (
                 <button
                   onClick={() => void submit()}
                   className={`min-h-11 text-sm font-semibold text-[var(--brand-coral-strong)] ${focusClass}`}
@@ -439,9 +519,7 @@ export default function MovieQuizPage() {
           >
             <Image
               src={getMoodMascotSrc(
-                stage === "error"
-                  ? "sad"
-                  : choiceByCategory("feeling")?.mood,
+                stage === "error" ? "sad" : choiceByCategory("feeling")?.mood,
               )}
               alt=""
               width={96}
@@ -489,7 +567,7 @@ export default function MovieQuizPage() {
         )}
 
         {stage === "results" && (
-          <section aria-labelledby="quiz-results">
+          <section aria-labelledby="quiz-results" className="mx-auto max-w-6xl">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="ui-kicker">Your viewing shortlist</p>
@@ -497,12 +575,15 @@ export default function MovieQuizPage() {
                   id="quiz-results"
                   ref={headingRef}
                   tabIndex={-1}
-                  className="mt-2 text-3xl font-bold outline-none sm:text-4xl"
+                  className="mt-2 text-balance text-3xl font-bold leading-none outline-none sm:text-4xl"
                 >
+                  Your next watch starts here.
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
                   {choiceByCategory("feeling")?.label} ·{" "}
                   {choiceByCategory("genre")?.label} ·{" "}
                   {choiceByCategory("format")?.label}
-                </h1>
+                </p>
               </div>
               <button
                 onClick={start}
@@ -517,7 +598,15 @@ export default function MovieQuizPage() {
                 we could load.
               </p>
             )}
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <details className="mb-5 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] lg:hidden">
+              <summary
+                className={`cursor-pointer px-4 py-3 text-sm font-semibold text-[var(--ink)] ${focusClass}`}
+              >
+                Your answers · edit your mix
+              </summary>
+              {renderMatchRecipe("match-recipe-mobile-heading")}
+            </details>
+            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
               <div className="min-w-0">
                 {topPick ? (
                   <>
@@ -525,24 +614,29 @@ export default function MovieQuizPage() {
                       onClick={() => setSelectedMovie(topPick)}
                       className={`group flex w-full items-start gap-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 text-left transition-colors hover:border-[var(--brand-coral)] motion-reduce:transition-none sm:gap-6 sm:p-6 ${focusClass}`}
                     >
-                      <Image
-                        src={posterOf(topPick)}
-                        alt=""
-                        width={240}
-                        height={360}
-                        className="aspect-[2/3] w-24 shrink-0 rounded-md object-cover sm:w-36"
-                      />
+                      <span className="relative block aspect-[2/3] w-20 shrink-0 overflow-hidden rounded-md sm:w-32">
+                        <Image
+                          src={posterOf(topPick)}
+                          alt=""
+                          fill
+                          sizes="(max-width: 639px) 80px, 128px"
+                          className="object-cover"
+                        />
+                      </span>
                       <div className="min-w-0">
                         <p className="ui-kicker">
                           {ranked && typeof topPick.matchScore === "number"
                             ? "Top match"
                             : "Start here"}
                         </p>
-                        <h2 className="mt-2 text-xl font-bold leading-tight sm:text-3xl">
+                        <h2
+                          title={titleOf(topPick)}
+                          className="mt-2 line-clamp-3 break-words text-xl font-bold leading-tight sm:text-3xl"
+                        >
                           {titleOf(topPick)}
                         </h2>
                         <Metadata item={topPick} />
-                        <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+                        <p className="mt-3 line-clamp-3 text-sm leading-6 text-[var(--ink-muted)]">
                           {reasonOf(topPick)}
                         </p>
                         <span className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--brand-coral-strong)]">
@@ -566,13 +660,13 @@ export default function MovieQuizPage() {
                               onClick={() => setSelectedMovie(item)}
                               className={`group min-w-0 text-left ${focusClass}`}
                             >
-                              <div className="relative overflow-hidden rounded-md border border-[var(--surface-border)] transition-colors group-hover:border-[var(--brand-coral)] motion-reduce:transition-none">
+                              <div className="relative aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-colors group-hover:border-[var(--brand-coral)] motion-reduce:transition-none">
                                 <Image
                                   src={posterOf(item)}
                                   alt=""
-                                  width={360}
-                                  height={540}
-                                  className="aspect-[2/3] w-full object-cover"
+                                  fill
+                                  sizes="(max-width: 639px) 44vw, (max-width: 1023px) 28vw, 200px"
+                                  className="object-cover"
                                 />
                                 <div className="absolute left-2 top-2">
                                   <RatingBadge
@@ -581,7 +675,7 @@ export default function MovieQuizPage() {
                                   />
                                 </div>
                               </div>
-                              <h3 className="mt-2 line-clamp-2 text-sm font-semibold leading-5">
+                              <h3 className="mt-2 min-h-10 line-clamp-2 break-words text-sm font-semibold leading-5">
                                 {titleOf(item)}
                               </h3>
                               <p className="mt-1 text-xs text-[var(--ink-muted)]">
@@ -593,7 +687,7 @@ export default function MovieQuizPage() {
                                   ""
                                 ).slice(0, 4) || "Date TBA"}
                               </p>
-                              <p className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
+                              <p className="mt-2 line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">
                                 {reasonOf(item)}
                               </p>
                             </button>
@@ -621,84 +715,10 @@ export default function MovieQuizPage() {
                 )}
               </div>
               <aside
-                className="order-first lg:order-last"
+                className="hidden min-w-0 rounded-2xl lg:sticky lg:top-24 lg:block lg:max-h-[calc(100dvh-14rem)] lg:overflow-y-auto lg:overscroll-contain lg:self-start"
                 aria-labelledby="match-recipe-heading"
               >
-                <div className="overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] shadow-xl shadow-black/10 lg:sticky lg:top-24">
-                  <div className="border-b border-[var(--surface-border)] bg-[radial-gradient(circle_at_100%_0%,rgba(240,100,75,0.16),transparent_13rem)] p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="ui-kicker">Your match recipe</p>
-                        <h2
-                          id="match-recipe-heading"
-                          className="mt-2 text-2xl font-bold leading-tight text-[var(--ink)]"
-                        >
-                          How we matched this
-                        </h2>
-                      </div>
-                      <span className="rounded-full border border-[var(--brand-coral)]/35 bg-[var(--brand-coral)]/10 px-2.5 py-1 text-xs font-bold text-[var(--brand-coral-strong)]">
-                        {questions.length} signals
-                      </span>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
-                      {ranked
-                        ? "Your story and mood choices shape the strongest matches. Pace, format and time help refine the shortlist."
-                        : "Your answers guide a broader genre-led shortlist from the available catalogue."}
-                    </p>
-                  </div>
-
-                  <div className="p-3 sm:p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3 px-1">
-                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
-                        Your answers
-                      </p>
-                      <span className="text-xs text-[var(--ink-muted)]">
-                        Select one to edit
-                      </span>
-                    </div>
-                    <ul className="grid gap-2">
-                      {questions.map((signal, i) => (
-                        <li key={signal.id}>
-                          <button
-                            onClick={() => {
-                              setCurrent(i);
-                              setStage("quiz");
-                            }}
-                            aria-label={`Edit ${signal.label}: ${choice(i)?.text ?? "No answer"}`}
-                            className={`group flex min-h-16 w-full items-center gap-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)]/55 px-3 py-2.5 text-left transition-colors hover:border-[var(--brand-coral)] hover:bg-[var(--surface-2)] ${focusClass}`}
-                          >
-                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--surface-0)] text-xs font-bold text-[var(--brand-coral-strong)] ring-1 ring-[var(--surface-border)]">
-                              {i + 1}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-xs font-semibold text-[var(--ink-muted)]">
-                                {signal.label}
-                              </span>
-                              <span className="mt-0.5 block truncate text-sm font-semibold text-[var(--ink)]">
-                                {choice(i)?.text}
-                              </span>
-                            </span>
-                            <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-[var(--brand-coral-strong)]">
-                              Edit
-                              <ArrowRight
-                                className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-                                aria-hidden="true"
-                              />
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="border-t border-[var(--surface-border)] px-5 py-4">
-                    <p className="text-xs leading-5 text-[var(--ink-muted)]">
-                      Ratings only break ties in fit. Results come from a
-                      limited TMDB candidate pool, so a score is not a promise
-                      that you will like a title.
-                    </p>
-                  </div>
-                </div>
+                {renderMatchRecipe("match-recipe-heading")}
               </aside>
             </div>
           </section>
@@ -714,7 +734,7 @@ export default function MovieQuizPage() {
           onClick={(event) => {
             if (event.target === event.currentTarget) setSelectedMovie(null);
           }}
-          className="fixed inset-0 m-auto h-[100dvh] max-h-[100dvh] w-full max-w-none overflow-hidden border-0 bg-[var(--surface-1)] p-0 text-[var(--ink)] backdrop:bg-black/80 sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-lg sm:border sm:border-[var(--surface-border)]"
+          className="fixed inset-0 m-auto h-[100dvh] max-h-[100dvh] w-full max-w-none overflow-hidden border-0 bg-[var(--surface-1)] p-0 text-[var(--ink)] backdrop:bg-black/80 sm:h-[min(42rem,90dvh)] sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-lg sm:border sm:border-[var(--surface-border)]"
         >
           <div className="flex h-full max-h-[100dvh] flex-col sm:max-h-[90dvh]">
             <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--surface-border)] bg-[var(--surface-1)] p-4 pt-[max(1rem,env(safe-area-inset-top))]">
@@ -732,17 +752,19 @@ export default function MovieQuizPage() {
             </div>
             <div className="min-h-0 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
               <div className="flex items-start gap-4">
-                <Image
-                  src={posterOf(selectedMovie)}
-                  alt=""
-                  width={240}
-                  height={360}
-                  className="aspect-[2/3] w-24 shrink-0 rounded-md object-cover sm:w-32"
-                />
+                <span className="relative block aspect-[2/3] w-20 shrink-0 overflow-hidden rounded-md sm:w-28">
+                  <Image
+                    src={posterOf(selectedMovie)}
+                    alt=""
+                    fill
+                    sizes="(max-width: 639px) 80px, 112px"
+                    className="object-cover"
+                  />
+                </span>
                 <div className="min-w-0">
                   <h2
                     id="quiz-movie-title"
-                    className="text-2xl font-bold leading-tight sm:text-3xl"
+                    className="break-words text-2xl font-bold leading-tight sm:text-3xl"
                   >
                     {titleOf(selectedMovie)}
                   </h2>

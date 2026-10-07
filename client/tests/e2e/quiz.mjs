@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const base = process.env.BASE_URL || "http://127.0.0.1:3000";
+const outputDir = process.env.QUIZ_SCREENSHOT_DIR;
+if (outputDir) await mkdir(outputDir, { recursive: true });
 const browser = await chromium.launch({
   headless: true,
   ...(process.env.BROWSER_CHANNEL
@@ -23,9 +26,10 @@ const fixture = {
 };
 
 try {
-  for (const width of [320, 375, 768, 1440]) {
+  for (const width of [320, 375, 768, 1024, 1280, 1440]) {
+    const height = width >= 1024 ? 720 : 844;
     const context = await browser.newContext({
-      viewport: { width, height: 900 },
+      viewport: { width, height },
     });
     const page = await context.newPage();
     const errors = [];
@@ -114,13 +118,31 @@ try {
     const top = page.getByRole("button", { name: /Top match Quiz fixture 1/ });
     const topBox = await top.boundingBox();
     assert.ok(
-      topBox && topBox.y >= 0 && topBox.y < 900,
+      topBox && topBox.y >= 0 && topBox.y + topBox.height <= height,
       "Top recommendation is in the first viewport",
     );
+    if (outputDir)
+      await page.screenshot({ path: `${outputDir}/results-${width}.png` });
     await top.scrollIntoViewIfNeeded();
     const trigger = await top.elementHandle();
     await top.click();
     await page.getByRole("dialog").waitFor();
+    const dialogBox = await page.getByRole("dialog").boundingBox();
+    assert.ok(
+      dialogBox && dialogBox.width <= width && dialogBox.height <= height,
+      "Details dialog fits the viewport",
+    );
+    const dialogScroller = page
+      .getByRole("dialog")
+      .locator('[class*="overflow-y-auto"]');
+    await dialogScroller.evaluate((element) =>
+      element.scrollTo(0, element.scrollHeight),
+    );
+    assert.ok(
+      await page.getByRole("link", { name: "Open full details" }).isVisible(),
+    );
+    if (outputDir)
+      await page.screenshot({ path: `${outputDir}/details-${width}.png` });
     assert.equal(
       await page.evaluate(() => document.body.style.overflow),
       "hidden",
@@ -134,6 +156,23 @@ try {
     assert.notEqual(
       await page.evaluate(() => document.body.style.overflow),
       "hidden",
+    );
+    if (width < 1024)
+      await page
+        .getByText("Your answers · edit your mix", { exact: true })
+        .click();
+    const answerPanel = page.locator(width < 1024 ? "details" : "aside");
+    const answerBounds = await answerPanel.boundingBox();
+    const editButtons = await answerPanel
+      .getByRole("button", { name: /^Edit / })
+      .evaluateAll((buttons) =>
+        buttons.map((button) => button.getBoundingClientRect().right),
+      );
+    assert.ok(
+      editButtons.every(
+        (right) => right <= answerBounds.x + answerBounds.width + 1,
+      ),
+      "Answer controls fit inside the panel",
     );
     await page
       .getByRole("heading", { name: "How we matched this", exact: true })
