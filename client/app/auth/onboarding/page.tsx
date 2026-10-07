@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { handleAppError } from "@/lib/errors";
 import { appToast, TOAST_IDS } from "@/lib/toast";
 import MoodiesIntro from "@/components/sections/MoodiesIntro";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
@@ -56,117 +57,26 @@ const LANGUAGE_OPTIONS = [
 const STEPS = ["age", "genres", "languages"] as const;
 type Step = (typeof STEPS)[number];
 
-// ── Shared chip ──────────────────────────────────────────────
-interface ChipProps {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}
-
-function Chip({ label, active, onClick }: ChipProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-150 whitespace-nowrap select-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-[rgb(233,79,55)]/35",
-        active
-          ? "border-[rgb(233,79,55)] bg-[rgb(233,79,55)] text-white shadow-[0_8px_22px_rgba(233,79,55,0.24)]"
-          : "border-white/10 bg-white/[0.045] text-white/56 hover:border-white/20 hover:bg-white/[0.08] hover:text-white/88",
-      ].join(" ")}
-    >
-      {label}
-    </button>
-  );
-}
-
-// ── Section label ─────────────────────────────────────────────
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mb-3 text-[0.66rem] font-bold uppercase tracking-[0.16em] text-white/36">
-      {children}
-    </p>
-  );
-}
-
-// ── Submit button ─────────────────────────────────────────────
-interface SubmitButtonProps {
-  disabled: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  className?: string;
-}
-
-function SubmitButton({
-  disabled,
-  onClick,
-  children,
-  className = "",
-}: SubmitButtonProps) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={[
-        "h-11 rounded-xl px-6 text-sm font-bold text-white transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-[rgb(233,79,55)]/20",
-        "font-['Bebas_Neue'] tracking-widest",
-        disabled
-          ? "bg-white/[0.07] text-white/20 cursor-not-allowed shadow-none"
-          : "bg-[rgb(233,79,55)] hover:bg-[rgb(215,65,42)] shadow-[0_4px_20px_rgba(233,79,55,0.35)] hover:shadow-[0_8px_24px_rgba(233,79,55,0.4)] hover:scale-[1.01] active:scale-[0.99] cursor-pointer",
-        className,
-      ].join(" ")}
-    >
-      {children}
-    </button>
-  );
-}
-
-// ── Age range slider ──────────────────────────────────────────
-interface AgeSliderProps {
-  value: number;
-  onChange: (v: number) => void;
-}
-
-function AgeSlider({ value, onChange }: AgeSliderProps) {
-  return (
-    <div className="w-full">
-      <input
-        type="range"
-        min={1}
-        max={100}
-        step={1}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="ob-range w-full"
-      />
-      <div className="mt-2 flex justify-between text-[0.62rem] text-white/25">
-        {["1", "25", "50", "75", "100"].map((v) => (
-          <span key={v}>{v}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Main component ────────────────────────────────────────────
 export default function OnboardingPage() {
-  const [age, setAge] = useState<number>(18);
+  const [age, setAge] = useState("");
+  const numericAge = Number(age);
+  const validAge = age !== "" && Number.isInteger(numericAge) && numericAge >= 1 && numericAge <= 100;
   const [genres, setGenres] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [mobileStep, setMobileStep] = useState<Step>("age");
+  const [step, setStep] = useState<Step>("age");
 
   const toggle = (list: string[], set: (v: string[]) => void, v: string) =>
     list.includes(v) ? set(list.filter((x) => x !== v)) : set([...list, v]);
 
   const canSubmit = useMemo(
-    () => age >= 1 && age <= 100 && genres.length > 0 && languages.length > 0,
-    [age, genres.length, languages.length],
+    () => validAge && genres.length > 0 && languages.length > 0,
+    [validAge, genres.length, languages.length],
   );
 
   const handleSubmit = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || !canSubmit) return;
     setIsSubmitting(true);
     // Credentials are no longer staged in browser storage. Remove any value
     // left by an older client before continuing with the authenticated session.
@@ -212,7 +122,7 @@ export default function OnboardingPage() {
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
-            age,
+            age: numericAge,
             preferredGenres: genres,
             preferredLanguages: languages,
           }),
@@ -238,7 +148,7 @@ export default function OnboardingPage() {
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
-            age,
+            age: numericAge,
             preferredGenres: genres,
             preferredLanguages: languages,
           }),
@@ -275,387 +185,99 @@ export default function OnboardingPage() {
     }
   };
 
-  const mobileStepIndex = STEPS.indexOf(mobileStep);
-  const canAdvanceMobile =
-    mobileStep === "age"
-      ? age >= 1 && age <= 100
-      : mobileStep === "genres"
+  const stepIndex = STEPS.indexOf(step);
+  const canAdvance =
+    step === "age"
+      ? validAge
+      : step === "genres"
         ? genres.length > 0
         : languages.length > 0;
 
-  const canFinish = canSubmit;
-  const processingLabel = isSubmitting;
-
+  const titles = { age: "How old are you?", genres: "What do you love to watch?", languages: "Which languages do you prefer?" };
+  const notes = { age: "Help us match content ratings to you.", genres: "Pick at least one. Browse all the options.", languages: "Choose at least one language for your picks." };
   return (
     <>
-      {/* Range slider global style — minimal, can't do pseudo-elements in Tailwind */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
-        .ob-range {
-          appearance: none; -webkit-appearance: none;
-          height: 8px; border-radius: 9999px;
-          background: linear-gradient(90deg, rgba(233,79,55,0.65), rgba(233,79,55,0.18));
-          outline: none; cursor: pointer;
-          border: 1px solid rgba(255,255,255,0.08);
-        }
-        .ob-range::-webkit-slider-thumb {
-          appearance: none; width: 22px; height: 22px;
-          border-radius: 50%; background: rgb(233,79,55);
-          border: 3px solid rgba(255,255,255,0.88);
-          box-shadow: 0 0 0 4px rgba(233,79,55,0.22), 0 8px 24px rgba(0,0,0,0.35);
-          transition: transform 0.15s;
-        }
-        .ob-range::-webkit-slider-thumb:hover { transform: scale(1.15); }
-        .ob-range::-moz-range-thumb {
-          width: 22px; height: 22px; border-radius: 50%;
-          background: rgb(233,79,55); border: 3px solid rgba(255,255,255,0.88);
-          box-shadow: 0 0 0 4px rgba(233,79,55,0.22), 0 8px 24px rgba(0,0,0,0.35);
-        }
-        .ob-scroll::-webkit-scrollbar { width: 4px; }
-        .ob-scroll::-webkit-scrollbar-track { background: transparent; }
-        .ob-scroll::-webkit-scrollbar-thumb { background: rgba(233,79,55,0.38); border-radius: 99px; }
-        .ob-fadein { animation: obFadeUp 0.45s cubic-bezier(0.16,1,0.3,1) both; }
-        @keyframes obFadeUp {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .ob-stepin { animation: obStepIn 0.27s cubic-bezier(0.16,1,0.3,1) both; }
-        @keyframes obStepIn {
-          from { opacity: 0; transform: translateX(18px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
+        @media (max-width: 767px) { .ob-onboarding:has(input:focus) .ob-welcome { display: none; } }
+        @media (max-height: 560px) { .ob-onboarding .ob-welcome { display: none; } }
       `}</style>
-
-      {/* ═══════════════════════════════════════════════
-          DESKTOP (≥ 768px) — horizontal 3-column card
-      ═══════════════════════════════════════════════ */}
-      <div className="ob-fadein hidden w-full max-w-[920px] flex-col mx-auto font-['DM_Sans'] md:flex">
-        {/* Header */}
-        <div className="mb-5 lg:mb-6">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-start gap-x-5 gap-y-3 sm:flex-nowrap">
-            <h1 className="font-['Bebas_Neue'] text-[2.2rem] leading-none tracking-[0.03em] text-[rgb(233,79,55)] lg:text-[2.45rem]">
-              Set up your profile
-            </h1>
-            </div>
-            <div className="mt-2.5 mb-2 h-0.5 w-12 rounded-full bg-[rgb(233,79,55)] shadow-[0_0_20px_rgba(233,79,55,0.55)]" />
-            <p className="text-sm leading-5 text-white/52">
-              Personalize your experience. Change it anytime in Settings.
-            </p>
+      <div className="ob-onboarding flex h-full min-h-0 flex-col bg-[var(--surface-0)] text-[var(--ink)]">
+        <header className="flex shrink-0 items-center justify-between gap-4 px-4 pb-3 pt-4 sm:px-6 sm:pt-5">
+          <span data-display className="text-xl font-bold">Moodies<span className="text-[var(--brand-coral-strong)]">.</span></span>
+          <div role="group" aria-label={`Step ${stepIndex + 1} of 3`} className="flex gap-1.5">
+            {STEPS.map((s, i) => <span key={s} aria-hidden="true" className={`h-1 w-6 rounded-full ${i <= stepIndex ? "bg-[var(--brand-coral)]" : "bg-[var(--surface-border)]"}`} />)}
           </div>
-        </div>
-
-        {/* 3-column card */}
-        <div className="mb-5">
-          <MoodiesIntro variant="onboarding" headingId="onboarding-intro-desktop-heading" />
-        </div>
-        <div
-          className="overflow-hidden rounded-3xl border border-white/12 border-t-white/18 shadow-[0_24px_80px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.06)]"
-          style={{
-            height: "min(470px, calc(100dvh - 200px))",
-            backgroundImage:
-              "radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), radial-gradient(circle at 20% 0%, rgba(233,79,55,0.13), transparent 38%), linear-gradient(rgba(12,12,12,0.94), rgba(12,12,12,0.94))",
-            backgroundSize: "20px 20px, 100% 100%, 100% 100%",
-          }}
-        >
-          <div className="grid h-[calc(100%-76px)] min-h-0 grid-cols-3">
-            {/* Col 1 — Age */}
-            <div className="flex flex-col border-r border-white/[0.07] p-5 lg:p-6">
-              <SectionLabel>Your Age</SectionLabel>
-              <div className="mb-5">
-                <div className="font-['Bebas_Neue'] text-[4.6rem] leading-none tracking-[0.04em] text-[rgb(233,79,55)] lg:text-[5.2rem]">
-                  {age}
-                </div>
-                <div className="mt-1 text-[0.66rem] uppercase tracking-[0.16em] text-white/32">
-                  years old
-                </div>
-              </div>
-              <div className="mt-auto">
-                <AgeSlider value={age} onChange={setAge} />
-              </div>
-            </div>
-
-            {/* Col 2 — Genres */}
-            <div className="flex min-h-0 flex-col border-r border-white/[0.07] p-5 lg:p-6">
-              <div className="flex items-center justify-between mb-3">
-                <SectionLabel>Preferred Genres</SectionLabel>
-                {genres.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setGenres([])}
-                    className="bg-transparent p-0 text-[0.72rem] font-medium text-amber-300 transition-colors hover:text-amber-200"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              <div className="ob-scroll flex flex-1 flex-wrap content-start gap-1.5 overflow-y-auto pr-1">
-                {GENRE_OPTIONS.map((g) => (
-                  <Chip
-                    key={g}
-                    label={g}
-                    active={genres.includes(g)}
-                    onClick={() => toggle(genres, setGenres, g)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Col 3 — Languages */}
-            <div className="flex min-h-0 flex-col p-5 lg:p-6">
-              <div className="flex items-center justify-between mb-3">
-                <SectionLabel>Preferred Languages</SectionLabel>
-                {languages.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setLanguages([])}
-                    className="bg-transparent p-0 text-[0.72rem] font-medium text-amber-300 transition-colors hover:text-amber-200"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              <div className="ob-scroll flex flex-1 flex-wrap content-start gap-1.5 overflow-y-auto pr-1">
-                {LANGUAGE_OPTIONS.map((l) => (
-                  <Chip
-                    key={l}
-                    label={l}
-                    active={languages.includes(l)}
-                    onClick={() => toggle(languages, setLanguages, l)}
-                  />
-                ))}
-              </div>
-            </div>
+        </header>
+        <div className="flex min-h-0 flex-1 flex-col px-4 pb-2 sm:px-6">
+          {step === "age" && <div className="ob-welcome mb-3 shrink-0"><MoodiesIntro variant="onboarding" headingId="onboarding-intro-heading" /></div>}
+          <div className="mb-3 shrink-0">
+            <p className="ui-kicker">Step {stepIndex + 1} of 3</p>
+            <h1 id="onboarding-step-heading" className="mt-2 text-3xl font-bold leading-none">{titles[step]}</h1>
+            {step !== "age" && <p className="mt-2 text-sm leading-5 text-[var(--ink-muted)]">{notes[step]}</p>}
           </div>
-
-          {/* Card footer */}
-          <div className="flex items-center justify-between gap-4 border-t border-white/[0.08] px-5 py-4 lg:px-6">
-            <div className="flex gap-6 text-[0.78rem] text-white/42">
-              <span>
-                <strong className="text-[rgb(233,79,55)] font-bold">
-                  {genres.length}
-                </strong>{" "}
-                genre{genres.length !== 1 ? "s" : ""} selected
-              </span>
-              <span>
-                <strong className="text-[rgb(233,79,55)] font-bold">
-                  {languages.length}
-                </strong>{" "}
-                language{languages.length !== 1 ? "s" : ""} selected
-              </span>
-            </div>
-            <SubmitButton
-              disabled={!canFinish || isSubmitting}
-              onClick={handleSubmit}
-              className="min-w-[180px] text-center"
-            >
-              {processingLabel ? "Processing..." : "Save & Enter Moodies"}
-            </SubmitButton>
-          </div>
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════════════════════
-          MOBILE (< 768px) — 3-step vertical wizard
-      ═══════════════════════════════════════════════ */}
-      <div
-        className="ob-fadein relative flex h-full min-h-0 flex-col bg-[#090909] font-['DM_Sans'] md:hidden"
-        style={{
-          backgroundImage:
-            "radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), radial-gradient(circle at 50% 0%, rgba(233,79,55,0.16), transparent 42%)",
-          backgroundSize: "24px 24px, 100% 100%",
-        }}
-      >
-        {/* Top red accent line */}
-        <div className="absolute left-0 right-0 top-0 z-50 h-0.5 bg-[rgb(233,79,55)] opacity-80" />
-
-        {/* Top bar */}
-        <div className="flex flex-shrink-0 items-center justify-between px-5 pt-5">
-          <div className="flex items-center gap-2 font-['Bebas_Neue'] text-xl tracking-[0.22em] text-white">
-            <div className="h-2 w-2 rounded-full bg-[rgb(233,79,55)] shadow-[0_0_16px_rgba(233,79,55,0.65)]" />
-            Moodies
-          </div>
-          <div className="flex gap-1.5">
-            {STEPS.map((s, i) => (
-              <div
-                key={s}
-                className={[
-                  "h-1 rounded-full transition-all duration-300",
-                  i < mobileStepIndex
-                    ? "w-7 bg-[rgba(233,79,55,0.42)]"
-                    : i === mobileStepIndex
-                      ? "w-10 bg-[rgb(233,79,55)] shadow-[0_0_14px_rgba(233,79,55,0.35)]"
-                      : "w-7 bg-white/10",
-                ].join(" ")}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Step content */}
-        <div className="ob-scroll flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-4 pt-7">
-          {mobileStep === "age" && (
-            <div className="mb-6 shrink-0">
-              <MoodiesIntro variant="onboarding" headingId="onboarding-intro-mobile-heading" />
-            </div>
-          )}
-          {/* Step 1 — Age */}
-          {mobileStep === "age" && (
-            <div className="ob-stepin flex flex-1 flex-col">
-              <p className="mb-2 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-[rgb(233,79,55)]">
-                Step 1 of 3
-              </p>
-              <h2 className="mb-2 font-['Bebas_Neue'] text-[2.35rem] leading-none tracking-[0.02em] text-white">
-                How old
-                <br />
-                are you?
-              </h2>
-              <p className="mb-7 text-sm leading-5 text-white/48">
-                Helps us match content ratings to you.
-              </p>
-              <div className="rounded-3xl border border-white/10 bg-white/[0.04] py-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                <div className="font-['Bebas_Neue'] text-[6.4rem] leading-none tracking-[0.04em] text-[rgb(233,79,55)]">
-                  {age}
-                </div>
-                <div className="mt-1 text-[0.68rem] uppercase tracking-[0.16em] text-white/32">
-                  years old
-                </div>
-              </div>
-              <div className="mt-auto pt-7">
-                <AgeSlider value={age} onChange={setAge} />
-              </div>
-            </div>
-          )}
-
-          {/* Step 2 — Genres */}
-          {mobileStep === "genres" && (
-            <div className="ob-stepin flex flex-1 flex-col">
-              <p className="mb-2 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-[rgb(233,79,55)]">
-                Step 2 of 3
-              </p>
-              <h2 className="mb-2 font-['Bebas_Neue'] text-[2.35rem] leading-none tracking-[0.02em] text-white">
-                What do
-                <br />
-                you watch?
-              </h2>
-              <p className="mb-4 text-sm leading-5 text-white/48">
-                Pick as many genres as you like.
-              </p>
-              <div className="mb-3 flex items-center gap-2 text-[0.75rem] text-white/42">
-                <strong className="text-[rgb(233,79,55)] font-bold">
-                  {genres.length}
-                </strong>{" "}
-                selected
-                {genres.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setGenres([])}
-                    className="bg-transparent p-0 text-[0.72rem] font-medium text-amber-300 transition-colors hover:text-amber-200"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2 pb-2">
-                {GENRE_OPTIONS.map((g) => (
-                  <Chip
-                    key={g}
-                    label={g}
-                    active={genres.includes(g)}
-                    onClick={() => toggle(genres, setGenres, g)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Step 3 — Languages */}
-          {mobileStep === "languages" && (
-            <div className="ob-stepin flex flex-1 flex-col">
-              <p className="mb-2 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-[rgb(233,79,55)]">
-                Step 3 of 3
-              </p>
-              <h2 className="mb-2 font-['Bebas_Neue'] text-[2.35rem] leading-none tracking-[0.02em] text-white">
-                Preferred
-                <br />
-                languages?
-              </h2>
-              <p className="mb-4 text-sm leading-5 text-white/48">
-                We will prioritize content in these languages.
-              </p>
-              <div className="mb-3 flex items-center gap-2 text-[0.75rem] text-white/42">
-                <strong className="text-[rgb(233,79,55)] font-bold">
-                  {languages.length}
-                </strong>{" "}
-                selected
-                {languages.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setLanguages([])}
-                    className="bg-transparent p-0 text-[0.72rem] font-medium text-amber-300 transition-colors hover:text-amber-200"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2 pb-2">
-                {LANGUAGE_OPTIONS.map((l) => (
-                  <Chip
-                    key={l}
-                    label={l}
-                    active={languages.includes(l)}
-                    onClick={() => toggle(languages, setLanguages, l)}
-                  />
-                ))}
-              </div>
-            </div>
+          {step === "age" ? <AgeInput value={age} onChange={setAge} id="onboarding-age" /> : (
+            <PreferencePicker key={step} options={step === "genres" ? GENRE_OPTIONS : LANGUAGE_OPTIONS}
+              selected={step === "genres" ? genres : languages} kind={step === "genres" ? "genre" : "language"}
+              onToggle={(v) => step === "genres" ? toggle(genres, setGenres, v) : toggle(languages, setLanguages, v)}
+              onClear={() => step === "genres" ? setGenres([]) : setLanguages([])} />
           )}
         </div>
-
-        {/* Footer nav */}
-        <div className="flex-shrink-0 border-t border-white/10 bg-black/28 px-5 pb-5 pt-3 backdrop-blur">
-          <div className="flex gap-2.5">
-            {mobileStepIndex > 0 && (
-              <button
-                type="button"
-                onClick={() => setMobileStep(STEPS[mobileStepIndex - 1])}
-                className="h-11 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-sm font-semibold text-white/48 transition-all hover:border-white/22 hover:text-white/78"
-              >
-                Back
-              </button>
-            )}
-            {mobileStep !== "languages" ? (
-              <button
-                type="button"
-                disabled={!canAdvanceMobile}
-                onClick={() => setMobileStep(STEPS[mobileStepIndex + 1])}
-                className={[
-                  "h-11 flex-1 rounded-xl font-['Bebas_Neue'] text-[0.95rem] tracking-widest transition-all",
-                  canAdvanceMobile
-                    ? "bg-[rgb(233,79,55)] text-white shadow-[0_4px_16px_rgba(233,79,55,0.28)] hover:bg-[rgb(215,65,42)] active:scale-[0.98] cursor-pointer"
-                    : "bg-white/[0.07] text-white/20 cursor-not-allowed",
-                ].join(" ")}
-              >
-                Continue
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={!canFinish || isSubmitting}
-                onClick={handleSubmit}
-                className={[
-                  "h-11 flex-1 rounded-xl font-['Bebas_Neue'] text-[0.95rem] tracking-widest transition-all",
-                  canFinish && !isSubmitting
-                    ? "bg-[rgb(233,79,55)] text-white shadow-[0_4px_16px_rgba(233,79,55,0.28)] hover:bg-[rgb(215,65,42)] active:scale-[0.98] cursor-pointer"
-                    : "bg-white/[0.07] text-white/20 cursor-not-allowed",
-                ].join(" ")}
-              >
-                {processingLabel ? "Processing..." : "Finish Setup"}
-              </button>
-            )}
+        <footer className="shrink-0 border-t border-[var(--surface-border)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:px-6">
+          <div className="flex gap-3">
+            {stepIndex > 0 && <button type="button" disabled={isSubmitting} onClick={() => setStep(STEPS[stepIndex - 1])} className="ui-secondary-action min-h-11">Back</button>}
+            <button type="button" disabled={!(step === "languages" ? canSubmit : canAdvance) || isSubmitting}
+              onClick={() => step === "languages" ? void handleSubmit() : setStep(STEPS[stepIndex + 1])}
+              className="ui-primary-action min-h-11 flex-1 disabled:cursor-not-allowed disabled:opacity-40">
+              {isSubmitting ? "Saving…" : step === "languages" ? "Finish Setup" : "Continue"}
+            </button>
           </div>
-        </div>
+        </footer>
       </div>
     </>
+  );
+}
+
+function AgeInput({ value, onChange, id }: { value: string; onChange: (value: string) => void; id: string }) {
+  const invalid = value !== "" && (Number(value) < 1 || Number(value) > 100);
+  return (
+    <div>
+      <label htmlFor={id} className="mb-2 block text-sm font-semibold text-[var(--ink)]">Your age</label>
+      <div className="relative">
+        <input id={id} type="text" inputMode="numeric" pattern="[0-9]*" maxLength={3} placeholder="-" value={value}
+          onChange={(e) => { if (/^\d{0,3}$/.test(e.target.value)) onChange(e.target.value); }}
+          aria-invalid={invalid} aria-describedby={`${id}-hint`}
+          className="h-16 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--surface-0)] px-4 pr-20 text-3xl font-semibold tabular-nums text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]" />
+        <span aria-hidden="true" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-[var(--ink-muted)]">years</span>
+      </div>
+      <p id={`${id}-hint`} className={`mt-2 text-xs leading-5 ${invalid ? "text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"}`}>{invalid ? "Enter an age from 1 to 100." : "Enter your age, from 1 to 100."}</p>
+    </div>
+  );
+}
+
+function PreferencePicker({ options, selected, onToggle, onClear, kind }: {
+  options: readonly string[]; selected: string[]; onToggle: (v: string) => void; onClear: () => void; kind: "genre" | "language";
+}) {
+  const [page, setPage] = useState(0);
+  const shortViewport = useMediaQuery("(max-height: 520px)");
+  const pageSize = shortViewport ? 3 : 9;
+  const pageCount = Math.ceil(options.length / pageSize);
+  const currentPage = Math.min(page, pageCount - 1);
+  const visible = options.slice(currentPage * pageSize, currentPage * pageSize + pageSize);
+  return (
+    <div className="min-w-0">
+      <div className="mb-2 flex min-h-8 items-center justify-between text-xs text-[var(--ink-muted)]">
+        <p aria-live="polite">{selected.length} selected</p>
+        <button type="button" onClick={onClear} disabled={!selected.length} className="min-h-8 px-2 font-semibold text-[var(--brand-coral-strong)] disabled:opacity-40">Clear</button>
+      </div>
+      <div role="group" aria-label={`Preferred ${kind}s`} className="grid auto-rows-fr grid-cols-3 gap-2">
+        {visible.map((option) => <button key={option} type="button" aria-pressed={selected.includes(option)} onClick={() => onToggle(option)}
+          className={`min-h-11 rounded-md border px-2 py-2 text-xs font-semibold leading-4 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] motion-reduce:transition-none ${selected.includes(option) ? "border-[var(--brand-coral)] bg-[var(--brand-coral)]/15 text-[var(--ink)]" : "border-[var(--surface-border)] bg-[var(--surface-1)] text-[var(--ink-muted)] hover:border-[var(--ink-muted)] hover:text-[var(--ink)]"}`}>{option}</button>)}
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <button type="button" aria-label={`Previous ${kind} options`} disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)} className="min-h-11 text-sm font-semibold text-[var(--ink)] disabled:opacity-30">Previous</button>
+        <span className="text-xs text-[var(--ink-muted)]" aria-live="polite">{currentPage + 1} / {pageCount}</span>
+        <button type="button" aria-label={`More ${kind} options`} disabled={currentPage === pageCount - 1} onClick={() => setPage(currentPage + 1)} className="min-h-11 text-sm font-semibold text-[var(--ink)] disabled:opacity-30">More options</button>
+      </div>
+    </div>
   );
 }

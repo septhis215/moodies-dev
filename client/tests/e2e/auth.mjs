@@ -109,6 +109,8 @@ try {
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("link", { name: "Set up my preferences" }).click();
   await page.waitForURL("**/auth/onboarding");
+  assert.equal(await page.getByLabel("Your age", { exact: true }).filter({ visible: true }).inputValue(), "");
+  await page.getByLabel("Your age", { exact: true }).filter({ visible: true }).fill("18");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByRole("button", { name: "Comedy", exact: true }).click();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
