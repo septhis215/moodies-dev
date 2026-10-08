@@ -51,6 +51,7 @@ export default function SearchBarWithSuggestions({
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const fieldRef = useRef<HTMLFormElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const suggestionsRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -251,18 +252,18 @@ export default function SearchBarWithSuggestions({
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   const updatePosition = useCallback(() => {
-    const el = inputRef.current ?? wrapperRef.current;
+    const el = fieldRef.current;
     if (!el || typeof window === "undefined") {
       setAnchorRect(null);
       return;
     }
     const r = el.getBoundingClientRect();
     setAnchorRect(r);
-  }, [inputRef, wrapperRef]);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const target = inputRef.current ?? wrapperRef.current;
+    const target = fieldRef.current;
     if (!target) return;
 
     resizeObserverRef.current?.disconnect();
@@ -411,12 +412,12 @@ export default function SearchBarWithSuggestions({
   };
 
   const portalRender = (() => {
-    if (!showSuggestions || typeof document === "undefined" || !anchorRect) return null;
+    if (!showSuggestions || typeof document === "undefined" || !anchorRect || anchorRect.width <= 0) return null;
 
     const padding = 8;
     const inputRect = anchorRect;
     const desiredWidth = Math.min(
-      Math.max(inputRect.width || targetWidth || 300, 260),
+      inputRect.width,
       window.innerWidth - padding * 2
     );
 
@@ -726,7 +727,7 @@ export default function SearchBarWithSuggestions({
                 setOpen(!open);
               }
             }}
-            className="ml-2 min-h-11 min-w-11 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 py-2 text-[var(--ink)] hover:bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-coral-strong)] transition-colors z-10"
+            className="ml-2 min-h-11 min-w-11 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--brand-coral-strong)] transition-colors z-10"
           >
             {open && !resolvedIsMobile ? <IconX size={20} /> : <IconSearch size={20} />}
           </button>
@@ -738,7 +739,7 @@ export default function SearchBarWithSuggestions({
             transition={{ type: "spring", stiffness: 220, damping: 28 }}
             className="overflow-hidden"
           >
-            <form role="search" aria-label="Search Moodies" className={styles.form} onSubmit={(event) => { event.preventDefault(); handleSearch(value, searchMode); }}>
+            <form ref={fieldRef} role="search" aria-label="Search Moodies" className={styles.form} onSubmit={(event) => { event.preventDefault(); handleSearch(value, searchMode); }}>
             <div className={styles.inputWrap}>
             <input
               ref={inputRef}
@@ -759,7 +760,7 @@ export default function SearchBarWithSuggestions({
             />
             {value && <button type="button" aria-label="Clear search" tabIndex={open && !resolvedIsMobile ? 0 : -1} className={styles.clear} onClick={() => { setValue(''); inputRef.current?.focus(); }}><IconX size={16} /></button>}
             </div>
-            <button type="submit" className={styles.submit} disabled={!value.trim()} tabIndex={open && !resolvedIsMobile ? 0 : -1}><IconSearch size={18} aria-hidden="true" />Search</button>
+            <button type="submit" aria-label="Search" title="Search" className={styles.submit} disabled={!value.trim()} tabIndex={open && !resolvedIsMobile ? 0 : -1}><IconSearch size={18} aria-hidden="true" /></button>
             </form>
           </motion.div>
         </div>
@@ -828,7 +829,7 @@ export default function SearchBarWithSuggestions({
                   />
                   {mobileValue && <button type="button" aria-label="Clear search" className={styles.clear} onClick={() => { setMobileValue(''); mobileInputRef.current?.focus(); }}><IconX size={16} /></button>}
                   </div>
-                  <button type="submit" className={styles.submit} disabled={!mobileValue.trim()}><IconSearch size={18} aria-hidden="true" />Search</button>
+                  <button type="submit" aria-label="Search" title="Search" className={styles.submit} disabled={!mobileValue.trim()}><IconSearch size={18} aria-hidden="true" /></button>
                 </form>
 
                 {/* Results / Trending */}
