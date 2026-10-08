@@ -8,7 +8,6 @@
   scroll-padding-inline: 0.25rem;
   /* Keep focus outlines inside the scroll area. */
   padding: 0.25rem;
-  border-bottom: 1px solid var(--surface-border);
 }
 .choice {
   flex: 1 0 auto;
@@ -30,6 +29,13 @@
 .sceneShade {
   /* Keep the copy shaded while letting the trailer shine through on the right. */
   background: linear-gradient(90deg, rgb(11 9 9 / 92%) 0%, rgb(11 9 9 / 78%) 26%, rgb(11 9 9 / 24%) 53%, rgb(11 9 9 / 12%) 100%);
+}
+@media (min-width: 1024px) {
+  .sceneShade {
+    background:
+      linear-gradient(rgb(11 9 9 / 22%), rgb(11 9 9 / 22%)),
+      linear-gradient(90deg, rgb(11 9 9 / 92%) 0%, rgb(11 9 9 / 78%) 26%, rgb(11 9 9 / 24%) 53%, rgb(11 9 9 / 12%) 100%);
+  }
 }
 .sceneEdges {
   background: linear-gradient(180deg, var(--surface-0) 0%, transparent 20%, transparent 78%, var(--surface-0) 100%);
@@ -93,20 +99,35 @@
 }
 
 @media (max-width: 639px) {
+  .sceneMedia {
+    /* Blur artwork and video together; keep copy, controls and fades sharp. */
+    filter: blur(14px);
+    transform: scale(1.1);
+  }
   .sceneShade {
-    background: linear-gradient(180deg, rgb(11 9 9 / 78%) 0%, rgb(11 9 9 / 42%) 38%, rgb(11 9 9 / 18%) 64%, rgb(11 9 9 / 28%) 100%);
+    background: rgb(11 9 9 / 55%);
+  }
+  .nowShowing {
+    margin-top: 0.5rem;
+    padding-left: 0.75rem;
+  }
+  .credit {
+    font-size: 1rem;
   }
   .pick {
-    flex-direction: column;
-    min-height: 11rem;
+    flex-direction: row;
+    min-height: 5.5rem;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.75rem;
+    padding: 0.5rem;
   }
-  .posterWrap { width: 3.5rem; height: 5.25rem; }
+  .posterWrap { width: 2rem; height: 3rem; }
   .poster { width: 100%; height: 100%; }
-  .pickCopy { width: 100%; }
-  .pickSkeleton { height: 11rem; }
+  .pickCopy { flex: 1; }
+  .pickTitle { font-size: 0.75rem; line-height: 1rem; }
+  .previewLabel { display: none; }
+  .detailsLink { padding-inline: 0.5rem; }
+  .pickSkeleton { height: 8.375rem; }
 }
 @media (min-width: 640px) {
   .choices { gap: 1rem; }

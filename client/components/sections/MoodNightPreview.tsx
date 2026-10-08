@@ -81,20 +81,22 @@ export default function MoodNightPreview() {
   }, [nearby, selection, retryAttempt]);
 
   const focus = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]";
-  return <section ref={sectionRef} id="your-moods" className="relative isolate scroll-mt-24 overflow-clip border-b border-[var(--surface-border)] bg-[var(--surface-0)]" aria-labelledby="mood-shelf-heading">
+  return <section ref={sectionRef} id="your-moods" className="relative isolate scroll-mt-24 overflow-clip bg-[var(--surface-0)]" aria-labelledby="mood-shelf-heading">
     <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+      <div className={`${styles.sceneMedia} absolute inset-0`}>
       {backdrop && <Image key={backdrop} src={tmdbImage(backdrop, "w1280")} alt="" fill sizes="100vw" className={`${styles.backdrop} object-cover`} />}
       {activeTrailer && motionAllowed && visible && pageVisible && !paused && <MoodTrailerBackdrop key={activeTrailer.key} videoKey={activeTrailer.key} onPlaying={onPlaying} />}
+      </div>
       <div className={`${styles.sceneShade} absolute inset-0`} />
       <div className="absolute inset-0" style={{ background: `linear-gradient(105deg, transparent 35%, ${mood.color}08 100%)` }} />
       <div className={`${styles.sceneEdges} absolute inset-0`} />
     </div>
-    <div className={`${styles.content} ui-shell relative grid items-center gap-6 py-12 sm:py-16 lg:min-h-[34rem] lg:grid-cols-[minmax(15rem,0.72fr)_minmax(0,1.28fr)] lg:gap-12 lg:py-20`}>
+    <div className={`${styles.content} ui-shell relative grid items-center gap-4 py-7 sm:gap-6 sm:py-16 lg:min-h-[34rem] lg:grid-cols-[minmax(15rem,0.72fr)_minmax(0,1.28fr)] lg:gap-12 lg:py-20`}>
       <div className="min-w-0">
         <p className="ui-kicker">Choose by mood</p>
         <h2 id="mood-shelf-heading" className="mt-3 max-w-lg text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">What kind of night is this?</h2>
         <p className="mt-3 max-w-md text-sm leading-6 text-[var(--ink-muted)]">Set the mood, then choose a story. Tap a pick to bring its world into the background.</p>
-        <Link href="/moods" className={`mt-5 inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] ${focus}`}>Explore the mood wheel <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+        <Link href="/moods" className={`mt-2 inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] sm:mt-5 ${focus}`}>Explore the mood wheel <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
         {activeItem && <div className={styles.nowShowing}>
           <div aria-live="polite" aria-atomic="true">
             <p className="flex items-center gap-2 text-xs font-semibold text-[var(--ink-muted)]">
@@ -115,12 +117,12 @@ export default function MoodNightPreview() {
             {choice.label}<span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-0.5 origin-left transition-transform duration-300 motion-reduce:transition-none ${choice.id === selection ? "scale-x-100" : "scale-x-0"}`} style={{ backgroundColor: choice.color }} />
           </button>)}
         </div>
-        <div id="landing-mood-preview" className="mt-5">
-          <div className="flex min-h-24 items-center gap-4">
-            <Image src={`/images/moods/${mood.mascot}.png`} alt={`${mood.mascotName} mood mascot`} width={96} height={96} unoptimized className="h-20 w-20 shrink-0 object-contain sm:h-24 sm:w-24" />
+        <div id="landing-mood-preview" className="mt-3 sm:mt-5">
+          <div className="flex min-h-16 items-center gap-3 sm:min-h-24 sm:gap-4">
+            <Image src={`/images/moods/${mood.mascot}.png`} alt={`${mood.mascotName} mood mascot`} width={96} height={96} unoptimized className="h-16 w-16 shrink-0 object-contain sm:h-24 sm:w-24" />
             <div className={styles.copy} aria-live="polite" aria-atomic="true"><h3 className="text-base font-bold text-[var(--ink)] sm:text-lg">{mood.id === "easy" || mood.id === "electric" ? "An" : "A"} {mood.label.toLowerCase()} night</h3><p className="mt-1 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">{mood.note}</p></div>
           </div>
-          <div aria-busy={!preview && !failed} className="mt-5 min-h-28">
+          <div aria-busy={!preview && !failed} className="mt-3 min-h-28 sm:mt-5">
             {!preview && !failed ? <><p role="status" className="sr-only">Loading {mood.label.toLowerCase()} night picks</p><div aria-hidden="true" className="grid grid-cols-2 gap-3 sm:grid-cols-4">{[0, 1, 2, 3].map(i => <Skeleton key={i} className={`${styles.pickSkeleton} h-28 rounded-lg`} />)}</div></>
               : preview?.items.length ? <>
                 <p className="mb-3 text-xs text-[var(--ink-muted)]">Choose a pick to change the scene</p>
