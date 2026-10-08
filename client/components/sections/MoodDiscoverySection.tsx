@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { ArrowRight, Brain, Film, Tv } from "lucide-react";
+import MoodNightPreview from "./MoodNightPreview";
 
 type MoodDiscoverySectionProps = {
   variant?: "full" | "teaser";
@@ -30,165 +30,10 @@ const discoveryPaths = [
   },
 ];
 
-const landingMoods = [
-  {
-    id: "easy",
-    label: "Easy",
-    color: "#FFDEAD",
-    mascot: "cozy",
-    mascotName: "Cozy",
-    note: "Low-stakes, comforting watches for a quiet night.",
-  },
-  {
-    id: "tense",
-    label: "Tense",
-    color: "#FF6B35",
-    mascot: "thrilling",
-    mascotName: "Thrilling",
-    note: "Pressure, suspense, and stories that keep moving.",
-  },
-  {
-    id: "tender",
-    label: "Tender",
-    color: "#FF69B4",
-    mascot: "romantic",
-    mascotName: "Romantic",
-    note: "Warm, intimate stories with something human at the center.",
-  },
-  {
-    id: "strange",
-    label: "Strange",
-    color: "#BA55D3",
-    mascot: "mind-bending",
-    mascotName: "Mind-Bending",
-    note: "Unfamiliar worlds, odd turns, and singular ideas.",
-  },
-  {
-    id: "electric",
-    label: "Electric",
-    color: "#8A2BE2",
-    mascot: "epic",
-    mascotName: "Epic",
-    note: "Fast, loud, kinetic picks for a high-energy watch.",
-  },
-];
-
 export default function MoodDiscoverySection({
   variant = "full",
 }: MoodDiscoverySectionProps) {
-  const [activeLandingMood, setActiveLandingMood] = useState(
-    landingMoods[0].id,
-  );
-  const activeMood =
-    landingMoods.find((mood) => mood.id === activeLandingMood) ??
-    landingMoods[0];
-
-  if (variant === "teaser") {
-    return (
-      <section
-        id="your-moods"
-        className="relative isolate scroll-mt-24 overflow-hidden border-b border-[var(--surface-border)]"
-        aria-labelledby="mood-shelf-heading"
-      >
-        {landingMoods.map((mood) => (
-          <div
-            key={mood.id}
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 -z-10 transition-opacity duration-700 motion-reduce:transition-none"
-            style={{
-              opacity: activeMood.id === mood.id ? 1 : 0,
-              background: `radial-gradient(ellipse at 78% 100%, ${mood.color}26, transparent 70%)`,
-            }}
-          />
-        ))}
-        <div className="ui-shell grid items-center gap-6 py-8 sm:py-10 lg:grid-cols-[minmax(15rem,0.72fr)_minmax(0,1.28fr)] lg:gap-12">
-          <div>
-            <p className="ui-kicker">Choose by mood</p>
-            <h2
-              id="mood-shelf-heading"
-              className="mt-3 max-w-lg text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
-            >
-              What kind of night is this?
-            </h2>
-            <p className="mt-3 max-w-md text-sm leading-6 text-[var(--ink-muted)]">
-              Pick a feeling first. Moodies will take you to a focused set of
-              movies and series instead of another endless catalogue.
-            </p>
-          </div>
-
-          <div className="min-w-0">
-            <div
-              className="grid grid-cols-5 gap-1 border-b border-[var(--surface-border)] sm:gap-4"
-              role="group"
-              aria-label="Choose a mood"
-            >
-              {landingMoods.map((mood) => {
-                const isActive = mood.id === activeMood.id;
-                return (
-                  <button
-                    key={mood.id}
-                    type="button"
-                    onClick={() => setActiveLandingMood(mood.id)}
-                    aria-controls="landing-mood-preview"
-                    className={`relative min-h-12 min-w-0 px-1 py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] motion-reduce:transition-none sm:text-xl ${
-                      isActive
-                        ? "text-[var(--ink)]"
-                        : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
-                    }`}
-                    aria-pressed={isActive}
-                  >
-                    {mood.label}
-                    <span
-                      aria-hidden="true"
-                      className={`absolute inset-x-0 bottom-0 h-0.5 origin-left transition-transform duration-300 motion-reduce:transition-none ${isActive ? "scale-x-100" : "scale-x-0"}`}
-                      style={{ backgroundColor: mood.color }}
-                    />
-                  </button>
-                );
-              })}
-            </div>
-
-            <div
-              id="landing-mood-preview"
-              className="mt-5 grid grid-cols-[5rem_minmax(0,1fr)] items-start gap-x-4 gap-y-3 sm:min-h-36 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-center sm:gap-5"
-            >
-              <div className="relative h-20 w-20 sm:h-32 sm:w-32">
-                <Image
-                  src={`/images/moods/${activeMood.mascot}.png`}
-                  alt={`${activeMood.mascotName} mood mascot`}
-                  width={160}
-                  height={160}
-                  sizes="(max-width: 639px) 80px, 128px"
-                  unoptimized
-                  className="h-full w-full object-contain"
-                />
-              </div>
-              <div className="contents sm:block">
-                <div aria-live="polite" aria-atomic="true">
-                  <h3 className="text-base font-bold text-[var(--ink)] sm:text-lg">
-                    {activeMood.id === "easy" || activeMood.id === "electric"
-                      ? "An"
-                      : "A"}{" "}
-                    {activeMood.label.toLowerCase()} night
-                  </h3>
-                  <p className="mt-1 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
-                    {activeMood.note}
-                  </p>
-                </div>
-                <Link
-                  href="/moods"
-                  className="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-[var(--surface-border)] px-3 text-sm font-semibold text-[var(--brand-coral-strong)] transition-colors hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] motion-reduce:transition-none sm:mt-3 sm:justify-start sm:border-0 sm:px-0"
-                >
-                  Explore the mood wheel
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  if (variant === "teaser") return <MoodNightPreview />;
 
   return (
     <section
