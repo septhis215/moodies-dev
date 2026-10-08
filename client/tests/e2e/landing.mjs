@@ -83,7 +83,7 @@ async function checkMobileRail(section, width) {
     assert.ok(
       (await section.evaluate(
         (element) => element.getBoundingClientRect().height,
-      )) < 440,
+      )) < 520,
       "Curated shelf is too tall on mobile",
     );
   } else

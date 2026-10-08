@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bookmark, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bookmark, Check, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { TmdbImage } from "@/components/ui/TmdbImage";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import type { All } from "@/types/all";
@@ -26,7 +26,7 @@ function CuratedCard({ item }: { item: All }) {
     ""
   ).slice(0, 4);
   const poster = item.poster_path
-    ? `https://image.tmdb.org/t/p/w185${item.poster_path}`
+    ? `https://image.tmdb.org/t/p/w342${item.poster_path}`
     : null;
 
   async function toggleSave() {
@@ -56,7 +56,7 @@ function CuratedCard({ item }: { item: All }) {
             src={poster}
             alt=""
             fill
-            sizes="72px"
+            sizes="(max-width: 639px) 30vw, (max-width: 1023px) 16vw, 140px"
             className="object-cover"
           />
         ) : (
@@ -67,16 +67,25 @@ function CuratedCard({ item }: { item: All }) {
             {type === "tv" ? "Series" : "Movie"}
           </span>
         )}
+        {Number.isFinite(item.vote_average) && (item.vote_average ?? 0) > 0 && (
+          <span
+            className={styles.rating}
+            aria-label={`Rating ${item.vote_average?.toFixed(1)} out of 10`}
+          >
+            <Star size={12} fill="currentColor" aria-hidden="true" />{" "}
+            {item.vote_average?.toFixed(1)}
+          </span>
+        )}
       </Link>
       <div className={styles.copy}>
-        <p className="mb-1 text-xs text-[var(--ink-muted)]">
+        <p className="mb-2 text-xs font-semibold text-[var(--brand-coral-strong)]">
           {type === "tv" ? "Series" : "Movie"}
           {year ? ` · ${year}` : ""}
         </p>
         <Link href={`/${type}/${item.id}`} className={styles.title}>
           {title}
         </Link>
-        <p className={`${styles.genre} mt-1`}>
+        <p className={`${styles.genre} mt-2 mb-3`}>
           {item.genres?.slice(0, 2).join(" · ") || "In your personal mix"}
         </p>
         <button
@@ -129,8 +138,15 @@ export function CuratedShelf({ items }: { items: All[] }) {
 
   function scroll(direction: number) {
     const rail = railRef.current;
-    rail?.scrollBy({
-      left: direction * rail.clientWidth,
+    if (!rail) return;
+    const card = rail.querySelector("article");
+    if (!card) return;
+    const stride =
+      card.getBoundingClientRect().width +
+      parseFloat(getComputedStyle(rail).columnGap || "0");
+    const visibleCards = Math.max(1, Math.round(rail.clientWidth / stride));
+    rail.scrollBy({
+      left: direction * stride * visibleCards,
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
         ? "auto"
         : "smooth",
@@ -171,49 +187,51 @@ export function CuratedShelf({ items }: { items: All[] }) {
           >
             {filtered.length} {filtered.length === 1 ? "pick" : "picks"}
           </span>
-          <div className="hidden sm:flex">
-            <button
-              type="button"
-              aria-label="Previous curated picks"
-              disabled={edges.start}
-              onClick={() => scroll(-1)}
-              className="flex h-11 w-11 items-center justify-center rounded-md text-[var(--ink)] disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              type="button"
-              aria-label="Next curated picks"
-              disabled={edges.end}
-              onClick={() => scroll(1)}
-              className="flex h-11 w-11 items-center justify-center rounded-md text-[var(--ink)] disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
         </div>
       </div>
-      <div
-        id="curated-picks-rail"
-        key={filter}
-        ref={railRef}
-        onScroll={syncEdges}
-        className={styles.rail}
-        data-curated-rail
-      >
-        {filtered.map((item) => (
-          <CuratedCard key={`${mediaType(item)}-${item.id}`} item={item} />
-        ))}
+      <div className={styles.frame}>
+        <button
+          type="button"
+          aria-label="Previous curated picks"
+          disabled={edges.start}
+          onClick={() => scroll(-1)}
+          aria-controls="curated-picks-rail"
+          className={`${styles.arrow} ${styles.previous}`}
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <div
+          id="curated-picks-rail"
+          key={filter}
+          ref={railRef}
+          onScroll={syncEdges}
+          className={styles.rail}
+          data-curated-rail
+        >
+          {filtered.map((item) => (
+            <CuratedCard key={`${mediaType(item)}-${item.id}`} item={item} />
+          ))}
+        </div>
+
+        <button
+          type="button"
+          aria-label="Next curated picks"
+          disabled={edges.end}
+          onClick={() => scroll(1)}
+          aria-controls="curated-picks-rail"
+          className={`${styles.arrow} ${styles.next}`}
+        >
+          <ChevronRight size={18} />
+        </button>
+
+        {filtered.length > 1 && (
+          <p className={styles.swipe}>Swipe to explore →</p>
+        )}
       </div>
       {!filtered.length && (
         <p className="py-6 text-sm text-[var(--ink-muted)]">
           No {filter === "tv" ? "series" : "movies"} in this mix yet. Try All
           picks or adjust your taste.
-        </p>
-      )}
-      {filtered.length > 1 && (
-        <p className="mt-1 text-xs text-[var(--ink-muted)] sm:hidden">
-          Swipe to explore your mix →
         </p>
       )}
     </div>
@@ -232,23 +250,23 @@ export function CuratedShelfSkeleton() {
         <div className="h-3 w-12 rounded bg-[var(--surface-2)]" />
         <div className="h-3 w-12 rounded bg-[var(--surface-2)]" />
       </div>
-      <div className={styles.rail} aria-hidden="true">
-        {Array.from({ length: 3 }, (_, index) => (
-          <div key={index} className={`${styles.card} moodies-skeleton`}>
-            <div className={styles.poster} />
-            <div className={styles.copy}>
-              <div className="mt-1 h-3 w-1/2 rounded bg-[var(--surface-2)]" />
-              <div className="mt-3 h-4 w-4/5 rounded bg-[var(--surface-2)]" />
-              <div className="mt-3 h-3 w-2/3 rounded bg-[var(--surface-2)]" />
-              <div className="mt-4 h-4 w-1/3 rounded bg-[var(--surface-2)]" />
+      <div className={styles.frame} aria-hidden="true">
+        <div className={`${styles.arrow} ${styles.previous}`} />
+        <div className={styles.rail}>
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className={`${styles.card} moodies-skeleton`}>
+              <div className={styles.poster} />
+              <div className={styles.copy}>
+                <div className="mt-1 h-3 w-1/2 rounded bg-[var(--surface-2)]" />
+                <div className="mt-3 h-4 w-4/5 rounded bg-[var(--surface-2)]" />
+                <div className="mt-3 h-3 w-2/3 rounded bg-[var(--surface-2)]" />
+                <div className="mt-4 h-4 w-1/3 rounded bg-[var(--surface-2)]" />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+        <div className={`${styles.arrow} ${styles.next}`} />
       </div>
-      <div
-        aria-hidden="true"
-        className="mt-1 h-4 w-40 rounded bg-[var(--surface-2)] moodies-skeleton sm:hidden"
-      />
       <div
         aria-hidden="true"
         className="mt-1 flex h-11 items-center moodies-skeleton"

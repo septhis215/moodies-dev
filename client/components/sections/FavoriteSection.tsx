@@ -108,7 +108,7 @@ export default function FavoriteSection({
       className="scroll-mt-24 overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-0)]"
       aria-labelledby="curated-picks-heading"
     >
-      <div className="ui-shell py-6 sm:py-8">
+      <div className="ui-shell py-7 sm:py-9">
         <header className="mb-3 flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
           <div className="min-w-0 flex-1">
             <p className="mb-1 break-words text-xs font-semibold text-[var(--brand-coral-strong)]">
@@ -118,7 +118,7 @@ export default function FavoriteSection({
             </p>
             <h2
               id="curated-picks-heading"
-              className="text-2xl font-bold leading-tight text-[var(--ink)] sm:text-3xl"
+              className="text-3xl font-bold leading-tight text-[var(--ink)] sm:text-4xl"
             >
               {title}
             </h2>
@@ -128,10 +128,11 @@ export default function FavoriteSection({
           </div>
           <Link
             href="/auth/onboarding"
-            className="inline-flex min-h-11 items-center gap-2 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
+            aria-label="Adjust your taste"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
           >
-            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> Adjust
-            your taste
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Adjust your taste</span>
           </Link>
         </header>
         {loading ? (
