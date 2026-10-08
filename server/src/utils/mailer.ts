@@ -143,14 +143,12 @@ function createMoodiesEmailTemplate(options: MoodiesEmailTemplateOptions) {
   const safeCode = code ? escapeHtml(code) : '';
   const safeCtaLabel = ctaLabel ? escapeHtml(ctaLabel) : '';
   const safeCtaUrl = ctaUrl ? escapeHtml(ctaUrl) : '';
-  const safeSupportEmail = escapeHtml(MOODIES_BRAND.supportEmail);
   const safeSupportHref = escapeHtml(
     supportMailtoHref(MOODIES_BRAND.supportEmail),
   );
   const currentYear = new Date().getFullYear();
 
-  return `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -158,161 +156,86 @@ function createMoodiesEmailTemplate(options: MoodiesEmailTemplateOptions) {
     <meta name="color-scheme" content="dark" />
     <meta name="supported-color-schemes" content="dark" />
     <title>${safeTitle}</title>
+    <style>
+      body, table, td, a { -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+      table, td { mso-table-lspace:0pt; mso-table-rspace:0pt; }
+      @media screen and (max-width:600px) {
+        .email-shell { padding:24px 12px !important; }
+        .email-content { padding:28px 24px !important; }
+        .email-title { font-size:28px !important; line-height:34px !important; }
+        .email-code { font-size:32px !important; letter-spacing:5px !important; }
+      }
+    </style>
   </head>
-
-  <body style="margin:0; padding:0; background:transparent; font-family:Arial, Helvetica, sans-serif; color:#f8fafc;">
-    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent;">
+  <body style="margin:0; padding:0; width:100%; background-color:#0b0909; font-family:Arial, Helvetica, sans-serif; color:#f5f1ed;">
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all; font-size:1px; line-height:1px; color:#0b0909;">
       ${safePreviewText}
     </div>
-
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0; padding:0; background:transparent;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#0b0909">
       <tr>
-        <td align="center" style="padding:34px 14px;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px; overflow:hidden; border-radius:28px; border:1px solid rgba(255,255,255,0.14); background:#0b0b0b; box-shadow:0 24px 80px rgba(0,0,0,0.58);">
+        <td class="email-shell" align="center" style="padding:48px 20px;">
+          <!--[if mso]><table role="presentation" width="560" cellspacing="0" cellpadding="0" border="0"><tr><td><![endif]-->
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;">
             <tr>
-              <td style="padding:0; background:#0b0b0b;">
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:radial-gradient(circle at 82% 0%, rgba(233,79,55,0.28), transparent 42%), radial-gradient(circle at 18% 12%, rgba(255,255,255,0.06), transparent 28%), #0b0b0b;">
+              <td style="padding:0 0 24px;">
+                <p style="margin:0; font-size:26px; line-height:32px; font-weight:700; letter-spacing:-0.5px; color:#f5f1ed;">Moodies<span style="color:#ff765f;">.</span></p>
+                <p style="margin:5px 0 0; font-size:13px; line-height:20px; color:#b9aca7;">Stories for every mood.</p>
+              </td>
+            </tr>
+            <tr>
+              <td bgcolor="#151112" style="background-color:#151112; border:1px solid #35292a; border-top:3px solid #f0644b; border-radius:16px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                   <tr>
-                    <td style="padding:28px 28px 22px 28px;">
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                    <td class="email-content" style="padding:36px 32px;">
+                      <p style="margin:0 0 12px; font-size:11px; line-height:16px; font-weight:700; letter-spacing:1.8px; text-transform:uppercase; color:#ff765f;">${safeEyebrow}</p>
+                      <h1 class="email-title" style="margin:0 0 24px; font-size:32px; line-height:38px; font-weight:700; letter-spacing:-0.5px; color:#f5f1ed;">${safeTitle}</h1>
+                      <p style="margin:0 0 12px; font-size:15px; line-height:24px; color:#f5f1ed;">${safeGreeting}</p>
+                      <p style="margin:0; font-size:15px; line-height:24px; color:#b9aca7;">${safeMessage}</p>
+                      ${safeCode ? `
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:28px;">
                         <tr>
-                          <td align="left" style="vertical-align:middle;">
-                            <div style="font-size:12px; line-height:16px; letter-spacing:4px; font-weight:700; color:#ffffff; text-transform:uppercase;">
-                              Moodies
-                            </div>
-                            <div style="width:48px; height:2px; margin-top:14px; background:#e94f37; border-radius:999px; box-shadow:0 0 18px rgba(233,79,55,0.55);"></div>
+                          <td align="center" bgcolor="#1d1718" style="padding:24px 12px; background-color:#1d1718; border:1px solid #35292a; border-radius:12px;">
+                            <p style="margin:0 0 12px; font-size:11px; line-height:16px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#b9aca7;">Your verification code</p>
+                            <p class="email-code" style="margin:0; font-family:'Courier New', Courier, monospace; font-size:36px; line-height:44px; font-weight:700; letter-spacing:6px; color:#f5f1ed;">${safeCode}</p>
+                            <p style="margin:12px 0 0; font-size:13px; line-height:20px; color:#b9aca7;">Expires in <strong style="color:#f5f1ed; font-weight:700;">10 minutes</strong></p>
                           </td>
-                          <td align="right" style="vertical-align:middle;">
-                            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                              <tr>
-                                <td align="center" style="width:70px; height:70px; border-radius:20px; border:1px solid rgba(233,79,55,0.34); background:linear-gradient(135deg, rgba(233,79,55,0.20), rgba(255,255,255,0.05)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.10);">
-                                  <div style="font-size:28px; line-height:30px; font-weight:900; color:#ffffff; letter-spacing:1px;">
-                                    M
-                                  </div>
-                                  <div style="margin-top:4px; font-size:8px; line-height:10px; font-weight:800; letter-spacing:1.7px; color:#e94f37; text-transform:uppercase;">
-                                    Moodies
-                                  </div>
-                                </td>
-                              </tr>
-                            </table>
+                        </tr>
+                      </table>` : ''}
+                      ${safeCtaLabel && safeCtaUrl ? `
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;">
+                        <tr>
+                          <td align="center" bgcolor="#f0644b" style="background-color:#f0644b; border-radius:8px; mso-padding-alt:14px 22px;">
+                            <a href="${safeCtaUrl}" target="_blank" style="display:inline-block; padding:14px 22px; border:1px solid #f0644b; border-radius:8px; font-size:14px; line-height:20px; font-weight:700; text-decoration:none; color:#0b0909;">${safeCtaLabel}</a>
+                          </td>
+                        </tr>
+                      </table>` : ''}
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:28px;">
+                        <tr>
+                          <td style="padding-top:24px; border-top:1px solid #35292a;">
+                            <p style="margin:0; font-size:13px; line-height:21px; color:#b9aca7;">${safeSupportNote}</p>
                           </td>
                         </tr>
                       </table>
-
-                      <div style="margin-top:26px; font-size:11px; line-height:16px; letter-spacing:2.4px; font-weight:700; color:#e94f37; text-transform:uppercase;">
-                        ${safeEyebrow}
-                      </div>
-
-                      <h1 style="margin:8px 0 0 0; font-size:34px; line-height:38px; color:#e94f37; font-weight:900; letter-spacing:0.4px; text-transform:uppercase;">
-                        ${safeTitle}
-                      </h1>
                     </td>
                   </tr>
                 </table>
               </td>
             </tr>
-
             <tr>
-              <td style="padding:28px 28px 6px 28px;">
-                <p style="margin:0 0 14px 0; font-size:16px; line-height:25px; color:#ffffff; font-weight:700;">
-                  ${safeGreeting}
-                </p>
-
-                <p style="margin:0; font-size:15px; line-height:25px; color:rgba(255,255,255,0.72);">
-                  ${safeMessage}
-                </p>
-              </td>
-            </tr>
-
-            ${
-              safeCode
-                ? `
-            <tr>
-              <td style="padding:26px 28px 6px 28px;">
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-radius:22px; border:1px solid rgba(233,79,55,0.36); background:linear-gradient(135deg, rgba(233,79,55,0.16), rgba(255,255,255,0.04));">
-                  <tr>
-                    <td align="center" style="padding:24px 18px;">
-                      <div style="font-size:11px; line-height:16px; letter-spacing:2.5px; font-weight:800; color:rgba(255,255,255,0.46); text-transform:uppercase;">
-                        Verification code
-                      </div>
-                      <div style="margin-top:10px; font-size:42px; line-height:48px; letter-spacing:10px; font-weight:900; color:#ffffff;">
-                        ${safeCode}
-                      </div>
-                      <div style="margin-top:10px; font-size:13px; line-height:20px; color:rgba(255,255,255,0.54);">
-                        This code expires in 10 minutes.
-                      </div>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            `
-                : ''
-            }
-
-            ${
-              safeCtaLabel && safeCtaUrl
-                ? `
-            <tr>
-              <td align="center" style="padding:28px 28px 6px 28px;">
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0">
-                  <tr>
-                    <td align="center" bgcolor="#e94f37" style="border-radius:14px; box-shadow:0 12px 28px rgba(233,79,55,0.32);">
-                      <a
-                        href="${safeCtaUrl}"
-                        target="_blank"
-                        style="display:inline-block; min-width:180px; padding:14px 24px; font-size:14px; font-weight:800; color:#ffffff; text-decoration:none; border-radius:14px; background:#e94f37;"
-                      >
-                        ${safeCtaLabel}
-                      </a>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            `
-                : ''
-            }
-
-            <tr>
-              <td style="padding:26px 28px 30px 28px;">
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-radius:18px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.045);">
-                  <tr>
-                    <td style="padding:17px 18px;">
-                      <p style="margin:0; font-size:13px; line-height:21px; color:rgba(255,255,255,0.58);">
-                        ${safeSupportNote}
-                      </p>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-
-            <tr>
-              <td style="padding:22px 28px; background:#070707; border-top:1px solid rgba(255,255,255,0.10);">
-                <p style="margin:0 0 8px 0; font-size:13px; line-height:20px; color:rgba(255,255,255,0.52);">
-                  ${safeFooterNote}
-                </p>
-
-                <p style="margin:0; font-size:13px; line-height:20px; color:rgba(255,255,255,0.42);">
-                  Need help? Contact
-                  <a href="${safeSupportHref}" style="color:#ffb199; text-decoration:none; font-weight:700;">
-                    ${safeSupportEmail}
-                  </a>
-                </p>
-
-                <p style="margin:16px 0 0 0; font-size:12px; line-height:18px; color:rgba(255,255,255,0.28);">
-                  Copyright ${currentYear} Moodies. All rights reserved.
-                </p>
+              <td style="padding:24px 4px 0;">
+                <p style="margin:0; font-size:12px; line-height:20px; color:#b9aca7;">${safeFooterNote}</p>
+                <p style="margin:10px 0 0; font-size:12px; line-height:20px; color:#b9aca7;">Need a hand? <a href="${safeSupportHref}" style="color:#ff765f; text-decoration:underline;">Contact Moodies support</a></p>
+                <p style="margin:16px 0 0; font-size:12px; line-height:18px; color:#b9aca7;">&copy; ${currentYear} Moodies</p>
               </td>
             </tr>
           </table>
+          <!--[if mso]></td></tr></table><![endif]-->
         </td>
       </tr>
     </table>
   </body>
-</html>
-`;
+</html>`;
+
 }
 
 function createPlainTextEmail(options: MoodiesEmailTemplateOptions) {
@@ -369,19 +292,19 @@ export async function sendVerificationCode(email: string, code: string) {
   )}`;
 
   await sendMoodiesEmail(email, 'Your Moodies password reset code', {
-    title: 'Reset password',
-    eyebrow: 'Security check',
+    title: 'Reset your password',
+    eyebrow: 'Account recovery',
     previewText: 'Use your Moodies verification code to reset your password.',
-    greeting: 'Hi Moodies friend,',
+    greeting: 'Hi there,',
     message:
-      'We received a request to reset your Moodies account password. Enter the code below in the Moodies app to continue.',
+      'Let’s get you back to your next watch. Enter this code on the password reset screen to choose a new password.',
     code,
-    ctaLabel: 'Open Moodies',
+    ctaLabel: 'Continue password reset',
     ctaUrl: verifyUrl,
     supportNote:
-      'Moodies will never ask you to share your password or verification code outside the official app.',
+      'Didn’t request this? You can ignore this email. Your password will stay the same. Keep this code private; Moodies will never ask you to share it.',
     footerNote:
-      'This email was sent because someone requested password recovery for your Moodies account.',
+      'You received this email because a password reset was requested for your Moodies account.',
   });
 
   logger.log(`Sent password reset verification email to ${email}`);
