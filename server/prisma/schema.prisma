@@ -336,6 +336,17 @@ model UserPreference {
 // Redis eviction. Redis stays the hot L1; Postgres is the permanent source of
 // truth, refreshed via the fetchedAt staleness check.
 
+// Five shared landing-page previews, independent of user recommendations.
+model MoodNightPreview {
+  choice    String   @id
+  payload   Json
+  expiresAt DateTime
+  fetchedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("mood_night_previews")
+}
+
 model MediaDetail {
   id         String    @id @default(uuid())
   tmdbId     Int

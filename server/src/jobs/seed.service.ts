@@ -4,6 +4,7 @@ import { TMDBService } from 'src/external-apis/services/tmdb.service';
 import { MoviesService } from 'src/media/movies/movies.service';
 import { TvService } from 'src/media/tv/tv.service';
 import { AllService } from 'src/media/all/all.service';
+import { MoodNightPreviewService } from 'src/routes/moods/mood-night-preview.service';
 import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class SeedService {
         private readonly movies: MoviesService,
         private readonly tv: TvService,
         private readonly all: AllService,
+        private readonly nightPreviews: MoodNightPreviewService,
     ) {}
 
     /**
@@ -36,6 +38,7 @@ export class SeedService {
             // Genre/config lookups
             ['genres:movie', () => this.tmdb.getMovieGenres()],
             ['genres:tv', () => this.tmdb.getTVGenres()],
+            ['moods:night-previews', () => this.nightPreviews.warmPreviews()],
 
             // Movies homepage — every TMDB-heavy section it loads
             ['movies:trending', () => this.movies.getTrending(25)],

@@ -27,7 +27,7 @@ export function findNightMoodId(payload: unknown, name: string): string | null {
 
 export function normalizeNightItems(payload: unknown): MoodNightItem[] {
   const root = record(payload);
-  const entries = Array.isArray(payload) ? payload : root.recommendations ?? root.results;
+  const entries = Array.isArray(payload) ? payload : root.items ?? root.recommendations ?? root.results;
   if (!Array.isArray(entries)) return [];
   const items = new Map<string, MoodNightItem>();
   for (const value of entries) {
@@ -40,8 +40,8 @@ export function normalizeNightItems(payload: unknown): MoodNightItem[] {
     const text = (value: unknown) => typeof value === "string" && value ? value : null;
     items.set(`${type}-${id}`, {
       id, type, title: text(item.title) ?? text(item.name) ?? "Untitled",
-      poster: text(item.posterPath ?? item.poster_path),
-      backdrop: text(item.backdropPath ?? item.backdrop_path),
+      poster: text(item.poster ?? item.posterPath ?? item.poster_path),
+      backdrop: text(item.backdrop ?? item.backdropPath ?? item.backdrop_path),
     });
   }
   return [...items.values()].slice(0, 4);
@@ -54,4 +54,30 @@ export function findNightTrailer(payload: unknown, items: MoodNightItem[]) {
     if (typeof key === "string" && /^[a-zA-Z0-9_-]{11}$/.test(key)) return { item, key };
   }
   return null;
+}
+
+export function parseNightPreview(payload: unknown) {
+  const items = normalizeNightItems(payload);
+  const root = record(payload);
+  // Existing database snapshots remain usable while the API upgrades them.
+  const entries = Array.isArray(root.trailers) ? root.trailers : [root.trailer];
+  const trailers = entries.flatMap(value => {
+    const trailer = record(value);
+    const trailerItem = record(trailer.item);
+    const item = items.find(item => item.id === trailerItem.id && item.type === trailerItem.type);
+    const key = trailer.key;
+    return item && typeof key === "string" && /^[a-zA-Z0-9_-]{11}$/.test(key) ? [{ item, key }] : [];
+  });
+  return {
+    items,
+    trailer: trailers[0] ?? null,
+    trailers,
+  };
+}
+
+export function selectNightPreview(preview: ReturnType<typeof parseNightPreview> | null, selectedKey: string | null) {
+  const item = preview?.items.find(item => `${item.type}-${item.id}` === selectedKey)
+    ?? preview?.trailer?.item ?? preview?.items[0] ?? null;
+  const trailer = preview?.trailers.find(trailer => trailer.item.id === item?.id && trailer.item.type === item?.type) ?? null;
+  return { item, trailer };
 }

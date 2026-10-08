@@ -9,6 +9,7 @@ import { MoodsService } from './moods.service';
 import { GetRecommendationsDto } from './dto/get-recommendations.dto';
 import { LogMoodDto } from './dto/log-mood.dto';
 import { RecommendationFeedbackDto } from './dto/recommendation-feedback.dto';
+import { MoodNightPreviewService } from './mood-night-preview.service';
 
 /**
  * IMPORTANT — NestJS resolves routes top-to-bottom within a controller.
@@ -30,7 +31,7 @@ import { RecommendationFeedbackDto } from './dto/recommendation-feedback.dto';
 @ApiTags('moods')
 @Controller('moods')
 export class MoodsController {
-    constructor(private readonly moodsService: MoodsService) { }
+    constructor(private readonly moodsService: MoodsService, private readonly nightPreview: MoodNightPreviewService) { }
 
     // ── Static routes ────────────────────────────────────────────────────────
 
@@ -39,6 +40,12 @@ export class MoodsController {
     @ApiResponse({ status: 200, description: 'List of all active moods' })
     async getAllMoods() {
         return this.moodsService.getAllMoods();
+    }
+
+    @Get('night-preview/:choice')
+    @ApiOperation({ summary: 'Get a database-cached public mood night preview' })
+    async getNightPreview(@Param('choice') choice: string) {
+        return this.nightPreview.getPreview(choice);
     }
 
     @Get('recommendations')
