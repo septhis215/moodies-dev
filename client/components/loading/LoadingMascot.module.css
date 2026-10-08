@@ -12,60 +12,93 @@
     calc(1rem + env(safe-area-inset-bottom))
     calc(1rem + env(safe-area-inset-left));
   background: var(--surface-0);
+  isolation: isolate;
 }
-.card {
-  --mascot-size: 8rem;
+.ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 55%, rgb(240 100 75 / 10%), transparent 58%),
+    radial-gradient(ellipse at 15% 20%, rgb(230 182 92 / 5%), transparent 45%),
+    radial-gradient(ellipse at 85% 75%, rgb(115 96 160 / 7%), transparent 42%);
+}
+.stage {
+  --mascot-size: 16rem;
   box-sizing: border-box;
-  width: min(24rem, 100%);
+  position: relative;
+  width: min(64rem, 100%);
   min-width: 0;
-  padding: 1.5rem;
-  overflow: hidden;
-  border: 1px solid var(--surface-border);
-  border-radius: 1.25rem;
-  background: linear-gradient(145deg, var(--surface-1), var(--surface-0));
-  box-shadow:
-    0 16px 48px rgb(0 0 0 / 35%),
-    inset 0 1px rgb(245 241 237 / 4%);
-  animation: arrive 240ms ease-out both;
+  text-align: center;
+  animation: arrive 400ms ease-out both;
 }
 .header,
 .footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 0.75rem;
 }
 .brand {
   font-family: var(--font-display), sans-serif;
-  font-size: 1.125rem;
+  font-size: 2rem;
   font-weight: 700;
   color: var(--ink);
 }
 .badge {
   flex-shrink: 0;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--surface-border);
-  border-radius: 999px;
-  font-size: 0.75rem;
-  color: var(--ink-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brand-coral-strong);
 }
 .scene {
   position: relative;
-  height: 8rem;
-  margin: 0.25rem 0 0.5rem;
+  height: 22rem;
+  margin: 1rem 0 0.75rem;
+  overflow: clip;
 }
+.gallery {
+  position: absolute;
+  inset: 1rem 8% 4rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  mask-image: linear-gradient(transparent, black 20%, black 65%, transparent);
+}
+.poster {
+  position: relative;
+  flex: 0 0 18%;
+  aspect-ratio: 2 / 3;
+  border: 1px solid rgb(230 182 92 / 12%);
+  border-radius: 0.5rem;
+  background: linear-gradient(155deg, rgb(230 182 92 / 7%), rgb(240 100 75 / 3%));
+  opacity: 0.45;
+  transform: rotate(-10deg) translateY(0.5rem);
+  animation: posterDrift 8s ease-in-out infinite alternate;
+}
+.poster:nth-child(2) { transform: rotate(6deg) translateY(-1rem); animation-delay: -3s; }
+.poster:nth-child(3) { transform: rotate(-5deg) translateY(0.75rem); animation-delay: -5s; }
+.poster:nth-child(4) { transform: rotate(10deg) translateY(-0.5rem); animation-delay: -1s; }
+.posterArt { position: absolute; inset: 8% 5% 25%; background-image: var(--poster-0); background-size: contain; background-position: center; background-repeat: no-repeat; filter: saturate(0.55); animation: posterReel 30s step-end infinite; }
+.posterLines { position: absolute; left: 15%; right: 15%; bottom: 12%; display: grid; gap: 0.4rem; }
+.posterLines span { height: 2px; border-radius: 2px; background: rgb(245 241 237 / 20%); }
+.posterLines span:last-child { width: 60%; }
+.icons svg { position: absolute; width: 2rem; height: 2rem; fill: none; stroke: var(--brand-gold); stroke-width: 1; opacity: 0.3; animation: floatIcon 6s ease-in-out infinite alternate; }
+.film { left: 5%; top: 15%; }
+.icons .star { right: 8%; top: 8%; animation-delay: -2s; }
+.icons .moon { left: 38%; top: 4%; animation-delay: -4s; }
+.icons .play { right: 35%; top: 38%; animation-delay: -1s; }
 .glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    ellipse at 50% 90%,
-    rgb(240 100 75 / 12%),
-    transparent 65%
-  );
+  background: radial-gradient(ellipse at 50% 75%, rgb(240 100 75 / 12%), transparent 60%);
 }
 .track {
   position: absolute;
-  bottom: 0.6rem;
+  bottom: 1.8rem;
   left: 0;
   right: 0;
   height: 1px;
@@ -84,13 +117,13 @@
   /* 100% translation equals the available runway at every screen width. */
   width: max(0px, calc(100% - var(--mascot-size)));
   height: var(--mascot-size);
-  animation: stroll 5.6s linear infinite;
+  animation: stroll 10s linear infinite;
 }
 .traveler {
   position: relative;
   width: var(--mascot-size);
   height: var(--mascot-size);
-  animation: turn 5.6s linear infinite;
+  animation: turn 10s linear infinite;
 }
 .gait {
   position: absolute;
@@ -152,15 +185,15 @@
 }
 .title {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--ink);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 .footer {
-  margin-top: 0.35rem;
-  font-size: 0.75rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1.5;
   color: var(--ink-muted);
 }
@@ -195,6 +228,20 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+@keyframes posterDrift {
+  to { translate: 0 -0.65rem; }
+}
+@keyframes posterReel {
+  0%, 100% { background-image: var(--poster-0); }
+  16.667% { background-image: var(--poster-1); }
+  33.333% { background-image: var(--poster-2); }
+  50% { background-image: var(--poster-3); }
+  66.667% { background-image: var(--poster-4); }
+  83.333% { background-image: var(--poster-5); }
+}
+@keyframes floatIcon {
+  to { translate: 0 -0.5rem; opacity: 0.5; }
 }
 @keyframes stroll {
   0%,
@@ -275,37 +322,46 @@
   }
 }
 @media (max-width: 639px) {
-  .card {
-    --mascot-size: min(6rem, 28vw);
-    width: min(21rem, 100%);
-    padding: 1.125rem;
+  .stage {
+    --mascot-size: min(12rem, 55vw);
   }
   .scene {
-    height: 5.75rem;
+    height: 18rem;
   }
+  .gallery { inset: 2rem 2% 5rem; gap: 0.5rem; }
+  .poster { flex-basis: 28%; }
+  .poster:nth-child(2) { display: none; }
+  .icons svg { width: 1.5rem; height: 1.5rem; }
+  .title { font-size: 1.125rem; }
 }
-/* Keep the centered loading panel comfortable on landscape phones. */
+/* Let the unboxed scene fit landscape phones without hiding the message. */
 @media (max-height: 480px) {
-  .card {
-    --mascot-size: min(4rem, 28vw);
-    padding: 0.625rem 1rem;
+  .stage {
+    --mascot-size: 9rem;
   }
   .scene {
-    height: 3.5rem;
+    height: 10rem;
+    margin-top: 0;
     margin-bottom: 0.25rem;
   }
+  .gallery { inset: 0 15% 2rem; }
+  .poster { height: 7rem; flex-basis: auto; }
+  .track { bottom: 1rem; }
+  .brand { font-size: 1.5rem; }
+  .footer { margin-top: 0.25rem; }
 }
 @media (max-height: 360px) {
-  .card {
-    --mascot-size: min(3rem, 28vw);
+  .stage {
+    --mascot-size: 7rem;
   }
-  .header,
   .footer {
     display: none;
   }
   .scene {
-    height: 2.5rem;
+    height: 7rem;
   }
+  .gallery { inset: 0 20% 1rem; }
+  .poster { height: 5rem; }
 }
 /* At extreme text zoom / very short heights, prioritise the loading message. */
 @media (max-height: 280px) {
@@ -314,7 +370,10 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .card,
+  .stage,
+  .poster,
+  .posterArt,
+  .icons svg,
   .journey,
   .traveler,
   .gait,
