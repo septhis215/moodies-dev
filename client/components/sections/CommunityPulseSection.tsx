@@ -19,6 +19,7 @@ type CommunityPulseSectionProps = {
   mediaType: MediaType;
   isLoading?: boolean;
   error?: string | null;
+  onRetry?: () => void;
 };
 
 type CommunitySignal = {
@@ -100,6 +101,7 @@ export function CommunityPulseSection({
   mediaType,
   isLoading = false,
   error,
+  onRetry,
 }: CommunityPulseSectionProps) {
   const mediaLabel = mediaType === "tv" ? "series" : "movies";
   const signals = data ? collectSignals(data) : [];
@@ -111,6 +113,7 @@ export function CommunityPulseSection({
       id={`${mediaType}-community-pulse`}
       className="border-t border-[var(--surface-border)] pt-6 sm:pt-7"
       aria-labelledby={`${mediaType}-community-pulse-heading`}
+      aria-busy={showLoading}
     >
       <div className="mb-4 max-w-2xl">
         <p className="ui-kicker">Community signal</p>
@@ -126,7 +129,7 @@ export function CommunityPulseSection({
       </div>
 
       {showLoading ? (
-        <PulseLoading />
+        <><span role="status" className="sr-only">Loading community activity</span><PulseLoading /></>
       ) : error ? (
         <div className="flex items-start gap-3 border-y border-[var(--surface-border)] py-6 text-[var(--ink-muted)]">
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--brand-coral-strong)]" />
@@ -135,6 +138,7 @@ export function CommunityPulseSection({
               Community activity is unavailable
             </p>
             <p className="mt-1 text-sm">{error}</p>
+            {onRetry && <button type="button" onClick={onRetry} className="ui-secondary-action mt-3">Try again</button>}
           </div>
         </div>
       ) : leadSignal ? (

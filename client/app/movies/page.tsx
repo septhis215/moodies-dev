@@ -1,7 +1,7 @@
 import React from "react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
-import type { CommunityPulseData } from "@/types/communityPulse";
+import { homepageSections } from "@/components/sections/HomepageSectionsServer";
 import MoviesHomePageClient from "./MovieHomePageClient";
 
 const BASE_URL = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
@@ -88,20 +88,8 @@ async function fetchPopularMovies() {
   return fetchWithFallback<All[]>("/movies/trending?limit=25", []);
 }
 
-async function fetchTopRatedMovies() {
-  return fetchWithFallback<All[]>("/movies/favorites?limit=30", []);
-}
 
-async function fetchMovieTrailers() {
-  return fetchWithFallback<All[]>("/movies/trailers?limit=15", []);
-}
 
-async function fetchNewMovieTrailers() {
-  return fetchWithFallback<All[]>(
-    "/movies/upcoming-trailers?months=6&perMonth=18&maxPagesPerMonth=5",
-    [],
-  );
-}
 
 async function fetchKoreanMovies() {
   return fetchWithFallback<All[]>("/movies/koreaTrending?limit=25", []);
@@ -149,12 +137,6 @@ async function fetchAwardWinners() {
   return fetchWithFallback<All[]>("/movies/award-winners?limit=25", []);
 }
 
-async function fetchCommunityPulse(): Promise<CommunityPulseData> {
-  return fetchWithFallback<CommunityPulseData>(
-    "/media-stats/community-pulse?mediaType=movie&limit=5",
-    { mostLiked: [], mostReviewed: [], mostSaved: [] },
-  );
-}
 
 async function fetchNewReleases() {
   const result = await fetchWithFallback<{ data: All[] } | All[]>(
@@ -183,58 +165,19 @@ export const metadata = {
 };
 
 export default async function MoviesHomePage() {
-  const bulkData = await fetchWithFallback<{
-    featured?: All[];
-    trending?: All[];
-    trailers?: All[];
-    koreaTrending?: All[];
-    reviews?: ReviewItem[];
-  } | null>("/movies/bulk/dashboard?limit=15", null);
-
-  const [
-    topRatedMovies,
-    animatedMovies,
-    indieMovies,
-    awardWinners,
-    actionMovies,
-    moods,
-    newReleaseMovies,
-    newMovieTrailers,
-    communityPulse,
-  ] = await Promise.all([
-    fetchTopRatedMovies(),
-    fetchAnimatedMovies(),
-    fetchIndieMovies(),
-    fetchAwardWinners(),
-    fetchActionMovies(),
-    fetchMoods(),
-    fetchNewReleases(),
-    fetchNewMovieTrailers(),
-    fetchCommunityPulse(),
+  const sections = homepageSections("movie");
+  const [trendingMovies, popularMovies, koreanMovies, movieReviews, animatedMovies,
+    indieMovies, awardWinners, actionMovies, moods, newReleaseMovies] = await Promise.all([
+    fetchTrendingMovies(), fetchPopularMovies(), fetchKoreanMovies(), fetchMovieReviews(),
+    fetchAnimatedMovies(), fetchIndieMovies(), fetchAwardWinners(), fetchActionMovies(),
+    fetchMoods(), fetchNewReleases(),
   ]);
-
-  const [trendingMovies, popularMovies, movieTrailers, koreanMovies] = bulkData
-    ? [
-        bulkData.featured || [],
-        bulkData.trending || [],
-        bulkData.trailers || [],
-        bulkData.koreaTrending || [],
-      ]
-    : await Promise.all([
-        fetchTrendingMovies(),
-        fetchPopularMovies(),
-        fetchMovieTrailers(),
-        fetchKoreanMovies(),
-      ]);
-  const movieReviews = await fetchMovieReviews();
 
   return (
     <MoviesHomePageClient
       trendingMovies={trendingMovies}
       popularMovies={popularMovies}
-      topRatedMovies={topRatedMovies}
-      movieTrailers={movieTrailers}
-      newMovieTrailers={newMovieTrailers}
+      upcomingSection={sections.upcoming}
       movieReviews={movieReviews}
       koreanMovies={koreanMovies}
       animatedMovies={animatedMovies}
@@ -243,7 +186,7 @@ export default async function MoviesHomePage() {
       actionMovies={actionMovies}
       moods={moods}
       newReleaseMovies={newReleaseMovies}
-      communityPulse={communityPulse}
+      communityPulseSection={sections.communityPulse}
     />
   );
 }

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { MovieTmdbClientService } from '../client/movie-tmdb-client.service';
 import { MovieContentFilterService } from '../filters/movie-content-filter.service';
 import { MovieRecommendationsService } from '../recommendations/movie-recommendations.service';
@@ -43,6 +43,8 @@ export class MovieTrailersService {
                 (value) => Array.isArray(value) ? value.length > 0 : true,
             );
         } catch (err) {
+            // Provider failures must not trigger a second expensive fetch as a cache bypass.
+            if (err instanceof ServiceUnavailableException) throw err;
             this.logger.warn(`Trailer cache bypassed for ${key}: ${(err as Error).message}`);
             return fetcher();
         }
@@ -229,7 +231,7 @@ export class MovieTrailersService {
 
         if (!this.client.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty trailers');
-            return [];
+            throw new ServiceUnavailableException('Upcoming releases are temporarily unavailable.');
         }
 
         try {
@@ -328,7 +330,7 @@ export class MovieTrailersService {
             return result;
         } catch (err) {
             this.logger.error('Failed to fetch upcoming trailers', err as any);
-            return [];
+            throw new ServiceUnavailableException('Upcoming releases are temporarily unavailable.');
         }
     }
 

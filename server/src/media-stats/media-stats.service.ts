@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { MediaType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { TMDBService } from '../external-apis/services/tmdb.service';
@@ -133,6 +133,11 @@ export class MediaStatsService {
       const r = tmdbResults[i];
       if (r.status === 'fulfilled' && r.value) tmdbMap.set(id, r.value);
     });
+
+    // Existing engagement with no metadata means upstream failure, not an empty community.
+    if (uniqueIds.length > 0 && tmdbMap.size === 0) {
+      throw new ServiceUnavailableException('Community activity is temporarily unavailable.');
+    }
 
     const toItems = (
       rows: typeof liked,

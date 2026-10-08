@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CalendarDays, Tv } from "lucide-react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
-import type { CommunityPulseData } from "@/types/communityPulse";
+import type { ReactNode } from "react";
 import { tmdbImage } from "@/lib/tmdb";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import RatingBadge from "@/components/ui/rating-badge";
@@ -12,23 +12,20 @@ import { HomepageMediaHero } from "@/components/hero/HomepageMediaHero";
 import { MediaShelf } from "@/components/media/MediaShelf";
 import MoodRecommendationsSection from "@/components/sections/MoodRecommendationSection";
 import CommunityPicks from "@/components/sections/CommunityPicks";
-import { ComingSoonSection } from "@/components/sections/ComingSoon";
-import { CommunityPulseSection } from "@/components/sections/CommunityPulseSection";
 import { useScrollToHash } from "@/hooks/useScrollToHash";
 
 type TVHomePageClientProps = {
   trendingTV: All[];
   popularTV: All[];
   topRatedTV: All[];
-  TVTrailer: All[];
-  NewTVTrailer: All[];
   KoreanTV: All[];
   TVReview: ReviewItem[];
   newReleaseTV: All[];
   airingToday?: All[];
   airingThisWeek?: All[];
   moods?: unknown[];
-  communityPulse?: CommunityPulseData;
+  communityPulseSection: ReactNode;
+  upcomingSection: ReactNode;
 };
 
 const titleFor = (item: All) => item.name || item.title || "Untitled";
@@ -138,14 +135,14 @@ export default function TVHomePageClient({
   trendingTV,
   popularTV,
   topRatedTV,
-  NewTVTrailer,
   KoreanTV,
   TVReview,
   newReleaseTV,
   airingToday = [],
   airingThisWeek = [],
   moods,
-  communityPulse,
+  communityPulseSection,
+  upcomingSection,
 }: TVHomePageClientProps) {
   useScrollToHash(100);
   const marqueeItems = popularTV.length ? popularTV : trendingTV;
@@ -222,7 +219,7 @@ export default function TVHomePageClient({
           viewAllHref="/tv/k-drama"
         />
 
-        <CommunityPulseSection data={communityPulse} mediaType="tv" />
+        {communityPulseSection}
       </div>
 
       <CommunityPicks
@@ -232,11 +229,7 @@ export default function TVHomePageClient({
       />
 
       <div className="ui-shell space-y-12 pb-14 pt-10 sm:space-y-16">
-        <ComingSoonSection
-          title="Premiering soon"
-          items={NewTVTrailer}
-          type="tv"
-        />
+        {upcomingSection}
 
         <MoodRecommendationsSection mediaType="tv" initialMoods={moods} />
       </div>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Film, Ticket } from "lucide-react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
-import type { CommunityPulseData } from "@/types/communityPulse";
+import type { ReactNode } from "react";
 import { tmdbImage } from "@/lib/tmdb";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import RatingBadge from "@/components/ui/rating-badge";
@@ -12,16 +12,11 @@ import { HomepageMediaHero } from "@/components/hero/HomepageMediaHero";
 import { MediaShelf } from "@/components/media/MediaShelf";
 import MoodRecommendationsSection from "@/components/sections/MoodRecommendationSection";
 import CommunityPicks from "@/components/sections/CommunityPicks";
-import { ComingSoonSection } from "@/components/sections/ComingSoon";
-import { CommunityPulseSection } from "@/components/sections/CommunityPulseSection";
 import { useScrollToHash } from "@/hooks/useScrollToHash";
 
 type MoviesHomePageClientProps = {
   trendingMovies: All[];
   popularMovies: All[];
-  topRatedMovies: All[];
-  movieTrailers: All[];
-  newMovieTrailers: All[];
   movieReviews: ReviewItem[];
   koreanMovies: All[];
   animatedMovies: All[];
@@ -30,7 +25,8 @@ type MoviesHomePageClientProps = {
   actionMovies: All[];
   moods?: unknown[];
   newReleaseMovies: All[];
-  communityPulse?: CommunityPulseData;
+  communityPulseSection: ReactNode;
+  upcomingSection: ReactNode;
 };
 
 const titleFor = (item: All) => item.title || item.name || "Untitled";
@@ -155,7 +151,6 @@ function BoxOfficeRanking({ items }: { items: All[] }) {
 export default function MoviesHomePageClient({
   trendingMovies,
   popularMovies,
-  newMovieTrailers,
   movieReviews,
   koreanMovies,
   animatedMovies,
@@ -164,7 +159,8 @@ export default function MoviesHomePageClient({
   actionMovies,
   moods,
   newReleaseMovies,
-  communityPulse,
+  communityPulseSection,
+  upcomingSection,
 }: MoviesHomePageClientProps) {
   useScrollToHash(100);
 
@@ -218,13 +214,9 @@ export default function MoviesHomePageClient({
           viewAllHref="/movies/korean-cinema"
         />
 
-        <CommunityPulseSection data={communityPulse} mediaType="movie" />
+        {communityPulseSection}
 
-        <ComingSoonSection
-          title="Coming to Theaters"
-          items={newMovieTrailers}
-          type="movies"
-        />
+        {upcomingSection}
       </div>
 
       <CommunityPicks

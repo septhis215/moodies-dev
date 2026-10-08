@@ -1,4 +1,7 @@
+"use client";
+
 import { tmdbImage } from "@/lib/tmdb";
+import { LoadingRegion, SkeletonGrid } from "@/components/loading/PageSkeleton";
 import { ChevronDown, Bookmark, BookmarkCheck, Sparkles } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
@@ -47,10 +50,16 @@ export function ComingSoonSection({
   title,
   items,
   type,
+  isLoading = false,
+  error,
+  onRetry,
 }: {
   title: string;
   items: MovieLike[];
   type: "movies" | "tv";
+  isLoading?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
 }) {
   const router = useRouter();
   const { isInWatchlist: hookIsIn, add, remove, ready } = useWatchlist();
@@ -272,6 +281,7 @@ export function ComingSoonSection({
     <section
       id="upcoming"
       className="relative mx-auto w-full max-w-7xl border-t border-[var(--surface-border)] py-6 sm:py-7"
+      aria-busy={isLoading}
     >
       <div>
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3 sm:mb-6">
@@ -286,15 +296,22 @@ export function ComingSoonSection({
                 : "Upcoming movie releases, organised by week. Save a film for later."}
             </p>
           </div>
-          <p className="shrink-0 text-sm text-[var(--ink-muted)]">
+          {!isLoading && !error && <p className="shrink-0 text-sm text-[var(--ink-muted)]">
             <span className="font-semibold text-[var(--ink)]">
               {totalReleases}
             </span>{" "}
             upcoming {type === "tv" ? "shows" : "films"}
-          </p>
+          </p>}
         </div>
 
-        {totalVisible === 0 ? (
+        {isLoading ? (
+          <LoadingRegion label="Loading upcoming releases"><SkeletonGrid count={6} /></LoadingRegion>
+        ) : error ? (
+          <div className="border-y border-[var(--surface-border)] py-6 text-sm text-[var(--ink-muted)]">
+            <p>{error}</p>
+            {onRetry && <button type="button" onClick={onRetry} className="ui-secondary-action mt-3">Try again</button>}
+          </div>
+        ) : totalVisible === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-black/30 p-6 text-center">
             <p className="text-sm font-semibold text-white">
               No upcoming releases are available right now.
