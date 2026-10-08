@@ -536,7 +536,7 @@ export default function MoodRecommendationsSection({
               ? Array.from({ length: DEFAULT_MOOD_COUNT }).map((_, index) => (
                   <div
                     key={index}
-                    className="h-40 animate-pulse rounded-xl border border-[var(--surface-border)] bg-white/[0.06]"
+                    className="h-40 moodies-skeleton rounded-xl border border-[var(--surface-border)] bg-white/[0.06]"
                   />
                 ))
               : displayedMoods.map((mood, index) => (

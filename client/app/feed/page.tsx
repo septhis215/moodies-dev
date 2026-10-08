@@ -1,4 +1,5 @@
 "use client";
+import PageSkeleton from "@/components/loading/PageSkeleton";
 import { cn } from "@/lib/utils";
 import { tmdbImage } from "@/lib/tmdb";
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -922,6 +923,7 @@ export default function VideoFeedPage() {
         panelOpen ? "touch-pan-y" : "touch-none",
       )}
     >
+      {loading && videos.length === 0 && <div className="pointer-events-none absolute inset-0"><PageSkeleton variant="feed" /></div>}
       {/* ── TOP NAVBAR ──────────────────────────────────────────── */}
       <motion.nav
         initial={{ y: -56, opacity: 0 }}
@@ -1002,7 +1004,7 @@ export default function VideoFeedPage() {
               <RefreshCw
                 className={cn(
                   "h-4 w-4 sm:h-5 sm:w-5",
-                  loadingMode === "refresh" && "animate-spin",
+                  loadingMode === "refresh" && "motion-safe:animate-spin",
                 )}
               />
             </motion.button>

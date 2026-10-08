@@ -334,8 +334,8 @@ export default function CelebrityMediaSections({
             aria-label="Loading celebrity videos"
             className="grid gap-4 sm:grid-cols-2"
           >
-            <div className="ui-panel aspect-video motion-safe:animate-pulse" />
-            <div className="ui-panel aspect-video motion-safe:animate-pulse" />
+            <div className="ui-panel aspect-video moodies-skeleton" />
+            <div className="ui-panel aspect-video moodies-skeleton" />
           </div>
         ) : shownVideos.length > 0 ? (
           <>
@@ -475,7 +475,7 @@ export default function CelebrityMediaSections({
           <div
             role="status"
             aria-label="Loading celebrity photos"
-            className="ui-panel h-64 motion-safe:animate-pulse"
+            className="ui-panel h-64 moodies-skeleton"
           />
         ) : (
           <div className="ui-panel p-5 text-sm text-[var(--ink-muted)]">

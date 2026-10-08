@@ -1,0 +1,203 @@
+.card {
+  --mascot-size: 7rem;
+  box-sizing: border-box;
+  position: fixed;
+  right: calc(1rem + env(safe-area-inset-right));
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  z-index: 40;
+  width: min(19rem, calc(100vw - 2rem - env(safe-area-inset-left) - env(safe-area-inset-right)));
+  padding: 1rem 1.125rem;
+  overflow: hidden;
+  pointer-events: none;
+  border: 1px solid var(--surface-border);
+  border-radius: 1.25rem;
+  background: linear-gradient(145deg, var(--surface-1), var(--surface-0));
+  box-shadow: 0 16px 48px rgb(0 0 0 / 35%), inset 0 1px rgb(245 241 237 / 4%);
+  animation: arrive 240ms ease-out both;
+}
+.header, .footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.brand {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.badge {
+  flex-shrink: 0;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+.scene {
+  position: relative;
+  height: 6.5rem;
+  margin: 0.25rem 0 0.5rem;
+}
+.glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 90%, rgb(240 100 75 / 12%), transparent 65%);
+}
+.track {
+  position: absolute;
+  bottom: 0.6rem;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--surface-border) 15%, var(--surface-border) 85%, transparent);
+}
+.journey {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  /* 100% translation now equals the available runway, at every card width. */
+  width: max(0px, calc(100% - var(--mascot-size)));
+  height: var(--mascot-size);
+  animation: stroll 5.6s linear infinite;
+}
+.traveler {
+  position: relative;
+  width: var(--mascot-size);
+  height: var(--mascot-size);
+  animation: turn 5.6s linear infinite;
+}
+.gait {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 76%;
+  animation: waddle 640ms ease-in-out infinite;
+}
+.part {
+  position: absolute;
+  inset: 0;
+  background: url("/images/moodies-mascot.png") center / contain no-repeat;
+}
+/* Separate the original artwork into limbs without changing the brand asset.
+   The torso masks the joints while the arms and feet alternate each step. */
+.body {
+  clip-path: polygon(0 0, 100% 0, 100% 50%, 74% 50%, 70% 74%, 66% 77%, 34% 77%, 30% 74%, 26% 50%, 0 50%);
+}
+.leftArm {
+  clip-path: polygon(27% 51%, 30% 64%, 25% 73%, 18% 72%, 18% 60%);
+  transform-origin: 27% 54%;
+  animation: armStep 640ms ease-in-out infinite;
+}
+.rightArm {
+  clip-path: polygon(73% 51%, 82% 60%, 82% 72%, 75% 73%, 70% 64%);
+  transform-origin: 73% 54%;
+  animation: armStep 640ms ease-in-out -320ms infinite;
+}
+.leftLeg {
+  clip-path: polygon(33% 74%, 47% 74%, 47% 87%, 33% 87%);
+  transform-origin: 40% 75%;
+  animation: footStep 640ms ease-in-out infinite;
+}
+.rightLeg {
+  clip-path: polygon(53% 74%, 67% 74%, 67% 87%, 53% 87%);
+  transform-origin: 60% 75%;
+  animation: footStep 640ms ease-in-out -320ms infinite;
+}
+.shadow {
+  position: absolute;
+  left: 30%;
+  right: 30%;
+  top: 83%;
+  height: 6%;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 35%);
+  filter: blur(2px);
+  animation: shadowStep 640ms ease-in-out infinite;
+}
+.title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.footer {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+.footer > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.dots { display: flex; flex-shrink: 0; gap: 0.25rem; }
+.dots i {
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background: var(--brand-coral-strong);
+  animation: dot 1.2s ease-in-out infinite;
+}
+.dots i:nth-child(2) { animation-delay: 150ms; }
+.dots i:nth-child(3) { animation-delay: 300ms; }
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes stroll {
+  0%, 100% { transform: translateX(0); }
+  48%, 50% { transform: translateX(100%); }
+  98% { transform: translateX(0); }
+}
+@keyframes turn {
+  0%, 48%, 100% { transform: scaleX(1); }
+  50%, 98% { transform: scaleX(-1); }
+}
+@keyframes waddle {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  25%, 75% { transform: translateY(-2px) rotate(0); }
+  50% { transform: translateY(0) rotate(2deg); }
+}
+@keyframes footStep {
+  0%, 100% { transform: rotate(-12deg) translateY(-1px); }
+  50% { transform: rotate(12deg) translateY(1px); }
+}
+@keyframes armStep {
+  0%, 100% { transform: rotate(9deg); }
+  50% { transform: rotate(-9deg); }
+}
+@keyframes shadowStep {
+  0%, 50%, 100% { transform: scaleX(1); opacity: 0.7; }
+  25%, 75% { transform: scaleX(0.9); opacity: 0.5; }
+}
+@keyframes dot {
+  0%, 70%, 100% { opacity: 0.35; }
+  35% { opacity: 1; }
+}
+@media (max-width: 639px) {
+  .card {
+    --mascot-size: min(6rem, 28vw);
+    width: min(17rem, calc(100vw - 2rem - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    padding: 0.75rem 1rem;
+  }
+  .scene { height: 5.75rem; }
+}
+/* Landscape phones get a shorter card, leaving the navigation visible. */
+@media (max-height: 480px) {
+  .card { --mascot-size: min(4rem, 28vw); padding: 0.625rem 1rem; }
+  .scene { height: 3.5rem; margin-bottom: 0.25rem; }
+}
+@media (max-height: 360px) {
+  .card { --mascot-size: min(3rem, 28vw); }
+  .header, .footer { display: none; }
+  .scene { height: 2.5rem; }
+}
+/* At extreme text zoom / very short heights, prioritise the loading message. */
+@media (max-height: 280px) {
+  .scene { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card, .journey, .traveler, .gait, .leftArm, .rightArm, .leftLeg, .rightLeg, .shadow, .dots i { animation: none; }
+  .journey { left: calc(50% - var(--mascot-size) / 2); }
+  .dots i { opacity: 0.6; }
+}

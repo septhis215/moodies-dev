@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import PageSkeleton from "@/components/loading/PageSkeleton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
@@ -16,7 +17,7 @@ export default function AccountIntroPage() {
     if (!loading && !isAuthenticated) router.replace("/auth/signup");
   }, [loading, isAuthenticated, router]);
 
-  if (loading || !isAuthenticated) return null;
+  if (loading || !isAuthenticated) return <PageSkeleton variant="intro" embedded />;
 
   return (
     <div>

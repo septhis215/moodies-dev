@@ -84,7 +84,7 @@ export default function KoreaTrendingSection({
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="aspect-[2/3] w-36 shrink-0 animate-pulse rounded-xl bg-white/[0.07] sm:w-44"
+              className="aspect-[2/3] w-36 shrink-0 moodies-skeleton rounded-xl bg-white/[0.07] sm:w-44"
             />
           ))}
         </div>

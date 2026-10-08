@@ -1,6 +1,7 @@
 import { tmdbImage } from "@/lib/tmdb";
 // app/auth/layout.tsx
-import React from "react";
+import React, { Suspense } from "react";
+import PageSkeleton from "@/components/loading/PageSkeleton";
 import AuthBackground from "./AuthBackground";
 import AuthLayoutClient from "./AuthLayoutClient";
 
@@ -79,7 +80,7 @@ async function fetchAuthFeatured(): Promise<Slide[]> {
   }
 }
 
-export default async function AuthLayout({
+async function AuthScene({
   children,
 }: {
   children: React.ReactNode;
@@ -91,5 +92,13 @@ export default async function AuthLayout({
       <AuthBackground slides={slides} rotationMs={10000} />
       <AuthLayoutClient slides={slides}>{children}</AuthLayoutClient>
     </main>
+  );
+}
+
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<PageSkeleton variant="auth" />}>
+      <AuthScene>{children}</AuthScene>
+    </Suspense>
   );
 }

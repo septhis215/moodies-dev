@@ -663,16 +663,16 @@ function CelebrityCard({ person }: { person: CelebrityCard }) {
 
 function CelebrityGridSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+    <div aria-busy="true" aria-label="Loading celebrities" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
       {Array.from({ length: 24 }).map((_, index) => (
         <div key={index} className="space-y-3 rounded-lg bg-white/[0.028] p-2">
-          <div className="aspect-[2/3] animate-pulse rounded-md bg-white/[0.06]" />
-          <div className="h-4 w-4/5 animate-pulse rounded bg-white/[0.06]" />
-          <div className="h-3 w-2/3 animate-pulse rounded bg-white/[0.045]" />
+          <div className="aspect-[2/3] moodies-skeleton rounded-md bg-white/[0.06]" />
+          <div className="h-4 w-4/5 moodies-skeleton rounded bg-white/[0.06]" />
+          <div className="h-3 w-2/3 moodies-skeleton rounded bg-white/[0.045]" />
         </div>
       ))}
       <div className="col-span-full flex justify-center pt-2">
-        <Loader2 className="h-5 w-5 animate-spin text-[#ef775f]" />
+        <Loader2 className="h-5 w-5 motion-safe:animate-spin text-[#ef775f]" />
       </div>
     </div>
   );

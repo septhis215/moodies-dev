@@ -2,6 +2,7 @@
 
 import { tmdbImage } from "@/lib/tmdb";
 import React, { useEffect, useMemo, useState } from "react";
+import PageSkeleton from "@/components/loading/PageSkeleton";
 import Link from "next/link";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { useParams } from "next/navigation";
@@ -540,15 +541,7 @@ export default function PublicProfilePage() {
         )
       : null;
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
-        <div className="ui-shell flex min-h-[72vh] items-center justify-center">
-          <div className="h-8 w-40 animate-pulse rounded bg-[var(--surface-2)]" aria-label="Loading profile" />
-        </div>
-      </main>
-    );
-  }
+  if (loading) return <PageSkeleton variant="profile" />;
 
   if (error || !profile) {
     return (

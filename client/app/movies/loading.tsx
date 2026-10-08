@@ -1,1 +1,5 @@
-export { default } from "@/components/ui/AppLoading";
+import PageSkeleton from "@/components/loading/PageSkeleton";
+
+export default function Loading() {
+  return <PageSkeleton variant="home" />;
+}

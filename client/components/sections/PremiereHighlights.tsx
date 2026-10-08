@@ -1,4 +1,6 @@
 "use client";
+
+import { LoadingRegion, RailSkeleton } from "@/components/loading/PageSkeleton";
 import React, { useEffect, useState } from "react";
 import { tmdbImage } from "@/lib/tmdb";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
@@ -143,28 +145,9 @@ export default function PremiereHighlights({
   );
 
   if (loading) {
-    return (
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
-              {title}
-            </h2>
-            <p className="text-gray-400 text-base mt-2">
-              Loading incredible content...
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="aspect-[16/9] bg-gray-800 animate-pulse rounded-2xl"
-            />
-          ))}
-        </div>
-      </section>
-    );
+    return <section className="ui-shell border-b border-[var(--surface-border)] py-8 sm:py-10" aria-label={title}>
+      <LoadingRegion label={`Loading ${title}`}><RailSkeleton landscape /></LoadingRegion>
+    </section>;
   }
 
   if (error) {

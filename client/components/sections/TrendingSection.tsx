@@ -89,7 +89,7 @@ export default function TrendingSection({
           {Array.from({ length: 6 }, (_, index) => (
             <div
               key={index}
-              className="aspect-[2/3] w-36 shrink-0 animate-pulse rounded-md bg-[var(--surface-2)] sm:w-44"
+              className="aspect-[2/3] w-36 shrink-0 moodies-skeleton rounded-md bg-[var(--surface-2)] sm:w-44"
             />
           ))}
         </div>

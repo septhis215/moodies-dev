@@ -247,17 +247,17 @@ export default function CommunityPicks({
     return (
       <section className="ui-shell border-b border-[var(--surface-border)] py-8 sm:py-10">
         <div className="mb-6 space-y-3">
-          <div className="h-3 w-32 animate-pulse rounded bg-[var(--surface-2)]" />
-          <div className="h-9 w-72 max-w-full animate-pulse rounded bg-[var(--surface-2)]" />
-          <div className="h-4 w-96 max-w-full animate-pulse rounded bg-[var(--surface-1)]" />
+          <div className="h-3 w-32 moodies-skeleton rounded bg-[var(--surface-2)]" />
+          <div className="h-9 w-72 max-w-full moodies-skeleton rounded bg-[var(--surface-2)]" />
+          <div className="h-4 w-96 max-w-full moodies-skeleton rounded bg-[var(--surface-1)]" />
         </div>
         <div className="grid gap-3 lg:grid-cols-12">
-          <div className="h-[420px] animate-pulse rounded-md bg-[var(--surface-1)] lg:col-span-5" />
+          <div className="h-[420px] moodies-skeleton rounded-md bg-[var(--surface-1)] lg:col-span-5" />
           <div className="grid gap-3 sm:grid-cols-2 lg:col-span-7">
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="h-48 animate-pulse rounded-md bg-[var(--surface-1)]"
+                className="h-48 moodies-skeleton rounded-md bg-[var(--surface-1)]"
               />
             ))}
           </div>

@@ -1,5 +1,5 @@
-import { ReviewsPageLoading } from "@/components/selected-content/extended/reviewsPageStates";
+import PageSkeleton from "@/components/loading/PageSkeleton";
 
 export default function Loading() {
-  return <ReviewsPageLoading />;
+  return <PageSkeleton variant="reviews" />;
 }

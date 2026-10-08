@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingRegion, SkeletonGrid } from "@/components/loading/PageSkeleton";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Check, ArrowLeft, ArrowRight, X } from "lucide-react";
@@ -543,6 +544,7 @@ export default function MovieQuizPage() {
                 ? "Comparing your viewing signals with the available catalogue."
                 : `Your answers are safe. ${errorMessage || "Please retry in a moment."}`}
             </p>
+            {stage === "loading" && <LoadingRegion label="Loading your matches" className="mt-6"><SkeletonGrid count={6} /></LoadingRegion>}
             <div className="mt-5 flex flex-wrap gap-3">
               {stage === "error" && (
                 <button

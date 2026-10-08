@@ -221,7 +221,7 @@ export default function FootballStoriesSection() {
                     ? Array.from({ length: 10 }).map((_, index) => (
                         <div
                           key={index}
-                          className="h-[228px] w-[128px] shrink-0 snap-start animate-pulse rounded-lg border border-white/10 bg-white/10 sm:h-[286px] sm:w-[162px]"
+                          className="h-[228px] w-[128px] shrink-0 snap-start moodies-skeleton rounded-lg border border-white/10 bg-white/10 sm:h-[286px] sm:w-[162px]"
                         />
                       ))
                     : displayItems.map((item, index) => (

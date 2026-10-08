@@ -1,5 +1,6 @@
 "use client";
 
+import { PosterSkeleton } from "@/components/loading/PageSkeleton";
 import Link from "next/link";
 import { Bookmark, BookmarkCheck, LoaderCircle } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
@@ -110,13 +111,7 @@ export function MediaCard({
 }
 
 export function MediaCardSkeleton() {
-  return (
-    <div className="animate-pulse">
-      <div className="aspect-[2/3] rounded-xl bg-white/[0.07]" />
-      <div className="mt-3 h-4 w-4/5 rounded-xl bg-white/[0.07]" />
-      <div className="mt-2 h-3 w-1/3 rounded-xl bg-white/[0.05]" />
-    </div>
-  );
+  return <PosterSkeleton />;
 }
 
 export default MediaCard;

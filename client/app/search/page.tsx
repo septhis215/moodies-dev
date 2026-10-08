@@ -1,5 +1,6 @@
 "use client";
 
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -590,7 +591,7 @@ export default function SearchResultsPage() {
               aria-hidden="true"
             >
               {Array.from({ length: 10 }, (_, index) => (
-                <div key={index} className={styles.skeleton} />
+                <Skeleton key={index} className={styles.skeleton} />
               ))}
             </div>
           ) : results.length > 0 ? (

@@ -19,7 +19,7 @@ import {
   Star,
 } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import AppLoading from "@/components/ui/AppLoading";
+import PageSkeleton from "@/components/loading/PageSkeleton";
 import { tmdbImage } from "@/lib/tmdb";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import CelebrityMediaSections from "@/components/celeb/CelebrityMediaSections";
@@ -555,7 +555,7 @@ export default function CelebrityDetailPage({
     );
   }
 
-  if (loading) return <AppLoading />;
+  if (loading) return <PageSkeleton variant="person" />;
   if (!person)
     return (
       <div className="ui-shell py-20 text-[var(--ink)]">

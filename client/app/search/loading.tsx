@@ -1,5 +1,5 @@
-/**
- * Search route loading segment — uses the shared Moodies loading screen.
- * See @/components/ui/AppLoading for the canonical source.
- */
-export { default } from "@/components/ui/AppLoading";
+import PageSkeleton from "@/components/loading/PageSkeleton";
+
+export default function Loading() {
+  return <PageSkeleton variant="search" />;
+}

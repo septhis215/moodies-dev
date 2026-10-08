@@ -79,14 +79,14 @@ function collectSignals(data: CommunityPulseData): CommunitySignal[] {
 function PulseLoading() {
   return (
     <div className="grid gap-4 lg:grid-cols-12" aria-hidden="true">
-      <div className="h-[280px] animate-pulse rounded-md bg-[var(--surface-1)] lg:col-span-5" />
+      <div className="h-[280px] moodies-skeleton rounded-md bg-[var(--surface-1)] lg:col-span-5" />
       <div className="divide-y divide-[var(--surface-border)] border-y border-[var(--surface-border)] lg:col-span-7">
         {[0, 1, 2, 3, 4].map((index) => (
           <div key={index} className="flex gap-3 py-1.5">
-            <div className="h-[50px] w-9 animate-pulse rounded-sm bg-[var(--surface-2)]" />
+            <div className="h-[50px] w-9 moodies-skeleton rounded-sm bg-[var(--surface-2)]" />
             <div className="flex-1 space-y-2 pt-1.5">
-              <div className="h-3 w-28 animate-pulse rounded bg-[var(--surface-2)]" />
-              <div className="h-4 w-2/3 animate-pulse rounded bg-[var(--surface-2)]" />
+              <div className="h-3 w-28 moodies-skeleton rounded bg-[var(--surface-2)]" />
+              <div className="h-4 w-2/3 moodies-skeleton rounded bg-[var(--surface-2)]" />
             </div>
           </div>
         ))}

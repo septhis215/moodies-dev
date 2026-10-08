@@ -94,7 +94,7 @@ export default function CelebSection() {
     return (
       <section className="relative mx-auto w-full px-4 py-12 sm:px-6 sm:py-16">
         <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-8">
+          <div className="moodies-skeleton space-y-8">
             <div className="space-y-4">
               <div className="h-8 bg-gray-700 rounded-lg w-64"></div>
               <div className="h-4 w-full max-w-96 rounded bg-gray-800"></div>

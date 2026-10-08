@@ -1,5 +1,6 @@
 "use client";
 
+import PageSkeleton from "@/components/loading/PageSkeleton";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { AnimatePresence, motion } from "framer-motion";
@@ -535,6 +536,8 @@ export default function MoodDiscoveryWheel() {
     (item) => Number(item.voteAverage ?? 0) >= 7,
   ).length;
 
+  if (loadingMoods) return <PageSkeleton variant="moods" />;
+
   return (
     <main className="min-h-screen overflow-x-clip bg-[var(--surface-0)] px-4 pb-10 pt-4 text-white sm:px-6 sm:pt-5 lg:px-8 lg:pt-28">
       <section className="pb-3 sm:pb-5">
@@ -903,11 +906,11 @@ export default function MoodDiscoveryWheel() {
                       key={index}
                       className="flex gap-3 rounded-lg border border-white/10 bg-black/20 p-3"
                     >
-                      <div className="h-20 w-14 animate-pulse rounded bg-white/10" />
+                      <div className="h-20 w-14 moodies-skeleton rounded bg-white/10" />
                       <div className="flex-1 space-y-3 py-1">
-                        <div className="h-3 w-3/4 animate-pulse rounded bg-white/10" />
-                        <div className="h-3 w-1/2 animate-pulse rounded bg-white/10" />
-                        <div className="h-3 w-full animate-pulse rounded bg-white/10" />
+                        <div className="h-3 w-3/4 moodies-skeleton rounded bg-white/10" />
+                        <div className="h-3 w-1/2 moodies-skeleton rounded bg-white/10" />
+                        <div className="h-3 w-full moodies-skeleton rounded bg-white/10" />
                       </div>
                     </div>
                   ))}

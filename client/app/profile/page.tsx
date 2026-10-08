@@ -8,6 +8,7 @@ import React, {
   useRef,
   useCallback,
 } from "react";
+import PageSkeleton from "@/components/loading/PageSkeleton";
 import Link from "next/link";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import {
@@ -785,7 +786,7 @@ export default function ProfilePage() {
   }
 
   if (authLoading) {
-    return <ProfilePageSkeleton />;
+    return <PageSkeleton variant="profile" />;
   }
 
   if (!isAuthenticated) {
@@ -1266,7 +1267,7 @@ export default function ProfilePage() {
                       Array.from({ length: 12 }).map((_, i) => (
                         <div
                           key={i}
-                          className="aspect-[2/3] bg-[var(--surface-2)] animate-pulse"
+                          className="aspect-[2/3] bg-[var(--surface-2)] moodies-skeleton"
                         />
                       ))}
 
@@ -1345,7 +1346,7 @@ export default function ProfilePage() {
                       Array.from({ length: 6 }).map((_, i) => (
                         <div
                           key={i}
-                          className="h-20 bg-[var(--surface-2)] animate-pulse sm:h-24"
+                          className="h-20 bg-[var(--surface-2)] moodies-skeleton sm:h-24"
                         />
                       ))}
 
@@ -1506,7 +1507,7 @@ export default function ProfilePage() {
                   {Array.from({ length: 3 }).map((_, i) => (
                     <div
                       key={i}
-                      className="h-48 rounded-2xl bg-white/[0.03] animate-pulse border border-white/[0.05]"
+                      className="h-48 rounded-2xl bg-white/[0.03] moodies-skeleton border border-white/[0.05]"
                     />
                   ))}
                 </div>
@@ -2497,30 +2498,5 @@ function StatCard({
         <p className="text-2xl font-bold text-[var(--ink)] sm:text-3xl">{value}</p>
       </div>
     </div>
-  );
-}
-
-function ProfilePageSkeleton() {
-  return (
-    <main className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
-      <div className="ui-shell animate-pulse py-8 sm:py-10" aria-label="Loading profile">
-        <div className="rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:p-8">
-          <div className="flex items-center gap-4">
-            <div className="h-[4.5rem] w-[4.5rem] rounded-2xl bg-[var(--surface-2)] sm:h-28 sm:w-28" />
-            <div className="flex-1 space-y-3">
-              <div className="h-3 w-24 rounded bg-[var(--surface-2)]" />
-              <div className="h-9 max-w-sm rounded bg-[var(--surface-2)]" />
-              <div className="h-4 w-48 rounded bg-[var(--surface-2)]" />
-            </div>
-          </div>
-          <div className="mt-6 h-16 rounded-xl bg-[var(--surface-2)]" />
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-24 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)]" />
-          ))}
-        </div>
-      </div>
-    </main>
   );
 }

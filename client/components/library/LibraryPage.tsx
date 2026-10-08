@@ -1,5 +1,6 @@
 "use client";
 
+import { SkeletonGrid } from "@/components/loading/PageSkeleton";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
@@ -586,15 +587,7 @@ function LoadingGrid({ label }: { label: string }) {
       <p role="status" className="mb-4 text-sm text-[var(--ink-muted)]">
         {label}
       </p>
-      <div aria-hidden="true" className={gridClass}>
-        {Array.from({ length: 6 }, (_, index) => (
-          <div key={index}>
-            <div className="aspect-[2/3] rounded-xl bg-[var(--surface-1)] motion-safe:animate-pulse" />
-            <div className="mt-3 h-4 w-3/4 rounded bg-[var(--surface-2)]" />
-            <div className="mt-2 h-3 w-1/2 rounded bg-[var(--surface-2)]" />
-          </div>
-        ))}
-      </div>
+      <div aria-hidden="true"><SkeletonGrid count={6} /></div>
     </div>
   );
 }
