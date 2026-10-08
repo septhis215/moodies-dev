@@ -3,7 +3,7 @@
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { useId, type InputHTMLAttributes, type ReactNode } from "react";
-import { AlertCircle, CheckCircle2, Eye, EyeOff, Info, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Eye, EyeOff, Info, Loader2 } from "lucide-react";
 import { SupportEmailLink } from "@/components/ui/support-email-link";
 
 export function AuthFrame({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -12,10 +12,16 @@ export function AuthFrame({ children, className = "" }: { children: ReactNode; c
 
 export function AuthBrand({ compact = false }: { compact?: boolean }) {
   return (
-    <Link href="/" aria-label="Moodies homepage" className={`auth-brand inline-flex items-center gap-2.5 rounded-sm focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] ${compact ? "mb-6" : "mb-8"}`}>
-      <Image src="/images/moodies-transparent.png" alt="" width={36} height={36} className="h-9 w-9 object-contain" priority />
-      <span data-display className="text-2xl font-bold tracking-normal text-[var(--ink)]">Moodies</span>
-    </Link>
+    <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 ${compact ? "mb-6" : "mb-8"}`}>
+      <Link href="/" aria-label="Moodies homepage" className="auth-brand inline-flex min-h-11 items-center gap-2.5 rounded-sm focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]">
+        <Image src="/images/moodies-transparent.png" alt="" width={36} height={36} className="h-9 w-9 object-contain" priority />
+        <span data-display className="text-2xl font-bold tracking-normal text-[var(--ink)]">Moodies</span>
+      </Link>
+      <Link href="/" className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border border-[var(--surface-border)] bg-white/5 px-2 text-sm font-semibold text-[var(--brand-coral-strong)] transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] md:hidden">
+        <ArrowLeft size={16} aria-hidden="true" />
+        Back to home
+      </Link>
+    </div>
   );
 }
 

@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { handleAppError } from "@/lib/errors";
 import { appToast, TOAST_IDS } from "@/lib/toast";
 import MoodiesIntro from "@/components/sections/MoodiesIntro";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
@@ -257,26 +256,17 @@ function AgeInput({ value, onChange, id }: { value: string; onChange: (value: st
 function PreferencePicker({ options, selected, onToggle, onClear, kind }: {
   options: readonly string[]; selected: string[]; onToggle: (v: string) => void; onClear: () => void; kind: "genre" | "language";
 }) {
-  const [page, setPage] = useState(0);
-  const shortViewport = useMediaQuery("(max-height: 520px)");
-  const pageSize = shortViewport ? 3 : 9;
-  const pageCount = Math.ceil(options.length / pageSize);
-  const currentPage = Math.min(page, pageCount - 1);
-  const visible = options.slice(currentPage * pageSize, currentPage * pageSize + pageSize);
   return (
-    <div className="min-w-0">
-      <div className="mb-2 flex min-h-8 items-center justify-between text-xs text-[var(--ink-muted)]">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="mb-2 flex shrink-0 items-center justify-between text-xs text-[var(--ink-muted)]">
         <p aria-live="polite">{selected.length} selected</p>
-        <button type="button" onClick={onClear} disabled={!selected.length} className="min-h-8 px-2 font-semibold text-[var(--brand-coral-strong)] disabled:opacity-40">Clear</button>
+        <button type="button" onClick={onClear} disabled={!selected.length} className="min-h-11 rounded-md px-2 font-semibold text-[var(--brand-coral-strong)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] disabled:cursor-not-allowed disabled:opacity-40">Clear</button>
       </div>
-      <div role="group" aria-label={`Preferred ${kind}s`} className="grid auto-rows-fr grid-cols-3 gap-2">
-        {visible.map((option) => <button key={option} type="button" aria-pressed={selected.includes(option)} onClick={() => onToggle(option)}
+      <div className="min-h-0 overflow-y-auto overscroll-contain pb-2 [scrollbar-color:var(--surface-border)_transparent]">
+      <div role="group" aria-label={`Preferred ${kind}s`} className="grid auto-rows-fr grid-cols-2 gap-2 p-1 sm:grid-cols-3">
+        {options.map((option) => <button key={option} type="button" aria-pressed={selected.includes(option)} onClick={() => onToggle(option)}
           className={`min-h-11 rounded-md border px-2 py-2 text-xs font-semibold leading-4 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] motion-reduce:transition-none ${selected.includes(option) ? "border-[var(--brand-coral)] bg-[var(--brand-coral)]/15 text-[var(--ink)]" : "border-[var(--surface-border)] bg-[var(--surface-1)] text-[var(--ink-muted)] hover:border-[var(--ink-muted)] hover:text-[var(--ink)]"}`}>{option}</button>)}
       </div>
-      <div className="mt-2 flex items-center justify-between gap-3">
-        <button type="button" aria-label={`Previous ${kind} options`} disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)} className="min-h-11 text-sm font-semibold text-[var(--ink)] disabled:opacity-30">Previous</button>
-        <span className="text-xs text-[var(--ink-muted)]" aria-live="polite">{currentPage + 1} / {pageCount}</span>
-        <button type="button" aria-label={`More ${kind} options`} disabled={currentPage === pageCount - 1} onClick={() => setPage(currentPage + 1)} className="min-h-11 text-sm font-semibold text-[var(--ink)] disabled:opacity-30">More options</button>
       </div>
     </div>
   );

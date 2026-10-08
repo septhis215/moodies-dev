@@ -44,6 +44,7 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
   const audioEnabledRef = useRef(audioEnabled);
   const pathname = usePathname();
   const isLogin = pathname.includes("/auth/login");
+  const isOnboarding = pathname.includes("/auth/onboarding");
 
   // Keep the latest audio preference available inside callbacks without
   // recreating the player every time the toggle is pressed.
@@ -363,13 +364,14 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
       )}
 
       {/* Cinematic overlays — sit above everything and mask any residual chrome */}
+      {isOnboarding && <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 bg-black/45" />}
       <div
-        className={`absolute inset-0 z-[1] bg-gradient-to-t ${
-          isLogin ? "from-black/55" : "from-black"
+        className={`pointer-events-none absolute inset-0 z-20 bg-gradient-to-t ${
+          isLogin ? "from-black/55" : isOnboarding ? "from-black/60" : "from-black"
         } via-black/00 to-transparent`}
       />
       <div
-        className={`absolute inset-0 z-[1] bg-gradient-to-r ${
+        className={`pointer-events-none absolute inset-0 z-20 bg-gradient-to-r ${
           isLogin ? "from-black/10" : "from-black/00"
         } via-black/00 to-transparent`}
       />
