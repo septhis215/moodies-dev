@@ -39,13 +39,13 @@ export default function MoodiesIntro({
     return (
       <section aria-labelledby={headingId} className="relative overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 sm:p-5">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_100%_0%,rgba(230,182,92,0.12),transparent_65%)]" />
-        <div className="relative grid grid-cols-[minmax(0,1fr)_4rem] items-center gap-3">
+        <div className="relative grid grid-cols-[minmax(0,1fr)_6rem] items-center gap-x-3 gap-y-3 sm:grid-cols-[minmax(0,1fr)_9rem]">
           <div>
             <p className="ui-kicker">Meet Moodies</p>
             <h2 id={headingId} className="mt-2 text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl">Find your next good watch.</h2>
           </div>
-          <Image src="/images/moods/serenity.png" alt="Serenity mood mascot" width={96} height={96} sizes="64px" unoptimized className="h-16 w-16 object-contain" />
-          <p className="col-span-2 text-sm leading-5 text-[var(--ink-muted)]">Movies and series for your mood, shaped by your taste.</p>
+          <Image src="/images/moods/serenity.png" alt="Serenity mood mascot" width={160} height={160} sizes="(max-width: 639px) 96px, 144px" unoptimized className="col-start-2 row-span-2 row-start-1 h-24 w-24 object-contain sm:h-36 sm:w-36" />
+          <p className="col-start-1 text-sm leading-5 text-[var(--ink-muted)]">Movies and series for your mood, shaped by your taste.</p>
         </div>
         <p className="relative mt-2 border-t border-[var(--surface-border)] pt-2 text-xs leading-4 text-[var(--ink-muted)]">Find it here. Watch on your service.</p>
       </section>
