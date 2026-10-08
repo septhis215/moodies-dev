@@ -24,6 +24,7 @@ export default function MoodNightPreview() {
   const [motionAllowed, setMotionAllowed] = useState(false);
   const [results, setResults] = useState<{ mood: string; data: Preview } | null>(null);
   const [failedSelection, setFailedSelection] = useState<string | null>(null);
+  const [retryAttempt, setRetryAttempt] = useState(0);
   const [paused, setPaused] = useState(false);
   const [selectedPick, setSelectedPick] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -71,23 +72,24 @@ export default function MoodNightPreview() {
         if (cancelled) return;
         cache.current.set(selection, data);
         setResults({ mood: selection, data });
+        setFailedSelection(null);
       } catch { if (!cancelled) setFailedSelection(selection); }
       finally { window.clearTimeout(timer); }
     };
     void load();
     return () => { cancelled = true; controller.abort(); window.clearTimeout(timer); };
-  }, [nearby, selection]);
+  }, [nearby, selection, retryAttempt]);
 
   const focus = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]";
   return <section ref={sectionRef} id="your-moods" className="relative isolate scroll-mt-24 overflow-clip border-b border-[var(--surface-border)] bg-[var(--surface-0)]" aria-labelledby="mood-shelf-heading">
     <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-      {backdrop && <Image key={backdrop} src={tmdbImage(backdrop, "w1280")} alt="" fill sizes="100vw" className={`${styles.backdrop} object-cover opacity-75`} />}
+      {backdrop && <Image key={backdrop} src={tmdbImage(backdrop, "w1280")} alt="" fill sizes="100vw" className={`${styles.backdrop} object-cover`} />}
       {activeTrailer && motionAllowed && visible && pageVisible && !paused && <MoodTrailerBackdrop key={activeTrailer.key} videoKey={activeTrailer.key} onPlaying={onPlaying} />}
-      <div className="absolute inset-0 bg-[var(--surface-0)]/40" />
-      <div className="absolute inset-0" style={{ background: `linear-gradient(105deg, var(--surface-0) 5%, ${mood.color}12 100%)` }} />
-      <div className="absolute inset-0 bg-gradient-to-t from-[var(--surface-0)] via-transparent to-[var(--surface-0)]/25" />
+      <div className={`${styles.sceneShade} absolute inset-0`} />
+      <div className="absolute inset-0" style={{ background: `linear-gradient(105deg, transparent 35%, ${mood.color}08 100%)` }} />
+      <div className={`${styles.sceneEdges} absolute inset-0`} />
     </div>
-    <div className="ui-shell relative grid items-center gap-6 py-10 sm:py-14 lg:grid-cols-[minmax(15rem,0.72fr)_minmax(0,1.28fr)] lg:gap-12 lg:py-16">
+    <div className={`${styles.content} ui-shell relative grid items-center gap-6 py-12 sm:py-16 lg:min-h-[34rem] lg:grid-cols-[minmax(15rem,0.72fr)_minmax(0,1.28fr)] lg:gap-12 lg:py-20`}>
       <div className="min-w-0">
         <p className="ui-kicker">Choose by mood</p>
         <h2 id="mood-shelf-heading" className="mt-3 max-w-lg text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">What kind of night is this?</h2>
@@ -138,7 +140,7 @@ export default function MoodNightPreview() {
                   </div>;
                 })}</div>
               </>
-                : <p role="status" className="text-sm leading-6 text-[var(--ink-muted)]">{failed ? "Tonight’s picks couldn’t load. Try the mood wheel for more ways to explore." : "No picks for this mood just yet. Try another feeling or explore the mood wheel."}</p>}
+                : <div><p role="status" className="text-sm leading-6 text-[var(--ink-muted)]">{failed ? "Tonight’s picks couldn’t load. Try again or explore the mood wheel." : "No picks for this mood just yet. Try another feeling or explore the mood wheel."}</p>{failed && <button type="button" onClick={() => { setFailedSelection(null); setRetryAttempt(value => value + 1); }} className={`mt-2 inline-flex min-h-11 items-center rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] ${focus}`}>Try again</button>}</div>}
           </div>
         </div>
       </div>

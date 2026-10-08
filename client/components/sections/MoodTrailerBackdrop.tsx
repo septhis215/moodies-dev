@@ -61,7 +61,7 @@ export default function MoodTrailerBackdrop({ videoKey, onPlaying }: {
     };
   }, [videoKey, onPlaying]);
 
-  return <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden transition-opacity duration-700 motion-reduce:transition-none ${playing ? "opacity-75" : "opacity-0"}`}>
+  return <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden transition-opacity duration-700 motion-reduce:transition-none ${playing ? "opacity-100" : "opacity-0"}`}>
     <div ref={hostRef} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 [&_iframe]:h-full [&_iframe]:w-full" />
   </div>;
 }
