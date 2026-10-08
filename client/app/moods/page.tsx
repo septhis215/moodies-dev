@@ -704,7 +704,7 @@ export default function MoodDiscoveryWheel() {
                         <motion.span
                           animate={{ rotate: -currentRotation }}
                           transition={wheelTransition}
-                          className="flex h-full w-full flex-col items-center justify-center gap-0.5"
+                          className="flex h-full w-full items-center justify-center"
                         >
                           <span
                             className={`relative block h-[58%] w-[58%] transition-transform hover:scale-110 ${isSelected ? "scale-110" : ""}`}
@@ -717,16 +717,37 @@ export default function MoodDiscoveryWheel() {
                               className="object-contain"
                             />
                           </span>
-                          <span
-                            className={`max-w-full text-center text-xs font-semibold leading-tight sm:text-sm ${isSelected ? "text-white" : "text-white/80"}`}
-                          >
-                            {mood.name}
-                          </span>
                         </motion.span>
                       </button>
                     );
                   })}
                 </motion.div>
+                {/* Labels settle independently; only the mascots travel with the wheel. */}
+                {activeMoods.map((mood, index) => {
+                  const angle =
+                    index * (360 / activeMoods.length) +
+                    180 / activeMoods.length - 90 + (currentRotation % 360);
+                  const point = polarToCartesian(50, 50, 31, angle);
+                  const isSelected = mood.id === selectedMoodId && !isSpinning;
+                  return (
+                    <div
+                      key={mood.id}
+                      aria-hidden="true"
+                      style={{ left: `${point.x}%`, top: `${point.y}%` }}
+                      className="pointer-events-none absolute h-[24%] w-[24%] -translate-x-1/2 -translate-y-1/2"
+                    >
+                      <motion.span
+                        key={`${activeClusterId}-${currentRotation}`}
+                        initial={{ opacity: 0, y: reducedMotion ? 0 : 4 }}
+                        animate={{ opacity: isSpinning ? 0 : 1, y: isSpinning && !reducedMotion ? 4 : 0 }}
+                        transition={{ duration: reducedMotion ? 0 : 0.28, delay: reducedMotion || isSpinning ? 0 : 0.5, ease: "easeOut" }}
+                        className={`absolute inset-x-0 top-[82%] text-center text-xs font-semibold leading-tight sm:text-sm ${isSelected ? "text-white" : "text-white/80"}`}
+                      >
+                        {mood.name}
+                      </motion.span>
+                    </div>
+                  );
+                })}
                 <div
                   aria-hidden
                   className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1"
@@ -765,10 +786,10 @@ export default function MoodDiscoveryWheel() {
               {showMoodBubble && selectedMood && !isSpinning ? (
                 <motion.div
                   key={selectedMood.id}
-                  initial={{ opacity: 0, y: 6 }}
+                  initial={{ opacity: 0, y: reducedMotion ? 0 : 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  exit={{ opacity: 0, y: reducedMotion ? 0 : -4 }}
+                  transition={{ duration: reducedMotion ? 0 : 0.32, ease: "easeOut" }}
                   className="mx-auto mt-3 mb-4 flex max-w-xl items-center gap-3 border-l-2 px-3 py-2"
                   style={{
                     borderColor: selectedMood.color ?? activeCluster.color,
