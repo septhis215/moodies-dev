@@ -37,14 +37,15 @@ const routes = [
   { name: "Movies", href: "/movies" },
   { name: "TV shows", href: "/tv" },
   { name: "Celebrities", href: "/celeb" },
-  { name: "Your Moods", href: "/moods/explore" },
-  { name: "My Collection", href: "/collection" },
+  { name: "Moods", href: "/moods/explore" },
+  { name: "Feed", href: "/feed" },
+  { name: "Collection", href: "/collection" },
 ];
 
 const routeOptions: Record<string, { label: string; path: string }[]> = {
   "/": [
-    { label: "Movies homepage", path: "/movies" },
-    { label: "TV shows homepage", path: "/tv" },
+    { label: "Movies", path: "/movies" },
+    { label: "TV shows", path: "/tv" },
     { label: "Trending", path: "/trending" },
     { label: "New Releases", path: "/fresh-off-the-screen" },
     { label: "Korean Hits", path: "/korean-hits" },
@@ -56,11 +57,11 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
     { label: "New Releases", path: "/movies/new-releases" },
     { label: "Featured Now", path: "/movies/featured" },
     { label: "Korean Cinema", path: "/movies/korean-cinema" },
-    { label: "Action-Packed", path: "/movies/action" },
+    { label: "Action", path: "/movies/action" },
     { label: "Award Winners", path: "/movies/award-winners" },
-    { label: "Animated Magic", path: "/movies/animated" },
+    { label: "Animation", path: "/movies/animated" },
     { label: "Indie Spotlight", path: "/movies/indie" },
-    { label: "Moods Matcher", path: "/movies#moods" },
+    { label: "Match by mood", path: "/movies#moods" },
   ],
   "/tv": [
     { label: "Airing Today", path: "/tv/airing/today" },
@@ -68,8 +69,8 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
     { label: "New Releases", path: "/tv/new-releases" },
     { label: "Top Rated", path: "/tv/top-rated" },
     { label: "Airing This Week", path: "/tv/airing/week" },
-    { label: "K-Drama Collection", path: "/tv/k-drama" },
-    { label: "Moods Matcher", path: "/tv#moods" },
+    { label: "K-dramas", path: "/tv/k-drama" },
+    { label: "Match by mood", path: "/tv#moods" },
   ],
   "/celeb": [
     { label: "Trending", path: "/celeb?category=trending&page=1" },
@@ -80,15 +81,20 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
     { label: "TV Stars", path: "/celeb?category=tv-stars&page=1" },
   ],
   "/moods/explore": [
-    { label: "Mood Wheels", path: "/moods" },
-    { label: "Movie Matcher", path: "/movies#moods" },
-    { label: "TV Matcher", path: "/tv#moods" },
+    { label: "Mood wheel", path: "/moods" },
+    { label: "Movies for your mood", path: "/movies#moods" },
+    { label: "TV shows for your mood", path: "/tv#moods" },
     { label: "Personality Quiz", path: "/quiz" },
     { label: "Moodies Feed", path: "/feed" },
   ],
   "/collection": [
-    { label: "My List", path: "/watchlist" },
-    { label: "My Likes", path: "/liked" },
+    { label: "Watchlist", path: "/watchlist" },
+    { label: "Liked titles", path: "/liked" },
+  ],
+  "/feed": [
+    { label: "Trending", path: "/trending" },
+    { label: "Movies", path: "/movies" },
+    { label: "TV shows", path: "/tv" },
   ],
 };
 
@@ -111,13 +117,13 @@ const sectionIntroductions: Record<
     mascot: "happy",
   },
   "/movies": {
-    title: "Movies homepage",
+    title: "Movies",
     description:
       "Find your next film: fresh releases, favourites, and picks for your mood.",
     mascot: "thrilling",
   },
   "/tv": {
-    title: "TV shows homepage",
+    title: "TV shows",
     description:
       "Find a series to settle into, from new arrivals to returning favourites.",
     mascot: "chill",
@@ -128,7 +134,7 @@ const sectionIntroductions: Record<
     mascot: "mind-bending",
   },
   "/collection": {
-    title: "My collection",
+    title: "Collection",
     description: "Keep your discoveries together: saved titles and favourites.",
     mascot: "nostalgic",
   },
@@ -159,7 +165,13 @@ export function NavbarComponent({
       route.href === "/"
         ? pathname === "/"
         : pathname === route.href || pathname.startsWith(`${route.href}/`),
-    )?.href ?? (pathname === "/moods" ? "/moods/explore" : "/");
+    )?.href ?? (
+      pathname === "/moods" || pathname === "/quiz"
+        ? "/moods/explore"
+        : ["/watchlist", "/liked", "/profile"].some(route => pathname === route || pathname.startsWith(`${route}/`))
+          ? "/collection"
+          : "/"
+    );
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
@@ -528,7 +540,7 @@ export function NavbarComponent({
                   />
                 </Link>
                 <p className="mb-2 px-2 text-xs font-semibold text-[var(--ink-muted)]">
-                  Browse collections
+                  Quick links
                 </p>
                 <div className="grid grid-cols-2 gap-2.5">
                   {(routeOptions[activeRoute] || []).map((option, index) => (
@@ -618,29 +630,22 @@ export function NavbarComponent({
 
   return (
     <Navbar sticky={sticky} transparent={transparent}>
-      <NavBody className="hidden lg:flex">
+      <NavBody className="hidden lg:flex lg:py-3">
         <NavbarLogo />
 
         <nav
           aria-label="Primary navigation"
           className="flex items-center gap-1"
         >
-          {[
-            { label: "Movies", href: "/movies" },
-            { label: "TV shows", href: "/tv" },
-            { label: "Celebs", href: "/celeb" },
-            { label: "Feed", href: "/feed" },
-            { label: "Moods", href: "/moods/explore" },
-          ].map((item) => {
+          {routes.filter(route => route.href !== "/" && route.href !== "/collection").map((item) => {
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={pathname === item.href ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-2.5 text-sm font-semibold transition-colors hover:bg-white/[0.055] hover:text-[var(--ink)] ${pathname === item.href || pathname.startsWith(`${item.href}/`) ? "bg-[var(--surface-2)] text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"} ${focusRing}`}
+                className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-2.5 text-sm font-semibold transition-colors hover:bg-white/[0.055] hover:text-[var(--ink)] ${currentRoute === item.href ? "bg-[var(--surface-2)] text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"} ${focusRing}`}
               >
-                <NavigationMascot href={item.href} className="h-8 w-8" />
-                {item.label}
+                {item.name}
               </Link>
             );
           })}
@@ -847,13 +852,13 @@ export function NavbarComponent({
                 Where to next?
               </h2>
               <p className="mt-1 text-sm text-[var(--ink-muted)]">
-                Browse a homepage or open its collections.
+                Find something to watch and explore your moods.
               </p>
             </div>
           </div>
 
           <nav aria-label="Mobile navigation" className="space-y-2">
-            {routes.map((route) => {
+            {routes.filter((route) => route.href !== "/collection").map((route) => {
               const subOptions = routeOptions[route.href] || [];
               const isExpanded = mobileExpandedRoute === route.href;
 
@@ -883,16 +888,11 @@ export function NavbarComponent({
                         <span className="block text-sm font-semibold text-[var(--ink)]">
                           {route.name}
                         </span>
-                        {(route.href === "/movies" || route.href === "/tv") && (
-                          <span className="block text-xs text-[var(--ink-muted)]">
-                            Explore the homepage
-                          </span>
-                        )}
                       </span>
                     </Link>
                     <button
                       type="button"
-                      aria-label={`${isExpanded ? "Hide" : "Show"} ${route.name} collections`}
+                      aria-label={`${isExpanded ? "Hide" : "Show"} ${route.name} quick links`}
                       aria-expanded={isExpanded}
                       aria-controls={`mobile-collections-${route.href.replaceAll("/", "-")}`}
                       onClick={() =>
@@ -900,7 +900,7 @@ export function NavbarComponent({
                       }
                       className={`mr-2 flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-2 text-xs font-semibold text-[var(--ink-muted)] hover:bg-white/5 ${focusRing}`}
                     >
-                      Collections
+                      More
                       <IconChevronDown
                         className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                         aria-hidden="true"

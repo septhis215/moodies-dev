@@ -151,7 +151,7 @@ body {
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
   --nav-height: 40px;
-  --mobile-nav-safe: calc(61px + env(safe-area-inset-top));
+  --mobile-nav-safe: calc(73px + env(safe-area-inset-top));
   --mobile-page-x: 1rem;
   --mobile-section-y: 2.5rem;
 }

@@ -215,7 +215,7 @@ export const NavbarLogo = ({ className }: { className?: string }) => (
     href="/"
     aria-label="Moodies home"
     className={cn(
-      "relative z-20 mr-4 flex min-h-11 min-w-11 items-center justify-center rounded-xl px-2 py-1 outline-none transition hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-[#e94f37]/75",
+      "relative z-20 mr-4 flex min-h-14 min-w-14 shrink-0 items-center justify-center rounded-xl px-2 py-1 outline-none transition hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-[#e94f37]/75 lg:min-h-18 lg:min-w-20",
       className,
     )}
   >
@@ -224,7 +224,7 @@ export const NavbarLogo = ({ className }: { className?: string }) => (
       alt=""
       width={80}
       height={80}
-      className="h-8 w-8 object-contain lg:h-12 lg:w-12"
+      className="h-12 w-12 object-contain lg:h-16 lg:w-16"
       priority
     />
   </Link>
