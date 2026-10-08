@@ -929,12 +929,12 @@ export default function VideoFeedPage() {
         initial={{ y: -56, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
-        className="pointer-events-none fixed left-0 right-0 top-0 z-50 bg-gradient-to-b from-black/88 via-black/55 to-transparent px-3 pb-10 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-14"
+        className="pointer-events-none fixed left-0 right-0 top-0 z-50 bg-gradient-to-b from-black/60 via-black/25 to-transparent px-3 pb-10 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-14"
       >
         <div className="mx-auto grid w-full max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
           <Link
             href="/"
-            className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/35 shadow-xl shadow-black/25 backdrop-blur-xl transition hover:border-white/25 hover:bg-black/50 sm:h-11 sm:w-11"
+            className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/25 shadow-xl shadow-black/25 backdrop-blur-xl transition hover:border-white/25 hover:bg-black/40 sm:h-11 sm:w-11"
           >
             <Image
               src="/images/moodies-transparent.png"
@@ -946,7 +946,7 @@ export default function VideoFeedPage() {
           </Link>
 
           <div className="flex min-w-0 justify-center">
-            <div className="pointer-events-auto grid w-full max-w-[21rem] grid-cols-2 gap-1 rounded-full border border-white/15 bg-black/35 p-1 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/45 sm:max-w-[24rem]">
+            <div className="pointer-events-auto grid w-full max-w-[21rem] grid-cols-2 gap-1 rounded-full border border-white/15 bg-black/25 p-1 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/35 sm:max-w-[24rem]">
               {feedTabs.map((tab) => (
                 <motion.button
                   key={tab.value}
@@ -992,7 +992,7 @@ export default function VideoFeedPage() {
             </div>
           </div>
 
-          <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full border border-white/15 bg-black/35 p-1 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/45">
+          <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full border border-white/15 bg-black/25 p-1 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/35">
             <motion.button
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.93 }}
@@ -1042,7 +1042,7 @@ export default function VideoFeedPage() {
         )}
         <div className="pointer-events-none absolute inset-0 bg-black/30" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_44%,transparent_20%,rgba(0,0,0,0.14)_58%,rgba(0,0,0,0.72)_100%)]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-36 bg-gradient-to-b from-black/82 via-black/28 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-black/35 via-black/10 to-transparent" />
         <AnimatePresence mode="wait">
           {currentVideo && (
             <motion.div
@@ -1169,8 +1169,8 @@ export default function VideoFeedPage() {
 
               {/*
                * ── PERMANENT BOTTOM TITLE BAR ──────────────────────
-               * Always rendered. Uses a tall gradient scrim so it
-               * feels embedded in the video, not overlaid on top.
+               * Always rendered. A short, translucent scrim keeps the
+               * title readable while leaving most of the trailer clear.
                * Right side is padded to avoid the action buttons column.
                */}
               <motion.div
@@ -1186,11 +1186,7 @@ export default function VideoFeedPage() {
                     videoFrameSizeClassName,
                   )}
                 >
-                  {/* Layer 1 — tall ambient scrim: fades video into dark over a large area */}
-                  <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black via-black/68 via-[42%] to-transparent sm:h-[58%]" />
-
-                  {/* Layer 2 — tight bottom vignette: ensures the very bottom edge is fully dark */}
-                  <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 h-[38%] max-h-72 bg-gradient-to-t from-black/65 via-black/20 via-[35%] to-transparent" />
 
                   {/* Content */}
                   <div className="relative w-full px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pr-20 pt-36 sm:px-6 sm:pb-7 sm:pr-28 sm:pt-40 lg:max-w-5xl lg:px-10 lg:pb-10 lg:pr-36">
