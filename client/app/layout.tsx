@@ -9,6 +9,7 @@ import { ToastProvider } from "./context/ToastContext";
 import { AppToaster } from "@/components/providers/AppToaster";
 import { TurnstileGateProvider } from "@/components/security/TurnstileGateProvider";
 import PerformanceMonitor from "@/components/providers/PerformanceMonitor";
+import { LoadingScreenProvider } from "@/components/loading/LoadingScreenProvider";
 
 const ACCESS_COOKIE = "mood_at";
 const SESSION_MARKER_COOKIE = "mood_session";
@@ -96,18 +97,20 @@ export default async function RootLayout({
         style={{ background: "#0b0909" }}
       >
         <PerformanceMonitor />
-        <ToastProvider>
-          <AuthProvider
-            initialBlockSessionBootstrap={initialBlockSessionBootstrap}
-          >
-            <AppErrorProvider>
-              <TurnstileGateProvider>
-                <ClientLayout>{children}</ClientLayout>
-              </TurnstileGateProvider>
-              <AppToaster />
-            </AppErrorProvider>
-          </AuthProvider>
-        </ToastProvider>
+        <LoadingScreenProvider>
+          <ToastProvider>
+            <AuthProvider
+              initialBlockSessionBootstrap={initialBlockSessionBootstrap}
+            >
+              <AppErrorProvider>
+                <TurnstileGateProvider>
+                  <ClientLayout>{children}</ClientLayout>
+                </TurnstileGateProvider>
+                <AppToaster />
+              </AppErrorProvider>
+            </AuthProvider>
+          </ToastProvider>
+        </LoadingScreenProvider>
       </body>
     </html>
   );

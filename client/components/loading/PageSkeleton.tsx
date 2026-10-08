@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import LoadingMascot from "./LoadingMascot";
+import { PageLoadingSignal } from "./LoadingScreenProvider";
 
 export type PageSkeletonVariant =
   | "home" | "catalogue" | "detail" | "credits" | "reviews"
@@ -15,7 +15,7 @@ export function LoadingRegion({ children, label = "Loading page", className = ""
     <div aria-busy="true" className={className} data-loading-skeleton="true">
       <span role="status" className="sr-only">{label}</span>
       <div aria-hidden="true" className="w-full">{children}</div>
-      {showMascot && <LoadingMascot />}
+      {showMascot && <PageLoadingSignal />}
     </div>
   );
 }
