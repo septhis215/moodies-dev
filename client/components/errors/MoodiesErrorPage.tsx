@@ -9,15 +9,6 @@ import { supportMailtoHref } from "@/lib/app-config";
 import styles from "./MoodiesErrorPage.module.css";
 
 const scenes = {
-  403: {
-    label: "Access restricted", title: "This screening is invite-only.",
-    note: "You don’t have permission to open this page. Try signing in with an account that has access, or find another story to enjoy.",
-    moods: [
-      { image: "western", name: "Western", line: "Even the sheriff checks tickets." },
-      { image: "gritty", name: "Gritty", line: "A tough crowd. A softer landing." },
-      { image: "thrilling", name: "Thrilling", line: "A little suspense at the door." },
-    ],
-  },
   404: {
     label: "Page not found", title: "A plot twist. A missing page.",
     note: "This page may have moved, or the link took a wrong turn. Your next great watch is still out there.",
@@ -65,8 +56,7 @@ export default function MoodiesErrorPage({ status, onRetry, title, note, standal
         <p className={styles.note}>{note ?? scene.note}</p>
         <div className={styles.actions}>
           {status === 500 ? <button type="button" onClick={() => onRetry ? onRetry() : window.location.reload()} className={styles.primary}><RefreshCw size={17} aria-hidden="true" />Try again</button>
-            : status === 403 ? <a href="/auth/login" className={styles.primary}><Ticket size={17} aria-hidden="true" />Sign in</a>
-              : <a href="/" className={styles.primary}><Home size={17} aria-hidden="true" />Back to home</a>}
+            : <a href="/" className={styles.primary}><Home size={17} aria-hidden="true" />Back to home</a>}
           <a href={status === 404 ? "/moods" : "/"} className={styles.secondary}>{status === 404 ? "Explore by mood" : "Back to home"}<ArrowRight size={17} aria-hidden="true" /></a>
         </div>
         <div className={styles.support}><span>Still stuck? We’re here to help.</span><a href={supportMailtoHref(`Moodies ${status} page help`)}>Contact support<ArrowRight size={14} aria-hidden="true" /></a></div>

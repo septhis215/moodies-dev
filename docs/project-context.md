@@ -146,9 +146,13 @@ client/
   hydration, or white-screen bug report.
 - Toasts are the app-wide error surface; the inventory of what currently uses it is in
   `docs/root-toast-system-report.md` and `docs/error-handling-inventory.md`.
-- Route-level failure surfaces (`app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx`,
-  `/403`, `/500`) all render `components/errors/MoodiesErrorPage`. `global-error.tsx`
-  replaces the root layout, so it imports `lib/fonts.ts` and `globals.css` manually.
+- Route-level failure surfaces (`app/error.tsx`, `app/global-error.tsx`,
+  `app/not-found.tsx`) all render `components/errors/MoodiesErrorPage`.
+  `global-error.tsx` replaces the root layout, so it imports `lib/fonts.ts` and
+  `globals.css` manually. There are deliberately no `/500` or `/403` routes:
+  `/500` is a reserved status-page path in `next build` (an `app/500/page.tsx`
+  route breaks the build, §9 item 15), and `/403` was removed with it — forbidden
+  API responses are classified by `lib/errors/normalize-api-error.ts`.
 
 ### 3.2 `server/` — the NestJS API
 
@@ -226,7 +230,7 @@ elsewhere; every mutable model carries `updatedAt @updatedAt`.
 
 ---
 
-## 4. Route map (client, 50 routes)
+## 4. Route map (client, 48 routes)
 
 The landing page is the reference implementation for layout and type. Its composition,
 in order, from `client/app/page.tsx`:
@@ -250,7 +254,7 @@ empty list.
 | Personal | `/watchlist`, `/liked`, `/profile`, `/profile/[userId]`, `/feed` (navbar hidden) |
 | Community/people | `/celeb`, `/celeb/[id]`, `/quiz` |
 | Legal/misc | `/terms`, `/coming-soon` |
-| Error pages | `/403`, `/500`, plus the file-based `not-found.tsx` / `error.tsx` / `global-error.tsx` boundaries — all render `components/errors/MoodiesErrorPage` |
+| Error pages | file-based `not-found.tsx` / `error.tsx` / `global-error.tsx` boundaries only — all render `components/errors/MoodiesErrorPage`. No `/500` route (reserved by `next build`, §9 item 15) and no `/403` route (removed in the same cleanup, §9 item 15) |
 
 Navigation model: `components/Navbar.tsx` owns a `routes` list (drives the mobile drawer
 and bottom nav), a `routeOptions` map (per-route quick links), a `routeIcons` map, and a
@@ -513,6 +517,16 @@ Read this before trusting any single file as a pattern.
 14. **Leftover empty directories.** `client/app/discover/` and
     `client/components/discover/` are empty remnants of the removed Discover surface and
     are untracked. `/discover` no longer exists as a route.
+15. **`/404` and `/500` are reserved route names in the App Router.** `next build`
+    always syncs default-rendered `.next/export/404.html` and `.next/export/500.html`
+    into `.next/server/pages/` after static generation. An `app/500/page.tsx` (or
+    `app/404`) route suppresses that default render while the sync still runs, so the
+    build dies with `ENOENT ... rename '.next/export/500.html' ->
+    '.next/server/pages/500.html'` (reproduced on Next 15.5.26). Handle 500s with
+    `error.tsx` / `global-error.tsx` only. The `/403` route was removed in the same
+    cleanup: `/403` is *not* reserved (it never breaks the build) but it had no
+    callers, so the error surface is file-convention-only. HTTP 403 API responses
+    are still classified by `client/lib/errors/normalize-api-error.ts`.
 
 ---
 
