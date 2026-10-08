@@ -15,8 +15,7 @@ export default function LoadingMascot() {
       <div className={styles.ambient} />
       <div className={styles.stage} data-loading-mascot>
         <div className={styles.header}>
-          <span className={styles.brand}>Moodies</span>
-          <span className={styles.badge}>Loading</span>
+          <span className={styles.loadingTitle}>Loading</span>
         </div>
         <div className={styles.scene}>
           <div className={styles.gallery}>

@@ -39,19 +39,11 @@
   justify-content: center;
   gap: 0.75rem;
 }
-.brand {
+.loadingTitle {
   font-family: var(--font-display), sans-serif;
   font-size: 2rem;
   font-weight: 700;
   color: var(--ink);
-}
-.badge {
-  flex-shrink: 0;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--brand-coral-strong);
 }
 .scene {
   position: relative;
@@ -347,7 +339,7 @@
   .gallery { inset: 0 15% 2rem; }
   .poster { height: 7rem; flex-basis: auto; }
   .track { bottom: 1rem; }
-  .brand { font-size: 1.5rem; }
+  .loadingTitle { font-size: 1.5rem; }
   .footer { margin-top: 0.25rem; }
 }
 @media (max-height: 360px) {
