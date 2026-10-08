@@ -120,6 +120,39 @@ try {
         exact: true,
       });
       await first.waitFor();
+      assert.equal(
+        await page
+          .getByText("Library reader’s collection", { exact: true })
+          .count(),
+        1,
+      );
+      const detailsBeforeView = calls.details;
+      const listsBeforeView = calls.list;
+      await page
+        .getByRole("button", { name: "Poster view", exact: true })
+        .click();
+      assert.equal(
+        await page.locator('[data-library-view="posters"]').count(),
+        1,
+      );
+      assert.equal(await page.getByRole("article").count(), 12);
+      await page
+        .getByRole("button", { name: "Card view", exact: true })
+        .click();
+      assert.equal(
+        await page.locator('[data-library-view="cards"]').count(),
+        1,
+      );
+      assert.equal(
+        calls.details,
+        detailsBeforeView,
+        "Layout changes must not refetch details",
+      );
+      assert.equal(
+        calls.list,
+        listsBeforeView,
+        "Layout changes must not refetch the library",
+      );
       assert.equal(await page.locator("a button").count(), 0);
       assert.equal(await first.getByRole("button").isVisible(), true);
       assert.ok((await first.getByRole("button").boundingBox()).height >= 44);

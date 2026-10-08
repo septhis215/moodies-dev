@@ -212,6 +212,7 @@ export function useLibrary(kind: LibraryKind) {
     completed: state.completed,
     authLoading: auth.loading,
     signedIn: Boolean(userId),
+    displayName: auth.user?.username || auth.user?.name,
     busy,
     remove,
     retry: () => setRevision((current) => current + 1),
