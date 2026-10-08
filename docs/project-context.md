@@ -118,10 +118,10 @@ client/
 │   ├── sections/          # 17 landing/listing rails (Trending, CommunityPicks, …)
 │   ├── hero/              # HeroCarousel + HomepageMediaHero
 │   ├── ui/                # 30 shadcn-style primitives (components.json present)
-│   ├── category-content/ media/ providers/ security/ selected-content/ snapshot/ collection/
+│   ├── category-content/ errors/ media/ providers/ security/ selected-content/ snapshot/ collection/
 │   └── discover/          # empty leftover directory (§9)
 ├── hooks/                 # useAuth, useWatchlist, useLiked, useMediaStats, useTurnstileGate, …
-├── lib/                   # api/, errors/, snapshot/, toast/, utils/, app-config, mediaApi, tmdb, serverFetch, turnstile
+├── lib/                   # api/, errors/, snapshot/, toast/, utils/, app-config, fonts, mediaApi, tmdb, serverFetch, turnstile
 ├── types/                 # all.ts, movie.ts, series.ts, person.ts, knownFor.ts, communityPulse.ts
 ├── utils/                 # apiFetch, likedClient, watchlistClient, mediaStatsClient
 ├── scripts/               # test.mjs, use-env.mjs (writes/removes .env.local)
@@ -146,6 +146,9 @@ client/
   hydration, or white-screen bug report.
 - Toasts are the app-wide error surface; the inventory of what currently uses it is in
   `docs/root-toast-system-report.md` and `docs/error-handling-inventory.md`.
+- Route-level failure surfaces (`app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx`,
+  `/403`, `/500`) all render `components/errors/MoodiesErrorPage`. `global-error.tsx`
+  replaces the root layout, so it imports `lib/fonts.ts` and `globals.css` manually.
 
 ### 3.2 `server/` — the NestJS API
 
@@ -223,7 +226,7 @@ elsewhere; every mutable model carries `updatedAt @updatedAt`.
 
 ---
 
-## 4. Route map (client, 46 routes)
+## 4. Route map (client, 50 routes)
 
 The landing page is the reference implementation for layout and type. Its composition,
 in order, from `client/app/page.tsx`:
@@ -247,6 +250,7 @@ empty list.
 | Personal | `/watchlist`, `/liked`, `/profile`, `/profile/[userId]`, `/feed` (navbar hidden) |
 | Community/people | `/celeb`, `/celeb/[id]`, `/quiz` |
 | Legal/misc | `/terms`, `/coming-soon` |
+| Error pages | `/403`, `/500`, plus the file-based `not-found.tsx` / `error.tsx` / `global-error.tsx` boundaries — all render `components/errors/MoodiesErrorPage` |
 
 Navigation model: `components/Navbar.tsx` owns a `routes` list (drives the mobile drawer
 and bottom nav), a `routeOptions` map (per-route quick links), a `routeIcons` map, and a

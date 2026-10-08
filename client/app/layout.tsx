@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import { Barlow_Condensed, Source_Sans_3 } from "next/font/google";
+import { bodyFont, displayFont } from "@/lib/fonts";
 import "./globals.css";
 import ClientLayout from "./client-layout";
 import { AppErrorProvider } from "./context/AppErrorProvider";
@@ -28,20 +28,6 @@ const AUTH_PREHIDE_SCRIPT = `
   } catch (error) {}
 })();
 `;
-
-const bodyFont = Source_Sans_3({
-  variable: "--font-body",
-  subsets: ["latin"],
-  weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
-  display: "swap",
-});
-
-const displayFont = Barlow_Condensed({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: {
