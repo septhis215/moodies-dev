@@ -16,14 +16,16 @@ export class MoodNightPreviewService {
   private readonly logger = new Logger(MoodNightPreviewService.name);
   private readonly pending = new Map<string, Promise<NightPreview>>();
   private readonly retryAfter = new Map<string, number>();
+  private readonly snapshots = new Map<string, { payload: NightPreview; expiresAt: Date }>();
+  private cacheRetryAt = 0;
 
   constructor(private readonly prisma: PrismaService, private readonly moods: MoodsService, private readonly all: AllService) {}
 
   async getPreview(choice: string, forceRefresh = false): Promise<NightPreview> {
     if (!Object.hasOwn(CHOICES, choice)) throw new BadRequestException('Unknown night mood');
-    const row = await this.prisma.moodNightPreview.findUnique({ where: { choice } });
-    const cached = row?.payload as unknown as NightPreview | undefined;
-    if (cached && Array.isArray(cached.trailers) && !forceRefresh && row!.expiresAt.getTime() > Date.now()) return cached;
+    const row = await this.readSnapshot(choice);
+    const cached = row?.payload;
+    if (cached && Array.isArray(cached.trailers) && !forceRefresh && row.expiresAt.getTime() > Date.now()) return cached;
     // Serve the last successful snapshot immediately, including after an API restart.
     if (cached && !forceRefresh) {
       if ((this.retryAfter.get(choice) ?? 0) <= Date.now()) {
@@ -37,6 +39,28 @@ export class MoodNightPreviewService {
       throw new ServiceUnavailableException('Tonight’s picks are temporarily unavailable.');
     }
     return this.refresh(choice, cached);
+  }
+
+  private async readSnapshot(choice: string): Promise<{ payload: NightPreview; expiresAt: Date } | undefined> {
+    if (this.cacheRetryAt <= Date.now()) {
+      try {
+        const row = await this.prisma.moodNightPreview.findUnique({ where: { choice } });
+        if (row) {
+          const snapshot = { payload: row.payload as unknown as NightPreview, expiresAt: row.expiresAt };
+          this.snapshots.set(choice, snapshot);
+          return snapshot;
+        }
+      } catch (error: unknown) {
+        this.cacheUnavailable(error);
+      }
+    }
+    return this.snapshots.get(choice);
+  }
+
+  private cacheUnavailable(error: unknown): void {
+    this.cacheRetryAt = Date.now() + 60_000;
+    const code = error instanceof Prisma.PrismaClientKnownRequestError ? error.code : 'unavailable';
+    this.logger.warn(`Night preview cache ${code}; using in-memory snapshots. ${code === 'P2021' ? 'Apply the mood_night_previews migration with prisma migrate deploy.' : 'Database cache will retry in one minute.'}`);
   }
 
   async warmPreviews(): Promise<void> {
@@ -84,7 +108,15 @@ export class MoodNightPreviewService {
     const payload: NightPreview = { items, trailer, trailers };
     const fetchedAt = new Date();
     const data = { payload: payload as unknown as Prisma.InputJsonValue, fetchedAt, expiresAt: new Date(fetchedAt.getTime() + (trailer ? 24 : 1) * HOUR) };
-    await this.prisma.moodNightPreview.upsert({ where: { choice }, create: { choice, ...data }, update: data });
+    // Cache storage is optional: a missing migration must not discard valid picks.
+    this.snapshots.set(choice, { payload, expiresAt: data.expiresAt });
+    if (this.cacheRetryAt <= Date.now()) {
+      try {
+        await this.prisma.moodNightPreview.upsert({ where: { choice }, create: { choice, ...data }, update: data });
+      } catch (error: unknown) {
+        this.cacheUnavailable(error);
+      }
+    }
     this.retryAfter.delete(choice);
     return payload;
   }

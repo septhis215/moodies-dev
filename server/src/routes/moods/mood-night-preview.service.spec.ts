@@ -3,6 +3,7 @@ import { MoodNightPreviewService } from './mood-night-preview.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MoodsService } from './moods.service';
 import { AllService } from 'src/media/all/all.service';
+import { Prisma } from '@prisma/client';
 
 describe('database-backed mood night previews', () => {
   const item = { id: 7, type: 'movie', title: 'A film', poster: '/poster.jpg', backdrop: '/backdrop.jpg' };
@@ -40,6 +41,42 @@ describe('database-backed mood night previews', () => {
     expect(results).toHaveLength(8);
     expect(moods.getRecommendations).toHaveBeenCalledTimes(1);
     expect(prisma.moodNightPreview.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it('serves picks when the cache migration is missing and reuses them across requests', async () => {
+    prisma.moodNightPreview.findUnique.mockRejectedValue(new Prisma.PrismaClientKnownRequestError('Missing cache table', { code: 'P2021', clientVersion: '6.15.0' }));
+    const results = await Promise.all(Array.from({ length: 8 }, () => service.getPreview('easy')));
+    expect(results.every(result => result.items[0].id === 7)).toBe(true);
+    expect(await service.getPreview('easy')).toEqual(payload);
+    expect(moods.getRecommendations).toHaveBeenCalledTimes(1);
+    expect(prisma.moodNightPreview.upsert).not.toHaveBeenCalled();
+  });
+
+  it('does not discard generated picks when persisting the snapshot fails', async () => {
+    prisma.moodNightPreview.upsert.mockRejectedValue(new Error('Cache write failed'));
+    expect(await service.getPreview('easy')).toEqual(payload);
+    expect(await service.getPreview('easy')).toEqual(payload);
+    expect(moods.getRecommendations).toHaveBeenCalledTimes(1);
+  });
+
+  it('serves its last snapshot if a later cache read fails', async () => {
+    await service.getPreview('easy');
+    prisma.moodNightPreview.findUnique.mockRejectedValue(new Error('Cache read failed'));
+    expect(await service.getPreview('easy')).toEqual(payload);
+    expect(moods.getRecommendations).toHaveBeenCalledTimes(1);
+  });
+
+  it('resumes database persistence after the cache retry interval', async () => {
+    jest.useFakeTimers();
+    try {
+      prisma.moodNightPreview.findUnique.mockRejectedValueOnce(new Error('Missing table'));
+      expect(await service.getPreview('easy')).toEqual(payload);
+      jest.advanceTimersByTime(60_001);
+      expect(await service.getPreview('easy', true)).toEqual(payload);
+      expect(prisma.moodNightPreview.upsert).toHaveBeenCalledTimes(1);
+      expect(await createService().getPreview('easy')).toEqual(payload);
+      expect(moods.getRecommendations).toHaveBeenCalledTimes(2);
+    } finally { jest.useRealTimers(); }
   });
 
   it('stores all available trailer keys without additional batch lookups', async () => {
