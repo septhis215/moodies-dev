@@ -7,6 +7,9 @@ import { CuratedShelf, CuratedShelfSkeleton } from "./CuratedShelf";
 import { useAuth } from "@/app/context/AuthProvider";
 import { handleAppError, normalizeResponseError } from "@/lib/errors";
 import type { All } from "@/types/all";
+import { TmdbImage } from "@/components/ui/TmdbImage";
+import { tmdbImage } from "@/lib/tmdb";
+import styles from "./FavoriteSection.module.css";
 
 interface FavoriteSectionProps {
   data?: All[];
@@ -102,16 +105,34 @@ export default function FavoriteSection({
 
   if (authLoading || !isAuthenticated) return null;
   const available = items.filter((item) => item.type !== "person");
+  // Use the existing response, preferring landscape artwork over a poster crop.
+  const artwork = available.find((item) => item.backdrop_path)?.backdrop_path;
+  const poster = available.find((item) => item.poster_path)?.poster_path;
+  const backdrop = tmdbImage(artwork || poster, artwork ? "w780" : "w342");
   const displayName = user?.username || user?.name;
   return (
     <section
-      className="scroll-mt-24 overflow-hidden border-b border-[var(--surface-border)] bg-[var(--surface-0)]"
+      className={`${styles.section} scroll-mt-24`}
       aria-labelledby="curated-picks-heading"
     >
-      <div className="ui-shell py-7 sm:py-9">
-        <header className="mb-3 flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
+      <div aria-hidden="true" className={styles.atmosphere}>
+        {backdrop && (
+          <TmdbImage
+            src={backdrop}
+            alt=""
+            fill
+            sizes="100vw"
+            loading="lazy"
+            className={styles.artwork}
+          />
+        )}
+        <div className={styles.shade} />
+        <div className={styles.edges} />
+      </div>
+      <div className={`${styles.content} ui-shell py-10 sm:py-12 lg:py-14`}>
+        <header className="mb-5 flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
           <div className="min-w-0 flex-1">
-            <p className="mb-1 break-words text-xs font-semibold text-[var(--brand-coral-strong)]">
+            <p className="ui-kicker mb-3 break-words">
               {displayName
                 ? `Picked for ${displayName}`
                 : "Picked around your taste"}

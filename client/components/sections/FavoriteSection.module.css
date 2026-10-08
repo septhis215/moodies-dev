@@ -1,0 +1,37 @@
+.section {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--surface-0);
+}
+
+.atmosphere {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 75% 55%, rgb(240 100 75 / 6%), transparent 65%);
+}
+
+.artwork {
+  object-fit: cover;
+  object-position: center 40%;
+  opacity: 0.15;
+  filter: blur(8px);
+  transform: scale(1.04);
+}
+
+.shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, rgb(11 9 9 / 65%), rgb(11 9 9 / 25%) 65%, transparent);
+}
+
+.edges {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--surface-0), transparent 28%, transparent 72%, var(--surface-0));
+}
+
+.content {
+  position: relative;
+}

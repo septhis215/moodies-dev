@@ -215,11 +215,11 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
             className="object-cover object-[58%_center] sm:object-center"
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,4,4,0.9)_0%,rgba(5,4,4,0.62)_42%,rgba(5,4,4,0.12)_78%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,4,0.24)_0%,rgba(5,4,4,0.06)_38%,rgba(5,4,4,0.96)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,4,0.24)_0%,rgba(5,4,4,0.06)_38%,var(--surface-0)_100%)]" />
         </motion.div>
       </AnimatePresence>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-7xl flex-col justify-end px-5 pb-6 pt-10 sm:px-6 sm:pb-7 sm:pt-24 lg:px-8 lg:pb-9">
+      <div className="ui-shell relative z-10 flex flex-col justify-end pb-6 pt-10 sm:pb-7 sm:pt-24 lg:pb-9">
         <div className="grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-8">
           <AnimatePresence initial={false} mode="wait">
             <motion.div
