@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, MessageCircle } from "lucide-react";
+import { RatingBadge } from "@/components/ui/rating-badge";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { tmdbImage } from "@/lib/tmdb";
 
@@ -314,15 +315,15 @@ export default function CommunityPicks({
           {featuredReview ? (
             <Link
               href={reviewHref(featuredReview) || "#community"}
-              className="group grid min-w-0 grid-cols-[5rem_minmax(0,1fr)] items-start overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:min-h-[420px] sm:grid-cols-[42%_minmax(0,1fr)] sm:items-stretch lg:col-span-5 lg:grid-cols-[44%_minmax(0,1fr)]"
+              className="group grid min-w-0 grid-cols-[6rem_minmax(0,1fr)] items-stretch overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:min-h-[420px] sm:grid-cols-[42%_minmax(0,1fr)] lg:col-span-5 lg:grid-cols-[44%_minmax(0,1fr)]"
               aria-label={`Read the community review for ${featuredReview.movieTitle || featuredReview.title}`}
             >
-              <div className="relative ml-3 mt-4 aspect-[2/3] overflow-hidden rounded-sm bg-[var(--surface-2)] sm:m-0 sm:aspect-auto sm:min-h-full sm:rounded-none">
+              <div className="relative overflow-hidden bg-[var(--surface-2)]">
                 <Image
                   src={reviewPoster(featuredReview)}
                   alt={`${featuredReview.movieTitle || featuredReview.title} poster`}
                   fill
-                  sizes="(max-width: 639px) 68px, (max-width: 1024px) 42vw, 220px"
+                  sizes="(max-width: 639px) 96px, (max-width: 1024px) 42vw, 220px"
                   className="object-cover"
                 />
               </div>
@@ -334,11 +335,11 @@ export default function CommunityPicks({
                       ? ` · ${featuredReview.movieYear}`
                       : ""}
                   </span>
-                  {typeof featuredReview.rating === "number" ? (
-                    <span className="text-[var(--brand-gold)]">
-                      {featuredReview.rating.toFixed(1)}/10
-                    </span>
-                  ) : null}
+                  <RatingBadge
+                    rating={featuredReview.rating}
+                    variant="minimal"
+                    size="md"
+                  />
                 </div>
                 <p className="mt-3 line-clamp-5 text-base font-semibold leading-6 text-[var(--ink)] sm:mt-5 sm:line-clamp-7 sm:text-xl sm:leading-7">
                   “{featuredReview.quote}”
@@ -363,45 +364,47 @@ export default function CommunityPicks({
             </Link>
           ) : null}
 
-          <div className="mobile-native-scroll flex min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto pb-2 lg:col-span-7 lg:grid lg:grid-cols-2 lg:overflow-visible lg:pb-0">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:col-span-7">
             {supportingReviews.map((review, index) => (
               <Link
                 key={`${review.tmdbId || "review"}-${index}`}
                 href={reviewHref(review) || "#community"}
-                className="group grid min-h-48 w-[92%] min-w-0 shrink-0 snap-start grid-cols-[5rem_minmax(0,1fr)] items-start overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:w-[48%] sm:grid-cols-[104px_minmax(0,1fr)] sm:items-stretch lg:w-auto"
+                className="group grid min-h-44 min-w-0 grid-cols-[5rem_minmax(0,1fr)] items-stretch overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:grid-cols-[104px_minmax(0,1fr)]"
                 aria-label={`Read the community review for ${review.movieTitle || review.title}`}
               >
-                <div className="relative ml-3 mt-4 aspect-[2/3] overflow-hidden rounded-sm bg-[var(--surface-2)] sm:m-0 sm:aspect-auto sm:rounded-none">
+                <div className="relative overflow-hidden bg-[var(--surface-2)]">
                   <Image
                     src={reviewPoster(review)}
                     alt={`${review.movieTitle || review.title} poster`}
                     fill
-                    sizes="(max-width: 639px) 68px, 104px"
+                    sizes="(max-width: 639px) 80px, 104px"
                     className="object-cover"
                   />
                 </div>
                 <blockquote className="flex min-w-0 flex-col p-4">
-                  <div className="flex items-center justify-between gap-2 text-xs font-semibold text-[var(--ink-muted)]">
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-semibold text-[var(--ink-muted)]">
                     <span>
                       {review.mediaType === "TV" ? "Series" : "Movie"}
+                      {review.movieYear ? ` · ${review.movieYear}` : ""}
                     </span>
-                    {typeof review.rating === "number" ? (
-                      <span className="text-[var(--brand-gold)]">
-                        {review.rating.toFixed(1)}
-                      </span>
-                    ) : null}
+                    <RatingBadge rating={review.rating} variant="minimal" />
                   </div>
                   <p className="mt-2 line-clamp-3 text-sm leading-5 text-[var(--ink)]">
                     “{review.quote}”
                   </p>
-                  <footer className="mt-auto pt-3">
-                    <p className="line-clamp-1 text-sm font-bold text-[var(--ink)]">
+                  <footer className="mt-auto">
+                    <p className="line-clamp-1 text-sm font-bold leading-5 text-[var(--ink)]">
                       {review.movieTitle || review.title}
                     </p>
-                    <div className="mt-2 flex items-center justify-between gap-2">
-                      <span className="truncate text-xs text-[var(--ink-muted)]">
-                        {review.name}
-                      </span>
+                    <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[var(--surface-border)] pt-2.5">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--surface-2)] text-[9px] font-bold text-[var(--brand-coral-strong)]">
+                          {reviewerInitials(review.name)}
+                        </span>
+                        <span className="truncate text-xs text-[var(--ink-muted)]">
+                          {review.name}
+                        </span>
+                      </div>
                       <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[var(--ink-muted)] transition-colors group-hover:text-[var(--brand-coral-strong)]" />
                     </div>
                   </footer>
