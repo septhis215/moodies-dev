@@ -1,7 +1,7 @@
 "use client";
 
 import { tmdbImage } from "@/lib/tmdb";
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useId } from "react";
 import { IconSearch, IconX, IconClock, IconArrowRight, IconTrendingUp } from "@tabler/icons-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { Film, Tv, User } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
+import styles from './SearchBar.module.css';
 
 interface SearchSuggestion {
   id: number;
@@ -52,6 +53,11 @@ export default function SearchBarWithSuggestions({
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const suggestionsRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const mobileInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileDialogRef = useRef<HTMLDivElement | null>(null);
+  const searchId = useId();
+  const trendingLoaded = useRef(false);
 
   const router = useRouter();
 
@@ -60,17 +66,16 @@ export default function SearchBarWithSuggestions({
   const [targetWidth, setTargetWidth] = useState<number>(400);
   const [mobileValue, setMobileValue] = useState<string>("");
   const [mobileMode, setMobileMode] = useState<SearchMode>('content');
+  const debouncedMobileValue = useDebounce(mobileValue, 300);
 
   const prefersReduced = useReducedMotion();
   const debouncedValue = useDebounce(value, 300);
 
   useEffect(() => {
-    const history = localStorage.getItem('searchHistory');
-    if (history) {
-      try {
-        setSearchHistory(JSON.parse(history));
-      } catch { }
-    }
+    try {
+      const history: unknown = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+      if (Array.isArray(history)) setSearchHistory(history.filter((item): item is string => typeof item === 'string').slice(0, 10));
+    } catch { /* Search still works when browser storage is unavailable. */ }
   }, []);
 
   // keep mobile UI in sync when opening/modal toggles or when searchMode/value changes
@@ -82,35 +87,6 @@ export default function SearchBarWithSuggestions({
     setMobileMode(searchMode);
   }, [searchMode]);
 
-  const getContentType = (item: Partial<TrendingTerm>): "movie" | "tv" | "person" => {
-    if (
-      item.media_type === "movie" ||
-      item.media_type === "tv" ||
-      item.media_type === "person"
-    ) {
-      return item.media_type;
-    }
-    if (item.type === "movies" || item.type === "movie") return "movie";
-    if (item.type === "tv") return "tv";
-    if (item.type === "person") return "person";
-    if (item.number_of_seasons || item.first_air_date || item.name) return "tv";
-    return "movie";
-  };
-
-  const handleClick = async (movie: TrendingTerm) => {
-    const contentType = getContentType(movie);
-    let href: string;
-
-    if (contentType === "person") {
-      href = `/person/${movie.id}`;
-    } else {
-      const routePath = contentType === "tv" ? "tv" : "movies";
-      href = `/${routePath}/${movie.id}`;
-    }
-
-    router.push(href);
-  };
-
   const [trendingTerms, setTrendingTerms] = useState<TrendingTerm[]>([
     { id: 0, title: 'Avengers', media_type: 'movie' },
     { id: 1, title: 'Stranger Things', media_type: 'tv' },
@@ -118,74 +94,60 @@ export default function SearchBarWithSuggestions({
   ]);
 
   useEffect(() => {
+    if ((!open && !mobileOpen) || trendingLoaded.current) return;
+    const controller = new AbortController();
     const fetchTrendingTerms = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'https://dev.api.moodies.tech/api'}/all/search/trending-terms`
+          `${process.env.NEXT_PUBLIC_API_URL || 'https://dev.api.moodies.tech/api'}/all/search/trending-terms`, { signal: controller.signal }
         );
         if (response.ok) {
           const data = await response.json();
-          if (data && data.length > 0) {
+          if (!controller.signal.aborted && Array.isArray(data) && data.length > 0) {
             setTrendingTerms(data);
+            trendingLoaded.current = true;
           }
         }
-      } catch (error) {
-        console.error('Failed to fetch trending terms:', error);
+      } catch {
+        // Keep the local trending suggestions when the API is unavailable.
       }
     };
 
-    fetchTrendingTerms();
-  }, []);
+    void fetchTrendingTerms();
+    return () => controller.abort();
+  }, [open, mobileOpen]);
 
   useEffect(() => {
-    if (debouncedValue.trim().length > 1 && open) {
-      fetchSuggestions(debouncedValue, searchMode);
-    } else {
+    const query = (mobileOpen ? debouncedMobileValue : debouncedValue).trim();
+    const currentQuery = (mobileOpen ? mobileValue : value).trim();
+    const mode = mobileOpen ? mobileMode : searchMode;
+    if ((!open && !mobileOpen) || currentQuery.length < 2) {
       setSuggestions([]);
-    }
-  }, [debouncedValue, open, searchMode]);
-
-  const debouncedMobileValue = useDebounce(mobileValue, 300);
-
-  useEffect(() => {
-    if (debouncedMobileValue.trim().length > 1 && mobileOpen) {
-      fetchSuggestions(debouncedMobileValue, mobileMode);
-    } else if (!debouncedMobileValue.trim()) {
-      setSuggestions([]);
-    }
-  }, [debouncedMobileValue, mobileOpen, mobileMode]);
-
-  const fetchSuggestions = async (
-    query: string,
-    type: 'content' | 'person'
-  ) => {
-    setLoadingSuggestions(true);
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://dev.api.moodies.tech/api'}/search/suggestions/${type}?q=${encodeURIComponent(
-          query
-        )}&limit=8`
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setSuggestions(Array.isArray(data) ? data : []);
-      } else {
-        setSuggestions([]);
-      }
-    } catch (error) {
-      console.error('Failed to fetch suggestions:', error);
-      setSuggestions([]);
-    } finally {
       setLoadingSuggestions(false);
+      return;
     }
-  };
+    if (query !== currentQuery) { setSuggestions([]); setLoadingSuggestions(true); return; }
+    const controller = new AbortController();
+    setLoadingSuggestions(true);
+    const load = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://dev.api.moodies.tech/api'}/search/suggestions/${mode}?q=${encodeURIComponent(query)}&limit=8`, { signal: controller.signal });
+        const data: unknown = response.ok ? await response.json() : [];
+        if (!controller.signal.aborted) setSuggestions(Array.isArray(data) ? data : []);
+      } catch {
+        if (!controller.signal.aborted) setSuggestions([]);
+      } finally {
+        if (!controller.signal.aborted) setLoadingSuggestions(false);
+      }
+    };
+    void load();
+    return () => controller.abort();
+  }, [debouncedValue, debouncedMobileValue, value, mobileValue, open, mobileOpen, searchMode, mobileMode]);
 
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(max-width: 639px)");
+    const mq = window.matchMedia("(max-width: 1023px)");
     const onChange = () => {
       setIsMobile(mq.matches);
       setTargetWidth(mq.matches ? 280 : 400);
@@ -245,7 +207,7 @@ export default function SearchBarWithSuggestions({
 
     const updatedHistory = [trimmedQuery, ...searchHistory.filter(h => h !== trimmedQuery)].slice(0, 10);
     setSearchHistory(updatedHistory);
-    localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
+    try { localStorage.setItem('searchHistory', JSON.stringify(updatedHistory)); } catch { /* Storage is optional. */ }
 
     const params = new URLSearchParams();
     params.set("q", trimmedQuery);
@@ -277,15 +239,11 @@ export default function SearchBarWithSuggestions({
 
     router.push(path);
     setOpen(false);
+    setMobileOpen(false);
     setSuggestions([]);
   }, [router]);
 
-  const showSuggestions = open && !isMobile && (
-    suggestions.length > 0 ||
-    loadingSuggestions ||
-    searchHistory.length > 0 ||
-    (value.trim().length === 0)
-  );
+  const showSuggestions = open && !isMobile;
 
 
   const resolvedIsMobile = isMobile === null ? false : isMobile;
@@ -362,20 +320,17 @@ export default function SearchBarWithSuggestions({
     );
   }, []);
 
-  useEffect(() => {
-    if (!open || isMobile) {
-      setHighlightedIndex(null);
-      return;
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (!showSuggestions) return;
+  const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.nativeEvent.isComposing) return;
       if (e.key === "ArrowDown") {
+        if (!suggestions.length) return;
         e.preventDefault();
         setHighlightedIndex((prev) => {
           const next = prev === null ? 0 : Math.min(prev + 1, (suggestions.length - 1));
           return next;
         });
       } else if (e.key === "ArrowUp") {
+        if (!suggestions.length) return;
         e.preventDefault();
         setHighlightedIndex((prev) => {
           const next = prev === null ? Math.max(suggestions.length - 1, 0) : Math.max(prev - 1, 0);
@@ -385,19 +340,34 @@ export default function SearchBarWithSuggestions({
         if (highlightedIndex !== null && suggestions[highlightedIndex]) {
           e.preventDefault();
           handleSuggestionClick(suggestions[highlightedIndex]);
-        } else if (value.trim()) {
-          handleSearch(value, searchMode);
         }
       } else if (e.key === "Escape") {
         setOpen(false);
         setSuggestions([]);
         setHighlightedIndex(null);
       }
-    };
+  };
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, isMobile, showSuggestions, suggestions, highlightedIndex, value, searchMode, handleSearch, handleSuggestionClick]);
+  useEffect(() => { setHighlightedIndex(null); }, [suggestions, open]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const trigger = triggerRef.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    mobileInputRef.current?.focus();
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const controls = mobileDialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input, a[href]');
+      if (!controls?.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', trapFocus);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', trapFocus); trigger?.focus(); };
+  }, [mobileOpen]);
 
   useEffect(() => {
     if (highlightedIndex === null) return;
@@ -408,12 +378,12 @@ export default function SearchBarWithSuggestions({
   const removeHistoryItem = (term: string) => {
     const updated = searchHistory.filter(h => h !== term);
     setSearchHistory(updated);
-    localStorage.setItem('searchHistory', JSON.stringify(updated));
+    try { localStorage.setItem('searchHistory', JSON.stringify(updated)); } catch { /* Storage is optional. */ }
   };
 
   const clearAllHistory = () => {
     setSearchHistory([]);
-    localStorage.removeItem('searchHistory');
+    try { localStorage.removeItem('searchHistory'); } catch { /* Storage is optional. */ }
   };
 
   const getTypeIcon = (type: 'movie' | 'tv' | 'person') => {
@@ -481,7 +451,7 @@ export default function SearchBarWithSuggestions({
             pointerEvents: "auto",
           }}
           className="bg-gradient-to-b from-[#060608]/85 to-[#0b0b0d]/85 backdrop-blur-md border border-gray-800 rounded-2xl shadow-2xl ring-1 ring-black/40"
-          role="listbox"
+          role="region"
           aria-label="Search suggestions"
         >
           <div className="sticky top-0 z-10 bg-gradient-to-b from-[#060608]/90 to-transparent px-3 py-2 backdrop-blur-sm">
@@ -502,10 +472,11 @@ export default function SearchBarWithSuggestions({
             {/* Mode Tabs */}
             <div className="flex gap-2 bg-white/5 rounded-full p-1">
               <button
+                type="button"
+                aria-pressed={searchMode === 'content'}
                 onClick={() => {
                   setSearchMode('content');
                   setSuggestions([]);
-                  if (value.trim().length > 2) fetchSuggestions(value, 'content');
                 }}
                 className={`flex-1 py-1.5 px-3 rounded-full text-xs font-medium transition-all ${searchMode === 'content'
                   ? 'bg-[#e94f37] text-white'
@@ -515,10 +486,11 @@ export default function SearchBarWithSuggestions({
                 Movies & TV
               </button>
               <button
+                type="button"
+                aria-pressed={searchMode === 'person'}
                 onClick={() => {
                   setSearchMode('person');
                   setSuggestions([]);
-                  if (value.trim().length > 2) fetchSuggestions(value, 'person');
                 }}
                 className={`flex-1 py-1.5 px-3 rounded-full text-xs font-medium transition-all ${searchMode === 'person'
                   ? 'bg-[#e94f37] text-white'
@@ -546,7 +518,7 @@ export default function SearchBarWithSuggestions({
             )}
 
             {!loadingSuggestions && suggestions.length > 0 && (
-              <div className="space-y-2 pt-2">
+              <div className="space-y-2 pt-2" role="listbox" id={`${searchId}-suggestions`} aria-label="Matching titles">
                 {suggestions.map((s, idx) => {
                   const isHighlighted = idx === highlightedIndex;
                   const accent = isHighlighted ? "before:w-1" : "before:w-0";
@@ -557,6 +529,7 @@ export default function SearchBarWithSuggestions({
                   return (
                     <div
                       key={`${s.type}-${s.id}`}
+                      id={`${searchId}-suggestion-${idx}`}
                       ref={(el) => {
                         itemRefs.current[idx] = el;
                       }}
@@ -702,7 +675,7 @@ export default function SearchBarWithSuggestions({
                       {(trendingTerms).slice(0, 6).map((t, idx) => (
                         <button
                           key={t.id + idx}
-                          onClick={() => handleClick(t)}
+                          onClick={() => handleSearch(t.title, searchMode)}
                           className="w-full text-left flex items-center gap-3 p-2 rounded-md bg-gradient-to-r from-white/3 to-white/6 hover:from-white/5 hover:to-white/8 transition"
                         >
                           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#e94f37]/10 text-[#e94f37] font-semibold text-sm flex-shrink-0">
@@ -725,6 +698,8 @@ export default function SearchBarWithSuggestions({
             )}
           </div>
 
+          {!loadingSuggestions && suggestions.length === 0 && value.trim().length > 1 && <p className="px-4 py-3 text-sm text-[var(--ink-muted)]">No quick matches. Try searching all results.</p>}
+          {value.trim() && <button type="button" className={styles.allResults} onClick={() => handleSearch(value, searchMode)}>Search all results for “{value.trim()}”<IconArrowRight size={16} aria-hidden="true" /></button>}
           <div className="sticky bottom-0 z-10 bg-gradient-to-t from-transparent to-[#060608]/90 px-3 py-2 border-t border-gray-800/60 flex items-center justify-between text-xs text-gray-400">
             <div>{suggestions.length > 0 ? `${suggestions.length} suggestion${suggestions.length > 1 ? "s" : ""}` : "No direct matches"}</div>
             <div className="hidden sm:flex items-center gap-2">Suggestions update as you type</div>
@@ -740,8 +715,10 @@ export default function SearchBarWithSuggestions({
       <div ref={wrapperRef} className="relative flex items-center gap-2">
         <div className="flex items-center flex-row-reverse relative">
           <button
+            ref={triggerRef}
             type="button"
-            aria-label="Open search"
+            aria-label={open && !resolvedIsMobile ? "Close search" : "Open search"}
+            aria-expanded={open || mobileOpen}
             onClick={() => {
               if (resolvedIsMobile) {
                 setMobileOpen(true);
@@ -749,31 +726,41 @@ export default function SearchBarWithSuggestions({
                 setOpen(!open);
               }
             }}
-            className="ml-2 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#e94f37] transition-colors z-10"
+            className="ml-2 min-h-11 min-w-11 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 py-2 text-[var(--ink)] hover:bg-[var(--surface-2)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-coral-strong)] transition-colors z-10"
           >
-            <IconSearch size={20} />
+            {open && !resolvedIsMobile ? <IconX size={20} /> : <IconSearch size={20} />}
           </button>
 
           <motion.div
             initial={false}
+            aria-hidden={!open || resolvedIsMobile}
             animate={{ width: open && !resolvedIsMobile ? targetWidth : 0 }}
             transition={{ type: "spring", stiffness: 220, damping: 28 }}
             className="overflow-hidden"
           >
+            <form role="search" aria-label="Search Moodies" className={styles.form} onSubmit={(event) => { event.preventDefault(); handleSearch(value, searchMode); }}>
+            <div className={styles.inputWrap}>
             <input
               ref={inputRef}
+              type="search"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={open && suggestions.length > 0}
+              aria-controls={suggestions.length > 0 ? `${searchId}-suggestions` : undefined}
+              aria-activedescendant={highlightedIndex !== null ? `${searchId}-suggestion-${highlightedIndex}` : undefined}
+              aria-label={searchMode === 'person' ? 'Search people' : 'Search movies and series'}
+              tabIndex={open && !resolvedIsMobile ? 0 : -1}
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSearch(value, searchMode);
-                }
-              }}
+              onKeyDown={onInputKeyDown}
               onFocus={() => setOpen(true)}
               placeholder={searchMode === 'person' ? 'Search for actors, directors...' : placeholder}
-              className="w-full bg-white/10 backdrop-blur-md placeholder:text-gray-300 text-white rounded-full px-4 py-2 text-sm outline-none transition-all"
-              style={{ height: 36 }}
+              className={styles.input}
             />
+            {value && <button type="button" aria-label="Clear search" tabIndex={open && !resolvedIsMobile ? 0 : -1} className={styles.clear} onClick={() => { setValue(''); inputRef.current?.focus(); }}><IconX size={16} /></button>}
+            </div>
+            <button type="submit" className={styles.submit} disabled={!value.trim()} tabIndex={open && !resolvedIsMobile ? 0 : -1}><IconSearch size={18} aria-hidden="true" />Search</button>
+            </form>
           </motion.div>
         </div>
 
@@ -792,16 +779,23 @@ export default function SearchBarWithSuggestions({
               onClick={() => setMobileOpen(false)}
             >
               <motion.div
+                ref={mobileDialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={`${searchId}-title`}
                 onClick={(e) => e.stopPropagation()}
                 initial={prefersReduced ? {} : { y: -12, opacity: 0 }}
                 animate={prefersReduced ? {} : { y: 0, opacity: 1 }}
                 exit={prefersReduced ? {} : { y: -12, opacity: 0 }}
                 transition={{ type: "spring", stiffness: 220, damping: 28 }}
-                className="w-full max-w-lg px-6"
+                className={`${styles.mobilePanel} w-full max-w-lg px-4`}
               >
+                <div className={styles.mobileHeader}><h2 id={`${searchId}-title`}>Search Moodies</h2><button type="button" aria-label="Close search" className={styles.close} onClick={() => setMobileOpen(false)}><IconX size={20} /></button></div>
                 {/* Mode Tabs */}
                 <div className="mb-3 flex gap-2 bg-white/10 backdrop-blur-md rounded-full p-1">
                   <button
+                    type="button"
+                    aria-pressed={mobileMode === 'content'}
                     onClick={() => { setMobileMode('content'); setSearchMode('content'); }}
                     className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${mobileMode === 'content' ? 'bg-[#e94f37] text-white' : 'text-gray-300 hover:text-white'
                       }`}
@@ -809,6 +803,8 @@ export default function SearchBarWithSuggestions({
                     Movies & TV
                   </button>
                   <button
+                    type="button"
+                    aria-pressed={mobileMode === 'person'}
                     onClick={() => { setMobileMode('person'); setSearchMode('person'); }}
                     className={`flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all ${mobileMode === 'person' ? 'bg-[#e94f37] text-white' : 'text-gray-300 hover:text-white'
                       }`}
@@ -818,25 +814,22 @@ export default function SearchBarWithSuggestions({
                 </div>
 
                 {/* Input */}
-                <div className="relative mb-4">
+                <form role="search" aria-label="Search Moodies" className={`${styles.form} mb-4`} onSubmit={(event) => { event.preventDefault(); handleSearch(mobileValue, mobileMode); }}>
+                  <div className={styles.inputWrap}>
                   <input
+                    ref={mobileInputRef}
+                    type="search"
+                    aria-label={mobileMode === 'person' ? 'Search people' : 'Search movies and series'}
                     value={mobileValue}
                     onChange={(e) => setMobileValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSearch(mobileValue, mobileMode);
-                    }}
                     placeholder={mobileMode === 'person' ? 'Search for actors, directors...' : placeholder}
-                    className="w-full rounded-full px-4 py-3 bg-white/10 backdrop-blur-md text-white placeholder:text-gray-300 outline-none"
+                    className={styles.input}
                     autoFocus
                   />
-                  <button
-                    aria-label="Close search"
-                    onClick={() => setMobileOpen(false)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-2 bg-white/10 hover:bg-white/20 transition-colors"
-                  >
-                    <IconX className="text-white" size={18} />
-                  </button>
-                </div>
+                  {mobileValue && <button type="button" aria-label="Clear search" className={styles.clear} onClick={() => { setMobileValue(''); mobileInputRef.current?.focus(); }}><IconX size={16} /></button>}
+                  </div>
+                  <button type="submit" className={styles.submit} disabled={!mobileValue.trim()}><IconSearch size={18} aria-hidden="true" />Search</button>
+                </form>
 
                 {/* Results / Trending */}
                 <div className="bg-white/10 backdrop-blur-md rounded-lg p-4 max-h-96 overflow-y-auto">
@@ -848,13 +841,13 @@ export default function SearchBarWithSuggestions({
 
                   {!loadingSuggestions && suggestions.length > 0 && (
                     suggestions.map((suggestion, index) => (
-                      <div
+                      <button type="button"
                         key={`${suggestion.id}-${index}`}
                         onClick={() => { handleSuggestionClick(suggestion); setMobileOpen(false); }}
-                        className="flex items-center gap-3 p-2 hover:bg-white/10 rounded cursor-pointer text-white"
+                        className="flex w-full items-center gap-3 p-2 text-left hover:bg-white/10 rounded cursor-pointer text-white"
                       >
                         <Image
-                          src={suggestion.poster_path ? tmdbImage(suggestion.poster_path, "w92") : '/placeholder-poster.svg'}
+                          src={(suggestion.type === 'person' ? suggestion.profile_path : suggestion.poster_path) ? tmdbImage((suggestion.type === 'person' ? suggestion.profile_path : suggestion.poster_path)!, "w92") : suggestion.type === 'person' ? '/placeholder-person.svg' : '/placeholder-poster.svg'}
                           alt=""
                           width={32}
                           height={40}
@@ -862,11 +855,11 @@ export default function SearchBarWithSuggestions({
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm truncate">
-                            {highlightMatch(suggestion.title, mobileValue)}
+                            {highlightMatch(suggestion.title || suggestion.name || 'Unknown', mobileValue)}
                           </p>
                           <p className="text-xs text-gray-400 mt-0.5">{getTypeLabel(suggestion.type)}</p>
                         </div>
-                      </div>
+                      </button>
                     ))
                   )}
 
@@ -878,14 +871,14 @@ export default function SearchBarWithSuggestions({
                     <>
                       <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-2 px-2">Trending</p>
                       {trendingTerms.slice(0, 6).map((term, index) => (
-                        <div
+                        <button type="button"
                           key={index}
                           onClick={() => { setMobileValue(term.title); handleSearch(term.title, mobileMode); }}
-                          className="flex items-center gap-3 p-2 hover:bg-white/10 rounded cursor-pointer text-white"
+                          className="flex w-full items-center gap-3 p-2 text-left hover:bg-white/10 rounded cursor-pointer text-white"
                         >
                           <IconTrendingUp size={16} className="text-gray-400" />
                           <span className="text-sm">{term.title}</span>
-                        </div>
+                        </button>
                       ))}
                     </>
                   )}
