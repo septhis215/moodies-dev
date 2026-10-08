@@ -13,18 +13,18 @@ const scenes = {
     label: "Page not found", title: "A plot twist. A missing page.",
     note: "This page may have moved, or the link took a wrong turn. Your next great watch is still out there.",
     moods: [
-      { image: "mind-bending", name: "Mind-Bending", line: "Even our mascot lost the plot." },
-      { image: "whimsy", name: "Whimsy", line: "A little lost. Still full of wonder." },
-      { image: "sci-fi", name: "Sci-Fi", line: "Wrong universe. Let’s head home." },
+      { image: "deep-diver", name: "Detective", line: "On the case of the missing page." },
+      { image: "hidden-gem-hunter", name: "Treasure hunter", line: "A wrong turn might still lead to a hidden gem." },
+      { image: "personality-seeker", name: "Curious guide", line: "So many questions. Let’s start with a new story." },
     ],
   },
   500: {
     label: "Unexpected intermission", title: "A little chaos behind the scenes.",
     note: "We couldn’t finish loading this view. Give it another try, or head home while we get the show back on track.",
     moods: [
-      { image: "chaos", name: "Chaos", line: "The popcorn is handling it better than we are." },
-      { image: "bittersweet", name: "Bittersweet", line: "A small setback in a bigger story." },
-      { image: "chill", name: "Chill", line: "Take a breath. We’ll try another take." },
+      { image: "comfort-watcher", name: "Comfort guide", line: "A small intermission. We saved you a cozy spot." },
+      { image: "first-episode", name: "Cozy guide", line: "Blanket ready. Let’s give it another take." },
+      { image: "first-watch", name: "Popcorn guide", line: "Take a breath. Your next story is still waiting." },
     ],
   },
 } as const;
@@ -44,7 +44,7 @@ export default function MoodiesErrorPage({ status, onRetry, title, note, standal
         <Sparkles className={styles.sparkle} aria-hidden="true" />
         <Ticket className={styles.ticket} aria-hidden="true" />
         <button type="button" className={styles.mascotButton} onClick={() => setMoodIndex(value => value + 1)} aria-label="Change the mascot mood" aria-describedby="mascot-hint">
-          <span className={styles.float}><Image key={mood.image} src={`/images/moods/${mood.image}.png`} alt={`${mood.name} mood mascot`} width={320} height={320} priority unoptimized className={styles.mascot} /></span>
+          <span className={styles.float}><Image key={mood.image} src={`/images/badges/${mood.image}.png`} alt={`${mood.name} Moodies mascot`} width={320} height={320} priority className={styles.mascot} /></span>
         </button>
         <p id="mascot-hint" className={styles.hint}><RefreshCw size={13} aria-hidden="true" />Tap for a change of mood</p>
         <p className={styles.caption} role="status" aria-live="polite" aria-atomic="true">{mood.line}</p>

@@ -1,6 +1,8 @@
 "use client";
 
 import { tmdbImage } from "@/lib/tmdb";
+import { BadgeMascot } from "@/components/ui/BadgeMascot";
+import { resolveBadgeMascot } from "@/lib/badge-mascots";
 import React, {
   useEffect,
   useState,
@@ -2377,6 +2379,7 @@ function AchievementCard({ row }: { row: UserAchievementView }) {
   const required = row.achievement.requiredCount ?? 1;
   const unlocked = row.progress.unlocked;
   const badgeName = row.badge?.badgeName ?? row.achievement.title;
+  const mascot = resolveBadgeMascot(row.badge?.badgeName);
 
   return (
     <div
@@ -2384,9 +2387,9 @@ function AchievementCard({ row }: { row: UserAchievementView }) {
     >
       <div className="flex items-start gap-3">
         <div
-          className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg ${unlocked ? "bg-[var(--brand-coral)] text-white" : "bg-[var(--surface-2)] text-[var(--ink-muted)]"}`}
+          className={mascot ? "h-16 w-16 flex-shrink-0" : `flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg ${unlocked ? "bg-[var(--brand-coral)] text-white" : "bg-[var(--surface-2)] text-[var(--ink-muted)]"}`}
         >
-          {resolveBadgeIcon(row.badge?.icon)}
+          {mascot ? <BadgeMascot name={mascot} className={`h-16 w-16 max-w-none ${unlocked ? "" : "opacity-60 grayscale"}`} sizes="64px" /> : resolveBadgeIcon(row.badge?.icon)}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -2423,24 +2426,17 @@ function AchievementCard({ row }: { row: UserAchievementView }) {
 
 function RewardBadgeCard({ row }: { row: UserAchievementView }) {
   const accent = row.badge?.colorTheme?.accent ?? "var(--brand-coral)";
+  const mascot = resolveBadgeMascot(row.badge?.badgeName);
   return (
     <div className="relative overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)]/50 p-4 transition-colors hover:border-white/15">
-      <div className="absolute -right-6 -top-6 h-24 w-24 opacity-20">
-        <Image
-          src={MASCOT_SRC}
-          alt=""
-          fill
-          sizes="96px"
-          className="object-contain"
-        />
-      </div>
       <div className="relative flex items-start gap-3">
-        <div
+        {mascot ? <BadgeMascot name={mascot} alt={row.badge?.badgeName ?? "Your earned badge"}
+          reaction="A little celebration, earned by you." className="h-24 w-24" sizes="96px" /> : <div
           className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-white"
           style={{ backgroundColor: accent }}
         >
           {resolveBadgeIcon(row.badge?.icon)}
-        </div>
+        </div>}
         <div className="min-w-0">
           <p className="font-bold text-[var(--ink)]">
             {row.badge?.badgeName ?? row.achievement.title}
@@ -2458,9 +2454,6 @@ function RewardBadgeCard({ row }: { row: UserAchievementView }) {
           Earned {new Date(row.progress.unlockedAt).toLocaleDateString()}
         </p>
       )}
-      <p className="relative mt-2 text-xs text-[var(--brand-coral-strong)]">
-        {row.badge?.mascotMood}: {row.badge?.mascotMotion}
-      </p>
     </div>
   );
 }

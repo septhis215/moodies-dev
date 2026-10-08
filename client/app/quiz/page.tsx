@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Check, ArrowLeft, ArrowRight, X } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
+import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { tmdbImage } from "@/lib/tmdb";
 import { apiRequest } from "@/lib/errors/api-client";
@@ -365,11 +366,11 @@ export default function MovieQuizPage() {
                 Browse mood tools instead
               </Link>
             </div>
-            <Image
-              src="/images/moodies-mascot.png"
-              alt="Moodies guide"
-              width={240}
-              height={280}
+            <BadgeMascot
+              name="quiz-starter"
+              alt="Your curious quiz guide"
+              reaction="No wrong answers. Just your kind of stories."
+              sizes="(max-width: 639px) 144px, 240px"
               priority
               className="mx-auto w-36 object-contain sm:w-60"
             />

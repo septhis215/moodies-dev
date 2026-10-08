@@ -1,6 +1,7 @@
 "use client";
 
 import { tmdbImage } from "@/lib/tmdb";
+import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -331,7 +332,7 @@ export default function ReviewsSection({
                 animate={{ opacity: 1 }}
                 className="col-span-full flex flex-col items-center justify-center gap-4 border-y border-[var(--surface-border)] py-16"
               >
-                <div className="text-4xl opacity-20 select-none">💬</div>
+                <BadgeMascot name="conversation-starter" className="h-24 w-24" sizes="96px" />
                 <div className="text-center">
                   <p className="text-sm font-semibold text-white/50">
                     No reviews yet
@@ -902,13 +903,7 @@ function ReviewForm({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           className="relative h-28 w-28"
         >
-          <Image
-            src="/images/moods/happy.png"
-            alt="Happy Moodies mascot"
-            fill
-            sizes="112px"
-            className="object-contain"
-          />
+          <BadgeMascot name="community-star" alt="Moodies celebrates your review" sizes="112px" className="h-28 w-28" />
         </motion.div>
         <span className="mt-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-300/25">
           <CheckCircle2 className="h-5 w-5" />

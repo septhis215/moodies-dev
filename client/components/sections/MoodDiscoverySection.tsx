@@ -1,6 +1,6 @@
 "use client";
 
-import { TmdbImage as Image } from "@/components/ui/TmdbImage";
+import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import Link from "next/link";
 import { ArrowRight, Brain, Film, Tv } from "lucide-react";
 import MoodNightPreview from "./MoodNightPreview";
@@ -69,15 +69,13 @@ export default function MoodDiscoverySection({
                 Mood wheel
               </h2>
             </div>
-            <Image
-              src="/images/moods/whimsy.png"
-              alt="Whimsy mood mascot"
-              width={240}
-              height={240}
+            <BadgeMascot
+              name="mood-explorer"
+              alt="Mood wheel explorer"
+              reaction="Every feeling opens a new story."
               sizes="(max-width: 639px) 96px, 192px"
               className="mx-auto h-24 w-24 object-contain sm:col-start-2 sm:row-span-3 sm:row-start-1 sm:h-48 sm:w-48"
               priority
-              unoptimized
             />
             <p className="col-span-2 max-w-md text-sm leading-6 text-[var(--ink-muted)] sm:col-span-1">
               Cozy, thrilling, or a little out of the ordinary? Pick your mood,

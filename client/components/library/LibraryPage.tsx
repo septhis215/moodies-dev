@@ -1,10 +1,11 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { BadgeMascot } from "@/components/ui/BadgeMascot";
+import type { BadgeMascotName } from "@/lib/badge-mascots";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
-  Bookmark,
   LayoutGrid,
   Rows3,
   Search,
@@ -334,6 +335,7 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
                 )}
                 {library.entries.length === 0 ? (
                   <LibraryState
+                    mascot={kind === "watchlist" ? "first-save" : "first-like"}
                     title={
                       kind === "watchlist"
                         ? "Your watchlist is empty"
@@ -518,21 +520,21 @@ function LibraryState({
   action,
   href,
   onAction,
+  mascot = "deep-diver",
 }: {
   title: string;
   note: string;
   action: string;
   href?: string;
   onAction?: () => void;
+  mascot?: BadgeMascotName;
 }) {
   return (
     <section
       className="relative overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[linear-gradient(120deg,rgba(255,255,255,0.035),transparent_60%),var(--surface-1)] p-7 shadow-[0_20px_55px_rgba(0,0,0,0.18)] sm:p-10"
       aria-label={title}
     >
-      <div className="mb-5 grid h-11 w-11 place-items-center rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] text-[var(--brand-coral-strong)]">
-        <Bookmark className="h-5 w-5" aria-hidden="true" />
-      </div>
+      <BadgeMascot name={mascot} className="mb-4 h-28 w-28 sm:h-36 sm:w-36" sizes="(max-width: 639px) 112px, 144px" />
       <h2 className="text-2xl font-bold sm:text-3xl">{title}</h2>
       <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
         {note}

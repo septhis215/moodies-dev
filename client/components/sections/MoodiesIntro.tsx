@@ -1,28 +1,28 @@
-import { TmdbImage as Image } from "@/components/ui/TmdbImage";
+import { BadgeMascot } from "@/components/ui/BadgeMascot";
 
 const discoveryFeatures = [
   {
     title: "Start with a feeling",
     description:
       "Something cozy, a little thrilling, or a good laugh. Discover stories that fit your mood.",
-    mascot: "romantic",
-    mascotName: "Romantic",
+    mascot: "mood-starter",
+    mascotName: "Mood wheel guide",
   },
   {
     title: "Make it personal",
     description:
       "Your favourite genres and languages help shape recommendations around your taste.",
-    mascot: "sci-fi",
-    mascotName: "Sci-Fi",
+    mascot: "taste-maker",
+    mascotName: "Your personal taste guide",
   },
   {
     title: "Get to know your next watch",
     description:
       "Explore trailers, ratings and community reviews, then save your picks to your watchlist.",
-    mascot: "documentary",
-    mascotName: "Documentary",
+    mascot: "watchlist-builder",
+    mascotName: "Watchlist builder",
   },
-];
+] as const;
 
 type MoodiesIntroProps = {
   variant?: "landing" | "onboarding";
@@ -44,7 +44,7 @@ export default function MoodiesIntro({
             <p className="ui-kicker">Meet Moodies</p>
             <h2 id={headingId} className="mt-2 text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl">Find your next good watch.</h2>
           </div>
-          <Image src="/images/moods/serenity.png" alt="Serenity mood mascot" width={160} height={160} sizes="(max-width: 639px) 96px, 144px" unoptimized className="col-start-2 row-span-2 row-start-1 h-24 w-24 object-contain sm:h-36 sm:w-36" />
+          <BadgeMascot name="first-watch" alt="Your Moodies welcome guide" reaction="A good watch starts with you." sizes="(max-width: 639px) 96px, 144px" className="col-start-2 row-span-2 row-start-1 h-24 w-24 sm:h-36 sm:w-36" />
           <p className="col-start-1 text-sm leading-5 text-[var(--ink-muted)]">Movies and series for your mood, shaped by your taste.</p>
         </div>
         <p className="relative mt-2 border-t border-[var(--surface-border)] pt-2 text-xs leading-4 text-[var(--ink-muted)]">Find it here. Watch on your service.</p>
@@ -68,7 +68,7 @@ export default function MoodiesIntro({
           }
         >
           <div
-            className={`grid items-center gap-x-4 gap-y-2 ${compact ? "grid-cols-[minmax(0,1fr)_4rem]" : "grid-cols-[minmax(0,1fr)_3rem] sm:grid-cols-[minmax(0,1fr)_8rem]"}`}
+            className="grid grid-cols-[minmax(0,1fr)_5rem] items-center gap-x-4 gap-y-2 sm:grid-cols-[minmax(0,1fr)_8rem]"
           >
             <div className="min-w-0">
               <p className="ui-kicker">What is Moodies?</p>
@@ -79,14 +79,11 @@ export default function MoodiesIntro({
                 Your mood. Your taste. Your next watch.
               </h2>
             </div>
-            <Image
-              src="/images/moods/serenity.png"
-              alt="Serenity mood mascot"
-              width={160}
-              height={160}
-              unoptimized
-              sizes={compact ? "64px" : "(max-width: 639px) 48px, 128px"}
-              className={`object-contain ${compact ? "h-16 w-16" : "col-start-2 row-start-1 h-12 w-12 self-start sm:h-32 sm:w-32 sm:self-center"}`}
+            <BadgeMascot
+              name="first-watch"
+              alt="Your Moodies welcome guide"
+              sizes="(max-width: 639px) 80px, 128px"
+              className="col-start-2 row-start-1 h-20 w-20 self-center sm:h-32 sm:w-32"
             />
             <p className="col-span-2 mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
               {compact ? (
@@ -110,12 +107,10 @@ export default function MoodiesIntro({
               {discoveryFeatures.map(
                 ({ title, description, mascot, mascotName }) => (
                   <li key={title} className="flex items-start gap-4">
-                    <Image
-                      src={`/images/moods/${mascot}.png`}
-                      alt={`${mascotName} mood mascot`}
-                      width={64}
-                      height={64}
-                      unoptimized
+                    <BadgeMascot
+                      name={mascot}
+                      alt={mascotName}
+                      sizes="56px"
                       className="h-14 w-14 shrink-0 object-contain"
                     />
                     <div>

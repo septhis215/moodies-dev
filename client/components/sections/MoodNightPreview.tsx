@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Pause, Play } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import { tmdbImage } from "@/lib/tmdb";
 import MoodTrailerBackdrop from "./MoodTrailerBackdrop";
 import styles from "./MoodNightPreview.module.css";
@@ -12,6 +13,7 @@ import { moodNightChoices, parseNightPreview, selectNightPreview } from "./mood-
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api").replace(/\/$/, "");
 type Preview = ReturnType<typeof parseNightPreview>;
+const nightMascots = { easy: "comfort-watcher", tense: "horror-survivor", tender: "romance-dreamer", strange: "personality-seeker", electric: "action-chaser" } as const;
 
 export default function MoodNightPreview() {
   const [selection, setSelection] = useState<string>(moodNightChoices[0].id);
@@ -119,7 +121,7 @@ export default function MoodNightPreview() {
         </div>
         <div id="landing-mood-preview" className="mt-3 sm:mt-5">
           <div className="flex min-h-16 items-center gap-3 sm:min-h-24 sm:gap-4">
-            <Image src={`/images/moods/${mood.mascot}.png`} alt={`${mood.mascotName} mood mascot`} width={96} height={96} unoptimized className="h-16 w-16 shrink-0 object-contain sm:h-24 sm:w-24" />
+            <BadgeMascot name={nightMascots[mood.id]} alt={`${mood.label} night guide`} sizes="(max-width: 639px) 64px, 96px" className="h-16 w-16 sm:h-24 sm:w-24" />
             <div className={styles.copy} aria-live="polite" aria-atomic="true"><h3 className="text-base font-bold text-[var(--ink)] sm:text-lg">{mood.id === "easy" || mood.id === "electric" ? "An" : "A"} {mood.label.toLowerCase()} night</h3><p className="mt-1 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">{mood.note}</p></div>
           </div>
           <div aria-busy={!preview && !failed} className="mt-3 min-h-28 sm:mt-5">
