@@ -669,7 +669,7 @@ export default function MoodRecommendationsSection({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-8 lg:grid-cols-4 xl:grid-cols-6"
+                className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4"
               >
                 {recommendations.map((rec, index) => {
                   const id = String(rec.tmdbId);
@@ -679,7 +679,9 @@ export default function MoodRecommendationsSection({
                   const matchScore = getMatchScore(rec);
                   const genres = rec.genreNames?.filter(Boolean) ?? [];
                   const moodColor = getMoodColor(selectedMood);
-                  const isFeatured = index === 0;
+                  // Two spotlights leave 16 posters: complete rows at both
+                  // the four-column desktop and two-column mobile sizes.
+                  const isFeatured = index < 2;
 
                   return (
                     <motion.article
@@ -687,14 +689,15 @@ export default function MoodRecommendationsSection({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.18 }}
-                      className={`relative min-w-0 ${isFeatured ? "col-span-2" : ""}`}
+                      className={`relative min-w-0 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] ${isFeatured ? "col-span-2" : ""}`}
+                      style={isFeatured ? { borderTopColor: moodColor } : undefined}
                     >
                       <Link
                         href={getMediaHref(rec)}
-                        className="group flex h-full flex-col rounded-xl outline-offset-4 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)]"
+                        className="group flex h-full flex-col rounded-2xl focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral)]"
                       >
                         <div
-                          className={`relative overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] ${isFeatured ? "aspect-video sm:aspect-[4/3]" : "aspect-[2/3]"}`}
+                          className={`relative overflow-hidden bg-[var(--surface-2)] ${isFeatured ? "aspect-video" : "aspect-[2/3]"}`}
                         >
                           <Image
                             src={
@@ -706,8 +709,8 @@ export default function MoodRecommendationsSection({
                             fill
                             sizes={
                               isFeatured
-                                ? "(max-width: 640px) 100vw, (max-width: 1024px) 66vw, 40vw"
-                                : "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                                ? "(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 640px"
+                                : "(max-width: 768px) 50vw, (max-width: 1280px) 25vw, 320px"
                             }
                             className="object-cover transition-transform duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
                           />
@@ -732,8 +735,14 @@ export default function MoodRecommendationsSection({
                           </div>
                         </div>
 
-                        <div className="flex flex-1 flex-col px-0.5 pt-3">
-                          <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                        <div className="flex flex-1 flex-col p-3 sm:p-4">
+                          {isFeatured && (
+                            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[var(--brand-coral-strong)]">
+                              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                              {index === 0 ? "Your strongest match" : "Another great match"}
+                            </p>
+                          )}
+                          <h3 className={`line-clamp-2 font-semibold text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)] ${isFeatured ? "text-lg leading-6 sm:text-xl" : "text-sm leading-5"}`}>
                             {rec.title}
                           </h3>
                           <p className="mt-1 text-xs text-[var(--ink-muted)]">
@@ -742,6 +751,11 @@ export default function MoodRecommendationsSection({
                           {genres.length > 0 && (
                             <p className="mt-1 truncate text-xs text-[var(--ink-muted)]">
                               {genres.slice(0, 2).join(" · ")}
+                            </p>
+                          )}
+                          {isFeatured && (rec.reason || rec.overview) && (
+                            <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--ink-muted)]">
+                              {rec.reason || rec.overview}
                             </p>
                           )}
                         </div>
@@ -757,7 +771,7 @@ export default function MoodRecommendationsSection({
                             ? `Remove ${rec.title} from My List`
                             : `Add ${rec.title} to My List`
                         }
-                        className={`absolute left-2 top-2 z-20 flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-black/80 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-[var(--brand-coral)] disabled:cursor-not-allowed disabled:opacity-70`}
+                        className="absolute left-2 top-2 z-20 flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-black/80 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-[var(--brand-coral)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)] disabled:cursor-not-allowed disabled:opacity-70"
                         aria-pressed={Boolean(inList)}
                         style={{ borderColor: inList ? moodColor : undefined }}
                       >
