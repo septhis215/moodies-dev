@@ -107,7 +107,7 @@
 }
 .posters {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 11rem));
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
   gap: 1rem;
 }
 .viewToggle {

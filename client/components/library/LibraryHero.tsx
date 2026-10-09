@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Bookmark, Heart } from "lucide-react";
 import { TmdbImage } from "@/components/ui/TmdbImage";
+import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import { tmdbImage } from "@/lib/tmdb";
 import {
   entryTitle,
@@ -44,7 +45,8 @@ export function LibraryHero({
         )}
         <div className={styles.shade} aria-hidden="true" />
         <div className={styles.heroBody}>
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+            <div className="min-w-0 flex-1">
             <p className={styles.personal}>
               {displayName
                 ? `${displayName}’s collection`
@@ -75,6 +77,14 @@ export function LibraryHero({
                 </span>
               </div>
             )}
+            </div>
+            <BadgeMascot
+              name={kind === "watchlist" ? "watchlist-builder" : "first-like"}
+              alt={kind === "watchlist" ? "Your watchlist companion" : "Your favourites companion"}
+              reaction={kind === "watchlist" ? "Saving a little magic for movie night." : "Good stories deserve a little love."}
+              className="h-20 w-20 sm:h-32 sm:w-32"
+              sizes="(max-width: 639px) 80px, 128px"
+            />
           </div>
           {featured && (
             <div className={styles.feature}>

@@ -53,7 +53,7 @@ export function LibraryCard({
           fill
           sizes={
             view === "posters"
-              ? "(max-width: 639px) 45vw, (max-width: 767px) 30vw, 176px"
+              ? "(max-width: 639px) 45vw, (max-width: 767px) 30vw, 208px"
               : "(max-width: 767px) 30vw, (max-width: 1279px) 16vw, 140px"
           }
         />

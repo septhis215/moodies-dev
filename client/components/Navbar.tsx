@@ -349,7 +349,7 @@ export function NavbarComponent({
   }, []);
 
   const avatar = (size: "small" | "large" = "small") => {
-    const dimensions = size === "large" ? "h-12 w-12" : "h-9 w-9";
+    const dimensions = size === "large" ? "h-12 w-12" : "h-11 w-11";
     return (
       <span
         className={`grid ${dimensions} shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.055] text-sm font-semibold text-white/80`}
@@ -358,8 +358,8 @@ export function NavbarComponent({
           <Image
             src={user.avatarUrl}
             alt=""
-            width={size === "large" ? 48 : 36}
-            height={size === "large" ? 48 : 36}
+            width={size === "large" ? 48 : 44}
+            height={size === "large" ? 48 : 44}
             unoptimized
             className="h-full w-full object-cover"
             referrerPolicy="no-referrer"
@@ -643,7 +643,7 @@ export function NavbarComponent({
                 key={item.href}
                 href={item.href}
                 aria-current={pathname === item.href ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center gap-2 rounded-xl px-2.5 text-sm font-semibold transition-colors hover:bg-white/[0.055] hover:text-[var(--ink)] ${currentRoute === item.href ? "bg-[var(--surface-2)] text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"} ${focusRing}`}
+                className={`inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-xl px-3 text-sm font-semibold leading-5 transition-colors hover:bg-white/[0.055] hover:text-[var(--ink)] ${currentRoute === item.href ? "bg-[var(--surface-2)] text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"} ${focusRing}`}
               >
                 {item.name}
               </Link>
@@ -651,7 +651,7 @@ export function NavbarComponent({
           })}
         </nav>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex shrink-0 items-center gap-2">
           <SearchBar
             placeholder="Search movies, series..."
             onSearch={() => undefined}
@@ -662,7 +662,7 @@ export function NavbarComponent({
             aria-controls="site-menu"
             aria-label={isMenuOpen ? "Close explore menu" : "Open explore menu"}
             onClick={openExploreMenu}
-            className={`grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white/70 transition hover:border-[#e94f37]/25 hover:bg-white/[0.075] hover:text-white ${focusRing}`}
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white/70 transition hover:border-[#e94f37]/25 hover:bg-white/[0.075] hover:text-white ${focusRing}`}
           >
             <IconMenu2 className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -679,7 +679,7 @@ export function NavbarComponent({
               aria-label={
                 isAuthenticated ? "View your profile" : "Sign in to Moodies"
               }
-              className={`rounded-xl transition hover:ring-1 hover:ring-[#e94f37]/35 ${focusRing}`}
+              className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition hover:ring-1 hover:ring-[#e94f37]/35 ${focusRing}`}
             >
               {avatar()}
             </Link>
@@ -692,18 +692,18 @@ export function NavbarComponent({
               aria-haspopup="menu"
               aria-expanded={isProfileOpen}
               aria-label="Open account menu"
-              className={`ml-1 flex min-h-10 items-center gap-2 rounded-xl px-2 text-left transition hover:bg-white/[0.05] ${focusRing}`}
+              className={`ml-1 flex h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-xl px-2 text-left transition hover:bg-white/[0.05] ${focusRing}`}
             >
               <span className="hidden xl:block">
-                <span className="block max-w-28 truncate text-sm font-semibold text-white">
+                <span className="block max-w-28 truncate text-sm font-semibold leading-5 text-white">
                   {displayName}
                 </span>
-                <span className="block text-xs text-white/40">
+                <span className="block text-xs leading-4 text-white/40">
                   {isAuthenticated ? "View account" : "Sign in"}
                 </span>
               </span>
               <IconChevronDown
-                className={`hidden h-4 w-4 text-white/40 transition-transform xl:block ${
+                className={`h-4 w-4 shrink-0 text-white/40 transition-transform ${
                   isProfileOpen ? "rotate-180" : ""
                 }`}
                 aria-hidden="true"
@@ -806,8 +806,8 @@ export function NavbarComponent({
 
       <MobileNav visible transparent={transparent}>
         <MobileNavHeader>
-          <NavbarLogo className="mr-0 px-1" />
-          <div className="flex items-center gap-1.5">
+          <NavbarLogo />
+          <div className="flex shrink-0 items-center gap-2">
             <SearchBar
               placeholder="Search movies, series..."
               onSearch={() => undefined}
@@ -817,7 +817,7 @@ export function NavbarComponent({
               aria-label={
                 isAuthenticated ? "View your profile" : "Sign in to Moodies"
               }
-              className={`grid min-h-11 min-w-11 place-items-center rounded-xl transition active:scale-95 ${focusRing}`}
+              className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition active:scale-95 ${focusRing}`}
             >
               {avatar()}
             </Link>

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ArrowLeft, ArrowRight, X } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
+import type { BadgeMascotName } from "@/lib/badge-mascots";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { tmdbImage } from "@/lib/tmdb";
 import { apiRequest } from "@/lib/errors/api-client";
@@ -52,6 +53,13 @@ const reasonOf = (item: MovieItem) =>
   "A genre-led suggestion from the available catalogue.";
 const focusClass =
   "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral)]";
+const resultGuides: Record<string, { name: BadgeMascotName; line: string }> = {
+  cozy: { name: "comfort-watcher", line: "Cozy spot saved. Your stories are ready." },
+  thrilling: { name: "action-chaser", line: "Ready for a little edge-of-your-seat magic?" },
+  "mind-bending": { name: "deep-diver", line: "A few stories worth getting lost in." },
+  bittersweet: { name: "romance-dreamer", line: "For the stories that stay with you." },
+  inspirational: { name: "super-fan", line: "Here’s to your next favourite story." },
+};
 
 export default function MovieQuizPage() {
   const [stage, setStage] = useState<Stage>("welcome");
@@ -161,6 +169,10 @@ export default function MovieQuizPage() {
       (question) => question.category === category,
     );
     return index < 0 ? null : choice(index);
+  };
+  const resultGuide = resultGuides[choiceByCategory("feeling")?.mood ?? ""] ?? {
+    name: "taste-maker" as const,
+    line: "Your taste. Your very own story shortlist.",
   };
   const start = () => {
     requestRef.current?.abort();
@@ -571,8 +583,9 @@ export default function MovieQuizPage() {
 
         {stage === "results" && (
           <section aria-labelledby="quiz-results" className="mx-auto max-w-6xl">
-            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-              <div>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:flex-1 sm:gap-5">
+                <div className="min-w-0">
                 <p className="ui-kicker">Your viewing shortlist</p>
                 <h1
                   id="quiz-results"
@@ -587,6 +600,10 @@ export default function MovieQuizPage() {
                   {choiceByCategory("genre")?.label} ·{" "}
                   {choiceByCategory("format")?.label}
                 </p>
+                </div>
+                <BadgeMascot name={resultGuide.name} alt="Your quiz results companion"
+                  reaction={resultGuide.line} className="h-20 w-20 sm:h-28 sm:w-28"
+                  sizes="(max-width: 639px) 80px, 112px" />
               </div>
               <button
                 onClick={start}

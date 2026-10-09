@@ -727,7 +727,7 @@ export default function SearchBarWithSuggestions({
                 setOpen(!open);
               }
             }}
-            className="ml-2 min-h-11 min-w-11 rounded-md border border-white/20 bg-white/5 px-3 py-2 text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[var(--brand-coral-strong)] transition-colors z-10"
+            className="z-10 grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white/70 transition-colors hover:border-[#e94f37]/25 hover:bg-white/[0.075] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)]"
           >
             {open && !resolvedIsMobile ? <IconX size={20} /> : <IconSearch size={20} />}
           </button>
