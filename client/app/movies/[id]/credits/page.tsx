@@ -1,5 +1,6 @@
 // app/movies/[id]/credits/page.tsx
 import AllCredits from "@/components/selected-content/extended/allCredits";
+import { CreditsPageUnavailable } from "@/components/selected-content/extended/creditsPageStates";
 import type { Metadata } from "next";
 
 type Props = {
@@ -27,40 +28,23 @@ export default async function CreditsPage({ params, searchParams }: Props) {
       next: { revalidate: 60 },
     });
     if (!res.ok) {
-      return (
-        <main className="min-h-screen flex items-center justify-center p-8 bg-black text-white">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold">Credits not available</h2>
-            <p className="mt-2 text-gray-400">
-              Could not fetch credits for this item.
-            </p>
-          </div>
-        </main>
-      );
+      return <CreditsPageUnavailable backHref={`/movies/${id}`} />;
     }
 
     const data = await res.json();
     const credits = data.credits ?? { cast: [], crew: [] };
     const info = data.info;
+    if (!info) return <CreditsPageUnavailable backHref={`/movies/${id}`} />;
 
     return (
-      <main className="min-h-screen bg-black text-slate-100">
-        <AllCredits
-          credits={credits}
-          info={info}
-          id={id}
-          highlight={highlight}
-        />
-      </main>
+      <AllCredits
+        credits={credits}
+        info={info}
+        id={id}
+        highlight={highlight}
+      />
     );
   } catch {
-    return (
-      <main className="min-h-screen flex items-center justify-center p-8 bg-black text-white">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold">Credits not available</h2>
-          <p className="mt-2 text-gray-400">Network error.</p>
-        </div>
-      </main>
-    );
+    return <CreditsPageUnavailable backHref={`/movies/${id}`} />;
   }
 }

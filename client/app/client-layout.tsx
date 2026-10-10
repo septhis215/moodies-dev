@@ -6,9 +6,8 @@ import { Suspense, useEffect } from "react";
 import { useScrollToHash } from "@/hooks/useScrollToHash";
 
 // Routes where the navbar should not appear.
-// startsWith is used for prefixes (e.g. /auth/login), includes for segments (e.g. /movies/123/reviews).
+// startsWith is used for prefixes (e.g. /auth/login).
 const NAVBAR_HIDDEN_PREFIXES = ["/auth", "/feed"];
-const NAVBAR_HIDDEN_SEGMENTS = ["/reviews", "/credits"];
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -20,10 +19,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [pathname]);
 
-  const shouldShowNavbar =
-    !NAVBAR_HIDDEN_PREFIXES.some((p) => pathname.startsWith(p)) &&
-    !NAVBAR_HIDDEN_SEGMENTS.some((s) => pathname.includes(s));
-  const isSelectedContentPage = /^\/(movies|tv)\/[^/]+\/?$/.test(pathname);
+  const shouldShowNavbar = !NAVBAR_HIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
+  const isSelectedContentPage = /^\/(movies|tv)\/[^/]+(?:\/(reviews|credits))?\/?$/.test(pathname);
 
   const mainClassName = shouldShowNavbar && !isSelectedContentPage
     ? "min-h-screen bg-black pt-[var(--mobile-nav-safe)] lg:pt-0"
