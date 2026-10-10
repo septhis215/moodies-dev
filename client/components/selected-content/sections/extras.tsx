@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import { ArrowUpRight, ChevronDown, ChevronUp, Search, Users2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { tmdbImage } from "@/lib/tmdb";
+import { selectKeyCrewGroups } from "@/components/selected-content/keyCrew";
 import type {
   MovieDetailsData,
   ProviderCountry,
@@ -15,17 +16,6 @@ type DetailsProps = {
   data: MovieDetailsData | TvDetailsData;
   contentId?: string;
 };
-
-type CrewMember =
-  | MovieDetailsData["credits"]["crew"][number]
-  | TvDetailsData["credits"]["crew"][number];
-
-function crewRoles(person: CrewMember): string[] {
-  if ("jobs" in person && Array.isArray(person.jobs)) {
-    return person.jobs.map((job) => job.job).filter(Boolean);
-  }
-  return person.job ? [person.job] : [];
-}
 
 function initials(value: string): string {
   return value
@@ -44,31 +34,11 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
   const basePath = info.content_type === "tv" ? "tv" : "movies";
   const creditsHref = contentId ? `/${basePath}/${contentId}/credits` : "#";
 
-  const keyCrew = useMemo(() => {
-    const priority = [
-      "Director",
-      "Creator",
-      "Executive Producer",
-      "Producer",
-      "Writer",
-      "Screenplay",
-      "Story",
-      "Original Music Composer",
-      "Director of Photography",
-    ];
-    const seen = new Set<string>();
-    return priority.flatMap((role) =>
-      credits.crew
-        .filter((person) => crewRoles(person).includes(role))
-        .filter((person) => {
-          const key = `${person.id}:${role}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        })
-        .map((person) => ({ person, role })),
-    );
-  }, [credits.crew]);
+  const keyCrew = useMemo(() => selectKeyCrewGroups(
+    credits.crew,
+    info.content_type,
+    info.content_type === "tv" ? info.created_by ?? [] : [],
+  ), [credits.crew, info]);
 
   const allProviders = useMemo(() => {
     const map = new Map<string, { provider_name: string; logo_path?: string }>();
@@ -97,7 +67,6 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
   );
   const visibleCast = credits.cast.slice(0, castLimit);
   const mobileCast = credits.cast.slice(0, 4);
-  const mobileCrew = keyCrew.slice(0, 4);
   const hasDistribution =
     info.production_countries.length > 0 || allProviders.length > 0;
 
@@ -130,37 +99,6 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
       </Link>
     ));
 
-  const renderCrew = (people: typeof keyCrew) =>
-    people.map(({ person, role }, index) => (
-      <Link
-        key={`${person.id}-${role}-${index}`}
-        href={`/celeb/${person.id}`}
-        className="flex min-w-0 items-center gap-3 border-b border-[var(--surface-border)] py-3 transition-colors hover:border-brand-coral/60"
-      >
-        <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--surface-2)] text-xs font-bold text-[var(--ink-muted)]">
-          {person.profile_path ? (
-            <Image
-              src={tmdbImage(person.profile_path, "w92")}
-              alt={person.name}
-              width={40}
-              height={40}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            initials(person.name)
-          )}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold leading-5 text-[var(--ink)]">
-            {person.name}
-          </p>
-          <p className="truncate text-xs leading-5 text-[var(--ink-muted)]">
-            {role}
-          </p>
-        </div>
-      </Link>
-    ));
-
   return (
     <section
       className="ui-shell scroll-mt-24 py-8 sm:py-10"
@@ -188,9 +126,9 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
                 The performers most closely tied to the story.
               </p>
             </div>
-            <Link href={creditsHref} className="ui-secondary-action">
-              Full credits
-            </Link>
+            {contentId && <Link href={creditsHref} className="ui-secondary-action leading-none ml-auto sm:ml-0" aria-label="View full cast and crew">
+              Credits <Users2 size={16} aria-hidden="true" />
+            </Link>}
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 sm:hidden">
@@ -210,20 +148,20 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
                       Math.min(current + 12, credits.cast.length),
                     )
                   }
-                  className="ui-secondary-action"
+                  className="ui-secondary-action leading-none"
                 >
+                  More
                   <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                  Show more cast
                 </button>
               ) : null}
               {castLimit > 12 ? (
                 <button
                   type="button"
                   onClick={() => setCastLimit(12)}
-                  className="ui-secondary-action"
+                  className="ui-secondary-action leading-none"
                 >
+                  Less
                   <ChevronUp className="h-4 w-4" aria-hidden="true" />
-                  Show less
                 </button>
               ) : null}
             </div>
@@ -232,28 +170,37 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
       ) : null}
 
       {keyCrew.length > 0 ? (
-        <div className="mt-8 border-t border-[var(--surface-border)] pt-6">
+        <section className="mt-8 border-t border-[var(--surface-border)] pt-6" aria-labelledby="key-crew-heading">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h3 className="text-xl font-semibold text-[var(--ink)]">
+              <h3 id="key-crew-heading" className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl">
                 Key crew
               </h3>
               <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
-                The creative roles that shape the finished work.
+                The people shaping the story.
               </p>
             </div>
-            <Link href={creditsHref} className="ui-secondary-action">
-              All credits
-            </Link>
+            {contentId && <Link href={creditsHref} className="ui-secondary-action leading-none" aria-label="View full cast and crew">
+              Credits <Users2 size={16} aria-hidden="true" />
+            </Link>}
           </div>
-
-          <div className="mt-5 grid gap-x-8 sm:hidden">
-            {renderCrew(mobileCrew)}
-          </div>
-          <div className="mt-5 hidden gap-x-8 sm:grid sm:grid-cols-2 lg:grid-cols-3">
-            {renderCrew(keyCrew)}
-          </div>
-        </div>
+          <dl className="mt-5 divide-y divide-[var(--surface-border)]">
+            {keyCrew.map((group) => (
+              <div key={group.label} className="grid gap-2 py-4 first:pt-0 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-6">
+                <dt className="text-sm font-semibold leading-6 text-[var(--ink-muted)] sm:pt-2">{group.label}</dt>
+                <dd className="flex min-w-0 flex-wrap gap-x-6 gap-y-1">
+                  {group.people.map((person) => (
+                    <Link key={person.id} href={`/celeb/${person.id}`} prefetch={false}
+                      className="group inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg text-sm font-semibold leading-6 text-[var(--ink)] transition-colors hover:text-[var(--brand-coral-strong)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral)]">
+                      <span className="min-w-0 break-words">{person.name}</span>
+                      <ArrowUpRight size={14} className="shrink-0 text-[var(--ink-muted)] group-hover:text-[var(--brand-coral-strong)]" aria-hidden="true" />
+                    </Link>
+                  ))}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
       ) : null}
 
       {hasDistribution ? (

@@ -1,7 +1,7 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Play, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Expand, Play, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { tmdbImage } from "@/lib/tmdb";
 
@@ -58,6 +58,8 @@ export default function ImageVideoCarousel({
   const [activeTab, setActiveTab] = useState<Tab>(firstTab);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const isPoster = activeTab === "posters";
 
   const images = activeTab === "posters" ? posters : backdrops;
   const currentVideo =
@@ -86,6 +88,19 @@ export default function ImageVideoCarousel({
       Math.min(current, Math.max(0, totalItems - 1)),
     );
   }, [activeTab, totalItems]);
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (!dialog.open) dialog.showModal();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [lightboxOpen]);
 
   useEffect(() => {
     if (!lightboxOpen) return;
@@ -122,27 +137,25 @@ export default function ImageVideoCarousel({
           >
             Media archive
           </h2>
-          <p className="mt-3 text-base leading-7 text-[var(--ink-muted)]">
-            Stills, posters, and videos kept available without competing with
-            the main decision on this page.
+          <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+            Explore the artwork, stills, and videos.
           </p>
         </div>
 
         <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)]">
-          <div className="flex flex-wrap gap-1" role="tablist" aria-label="Media type">
+          <div className="flex flex-wrap gap-1" role="group" aria-label="Media type">
             {(["posters", "backdrops", "videos"] as Tab[]).map((tab) =>
               counts[tab] > 0 ? (
                 <button
                   key={tab}
                   type="button"
-                  role="tab"
-                  aria-selected={activeTab === tab}
+                  aria-pressed={activeTab === tab}
                   onClick={() => {
                     setActiveTab(tab);
                     setSelectedIndex(0);
                     setLightboxOpen(false);
                   }}
-                  className={`px-3 py-2 text-xs font-semibold transition-colors ${
+                  className={`min-h-11 rounded-t-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)] ${
                     activeTab === tab
                       ? "border-b-2 border-brand-coral-strong text-[var(--ink)]"
                       : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
@@ -153,37 +166,33 @@ export default function ImageVideoCarousel({
               ) : null,
             )}
           </div>
-          <span className="hidden sm:inline">
-            {selectedIndex + 1} / {totalItems}
-          </span>
         </div>
       </header>
 
       <div
-        className={`mt-6 grid gap-4 ${
+        className={`mt-6 grid min-w-0 items-start gap-4 ${
           totalItems > 1
-            ? "lg:h-[min(32rem,calc(100dvh-14rem))] lg:grid-cols-[minmax(0,1fr)_15rem] lg:items-stretch"
+            ? isPoster ? "lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-6" : "lg:grid-cols-[16rem_minmax(0,1fr)]"
             : "lg:grid-cols-1"
         }`}
       >
         <div
-          className={`relative overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] ${
-            totalItems > 1 ? "lg:flex lg:h-full lg:flex-col" : ""
+          className={`min-w-0 ${
+            isPoster ? "mx-auto w-full max-w-64 sm:max-w-80" : "w-full lg:order-last"
           }`}
         >
           <div
-            className={`relative ${
-              totalItems > 1
-                ? "aspect-video lg:min-h-0 lg:flex-1 lg:aspect-auto"
-                : "aspect-video lg:aspect-[16/8]"
+            className={`relative overflow-hidden rounded-xl bg-black ${
+              isPoster ? "aspect-[2/3]" : "aspect-video"
             }`}
           >
             {activeTab === "videos" ? (
               currentVideo && isYoutube ? (
                 <iframe
+                  key={currentVideo.key}
                   src={youtubeEmbed(currentVideo.key)}
                   title={currentVideo.name || "Video"}
-                  className="h-full w-full border-0"
+                  className="absolute inset-0 h-full w-full border-0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
@@ -213,7 +222,7 @@ export default function ImageVideoCarousel({
             ) : images[selectedIndex] ? (
               <button
                 type="button"
-                className="relative h-full w-full cursor-zoom-in"
+                className="relative block h-full w-full cursor-zoom-in focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-coral)]"
                 onClick={() => setLightboxOpen(true)}
                 aria-label={`Open ${activeLabel.toLowerCase()} ${selectedIndex + 1}`}
               >
@@ -221,42 +230,19 @@ export default function ImageVideoCarousel({
                   src={imageUrl(images[selectedIndex], activeTab === "posters" ? "w500" : "w1280")}
                   alt={`${activeLabel} ${selectedIndex + 1}`}
                   fill
-                  sizes="(max-width: 1024px) 100vw, 70vw"
+                  sizes={isPoster ? "(min-width: 640px) 320px, 256px" : "(min-width: 1024px) 960px, 100vw"}
                   className="object-contain"
-                  priority
                 />
+                <span className="absolute bottom-3 right-3 grid h-9 w-9 place-items-center rounded-lg bg-black/70 text-white" aria-hidden="true"><Expand size={16} /></span>
               </button>
             ) : null}
 
-            {totalItems > 1 ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => navigate("previous")}
-                  className="absolute left-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 place-items-center border border-white/15 bg-black/60 text-white transition-colors hover:border-brand-coral-strong hover:text-brand-coral-strong lg:grid"
-                  aria-label={`Previous ${activeLabel.toLowerCase()}`}
-                >
-                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("next")}
-                  className="absolute right-3 top-1/2 hidden h-9 w-9 -translate-y-1/2 place-items-center border border-white/15 bg-black/60 text-white transition-colors hover:border-brand-coral-strong hover:text-brand-coral-strong lg:grid"
-                  aria-label={`Next ${activeLabel.toLowerCase()}`}
-                >
-                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                </button>
-              </>
-            ) : null}
-          </div>
-          <div className="flex items-center justify-between border-t border-[var(--surface-border)] px-3 py-2 text-xs text-[var(--ink-muted)]">
-            <span>{currentVideo?.name || activeLabel}</span>
-            <span>{selectedIndex + 1} / {totalItems}</span>
           </div>
         </div>
 
         {totalItems > 1 ? (
-          <div className="mobile-native-scroll scrollbar-hide flex gap-2 overflow-x-auto pb-1 lg:min-h-0 lg:overflow-y-auto lg:block lg:space-y-2 lg:overflow-x-hidden">
+          <div className={`flex min-w-0 gap-3 overflow-x-auto overflow-y-hidden overscroll-contain py-1 max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden lg:max-h-[32rem] lg:overflow-x-hidden lg:overflow-y-auto lg:p-2 ${isPoster ? "lg:grid lg:grid-cols-3 xl:grid-cols-4 lg:content-start" : "lg:block lg:space-y-3"}`}
+            tabIndex={0} role="region" aria-label={`Browse ${activeTab}, scroll for more`}>
             {(activeTab === "videos" ? normalizedVideos : images).map((item, index) => {
               const video = activeTab === "videos" ? (item as VideoItem) : null;
               const selected = selectedIndex === index;
@@ -265,26 +251,28 @@ export default function ImageVideoCarousel({
                   key={video ? `${video.id ?? video.key}-${index}` : `${item}-${index}`}
                   type="button"
                   onClick={() => setSelectedIndex(index)}
-                  className={`relative block h-20 w-32 shrink-0 overflow-hidden rounded-xl border text-left transition-colors lg:h-[4.75rem] lg:w-full ${
+                  className={`relative block shrink-0 overflow-hidden rounded-xl bg-black text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)] ${isPoster ? "aspect-[2/3] w-20 sm:w-24 lg:w-full" : "aspect-video w-56 lg:w-full"} ${
                     selected
-                      ? "border-brand-coral-strong"
-                      : "border-[var(--surface-border)] opacity-65 hover:opacity-100"
+                      ? "ring-2 ring-inset ring-[var(--brand-coral)]"
+                      : "opacity-70 hover:opacity-100"
                   }`}
+                  aria-pressed={selected}
                   aria-label={`Select ${activeLabel.toLowerCase()} ${index + 1}`}
                 >
                   <Image
                     src={video ? youtubeThumb(video.key) : imageUrl(item as string, activeTab === "posters" ? "w500" : "w1280")}
-                    alt={video?.name || `${activeLabel} ${index + 1}`}
+                    alt=""
                     fill
-                    sizes="(max-width: 1024px) 128px, 240px"
+                    sizes={isPoster ? "(min-width: 1024px) 220px, 96px" : "256px"}
                     unoptimized={Boolean(video)}
-                    className="object-cover"
+                    className={isPoster ? "object-contain" : "object-cover"}
                   />
                   {video ? (
                     <span className="absolute inset-0 grid place-items-center bg-black/25 text-white">
                       <Play className="h-4 w-4 fill-current" aria-hidden="true" />
                     </span>
                   ) : null}
+                  {selected && <span className="pointer-events-none absolute inset-0 rounded-xl border-2 border-[var(--brand-coral)]" aria-hidden="true" />}
                 </button>
               );
             })}
@@ -293,15 +281,15 @@ export default function ImageVideoCarousel({
       </div>
 
       {lightboxOpen && activeTab !== "videos" && images[selectedIndex] ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/90 p-4"
-          role="dialog"
-          aria-modal="true"
+        <dialog
+          ref={dialogRef}
+          className="fixed inset-0 m-auto h-[min(86dvh,48rem)] max-h-none w-[calc(100%_-_2rem)] max-w-6xl overflow-hidden rounded-xl bg-black p-4 text-white backdrop:bg-black/90"
           aria-label={`${activeLabel} viewer`}
-          onClick={() => setLightboxOpen(false)}
+          onCancel={(event) => { event.preventDefault(); setLightboxOpen(false); }}
+          onClick={(event) => { if (event.target === event.currentTarget) setLightboxOpen(false); }}
         >
           <div
-            className="relative h-[min(82vh,46rem)] w-full max-w-6xl"
+            className="relative h-full w-full"
             onClick={(event) => event.stopPropagation()}
           >
             <Image
@@ -314,8 +302,9 @@ export default function ImageVideoCarousel({
             />
             <button
               type="button"
+              autoFocus
               onClick={() => setLightboxOpen(false)}
-              className="absolute right-0 top-0 grid h-10 w-10 place-items-center border border-white/15 bg-black/60 text-white hover:border-brand-coral-strong hover:text-brand-coral-strong"
+              className="absolute right-0 top-0 grid h-11 w-11 place-items-center rounded-xl border border-white/15 bg-black/60 text-white focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)] hover:text-[var(--brand-coral-strong)]"
               aria-label="Close viewer"
             >
               <X className="h-5 w-5" aria-hidden="true" />
@@ -341,7 +330,7 @@ export default function ImageVideoCarousel({
               </>
             ) : null}
           </div>
-        </div>
+        </dialog>
       ) : null}
     </section>
   );

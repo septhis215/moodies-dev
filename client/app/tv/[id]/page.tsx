@@ -208,9 +208,17 @@ export default async function TvPage({
       />
       <DecisionPanel
         data={data}
+        trailers={videos?.videos ?? []}
         topMoods={reviews.topMoods || []}
         reviewStats={reviewStats}
-      />
+      >
+        <CommonCardCarousel
+          title="If this landed for you"
+          showHeader={false}
+          type="tv"
+          items={recommendations ?? []}
+        />
+      </DecisionPanel>
 
       <div className="bg-[var(--surface-0)]">
 
@@ -219,15 +227,6 @@ export default async function TvPage({
           contentId={id}
           contentType="tv"
         />
-
-        <div className="ui-shell overflow-hidden [&>section>div:first-child]:mb-0">
-          <CommonCardCarousel
-            title="If this landed for you"
-            subtitle="A few next watches selected for the story, genre, and audience response."
-            type="tv"
-            items={recommendations ?? []}
-          />
-        </div>
 
           {/* Seasons / Episodes — placed after the decision signals */}
         <TvSeasonsEpisodes seasons={seasonsProp} />

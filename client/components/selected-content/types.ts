@@ -105,7 +105,7 @@ export type TvDetailsData = {
     poster_path?: string;
     backdrop_path?: string;
     adult: boolean;
-    created_by?: Array<{ id: number; name: string }>;
+    created_by?: Array<{ id: number; name: string; profile_path?: string | null }>;
     content_type: "tv";
     director?: string;
     content_rating?: string;

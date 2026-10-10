@@ -154,7 +154,7 @@ export default async function ReviewsPage({ params }: Props) {
   }));
 
   return (
-    <main className="min-h-screen bg-black text-slate-100">
+    <main className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
       <AllReviews
         reviews={transformedReviews}
         info={movieInfo}
