@@ -7,7 +7,9 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import {
+  ArrowDownWideNarrow,
   CheckCircle2,
+  Eye,
   PenSquare,
   Share2,
   Star,
@@ -257,74 +259,57 @@ export default function ReviewsSection({
         aria-labelledby="reviews-heading"
       >
         {/* ── Header ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
             <h2
               id="reviews-heading"
-              className="mt-1 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
+              className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
             >
               Audience Reviews
             </h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-              {sorted.length > 0
-                ? `${sorted.length} review${sorted.length !== 1 ? "s" : ""} from the community`
-                : "No reviews yet"}
-            </p>
+            {sorted.length > 0 ? (
+              <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+                {sorted.length} review{sorted.length !== 1 ? "s" : ""} from the community
+              </p>
+            ) : null}
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Sort pills */}
-            <div className="hidden md:flex items-center gap-1.5">
-              {(["latest", "highest", "popularity"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSortBy(s)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer capitalize border ${
-                    sortBy === s
-                      ? "bg-[#e94f37]/[0.12] border-[#e94f37]/50 text-[#e94f37]"
-                      : "bg-white/[0.04] border-white/[0.08] text-white/45 hover:text-white/80 hover:bg-white/[0.07] hover:border-white/[0.15]"
-                  }`}
-                >
-                  {s}
+          <div className="flex flex-wrap items-center gap-2">
+            {sorted.length > 0 ? (
+              <>
+                <div className="relative">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                    aria-label="Sort reviews"
+                    className="ui-secondary-action h-11 cursor-pointer appearance-none pr-10 leading-none [&>option]:bg-[var(--surface-1)] [&>option]:text-[var(--ink)]"
+                  >
+                    <option value="latest">Latest</option>
+                    <option value="highest">Highest</option>
+                    <option value="popularity">Popular</option>
+                  </select>
+                  <ArrowDownWideNarrow className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true" />
+                </div>
+                <button type="button" onClick={openModal} className="ui-primary-action leading-none" aria-label="Write a review">
+                  Write
+                  <PenSquare className="h-4 w-4 shrink-0" aria-hidden="true" />
                 </button>
-              ))}
-            </div>
-
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="min-h-10 bg-white/[0.04] text-white/70 rounded-xl px-3 py-1.5 text-xs border border-white/[0.09] outline-none cursor-pointer md:hidden"
-            >
-              <option value="latest">Latest</option>
-              <option value="highest">Highest</option>
-              <option value="popularity">Popularity</option>
-            </select>
-
-            <button
-              onClick={openModal}
-              className="ui-primary-action"
-            >
-              <PenSquare size={11} strokeWidth={2.5} />
-              Write a Review
-            </button>
+              </>
+            ) : null}
 
             <Link
               href={viewAllHref}
-              className="ui-secondary-action"
+              className="ui-secondary-action leading-none"
+              aria-label="View all reviews"
             >
-              View all →
+              Reviews
+              <Eye className="h-4 w-4 shrink-0" aria-hidden="true" />
             </Link>
           </div>
         </div>
 
         {/* ── Cards ── */}
-        <div
-          className={`grid gap-3 ${
-            expandedReviews.size > 0
-              ? "grid-cols-1"
-              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-          }`}
-        >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout">
             {topThree.length === 0 ? (
               <motion.div
@@ -334,19 +319,21 @@ export default function ReviewsSection({
               >
                 <BadgeMascot name="conversation-starter" className="h-24 w-24" sizes="96px" />
                 <div className="text-center">
-                  <p className="text-sm font-semibold text-white/50">
+                  <p className="text-sm font-semibold text-[var(--ink)]">
                     No reviews yet
                   </p>
-                  <p className="text-xs text-white/25 mt-0.5">
+                  <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
                     Be the first to share your thoughts
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={openModal}
-                    className="ui-secondary-action"
+                  className="ui-secondary-action leading-none"
+                  aria-label="Write a review"
                 >
-                  <PenSquare size={12} strokeWidth={2.5} />
-                  Write a Review
+                  Write
+                  <PenSquare className="h-4 w-4 shrink-0" aria-hidden="true" />
                 </button>
               </motion.div>
             ) : (
@@ -376,9 +363,9 @@ export default function ReviewsSection({
                       layout: { duration: 0.3, ease: "easeInOut" },
                       opacity: { duration: 0.2 },
                     }}
-                    className="group flex flex-col border-t border-[var(--surface-border)] py-5 transition-colors hover:border-brand-coral/50"
+                    className="group flex h-80 min-w-0 flex-col border-t border-[var(--surface-border)] py-5 transition-colors hover:border-brand-coral/50"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex shrink-0 items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
                         <AvatarBlock review={r} href={profileHref} size={36} />
                         <div className="min-w-0">
@@ -433,8 +420,8 @@ export default function ReviewsSection({
                     </div>
 
                     {/* Review text — the hero */}
-                    <div className="mt-4">
-                      <div className="mb-2 flex h-7 w-7 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.035] text-white/15">
+                    <div className="mt-4 flex min-h-0 flex-1 flex-col">
+                      <div className="mb-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.035] text-white/15">
                         <svg
                           className="h-4 w-4"
                           viewBox="0 0 32 32"
@@ -444,7 +431,13 @@ export default function ReviewsSection({
                           <path d="M10 8C5.6 8 2 11.6 2 16v8h8v-8H4c0-3.3 2.7-6 6-6V8zm12 0c-4.4 0-8 3.6-8 8v8h8v-8h-6c0-3.3 2.7-6 6-6V8z" />
                         </svg>
                       </div>
-                      <p className="text-[14px] leading-[1.75] text-white/72 break-words">
+                      <p
+                        id={`review-preview-${r.id}`}
+                        tabIndex={isExpanded ? 0 : undefined}
+                        role={isExpanded ? "region" : undefined}
+                        aria-label={isExpanded ? `Full review by ${r.author}` : undefined}
+                        className={`min-h-0 flex-1 break-words text-sm leading-6 text-[var(--ink-muted)] ${isExpanded ? "overflow-y-auto overscroll-contain pr-2 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)]" : "line-clamp-3 overflow-hidden"}`}
+                      >
                         {isExpanded
                           ? r.content
                           : r.content.slice(0, PREVIEW_LEN)}
@@ -454,8 +447,11 @@ export default function ReviewsSection({
                       </p>
                       {needsTruncation && (
                         <button
+                          type="button"
+                          aria-expanded={isExpanded}
+                          aria-controls={`review-preview-${r.id}`}
                           onClick={() => toggleExpand(r.id)}
-                          className="mt-2 text-[11px] text-[#e94f37]/70 hover:text-[#e94f37] font-semibold transition-colors cursor-pointer"
+                          className="mt-2 min-h-7 shrink-0 self-start text-sm font-semibold text-[var(--brand-coral-strong)] transition-colors hover:text-[var(--ink)]"
                         >
                           {isExpanded ? "Show less" : "Read more"}
                         </button>
@@ -463,7 +459,7 @@ export default function ReviewsSection({
                     </div>
 
                     {/* Author attribution footer */}
-                    <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.07] pt-3">
+                    <div className="mt-3 flex min-h-12 shrink-0 items-center justify-between gap-3 border-t border-[var(--surface-border)] pt-3">
                       <ReviewMoodPanel value={r.moodEmojis?.[0]} />
 
                       {canShareReviewSnapshot && (

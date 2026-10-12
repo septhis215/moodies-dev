@@ -6,7 +6,8 @@ import { createPortal } from "react-dom";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Star, Search, PenSquare, Share2, X } from "lucide-react";
+import { ArrowLeft, ArrowDownWideNarrow, ChevronDown, ChevronUp, Eye, Film, MessageCircle, Reply as ReplyIcon, Send, Star, Search, PenSquare, Share2, ThumbsUp, X } from "lucide-react";
+import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
 import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
@@ -25,6 +26,9 @@ const REACTIONS: Array<{ type: ReactionType; emoji: string; label: string }> = [
   { type: "SAD", emoji: "😢", label: "Sad" },
   { type: "ANGRY", emoji: "😡", label: "Angry" },
 ];
+
+// Thread utilities stay visually quiet; touch devices retain a generous hit area.
+const THREAD_ACTION_CLASS = "ui-secondary-action min-h-8 gap-1.5 rounded-lg border-transparent bg-transparent px-2.5 text-sm font-semibold leading-none text-[var(--ink-muted)] hover:border-[var(--surface-border)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)] pointer-coarse:min-h-11";
 
 function toAccentColor(rating?: number): string | null {
   if (rating == null) return null;
@@ -59,12 +63,12 @@ function MoodChip({ value }: { value?: string }) {
   const label = moodLabelFromValue(value);
 
   return (
-    <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-white/[0.09] bg-white/[0.045] py-1 pl-1 pr-2.5 text-white/55">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.05] ring-1 ring-white/[0.08]">
+    <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-[var(--surface-border)] bg-[var(--surface-2)] py-1 pl-1 pr-2.5 text-[var(--ink-muted)]">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--surface-border)]">
         {isPublicImagePath(value) ? (
           <Image
             src={value}
-            alt={label}
+            alt=""
             width={36}
             height={36}
             className="h-8 w-8 object-contain opacity-95"
@@ -73,13 +77,8 @@ function MoodChip({ value }: { value?: string }) {
           <span className="text-lg leading-none">{value}</span>
         )}
       </span>
-      <span className="min-w-0">
-        <span className="block text-[9px] font-semibold uppercase tracking-[0.12em] text-white/28">
-          Mood
-        </span>
-        <span className="block max-w-24 truncate text-xs font-semibold text-white/60">
-          {label}
-        </span>
+      <span className="min-w-0 max-w-24 truncate text-xs font-semibold leading-none text-[var(--ink-muted)]">
+        {label}
       </span>
     </span>
   );
@@ -90,14 +89,12 @@ function ReactionBar({
   myReaction,
   onReact,
   disabled = false,
-  size = "default",
   pickerPlacement = "left",
 }: {
   counts?: ReactionCount[];
   myReaction?: ReactionType | null;
   onReact: (type: ReactionType) => void;
   disabled?: boolean;
-  size?: "default" | "compact";
   pickerPlacement?: "left" | "right";
 }) {
   const [open, setOpen] = useState(false);
@@ -115,32 +112,31 @@ function ReactionBar({
       className="relative inline-flex items-center gap-1.5"
       onMouseEnter={() => !disabled && setOpen(true)}
       onMouseLeave={() => setOpen(false)}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setOpen(false);
+      }}
     >
       <button
         type="button"
         disabled={disabled}
+        aria-label="React to this review or reply"
+        aria-expanded={open}
         onClick={() => !disabled && setOpen((value) => !value)}
-        className={`inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.035] font-semibold text-white/58 transition-all hover:border-[#e94f37]/35 hover:bg-[#e94f37]/10 hover:text-[#ff8a78] disabled:cursor-not-allowed disabled:opacity-45 ${
-          size === "compact"
-            ? "px-2 py-1 text-[10px]"
-            : "px-3 py-1.5 text-[11px]"
-        }`}
+        className={`${THREAD_ACTION_CLASS} disabled:cursor-not-allowed disabled:opacity-45`}
       >
-        <span className={selected ? "text-sm" : ""}>
-          {selected?.emoji ?? "React +"}
-        </span>
-        {selected && <span>{selected.label}</span>}
+        <span>{selected?.label ?? "React"}</span>
+        {selected ? <span aria-hidden="true">{selected.emoji}</span> : <ThumbsUp className="h-4 w-4" aria-hidden="true" />}
       </button>
 
       {total > 0 && (
-        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-white/36">
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-muted)]">
           <span className="flex -space-x-1">
             {topCounts.map((item) => {
               const reaction = REACTIONS.find((r) => r.type === item.type);
               return (
                 <span
                   key={item.type}
-                  className="flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-[11px] ring-1 ring-white/[0.08]"
+                  className="flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-xs ring-1 ring-[var(--surface-border)]"
                   title={`${reaction?.label ?? item.type}: ${item.count}`}
                 >
                   {reaction?.emoji}
@@ -159,19 +155,21 @@ function ReactionBar({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.96 }}
             transition={{ duration: 0.12 }}
-            className={`absolute bottom-full z-40 mb-2 flex gap-1 rounded-full border border-white/[0.10] bg-[#161618] p-1.5 shadow-2xl shadow-black/50 ${pickerPlacementClass}`}
+            className={`absolute bottom-full z-40 grid grid-cols-3 gap-0.5 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] p-1 shadow-xl shadow-black/30 sm:flex ${pickerPlacementClass}`}
           >
             {REACTIONS.map((reaction) => (
               <button
                 key={reaction.type}
                 type="button"
                 title={reaction.label}
+                aria-label={reaction.label}
+                aria-pressed={myReaction === reaction.type}
                 onClick={() => {
                   onReact(reaction.type);
                   setOpen(false);
                 }}
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-lg transition hover:scale-125 hover:bg-white/[0.08] ${
-                  myReaction === reaction.type ? "bg-[#e94f37]/15" : ""
+                className={`flex h-11 w-11 items-center justify-center rounded-xl text-lg transition hover:bg-[var(--brand-coral)]/10 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)] ${
+                  myReaction === reaction.type ? "bg-[var(--brand-coral)]/15" : ""
                 }`}
               >
                 {reaction.emoji}
@@ -278,6 +276,15 @@ export default function AllReviews({
   useEffect(() => setMounted(true), []);
 
   const basePath = info.content_type === "movie" ? "movies" : "tv";
+  const titleHref = `/${basePath}/${id ?? info.id}`;
+  const leadingMood = [...topMoods].sort((a, b) => b.count - a.count)[0];
+  const openWriteModal = () => {
+    if (!isAuthenticated) {
+      toast("Sign in to write a review.", "warning", 3000, "Not Logged In", null);
+      return;
+    }
+    setWriteModalOpen(true);
+  };
 
   function popularityProxy(r: Review) {
     return (
@@ -544,7 +551,7 @@ export default function AllReviews({
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-[var(--surface-0)] pb-8 text-[var(--ink)]">
       {/* ── Hero banner ── */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0">
@@ -559,25 +566,32 @@ export default function AllReviews({
             sizes="100vw"
             style={{
               objectFit: "cover",
-              filter: "brightness(0.3) saturate(0.5)",
+              filter: "brightness(0.45) saturate(0.7)",
             }}
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--surface-0)] via-[var(--surface-0)]/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[var(--surface-0)]/70 via-transparent to-transparent" />
         </div>
 
-        <div className="relative z-10 mx-auto max-w-7xl px-4 pb-8 pt-6 sm:px-6 sm:pb-10 lg:px-8">
-          <Link
-            href={`/${basePath}/${id}`}
-            className="mb-6 inline-flex min-h-11 items-center gap-1.5 text-sm text-white/40 transition-colors hover:text-white sm:mb-8"
-          >
-            <ArrowLeft size={15} />
-            Back to {info.title}
-          </Link>
+        <div className="ui-shell relative z-10 pb-8 pt-[calc(2rem+var(--mobile-nav-safe))] sm:pb-10 lg:pt-28">
+          <nav aria-label="Title navigation" className="mb-6 flex flex-wrap items-center justify-between gap-3 sm:mb-8">
+            <Link href={titleHref} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--brand-coral-strong)]" aria-label={`Back to ${info.title}`}>
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              <span className="max-w-48 truncate">{info.title}</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <Link href={titleHref} className="ui-secondary-action leading-none">Details <Film className="h-4 w-4" aria-hidden="true" /></Link>
+              <span aria-current="page" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--brand-coral)]/30 bg-[var(--brand-coral)]/10 px-4 text-sm font-semibold text-[var(--brand-coral-strong)]">Reviews <MessageCircle className="h-4 w-4" aria-hidden="true" /></span>
+            </div>
+          </nav>
 
-          <div className="flex items-start gap-4 sm:gap-8">
-            <div className="flex-shrink-0 w-20 sm:w-28 md:w-36 rounded-xl overflow-hidden shadow-2xl border border-white/[0.08]">
+          <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-5 gap-y-6 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-x-8 lg:grid-cols-[12rem_minmax(0,1fr)_19rem] lg:gap-x-10">
+            <Link
+              href={titleHref}
+              aria-label={`View ${info.title} details`}
+              className="group relative block aspect-[2/3] self-start overflow-hidden rounded-xl border border-[var(--surface-border)] shadow-xl shadow-black/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral)]"
+            >
               <Image
                 src={
                   info.poster_path
@@ -585,181 +599,142 @@ export default function AllReviews({
                     : "/placeholder-poster.svg"
                 }
                 alt={info.title}
-                width={144}
-                height={216}
-                style={{ width: "100%", height: "auto", display: "block" }}
+                fill
+                sizes="(min-width: 1024px) 192px, (min-width: 640px) 160px, 80px"
+                className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-105"
               />
+            </Link>
+
+            <div className="contents sm:block sm:min-w-0">
+              <div className="min-w-0">
+                <p className="ui-kicker">Audience reviews</p>
+                <h1 className="mt-3 max-w-3xl break-words text-balance text-[2.1rem] font-bold leading-[0.98] tracking-normal text-white min-[390px]:text-[2.45rem] sm:text-[clamp(2.45rem,4.6vw,4rem)] sm:leading-[0.96] xl:text-[clamp(2.45rem,4.2vw,4.8rem)]">
+                  {info.title}
+                </h1>
+
+                <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/80">
+                  <span>{info.content_type === "tv" ? "Series" : "Film"}</span>
+                  {info.release_date && <span>{info.release_date.slice(0, 4)}</span>}
+                  {info.content_type === "tv" && (info.number_of_seasons ?? 0) > 0 && (
+                    <span>
+                      {info.number_of_seasons} season
+                      {info.number_of_seasons !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {info.content_type === "tv" && (info.number_of_episodes ?? 0) > 0 && (
+                    <span>{info.number_of_episodes} episode{info.number_of_episodes === 1 ? "" : "s"}</span>
+                  )}
+                  {info.content_type === "movie" && info.runtime > 0 && <span>{info.runtime} min</span>}
+                </div>
+              </div>
+              <div className="col-span-2 min-w-0 sm:mt-5">
+                <p className="max-w-xl text-sm leading-6 text-white/80">Every watch feels different. See what stayed with the community.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {info.genres.slice(0, 3).map((g) => (
+                    <span
+                      key={g.id}
+                      className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-1)]/80 px-3 py-1 text-xs font-semibold text-white/88"
+                    >
+                      {g.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div className="flex-1 min-w-0 space-y-3">
-              <p className="text-[11px] uppercase tracking-widest text-white/40">
-                {info.content_type === "tv" ? "TV Series" : "Movie"} · Reviews
-              </p>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight leading-tight">
-                {info.title}
-              </h1>
-
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-xs text-white/40">
-                  {new Date(info.release_date).getFullYear()}
-                </span>
-                {info.content_type === "tv" && (info.number_of_seasons ?? 0) > 0 && (
-                  <span className="text-xs text-white/40">
-                    {info.number_of_seasons} Season
-                    {info.number_of_seasons !== 1 ? "s" : ""}
-                  </span>
-                )}
-                {info.content_type === "tv" && (info.number_of_episodes ?? 0) > 0 && (
-                  <span className="text-xs text-white/40">
-                    {info.number_of_episodes} Episodes
-                  </span>
-                )}
-                <div className="hidden h-3 w-px bg-white/20 sm:block" />
-                {info.genres.slice(0, 3).map((g) => (
-                  <span
-                    key={g.id}
-                    className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-white/50"
-                  >
-                    {g.name}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-4 flex-wrap pt-1">
-                {reviewStats && reviewStats.totalRatings > 0 && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <RatingArc
-                        rating={reviewStats.averageRating}
-                        color="#e94f37"
-                      />
-                      <div>
-                        <p className="text-[10px] uppercase tracking-widest text-white/40">
-                          Community
-                        </p>
-                        <p className="text-xs text-white/60">
-                          {reviewStats.totalRatings} ratings
-                        </p>
-                      </div>
-                    </div>
-                    <div className="h-8 w-px bg-white/[0.08]" />
-                  </>
-                )}
-                <div className="flex items-center gap-2">
-                  <RatingArc rating={info.vote_average} color="#01b4e4" />
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest text-[#01b4e4]/60">
-                      TMDb
-                    </p>
-                    <p className="text-xs text-white/40">
-                      {info.vote_count.toLocaleString()} votes
-                    </p>
+            <section aria-labelledby="audience-pulse-heading" className="col-span-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)]/90 p-5 backdrop-blur-sm lg:col-span-1 lg:col-start-3">
+              <h2 id="audience-pulse-heading" className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl">Audience pulse</h2>
+              {leadingMood && (
+                <div className="mt-4 flex items-center gap-3">
+                  {isPublicImagePath(leadingMood.emoji) ? (
+                    <Image src={leadingMood.emoji} alt="" width={64} height={64} className="h-16 w-16 shrink-0 object-contain" />
+                  ) : <span className="text-3xl" aria-hidden="true">{leadingMood.emoji}</span>}
+                  <div className="min-w-0">
+                    <p className="text-xs text-[var(--ink-muted)]">Most shared mood</p>
+                    <p className="break-words text-lg font-bold text-[var(--ink)]">{moodLabelFromValue(leadingMood.emoji)}</p>
+                    <p className="text-xs text-[var(--ink-muted)]">{leadingMood.count.toLocaleString()} viewer{leadingMood.count === 1 ? "" : "s"}</p>
                   </div>
                 </div>
-                {topMoods.length > 0 && (
-                  <>
-                    <div className="h-8 w-px bg-white/[0.08]" />
-                    <div className="flex items-center gap-2">
-                      {topMoods.slice(0, 3).map((m, i) => (
-                        <MoodChip key={i} value={m.emoji} />
-                      ))}
-                      <span className="text-[11px] text-white/45 ml-1">
-                        Community vibe
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+              )}
+              <dl className="mt-5 grid grid-cols-2 gap-4">
+                <div>
+                  <dt className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ink-muted)]"><MessageCircle className="h-4 w-4 text-[var(--brand-coral)]" aria-hidden="true" />Moodies</dt>
+                  <dd className="mt-2">
+                    <span data-display className="text-3xl font-bold leading-none text-[var(--brand-coral-strong)]">{reviewStats && reviewStats.totalRatings > 0 ? reviewStats.averageRating.toFixed(1) : "—"}</span>
+                    {reviewStats && reviewStats.totalRatings > 0 && <span className="ml-1 text-xs text-[var(--ink-muted)]">/ 10</span>}
+                    <span className="mt-1 block text-xs text-[var(--ink-muted)]">{reviewStats && reviewStats.totalRatings > 0 ? `${reviewStats.totalRatings.toLocaleString()} rating${reviewStats.totalRatings === 1 ? "" : "s"}` : "Not rated yet"}</span>
+                  </dd>
+                </div>
+                <div className="border-l border-[var(--surface-border)] pl-4">
+                  <dt className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ink-muted)]"><Star className="h-4 w-4 text-[var(--brand-gold)]" aria-hidden="true" />TMDb</dt>
+                  <dd className="mt-2">
+                    <span data-display className="text-3xl font-bold leading-none text-[var(--brand-gold)]">{info.vote_count > 0 ? info.vote_average.toFixed(1) : "—"}</span>
+                    {info.vote_count > 0 && <span className="ml-1 text-xs text-[var(--ink-muted)]">/ 10</span>}
+                    <span className="mt-1 block text-xs text-[var(--ink-muted)]">{info.vote_count > 0 ? `${info.vote_count.toLocaleString()} vote${info.vote_count === 1 ? "" : "s"}` : "No votes yet"}</span>
+                  </dd>
+                </div>
+              </dl>
+            </section>
           </div>
         </div>
       </div>
 
       {/* ── Controls bar ── */}
-      <div
-        className="sticky top-0 z-20 border-b border-white/[0.06]"
-        style={{ background: "rgba(0,0,0,0.9)", backdropFilter: "blur(12px)" }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3 flex-wrap">
+      <section className="ui-shell py-8 sm:py-10" aria-labelledby="all-reviews-heading">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 id="all-reviews-heading" className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">Audience Reviews</h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]" role="status">{filteredAndSorted.length} review{filteredAndSorted.length === 1 ? "" : "s"}{searchQuery && ` for “${searchQuery}”`}</p>
+          </div>
+          {localReviews.length > 0 ? <button type="button" onClick={openWriteModal} className="ui-primary-action leading-none" aria-label="Write a review">Write <PenSquare className="h-4 w-4" aria-hidden="true" /></button> : null}
+        </div>
+        <div className="ui-panel mb-5 flex flex-col gap-3 rounded-xl p-3 sm:flex-row sm:items-center">
           {/* Search */}
-          <div className="relative min-w-full flex-1 sm:min-w-[160px] sm:max-w-xs">
+          <div className="relative min-w-0 flex-1">
             <Search
-              size={13}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-white/45"
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]"
             />
             <input
               type="text"
+              aria-label="Search reviews by author or content"
               placeholder="Search reviews…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="min-h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] py-2 pl-8 pr-3 text-xs text-white outline-none transition-colors placeholder-white/45 focus:border-[#e94f37]/35"
+              className="h-11 w-full rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)] py-2 pl-10 pr-10 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] focus-visible:border-[var(--brand-coral-strong)] focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/30"
             />
+            {searchQuery ? <button type="button" onClick={() => setSearchQuery("")} aria-label="Clear search" className="absolute right-1 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center text-[var(--ink-muted)] hover:text-[var(--ink)]"><X className="h-4 w-4" aria-hidden="true" /></button> : null}
           </div>
 
-          {/* Sort pills — individual card tiles */}
-          <div className="-mx-1 flex max-w-full items-center gap-1.5 overflow-x-auto px-1 mobile-native-scroll sm:mx-0 sm:overflow-visible sm:px-0">
-            {(["latest", "highest", "popularity"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setSortBy(s)}
-                className={`min-h-10 shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium capitalize transition-all duration-150 cursor-pointer ${
-                  sortBy === s
-                    ? "bg-[#e94f37]/[0.12] border-[#e94f37]/50 text-[#e94f37]"
-                    : "bg-white/[0.04] border-white/[0.08] text-white/55 hover:text-white/80 hover:bg-white/[0.07] hover:border-white/[0.15]"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
+          <div className="relative shrink-0">
+            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} aria-label="Sort reviews" className="ui-secondary-action h-11 w-full appearance-none pr-10 leading-none [&>option]:bg-[var(--surface-1)]">
+              <option value="latest">Latest</option><option value="highest">Highest</option><option value="popularity">Popular</option>
+            </select>
+            <ArrowDownWideNarrow className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true" />
           </div>
-
-          <span className="text-[11px] text-white/45 hidden sm:block">
-            {filteredAndSorted.length} review
-            {filteredAndSorted.length !== 1 ? "s" : ""}
-            {searchQuery && ` for "${searchQuery}"`}
-          </span>
-
-          <div className="flex-1" />
-
-          {/* Write CTA — transparent red border */}
-          <button
-            onClick={() => {
-              if (!isAuthenticated) {
-                toast(
-                  "Sign in to write a review.",
-                  "warning",
-                  3000,
-                  "Not Logged In",
-                  null,
-                );
-                return;
-              }
-              setWriteModalOpen(true);
-            }}
-            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-[#e94f37]/40 bg-white/[0.04] px-3.5 py-1.5 text-xs font-semibold text-[#e94f37] transition-all hover:border-[#e94f37]/70 hover:bg-[#e94f37]/[0.10] active:scale-95 cursor-pointer"
-          >
-            <PenSquare size={11} strokeWidth={2.5} />
-            Write a Review
-          </button>
         </div>
-      </div>
+      </section>
 
       {/* ── Reviews list ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-3">
+      <div className="ui-shell pb-8 sm:pb-10">
+        <div className="space-y-5">
           <AnimatePresence mode="popLayout">
             {filteredAndSorted.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center gap-4 rounded-xl border border-white/[0.08] bg-white/[0.04] px-6 py-20 text-center shadow-[0_18px_70px_rgba(0,0,0,0.24)]"
+                className="ui-panel flex flex-col items-center justify-center gap-4 rounded-xl px-6 py-16 text-center"
               >
-                <div className="text-4xl opacity-20 select-none">💬</div>
-                <p className="text-sm font-bold text-white/82">
+                <BadgeMascot name="conversation-starter" className="h-24 w-24" sizes="96px" />
+                <p className="text-sm font-bold text-[var(--ink)]">
                   {searchQuery
                     ? "No reviews match your search."
                     : "No reviews yet."}
                 </p>
+                <p className="max-w-sm text-sm leading-6 text-[var(--ink-muted)]">{searchQuery ? "Try another name or phrase." : "Be the first to share how this made you feel."}</p>
+                <button type="button" aria-label={searchQuery ? "Clear search" : "Write a review"} onClick={searchQuery ? () => setSearchQuery("") : openWriteModal} className="ui-secondary-action leading-none">
+                  {searchQuery ? "Clear" : "Write"}{searchQuery ? <X className="h-4 w-4" aria-hidden="true" /> : <PenSquare className="h-4 w-4" aria-hidden="true" />}
+                </button>
               </motion.div>
             ) : (
               filteredAndSorted.map((review) => {
@@ -786,10 +761,10 @@ export default function AllReviews({
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="group rounded-xl border border-white/[0.08] bg-[rgba(255,255,255,0.045)] shadow-[0_18px_70px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[#e94f37]/25 hover:bg-white/[0.065] overflow-hidden"
+                    className="ui-panel group scroll-mt-28 rounded-xl transition-colors duration-200 hover:border-[var(--brand-coral)]/40"
                   >
                     <div className="flex flex-col gap-4 px-4 pt-4 sm:px-5 sm:pt-5">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="flex min-w-0 items-start gap-3">
                           <AvatarBlock
                             review={review}
@@ -800,19 +775,19 @@ export default function AllReviews({
                             {profileHref ? (
                               <Link
                                 href={profileHref}
-                                className="block truncate text-sm font-bold text-white/90 underline-offset-4 transition-colors hover:text-[#ff8a78] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]"
+                                className="block truncate text-sm font-bold text-[var(--ink)] underline-offset-4 transition-colors hover:text-[var(--brand-coral-strong)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
                               >
                                 {review.author}
                               </Link>
                             ) : (
-                              <p className="truncate text-sm font-bold text-white/88">
+                              <p className="truncate text-sm font-bold text-[var(--ink)]">
                                 {review.author}
                               </p>
                             )}
-                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-white/50">
+                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--ink-muted)]">
                               <span>{formatDate(review.created_at)}</span>
                               {review.author_details?.username && (
-                                <span className="text-white/36">
+                                <span className="text-[var(--ink-muted)]">
                                   @{review.author_details.username}
                                 </span>
                               )}
@@ -848,12 +823,12 @@ export default function AllReviews({
                     </div>
 
                     {/* Review text — hero */}
-                    <div className="px-5 pt-3 pb-4">
-                      <p className="text-[15px] text-white/78 leading-7 whitespace-pre-wrap">
+                    <div className="px-4 pb-5 pt-4 sm:px-5">
+                      <p className="whitespace-pre-wrap break-words text-base leading-7 text-[var(--ink)]">
                         {shouldTruncate && !isExpanded ? (
                           <>
                             {review.content.slice(0, 400)}
-                            <span className="text-white/25">…</span>
+                            <span className="text-[var(--ink-muted)]">…</span>
                           </>
                         ) : (
                           review.content
@@ -862,25 +837,27 @@ export default function AllReviews({
                       {shouldTruncate && (
                         <button
                           onClick={() => toggleExpanded(review.id)}
-                          className="mt-3 text-[12px] text-[#ff8a78] hover:text-[#ffb3a7] font-semibold transition-colors cursor-pointer"
+                          aria-expanded={isExpanded}
+                          className={`${THREAD_ACTION_CLASS} mt-3`}
                         >
-                          {isExpanded ? "Show less" : "Read more"}
+                          {isExpanded ? "Less" : "More"}
+                          {isExpanded ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
                         </button>
                       )}
                     </div>
 
                     {/* Replies */}
                     {review.replies && review.replies.length > 0 && (
-                      <div className="mx-4 mb-4 rounded-xl border border-white/[0.07] bg-black/20 p-3 sm:mx-5 sm:p-4">
+                      <div className="mx-4 mb-4 rounded-xl border border-[var(--surface-border)] bg-black/20 p-3 sm:mx-5 sm:p-4">
                         <div className="mb-3 flex items-center justify-between gap-3">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ink-muted)]">
                             Replies
                           </p>
-                          <span className="rounded-full border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[10px] text-white/45">
+                          <span className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-2)] px-2 py-0.5 text-xs text-[var(--ink-muted)]">
                             {review.replies.length}
                           </span>
                         </div>
-                        <div className="relative space-y-2.5 pl-3 before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-gradient-to-b before:from-[#e94f37]/45 before:via-white/12 before:to-transparent sm:pl-4">
+                        <div className="relative space-y-2.5 pl-3 before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-gradient-to-b before:from-[var(--brand-coral)]/45 before:via-white/12 before:to-transparent sm:pl-4">
                           {(repliesExpanded
                             ? review.replies
                             : review.replies.slice(0, 2)
@@ -889,9 +866,9 @@ export default function AllReviews({
                             return (
                               <div
                                 key={reply.id ?? i}
-                                className="relative rounded-xl border border-white/[0.07] bg-white/[0.035] px-3 py-3 transition-colors hover:border-white/[0.12] hover:bg-white/[0.055]"
+                                className="relative rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 py-3 transition-colors hover:border-[var(--surface-border)] hover:bg-[var(--surface-2)]"
                               >
-                                <span className="absolute -left-3 top-5 h-px w-3 bg-white/14 sm:-left-4 sm:w-4" />
+                                <span className="absolute -left-3 top-5 h-px w-3 bg-[var(--surface-2)] sm:-left-4 sm:w-4" />
                                 <div className="flex items-start gap-2.5">
                                   <ReplyAvatarBlock
                                     reply={reply}
@@ -902,23 +879,22 @@ export default function AllReviews({
                                       {replyHref ? (
                                         <Link
                                           href={replyHref}
-                                          className="truncate text-xs font-semibold text-white/82 underline-offset-4 transition-colors hover:text-[#ff8a78] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]"
+                                          className="truncate text-xs font-semibold text-[var(--ink)] underline-offset-4 transition-colors hover:text-[var(--brand-coral-strong)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
                                         >
                                           {reply.user.username}
                                         </Link>
                                       ) : (
-                                        <span className="truncate text-xs font-semibold text-white/72">
+                                        <span className="truncate text-xs font-semibold text-[var(--ink-muted)]">
                                           {reply.user.username}
                                         </span>
                                       )}
-                                      <span className="text-[10px] text-white/45">
+                                      <span className="text-xs text-[var(--ink-muted)]">
                                         {formatDate(reply.created_at)}
                                       </span>
                                       <ReactionBar
                                         counts={reply.reactionCounts}
                                         myReaction={reply.myReaction}
                                         disabled={!isAuthenticated}
-                                        size="compact"
                                         pickerPlacement="right"
                                         onReact={(type) =>
                                           handleReplyReaction(
@@ -942,13 +918,13 @@ export default function AllReviews({
                                                   `@${reply.user.username} — `,
                                                 )
                                           }
-                                          className="text-[10px] text-white/38 hover:text-[#ff8a78] transition-colors cursor-pointer ml-auto font-semibold"
+                                          className={`${THREAD_ACTION_CLASS} ml-auto`}
                                         >
-                                          Reply
+                                          Reply <ReplyIcon className="h-4 w-4" aria-hidden="true" />
                                         </button>
                                       )}
                                     </div>
-                                    <p className="text-xs text-white/68 leading-5 mt-1.5">
+                                    <p className="mt-2 break-words text-sm leading-6 text-[var(--ink)]">
                                       {(() => {
                                         const sep = " — ";
                                         const idx = reply.content.indexOf(sep);
@@ -960,11 +936,11 @@ export default function AllReviews({
                                             <>
                                               <span
                                                 className="font-semibold"
-                                                style={{ color: "#ff8a78" }}
+                                                style={{ color: "var(--brand-coral-strong)" }}
                                               >
                                                 {reply.content.slice(0, idx)}
                                               </span>
-                                              <span className="text-white/20">
+                                              <span className="text-[var(--ink-muted)]">
                                                 {" "}
                                                 —{" "}
                                               </span>
@@ -981,7 +957,7 @@ export default function AllReviews({
                                               <span
                                                 key={i}
                                                 className="font-semibold"
-                                                style={{ color: "#ff8a78" }}
+                                                style={{ color: "var(--brand-coral-strong)" }}
                                               >
                                                 {part}
                                               </span>
@@ -1000,11 +976,11 @@ export default function AllReviews({
                         {review.replies.length > 2 && (
                           <button
                             onClick={() => toggleReplies(review.id)}
-                            className="mt-3 text-[11px] text-white/45 hover:text-white/72 transition-colors cursor-pointer font-semibold"
+                            aria-expanded={repliesExpanded}
+                            className={`${THREAD_ACTION_CLASS} mt-3`}
                           >
-                            {repliesExpanded
-                              ? "Show less"
-                              : `+ ${review.replies.length - 2} more repl${review.replies.length - 2 === 1 ? "y" : "ies"}`}
+                            {repliesExpanded ? "Less" : "More"}
+                            {repliesExpanded ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
                           </button>
                         )}
                       </div>
@@ -1017,42 +993,43 @@ export default function AllReviews({
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
-                        className="mx-4 mb-4 space-y-3 rounded-xl border border-white/[0.07] bg-white/[0.035] p-3 sm:mx-5"
+                        className="mx-4 mb-4 space-y-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] p-3 sm:mx-5"
                         >
                           {showReplyForm?.prefill && (
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/20 border border-white/[0.07] rounded-xl">
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/20 border border-[var(--surface-border)] rounded-xl">
                               <span
                                 className="text-xs font-semibold"
-                                style={{ color: "#e94f37" }}
+                                style={{ color: "var(--brand-coral)" }}
                               >
                                 {showReplyForm.prefill.trim()}
                               </span>
-                              <span className="text-xs text-white/48">
+                              <span className="text-xs text-[var(--ink-muted)]">
                                 replying to
                               </span>
                             </div>
                           )}
                           <textarea
+                            aria-label="Your reply"
                             value={replyContent}
                             onChange={(e) => setReplyContent(e.target.value)}
                             placeholder="Write your reply…"
                             rows={3}
                             autoFocus
-                            className="w-full bg-black/20 border border-white/[0.08] focus:border-[#e94f37]/45 rounded-xl px-3 py-2.5 text-sm text-white/78 placeholder-white/35 resize-none outline-none transition-colors"
+                            className="w-full bg-black/20 border border-[var(--surface-border)] focus:border-[var(--brand-coral)]/45 rounded-xl px-3 py-2.5 text-sm text-[var(--ink-muted)] placeholder:text-[var(--ink-muted)] resize-none outline-none transition-colors"
                           />
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() => closeReplyForm()}
-                              className="px-3 py-1.5 text-xs text-white/48 hover:text-white/78 transition-colors cursor-pointer"
+                              className="ui-secondary-action leading-none"
                             >
-                              Cancel
+                              Cancel <X className="h-4 w-4" aria-hidden="true" />
                             </button>
                             <button
                               onClick={() => handleReplySubmit(review.id)}
                               disabled={submittingReply}
-                              className="px-4 py-1.5 rounded-xl bg-white/[0.04] border border-[#e94f37]/40 text-[#e94f37] text-xs font-semibold hover:bg-[#e94f37]/[0.10] hover:border-[#e94f37]/70 transition-all disabled:opacity-40 cursor-pointer"
+                              className="ui-primary-action leading-none disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                              {submittingReply ? "Posting…" : "Post Reply"}
+                              {submittingReply ? "Posting…" : "Post"} <Send className="h-4 w-4" aria-hidden="true" />
                             </button>
                           </div>
                         </motion.div>
@@ -1060,8 +1037,8 @@ export default function AllReviews({
                     </AnimatePresence>
 
                     {/* Action footer */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] bg-white/[0.025] px-4 py-3">
-                      <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-white/45">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-[var(--surface-border)] px-4 py-3 sm:px-5">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-[var(--ink-muted)]">
                         <span>
                           {review.replies?.length ?? 0} repl
                           {(review.replies?.length ?? 0) === 1 ? "y" : "ies"}
@@ -1069,7 +1046,7 @@ export default function AllReviews({
                         {review.updated_at &&
                           review.updated_at !== review.created_at && (
                             <>
-                              <span className="text-white/18">/</span>
+                              <span className="text-[var(--ink-muted)]">/</span>
                               <span>
                                 Updated {formatDate(review.updated_at)}
                               </span>
@@ -1077,7 +1054,7 @@ export default function AllReviews({
                           )}
                       </div>
 
-                      <div className="flex flex-shrink-0 items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
                         {canShareReviewSnapshot && (
                           <button
                             type="button"
@@ -1087,10 +1064,10 @@ export default function AllReviews({
                                 reviewId: review.id,
                               })
                             }
-                            className="flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-[11px] font-semibold text-white/58 transition-all hover:border-[#e94f37]/35 hover:bg-[#e94f37]/10 hover:text-[#ff8a78] cursor-pointer"
+                            aria-label="Share a review snapshot"
+                            className={THREAD_ACTION_CLASS}
                           >
-                            <Share2 size={13} />
-                            Snapshot
+                            Share <Share2 className="h-4 w-4" aria-hidden="true" />
                           </button>
                         )}
                         <ReactionBar
@@ -1107,7 +1084,7 @@ export default function AllReviews({
                           }
                         />
                         {banStatus.banned ? (
-                          <span className="text-[10px] text-red-400/50">
+                          <span className="text-xs text-red-400/50">
                             Replies suspended
                           </span>
                         ) : (
@@ -1117,24 +1094,13 @@ export default function AllReviews({
                                 ? closeReplyForm()
                                 : openReplyForm(review.id)
                             }
-                            className="flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.035] px-3 py-1.5 text-[11px] font-semibold text-white/58 transition-all hover:border-[#e94f37]/35 hover:bg-[#e94f37]/10 hover:text-[#ff8a78] cursor-pointer"
+                            aria-expanded={showReplyForm?.reviewId === review.id}
+                            className={THREAD_ACTION_CLASS}
                           >
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-                              />
-                            </svg>
                             {showReplyForm?.reviewId === review.id
                               ? "Cancel"
                               : "Reply"}
+                            {showReplyForm?.reviewId === review.id ? <X className="h-4 w-4" aria-hidden="true" /> : <ReplyIcon className="h-4 w-4" aria-hidden="true" />}
                           </button>
                         )}
                         {review.url && (
@@ -1142,9 +1108,9 @@ export default function AllReviews({
                             href={review.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[10px] font-medium text-white/38 hover:text-[#ff8a78] transition-colors"
+                            className={THREAD_ACTION_CLASS}
                           >
-                            Original →
+                            Original <Eye className="h-4 w-4" aria-hidden="true" />
                           </Link>
                         )}
                       </div>
@@ -1180,7 +1146,7 @@ export default function AllReviews({
                   aria-modal="true"
                   aria-labelledby="review-dialog-title"
                   aria-describedby="review-dialog-description"
-                  className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-xl border border-white/10 bg-[#0a0a0b]/96 shadow-2xl shadow-black/70 sm:max-h-[min(90dvh,780px)] sm:rounded-xl"
+                  className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-xl border border-[var(--surface-border)] bg-[var(--surface-1)] shadow-2xl shadow-black/70 sm:max-h-[min(90dvh,780px)] sm:rounded-xl"
                   style={{
                     boxShadow:
                       "0 32px 90px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.04)",
@@ -1188,21 +1154,21 @@ export default function AllReviews({
                 >
                   <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(233,79,55,0.18),transparent_34%),radial-gradient(circle_at_90%_12%,rgba(255,255,255,0.06),transparent_28%)]" />
                   {/* Header — quote glyph + title + close */}
-                  <div className="relative z-20 flex shrink-0 items-center justify-between border-b border-white/[0.08] bg-black/35 px-4 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
+                  <div className="relative z-20 flex shrink-0 items-center justify-between border-b border-[var(--surface-border)] bg-black/35 px-4 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#e94f37]/25 bg-[#e94f37]/10 text-[#ff8c79]">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--brand-coral)]/25 bg-[var(--brand-coral)]/10 text-[var(--brand-coral-strong)]">
                         <PenSquare className="h-4.5 w-4.5" />
                       </span>
                       <div>
                         <h2
                           id="review-dialog-title"
-                          className="text-base font-black leading-tight text-white sm:text-lg"
+                          className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
                         >
                           Share your viewing mood
                         </h2>
                         <p
                           id="review-dialog-description"
-                          className="mt-0.5 text-xs text-white/45"
+                          className="mt-0.5 text-xs text-[var(--ink-muted)]"
                         >
                           Rate it, name the feeling, and tell the community why.
                         </p>
@@ -1211,7 +1177,7 @@ export default function AllReviews({
                     <button
                       onClick={() => setWriteModalOpen(false)}
                       aria-label="Close review dialog"
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/55 transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] text-[var(--ink-muted)] transition hover:border-[var(--surface-border)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
                     >
                       <X className="h-5 w-5" />
                     </button>
@@ -1220,27 +1186,27 @@ export default function AllReviews({
                   <div className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain mobile-native-scroll scrollbar-none">
                     {!isAuthenticated ? (
                       <div className="flex flex-col items-center justify-center py-12 px-6 text-center gap-4">
-                        <div className="w-14 h-14 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-2xl">
+                        <div className="w-14 h-14 rounded-xl bg-[var(--surface-2)] border border-[var(--surface-border)] flex items-center justify-center text-2xl">
                           🔐
                         </div>
                         <div>
-                          <h3 className="text-sm font-bold text-white mb-1">
+                          <h3 className="text-sm font-bold text-[var(--ink)] mb-1">
                             Sign in to continue
                           </h3>
-                          <p className="text-xs text-white/35">
+                          <p className="text-xs text-[var(--ink-muted)]">
                             You need to be logged in to leave a review.
                           </p>
                         </div>
                         <Link
                           href="/auth/login"
-                          className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-white/[0.04] border border-[#e94f37]/40 text-[#e94f37] text-xs font-semibold hover:bg-[#e94f37]/[0.10] hover:border-[#e94f37]/70 transition-all"
+                          className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--surface-2)] border border-[var(--brand-coral)]/40 text-[var(--brand-coral)] text-xs font-semibold hover:bg-[var(--brand-coral)]/[0.10] hover:border-[var(--brand-coral)]/70 transition-all"
                         >
                           Sign in
                         </Link>
                       </div>
                     ) : banStatus.banned ? (
                       <div className="flex items-start gap-4 px-5 py-5">
-                        <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-white/[0.04] border border-red-500/20 flex items-center justify-center">
+                        <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-[var(--surface-2)] border border-red-500/20 flex items-center justify-center">
                           <svg
                             className="w-4 h-4 text-red-400"
                             fill="none"
@@ -1259,10 +1225,10 @@ export default function AllReviews({
                           <h3 className="text-xs font-bold text-red-400 mb-1">
                             Review Privileges Suspended
                           </h3>
-                          <p className="text-[11px] text-white/35 mb-3">
+                          <p className="text-xs text-[var(--ink-muted)] mb-3">
                             Temporarily restricted due to policy violations.
                           </p>
-                          <div className="flex items-center gap-1.5 text-[11px] text-white/35">
+                          <div className="flex items-center gap-1.5 text-xs text-[var(--ink-muted)]">
                             <svg
                               className="w-3 h-3 text-red-400"
                               fill="none"
@@ -1443,7 +1409,7 @@ function ReviewFormInModal({
     <form onSubmit={handleSubmit}>
       <div className="space-y-5 px-4 py-4 sm:px-6 sm:py-5">
       {/* Compose card — hero */}
-      <div className="relative overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03]">
+      <div className="relative overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)]">
         {selectedMoodImage && (
           <Image
             src={selectedMoodImage}
@@ -1497,7 +1463,7 @@ function ReviewFormInModal({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-white/[0.08] text-[10px] text-white/20"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-[var(--surface-border)] text-xs text-[var(--ink-muted)]"
               >
                 <svg
                   width="10"
@@ -1516,33 +1482,34 @@ function ReviewFormInModal({
 
         {/* Textarea — hero */}
         <textarea
+          aria-label="Your review"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="What did you think? Share what you loved, hated, or found surprising…"
           rows={5}
-          className="relative z-10 w-full resize-none bg-transparent px-4 py-3 text-[13px] leading-[1.75] text-white/75 outline-none placeholder-white/20"
+          className="relative z-10 w-full resize-none bg-transparent px-4 py-3 text-sm leading-6 text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--brand-coral)]"
         />
 
         {/* Author attribution footer */}
-        <div className="relative z-10 flex items-center justify-between gap-3 border-t border-white/[0.07] bg-white/[0.025] px-4 py-3">
+        <div className="relative z-10 flex items-center justify-between gap-3 border-t border-[var(--surface-border)] bg-[var(--surface-2)] px-4 py-3">
           <div className="flex items-center gap-2.5">
             <div
               style={{ width: 28, height: 28, minWidth: 28 }}
-              className="rounded-full bg-white/[0.09] border border-white/[0.12] flex items-center justify-center flex-shrink-0"
+              className="rounded-full bg-[var(--surface-2)] border border-[var(--surface-border)] flex items-center justify-center flex-shrink-0"
             >
-              <span className="text-white/60 font-semibold text-[10px]">
+              <span className="text-[var(--ink-muted)] font-semibold text-xs">
                 {author.charAt(0).toUpperCase()}
               </span>
             </div>
             <div>
-              <p className="text-xs font-semibold text-white/75 leading-none">
+              <p className="text-xs font-semibold text-[var(--ink-muted)] leading-none">
                 {author}
               </p>
-              <p className="text-[10px] text-white/25 mt-0.5">Posting as you</p>
+              <p className="text-xs text-[var(--ink-muted)] mt-0.5">Posting as you</p>
             </div>
           </div>
           <span
-            className={`text-[10px] font-semibold ${content.length < 10 ? "text-white/20" : "text-[#4ade80]"}`}
+            className={`text-xs font-semibold ${content.length < 10 ? "text-[var(--ink-muted)]" : "text-[#4ade80]"}`}
           >
             {content.length < 10 ? `${10 - content.length} more` : "✓ Ready"}
           </span>
@@ -1551,7 +1518,7 @@ function ReviewFormInModal({
 
       {/* Rating row */}
       <div className="flex items-center justify-between px-1">
-        <span className="text-[11px] text-white/35 font-medium">
+        <span className="text-xs text-[var(--ink-muted)] font-medium">
           Your rating
         </span>
         <div className="flex items-center gap-0.5">
@@ -1569,7 +1536,7 @@ function ReviewFormInModal({
               >
                 <Star
                   size={16}
-                  className={`transition-colors duration-100 ${active ? "text-yellow-400 fill-yellow-400" : "text-white/20 hover:text-white/35"}`}
+                  className={`transition-colors duration-100 ${active ? "text-yellow-400 fill-yellow-400" : "text-[var(--ink-muted)] hover:text-[var(--ink-muted)]"}`}
                 />
               </button>
             );
@@ -1578,12 +1545,12 @@ function ReviewFormInModal({
       </div>
 
       {/* Mood grid */}
-      <section className="rounded-xl border border-white/[0.08] bg-white/[0.035] p-3.5 sm:p-4">
+      <section className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] p-3.5 sm:p-4">
         <div className="mb-3 flex flex-col gap-1">
-          <span className="text-[13px] font-bold text-[#f5f5f7]">
+          <span className="text-sm font-bold text-[var(--ink)]">
             How did it make you feel?
           </span>
-          <span className="text-[11px] font-medium text-white/45">
+          <span className="text-xs font-medium text-[var(--ink-muted)]">
             Choose one mood
           </span>
         </div>
@@ -1612,15 +1579,15 @@ function ReviewFormInModal({
                 }
                 onClick={() => setMood(m.value)}
                 onKeyDown={(event) => handleMoodKeyDown(event, index)}
-                className={`relative flex min-h-[84px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border px-2.5 py-3 text-center transition-[border-color,background-color,box-shadow,color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e3262a]/60 motion-safe:hover:-translate-y-px md:min-h-[76px] ${
+                className={`relative flex min-h-[84px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border px-2.5 py-3 text-center transition-[border-color,background-color,box-shadow,color,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/60 motion-safe:hover:-translate-y-px md:min-h-[76px] ${
                   isSelected
-                    ? "border-[#e3262a] bg-[#e3262a]/[0.16] text-white shadow-[0_0_0_1px_rgba(227,38,42,0.25),0_12px_28px_rgba(227,38,42,0.18)]"
-                    : "border-white/[0.10] bg-white/[0.045] text-white/70 hover:border-[#e3262a]/55 hover:bg-[#e3262a]/[0.08] hover:text-white"
+                    ? "border-[var(--brand-coral)] bg-[var(--brand-coral)]/[0.16] text-[var(--ink)] shadow-[0_0_0_1px_rgba(227,38,42,0.25),0_12px_28px_rgba(227,38,42,0.18)]"
+                    : "border-[var(--surface-border)] bg-[var(--surface-2)] text-[var(--ink-muted)] hover:border-[var(--brand-coral)]/55 hover:bg-[var(--brand-coral)]/[0.08] hover:text-[var(--ink)]"
                 }`}
               >
                 {isSelected && (
                   <span
-                    className="absolute right-2 top-2 grid h-[18px] w-[18px] place-items-center rounded-full bg-[#e3262a] text-[11px] font-bold leading-none text-white"
+                    className="absolute right-2 top-2 grid h-[18px] w-[18px] place-items-center rounded-full bg-[var(--brand-coral)] text-xs font-bold leading-none text-[var(--ink)]"
                     aria-hidden="true"
                   >
                     <svg
@@ -1647,7 +1614,7 @@ function ReviewFormInModal({
                       : ""
                   }`}
                 />
-                <span className="text-[12px] font-semibold leading-tight md:text-[11px]">
+                <span className="text-xs font-semibold leading-tight md:text-xs">
                   {m.label}
                 </span>
               </button>
@@ -1663,7 +1630,7 @@ function ReviewFormInModal({
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-red-500/20"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[var(--surface-2)] border border-red-500/20"
           >
             <svg
               className="w-3 h-3 text-red-400 flex-shrink-0"
@@ -1683,13 +1650,13 @@ function ReviewFormInModal({
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-1 pb-1">
-        <p className="text-[10px] text-white/20">May be featured publicly.</p>
+        <p className="text-xs text-[var(--ink-muted)]">May be featured publicly.</p>
         <button
           type="submit"
           disabled={submitting || !isReady}
-          className="px-5 py-2 rounded-xl bg-white/[0.04] border border-[#e94f37]/40 text-[#e94f37] text-xs font-semibold hover:bg-[#e94f37]/[0.10] hover:border-[#e94f37]/70 active:scale-95 transition-all disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
+          className="ui-primary-action leading-none disabled:opacity-35 disabled:cursor-not-allowed"
         >
-          {submitting ? "Submitting…" : "Submit Review"}
+          {submitting ? "Posting…" : "Post"} <Send className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
       </div>
@@ -1698,55 +1665,6 @@ function ReviewFormInModal({
 }
 
 /* ── Helpers ── */
-function RatingArc({
-  rating,
-  color = "#e94f37",
-  size = 44,
-}: {
-  rating: number;
-  color?: string;
-  size?: number;
-}) {
-  const clamped = Math.max(0, Math.min(10, rating));
-  const r = size * 0.28,
-    circ = 2 * Math.PI * r;
-  return (
-    <div
-      className="relative flex-shrink-0"
-      style={{ width: size, height: size }}
-    >
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="rgba(255,255,255,0.06)"
-          strokeWidth="3"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          strokeDashoffset={circ * (1 - clamped / 10)}
-          style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
-        />
-      </svg>
-      <span
-        className="absolute inset-0 flex items-center justify-center font-bold text-white"
-        style={{ fontSize: size < 36 ? "0.55rem" : "0.65rem" }}
-      >
-        {clamped.toFixed(1)}
-      </span>
-    </div>
-  );
-}
-
 function AvatarBlock({
   review,
   href,
@@ -1772,7 +1690,7 @@ function AvatarBlock({
   const avatar = (
     <div
       style={{ width: size, height: size, minWidth: size }}
-      className="rounded-full overflow-hidden bg-white/[0.08] border border-white/[0.10] flex items-center justify-center flex-shrink-0 transition-colors group-hover:border-[#e94f37]/50"
+      className="rounded-full overflow-hidden bg-[var(--surface-2)] border border-[var(--surface-border)] flex items-center justify-center flex-shrink-0 transition-colors group-hover:border-[var(--brand-coral)]/50"
     >
       {avatarSrc ? (
         <img
@@ -1785,7 +1703,7 @@ function AvatarBlock({
         />
       ) : (
         <span
-          className="text-white/50 font-semibold"
+          className="text-[var(--ink-muted)] font-semibold"
           style={{ fontSize: size < 36 ? "10px" : "13px" }}
         >
           {initials}
@@ -1798,7 +1716,7 @@ function AvatarBlock({
     <Link
       href={href}
       aria-label={`View ${review.author}'s profile`}
-      className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]"
+      className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
     >
       {avatar}
     </Link>
@@ -1826,7 +1744,7 @@ function ReplyAvatarBlock({
   const avatar = (
     <div
       style={{ width: size, height: size, minWidth: size }}
-      className="rounded-full overflow-hidden bg-white/[0.08] border border-white/[0.10] flex items-center justify-center flex-shrink-0 transition-colors group-hover:border-[#e94f37]/50"
+      className="rounded-full overflow-hidden bg-[var(--surface-2)] border border-[var(--surface-border)] flex items-center justify-center flex-shrink-0 transition-colors group-hover:border-[var(--brand-coral)]/50"
     >
       {avatarSrc ? (
         <img
@@ -1838,7 +1756,7 @@ function ReplyAvatarBlock({
           className="object-cover w-full h-full"
         />
       ) : (
-        <span className="text-white/58 font-semibold text-[10px]">
+        <span className="text-[var(--ink-muted)] font-semibold text-xs">
           {initial}
         </span>
       )}
@@ -1849,7 +1767,7 @@ function ReplyAvatarBlock({
     <Link
       href={href}
       aria-label={`View ${reply.user.username}'s profile`}
-      className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e94f37]"
+      className="group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
     >
       {avatar}
     </Link>

@@ -162,9 +162,17 @@ export default async function MoviePage({
       />
       <DecisionPanel
         data={data}
+        trailers={videos?.videos ?? []}
         topMoods={reviews.topMoods || []}
         reviewStats={reviewStats}
-      />
+      >
+        <CommonCardCarousel
+          title="If this landed for you"
+          showHeader={false}
+          type="movie"
+          items={recommendations ?? []}
+        />
+      </DecisionPanel>
 
       <div className="bg-[var(--surface-0)]">
         <ReviewsSection
@@ -172,15 +180,6 @@ export default async function MoviePage({
           contentId={id}
           contentType="movie"
         />
-
-        <div className="ui-shell overflow-hidden [&>section>div:first-child]:mb-0">
-          <CommonCardCarousel
-            title="If this landed for you"
-            subtitle="A few next watches selected for the story, genre, and audience response."
-            type="movie"
-            items={recommendations ?? []}
-          />
-        </div>
 
         <MovieDetails data={data} contentId={id} />
 

@@ -1,5 +1,5 @@
-import PageSkeleton from "@/components/loading/PageSkeleton";
+import { CreditsPageLoading } from "@/components/selected-content/extended/creditsPageStates";
 
 export default function Loading() {
-  return <PageSkeleton variant="credits" />;
+  return <CreditsPageLoading />;
 }

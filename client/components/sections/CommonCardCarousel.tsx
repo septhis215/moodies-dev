@@ -10,6 +10,7 @@ import MediaCard from "@/components/ui/MediaCard";
 interface CommonCardCarouselProps {
   title: string;
   subtitle?: string;
+  showHeader?: boolean;
   type?: "movie" | "tv";
   items: All[];
 }
@@ -17,6 +18,7 @@ interface CommonCardCarouselProps {
 export default function CommonCardCarousel({
   title,
   subtitle,
+  showHeader = true,
   type,
   items,
 }: CommonCardCarouselProps) {
@@ -86,13 +88,13 @@ export default function CommonCardCarousel({
   }
 
   return (
-    <section className="relative">
-      <div className="flex flex-col gap-2 mb-8">
+    <section className="relative" aria-label={title}>
+      {showHeader ? <div className="flex flex-col gap-2 mb-8">
         <h2 className="text-3xl sm:text-4xl font-black text-white">{title}</h2>
         {subtitle && (
           <p className="text-gray-400 text-sm font-medium">{subtitle}</p>
         )}
-      </div>
+      </div> : null}
       <Carousel items={items} CardComponent={MovieCard} mobileBleed={false} />
     </section>
   );

@@ -2,20 +2,17 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark,
   BookmarkCheck,
   CalendarDays,
-  Check,
   Clock3,
-  ExternalLink,
   Heart,
   MessageCircle,
   Play,
   Share2,
   Sparkles,
-  VolumeX,
 } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { SnapshotShareModal } from "@/components/snapshot/SnapshotShareModal";
@@ -24,6 +21,7 @@ import { useMediaStats } from "@/hooks/useMediaStats";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { fmtCount } from "@/utils/mediaStatsClient";
 import { tmdbImage } from "@/lib/tmdb";
+import { loadYouTubeApi, YT_PLAYER_STATE, type YouTubePlayer } from "@/lib/youtube-player";
 import type {
   MovieDetailsData,
   TrailerData,
@@ -152,6 +150,100 @@ function ReadMore({ text, limit = 240 }: { text: string; limit?: number }) {
   );
 }
 
+function trailerEmbedUrl(videoKey: string) {
+  return `https://www.youtube-nocookie.com/embed/${videoKey}?autoplay=1&mute=1&playsinline=1&controls=1&rel=0&iv_load_policy=3&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
+}
+
+function TrailerVideoPlayer({
+  videoKey,
+  title,
+  onEnded,
+}: {
+  videoKey: string;
+  title: string;
+  onEnded: () => string;
+}) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLIFrameElement | null>(null);
+  const playerRef = useRef<YouTubePlayer | null>(null);
+  const readyRef = useRef(false);
+  const videoKeyRef = useRef(videoKey);
+  const onEndedRef = useRef(onEnded);
+
+  useEffect(() => {
+    onEndedRef.current = onEnded;
+  }, [onEnded]);
+
+  useEffect(() => {
+    videoKeyRef.current = videoKey;
+    if (readyRef.current) {
+      playerRef.current?.loadVideoById(videoKey);
+    } else if (frameRef.current) {
+      frameRef.current.src = trailerEmbedUrl(videoKey);
+    }
+  }, [videoKey]);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (frame) frame.title = title;
+  }, [title]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    let cancelled = false;
+    let player: YouTubePlayer | null = null;
+    // Render the working embed immediately; API loading must never leave an empty player.
+    // This child is owned imperatively so API cleanup cannot remove a React-owned node.
+    const frame = document.createElement("iframe");
+    frame.src = trailerEmbedUrl(videoKeyRef.current);
+    frame.title = host.getAttribute("aria-label") || "Trailer";
+    frame.allow = "autoplay; encrypted-media; picture-in-picture";
+    frame.allowFullscreen = true;
+    frame.referrerPolicy = "strict-origin-when-cross-origin";
+    frame.className = "absolute inset-0 h-full w-full border-0";
+    host.appendChild(frame);
+    frameRef.current = frame;
+
+    void loadYouTubeApi().then((YT) => {
+      // Strict Mode can clean up this effect while the shared API is still loading.
+      if (cancelled) return;
+      player = new YT.Player(frame, {
+        events: {
+          onReady: ({ target }) => {
+            if (cancelled) return;
+            playerRef.current = target;
+            readyRef.current = true;
+          },
+          onStateChange: ({ data }) => {
+            if (!cancelled && data === YT_PLAYER_STATE.ENDED) {
+              const nextKey = onEndedRef.current();
+              // Restart a one-video list without recreating the player or resetting audio.
+              if (nextKey === videoKeyRef.current) {
+                playerRef.current?.loadVideoById(nextKey);
+              }
+            }
+          },
+        },
+      });
+      playerRef.current = player;
+    }).catch((error: unknown) => {
+      if (!cancelled) console.error("Could not initialize trailer player", error);
+    });
+
+    return () => {
+      cancelled = true;
+      readyRef.current = false;
+      playerRef.current = null;
+      frameRef.current = null;
+      player?.destroy();
+      frame.remove();
+    };
+  }, []);
+
+  return <div ref={hostRef} className="absolute inset-0" aria-label={title} />;
+}
+
 function TrailerPlayer({
   trailers,
   title,
@@ -182,7 +274,7 @@ function TrailerPlayer({
             Trailer
           </h2>
         </div>
-        <div className="relative aspect-video overflow-hidden rounded-xl border border-[var(--surface-border)] bg-black">
+        <div className="relative aspect-video overflow-hidden rounded-xl bg-black">
           <Image
             src={poster}
             alt=""
@@ -196,9 +288,6 @@ function TrailerPlayer({
               <Play className="mx-auto h-8 w-8 text-white/55" aria-hidden="true" />
               <p className="mt-3 text-sm font-semibold text-[var(--ink)]">
                 Trailer unavailable here
-              </p>
-              <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
-                Check back when a playable trailer is available.
               </p>
             </div>
           </div>
@@ -218,67 +307,51 @@ function TrailerPlayer({
             Trailer
           </h2>
         </div>
-        <span className="shrink-0 text-xs text-[var(--ink-muted)]">
-          {youtubeTrailers.length} available
-        </span>
       </div>
 
       <div
         className={`grid gap-3 lg:items-stretch ${
           youtubeTrailers.length > 1
-            ? "lg:h-[min(34rem,calc(100dvh-12rem))] lg:grid-cols-[minmax(0,1fr)_16rem]"
+            ? "lg:h-[min(34rem,calc(100dvh-12rem))] lg:grid-cols-[16rem_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]"
             : "lg:grid-cols-1"
         }`}
       >
         <div
-          className={`min-w-0 overflow-hidden rounded-xl border border-[var(--surface-border)] bg-black ${
+          className={`min-h-0 min-w-0 overflow-hidden rounded-xl bg-black lg:order-last ${
             youtubeTrailers.length > 1 ? "lg:flex lg:h-full lg:flex-col" : ""
           }`}
         >
           <div
             className={`relative ${
               youtubeTrailers.length > 1
-                ? "aspect-video lg:min-h-0 lg:flex-1"
+                ? "aspect-video lg:aspect-auto lg:min-h-0 lg:flex-1"
                 : "aspect-video lg:max-h-[min(calc(90dvh-4rem),42rem)]"
             }`}
           >
-            <iframe
-              className="absolute inset-0 h-full w-full border-0"
-              src={`https://www.youtube-nocookie.com/embed/${activeTrailer.key}?autoplay=1&mute=1&playsinline=1&controls=1&rel=0&modestbranding=1&iv_load_policy=3`}
+            <TrailerVideoPlayer
+              videoKey={activeTrailer.key}
               title={`${title} — ${activeTrailer.name || "trailer"}`}
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
+              onEnded={() => {
+                const currentIndex = youtubeTrailers.findIndex((video) => video.key === activeTrailer.key);
+                const nextTrailer = youtubeTrailers[(currentIndex + 1) % youtubeTrailers.length];
+                setActiveKey(nextTrailer.key);
+                return nextTrailer.key;
+              }}
             />
-          </div>
-          <div className="flex items-center justify-between gap-3 border-t border-[var(--surface-border)] px-3 py-3 text-xs text-[var(--ink-muted)] sm:px-4">
-            <span className="flex min-w-0 items-center gap-2 truncate">
-              <VolumeX className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <span className="truncate">{activeTrailer.name || "Official trailer"}</span>
-            </span>
-            <a
-              href={`https://www.youtube.com/watch?v=${activeTrailer.key}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex shrink-0 items-center gap-1.5 font-semibold text-[var(--ink)] hover:text-brand-coral-strong"
-            >
-              YouTube
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-            </a>
           </div>
         </div>
 
         {youtubeTrailers.length > 1 ? (
           <aside
-            className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] lg:h-full"
+            className="ui-panel flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl max-lg:border-0 max-lg:bg-transparent lg:h-full lg:p-3"
             aria-label="Trailer playlist"
           >
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--surface-border)] px-3 py-3">
-              <h3 className="text-sm font-bold text-[var(--ink)]">More trailers</h3>
-              <span className="shrink-0 text-xs text-[var(--ink-muted)]">
-                {youtubeTrailers.length} videos
-              </span>
-            </div>
-            <div className="mobile-native-scroll scrollbar-hide flex gap-2 overflow-x-auto p-2 overscroll-contain lg:min-h-0 lg:flex-1 lg:block lg:space-y-2 lg:overflow-y-auto">
+            <div
+              className="flex gap-2 overflow-x-auto overflow-y-hidden overscroll-contain max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden lg:min-h-0 lg:flex-1 lg:block lg:space-y-2 lg:overflow-x-hidden lg:overflow-y-auto lg:p-1 lg:pr-3"
+              tabIndex={0}
+              role="region"
+              aria-label="More trailers, scroll to browse"
+            >
               {youtubeTrailers.map((video, index) => {
                 const isActive = video.key === activeTrailer.key;
 
@@ -289,36 +362,22 @@ function TrailerPlayer({
                     onClick={() => setActiveKey(video.key)}
                     aria-pressed={isActive}
                     aria-label={`Play ${video.name || `trailer ${index + 1}`}`}
-                    className={`group flex w-64 shrink-0 gap-2 rounded-xl border p-2 text-left transition-colors lg:w-full ${
-                      isActive
-                        ? "border-brand-coral-strong bg-brand-coral/10"
-                        : "border-[var(--surface-border)] bg-black/20 hover:border-white/25 hover:bg-black/35"
-                    }`}
+                    className="group relative block aspect-video w-64 shrink-0 overflow-hidden rounded-xl bg-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-coral-strong lg:w-full"
                   >
-                    <span className="relative h-14 w-24 shrink-0 overflow-hidden rounded-xl bg-black">
-                      <Image
-                        src={`https://img.youtube.com/vi/${video.key}/mqdefault.jpg`}
-                        alt=""
-                        fill
-                        sizes="96px"
-                        unoptimized
-                        className="object-cover"
-                      />
-                      <span
-                        className={`absolute inset-0 grid place-items-center text-white ${
-                          isActive ? "bg-brand-coral-strong/35" : "bg-black/25"
-                        }`}
-                      >
-                        <Play className="h-4 w-4 fill-current" aria-hidden="true" />
-                      </span>
-                    </span>
-                    <span className="min-w-0 self-center">
-                      <span className="block truncate text-xs font-semibold text-[var(--ink)]">
-                        {video.name || "Trailer"}
-                      </span>
-                      <span className="mt-1 block text-[11px] text-[var(--ink-muted)]">
-                        {index + 1} of {youtubeTrailers.length}
-                      </span>
+                    <Image
+                      src={`https://img.youtube.com/vi/${video.key}/mqdefault.jpg`}
+                      alt=""
+                      fill
+                      sizes="256px"
+                      unoptimized
+                      className="object-contain"
+                    />
+                    <span
+                      className={`absolute inset-0 grid place-items-center text-white transition-colors ${
+                        isActive ? "bg-brand-coral-strong/15" : "bg-black/10 group-hover:bg-black/25"
+                      }`}
+                    >
+                      <Play className="h-4 w-4 fill-current" aria-hidden="true" />
                     </span>
                   </button>
                 );
@@ -460,7 +519,7 @@ export function HeroContentCard({
 
   return (
     <section
-      className="relative isolate overflow-hidden border-b border-white/10 bg-surface-0"
+      className="relative isolate overflow-hidden bg-surface-0"
       aria-labelledby="content-title"
     >
       <div className="pointer-events-none absolute inset-0 opacity-60">
@@ -601,23 +660,23 @@ export function HeroContentCard({
               </div>
             ) : null}
 
-            <div className="mt-5 flex flex-wrap gap-2.5">
-              <Link href={reviewHref} className="ui-primary-action">
-                <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                Read reviews
+            <div className="mt-5 grid auto-cols-fr grid-flow-col gap-2.5 sm:flex sm:flex-wrap">
+              <Link href={reviewHref} className="ui-primary-action leading-none">
+                <MessageCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="sr-only sm:not-sr-only">Reviews</span>
               </Link>
-              <button type="button" onClick={handleWatchlistToggle} disabled={isTogglingWatchlist} className="ui-secondary-action">
-                {inWatchlist ? <BookmarkCheck className="h-4 w-4" aria-hidden="true" /> : <Bookmark className="h-4 w-4" aria-hidden="true" />}
-                {inWatchlist ? "Saved" : "Save"}
+              <button type="button" onClick={handleWatchlistToggle} disabled={isTogglingWatchlist} className="ui-secondary-action leading-none">
+                {inWatchlist ? <BookmarkCheck className="h-4 w-4 shrink-0" aria-hidden="true" /> : <Bookmark className="h-4 w-4 shrink-0" aria-hidden="true" />}
+                <span className="sr-only sm:not-sr-only">{inWatchlist ? "Saved" : "Save"}</span>
               </button>
-              <button type="button" onClick={handleLikeToggle} disabled={isTogglingLiked} className="ui-secondary-action">
-                <Heart className="h-4 w-4" fill={inLiked ? "currentColor" : "none"} aria-hidden="true" />
-                {inLiked ? "Liked" : "Like"}
+              <button type="button" onClick={handleLikeToggle} disabled={isTogglingLiked} className="ui-secondary-action leading-none">
+                <Heart className="h-4 w-4 shrink-0" fill={inLiked ? "currentColor" : "none"} aria-hidden="true" />
+                <span className="sr-only sm:not-sr-only">{inLiked ? "Liked" : "Like"}</span>
               </button>
               {contentId ? (
-                <button type="button" onClick={() => setIsSnapshotOpen(true)} className="ui-secondary-action" aria-label="Share content snapshot">
-                  <Share2 className="h-4 w-4" aria-hidden="true" />
-                  Share
+                <button type="button" onClick={() => setIsSnapshotOpen(true)} className="ui-secondary-action leading-none" aria-label="Share content snapshot">
+                  <Share2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span className="sr-only sm:not-sr-only">Share</span>
                 </button>
               ) : null}
             </div>
@@ -637,10 +696,6 @@ export function HeroContentCard({
               title={mappedContent.title}
               poster={mappedContent.poster}
             />
-            <p className="mt-2 flex items-center gap-1.5 text-xs leading-5 text-[var(--ink-muted)]">
-              <Check className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
-              Start with the trailer, then decide how it feels to you.
-            </p>
           </div>
         </div>
       </div>

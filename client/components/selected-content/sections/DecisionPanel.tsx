@@ -1,10 +1,15 @@
 import Link from "next/link";
-import { CalendarDays, Clock3, Heart, MessageSquare } from "lucide-react";
+import type { ReactNode } from "react";
+import { CalendarDays, Clock3, Eye, Heart, MessageSquare } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import type { MovieDetailsData, TvDetailsData } from "@/components/selected-content/types";
+import type { MovieDetailsData, TrailerData, TvDetailsData } from "@/components/selected-content/types";
+import { tmdbImage } from "@/lib/tmdb";
+import TrailerBackground from "./TrailerBackground";
 
 type DecisionPanelProps = {
   data: MovieDetailsData | TvDetailsData;
+  trailers?: TrailerData[];
+  children?: ReactNode;
   topMoods?: Array<{ emoji: string; count: number }>;
   reviewStats?: { totalRatings: number; averageRating: number } | null;
 };
@@ -26,8 +31,10 @@ function isImagePath(value: string): boolean {
 
 export default function DecisionPanel({
   data,
+  trailers = [],
   topMoods = [],
   reviewStats,
+  children,
 }: DecisionPanelProps) {
   const info = data.info;
   const isTv = info.content_type === "tv";
@@ -38,17 +45,39 @@ export default function DecisionPanel({
   const ratingLabel = appRating ? "Moodies audience" : "TMDB";
   const date = info.release_date || tvInfo?.first_air_date || "";
   const moodLabels = topMoods.slice(0, 3);
+  const firstTrailer = [data.trailer, ...trailers].find(
+    (video) => video?.key && (!video.site || video.site.toLowerCase() === "youtube"),
+  );
 
   return (
-    <section className="ui-shell py-8 sm:py-10" aria-labelledby="decision-heading">
-      <div className="grid gap-6 border-y border-[var(--surface-border)] py-6 sm:py-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+    <section className="relative isolate overflow-hidden bg-[var(--surface-0)]" aria-labelledby="decision-heading">
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        {info.backdrop_path ? (
+          <Image src={tmdbImage(info.backdrop_path, "original")} alt="" fill sizes="100vw" className="object-cover" />
+        ) : null}
+        {firstTrailer?.key ? <TrailerBackground videoKey={firstTrailer.key} /> : null}
+        <div className="absolute inset-0 bg-[var(--surface-0)]/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[var(--surface-0)] via-transparent to-[var(--surface-0)]" />
+      </div>
+      <div className="ui-shell relative flex min-h-[28rem] flex-col justify-center py-8 sm:min-h-[36rem] sm:py-10">
+      <div className="grid gap-6 border-b border-[var(--surface-border)] py-6 sm:py-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div>
+          <p className="ui-kicker">Find your next watch</p>
           <h2 id="decision-heading" className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
-            Does this fit your night?
+            Does this fit your mood?
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
             A quick read of the audience signal, score, and format before you spend time with it.
           </p>
+          {info.genres.length ? (
+            <div className="mt-5 flex flex-wrap gap-2" aria-label="Genres">
+              {info.genres.slice(0, 4).map((genre) => (
+                <span key={genre.id} className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-1)]/70 px-3 py-1 text-xs font-semibold text-[var(--ink-muted)]">
+                  {genre.name}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="mt-5 flex flex-wrap gap-x-5 gap-y-3 text-xs text-[var(--ink-muted)]">
             <span className="inline-flex items-center gap-1.5">
               <CalendarDays className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
@@ -70,10 +99,11 @@ export default function DecisionPanel({
             ) : null}
           </div>
           {moodLabels.length ? (
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              <span className="mr-1 text-xs font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+            <div className="mt-5" role="group" aria-labelledby="audience-mood-heading">
+              <h3 id="audience-mood-heading" className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
                 Audience mood
-              </span>
+              </h3>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
               {moodLabels.map((mood) => (
                 <span
                   key={mood.emoji}
@@ -95,12 +125,16 @@ export default function DecisionPanel({
                   <span>{mood.count}</span>
                 </span>
               ))}
+              </div>
             </div>
           ) : null}
         </div>
         <Link href={`/${mediaPath}/${info.id}/reviews`} className="ui-primary-action w-full sm:w-auto">
-          Read all reviews
+          Reviews
+          <Eye className="h-4 w-4" aria-hidden="true" />
         </Link>
+      </div>
+      {children ? <div className="mt-8 min-w-0 sm:mt-10">{children}</div> : null}
       </div>
     </section>
   );
