@@ -12,6 +12,7 @@ import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import RatingBadge from "@/components/ui/rating-badge";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import useCarousel from "@/hooks/useCarousel";
+import { useHeroSwipe } from "@/hooks/useHeroSwipe";
 import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 
 type HomepageMediaHeroProps = {
@@ -62,6 +63,12 @@ export function HomepageMediaHero({
     pause,
     resume,
   } = useCarousel({ length: heroItems.length, intervalMs: 8000 });
+  const swipeHandlers = useHeroSwipe({
+    onSwipe: direction => setActiveIndex(current => heroItems.length > 1
+      ? (current + direction + heroItems.length) % heroItems.length : current),
+    pause,
+    resume,
+  });
   const featured = heroItems[activeIndex] || heroItems[0] || null;
   const routeBase = mediaType === "tv" ? "tv" : "movies";
   const watchlistType = mediaType === "tv" ? "series" : "movie";
@@ -122,14 +129,14 @@ export function HomepageMediaHero({
 
   return (
     <section
-      className="ui-shell pt-20 sm:pt-24"
+      className="ui-shell pt-0 sm:pt-6 lg:pt-24"
       onMouseEnter={pause}
       onMouseLeave={resume}
       onFocusCapture={pause}
       onBlurCapture={resume}
       aria-labelledby={`${mediaType}-hub-heading`}
     >
-      <header className="flex max-w-3xl items-start gap-3">
+      <header className="sr-only sm:not-sr-only sm:flex sm:max-w-3xl sm:items-start sm:gap-3">
         <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[var(--surface-border)] text-[var(--brand-coral-strong)]">
           {icon}
         </span>
@@ -143,13 +150,13 @@ export function HomepageMediaHero({
           >
             {title}
           </h1>
-          <p className="mt-1.5 text-sm leading-5 text-[var(--ink-muted)]">
+          <p className="mt-1.5 line-clamp-2 text-sm leading-5 text-[var(--ink-muted)]">
             {description}
           </p>
         </div>
       </header>
 
-      <div className="relative mt-4 min-h-[540px] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] sm:min-h-[460px]">
+      <div {...swipeHandlers} className="relative -mx-4 overflow-hidden bg-[var(--surface-0)] sm:mx-0 sm:mt-4 sm:rounded-md sm:border sm:border-[var(--surface-border)] sm:bg-[var(--surface-1)]">
         <AnimatePresence initial={false} mode="sync">
           <motion.div
             key={`backdrop-${featured.id}`}
@@ -158,6 +165,7 @@ export function HomepageMediaHero({
             exit={{ opacity: 0 }}
             transition={{ duration: reduceMotion ? 0 : 0.65, ease: "easeOut" }}
             className="absolute inset-0"
+            style={{ touchAction: "pan-y pinch-zoom" }}
           >
             <Image
               src={getBackdropUrl(
@@ -169,12 +177,13 @@ export function HomepageMediaHero({
               sizes="100vw"
               className="object-cover object-center"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#080707] via-[#080707]/82 to-[#080707]/24" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#080707] via-transparent to-black/20" />
+            <div className="absolute inset-0 hidden bg-gradient-to-r from-[#080707] via-[#080707]/82 to-[#080707]/24 sm:block" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,7,7,0.06)_0%,rgba(8,7,7,0.12)_30%,rgba(8,7,7,0.82)_62%,var(--surface-0)_100%)] sm:bg-gradient-to-t sm:from-[#080707] sm:via-transparent sm:to-black/20" />
           </motion.div>
         </AnimatePresence>
 
-        <div className="relative z-10 grid min-h-[540px] min-w-0 grid-rows-[1fr_auto] p-4 sm:min-h-[460px] sm:p-6 lg:p-7">
+        <div className="relative z-10 grid min-h-[min(620px,calc(100svh-var(--mobile-nav-safe)))] min-w-0 grid-rows-[auto_1fr_auto] px-5 pb-5 pt-4 sm:min-h-[460px] sm:grid-rows-[1fr_auto] sm:p-6 lg:p-7">
+          <div aria-hidden="true" className="h-44 sm:hidden" style={{ touchAction: "pan-y pinch-zoom" }} />
           <AnimatePresence initial={false} mode="wait">
             <motion.div
               key={`copy-${featured.id}`}
@@ -185,15 +194,22 @@ export function HomepageMediaHero({
                 duration: reduceMotion ? 0 : 0.34,
                 ease: "easeOut",
               }}
-              className="grid min-h-0 items-center gap-5 pb-5 sm:grid-cols-[minmax(0,1fr)_140px] lg:grid-cols-[minmax(0,620px)_160px] lg:gap-9"
+              className="grid min-h-0 items-end gap-5 pb-5 sm:items-center sm:grid-cols-[minmax(0,1fr)_140px] lg:grid-cols-[minmax(0,620px)_160px] lg:gap-9"
+              style={{ touchAction: "pan-y pinch-zoom" }}
             >
-              <div className="min-w-0 max-w-2xl self-center pt-5 sm:pt-0">
+              <div className="min-w-0 max-w-2xl self-end sm:self-center">
                 <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white/65">
-                  <span className="text-[#ff8b78]">{spotlightLabel}</span>
-                  <span aria-hidden="true">/</span>
-                  <span>{mediaLabel}</span>
+                  <span className="text-[#ff8b78]">
+                    <span className="sm:hidden">{mediaLabel} spotlight</span>
+                    <span className="hidden sm:inline">{spotlightLabel}</span>
+                  </span>
+                  <span aria-hidden="true" className="hidden sm:inline">/</span>
+                  <span className="hidden sm:inline">{mediaLabel}</span>
                   <span aria-hidden="true">/</span>
                   <span>{getYear(featured)}</span>
+                  <span className="sm:hidden">
+                    <RatingBadge rating={featured.vote_average} variant="colored" size="sm" />
+                  </span>
                 </div>
 
                 <motion.h2
@@ -205,7 +221,7 @@ export function HomepageMediaHero({
                   }}
                   aria-label={getTitle(featured)}
                   title={getTitle(featured)}
-                  className="mt-3 line-clamp-2 max-w-[20ch] break-words text-4xl font-bold leading-[0.95] tracking-[-0.035em] text-white sm:text-5xl"
+                  className="mt-3 line-clamp-3 max-w-[20ch] break-words text-balance text-4xl font-bold leading-none tracking-normal text-white drop-shadow-lg sm:line-clamp-2 sm:text-5xl sm:leading-[0.95]"
                 >
                   {getTitle(featured)}
                 </motion.h2>
@@ -229,16 +245,14 @@ export function HomepageMediaHero({
                     duration: reduceMotion ? 0 : 0.3,
                     delay: reduceMotion ? 0 : 0.18,
                   }}
-                  className="mt-4 flex flex-wrap items-center gap-3"
+                  className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-wrap sm:gap-3"
                 >
-                  <RatingBadge
-                    rating={featured.vote_average}
-                    variant="colored"
-                    size="sm"
-                  />
+                  <span className="hidden sm:contents">
+                    <RatingBadge rating={featured.vote_average} variant="colored" size="sm" />
+                  </span>
                   <Link
                     href={`/${routeBase}/${featured.id}`}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[var(--brand-coral)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-coral-strong)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[var(--brand-coral)] px-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-coral-strong)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:min-h-11 sm:rounded-md sm:px-5"
                   >
                     <Info className="h-4 w-4" />
                     {primaryCta}
@@ -247,7 +261,7 @@ export function HomepageMediaHero({
                     type="button"
                     onClick={toggleWatchlist}
                     disabled={watchlistLoading}
-                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border px-4 text-sm font-semibold transition-colors disabled:opacity-60 ${
+                    className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 sm:min-h-11 sm:rounded-md ${
                       saved
                         ? "border-[var(--brand-coral)] bg-[var(--brand-coral)] text-white"
                         : "border-white/25 bg-black/30 text-white backdrop-blur-sm hover:border-white/55 hover:bg-black/50"
@@ -263,7 +277,7 @@ export function HomepageMediaHero({
                     ) : (
                       <Bookmark className="h-4 w-4" />
                     )}
-                    <span className="hidden sm:inline">
+                    <span>
                       {saved ? "Saved" : "My List"}
                     </span>
                   </button>
@@ -290,10 +304,16 @@ export function HomepageMediaHero({
             </motion.div>
           </AnimatePresence>
 
-          <div className="min-w-0 overflow-hidden border-t border-white/15 pt-3">
+          <div className="flex items-center gap-3 text-xs text-white/55 lg:hidden">
+            <span>Swipe to explore</span>
+            <span aria-hidden="true" className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/15"><span className="block h-full rounded-full bg-[var(--brand-coral)]" style={{ width: `${((activeIndex + 1) / heroItems.length) * 100}%` }} /></span>
+            <span className="tabular-nums">{activeIndex + 1} / {heroItems.length}</span>
+          </div>
+          <div className="hidden min-w-0 overflow-hidden border-t border-white/15 pt-3 lg:block">
             <div className="mb-2 flex items-center justify-between gap-3">
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">
-                Now in the marquee
+                <span className="sm:hidden">Swipe to explore</span>
+                <span className="hidden sm:inline">Now in the marquee</span>
               </p>
               <div className="flex items-center gap-2">
                 <span className="mr-1 text-[10px] tabular-nums text-white/55">
@@ -304,14 +324,14 @@ export function HomepageMediaHero({
                   direction="previous"
                   onClick={() => selectRelative(-1)}
                   disabled={heroItems.length < 2}
-                  className="h-9 w-9 shadow-none"
+                  className="hidden h-9 w-9 shadow-none sm:grid"
                   aria-label="Previous featured title"
                 />
                 <CarouselNavButton
                   direction="next"
                   onClick={() => selectRelative(1)}
                   disabled={heroItems.length < 2}
-                  className="h-9 w-9 shadow-none"
+                  className="hidden h-9 w-9 shadow-none sm:grid"
                   aria-label="Next featured title"
                 />
               </div>
@@ -320,6 +340,7 @@ export function HomepageMediaHero({
             <div className="relative w-full min-w-0 max-w-full">
               <div
                 ref={selectorRailRef}
+                data-hero-selector
                 className="mobile-native-scroll -mx-4 flex w-auto min-w-0 max-w-[calc(100%+2rem)] snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-full sm:max-w-full sm:px-0"
               >
                 {heroItems.map((item, index) => {
@@ -330,7 +351,7 @@ export function HomepageMediaHero({
                       type="button"
                       onClick={() => setActiveIndex(index)}
                       data-active={active}
-                      className={`group/thumb relative grid w-[148px] shrink-0 snap-center grid-cols-[40px_minmax(0,1fr)] items-center gap-2 rounded-sm border p-1.5 text-left transition-colors sm:w-[166px] ${
+                      className={`group/thumb relative grid w-14 shrink-0 snap-center items-center rounded-lg border p-1 text-left transition-colors sm:w-[166px] sm:grid-cols-[40px_minmax(0,1fr)] sm:gap-2 sm:rounded-sm sm:p-1.5 ${
                         active
                           ? "border-[var(--brand-coral)] bg-black/50"
                           : "border-white/12 bg-black/20 hover:border-white/40 hover:bg-black/35"
@@ -347,7 +368,7 @@ export function HomepageMediaHero({
                           className={`object-cover transition-opacity ${active ? "opacity-100" : "opacity-65 group-hover/thumb:opacity-100"}`}
                         />
                       </span>
-                      <span className="min-w-0">
+                      <span className="hidden min-w-0 sm:block">
                         <span
                           className={`block truncate text-xs font-semibold ${active ? "text-white" : "text-white/65"}`}
                         >

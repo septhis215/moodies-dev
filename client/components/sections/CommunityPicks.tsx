@@ -1,11 +1,115 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, MessageCircle } from "lucide-react";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { tmdbImage } from "@/lib/tmdb";
+import styles from "./CommunityPicks.module.css";
+
+function MobileReviewCard({ review, index, count, isActive }: { review: ReviewItem; index: number; count: number; isActive: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const quoteRef = useRef<HTMLParagraphElement>(null);
+  const quoteId = useId();
+  const mediaTitle = review.movieTitle || review.title;
+  const href = reviewHref(review);
+  const backdrop = review.movieBackdrop;
+  const artwork = backdrop
+    ? (backdrop.startsWith("http") ? backdrop : tmdbImage(backdrop, "backdropCard"))
+    : reviewPoster(review);
+
+  useEffect(() => {
+    if (!isActive) setExpanded(false);
+  }, [isActive]);
+
+  useEffect(() => {
+    const quote = quoteRef.current;
+    if (!quote || expanded) return;
+    const measure = () => setOverflows(quote.scrollHeight > quote.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(quote);
+    return () => observer.disconnect();
+  }, [expanded, review.quote]);
+
+  return (
+    <article className={styles.card} aria-label={`Review ${index + 1} of ${count}: ${mediaTitle}`}>
+      <div className={styles.artwork}>
+        <Image src={artwork || "/placeholder-backdrop.svg"} alt="" fill sizes="(max-width: 640px) 100vw, 70vw" className={backdrop ? styles.backdrop : styles.posterBackdrop} />
+        <div className={styles.shade} />
+        <div className={styles.media}>
+          <span className={styles.poster}>
+            <Image src={reviewPoster(review) || "/placeholder-poster.svg"} alt="" fill sizes="56px" className="object-cover" />
+          </span>
+          <div className={styles.mediaCopy}>
+            <p className={styles.meta}>{review.mediaType === "TV" ? "Series" : "Movie"}{review.movieYear ? ` · ${review.movieYear}` : ""}</p>
+            <h3 className={styles.mediaTitle}>{mediaTitle}</h3>
+          </div>
+        </div>
+      </div>
+      <div className={styles.body}>
+        <div className={styles.reviewer}>
+          <span className={styles.avatar}>
+            {review.avatar && !avatarFailed ? (
+              <Image src={review.avatar} alt="" fill sizes="36px" unoptimized onError={() => setAvatarFailed(true)} className="object-cover" />
+            ) : reviewerInitials(review.name)}
+          </span>
+          <div className={styles.author}>
+            <p>{review.name}</p>
+            <span>Moodies member</span>
+          </div>
+          <RatingBadge rating={review.rating} variant="minimal" />
+        </div>
+        <blockquote className={styles.quote}>
+          <p ref={quoteRef} id={quoteId} className={expanded ? undefined : styles.excerpt}>“{review.quote}”</p>
+        </blockquote>
+        <div className={styles.actions}>
+          {overflows && <button type="button" aria-expanded={expanded} aria-controls={quoteId} onClick={() => setExpanded(value => !value)}>{expanded ? "Show less" : "Read more"}</button>}
+          {href && <Link href={href} aria-label={`Explore ${mediaTitle}`}>Explore title <ArrowUpRight size={16} aria-hidden="true" /></Link>}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function MobileReviews({ reviews }: { reviews: ReviewItem[] }) {
+  const railRef = useRef<HTMLDivElement>(null);
+  const railId = useId();
+  const [active, setActive] = useState(0);
+
+  const selectReview = (index: number) => {
+    const rail = railRef.current;
+    const card = rail?.children[index] as HTMLElement | undefined;
+    const first = rail?.firstElementChild as HTMLElement | null;
+    if (!rail || !card || !first) return;
+    rail.scrollTo({ left: card.offsetLeft - first.offsetLeft, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  };
+
+  return (
+    <div className={styles.mobile}>
+      <div ref={railRef} id={railId} className={styles.rail} role="region" aria-label="Member reviews" aria-roledescription="carousel" onScroll={() => {
+        const rail = railRef.current;
+        if (!rail) return;
+        const cards = Array.from(rail.children) as HTMLElement[];
+        const first = cards[0]?.offsetLeft ?? 0;
+        const nearest = cards.reduce((best, card, index) => Math.abs(card.offsetLeft - first - rail.scrollLeft) < Math.abs(cards[best].offsetLeft - first - rail.scrollLeft) ? index : best, 0);
+        setActive(nearest);
+      }}>
+        {reviews.map((review, index) => <MobileReviewCard key={`${review.mediaType}-${review.tmdbId}-${review.user?.id || review.name}-${index}`} review={review} index={index} count={reviews.length} isActive={active === index} />)}
+      </div>
+      {reviews.length > 1 && <div className={styles.navigation}>
+        <span className={styles.swipeHint}>Swipe to read</span>
+        <div className={styles.dots} aria-label="Choose a review">
+          {reviews.map((review, index) => <button key={`${review.tmdbId}-${index}`} type="button" aria-label={`Show review ${index + 1} of ${reviews.length}`} aria-controls={railId} aria-current={active === index ? "true" : undefined} onClick={() => selectReview(index)}><span /></button>)}
+        </div>
+        <span className={styles.count} aria-live="polite" aria-atomic="true">{active + 1} / {reviews.length}</span>
+      </div>}
+    </div>
+  );
+}
 
 type CanonicalMediaType = "MOVIE" | "TV";
 type MediaTypeInput = string | null | undefined;
@@ -252,7 +356,8 @@ export default function CommunityPicks({
           <div className="h-9 w-72 max-w-full moodies-skeleton rounded bg-[var(--surface-2)]" />
           <div className="h-4 w-96 max-w-full moodies-skeleton rounded bg-[var(--surface-1)]" />
         </div>
-        <div className="grid gap-3 lg:grid-cols-12">
+        <div className="mb-4 h-96 moodies-skeleton rounded-2xl bg-[var(--surface-1)] lg:hidden" />
+        <div className="hidden gap-3 lg:grid lg:grid-cols-12">
           <div className="h-[420px] moodies-skeleton rounded-md bg-[var(--surface-1)] lg:col-span-5" />
           <div className="grid gap-3 sm:grid-cols-2 lg:col-span-7">
             {[...Array(4)].map((_, i) => (
@@ -269,13 +374,14 @@ export default function CommunityPicks({
 
   if (reviews.length === 0) return null;
 
-  const ratedReviews = reviews.filter((review) => review.rating !== undefined);
+  const visibleReviews = reviews.slice(0, 5);
+  const ratedReviews = visibleReviews.filter((review) => review.rating !== undefined);
   const averageRating =
     ratedReviews.length > 0
       ? ratedReviews.reduce((sum, review) => sum + (review.rating ?? 0), 0) /
         ratedReviews.length
       : null;
-  const [featuredReview, ...supportingReviews] = reviews.slice(0, 5);
+  const [featuredReview, ...supportingReviews] = visibleReviews;
 
   return (
     <section
@@ -311,7 +417,8 @@ export default function CommunityPicks({
           </div>
         </div>
 
-        <div className="mt-5 grid min-w-0 gap-3 sm:mt-6 lg:grid-cols-12">
+        <MobileReviews reviews={visibleReviews} />
+        <div className="mt-5 hidden min-w-0 gap-3 sm:mt-6 lg:grid lg:grid-cols-12">
           {featuredReview ? (
             <Link
               href={reviewHref(featuredReview) || "#community"}

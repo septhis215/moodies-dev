@@ -17,6 +17,7 @@ import {
 import type { All } from "@/types/all";
 import { tmdbImage } from "@/lib/tmdb";
 import useCarousel from "@/hooks/useCarousel";
+import { useHeroSwipe } from "@/hooks/useHeroSwipe";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import HeroThumbnail from "./heroThumbnail";
@@ -80,6 +81,11 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
   const isCompact = useMediaQuery("(max-width: 640px)");
   const thumbnailWindowSize = isCompact ? 4 : 5;
   const [wlLoading, setWlLoading] = useState(false);
+  const swipeHandlers = useHeroSwipe({
+    onSwipe: direction => setIndex(current => (current + direction + all.length) % all.length),
+    pause,
+    resume,
+  });
 
   const router = useRouter();
   const { add, remove, isInWatchlist, ready } = useWatchlist();
@@ -186,12 +192,14 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
   return (
     <section
       className="landing-hero relative isolate flex w-full overflow-hidden bg-[var(--surface-0)] text-white"
+      style={{ touchAction: "pan-y pinch-zoom" }}
       onMouseEnter={pause}
       onMouseLeave={resume}
       onFocusCapture={pause}
       onBlurCapture={resume}
       aria-roledescription="carousel"
       aria-label="Featured Moodies titles"
+      {...swipeHandlers}
     >
       <AnimatePresence initial={false} mode="sync">
         <motion.div
@@ -214,12 +222,12 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
             aria-hidden
             className="object-cover object-[58%_center] sm:object-center"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,4,4,0.9)_0%,rgba(5,4,4,0.62)_42%,rgba(5,4,4,0.12)_78%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,4,0.24)_0%,rgba(5,4,4,0.06)_38%,var(--surface-0)_100%)]" />
+          <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(5,4,4,0.9)_0%,rgba(5,4,4,0.62)_42%,rgba(5,4,4,0.12)_78%)] sm:block" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,4,0.12)_0%,rgba(5,4,4,0.15)_25%,rgba(5,4,4,0.8)_60%,var(--surface-0)_100%)] sm:bg-[linear-gradient(180deg,rgba(5,4,4,0.24)_0%,rgba(5,4,4,0.06)_38%,var(--surface-0)_100%)]" />
         </motion.div>
       </AnimatePresence>
 
-      <div className="ui-shell relative z-10 flex flex-col justify-end pb-6 pt-10 sm:pb-7 sm:pt-24 lg:pb-9">
+      <div className="ui-shell relative z-10 flex flex-col justify-end pb-5 pt-36 sm:pb-7 sm:pt-24 lg:pb-9">
         <div className="grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-8">
           <AnimatePresence initial={false} mode="wait">
             <motion.div
@@ -294,7 +302,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                   duration: reduceMotion ? 0 : 0.32,
                   delay: reduceMotion ? 0 : 0.14,
                 }}
-                className="mt-4 line-clamp-3 max-w-xl text-sm leading-6 text-white/80"
+                className="mt-4 line-clamp-2 max-w-xl text-sm leading-6 text-white/80 sm:line-clamp-3"
               >
                 <span className="sm:hidden">{mobileOverview}</span>
                 <span className="hidden sm:inline">{desktopOverview}</span>
@@ -312,7 +320,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                 <button
                   type="button"
                   onClick={goToDetails}
-                  className="ui-primary-action min-h-11"
+                  className="ui-primary-action min-h-12 rounded-xl sm:min-h-11 sm:rounded-md"
                 >
                   <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Explore
@@ -322,7 +330,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                   type="button"
                   onClick={toggleWatchlist}
                   disabled={wlLoading}
-                  className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border px-5 py-3 text-sm font-extrabold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                  className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-extrabold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-11 sm:rounded-md ${
                     currentInWatchlist
                       ? "border-emerald-300/45 bg-emerald-400/18 text-emerald-100 hover:bg-emerald-400/24 focus-visible:outline-emerald-200"
                       : "border-white/18 bg-white/10 text-white hover:bg-white/16 focus-visible:outline-white/70"
@@ -384,11 +392,12 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           </div>
         </div>
 
-        <div className="mt-8 flex items-center gap-3 lg:hidden">
+        <div className="mt-5 flex items-center gap-3 sm:mt-8 lg:hidden">
+          <span className="shrink-0 text-xs text-white/55 sm:hidden">Swipe to explore</span>
           <button
             type="button"
             onClick={() => goToSlide(index - 1)}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border border-white/20 bg-black/38 text-white/80 backdrop-blur-sm"
+            className="hidden h-10 w-10 shrink-0 place-items-center rounded-sm border border-white/20 bg-black/38 text-white/80 backdrop-blur-sm sm:grid"
             aria-label="Previous featured title"
           >
             <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -408,7 +417,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           <button
             type="button"
             onClick={() => goToSlide(index + 1)}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border border-white/20 bg-black/38 text-white/80 backdrop-blur-sm"
+            className="hidden h-10 w-10 shrink-0 place-items-center rounded-sm border border-white/20 bg-black/38 text-white/80 backdrop-blur-sm sm:grid"
             aria-label="Next featured title"
           >
             <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
