@@ -6,7 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   loadYouTubeApi,
   type YouTubePlayer,
+  YT_PLAYER_STATE,
 } from "@/lib/youtube-player";
+import { createTrailerReveal } from "@/lib/trailer-reveal";
 
 type VideoStatus = "loading" | "playing" | "ended" | "error" | "blocked";
 
@@ -39,6 +41,7 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [trailerKeys, setTrailerKeys] = useState<Record<number, string>>({});
   const [videoStatus, setVideoStatus] = useState<VideoStatus>("loading");
+  const [videoVisible, setVideoVisible] = useState(false);
   const playerRef = useRef<YouTubePlayer | null>(null);
   const playerIdRef = useRef(`yt-player-${Math.random().toString(36).slice(2, 9)}`);
   const audioEnabledRef = useRef(audioEnabled);
@@ -186,6 +189,9 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
 
     let cancelled = false;
     let player: YouTubePlayer | null = null;
+    let autoplayCheck: number | undefined;
+    setVideoVisible(false);
+    const reveal = createTrailerReveal(setVideoVisible, () => player?.getPlayerState() === YT_PLAYER_STATE.PLAYING);
 
     const start = async () => {
       try {
@@ -200,7 +206,6 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
             autoplay: 1,
             mute: 1,
             controls: 0,
-            modestbranding: 1,
             rel: 0,
             playsinline: 1,
             loop: 0,
@@ -208,11 +213,16 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
             disablekb: 1,
             fs: 0,
             cc_load_policy: 0,
+            origin: window.location.origin,
           },
           events: {
             onReady: (event: { target: YouTubePlayer }) => {
               if (cancelled) return;
               setVideoStatus("loading");
+              const iframe = event.target.getIframe();
+              iframe.tabIndex = -1;
+              iframe.setAttribute("aria-hidden", "true");
+              iframe.title = "Auth trailer background";
               // Respect the user's audio preference for this player
               try {
                 if (audioEnabledRef.current) event.target.unMute();
@@ -221,11 +231,12 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
                 /* ignore */
               }
               // Detect browsers that block programmatic autoplay
-              window.setTimeout(() => {
+              autoplayCheck = window.setTimeout(() => {
                 if (cancelled) return;
                 const state = event.target.getPlayerState();
                 if (state === State?.PLAYING) {
                   setVideoStatus("playing");
+                  reveal.update(true);
                 } else if (state === State?.ENDED) {
                   setVideoStatus("ended");
                 } else {
@@ -235,6 +246,7 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
             },
             onStateChange: (event: { data: number }) => {
               if (cancelled) return;
+              reveal.update(event.data === State?.PLAYING);
               if (event.data === State?.PLAYING) {
                 setVideoStatus("playing");
               } else if (event.data === State?.ENDED) {
@@ -245,7 +257,13 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
             },
             onError: () => {
               if (cancelled) return;
+              reveal.update(false);
               setVideoStatus("error");
+            },
+            onAutoplayBlocked: () => {
+              if (cancelled) return;
+              reveal.update(false);
+              setVideoStatus("blocked");
             },
           },
         });
@@ -270,6 +288,8 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
 
     return () => {
       cancelled = true;
+      reveal.dispose();
+      window.clearTimeout(autoplayCheck);
       window.clearTimeout(handle);
       try {
         playerRef.current?.destroy();
@@ -310,11 +330,11 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
       {/* Image backdrop — base layer / universal fallback */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={`${current.backdrop}-${phase}`}
+          key={current.backdrop}
           initial={{ opacity: 0 }}
-          animate={{ opacity: isVideoPhase ? 0 : isLogin ? 0.82 : 0.7 }}
+          animate={{ opacity: isVideoPhase && videoVisible ? 0 : isLogin ? 0.82 : 0.7 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: isVideoPhase ? 0.6 : 1 }}
+          transition={{ duration: isVideoPhase ? (videoVisible ? 0.6 : 0) : 1 }}
           className="absolute inset-0 z-0"
         >
           <Image
@@ -329,15 +349,15 @@ export default function AuthBackground({ slides, rotationMs = 10000 }: Props) {
       </AnimatePresence>
 
       {/* Trailer video — progressive enhancement (desktop, motion-allowed only).
-          Oversized + cropped + click-blocked to hide all YouTube chrome. */}
+          Keep artwork visible through startup and playback interruptions. */}
       <AnimatePresence>
         {isVideoPhase && currentKey && (
           <motion.div
             key={currentKey}
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            animate={{ opacity: videoVisible ? 1 : 0 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1.2, delay: 0.6 }}
+            transition={{ duration: videoVisible ? 0.7 : 0 }}
             className="absolute inset-0 z-10 overflow-hidden"
           >
             {/* YouTube player mount point — controlled via the IFrame API so we

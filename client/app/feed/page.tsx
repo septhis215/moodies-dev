@@ -1481,7 +1481,7 @@ export default function VideoFeedPage() {
                 </motion.button>
               </div>
 
-              <div className="relative h-52 shrink-0 overflow-hidden border-b border-white/[0.08] sm:h-60 md:h-64">
+              <div className="relative h-44 shrink-0 overflow-hidden border-b border-white/[0.08] sm:h-56 md:h-60">
                 {currentBackdrop && !modalBackdropError ? (
                   <Image
                     src={currentBackdrop}
@@ -1509,16 +1509,16 @@ export default function VideoFeedPage() {
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#ff8a76]">
                     {currentVideoTypeLabel}
                   </p>
-                  <h2 className="mt-1 line-clamp-2 max-w-md text-2xl font-black leading-[1.05] tracking-[-0.025em] text-white drop-shadow-lg sm:text-3xl">
+                  <h2 className="mt-1 line-clamp-2 max-w-md text-2xl font-bold leading-tight text-white drop-shadow-lg sm:text-3xl">
                     {currentVideo.title || currentVideo.name}
                   </h2>
                 </div>
               </div>
 
-              <div className="space-y-5 px-4 pb-5 pt-5 sm:px-5">
+              <div className="px-4 py-4 sm:px-5">
                 <div className="flex gap-4">
                   <div
-                    className="h-36 w-24 shrink-0 rounded-2xl border border-white/12 bg-white/[0.06] bg-cover bg-center shadow-xl shadow-black/40"
+                    className="h-24 w-16 shrink-0 rounded-xl border border-white/12 bg-white/[0.06] bg-cover bg-center shadow-xl shadow-black/40"
                     style={
                       currentPoster
                         ? { backgroundImage: `url(${currentPoster})` }
@@ -1526,7 +1526,7 @@ export default function VideoFeedPage() {
                     }
                     aria-hidden="true"
                   />
-                  <div className="min-w-0 flex-1 pt-1">
+                  <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       {currentYear && Number.isFinite(currentYear) && (
                         <span className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.08] px-2.5 py-1 text-xs font-bold text-white/70">
@@ -1543,9 +1543,6 @@ export default function VideoFeedPage() {
                         </span>
                       ))}
                     </div>
-                  </div>
-                </div>
-
                 <div className="flex flex-wrap items-center gap-2">
                   {Number.isFinite(Number(currentVideo.vote_average)) &&
                     (() => {
@@ -1579,6 +1576,8 @@ export default function VideoFeedPage() {
                     </span>
                   )}
                 </div>
+                  </div>
+                </div>
               </div>
 
               <div className="mx-4 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4 shadow-lg shadow-black/15 sm:mx-5">
@@ -1589,45 +1588,30 @@ export default function VideoFeedPage() {
                 <p
                   className={`text-sm leading-6 text-white/[0.74] transition-all duration-300 ${expanded ? "" : "line-clamp-5"}`}
                 >
-                  {currentVideo.overview}
+                  {currentVideo.overview || "No overview available yet."}
                 </p>
                 {currentVideo.overview?.length > 190 && (
                   <button
                     onClick={() => setExpanded(!expanded)}
-                    className="mt-3 text-xs font-bold text-red-300 transition-colors hover:text-red-200"
+                    aria-expanded={expanded}
+                    className="mt-2 min-h-11 text-sm font-semibold text-red-300 transition-colors hover:text-red-200"
                   >
                     {expanded ? "Show less" : "Read more"}
                   </button>
                 )}
               </div>
 
-              <div className="mx-4 mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:mx-5">
+              {(currentVideo.release_date || currentVideo.first_air_date || currentVideo.original_language) && <div className="mx-4 mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:mx-5">
                 <h4 className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/40">
                   <span className="inline-block h-3.5 w-0.5 rounded-full bg-gradient-to-b from-red-500 to-orange-500" />
                   Info
                 </h4>
                 <div className="grid grid-cols-2 gap-2.5">
-                  <div className="col-span-2 rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
-                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
-                      Type
-                    </div>
-                    <div className="text-sm font-bold uppercase text-white">
-                      {currentContentType}
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
-                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
-                      Video
-                    </div>
-                    <div className="text-sm font-bold uppercase text-white">
-                      {currentVideoTypeLabel}
-                    </div>
-                  </div>
                   {(currentVideo.release_date ||
                     currentVideo.first_air_date) && (
                     <div className="rounded-xl border border-white/[0.08] bg-black/[0.24] p-3.5">
                       <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">
-                        Released
+                        Release date
                       </div>
                       <div className="text-sm font-bold text-white">
                         {new Date(
@@ -1648,7 +1632,7 @@ export default function VideoFeedPage() {
                     </div>
                   )}
                 </div>
-              </div>
+              </div>}
 
               <div className="sticky bottom-0 mt-auto border-t border-white/[0.08] bg-[#0b0c0f]/88 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-2xl sm:px-5 sm:pb-4">
                 {href ? (
