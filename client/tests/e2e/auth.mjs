@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
+import { installMockTurnstile } from './fixtures/turnstile.mjs';
 
 const baseUrl = process.env.BASE_URL || "http://localhost:3000";
 const outputDir = process.env.AUTH_SCREENSHOT_DIR;
@@ -14,6 +15,7 @@ let failReset = false;
 const submissions = [];
 const errors = [];
 const context = await browser.newContext({ reducedMotion: "reduce" });
+await installMockTurnstile(context);
 const PAGE_READY_SETTLE_MS = 750;
 await context.route("**/api/**", async (route) => {
   const path = new URL(route.request().url()).pathname;

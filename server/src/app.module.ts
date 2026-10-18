@@ -47,6 +47,7 @@ import { TurnstileModule } from './common/security/turnstile.module';
           .empty('')
           .default('development'),
         PORT: Joi.number().empty('').default(3001),
+        BIND_HOST: Joi.string().ip().empty('').default('0.0.0.0'),
         // Required — the app cannot function without these.
         JWT_SECRET: Joi.string().required(), // recommend >= 32 random chars
         DATABASE_URL: Joi.string().required(),
@@ -63,6 +64,16 @@ import { TurnstileModule } from './common/security/turnstile.module';
         TURNSTILE_SECRET_KEY: Joi.string().empty('').optional(),
         TURNSTILE_VERIFY_URL: Joi.string().empty('').optional(),
         TURNSTILE_COOKIE_SECRET: Joi.string().empty('').optional(),
+        TURNSTILE_ALLOWED_HOSTNAMES: Joi.string().empty('').optional(),
+        TURNSTILE_VERIFY_TIMEOUT_MS: Joi.number().integer().min(100).max(10000).empty('').default(4000),
+        TURNSTILE_MAX_CONCURRENT: Joi.number().integer().min(1).max(1000).empty('').default(64),
+        TRUST_PROXY: Joi.string().valid('true', 'false').empty('').default('false'),
+        TRUSTED_PROXY_CIDRS: Joi.string().empty('').when('TRUST_PROXY', { is: 'true', then: Joi.required(), otherwise: Joi.optional() }),
+        RATE_LIMIT_GLOBAL_PER_MINUTE: Joi.number().integer().min(1).max(100000).empty('').default(600),
+        RATE_LIMIT_AUTH_IP_PER_MINUTE: Joi.number().integer().min(1).max(10000).empty('').default(30),
+        RATE_LIMIT_READ_IP_PER_MINUTE: Joi.number().integer().min(1).max(100000).empty('').default(300),
+        REDIS_CONNECT_TIMEOUT_MS: Joi.number().integer().min(100).max(10000).empty('').default(1500),
+        REDIS_COMMAND_TIMEOUT_MS: Joi.number().integer().min(100).max(10000).empty('').default(1500),
         REDIS_HOST: Joi.string().empty('').optional(),
         REDIS_PORT: Joi.number().empty('').optional(),
         REDIS_PASS: Joi.string().allow('').optional(),

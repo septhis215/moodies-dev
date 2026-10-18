@@ -19,7 +19,9 @@ function setup(handler, extras = {}) {
       calls.push(request);
       return handler(request);
     },
-    require: () => ({ createAppError: (error) => ({ isOperational: true, ...error }) }),
+    require: (name) => name === "@/lib/turnstile"
+      ? { prepareCaptchaRequest: extras.prepareCaptchaRequest ?? (async request => request), captchaRequestSignal: request => request.signal }
+      : { createAppError: (error) => ({ isOperational: true, ...error }) },
   });
   mod.exports.subscribeSession((event) => events.push(event));
   return { ...mod.exports, calls, events };
@@ -196,6 +198,22 @@ test("an explicit cookie-free guest bootstrap needs no refresh request", async (
   assert.equal((await (await session.fetchSessionBootstrap()).json()).user, null);
   assert.equal(session.calls.length, 1);
   assert.deepEqual(session.events, []);
+});
+
+test("an account change while waiting for CAPTCHA cancels the mutation before its first send", async () => {
+  let release;
+  const waiting = new Promise(resolve => { release = resolve; });
+  const session = setup(() => json({ ok: true }), {
+    prepareCaptchaRequest: async request => {
+      if (request.url.endsWith('/reviews')) await waiting;
+      return request;
+    },
+  });
+  const pending = session.sessionFetch(base + '/reviews', { method: 'POST', body: 'old-account-review' });
+  await session.authenticateSession(base + '/auth/signin', { method: 'POST' });
+  release();
+  await assert.rejects(pending, error => error.code === 'AUTH_SESSION_CHANGED');
+  assert.ok(!session.calls.some(request => request.url.endsWith('/reviews')));
 });
 
 test("storage markers cannot change the initial server/client render", () => {

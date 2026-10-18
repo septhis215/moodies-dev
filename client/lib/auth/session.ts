@@ -1,4 +1,5 @@
 import { createAppError, type AppError } from "@/lib/errors/app-error";
+import { captchaRequestSignal, prepareCaptchaRequest } from "@/lib/turnstile";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api").replace(/\/$/, "");
 const SESSION_LOCK = `moodies:refresh:${API_BASE}`;
@@ -129,7 +130,9 @@ export async function sessionFetch(input: RequestInfo | URL, init: RequestInit =
       userMessage: "Your sign-in changed. Please try this action again.",
     });
   };
-  const response = await fetch(request.clone());
+  const prepared = await prepareCaptchaRequest(request.clone());
+  checkIdentity();
+  const response = await fetch(prepared, { signal: captchaRequestSignal(prepared) });
   checkIdentity();
   if (response.status !== 401 && response.status !== 498) return response;
   const result = await refreshSession();
@@ -137,16 +140,21 @@ export async function sessionFetch(input: RequestInfo | URL, init: RequestInit =
   request.signal.throwIfAborted();
   if (result.status === "unavailable") throw result.error;
   if (result.status === "expired") return response;
-  const retried = await fetch(request.clone());
+  const retryRequest = await prepareCaptchaRequest(request.clone());
+  checkIdentity();
+  const retried = await fetch(retryRequest, { signal: captchaRequestSignal(retryRequest) });
   checkIdentity();
   return retried;
 }
 
 /** Sign-in/signup must not compete with a refresh response for cookie ownership. */
 export async function authenticateSession(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+  // Do not hold the cross-tab session lock while a person completes a challenge.
+  const request = await prepareCaptchaRequest(new Request(input, { ...init, credentials: "include", cache: "no-store" }));
   return withSessionLock(async () => {
+    request.signal.throwIfAborted();
     resetSessionRequests();
-    const response = await fetch(input, { ...init, credentials: "include", cache: "no-store" });
+    const response = await fetch(request, { signal: captchaRequestSignal(request) });
     if (response.ok) publish("signed-in");
     return response;
   });

@@ -1,91 +1,98 @@
 "use client";
-
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { TurnstileFullScreenGate } from "@/components/security/TurnstileFullScreenGate";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import { TurnstileFullScreenGate } from "./TurnstileFullScreenGate";
+import { TurnstileGateContext } from "@/hooks/useTurnstileGate";
 import {
-  TurnstileGateContext,
-  type TurnstileGateState,
-} from "@/hooks/useTurnstileGate";
-import {
-  fetchTurnstileStatus,
-  verifyTurnstileToken,
+  captchaError,
+  registerHumanChallenge,
+  type HumanAction,
 } from "@/lib/turnstile";
 
+type Pending = {
+  id: number;
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+  cleanup: () => void;
+};
+
+/** Public browsing never waits on a CAPTCHA/status request. Mutations request proof. */
 export function TurnstileGateProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [isChecking, setIsChecking] = useState(true);
-  const [isVerified, setIsVerified] = useState(false);
-  const [isReleasing, setIsReleasing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const captchaEnabled = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
-
-  useEffect(() => {
-    if (!captchaEnabled) {
-      setIsChecking(false);
-      setIsVerified(true);
-      setError(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function checkStatus() {
-      setIsChecking(true);
-      try {
-        const status = await fetchTurnstileStatus();
-        if (cancelled) return;
-        setIsVerified(Boolean(status.verified));
-        setError(null);
-      } catch {
-        if (!cancelled) {
-          setIsVerified(false);
-          setError("We could not complete the security check. Please try again.");
-        }
-      } finally {
-        if (!cancelled) setIsChecking(false);
-      }
-    }
-
-    void checkStatus();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [captchaEnabled]);
-
-  const verifyToken = useCallback(async (token: string) => {
-    setError(null);
-    const result = await verifyTurnstileToken(token);
-    if (!result.success || !result.verified) {
-      setIsVerified(false);
-      setError(result.message ?? "Verification failed. Please try again.");
-      return;
-    }
-    setIsVerified(true);
-    setError(null);
-    setIsReleasing(true);
-    window.setTimeout(() => setIsReleasing(false), 1000);
+  const [challenge, setChallenge] = useState<{
+    id: number;
+    action: HumanAction;
+  } | null>(null);
+  const pending = useRef<Pending | null>(null);
+  const pathname = usePathname();
+  const sequence = useRef(0);
+  const finish = useCallback((id: number, token?: string) => {
+    const current = pending.current;
+    if (current?.id !== id) return;
+    pending.current = null;
+    current.cleanup();
+    if (token) current.resolve(token);
+    else
+      current.reject(
+        captchaError(
+          "Security check cancelled. You can try this action again.",
+        ),
+      );
+    setChallenge(null);
   }, []);
-
-  const value = useMemo<TurnstileGateState>(
+  useEffect(() => {
+    const current = pending.current;
+    if (current) finish(current.id);
+  }, [pathname, finish]);
+  useEffect(() => {
+    const unregister = registerHumanChallenge(
+      (nextAction, signal) =>
+        new Promise((resolve, reject) => {
+          if (signal.aborted) {
+            reject(captchaError("Security check cancelled."));
+            return;
+          }
+          const id = ++sequence.current;
+          const abort = () => finish(id);
+          signal.addEventListener("abort", abort, { once: true });
+          pending.current = {
+            id,
+            resolve,
+            reject,
+            cleanup: () => signal.removeEventListener("abort", abort),
+          };
+          setChallenge({ id, action: nextAction });
+        }),
+    );
+    return () => {
+      unregister();
+      const current = pending.current;
+      pending.current = null;
+      current?.cleanup();
+      current?.reject(
+        captchaError("Security check cancelled. Please try again."),
+      );
+    };
+  }, [finish]);
+  const value = useMemo(
     () => ({
-      isChecking,
-      isVerified,
-      isReleasing,
-      isBlocked: !isChecking && (!isVerified || isReleasing),
-      error,
-      verifyToken,
+      action: challenge?.action ?? null,
+      complete: (token: string) => {
+        if (challenge) finish(challenge.id, token);
+      },
+      cancel: () => {
+        if (challenge) finish(challenge.id);
+      },
     }),
-    [error, isChecking, isReleasing, isVerified, verifyToken],
+    [challenge, finish],
   );
-
   return (
     <TurnstileGateContext.Provider value={value}>
       {children}
-      {value.isBlocked && <TurnstileFullScreenGate />}
+      {challenge && <TurnstileFullScreenGate key={challenge.id} />}
     </TurnstileGateContext.Provider>
   );
 }

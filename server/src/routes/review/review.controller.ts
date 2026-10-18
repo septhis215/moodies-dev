@@ -19,15 +19,15 @@ import { SetReactionDto } from './dto/set-reaction.dto';
 import { ReviewBanGuard } from './guard/review-ban.guard';
 import { ReviewService } from './review.service';
 import { TurnstileVerifiedGuard } from 'src/common/security/turnstile-verified.guard';
+import { TurnstileAction } from 'src/common/security/turnstile-action.decorator';
 
 @Controller('reviews')
 export class ReviewController {
   constructor(private readonly reviewsService: ReviewService) {}
 
   @Post()
-  @UseGuards(TurnstileVerifiedGuard)
-  @UseGuards(JwtGuard)
-  @UseGuards(ReviewBanGuard)
+  @TurnstileAction('review')
+  @UseGuards(JwtGuard, ReviewBanGuard, TurnstileVerifiedGuard)
   async createReview(
     @Req() req,
     @Body() dto: CreateReviewDto,
@@ -36,8 +36,8 @@ export class ReviewController {
   }
 
   @Post(':id/replies')
-  @UseGuards(JwtGuard)
-  @UseGuards(ReviewBanGuard)
+  @TurnstileAction('reply')
+  @UseGuards(JwtGuard, ReviewBanGuard, TurnstileVerifiedGuard)
   replyToReview(
     @Req() req,
     @Param('id') reviewId: string,
@@ -79,8 +79,8 @@ export class ReviewController {
   }
 
   @Post(':id/snapshot')
-  @UseGuards(TurnstileVerifiedGuard)
-  @UseGuards(JwtGuard)
+  @TurnstileAction('snapshot')
+  @UseGuards(JwtGuard, TurnstileVerifiedGuard)
   async createReviewSnapshot(
     @Req() req,
     @Param('id') reviewId: string,
