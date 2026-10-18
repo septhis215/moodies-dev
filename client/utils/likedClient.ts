@@ -3,6 +3,7 @@ import {
   normalizeApiError,
   normalizeResponseError,
 } from "@/lib/errors";
+import { sessionFetch } from "@/lib/auth/session";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
@@ -12,7 +13,7 @@ export type LikeType = "movie" | "series";
 // Bearer header. A 401 means "not signed in", which callers treat as empty.
 export async function fetchLikedList() {
   try {
-    const r = await fetch(`${API_BASE}/liked`, {
+    const r = await sessionFetch(`${API_BASE}/liked`, {
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       cache: "no-store",
@@ -29,7 +30,7 @@ export async function fetchLikedList() {
 
 export async function toggleLiked(tmdbId: string, type: LikeType) {
   try {
-    const r = await fetch(`${API_BASE}/liked/toggle`, {
+    const r = await sessionFetch(`${API_BASE}/liked/toggle`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",

@@ -18,11 +18,12 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuid } from 'uuid';
-import { createHash, randomBytes, randomInt } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { RedisService } from 'src/redis/redis.service';
 import { sendVerificationCode } from '../utils/mailer';
 import { uploadAvatarToStorage } from '../utils/storage';
-import { REFRESH_TTL_SECONDS } from './auth.cookies';
+import { accessTtlMs } from './auth.config';
+import { AuthSessionService, type AccessIdentity } from './auth-session.service';
 import { MediaType } from '@prisma/client';
 
 
@@ -36,72 +37,39 @@ export class AuthService {
     private readonly jwt: JwtService,
     private configService: ConfigService,
     private readonly redis: RedisService,
+    private readonly sessions: AuthSessionService,
   ) { }
 
   /** Short-lived access token delivered as an HttpOnly cookie. */
-  signAccessToken(payload: { sub: number | string; email?: string }) {
-    // expiresIn is a config string ('15m', '1h', …); cast past ms's StringValue
-    // template-literal type, which a plain env string can't satisfy.
-    const expiresIn = (process.env.JWT_ACCESS_EXPIRES || '15m') as unknown as number;
+  signAccessToken(payload: { sub: number | string; email?: string; sid?: string; ver?: number }) {
     return this.jwt.sign(
-      { sub: String(payload.sub), ...(payload.email ? { email: payload.email } : {}) },
-      { secret: process.env.JWT_SECRET, expiresIn },
+      { ...payload, sub: String(payload.sub) },
+      { secret: process.env.JWT_SECRET, expiresIn: accessTtlMs() / 1000 },
     );
-  }
-
-  private refreshKey(token: string) {
-    return `rt:${createHash('sha256').update(token).digest('hex')}`;
-  }
-
-  private legacyRefreshKey(token: string) {
-    return `rt:${token}`;
-  }
-
-  /**
-   * Mint an opaque refresh token and record it in Redis (token → userId) with a
-   * TTL. Opaque + server-stored means it can be revoked (logout) and rotated,
-   * unlike a stateless JWT.
-   */
-  async issueRefreshToken(userId: string): Promise<string> {
-    const token = randomBytes(32).toString('hex');
-    await this.redis.set(this.refreshKey(token), userId, REFRESH_TTL_SECONDS);
-    return token;
   }
 
   /** Issue a fresh access + refresh pair for a freshly authenticated user. */
   async issueTokens(userId: string, email?: string) {
-    const accessToken = this.signAccessToken({ sub: userId, email });
-    const refreshToken = await this.issueRefreshToken(userId);
-    return { accessToken, refreshToken };
+    const { session, refreshToken } = await this.sessions.create(userId);
+    const accessToken = this.signAccessToken({ sub: userId, email, sid: session.id, ver: session.user.authVersion });
+    return { accessToken, refreshToken, expiresAt: session.expiresAt };
   }
 
   /**
-   * Rotate a refresh token: validate it against Redis, delete it (single-use),
-   * and issue a new pair. Returns null when the token is unknown/expired — which
-   * also covers a replay of an already-rotated token.
+   * Rotate through the durable session store, including bounded duplicate
+   * recovery. Store outages propagate; only invalid sessions return null.
    */
   async rotateRefreshToken(oldToken: string) {
-    if (!oldToken) return null;
-    const key = this.refreshKey(oldToken);
-    const legacyKey = this.legacyRefreshKey(oldToken);
-    const userId = (await this.redis.get(key)) ?? (await this.redis.get(legacyKey));
-    if (!userId) return null;
-    await this.redis.del([key, legacyKey]);
-
-    const user = await this.prismaService.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true },
-    });
-    if (!user) return null;
-
-    const accessToken = this.signAccessToken({ sub: user.id, email: user.email });
-    const refreshToken = await this.issueRefreshToken(user.id);
-    return { userId: user.id, accessToken, refreshToken };
+    const rotated = await this.sessions.rotate(oldToken);
+    if (!rotated) return null;
+    const { session, refreshToken } = rotated;
+    const accessToken = this.signAccessToken({ sub: session.userId, email: session.user.email, sid: session.id, ver: session.user.authVersion });
+    return { accessToken, refreshToken, expiresAt: session.expiresAt };
   }
 
   /** Invalidate a refresh token (logout). */
   async revokeRefreshToken(token: string | undefined): Promise<void> {
-    if (token) await this.redis.del([this.refreshKey(token), this.legacyRefreshKey(token)]);
+    await this.sessions.revoke(token);
   }
 
   async signup(dto: RegisterDto) {
@@ -201,7 +169,10 @@ export class AuthService {
     if (!ok) throw new UnauthorizedException('Old password is incorrect');
 
     const hash = await argon.hash(dto.newPassword);
-    await this.prismaService.user.update({ where: { id: userId }, data: { password: hash } });
+    await this.prismaService.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: userId }, data: { password: hash, authVersion: { increment: 1 } } });
+      await tx.authSession.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    });
     return { ok: true };
   }
 
@@ -511,19 +482,21 @@ export class AuthService {
 
     // Atomically consume the verified token first, so it can't be replayed by a
     // concurrent reset. Only proceed to set the password if we actually consumed one.
-    const { count } = await this.prismaService.emailVerification.updateMany({
-      where: { email: normalizedEmail, verified: true },
-      data: { verified: false },
+    const changed = await this.prismaService.$transaction(async (tx) => {
+      const { count } = await tx.emailVerification.updateMany({
+        where: { email: normalizedEmail, verified: true, expiresAt: { gt: new Date() } },
+        data: { verified: false },
+      });
+      if (count === 0) return false;
+      const user = await tx.user.update({
+        where: { email: normalizedEmail }, data: { password: hash, authVersion: { increment: 1 } },
+      });
+      await tx.authSession.updateMany({ where: { userId: user.id, revokedAt: null }, data: { revokedAt: new Date() } });
+      return true;
     });
-
-    if (count === 0) {
+    if (!changed) {
       return { success: false, message: 'Email not verified for password reset.' };
     }
-
-    await this.prismaService.user.update({
-      where: { email: normalizedEmail },
-      data: { password: hash },
-    });
 
     return { success: true, message: 'Password reset successful.' };
   }
@@ -687,9 +660,9 @@ export class AuthService {
       };
     }
 
-    let payload: { sub?: string };
+    let payload: AccessIdentity;
     try {
-      payload = await this.jwt.verifyAsync<{ sub?: string }>(accessToken, {
+      payload = await this.jwt.verifyAsync<AccessIdentity>(accessToken, {
         secret: process.env.JWT_SECRET,
       });
     } catch {
@@ -701,7 +674,7 @@ export class AuthService {
       };
     }
 
-    if (!payload.sub) {
+    if (!payload.sub || !await this.sessions.isActive(payload)) {
       return {
         isAuthenticated: false,
         user: null,

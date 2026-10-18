@@ -14,11 +14,13 @@ let failReset = false;
 const submissions = [];
 const errors = [];
 const context = await browser.newContext({ reducedMotion: "reduce" });
+const PAGE_READY_SETTLE_MS = 750;
 await context.route("**/api/**", async (route) => {
   const path = new URL(route.request().url()).pathname;
   const payload = route.request().postDataJSON();
   if (path.endsWith("/security/turnstile/status")) return route.fulfill({ json: { verified: true } });
   if (path.endsWith("/auth/bootstrap")) return route.fulfill({ json: { user: authenticated ? user : null, watchlist: { movieId: [], seriesId: [] }, liked: { movieId: [], seriesId: [] } } });
+  if (path.endsWith("/auth/refresh")) return route.fulfill({ status: authenticated ? 200 : 401, json: authenticated ? { ok: true } : { message: "Invalid or expired session" } });
   if (path.endsWith("/auth/signup")) {
     submissions.push({ path, payload });
     if (failSignup) return route.fulfill({ status: 409, json: { message: "This email is already registered." } });
@@ -44,10 +46,26 @@ await context.route("**/api/**", async (route) => {
 });
 const page = await context.newPage();
 page.on("pageerror", (error) => errors.push(error.message));
+async function waitForPageReady() {
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => { delete document.documentElement.dataset.authTestReadySince; });
+  // Streaming fallbacks can register after the URL changes. Do not type while
+  // the shared loader makes the ready page inert during its settling period.
+  await page.waitForFunction((settleMs) => {
+    const root = document.documentElement;
+    if (document.querySelector("[data-loading-screen], [inert]")) {
+      delete root.dataset.authTestReadySince;
+      return false;
+    }
+    if (!root.dataset.authTestReadySince) root.dataset.authTestReadySince = String(performance.now());
+    return performance.now() - Number(root.dataset.authTestReadySince) >= settleMs;
+  }, PAGE_READY_SETTLE_MS);
+}
 async function navigate(path) {
   const bootstrap = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith("/auth/bootstrap"));
   const response = await page.goto(`${baseUrl}${path}`, { waitUntil: "domcontentloaded", timeout: 120000 });
   await bootstrap;
+  await waitForPageReady();
   return response;
 }
 try {
@@ -107,10 +125,15 @@ try {
   await page.getByRole("heading", { name: "Welcome to Moodies", exact: true }).waitFor();
   if (outputDir) await page.screenshot({ path: `${outputDir}/intro-375.png` });
   await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForPageReady();
   await page.getByRole("link", { name: "Set up my preferences" }).click();
   await page.waitForURL("**/auth/onboarding");
+  await waitForPageReady();
   assert.equal(await page.getByLabel("Your age", { exact: true }).filter({ visible: true }).inputValue(), "");
-  await page.getByLabel("Your age", { exact: true }).filter({ visible: true }).fill("18");
+  const ageInput = page.getByLabel("Your age", { exact: true }).filter({ visible: true });
+  await ageInput.press("1");
+  await ageInput.press("8");
+  assert.equal(await ageInput.inputValue(), "18");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByRole("button", { name: "Comedy", exact: true }).click();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
@@ -148,6 +171,10 @@ try {
   await page.waitForURL("**/auth/verify-code?email=member%40example.com");
   assert.deepEqual(errors, []);
   console.log("Login and password recovery success/error flows passed.");
+} catch (error) {
+  console.error("Auth flow failed", { url: page.url(), submittedPaths: submissions.map((item) => item.path) });
+  console.error(await page.locator("body").innerText().catch(() => "Page unavailable"));
+  throw error;
 } finally {
   if (errors.length) console.error("Browser errors:", errors);
   await context.close();

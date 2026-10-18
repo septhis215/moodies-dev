@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/app/context/AuthProvider";
+import { sessionFetch } from "@/lib/auth/session";
 
 interface BanStatus {
   banned: boolean;
@@ -28,7 +29,7 @@ export function useReviewBanStatus() {
 
     const checkBanStatus = async () => {
       try {
-        const response = await fetch(
+        const response = await sessionFetch(
           `${API}/reviews/me/ban-status`,
           {
             credentials: "include",

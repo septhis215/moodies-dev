@@ -1,4 +1,5 @@
 "use client";
+import { authenticateSession } from "@/lib/auth/session";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -61,7 +62,7 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API}/auth/signup`, {
+      const response = await authenticateSession(`${API}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

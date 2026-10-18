@@ -7,6 +7,10 @@ import { GoogleStrategy } from './strategy/google.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { PassportModule } from '@nestjs/passport';
+import { AuthSessionService } from './auth-session.service';
+import { accessTtlMs } from './auth.config';
+import { AuthSessionCleanupService } from './auth-session-cleanup.service';
+import { CookieOriginGuard } from './cookie-origin.guard';
 
 @Module({
   imports: [
@@ -16,13 +20,13 @@ import { PassportModule } from '@nestjs/passport';
       imports: [ConfigModule],
       useFactory: (cfg: ConfigService) => ({
         secret: cfg.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: cfg.get('JWT_EXPIRES') || '1d' },
+        signOptions: { expiresIn: accessTtlMs() / 1000 },
       }),
       inject: [ConfigService],
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, PrismaService, GoogleStrategy],
+  providers: [AuthService, AuthSessionService, AuthSessionCleanupService, CookieOriginGuard, JwtStrategy, PrismaService, GoogleStrategy],
   exports: [PassportModule, JwtModule, JwtStrategy, AuthService],
 })
 export class AuthModule { }

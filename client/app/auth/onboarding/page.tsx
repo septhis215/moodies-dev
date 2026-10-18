@@ -1,4 +1,5 @@
 "use client";
+import { authenticateSession, sessionFetch } from "@/lib/auth/session";
 
 import { useMemo, useState } from "react";
 import { handleAppError } from "@/lib/errors";
@@ -97,7 +98,7 @@ export default function OnboardingPage() {
           title: "Almost there!",
         });
         if (!pending.accountCreated) {
-          const signupRes = await fetch(`${API_BASE}/auth/signup`, {
+          const signupRes = await authenticateSession(`${API_BASE}/auth/signup`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -116,7 +117,7 @@ export default function OnboardingPage() {
           );
         }
         // Authenticated via cookie now — save prefs with credentials.
-        const prefsRes = await fetch(`${API_BASE}/auth/me/preferences`, {
+        const prefsRes = await sessionFetch(`${API_BASE}/auth/me/preferences`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -142,7 +143,7 @@ export default function OnboardingPage() {
           id: "onboarding-preferences",
           title: "Setting up your profile",
         });
-        const res = await fetch(`${API_BASE}/auth/me/preferences`, {
+        const res = await sessionFetch(`${API_BASE}/auth/me/preferences`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",

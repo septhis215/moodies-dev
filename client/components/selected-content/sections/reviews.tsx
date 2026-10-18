@@ -1,4 +1,5 @@
 "use client";
+import { sessionFetch } from "@/lib/auth/session";
 
 import { tmdbImage } from "@/lib/tmdb";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
@@ -804,7 +805,7 @@ function ReviewForm({
     }
     setSubmitState("submitting");
     try {
-      const res = await fetch(`${API}/reviews`, {
+      const res = await sessionFetch(`${API}/reviews`, {
         method: "POST",
         credentials: "include",
         headers: {

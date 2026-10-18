@@ -1,4 +1,5 @@
 "use client";
+import { sessionFetch } from "@/lib/auth/session";
 
 import { tmdbImage } from "@/lib/tmdb";
 import React, { useMemo, useState, useEffect } from "react";
@@ -409,7 +410,7 @@ export default function AllReviews({
       const submittedContent = (
         (showReplyForm?.prefill ?? "") + replyContent
       ).trim();
-      const res = await fetch(`${API}/reviews/${reviewId}/replies`, {
+      const res = await sessionFetch(`${API}/reviews/${reviewId}/replies`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -467,7 +468,7 @@ export default function AllReviews({
 
     const removing = currentReaction === nextReaction;
     try {
-      const res = await fetch(`${API}/reviews/${reviewId}/reactions`, {
+      const res = await sessionFetch(`${API}/reviews/${reviewId}/reactions`, {
         method: removing ? "DELETE" : "POST",
         credentials: "include",
         headers: removing ? undefined : { "Content-Type": "application/json" },
@@ -512,7 +513,7 @@ export default function AllReviews({
 
     const removing = currentReaction === nextReaction;
     try {
-      const res = await fetch(`${API}/reviews/replies/${replyId}/reactions`, {
+      const res = await sessionFetch(`${API}/reviews/replies/${replyId}/reactions`, {
         method: removing ? "DELETE" : "POST",
         credentials: "include",
         headers: removing ? undefined : { "Content-Type": "application/json" },
@@ -1325,7 +1326,7 @@ function ReviewFormInModal({
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`${API}/reviews`, {
+      const res = await sessionFetch(`${API}/reviews`, {
         method: "POST",
         credentials: "include",
         headers: {

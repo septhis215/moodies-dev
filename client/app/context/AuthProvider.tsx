@@ -9,7 +9,12 @@ import React, {
   useState,
 } from "react";
 import AppLoading from "@/components/ui/AppLoading";
-import { appToast } from "@/lib/toast";
+import { appToast, TOAST_IDS } from "@/lib/toast";
+import { handleAppError } from "@/lib/errors";
+import {
+  endSession, fetchSessionBootstrap, refreshSession, resetSessionRequests,
+  sessionFetch, sessionEpoch, subscribeSession, type RefreshResult,
+} from "@/lib/auth/session";
 
 /* ---------- Types ---------- */
 type User = {
@@ -49,8 +54,8 @@ type AuthContextValue = {
   logout: () => Promise<void>;
   /** Drop client state without a server round-trip (used on a hard 401). */
   logoutSilent: () => void;
-  /** Attempt a single silent token refresh. Returns true on success. */
-  refreshSession: () => Promise<boolean>;
+  /** Distinguishes expiry from an unavailable authentication service. */
+  refreshSession: () => Promise<RefreshResult>;
   /** Re-fetch the current user from /auth/me. */
   reloadUser: () => Promise<void>;
 };
@@ -110,8 +115,8 @@ function extractUser(payload: unknown): User {
 function hasSessionMarker(): boolean {
   if (typeof window === "undefined") return false;
 
-  const hasStorageMarker =
-    window.localStorage.getItem(SESSION_MARKER_KEY) === "1";
+  let hasStorageMarker = false;
+  try { hasStorageMarker = window.localStorage.getItem(SESSION_MARKER_KEY) === "1"; } catch { /* Optional UI hint. */ }
   const hasCookieMarker = document.cookie
     .split(";")
     .some((part) => part.trim() === `${SESSION_MARKER_COOKIE}=1`);
@@ -130,9 +135,15 @@ function shouldBlockForSessionBootstrap(): boolean {
   return hasSessionMarker() || isGoogleLoginLanding();
 }
 
+function notifySessionExpired(): void {
+  appToast.error("Your session has ended. Please sign in again.", {
+    id: TOAST_IDS.authSessionExpired, title: "Session expired", duration: 6000,
+  });
+}
+
 export function markSessionPresent(): void {
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(SESSION_MARKER_KEY, "1");
+    try { window.localStorage.setItem(SESSION_MARKER_KEY, "1"); } catch { /* Cookies remain authoritative. */ }
     const secure = window.location.protocol === "https:" ? "; Secure" : "";
     document.cookie = `${SESSION_MARKER_COOKIE}=1; path=/; max-age=${SESSION_MARKER_MAX_AGE_SECONDS}; SameSite=Lax${secure}`;
   }
@@ -140,20 +151,22 @@ export function markSessionPresent(): void {
 
 export function clearSessionMarker(): void {
   if (typeof window !== "undefined") {
-    window.localStorage.removeItem(SESSION_MARKER_KEY);
-    window.localStorage.removeItem(LAST_ACCOUNT_KEY);
+    try {
+      window.localStorage.removeItem(SESSION_MARKER_KEY);
+      window.localStorage.removeItem(LAST_ACCOUNT_KEY);
+    } catch { /* Storage may be disabled. */ }
     document.cookie = `${SESSION_MARKER_COOKIE}=; path=/; max-age=0; SameSite=Lax`;
   }
 }
 
 function getLastAccountId(): string | undefined {
   if (typeof window === "undefined" || !hasSessionMarker()) return undefined;
-  return window.localStorage.getItem(LAST_ACCOUNT_KEY) ?? undefined;
+  try { return window.localStorage.getItem(LAST_ACCOUNT_KEY) ?? undefined; } catch { return undefined; }
 }
 
 function setLastAccountId(userId?: string): void {
   if (typeof window === "undefined" || !userId) return;
-  window.localStorage.setItem(LAST_ACCOUNT_KEY, userId);
+  try { window.localStorage.setItem(LAST_ACCOUNT_KEY, userId); } catch { /* Optional cache hint. */ }
 }
 
 function toSet(values?: string[]) {
@@ -214,9 +227,9 @@ export function AuthProvider({
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [blockSessionBootstrap, setBlockSessionBootstrap] = useState(
-    () => initialBlockSessionBootstrap || shouldBlockForSessionBootstrap(),
-  );
+  // Match the server on the first render. Browser-only hints are applied after
+  // hydration, otherwise React can discard the page (and input already typed).
+  const [blockSessionBootstrap, setBlockSessionBootstrap] = useState(initialBlockSessionBootstrap);
   const [watchlistMovieIds, setWatchlistMovieIds] = useState<Set<string>>(
     () => initialWatchlist?.movieIds ?? new Set(),
   );
@@ -275,12 +288,10 @@ export function AuthProvider({
   // Identity now lives in an HttpOnly cookie the JS can't read, so we always
   // ask the server who we are rather than decoding a token client-side.
   const reloadUser = useCallback(async () => {
+    const startedEpoch = sessionEpoch();
     try {
-      const res = await fetch(`${API_BASE}/auth/bootstrap`, {
-        credentials: "include",
-        headers: { accept: "application/json" },
-        cache: "no-store",
-      });
+      const res = await fetchSessionBootstrap();
+      if (startedEpoch !== sessionEpoch()) return;
       if (res.ok) {
         const raw = await res.json();
         const boot = asRecord(raw);
@@ -296,35 +307,15 @@ export function AuthProvider({
             boot.liked as IdBuckets | null,
           );
         } else {
+          if (hasSessionMarker()) notifySessionExpired();
           clearSessionMarker();
           clearAccountState();
         }
       }
-    } catch {
-      /* network error — keep current state */
+    } catch (error) {
+      handleAppError(error, { toastKey: "session-unavailable", log: false });
     }
   }, [applyBuckets, clearAccountState]);
-
-  const refreshSession = useCallback(async (): Promise<boolean> => {
-    if (!hasSessionMarker()) return false;
-
-    try {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-        headers: { accept: "application/json" },
-        cache: "no-store",
-      });
-      if (res.ok) {
-        markSessionPresent();
-        return true;
-      }
-      clearSessionMarker();
-      return false;
-    } catch {
-      return false;
-    }
-  }, []);
 
   const logoutSilent = useCallback(() => {
     setUser(null);
@@ -333,21 +324,33 @@ export function AuthProvider({
   }, [clearAccountState]);
 
   const logout = useCallback(async () => {
-    try {
-      await fetch(`${API_BASE}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {
-      /* ignore — clear client state regardless */
+    try { await endSession(); } catch (error) {
+      handleAppError(error, { fallbackMessage: "We could not sign you out. Please try again.", toastKey: "logout-unavailable" });
+      throw error;
     }
-    setUser(null);
-    clearSessionMarker();
-    clearAccountState();
-  }, [clearAccountState]);
+  }, []);
+
+  useEffect(() => subscribeSession((event) => {
+    if (event === "recovered") {
+      markSessionPresent();
+      return;
+    }
+    if (event === "signed-in") {
+      logoutSilent();
+      markSessionPresent();
+      void reloadUser();
+      return;
+    }
+    const hadSession = !!user || hasSessionMarker();
+    logoutSilent();
+    if (event === "expired" && hadSession) {
+      notifySessionExpired();
+    }
+  }), [logoutSilent, reloadUser, user]);
 
   const login = useCallback(
     async (usr?: User) => {
+      resetSessionRequests();
       if (usr) {
         setUser(usr); // optimistic; server cookie is already set
         markSessionPresent();
@@ -361,17 +364,15 @@ export function AuthProvider({
   // Bootstrap the session from cookies on first load (with one refresh retry).
   useEffect(() => {
     let cancelled = false;
+    if (shouldBlockForSessionBootstrap()) setBlockSessionBootstrap(true);
 
     const isGoogleLanding = isGoogleLoginLanding();
 
     (async () => {
+      const startedEpoch = sessionEpoch();
       try {
-        const res = await fetch(`${API_BASE}/auth/bootstrap`, {
-          credentials: "include",
-          headers: { accept: "application/json" },
-          cache: "no-store",
-        });
-        if (!cancelled && res.ok) {
+        const res = await fetchSessionBootstrap();
+        if (!cancelled && startedEpoch === sessionEpoch() && res.ok) {
           const raw = await res.json();
           const boot = asRecord(raw);
           const bootUser = boot.user ? extractUser(boot.user) : null;
@@ -385,22 +386,16 @@ export function AuthProvider({
               boot.watchlist as IdBuckets | null,
               boot.liked as IdBuckets | null,
             );
-          } else if (hasSessionMarker()) {
-            const refreshed = await refreshSession();
-            if (!cancelled && refreshed) await reloadUser();
-            if (!cancelled && !refreshed) {
-              setUser(null);
-              clearSessionMarker();
-              clearAccountState();
-            }
           } else {
+            if (hasSessionMarker()) notifySessionExpired();
             setUser(null);
             clearSessionMarker();
             clearAccountState();
           }
         }
-      } catch {
+      } catch (error) {
         if (!cancelled) {
+          handleAppError(error, { toastKey: "session-unavailable", log: false });
           setWatchlistLoading(false);
           setWatchlistReady(true);
           setLikedLoading(false);
@@ -428,12 +423,24 @@ export function AuthProvider({
     return () => {
       cancelled = true;
     };
-  }, [applyBuckets, clearAccountState, refreshSession, reloadUser]);
+  }, [applyBuckets, clearAccountState]);
 
   useEffect(() => {
-    if (!blockSessionBootstrap || typeof document === "undefined") return;
+    const recover = () => {
+      if (document.visibilityState === "visible" && (user || hasSessionMarker())) void reloadUser();
+    };
+    window.addEventListener("online", recover);
+    document.addEventListener("visibilitychange", recover);
+    return () => {
+      window.removeEventListener("online", recover);
+      document.removeEventListener("visibilitychange", recover);
+    };
+  }, [reloadUser, user]);
+
+  useEffect(() => {
+    if ((!blockSessionBootstrap && loading) || typeof document === "undefined") return;
     document.getElementById(AUTH_PREHIDE_STYLE_ID)?.remove();
-  }, [blockSessionBootstrap]);
+  }, [blockSessionBootstrap, loading]);
 
   const refreshWatchlist = useCallback(async () => {
     if (!userId) {
@@ -444,7 +451,7 @@ export function AuthProvider({
 
     setWatchlistLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/watchlist`, {
+      const res = await sessionFetch(`${API_BASE}/watchlist`, {
         credentials: "include",
         headers: { accept: "application/json" },
         cache: "no-store",
@@ -470,7 +477,7 @@ export function AuthProvider({
 
     setLikedLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/liked`, {
+      const res = await sessionFetch(`${API_BASE}/liked`, {
         credentials: "include",
         headers: { accept: "application/json" },
         cache: "no-store",
@@ -580,7 +587,6 @@ export function AuthProvider({
       login,
       logout,
       logoutSilent,
-      refreshSession,
       reloadUser,
     ]
   );

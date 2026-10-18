@@ -153,17 +153,18 @@ Do not use the `out` directory for the current dynamic client.
 
 Auth no longer uses a Bearer token stored in `localStorage`. The session now lives in
 **HttpOnly cookies** that JavaScript can't read (closes the XSS token-theft and
-token-in-URL risks), with a refresh token tracked server-side in Redis so logout
+token-in-URL risks), with a refresh token tracked server-side in PostgreSQL so logout
 actually revokes the session.
 
 **What changed**
 - `signin` / `signup` / Google callback set two cookies (`mood_at` access, `mood_rt`
   refresh) instead of returning a token. The Google callback **no longer puts the token
   in the redirect URL**.
-- New `POST /auth/refresh` rotates the refresh token; `POST /auth/logout` revokes it.
-- The JWT strategy reads the access token from the cookie, with a **Bearer-header
-  fallback** during rollout.
-- Every client API call now sends `credentials: "include"` and no `Authorization`
+- `POST /api/auth/refresh` rotates the refresh token; `POST /api/auth/logout` revokes it,
+  including when the access JWT has expired. The refresh cookie has `Path=/api/auth`.
+- The JWT strategy reads the access token exclusively from the cookie and checks
+  session revocation and the user's authentication version.
+- Protected client API calls use `client/lib/auth/session.ts`, send `credentials: "include"`, and no `Authorization`
   header. The old `secureStorage` util and `NEXT_PUBLIC_STORAGE_SECRET` were **removed**
   — the token is never exposed to JS, so client-side storage isn't needed.
 
@@ -172,22 +173,27 @@ actually revokes the session.
 | Var | Default | Notes |
 |---|---|---|
 | `JWT_ACCESS_EXPIRES` | `15m` | Access-token (cookie) lifetime. |
-| `REFRESH_EXPIRES_DAYS` | `30` | Refresh-token lifetime (also the Redis TTL). |
+| `REFRESH_EXPIRES_DAYS` | `30` | Absolute session lifetime; rotation never extends it. |
 | `COOKIE_SAMESITE` | `lax` | `lax` \| `strict` \| `none`. See cross-site note below. |
 | `COOKIE_SECURE` | `NODE_ENV==='production'` | Force `true`/`false`. Required `true` when SameSite=None. |
 | `COOKIE_DOMAIN` | host-only | Set e.g. `.moodies.com` to share the cookie across subdomains. |
 
-> Refresh tokens are stored in Redis (`rt:<token>` → userId), so the existing `REDIS_*`
-> vars must be set for login/refresh to work.
+New sessions store only current/previous refresh-token hashes in the `auth_sessions`
+PostgreSQL table. Redis is needed only to import remaining legacy sessions, not for
+new login/refresh. See [session hardening](SESSION_HARDENING.md) for rollout,
+retry behavior, testing, and rollback constraints.
 
 **SameSite / cross-origin rule (important)**
-- `localhost:3000 ↔ :4000` and a `app.x.com ↔ api.x.com` split are **same-site**
+- `http://localhost:3000 ↔ http://localhost:4000` and an HTTPS `app.x.com ↔ api.x.com` split are **same-site**
   (SameSite ignores port; both share the registrable domain), so the default
   `SameSite=Lax` cookies are sent on `fetch(credentials:"include")` — no change needed.
 - Only if the API is on a **truly different domain** from the client do you need
-  `COOKIE_SAMESITE=none` + `COOKIE_SECURE=true` (and HTTPS).
+  `COOKIE_SAMESITE=none` + `COOKIE_SECURE=true` (and HTTPS). This includes a localhost
+  frontend calling a hosted API. Browsers can still block third-party cookies;
+  prefer a local API or frontend/API hosts on the same site.
 - CORS already runs with `credentials: true`; just ensure the client origin is in
   `CORS_ORIGINS` (it must be an explicit origin, never `*`).
+- Refresh/logout additionally validate the browser's `Origin` against that allowlist.
 
 **Manual test checklist after deploying this**
 1. Email signin → cookies `mood_at`/`mood_rt` set (DevTools → Application → Cookies); no token in `localStorage`.
@@ -195,7 +201,7 @@ actually revokes the session.
 3. Google sign-in → lands on `/` (or `/auth/onboarding`) with **no `?token=` in the URL**.
 4. Logout (Navbar + profile) → cookies cleared and `/auth/me` returns 401.
 5. Let the access token expire (or delete `mood_at`) and hit a protected page → it
-   silently refreshes via `/auth/refresh` and succeeds.
+   silently refreshes via `/api/auth/refresh` and succeeds.
 
 > **Note (SEC-6, not addressed):** `docker-compose.yml` still has a hardcoded Postgres
 > password and a passwordless, port-exposed MongoDB. Left as-is per decision; only safe

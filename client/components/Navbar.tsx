@@ -597,7 +597,7 @@ export function NavbarComponent({
                     disabled={isLoggingOut}
                     onClick={() => {
                       setIsMenuOpen(false);
-                      void logout();
+                      void logout().catch(() => {});
                     }}
                     className={`inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3.5 text-sm font-medium text-white/65 transition hover:border-[#e94f37]/25 hover:bg-[#e94f37]/[0.07] hover:text-white disabled:cursor-wait disabled:opacity-55 ${focusRing}`}
                   >
@@ -768,7 +768,7 @@ export function NavbarComponent({
                           type="button"
                           role="menuitem"
                           disabled={isLoggingOut}
-                          onClick={() => void logout()}
+                          onClick={() => void logout().catch(() => {})}
                           className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-white/62 transition hover:bg-[#e94f37]/[0.07] hover:text-white disabled:cursor-wait disabled:opacity-55 ${focusRing}`}
                         >
                           <IconLogout
@@ -967,7 +967,7 @@ export function NavbarComponent({
                 disabled={isLoggingOut}
                 onClick={() => {
                   setIsMobileOpen(false);
-                  void logout();
+                  void logout().catch(() => {});
                 }}
                 aria-label="Sign out of Moodies"
                 className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.035] text-[#ef775f] transition hover:border-[#e94f37]/25 hover:bg-[#e94f37]/[0.07] disabled:cursor-wait disabled:opacity-55 ${focusRing}`}

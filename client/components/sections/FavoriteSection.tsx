@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Bookmark, SlidersHorizontal } from "lucide-react";
 import { CuratedShelf, CuratedShelfSkeleton } from "./CuratedShelf";
 import { useAuth } from "@/app/context/AuthProvider";
+import { sessionFetch } from "@/lib/auth/session";
 import { handleAppError, normalizeResponseError } from "@/lib/errors";
 import type { All } from "@/types/all";
 import { TmdbImage } from "@/components/ui/TmdbImage";
@@ -29,8 +30,6 @@ export default function FavoriteSection({
   const {
     isAuthenticated,
     loading: authLoading,
-    refreshSession,
-    logoutSilent,
     user,
   } = useAuth();
   const [items, setItems] = useState<All[]>(data || []);
@@ -59,15 +58,7 @@ export default function FavoriteSection({
           cache: "no-store",
           signal: controller.signal,
         };
-        let response = await fetch(url, options);
-        if (response.status === 401 || response.status === 498) {
-          if (await refreshSession()) response = await fetch(url, options);
-          if (controller.signal.aborted) return;
-          if (response.status === 401 || response.status === 498) {
-            logoutSilent();
-            return;
-          }
-        }
+        const response = await sessionFetch(url, options);
         if (response.status === 400) {
           if (!controller.signal.aborted) setStatus("preferences");
           return;
@@ -99,8 +90,6 @@ export default function FavoriteSection({
     isAuthenticated,
     user?.id,
     retry,
-    refreshSession,
-    logoutSilent,
   ]);
 
   if (authLoading || !isAuthenticated) return null;
