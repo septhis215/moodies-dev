@@ -70,6 +70,7 @@ async function bootstrap() {
       callback(null, false);
     },
     credentials: true,
+    exposedHeaders: ['Retry-After', 'RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
     // Cross-origin JSON mutations preflight in staging; cache successful OPTIONS
     // checks briefly so repeated save/like clicks do not pay that round trip.
     maxAge: 600,
@@ -86,7 +87,7 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const port = process.env.PORT || 3001; // set PORT env or default
-  await app.listen(port);
+  await app.listen(port, process.env.BIND_HOST || '0.0.0.0');
   Logger.log(`Nest listening on http://localhost:${port}`, 'Bootstrap');
 }
 bootstrap();

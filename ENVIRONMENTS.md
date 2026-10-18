@@ -78,6 +78,15 @@ Two env vars exist, and they are **not** interchangeable:
 
 ## Backend deployment
 
+For the current action-based CAPTCHA, trusted-proxy requirements, Redis outage
+policy, and Cloudflare staging/origin setup, follow [BOT_PROTECTION.md](BOT_PROTECTION.md).
+`TRUST_PROXY=true` now requires `TRUSTED_PROXY_CIDRS`. Build the frontend with its
+matching `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; set `TURNSTILE_ALLOWED_HOSTNAMES` to the
+frontend hostnames on the backend (or derive them from correct existing origins).
+The old generic CAPTCHA cookie no longer authorizes protected actions.
+Root Compose published ports now bind to `127.0.0.1`; use the controlled reverse
+proxy rather than exposing the frontend/API or database ports directly.
+
 - Build with `npm run build` from the repository root; start with `npm run start:prod`
   from `server/`.
 - Provide `DATABASE_URL`, `DIRECT_URL` when migrations are needed, and all required secrets

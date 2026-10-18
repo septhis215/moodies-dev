@@ -2,6 +2,11 @@
 
 This directory contains production templates for the NestJS API in `server/`.
 The VPS should expose only the reverse proxy; Node listens on localhost.
+The systemd template sets `BIND_HOST=127.0.0.1`; do not override this to a public
+bind in `/etc/moodies/server.env`. Set `TRUST_PROXY=true` and
+`TRUSTED_PROXY_CIDRS=127.0.0.1/32,::1/128` for local Nginx. See
+[BOT_PROTECTION.md](../../BOT_PROTECTION.md) for Cloudflare real-IP/origin lockdown,
+staging Access, CAPTCHA keys, and the coordinated frontend/backend cutover.
 
 ## Recommended layout
 

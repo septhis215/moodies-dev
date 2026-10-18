@@ -8,6 +8,7 @@ User=moodies
 WorkingDirectory=/var/www/moodies
 EnvironmentFile=/etc/moodies/server.env
 Environment=NODE_ENV=production
+Environment=BIND_HOST=127.0.0.1
 ExecStart=/usr/bin/npm run start:prod --workspace server
 Restart=always
 RestartSec=5

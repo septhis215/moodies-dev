@@ -28,6 +28,7 @@ import {
   setAuthCookies,
 } from './auth.cookies';
 import { TurnstileVerifiedGuard } from 'src/common/security/turnstile-verified.guard';
+import { TurnstileAction } from 'src/common/security/turnstile-action.decorator';
 import { CookieOriginGuard } from './cookie-origin.guard';
 
 type PasswordResetRequestBody = {
@@ -54,6 +55,7 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(TurnstileVerifiedGuard)
   @Post('signup')
+  @TurnstileAction('signup')
   async signup(
     @Body() dto: authDto.RegisterDto,
     @Res({ passthrough: true }) res: ExpressResponse,
@@ -71,6 +73,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(TurnstileVerifiedGuard)
   @Post('signin')
+  @TurnstileAction('signin')
   async signin(
     @Body() dto: authDto.LoginDto,
     @Res({ passthrough: true }) res: ExpressResponse,
@@ -183,6 +186,7 @@ export class AuthController {
   /* ================= PASSWORD RESET (email-code flow) ================= */
 
   @Post('request-reset')
+  @TurnstileAction('password_reset')
   @UseGuards(TurnstileVerifiedGuard)
   async requestReset(
     @Body() body: PasswordResetRequestBody,

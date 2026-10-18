@@ -70,6 +70,17 @@ function safeUserMessage(type: AppErrorType, payload?: ErrorPayload): string {
   return ERROR_MESSAGES[type];
 }
 
+function securityMessage(code: unknown): string | undefined {
+  const messages: Record<string, string> = {
+    CAPTCHA_REQUIRED: 'Please complete the security check and try again.',
+    CAPTCHA_REJECTED: 'The security check expired or was not accepted. Please try again.',
+    CAPTCHA_UNAVAILABLE: 'Security verification is temporarily unavailable. Please try again shortly.',
+    CAPTCHA_CLIENT_OUTDATED: 'Please reload Moodies to use the updated security check.',
+    RATE_LIMIT_UNAVAILABLE: 'This action is temporarily unavailable. Please try again shortly.',
+  };
+  return typeof code === 'string' && Object.hasOwn(messages, code) ? messages[code] : undefined;
+}
+
 export async function normalizeResponseError(
   response: Response,
   fallbackMessage?: string,
@@ -102,7 +113,7 @@ export async function normalizeResponseError(
       firstMessage(payload?.message) ??
       firstMessage(payload?.error) ??
       `${response.status} ${response.statusText}`.trim(),
-    userMessage: fallbackMessage ?? safeUserMessage(type, payload),
+    userMessage: securityMessage(payload?.code) ?? fallbackMessage ?? safeUserMessage(type, payload),
     details,
     isOperational: true,
   });
@@ -110,6 +121,7 @@ export async function normalizeResponseError(
 
 export function normalizeApiError(error: unknown, fallbackMessage?: string): AppError {
   if (isAppError(error)) {
+    if (securityMessage(error.code)) return error;
     return fallbackMessage ? { ...error, userMessage: fallbackMessage } : error;
   }
 

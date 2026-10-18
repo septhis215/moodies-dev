@@ -141,6 +141,10 @@ client/
   not an action file).
 - The provider order in `app/layout.tsx` is load-bearing:
   `PerformanceMonitor → ToastProvider → AuthProvider → AppErrorProvider → TurnstileGateProvider → ClientLayout → AppToaster`.
+- `TurnstileGateProvider` only opens an on-demand action challenge; public browsing
+  must not wait on CAPTCHA/status requests. `lib/turnstile.ts` maps protected POSTs
+  to fresh single-use tokens; the backend validates hostname and action, not a
+  reusable clearance cookie. See root `BOT_PROTECTION.md` for rollout and edge setup.
 - `app/layout.tsx` injects an inline "auth pre-hide" script that blanks the page when a
   session marker exists in `localStorage` (`moodies:session`) — relevant to any flash,
   hydration, or white-screen bug report.
@@ -204,6 +208,11 @@ server/
 - Env validation is a **Joi schema in `app.module.ts`**, not `env.ts`. Required:
   `JWT_SECRET`, `DATABASE_URL`. Optional-with-defaults: TMDB, Redis, Turnstile, Google,
   Resend, Supabase, `CORS_ORIGINS`, `CLIENT_URL`, `PORT`.
+- IP-based security uses `ClientIpService`, socket-first and explicit trusted
+  CIDRs. `TRUST_PROXY=true` requires `TRUSTED_PROXY_CIDRS`; arbitrary forwarded/CF
+  headers are not identity. Redis token buckets enforce aggregate/route/account
+  budgets. Hosted writes fail closed on limiter outages; public reads and session
+  maintenance have bounded local fallback. Edge protection is still required.
 - The API base URL **must always end in `/api`** because of `app.setGlobalPrefix("api")`
   in `main.ts`. A base URL without the suffix fails silently (404 against the root).
 
@@ -330,6 +339,8 @@ Local infrastructure (Compose): `postgres-dev` on host port **5434** (db
 `moodies-postgres`), `mongo` on 27017, `server` published on **4000:4000** (`server/.env`
 sets `PORT="4000"`; a bare `nest start` without it falls back to **3001**), `client` on
 3000:3000.
+All root Compose host port publications now bind to `127.0.0.1`; containers retain
+their normal internal ports. Hosted/LAN access must use a controlled proxy.
 
 ---
 
