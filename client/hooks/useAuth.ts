@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { markSessionPresent } from "@/app/context/AuthProvider";
 import { handleAppError, normalizeResponseError } from "@/lib/errors";
 import { appToast } from "@/lib/toast";
+import { authenticateSession } from "@/lib/auth/session";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
@@ -26,7 +27,7 @@ export function useAuth() {
                 // Perform sign-in. The server sets the session as HttpOnly
                 // cookies on this response — credentials:include is required for
                 // the browser to store them, and there is no token to persist.
-                const res = await fetch(`${API_BASE}/auth/signin`, {
+                const res = await authenticateSession(`${API_BASE}/auth/signin`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     credentials: "include",

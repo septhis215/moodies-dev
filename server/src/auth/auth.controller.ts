@@ -28,6 +28,7 @@ import {
   setAuthCookies,
 } from './auth.cookies';
 import { TurnstileVerifiedGuard } from 'src/common/security/turnstile-verified.guard';
+import { CookieOriginGuard } from './cookie-origin.guard';
 
 type PasswordResetRequestBody = {
   email: string;
@@ -38,10 +39,16 @@ export class AuthController {
   constructor(private authService: AuthService) { }
 
   @Get('bootstrap')
-  bootstrap(@Req() req: ExpressRequest) {
-    return this.authService.getBootstrapFromAccessToken(
-      readCookie(req, ACCESS_COOKIE),
-    );
+  async bootstrap(@Req() req: ExpressRequest, @Res({ passthrough: true }) res: ExpressResponse) {
+    res.setHeader('Cache-Control', 'no-store');
+    const boot = await this.authService.getBootstrapFromAccessToken(readCookie(req, ACCESS_COOKIE));
+    // Upgrade still-valid legacy access sessions before their incorrectly scoped refresh cookie expires.
+    const hasRefreshCookie = !!readCookie(req, REFRESH_COOKIE);
+    if (boot.user && !hasRefreshCookie) {
+      const tokens = await this.authService.issueTokens(boot.user.id, boot.user.email);
+      setAuthCookies(res, tokens.accessToken, tokens.refreshToken, tokens.expiresAt);
+    }
+    return { ...boot, canRefresh: hasRefreshCookie || !!boot.user };
   }
 
   @HttpCode(HttpStatus.CREATED)
@@ -53,11 +60,11 @@ export class AuthController {
   ) {
     // Do not log `dto` — it contains the plaintext password.
     const result = await this.authService.signup(dto);
-    const { accessToken, refreshToken } = await this.authService.issueTokens(
+    const { accessToken, refreshToken, expiresAt } = await this.authService.issueTokens(
       result.user.id,
       result.user.email,
     );
-    setAuthCookies(res, accessToken, refreshToken);
+    setAuthCookies(res, accessToken, refreshToken, expiresAt);
     return result;
   }
 
@@ -69,28 +76,29 @@ export class AuthController {
     @Res({ passthrough: true }) res: ExpressResponse,
   ) {
     const result = await this.authService.signin(dto);
-    const { accessToken, refreshToken } = await this.authService.issueTokens(
+    const { accessToken, refreshToken, expiresAt } = await this.authService.issueTokens(
       result.user.id,
       result.user.email,
     );
-    setAuthCookies(res, accessToken, refreshToken);
+    setAuthCookies(res, accessToken, refreshToken, expiresAt);
     return result;
   }
 
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
+  @UseGuards(CookieOriginGuard)
   async refresh(
     @Req() req: ExpressRequest,
     @Res({ passthrough: true }) res: ExpressResponse,
   ) {
+    res.setHeader('Cache-Control', 'no-store');
     const rotated = await this.authService.rotateRefreshToken(
       readCookie(req, REFRESH_COOKIE) ?? '',
     );
     if (!rotated) {
-      clearAuthCookies(res);
       throw new UnauthorizedException('Invalid or expired session');
     }
-    setAuthCookies(res, rotated.accessToken, rotated.refreshToken);
+    setAuthCookies(res, rotated.accessToken, rotated.refreshToken, rotated.expiresAt);
     return { ok: true };
   }
 
@@ -111,12 +119,13 @@ export class AuthController {
   // reset-password (see below), which the client already uses.
 
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtGuard)
   @Post('logout')
+  @UseGuards(CookieOriginGuard)
   async logout(
     @Req() req: ExpressRequest,
     @Res({ passthrough: true }) res: ExpressResponse,
   ) {
+    res.setHeader('Cache-Control', 'no-store');
     // Revoke the refresh token server-side and clear both cookies, so logout
     // actually invalidates the session rather than just deleting a client copy.
     await this.authService.revokeRefreshToken(readCookie(req, REFRESH_COOKIE));
@@ -152,11 +161,11 @@ export class AuthController {
 
     // Establish the session as HttpOnly cookies. The access token is NEVER placed
     // in the redirect URL (it would leak via history, logs and the Referer header).
-    const { accessToken, refreshToken } = await this.authService.issueTokens(
+    const { accessToken, refreshToken, expiresAt } = await this.authService.issueTokens(
       user.id,
       user.email,
     );
-    setAuthCookies(res, accessToken, refreshToken);
+    setAuthCookies(res, accessToken, refreshToken, expiresAt);
 
     const base = process.env.CLIENT_URL ?? 'http://localhost:3000';
 

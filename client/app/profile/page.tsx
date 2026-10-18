@@ -1,4 +1,6 @@
 "use client";
+import { sessionFetch } from "@/lib/auth/session";
+import { handleAppError } from "@/lib/errors";
 
 import { tmdbImage } from "@/lib/tmdb";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
@@ -200,7 +202,6 @@ export default function ProfilePage() {
     isAuthenticated,
     loading: authLoading,
     logout,
-    logoutSilent,
   } = useAuth();
 
   const [profile, setProfile] = useState<ServerUser | null>(null);
@@ -243,6 +244,15 @@ export default function ProfilePage() {
     recentActivity: true,
   });
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setProfile(null);
+    setWatchlist(null);
+    setReviews([]);
+    setAchievements([]);
+    setEditOpen(false);
+    setAvatarPreview(null);
+  }, [decodedUser?.id]);
 
   const handleAvatarFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;
@@ -299,7 +309,7 @@ export default function ProfilePage() {
 
       const [profileRes, avatarRes] = await Promise.all([
         Object.keys(body).length > 0
-          ? fetch(`${API_BASE}/auth/me/profile`, {
+          ? sessionFetch(`${API_BASE}/auth/me/profile`, {
               method: "PATCH",
               credentials: "include",
               headers: {
@@ -309,7 +319,7 @@ export default function ProfilePage() {
             })
           : Promise.resolve(null),
         avatarPreview
-          ? fetch(`${API_BASE}/auth/me/avatar`, {
+          ? sessionFetch(`${API_BASE}/auth/me/avatar`, {
               method: "PATCH",
               credentials: "include",
               headers: {
@@ -379,7 +389,7 @@ export default function ProfilePage() {
 
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/reviews/me?limit=200`, {
+        const res = await sessionFetch(`${API_BASE}/reviews/me?limit=200`, {
           credentials: "include",
           cache: "no-store",
         });
@@ -406,6 +416,8 @@ export default function ProfilePage() {
           }),
         );
         if (alive) setReviews(enriched);
+      } catch (error) {
+        if (alive) handleAppError(error, { toastKey: "profile-reviews-error" });
       } finally {
         if (alive) setReviewsLoading(false);
       }
@@ -414,7 +426,7 @@ export default function ProfilePage() {
     return () => {
       alive = false;
     };
-  }, [tab, isAuthenticated]);
+  }, [tab, isAuthenticated, decodedUser?.id]);
 
   /* ---------------- Fetch profile + watchlist ---------------- */
   useEffect(() => {
@@ -424,18 +436,17 @@ export default function ProfilePage() {
     (async () => {
       setLoading(true);
       try {
-        const mePromise = fetch(`${API_BASE}/auth/me`, {
+        const mePromise = sessionFetch(`${API_BASE}/auth/me`, {
           credentials: "include",
           cache: "no-store",
         });
-        const watchlistPromise = fetch(`${API_BASE}/watchlist`, {
+        const watchlistPromise = sessionFetch(`${API_BASE}/watchlist`, {
           credentials: "include",
           cache: "no-store",
         });
-        const meRes = await mePromise;
+        const [meRes, wlRes] = await Promise.all([mePromise, watchlistPromise]);
 
         if (!alive) return;
-        if (meRes.status === 401) return logoutSilent();
         if (meRes.ok) {
           const me = await meRes.json();
           setProfile(me);
@@ -444,10 +455,10 @@ export default function ProfilePage() {
           }
         }
 
-        const wlRes = await watchlistPromise;
         if (!alive) return;
-        if (wlRes.status === 401) return logoutSilent();
         if (wlRes.ok) setWatchlist(await wlRes.json());
+      } catch (error) {
+        if (alive) handleAppError(error, { toastKey: "profile-session-error" });
       } finally {
         if (alive) setLoading(false);
       }
@@ -456,7 +467,7 @@ export default function ProfilePage() {
     return () => {
       alive = false;
     };
-  }, [isAuthenticated, logoutSilent]);
+  }, [isAuthenticated, decodedUser?.id]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -464,13 +475,12 @@ export default function ProfilePage() {
 
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/auth/me/achievements`, {
+        const res = await sessionFetch(`${API_BASE}/auth/me/achievements`, {
           credentials: "include",
           cache: "no-store",
         });
 
         if (!alive) return;
-        if (res.status === 401) return logoutSilent();
         if (res.ok) {
           const payload = await res.json();
           setAchievements(
@@ -485,7 +495,7 @@ export default function ProfilePage() {
     return () => {
       alive = false;
     };
-  }, [isAuthenticated, logoutSilent]);
+  }, [isAuthenticated, decodedUser?.id]);
 
   /* ---------------- Fetch TMDB details ---------------- */
   const movieIds = useMemo(() => watchlist?.movieId ?? [], [watchlist]);
@@ -919,8 +929,10 @@ export default function ProfilePage() {
               <button
                 className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:bg-white/5 hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
                 onClick={async () => {
-                  await logout();
-                  window.location.href = "/";
+                  try {
+                    await logout();
+                    window.location.href = "/";
+                  } catch { /* AuthProvider displays the recoverable logout error. */ }
                 }}
               >
                 <LogOut className="h-4 w-4" />

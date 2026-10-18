@@ -52,7 +52,7 @@ import { TurnstileModule } from './common/security/turnstile.module';
         DATABASE_URL: Joi.string().required(),
         // Optional / have safe defaults in code.
         JWT_ACCESS_EXPIRES: Joi.string().empty('').default('15m'),
-        REFRESH_EXPIRES_DAYS: Joi.number().empty('').default(30),
+        REFRESH_EXPIRES_DAYS: Joi.number().positive().empty('').default(30),
         DIRECT_URL: Joi.string().empty('').optional(),
         TMDB_API_KEY: Joi.string().empty('').optional(),
         YOUTUBE_API_KEY: Joi.string().empty('').optional(),

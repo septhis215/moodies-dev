@@ -1,4 +1,5 @@
 import { normalizeApiError, normalizeResponseError } from "./normalize-api-error";
+import { sessionFetch } from "@/lib/auth/session";
 
 export type ApiRequestOptions = RequestInit & {
   fallbackMessage?: string;
@@ -11,7 +12,7 @@ export async function apiRequest<T>(
   const { fallbackMessage, ...init } = options;
 
   try {
-    const response = await fetch(input, init);
+    const response = await (init.credentials === "include" ? sessionFetch(input, init) : fetch(input, init));
     if (!response.ok) throw await normalizeResponseError(response, fallbackMessage);
     return (await response.json()) as T;
   } catch (error) {

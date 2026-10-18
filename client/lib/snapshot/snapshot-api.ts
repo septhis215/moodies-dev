@@ -1,3 +1,4 @@
+import { sessionFetch } from "@/lib/auth/session";
 import type {
   SnapshotFormat,
   SnapshotMediaType,
@@ -13,7 +14,7 @@ async function postSnapshot<T>(
   body: { format: SnapshotFormat },
   credentials: RequestCredentials = "include",
 ): Promise<T> {
-  const response = await fetch(`${API}${path}`, {
+  const response = await sessionFetch(`${API}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials,

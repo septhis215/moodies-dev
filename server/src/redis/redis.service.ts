@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient } from 'redis';
 
@@ -59,6 +59,22 @@ export class RedisService implements OnModuleDestroy {
   async get(key: string): Promise<string | null> {
     const client = await this.getClient();
     return client ? client.get(key) : null;
+  }
+
+  /** Legacy auth reads must distinguish missing tokens from an unavailable store. */
+  async getSessionWithTtl(key: string): Promise<{ value: string; ttlSeconds: number } | null> {
+    const client = await this.getClient();
+    if (!client) throw new ServiceUnavailableException('Session storage is temporarily unavailable');
+    const value = await client.get(key);
+    if (!value) return null;
+    const ttlSeconds = await client.ttl(key);
+    return ttlSeconds > 0 ? { value, ttlSeconds } : null;
+  }
+
+  async deleteSessionKeys(keys: string[]): Promise<void> {
+    const client = await this.getClient();
+    if (!client) throw new ServiceUnavailableException('Session storage is temporarily unavailable');
+    await client.del(keys);
   }
 
   async del(key: string | string[]): Promise<void> {

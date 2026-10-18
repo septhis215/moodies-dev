@@ -1,4 +1,5 @@
 "use client";
+import { sessionFetch } from "@/lib/auth/session";
 
 import PageSkeleton from "@/components/loading/PageSkeleton";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -407,7 +408,7 @@ export default function MoodDiscoveryWheel() {
 
     try {
       if (forceRefresh) {
-        const response = await fetch(
+        const response = await sessionFetch(
           `${API_BASE}/moods/recommendations/regenerate`,
           {
             method: "POST",

@@ -64,7 +64,7 @@ Each pillar below maps to real, shipped code, not aspirations.
 | ORM / primary DB | Prisma 6.15 on PostgreSQL 15 | `^6.15.0` |
 | Cache | Redis (L1) with Prisma tables as durable L2 | `redis` `^5.8.2` |
 | Secondary DBs present | MongoDB + TypeORM + Mongoose are installed and wired in `AppModule`/compose but are **legacy/side** stores, not the source of truth | — |
-| Auth | JWT access + refresh cookies, Argon2 and bcrypt both present, Passport Google OAuth2 | — |
+| Auth | JWT access + refresh cookies, PostgreSQL session authority (legacy Redis reader), Argon2 and bcrypt both present, Passport Google OAuth2 | — |
 | Bot protection | Cloudflare Turnstile (`@marsidev/react-turnstile` client, Nest guard server) | — |
 | Email | Nodemailer with a `MAIL_SUPPORT` sender; Resend config key supported | — |
 | Avatars / uploads | Supabase Storage | — |
@@ -181,7 +181,7 @@ server/
 │   │   └── user/               # public user profile read
 │   └── utils/
 ├── prisma/
-│   ├── schema.prisma           # 20 models + 3 enums — source of truth for the data model
+│   ├── schema.prisma           # 22 models + 3 enums — source of truth for the data model
 │   ├── migrations/             # 22 migration directories
 │   ├── seed.ts                 # entrypoint
 │   └── seed/{moods,achievements}.seed.ts
@@ -207,7 +207,7 @@ server/
 - The API base URL **must always end in `/api`** because of `app.setGlobalPrefix("api")`
   in `main.ts`. A base URL without the suffix fails silently (404 against the root).
 
-### 3.3 Data model (Prisma — 20 models, 3 enums)
+### 3.3 Data model (Prisma — 22 models, 3 enums)
 
 All tables use `@@map` to snake_case plural names. IDs are `cuid()` for `User` and `uuid()`
 elsewhere; every mutable model carries `updatedAt @updatedAt`.
@@ -215,6 +215,7 @@ elsewhere; every mutable model carries `updatedAt @updatedAt`.
 | Domain | Models | What to know |
 |---|---|---|
 | Identity | `User`, `EmailVerification` | `password` is nullable — Google-only accounts have `provider` + `unique googleId`. Carries `preferredGenres`/`preferredLanguages` string arrays, the six `disclose*` privacy booleans, and the review-reputation trio `reviewCount` / `reviewWarningScore` / `reviewBannedUntil`. |
+| Sessions | `AuthSession` | PostgreSQL authority for hashed current/previous refresh tokens, absolute expiry, and revocation. `User.authVersion` invalidates credentials after password changes. Redis is only a compatibility reader for legacy refresh tokens. |
 | Mood core ★ | `Mood`, `MoodLog`, `Recommendation`, `UserPreference` | `Mood` = unique `name` + `color` + `icon` + `description` + `keywords[]` + `tmdbGenres Int[]` + **`valence`/`arousal` as `Decimal(3,2)`** in `[-1, 1]` + `isActive`. `Recommendation` stores `score`, `reason`, `algorithm`, `metadata Json`, a consumed-state tail (`viewed`/`liked`/`saved`/`rating`), and is unique per `(userId, moodId, tmdbId, mediaType)`. `MoodLog` is the raw mood-history signal. |
 | Personal library | `WatchlistItem`, `LikedItem` | One **row per title** keyed by `tmdbId` + type, replacing an earlier array-on-user design. Mutation shape is a `toggle`, not a set. |
 | Community | `Review`, `ReviewReply`, `ReviewReaction`, `ReviewReplyReaction` | `Review` = SmallInt `rating` + `content` + `moodEmojis[]` + `status ReviewStatus` + moderation columns `toxicityScore Float?` / `profanityHit` / `flaggedReason` / `affectsRating`. Reactions are the six Facebook-style types, unique per `(reviewId, userId)`. `affectsRating = false` is how flagged content is excluded from aggregates without deletion. |
@@ -314,9 +315,13 @@ Authoritative doc: [`ENVIRONMENTS.md`](../ENVIRONMENTS.md).
    `.env.local`.
 4. Secrets come from Doppler when `DOPPLER_TOKEN` is set; `env_file` in Compose is the
    fallback. Never commit a real `.env`.
-5. Auth cookies: `mood_at` (access, 15 min) and `mood_session` (marker). Refresh token
-   lifetime 30 days. `localStorage` key `moodies:session` mirrors the marker and drives
-   the auth pre-hide script.
+5. Auth cookies: `mood_at` (access, default 15 min), `mood_rt` (HttpOnly refresh,
+   `Path=/api/auth`), and `mood_session` (UI marker). Sessions live in PostgreSQL
+   `auth_sessions`, have an absolute default 30-day lifetime, and are revoked on
+   logout/password changes. `localStorage` key `moodies:session` only drives UI hints;
+   its absence cannot prevent cookie recovery. Protected client requests use
+   `lib/auth/session.ts`; network/429/5xx failures preserve existing login state.
+   See `SESSION_HARDENING.md` before deploying the additive session migration.
 6. CORS is an **allowlist** from `CORS_ORIGINS` → `CLIENT_URL` →
    `http://localhost:3000`, plus automatic acceptance of dev-only origins on ports
    3000–3999 when `NODE_ENV=development`.

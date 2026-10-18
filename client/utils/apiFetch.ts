@@ -1,10 +1,8 @@
 "use client";
-import { useAuth } from "@/app/context/AuthProvider";
 import { throwIfResponseError } from "@/lib/errors";
+import { sessionFetch } from "@/lib/auth/session";
 
 export function useApiFetch() {
-  const { refreshSession, logoutSilent } = useAuth();
-
   async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
     const headers = new Headers(init.headers as HeadersInit);
     headers.set("accept", "application/json");
@@ -16,19 +14,7 @@ export function useApiFetch() {
       credentials: "include",
     };
 
-    let res = await fetch(input, opts);
-
-    if (res.status === 401 || res.status === 498) {
-      // Access cookie likely expired — try one silent refresh, then retry once.
-      const refreshed = await refreshSession();
-      if (refreshed) {
-        res = await fetch(input, opts);
-      }
-      if (res.status === 401 || res.status === 498) {
-        logoutSilent();
-      }
-    }
-    return res;
+    return sessionFetch(input, opts);
   }
 
   async function apiFetchJson<T>(
