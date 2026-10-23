@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/** Navigate actual snap points, not guessed widths or an in-flight scroll offset. */
-export function useCarouselScroll(itemCount: number, step = 1) {
+/** Page through visible cards at actual snap points; allow an explicit card step. */
+export function useCarouselScroll(itemCount: number, step?: number) {
   const containerRef = useRef<HTMLDivElement>(null);
   const targetRef = useRef<number | null>(null);
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -62,7 +62,15 @@ export function useCarouselScroll(itemCount: number, step = 1) {
       const element = containerRef.current;
       if (!element) return;
       const max = Math.max(0, element.scrollWidth - element.clientWidth);
-      const padding = parseFloat(getComputedStyle(element).paddingLeft) || 0;
+      const style = getComputedStyle(element);
+      const padding = parseFloat(style.paddingLeft) || 0;
+      const gap = parseFloat(style.columnGap) || 0;
+      const cardWidth = element.firstElementChild?.getBoundingClientRect().width ?? 0;
+      const availableWidth = element.clientWidth - padding - (parseFloat(style.paddingRight) || 0);
+      // Include the trailing gap in the calculation and tolerate subpixel rounding.
+      const pageSize = cardWidth > 0
+        ? Math.max(1, Math.floor((availableWidth + gap + 2) / (cardWidth + gap)))
+        : 1;
       const origin = element.getBoundingClientRect().left + element.clientLeft;
       const points = [
         0,
@@ -88,7 +96,7 @@ export function useCarouselScroll(itemCount: number, step = 1) {
           ? points.filter((point) => point > current + 2)
           : points.filter((point) => point < current - 2).reverse();
       const target =
-        candidates[Math.min(Math.max(1, step), candidates.length) - 1];
+        candidates[Math.min(Math.max(1, step ?? pageSize), candidates.length) - 1];
       if (target === undefined) return;
       clearTimeout(settleTimerRef.current);
       targetRef.current = target;

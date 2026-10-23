@@ -45,21 +45,26 @@ export const Navigation: Story = {
     const initialTop = next.getBoundingClientRect().top;
     await waitFor(() => expect(next).toBeEnabled());
     await expect(previous).toBeDisabled();
+    const style = getComputedStyle(rail);
+    const first = rail.children[0].getBoundingClientRect();
+    const stride = rail.children[1].getBoundingClientRect().left - first.left;
+    const pageSize = Array.from(rail.children).filter((child) => {
+      const card = child.getBoundingClientRect();
+      return card.left >= first.left - 2 && card.right <= rail.getBoundingClientRect().right - (parseFloat(style.paddingRight) || 0) + 2;
+    }).length;
+    expect(pageSize).toBeGreaterThan(1);
+    next.click();
+    await waitFor(() => expect(Math.abs(rail.scrollLeft - pageSize * stride)).toBeLessThan(3), { timeout: 3000 });
+    previous.click();
+    await waitFor(() => expect(rail.scrollLeft).toBeLessThan(3), { timeout: 3000 });
     // Queue three clicks before the smooth scroll settles.
     next.click();
     next.click();
     next.click();
-    const thirdCard = rail.children[3] as HTMLElement;
+    const expectedTarget = Math.min(pageSize * 3 * stride, rail.scrollWidth - rail.clientWidth);
     await waitFor(
       () => {
-        const padding = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
-        expect(
-          Math.abs(
-            thirdCard.getBoundingClientRect().left -
-              rail.getBoundingClientRect().left -
-              padding,
-          ),
-        ).toBeLessThan(3);
+        expect(Math.abs(rail.scrollLeft - expectedTarget)).toBeLessThan(3);
       },
       { timeout: 3000 },
     );

@@ -52,7 +52,7 @@ export default function CelebSection() {
 
   const railId = useId();
   const { containerRef, canScrollLeft, canScrollRight, scroll } =
-    useCarouselScroll(celebs.length, Math.max(1, Math.floor(itemsPerView - 1)));
+    useCarouselScroll(celebs.length);
   const GAP_PX = isSm ? 24 : 12;
 
   useEffect(() => {

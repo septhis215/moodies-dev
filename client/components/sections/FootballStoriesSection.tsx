@@ -122,7 +122,7 @@ export default function FootballStoriesSection() {
     canScrollLeft,
     canScrollRight,
     scroll,
-  } = useCarouselScroll(loading ? 10 : displayItems.length, 3);
+  } = useCarouselScroll(loading ? 10 : displayItems.length);
 
   return (
     <section className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
