@@ -6,7 +6,6 @@ import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import {
   Bookmark,
-  Layers,
   Sparkles,
   RefreshCw,
   Shuffle,
@@ -457,10 +456,11 @@ export default function MoodRecommendationsSection({
     <section
       id="moods"
       className="relative mx-auto w-full max-w-7xl overflow-hidden border-t border-[var(--surface-border)] pt-6 sm:pt-7"
+      aria-labelledby="mood-matcher-heading"
     >
       <div className="mb-5 max-w-2xl sm:mb-6">
         <p className="ui-kicker">Find your mood</p>
-        <h2 className="mt-2 text-balance text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
+        <h2 id="mood-matcher-heading" className="mt-2 text-balance text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
           Mood matcher
         </h2>
         <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
@@ -480,24 +480,11 @@ export default function MoodRecommendationsSection({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="mb-4 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)]"
+            className="mb-3"
           >
-            <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-coral)]/10 text-[var(--brand-coral-strong)]">
-                  <Layers className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-[var(--ink)]">
-                    Choose how you want to feel
-                  </h3>
-                  <p className="mt-0.5 text-sm text-[var(--ink-muted)]">
-                    Pick one below, or shuffle for a fresh set.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <p className="text-sm text-[var(--ink-muted)]">Choose a mood to see your matches.</p>
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={toggleMoodCount}
                   className="min-h-11 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 py-2 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)]"
@@ -536,12 +523,14 @@ export default function MoodRecommendationsSection({
               ? Array.from({ length: DEFAULT_MOOD_COUNT }).map((_, index) => (
                   <div
                     key={index}
-                    className="h-40 moodies-skeleton rounded-xl border border-[var(--surface-border)] bg-white/[0.06]"
+                    className="h-24 moodies-skeleton rounded-xl border border-[var(--surface-border)] bg-white/[0.06]"
                   />
                 ))
               : displayedMoods.map((mood, index) => (
                   <motion.button
                     key={mood.id}
+                    type="button"
+                    aria-label={`Choose ${mood.name} mood`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{
@@ -549,26 +538,26 @@ export default function MoodRecommendationsSection({
                       duration: 0.18,
                     }}
                     onClick={() => handleMoodClick(mood)}
-                    className="group relative min-h-40 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 text-left transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:bg-[var(--surface-2)] sm:p-4"
+                    className="group relative min-h-24 min-w-0 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 text-left transition-colors hover:border-[var(--brand-coral)] hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)] motion-reduce:transition-none"
                     style={{
                       borderTopColor: mood.color,
                     }}
                   >
-                    <div className="flex h-full flex-col">
-                      <div className="relative h-14 w-14 self-center sm:h-16 sm:w-16">
+                    <div className="flex h-full min-w-0 items-center gap-2.5">
+                      <div className="relative h-10 w-10 shrink-0">
                         <Image
                           src={getMoodImageSrc(mood)}
                           alt={`${mood.name} mood mascot`}
                           fill
-                          sizes="(max-width: 640px) 64px, 96px"
+                          sizes="40px"
                           className="object-contain"
                         />
                       </div>
-                      <div className="mt-2 text-center">
-                        <h3 className="mb-1 text-sm font-bold text-[var(--ink)]">
+                      <div className="min-w-0">
+                        <h3 className="wrap-anywhere text-sm font-semibold leading-5 text-[var(--ink)]">
                           {mood.name}
                         </h3>
-                        <p className="line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">
+                        <p className="mt-1 hidden line-clamp-2 text-xs leading-5 text-[var(--ink-muted)] sm:block">
                           {mood.description}
                         </p>
                       </div>
@@ -583,20 +572,23 @@ export default function MoodRecommendationsSection({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="relative mb-8 isolate"
+            aria-busy={loading}
           >
-            <div className="relative mb-6 border-b border-[var(--surface-border)] pb-5 sm:pb-6">
-              <div className="min-w-0 flex-1">
-                <p className="ui-kicker pr-20 sm:pr-48">Selected mood</p>
-                <h3
-                  data-display
-                  className="mt-2 pr-20 text-3xl font-bold text-[var(--ink)] sm:pr-48 sm:text-4xl"
-                >
-                  {selectedMood.name} picks
-                </h3>
-                <p className="mt-2 max-w-lg pr-20 text-sm leading-6 text-[var(--ink-muted)] sm:pr-36">
-                  {selectedMood.description}
-                </p>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--surface-border)] pb-4">
+              <div className="flex min-w-0 flex-1 basis-52 items-center gap-3">
+                <div className="relative h-12 w-12 shrink-0">
+                  <Image src={getMoodImageSrc(selectedMood)} alt={`${selectedMood.name} mood mascot`} fill sizes="48px" className="object-contain" />
+                </div>
+                <div className="min-w-0">
+                  <h3 data-display className="text-2xl font-bold leading-tight text-[var(--ink)]">
+                    {selectedMood.name} picks
+                  </h3>
+                  <p className="mt-1 text-sm leading-5 text-[var(--ink-muted)]" role="status">
+                    {loading ? "Finding your matches…" : error ? "Try refreshing your picks." : `${recommendations.length} picks for your mood`}
+                  </p>
+                </div>
+              </div>
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => setSelectedMood(null)}
                     className="ui-secondary-action min-h-11 justify-center"
@@ -614,52 +606,32 @@ export default function MoodRecommendationsSection({
                     {loading ? "Refreshing" : "Refresh picks"}
                   </button>
                 </div>
-              </div>
-              <div className="absolute right-0 top-0 h-16 w-16 sm:h-40 sm:w-40">
-                <Image
-                  src={getMoodImageSrc(selectedMood)}
-                  alt={`${selectedMood.name} mood mascot`}
-                  fill
-                  sizes="(max-width: 640px) 64px, 160px"
-                  className="object-contain"
-                />
-              </div>
             </div>
 
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <div className="relative mb-6">
-                  <div
-                    className="h-20 w-20 animate-spin rounded-full border-4"
-                    style={{
-                      borderColor: `${selectedMood.color}20`,
-                      borderTopColor: selectedMood.color,
-                    }}
-                  />
-                </div>
-                <p className="mb-2 text-xl font-bold text-[var(--ink)]">
-                  Finding your picks
-                </p>
-                <p className="text-sm text-[var(--ink-muted)]">
-                  Finding content that fits your{" "}
-                  {selectedMood.name.toLowerCase()} mood...
-                </p>
+              <div aria-hidden="true" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                {Array.from({ length: 12 }, (_, index) => (
+                  <div key={index} className="overflow-hidden rounded-xl border border-[var(--surface-border)]">
+                    <div className="moodies-skeleton aspect-[2/3]" />
+                    <div className="space-y-2 bg-[var(--surface-1)] p-2.5">
+                      <div className="moodies-skeleton h-4 w-3/4 rounded" />
+                      <div className="moodies-skeleton h-3 w-1/2 rounded" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : error ? (
-              <div className="flex items-center justify-center py-16">
+              <div className="flex items-center justify-center rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] px-4 py-8">
                 <div className="max-w-md text-center">
-                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/20">
-                    <Sparkles className="h-9 w-9 text-red-300" />
-                  </div>
                   <h3 className="mb-2 text-xl font-bold text-[var(--ink)]">
-                    Oops!
+                    Couldn’t load your picks
                   </h3>
-                  <p className="mb-6 text-lg text-gray-400">{error}</p>
+                  <p role="status" className="mb-4 text-sm leading-6 text-[var(--ink-muted)]">Try again in a moment, or choose another mood.</p>
                   <button
                     onClick={handleRefresh}
-                    className="rounded-md bg-[var(--brand-coral)] px-6 py-3 font-bold text-white transition-colors hover:bg-[var(--brand-coral-strong)]"
+                    className="ui-primary-action min-h-11"
                   >
-                    Try Again
+                    Try again
                   </button>
                 </div>
               </div>
@@ -669,9 +641,9 @@ export default function MoodRecommendationsSection({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4"
+                className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
               >
-                {recommendations.map((rec, index) => {
+                {recommendations.map((rec) => {
                   const id = String(rec.tmdbId);
                   const kind = toHookType(rec.mediaType);
                   const inList = isInWatchlist(id, kind) ?? watchlistStates[id];
@@ -679,9 +651,6 @@ export default function MoodRecommendationsSection({
                   const matchScore = getMatchScore(rec);
                   const genres = rec.genreNames?.filter(Boolean) ?? [];
                   const moodColor = getMoodColor(selectedMood);
-                  // Two spotlights leave 16 posters: complete rows at both
-                  // the four-column desktop and two-column mobile sizes.
-                  const isFeatured = index < 2;
 
                   return (
                     <motion.article
@@ -689,29 +658,20 @@ export default function MoodRecommendationsSection({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ duration: 0.18 }}
-                      className={`relative min-w-0 overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] ${isFeatured ? "col-span-2" : ""}`}
-                      style={isFeatured ? { borderTopColor: moodColor } : undefined}
+                      className="relative min-w-0 overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] motion-reduce:transition-none"
                     >
                       <Link
                         href={getMediaHref(rec)}
-                        className="group flex h-full flex-col rounded-2xl focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral)]"
+                        className="group flex h-full flex-col rounded-xl focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral)]"
                       >
                         <div
-                          className={`relative overflow-hidden bg-[var(--surface-2)] ${isFeatured ? "aspect-video" : "aspect-[2/3]"}`}
+                          className="relative aspect-[2/3] overflow-hidden bg-[var(--surface-2)]"
                         >
                           <Image
-                            src={
-                              isFeatured && rec.backdropPath
-                                ? tmdbImage(rec.backdropPath, "w780")
-                                : getPosterUrl(rec.posterPath)
-                            }
+                            src={getPosterUrl(rec.posterPath)}
                             alt={rec.title}
                             fill
-                            sizes={
-                              isFeatured
-                                ? "(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 640px"
-                                : "(max-width: 768px) 50vw, (max-width: 1280px) 25vw, 320px"
-                            }
+                            sizes="(max-width: 639px) 45vw, (max-width: 767px) 30vw, (max-width: 1023px) 22vw, (max-width: 1279px) 18vw, 196px"
                             className="object-cover transition-transform duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
                           />
 
@@ -735,27 +695,16 @@ export default function MoodRecommendationsSection({
                           </div>
                         </div>
 
-                        <div className="flex flex-1 flex-col p-3 sm:p-4">
-                          {isFeatured && (
-                            <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[var(--brand-coral-strong)]">
-                              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                              {index === 0 ? "Your strongest match" : "Another great match"}
-                            </p>
-                          )}
-                          <h3 className={`line-clamp-2 font-semibold text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)] ${isFeatured ? "text-lg leading-6 sm:text-xl" : "text-sm leading-5"}`}>
+                        <div className="flex flex-1 flex-col p-2.5">
+                          <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
                             {rec.title}
                           </h3>
                           <p className="mt-1 text-xs text-[var(--ink-muted)]">
                             {getMediaLabel(rec)} · {getYear(rec.releaseDate)}
                           </p>
                           {genres.length > 0 && (
-                            <p className="mt-1 truncate text-xs text-[var(--ink-muted)]">
+                            <p className="mt-1 hidden truncate text-xs text-[var(--ink-muted)] sm:block">
                               {genres.slice(0, 2).join(" · ")}
-                            </p>
-                          )}
-                          {isFeatured && (rec.reason || rec.overview) && (
-                            <p className="mt-3 line-clamp-2 text-sm leading-6 text-[var(--ink-muted)]">
-                              {rec.reason || rec.overview}
                             </p>
                           )}
                         </div>
@@ -788,7 +737,7 @@ export default function MoodRecommendationsSection({
                 })}
               </motion.div>
             ) : (
-              <div className="flex items-center justify-center py-32">
+              <div className="flex items-center justify-center py-8">
                 <div className="max-w-md border border-[var(--surface-border)] bg-[var(--surface-1)] p-8 text-center">
                   <div
                     className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
@@ -802,10 +751,10 @@ export default function MoodRecommendationsSection({
                   <h3 className="mb-2 text-xl font-bold text-[var(--ink)]">
                     No matches found
                   </h3>
-                  <p className="mb-6 text-sm leading-6 text-gray-400">
+                  <p className="mb-6 text-sm leading-6 text-[var(--ink-muted)]">
                     We could not build a confident{" "}
                     {selectedMood.name.toLowerCase()} set from the current
-                    filters. Refresh this mood or choose another lane.
+                    filters. Refresh your picks or choose another mood.
                   </p>
                   <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
                     <button
