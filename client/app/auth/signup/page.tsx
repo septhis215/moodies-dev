@@ -1,4 +1,5 @@
 "use client";
+import { authenticateSession } from "@/lib/auth/session";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -16,8 +17,8 @@ import {
   AuthPasswordInput,
   GoogleButton,
 } from "../AuthFormUI";
-import { useTurnstileGate } from "@/hooks/useTurnstileGate";
 import { useAuth } from "@/app/context/AuthProvider";
+import { normalizeApiError } from "@/lib/errors";
 
 const API =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -33,7 +34,6 @@ export default function SignupPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
-  const { isVerified } = useTurnstileGate();
   const { login } = useAuth();
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -44,10 +44,6 @@ export default function SignupPage() {
     const normalizedEmail = email.trim().toLowerCase();
     if (!agree) {
       setErr("Please agree to the Terms & Conditions.");
-      return;
-    }
-    if (!isVerified) {
-      setErr("Please complete the human verification.");
       return;
     }
     if (!/^[A-Za-z0-9_]{3,20}$/.test(normalizedUsername)) {
@@ -61,7 +57,7 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API}/auth/signup`, {
+      const response = await authenticateSession(`${API}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -75,7 +71,7 @@ export default function SignupPage() {
       await login(data.user);
       router.replace("/auth/intro");
     } catch (error) {
-      setErr(error instanceof Error ? error.message : "Sign up failed. Please try again.");
+      setErr(error instanceof Error ? error.message : normalizeApiError(error, "Sign up failed. Please try again.").userMessage);
     } finally {
       setLoading(false);
     }

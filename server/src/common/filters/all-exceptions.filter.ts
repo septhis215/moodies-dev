@@ -40,6 +40,7 @@ const STATUS = {
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger('Exception');
+  private nextProtectionFailureLog = 0;
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -57,7 +58,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       const body = this.formatHttpException(exception, path, timestamp);
-      if (body.statusCode >= 500) {
+      const protectionUnavailable = body.code === 'CAPTCHA_UNAVAILABLE' || body.code === 'RATE_LIMIT_UNAVAILABLE';
+      if (protectionUnavailable && Date.now() >= this.nextProtectionFailureLog) {
+        this.nextProtectionFailureLog = Date.now() + 60_000;
+        this.logger.warn(`Protection dependency unavailable: ${body.code}. Further failures are suppressed for one minute.`);
+      } else if (body.statusCode >= 500 && !protectionUnavailable) {
         this.logger.error(
           `${request?.method} ${path} -> ${body.statusCode}`,
           exception.stack,
@@ -99,7 +104,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
       : typeof rawMessage === 'string'
         ? [rawMessage]
         : [];
-    const code = this.codeForStatus(statusCode, payload.error);
+    const code = typeof payload.code === 'string' && /^[A-Z][A-Z0-9_]{1,63}$/.test(payload.code)
+      ? payload.code : this.codeForStatus(statusCode, payload.error);
     const fieldErrors =
       statusCode === STATUS.BAD_REQUEST && messages.length > 1
         ? { form: messages }

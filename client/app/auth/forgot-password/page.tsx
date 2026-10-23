@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { captchaFetch } from "@/lib/turnstile";
 import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
 import { normalizeApiError, normalizeResponseError } from "@/lib/errors";
@@ -32,7 +33,7 @@ export default function ForgotPasswordPage() {
     setMsg("");
     setLoading(true);
     try {
-      const res = await fetch(`${API}/auth/request-reset`, {
+      const res = await captchaFetch(`${API}/auth/request-reset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

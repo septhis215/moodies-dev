@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/app/context/AuthProvider";
+import { sessionFetch } from "@/lib/auth/session";
 import { fetchMediaSummary, type MediaSummary } from "@/lib/mediaApi";
 import { handleAppError } from "@/lib/errors";
 import { appToast } from "@/lib/toast";
@@ -56,7 +57,7 @@ export function useLibrary(kind: LibraryKind) {
 
     void (async () => {
       try {
-        const response = await fetch(API_BASE + "/" + kind, {
+        const response = await sessionFetch(API_BASE + "/" + kind, {
           credentials: "include",
           cache: "no-store",
           signal: AbortSignal.any([
@@ -151,7 +152,7 @@ export function useLibrary(kind: LibraryKind) {
         entries: previous.entries.filter((item) => entryKey(item) !== key),
       }));
       try {
-        const response = await fetch(
+        const response = await sessionFetch(
           API_BASE +
             "/" +
             kind +

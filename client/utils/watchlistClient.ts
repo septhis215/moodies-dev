@@ -3,6 +3,7 @@ import {
   normalizeApiError,
   normalizeResponseError,
 } from "@/lib/errors";
+import { sessionFetch } from "@/lib/auth/session";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
@@ -12,7 +13,7 @@ export type WatchType = "movie" | "series";
 // Bearer header. A 401 means "not signed in", which callers treat as empty.
 export async function fetchWatchlist() {
   try {
-    const r = await fetch(`${API_BASE}/watchlist`, {
+    const r = await sessionFetch(`${API_BASE}/watchlist`, {
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       cache: "no-store",
@@ -32,7 +33,7 @@ export async function fetchWatchlist() {
 
 export async function toggleWatchlist(tmdbId: string, type: "movie" | "series") {
   try {
-    const r = await fetch(`${API_BASE}/watchlist/toggle`, {
+    const r = await sessionFetch(`${API_BASE}/watchlist/toggle`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",

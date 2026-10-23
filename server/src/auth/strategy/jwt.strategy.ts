@@ -5,6 +5,7 @@ import type { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ACCESS_COOKIE, readCookie } from '../auth.cookies';
+import { AuthSessionService, type AccessIdentity } from '../auth-session.service';
 
 // Read the access token exclusively from the HttpOnly cookie.
 const cookieExtractor = (req: Request): string | null =>
@@ -16,6 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     configService: ConfigService,
     private prismaService: PrismaService,
+    private readonly sessions: AuthSessionService,
   ) {
     const secret = configService.get('JWT_SECRET');
 
@@ -31,7 +33,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   // can be used for user testing
-  async validate(payload: { sub: string; email: string }) {
+  async validate(payload: AccessIdentity & { sub: string }) {
+    if (!await this.sessions.isActive(payload)) return null;
     const user = await this.prismaService.user.findUnique({
       where: {
         id: payload.sub,
