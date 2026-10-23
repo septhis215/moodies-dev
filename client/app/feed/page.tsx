@@ -71,7 +71,7 @@ type FeedContentLike = Partial<VideoItem> & {
 type Category = "all" | "upcoming";
 type LoadingMode = "idle" | "initial" | "more" | "refresh";
 /** Playback signals the mounted player reports back to the page. */
-type FeedPlayerStatus = "playing" | "paused" | "blocked" | "error";
+type FeedPlayerStatus = "playing" | "paused" | "blocked" | "error" | "muted";
 
 const feedTabs: Array<{
   value: Category;
@@ -123,11 +123,9 @@ export default function VideoFeedPage() {
   const viewerIdRef = useRef<string>("");
   const reportedViewsRef = useRef<Set<string>>(new Set());
 
-  // Mobile browsers only guarantee autoplay while muted. Once the user
-  // explicitly enables sound, that preference carries to subsequent videos —
-  // but it may only be enabled from a deliberate tap on the sound control.
-  // Treating any stray gesture as consent would unmute the next card and the
-  // autoplay policy would then refuse to start it at all.
+  // Each new iframe starts muted. Safari's audio permission for the previous
+  // player does not carry over to a newly mounted player after a swipe.
+  // Sound is enabled directly by a deliberate tap on the active clip.
   const [muted, setMuted] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
@@ -138,7 +136,7 @@ export default function VideoFeedPage() {
     unlike: removeFromLiked,
     ready: likedReady,
   } = useLiked();
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [manuallyPaused, setManuallyPaused] = useState(false);
   const [playerError, setPlayerError] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
@@ -156,7 +154,7 @@ export default function VideoFeedPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   /** Live player instance, published by the mounted slide's own player. */
   const playerRef = useRef<YouTubePlayer | null>(null);
-  const isPlayingRef = useRef(true);
+  const isPlayingRef = useRef(false);
   const manuallyPausedRef = useRef(false);
   const autoplayBlockedRef = useRef(false);
   const gatesClearRef = useRef(true);
@@ -520,7 +518,7 @@ export default function VideoFeedPage() {
   // derived from real player state, so this can finally fire on a video that is
   // genuinely stuck instead of being disarmed the moment markup appeared.
   useEffect(() => {
-    if (!currentVideo || videoReady || autoplayBlocked) return;
+    if (!currentVideo || videoReady || autoplayBlocked || !feedVisible || panelOpen || manuallyPaused) return;
     const timer = window.setTimeout(() => setPlayerError(true), 12000);
     return () => window.clearTimeout(timer);
   }, [
@@ -529,6 +527,9 @@ export default function VideoFeedPage() {
     playerReloadKey,
     videoReady,
     autoplayBlocked,
+    feedVisible,
+    panelOpen,
+    manuallyPaused,
   ]);
 
   useEffect(() => {
@@ -592,6 +593,11 @@ export default function VideoFeedPage() {
   }, []);
 
   const handlePlayerStatus = useCallback((status: FeedPlayerStatus) => {
+    if (status === "muted") {
+      setMuted(true);
+      setAudioUnlocked(false);
+      return;
+    }
     if (status === "playing") {
       setAutoplayBlocked(false);
       setVideoReady(true);
@@ -661,7 +667,6 @@ export default function VideoFeedPage() {
 
       setAutoplayBlocked(false);
       player.playVideo();
-      setIsPlaying(true);
     },
     [currentVideo, feedVisible, panelOpen],
   );
@@ -677,29 +682,40 @@ export default function VideoFeedPage() {
     playActiveVideo(true);
   }, [playActiveVideo]);
 
-  const toggleMute = useCallback(() => {
-    setAudioUnlocked(true);
-    setMuted((prev) => !prev);
-  }, []);
-
   /** Turns sound on from a deliberate tap, then keeps the video running. */
   const enableAudio = useCallback(() => {
-    setAudioUnlocked(true);
-    setMuted(false);
     const player = playerRef.current;
-    if (!player || manuallyPausedRef.current || panelOpen) return;
+    if (!player) return;
     try {
       player.setVolume(100);
       player.unMute();
+      setAudioUnlocked(true);
+      setMuted(false);
       // Unmuting can flip a tolerated muted stream into a blocked one, so
       // restart inside the same gesture rather than waiting to notice.
-      player.playVideo();
-      setAutoplayBlocked(false);
-      setIsPlaying(true);
+      if (!manuallyPausedRef.current && !panelOpen) {
+        player.playVideo();
+        setAutoplayBlocked(false);
+      }
     } catch {
       /* the player is mid-teardown */
     }
   }, [panelOpen]);
+
+  const toggleMute = useCallback(() => {
+    if (muted) {
+      enableAudio();
+      return;
+    }
+    // Apply the audio change in this handler, while Safari still has the tap's
+    // user activation. A later React effect cannot reliably unlock audio.
+    try {
+      playerRef.current?.mute();
+      setMuted(true);
+    } catch {
+      /* the player is mid-teardown */
+    }
+  }, [muted, enableAudio]);
 
   const handleScroll = useCallback(
     (e: WheelEvent) => {
@@ -1698,7 +1714,6 @@ function FeedVideoPlayer({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YouTubePlayer | null>(null);
-  const mutedRef = useRef(muted);
   const allowedRef = useRef(playbackAllowed);
 
   useEffect(() => {
@@ -1706,15 +1721,11 @@ function FeedVideoPlayer({
   }, [playbackAllowed]);
 
   useEffect(() => {
-    mutedRef.current = muted;
     const player = playerRef.current;
     if (!player) return;
     try {
       if (muted) {
         player.mute();
-      } else {
-        player.setVolume(100);
-        player.unMute();
       }
     } catch {
       /* the player is mid-teardown */
@@ -1726,6 +1737,18 @@ function FeedVideoPlayer({
     if (!host) return;
 
     let cancelled = false;
+    let retriedMuted = false;
+    let playbackTimer: number | undefined;
+    const checkPlayback = (player: YouTubePlayer) => {
+      window.clearTimeout(playbackTimer);
+      playbackTimer = window.setTimeout(() => {
+        if (cancelled || !allowedRef.current) return;
+        const state = player.getPlayerState();
+        if (state !== YT_PLAYER_STATE.PLAYING && state !== YT_PLAYER_STATE.BUFFERING) {
+          onStatus("blocked");
+        }
+      }, 4000);
+    };
 
     const mount = async () => {
       let player: YouTubePlayer | null = null;
@@ -1734,8 +1757,7 @@ function FeedVideoPlayer({
           videoId: videoKey,
           playerVars: {
             autoplay: 1,
-            // Always start muted — it is the only setting every autoplay policy
-            // tolerates. The user's real audio preference is applied in onReady.
+            // Keep the iframe muted through onReady; audio is gesture-only.
             mute: 1,
             controls: 0,
             disablekb: 1,
@@ -1748,6 +1770,7 @@ function FeedVideoPlayer({
             cc_load_policy: 0,
             autohide: 1,
             playsinline: 1,
+            origin: window.location.origin,
             vq: "hd1080",
           },
           events: {
@@ -1755,11 +1778,8 @@ function FeedVideoPlayer({
               if (cancelled) return;
               const ready = event.target;
               try {
-                if (mutedRef.current) ready.mute();
-                else {
-                  ready.setVolume(100);
-                  ready.unMute();
-                }
+                ready.mute();
+                onStatus("muted");
                 if (allowedRef.current) ready.playVideo();
                 else ready.pauseVideo();
               } catch {
@@ -1767,12 +1787,7 @@ function FeedVideoPlayer({
               }
               // onReady is not "playing". Give the browser's answer a beat, then
               // trust the measured state over the request that was made.
-              window.setTimeout(() => {
-                if (cancelled) return;
-                if (ready.getPlayerState() !== YT_PLAYER_STATE.PLAYING) {
-                  onStatus("blocked");
-                }
-              }, 4000);
+              checkPlayback(ready);
             },
             onStateChange: (event) => {
               if (cancelled) return;
@@ -1787,11 +1802,24 @@ function FeedVideoPlayer({
             onError: () => {
               if (!cancelled) onStatus("error");
             },
-            // The only signal that proves the browser refused to start the video.
-            // A plain embed iframe cannot report this, which is why the previous
-            // implementation never noticed it happening.
             onAutoplayBlocked: () => {
-              if (!cancelled) onStatus("blocked");
+              if (cancelled || !allowedRef.current) return;
+              const active = playerRef.current;
+              // Recover an audible/transient rejection once with a muted play
+              // request. A second rejection needs the visible gesture control.
+              if (active && !retriedMuted) {
+                retriedMuted = true;
+                try {
+                  active.mute();
+                  onStatus("muted");
+                  active.playVideo();
+                  checkPlayback(active);
+                  return;
+                } catch {
+                  /* fall through to the gesture control */
+                }
+              }
+              onStatus("blocked");
             },
           },
         });
@@ -1830,6 +1858,7 @@ function FeedVideoPlayer({
 
     return () => {
       cancelled = true;
+      window.clearTimeout(playbackTimer);
       const live = playerRef.current;
       playerRef.current = null;
       if (live) {
