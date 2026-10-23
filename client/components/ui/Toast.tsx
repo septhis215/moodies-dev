@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import styles from "./Toast.module.css";
 
 type ToastVariant = "info" | "success" | "warning" | "error";
 
@@ -35,37 +36,27 @@ const VARIANT_META: Record<
     label: string;
     icon: React.ComponentType<{ className?: string }>;
     role: "status" | "alert";
-    iconClassName: string;
-    ringClassName: string;
   }
 > = {
   success: {
     label: "Success",
     icon: CheckCircle2,
     role: "status",
-    iconClassName: "text-emerald-400",
-    ringClassName: "bg-emerald-500/10 ring-emerald-500/20",
   },
   error: {
     label: "Error",
     icon: AlertCircle,
     role: "alert",
-    iconClassName: "text-[#E3262A]",
-    ringClassName: "bg-[#E3262A]/10 ring-[#E3262A]/25",
   },
   warning: {
     label: "Warning",
     icon: TriangleAlert,
     role: "alert",
-    iconClassName: "text-amber-300",
-    ringClassName: "bg-amber-400/10 ring-amber-400/20",
   },
   info: {
     label: "Info",
     icon: Info,
     role: "status",
-    iconClassName: "text-white/70",
-    ringClassName: "bg-white/7 ring-white/10",
   },
 };
 
@@ -78,14 +69,15 @@ const Toast: React.FC<ToastProps> = ({
   message,
   onClose,
   variant = "info",
-  duration = 4000,
+  duration = 5000,
   title = null,
   posterUrl = null,
   imageSize,
   action,
   loading = false,
+  createdAt,
 }) => {
-  const [isPaused, setIsPaused] = React.useState(false);
+  const pauseReasons = React.useRef(new Set<"pointer" | "focus">());
   const remainingRef = React.useRef(duration ?? 0);
   const startedAtRef = React.useRef<number | null>(null);
   const timeoutRef = React.useRef<number | null>(null);
@@ -97,20 +89,20 @@ const Toast: React.FC<ToastProps> = ({
   const displayTitle = title || defaultTitle(variant, loading);
 
   const clearTimer = React.useCallback(() => {
-    if (timeoutRef.current) {
+    if (timeoutRef.current !== null) {
       window.clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
   }, []);
 
   const startTimer = React.useCallback(() => {
-    if (isPersistent) return;
+    if (isPersistent || pauseReasons.current.size) return;
 
     clearTimer();
     startedAtRef.current = performance.now();
     timeoutRef.current = window.setTimeout(() => {
       onCloseRef.current();
-    }, Math.max(remainingRef.current || 4000, 800));
+    }, Math.max(remainingRef.current, 0));
   }, [clearTimer, isPersistent]);
 
   React.useEffect(() => {
@@ -122,10 +114,12 @@ const Toast: React.FC<ToastProps> = ({
     startTimer();
 
     return clearTimer;
-  }, [clearTimer, duration, startTimer]);
+  }, [clearTimer, createdAt, duration, startTimer]);
 
-  const pauseTimer = () => {
-    if (isPaused || isPersistent) return;
+  const pauseTimer = (reason: "pointer" | "focus") => {
+    const alreadyPaused = pauseReasons.current.size > 0;
+    pauseReasons.current.add(reason);
+    if (alreadyPaused || isPersistent) return;
 
     if (startedAtRef.current !== null) {
       remainingRef.current = Math.max(
@@ -135,13 +129,11 @@ const Toast: React.FC<ToastProps> = ({
     }
 
     clearTimer();
-    setIsPaused(true);
   };
 
-  const resumeTimer = () => {
-    if (!isPaused || isPersistent) return;
-
-    setIsPaused(false);
+  const resumeTimer = (reason: "pointer" | "focus") => {
+    pauseReasons.current.delete(reason);
+    if (pauseReasons.current.size || isPersistent) return;
     startTimer();
   };
 
@@ -149,59 +141,51 @@ const Toast: React.FC<ToastProps> = ({
     <div
       role={meta.role}
       aria-live={meta.role === "alert" ? "assertive" : "polite"}
-      onMouseEnter={pauseTimer}
-      onMouseLeave={resumeTimer}
-      onFocus={pauseTimer}
-      onBlur={resumeTimer}
-      className={cn(
-        "group pointer-events-auto relative grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 overflow-hidden rounded-md border border-white/10 bg-[#101012]/95 p-4 pr-3 text-white shadow-lg shadow-black/35 backdrop-blur-md",
-        "animate-in fade-in slide-in-from-bottom-2 duration-200",
-      )}
+      aria-atomic="true"
+      onMouseEnter={() => pauseTimer("pointer")}
+      onMouseLeave={() => resumeTimer("pointer")}
+      onFocus={() => pauseTimer("focus")}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) resumeTimer("focus");
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.stopPropagation();
+          onClose();
+        }
+      }}
+      data-variant={variant}
+      className={styles.toast}
     >
-      {posterUrl ? (
-        <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md border border-white/10 bg-white/[0.04]">
-          <img
-            src={posterUrl}
-            alt=""
-            className="h-full w-full object-cover"
-            style={
-              imageSize
-                ? {
-                    width: imageSize.width,
-                    height: imageSize.height,
-                    objectFit: "contain",
-                  }
-                : undefined
-            }
-          />
-        </div>
-      ) : (
-        <div
-          className={cn(
-            "grid h-9 w-9 shrink-0 place-items-center rounded-md ring-1",
-            meta.ringClassName,
-          )}
-          aria-hidden
-        >
-          <Icon
-            className={cn(
-              "h-4 w-4",
-              loading && "animate-spin",
-              meta.iconClassName,
-            )}
-          />
-        </div>
-      )}
+      <div className={styles.icon} aria-hidden="true">
+        <Icon className={cn("h-5 w-5", loading && styles.spinner)} />
+      </div>
 
-      <div className="min-w-0 pt-0.5">
-        <div className="truncate text-sm font-semibold leading-5 text-white">
-          {displayTitle}
-        </div>
-        <div className="mt-1 text-sm leading-5 text-white/65">{message}</div>
+      <div className={styles.content}>
+        <div className={styles.title}>{displayTitle}</div>
+        <div className={styles.message}>{message}</div>
+        {posterUrl && (
+          <div className={styles.poster}>
+            <img
+              src={posterUrl}
+              alt=""
+              className="h-full w-full object-contain"
+              style={
+                imageSize
+                  ? {
+                      width: imageSize.width,
+                      height: imageSize.height,
+                      objectFit: "contain",
+                    }
+                  : undefined
+              }
+            />
+          </div>
+        )}
         {action && (
           <button
             type="button"
-            className="mt-3 inline-flex h-8 items-center justify-center rounded-md bg-white px-3 text-xs font-semibold text-black transition hover:bg-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/35"
+            className={styles.action}
             onClick={() => {
               action.onClick();
               onClose();
@@ -216,7 +200,7 @@ const Toast: React.FC<ToastProps> = ({
         type="button"
         onClick={onClose}
         aria-label="Dismiss notification"
-        className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-white/45 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+        className={styles.dismiss}
       >
         <X className="h-4 w-4" aria-hidden />
       </button>

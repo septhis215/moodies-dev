@@ -52,36 +52,41 @@ export function AppToaster() {
       <style>{`
         .m-toast-viewport {
           position: fixed;
-          right: 16px;
-          bottom: calc(16px + env(safe-area-inset-bottom));
+          top: calc(88px + env(safe-area-inset-top));
+          left: 50%;
+          transform: translateX(-50%);
           z-index: 9999;
           display: flex;
-          width: min(420px, calc(100vw - 32px));
-          max-height: calc(100dvh - 32px);
+          width: min(460px, calc(100vw - 32px));
+          max-height: calc(100dvh - 112px - env(safe-area-inset-top));
+          overflow-y: auto;
+          overscroll-behavior: contain;
           flex-direction: column;
-          align-items: flex-end;
-          gap: 10px;
+          align-items: stretch;
+          gap: 12px;
           pointer-events: none;
         }
 
         .m-toast-shell {
           width: 100%;
+          flex-shrink: 0;
           pointer-events: auto;
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 639px) {
           .m-toast-viewport {
-            top: calc(12px + env(safe-area-inset-top));
+            top: calc(76px + env(safe-area-inset-top));
             right: 12px;
             bottom: auto;
             left: 12px;
+            transform: none;
             width: auto;
-            max-height: min(60dvh, 360px);
+            max-height: calc(100dvh - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
             align-items: stretch;
           }
         }
       `}</style>
-      <div className="m-toast-viewport" aria-live="polite" aria-atomic="false">
+      <div className="m-toast-viewport">
         {toasts.map((toast) => (
           <div key={toast.id} className="m-toast-shell">
             <Toast

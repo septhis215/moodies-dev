@@ -1,10 +1,10 @@
 import type { AppToastVariant } from "./toast-types";
 
 export const TOAST_DURATIONS: Record<AppToastVariant, number> = {
-  success: 3500,
-  info: 4000,
-  warning: 5000,
-  error: 6000,
+  success: 4500,
+  info: 5000,
+  warning: 6000,
+  error: 8000,
 };
 
 export const TOAST_IDS = {

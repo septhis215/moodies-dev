@@ -6,7 +6,15 @@ Implemented a root-level Moodies toast system using the app's existing custom to
 
 ## Library Used
 
-No new toast library was installed. The project already had a custom `Toast` component and `ToastProvider`, and no Sonner or React Hot Toast dependency was present. The implementation keeps the existing dark premium Moodies styling and avoids multiple competing toast systems.
+No new toast library was installed. The project already had a custom `Toast` component and `ToastProvider`, and no Sonner or React Hot Toast dependency was present. All notifications use the same root toast system.
+
+## Notification presentation
+
+- Warm ivory cards with dark text stand out against the dark application. Each variant has a distinct status icon, tinted icon background, and coloured edge; status icons remain visible when an optional poster is supplied.
+- Notifications appear at the top centre below the navigation, with safe-area spacing and a viewport-width layout on phones. Long stacks scroll within the available screen height.
+- Titles and messages wrap. Dismiss and action controls have 44px targets and visible keyboard focus; Escape dismisses a toast while focus is inside it.
+- Default durations are 4.5 seconds for success, 5 for info, 6 for warnings, and 8 for errors. Loading notifications remain persistent. Hovering or focusing controls pauses dismissal until both hover and focus have left the notification. Updating a notification resets its timer.
+- Each toast owns its status/alert announcement; the stack does not add a second live region. Reduced-motion preferences disable entrance and spinner animation.
 
 Context7 was used before implementation:
 
