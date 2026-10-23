@@ -23,7 +23,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isSelectedContentPage = /^\/(movies|tv)\/[^/]+(?:\/(reviews|credits))?\/?$/.test(pathname);
 
   const mainClassName = shouldShowNavbar && !isSelectedContentPage
-    ? "min-h-screen bg-black pt-[var(--mobile-nav-safe)] lg:pt-0"
+    ? `${pathname === "/quiz" ? "min-h-dvh" : "min-h-screen"} bg-black pt-[var(--mobile-nav-safe)] lg:pt-0`
     : "min-h-screen bg-black";
 
   return (

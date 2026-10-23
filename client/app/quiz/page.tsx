@@ -11,6 +11,7 @@ import { RatingBadge } from "@/components/ui/rating-badge";
 import { tmdbImage } from "@/lib/tmdb";
 import { apiRequest } from "@/lib/errors/api-client";
 import { handleAppError } from "@/lib/errors/handle-app-error";
+import styles from "./quiz.module.css";
 import {
   QUIZ_SIGNALS,
   createQuizSessionQuestions,
@@ -339,8 +340,8 @@ export default function MovieQuizPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
-      <div className="ui-shell py-6 sm:py-10 lg:pt-24">
+    <div className={`${stage === "quiz" ? styles.questionPage : "min-h-screen"} bg-[var(--surface-0)] text-[var(--ink)]`}>
+      <div className={`ui-shell py-6 sm:py-10 lg:pt-24 ${stage === "quiz" ? styles.questionShell : ""}`}>
         {stage === "welcome" && (
           <section
             aria-labelledby="quiz-welcome"
@@ -392,19 +393,21 @@ export default function MovieQuizPage() {
         {stage === "quiz" && (
           <section
             aria-labelledby="quiz-question"
-            className="mx-auto max-w-2xl"
+            className={`${styles.question} relative mx-auto max-w-2xl`}
           >
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <p className="ui-kicker">Your signal reel</p>
+            <div className="flex items-center justify-between gap-4 sm:mb-5">
+              <p className="ui-kicker hidden sm:block">Your signal reel</p>
               <button
                 onClick={exit}
-                className={`min-h-11 px-2 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)] ${focusClass}`}
+                aria-label="Exit quiz"
+                className={`absolute right-0 top-0 flex min-h-11 min-w-11 items-center justify-center text-sm text-[var(--ink-muted)] hover:text-[var(--ink)] sm:static sm:px-2 ${focusClass}`}
               >
-                Exit quiz
+                <X className="h-5 w-5 sm:hidden" aria-hidden="true" />
+                <span className="hidden sm:inline">Exit quiz</span>
               </button>
             </div>
             <ol
-              className="grid grid-cols-5 gap-1.5 sm:gap-3"
+              className="grid grid-cols-5 gap-1 pr-13 sm:gap-3 sm:pr-0"
               aria-label={`${answers.filter((a) => a !== null).length} of ${questionCount} signals answered`}
             >
               {questions.map((signal, i) => (
@@ -414,18 +417,18 @@ export default function MovieQuizPage() {
                     disabled={answers[i] === null && i !== current}
                     aria-current={i === current ? "step" : undefined}
                     aria-label={`${signal.label}: ${choice(i)?.text ?? "not answered"}`}
-                    className={`flex min-h-20 w-full min-w-0 flex-col justify-between rounded-md border px-1.5 py-2 text-left sm:px-3 ${focusClass} ${i === current ? "border-[var(--brand-coral)] bg-[var(--surface-2)]" : "border-[var(--surface-border)] bg-[var(--surface-1)]"}`}
+                    className={`flex min-h-11 w-full min-w-0 flex-col items-center justify-center rounded-md border px-1 py-1.5 text-left sm:min-h-20 sm:items-stretch sm:justify-between sm:px-3 sm:py-2 ${focusClass} ${i === current ? "border-[var(--brand-coral)] bg-[var(--surface-2)]" : "border-[var(--surface-border)] bg-[var(--surface-1)]"}`}
                   >
                     <span className="flex items-center justify-between gap-1 text-xs text-[var(--ink-muted)]">
-                      {i + 1}
+                      <span className={answers[i] !== null ? "hidden sm:inline" : ""}>{i + 1}</span>
                       {answers[i] !== null && (
                         <Check className="h-3.5 w-3.5" aria-hidden="true" />
                       )}
                     </span>
-                    <span className="truncate text-xs font-semibold">
+                    <span className="hidden truncate text-xs font-semibold sm:block">
                       {signal.label}
                     </span>
-                    <span className="w-full truncate text-xs text-[var(--ink-muted)]">
+                    <span className="hidden w-full truncate text-xs text-[var(--ink-muted)] sm:block">
                       {choice(i)?.label ?? (i === current ? "Now" : "—")}
                     </span>
                   </button>
@@ -433,27 +436,27 @@ export default function MovieQuizPage() {
               ))}
             </ol>
             {resumed && (
-              <p className="mt-3 text-xs text-[var(--ink-muted)]">
+              <p className="sr-only sm:not-sr-only sm:mt-3 sm:text-xs sm:text-[var(--ink-muted)]">
                 Your saved answers are here. Continue or change any completed
                 signal.
               </p>
             )}
-            <p className="mt-6 text-sm text-[var(--ink-muted)]">
+            <p className="sr-only sm:not-sr-only sm:mt-6 sm:text-sm sm:text-[var(--ink-muted)]">
               Question {current + 1} of {questionCount} · Choose one
             </p>
             <h1
               ref={headingRef}
               tabIndex={-1}
               id="quiz-question"
-              className="mt-2 text-3xl font-bold leading-tight outline-none sm:text-4xl"
+              className="mt-3 text-2xl font-bold leading-tight outline-none sm:mt-2 sm:text-4xl"
             >
               {question.question}
             </h1>
-            <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+            <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)] sm:mt-2 sm:text-sm sm:leading-6">
               {question.hint}
             </p>
             <div
-              className="mt-5 grid gap-3"
+              className={`mt-3 grid gap-2 sm:mt-5 sm:gap-3 ${question.options.length > 4 ? "grid-cols-2 sm:grid-cols-1" : ""}`}
               role="group"
               aria-label="Answer choices"
             >
@@ -468,7 +471,7 @@ export default function MovieQuizPage() {
                       ),
                     )
                   }
-                  className={`flex min-h-16 items-center gap-3 rounded-md border px-4 py-3 text-left text-base transition-colors motion-reduce:transition-none ${focusClass} ${answers[current] === i ? "border-[var(--brand-coral)] bg-[var(--surface-2)]" : "border-[var(--surface-border)] bg-[var(--surface-1)] hover:border-[var(--ink-muted)]"}`}
+                  className={`flex min-h-12 items-center gap-2 rounded-md border px-3 py-2 text-left text-sm leading-5 transition-colors motion-reduce:transition-none sm:min-h-16 sm:gap-3 sm:px-4 sm:py-3 sm:text-base ${focusClass} ${answers[current] === i ? "border-[var(--brand-coral)] bg-[var(--surface-2)]" : "border-[var(--surface-border)] bg-[var(--surface-1)] hover:border-[var(--ink-muted)]"}`}
                 >
                   {option.mood && (
                     <Image
@@ -476,20 +479,18 @@ export default function MovieQuizPage() {
                       alt=""
                       width={40}
                       height={40}
-                      className="shrink-0 object-contain"
+                      className="h-7 w-7 shrink-0 object-contain sm:h-10 sm:w-10"
                     />
                   )}
-                  <span className="flex-1">{option.text}</span>
-                  {answers[current] === i && (
-                    <Check
-                      className="h-5 w-5 shrink-0 text-[var(--brand-coral-strong)]"
-                      aria-hidden="true"
-                    />
-                  )}
+                  <span className="min-w-0 flex-1">{option.text}</span>
+                  <Check
+                    className={`h-4 w-4 shrink-0 text-[var(--brand-coral-strong)] sm:h-5 sm:w-5 ${answers[current] === i ? "" : "invisible"}`}
+                    aria-hidden="true"
+                  />
                 </button>
               ))}
             </div>
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+            <div className={`${styles.actions} mt-5 flex flex-wrap items-center justify-between gap-3`}>
               <button
                 disabled={current === 0}
                 onClick={() => setCurrent((step) => step - 1)}

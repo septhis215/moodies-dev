@@ -1,0 +1,18 @@
+@media (max-width: 639px) {
+  .questionPage {
+    min-height: calc(100dvh - var(--mobile-nav-safe));
+  }
+  .questionShell {
+    padding-top: 0.75rem;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+  .question {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - var(--mobile-nav-safe) - 0.75rem - max(0.75rem, env(safe-area-inset-bottom)));
+  }
+  .actions {
+    margin-top: auto;
+    padding-top: 0.75rem;
+  }
+}
