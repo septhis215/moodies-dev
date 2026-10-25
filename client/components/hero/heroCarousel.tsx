@@ -131,7 +131,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
 
   if (!all || all.length === 0 || !current) {
     return (
-      <section className="flex h-[60vh] min-h-[420px] items-center justify-center bg-[#09090a] px-6 text-center text-white">
+      <section className="landing-hero flex items-center justify-center bg-[var(--surface-0)] px-6 text-center text-white">
         <p className="text-sm font-semibold text-white/70">
           Featured titles are loading.
         </p>

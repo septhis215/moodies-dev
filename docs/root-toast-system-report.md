@@ -10,8 +10,8 @@ No new toast library was installed. The project already had a custom `Toast` com
 
 ## Notification presentation
 
-- Warm ivory cards with dark text stand out against the dark application. Each variant has a distinct status icon, tinted icon background, and coloured edge; status icons remain visible when an optional poster is supplied.
-- Notifications appear at the top centre below the navigation, with safe-area spacing and a viewport-width layout on phones. Long stacks scroll within the available screen height.
+- Dark cards use the shared Moodies surface and text tokens, a subtle status-tinted background and border, and distinct status icons. Status icons remain visible when an optional poster is supplied.
+- Notifications appear at the top right, with safe-area spacing and a viewport-width layout below the navigation on phones. Long stacks scroll within the available screen height.
 - Titles and messages wrap. Dismiss and action controls have 44px targets and visible keyboard focus; Escape dismisses a toast while focus is inside it.
 - Default durations are 4.5 seconds for success, 5 for info, 6 for warnings, and 8 for errors. Loading notifications remain persistent. Hovering or focusing controls pauses dismissal until both hover and focus have left the notification. Updating a notification resets its timer.
 - Each toast owns its status/alert announcement; the stack does not add a second live region. Reduced-motion preferences disable entrance and spinner animation.

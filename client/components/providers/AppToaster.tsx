@@ -52,18 +52,17 @@ export function AppToaster() {
       <style>{`
         .m-toast-viewport {
           position: fixed;
-          top: calc(88px + env(safe-area-inset-top));
-          left: 50%;
-          transform: translateX(-50%);
+          top: calc(24px + env(safe-area-inset-top));
+          right: calc(24px + env(safe-area-inset-right));
           z-index: 9999;
           display: flex;
-          width: min(460px, calc(100vw - 32px));
-          max-height: calc(100dvh - 112px - env(safe-area-inset-top));
+          width: min(400px, calc(100vw - 48px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+          max-height: calc(100dvh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
           overflow-y: auto;
           overscroll-behavior: contain;
           flex-direction: column;
           align-items: stretch;
-          gap: 12px;
+          gap: 10px;
           pointer-events: none;
         }
 
@@ -76,11 +75,9 @@ export function AppToaster() {
         @media (max-width: 639px) {
           .m-toast-viewport {
             top: calc(76px + env(safe-area-inset-top));
-            right: 12px;
+            right: calc(12px + env(safe-area-inset-right));
             bottom: auto;
-            left: 12px;
-            transform: none;
-            width: auto;
+            width: min(400px, calc(100vw - 24px - env(safe-area-inset-left) - env(safe-area-inset-right)));
             max-height: calc(100dvh - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
             align-items: stretch;
           }

@@ -25,15 +25,17 @@
   .moodies-skeleton::after { animation: none; display: none; }
 }
 
-/* Keep the spotlight and its actions visible on short laptop viewports.
-   Content can grow naturally on phones, landscape screens, and at text zoom. */
+/* Fill the first screen, accounting for the mobile navbar's reserved space.
+   A minimum lets content grow on short screens and at increased text sizes. */
 .landing-hero {
-  min-height: min(640px, 82svh);
+  min-height: calc(100svh - var(--mobile-nav-safe));
+  min-height: calc(100dvh - var(--mobile-nav-safe));
 }
 
 @media (min-width: 1024px) {
   .landing-hero {
-    min-height: min(780px, 84svh);
+    min-height: 100svh;
+    min-height: 100dvh;
   }
 }
 
