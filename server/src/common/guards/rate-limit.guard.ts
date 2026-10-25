@@ -62,7 +62,9 @@ export class RateLimitGuard implements CanActivate {
       (request.method === 'POST' && /\/snapshot$/.test(path));
     const ip = this.digest(this.ips.get(request));
     const group = this.group(path, request.method, authAction);
-    const points = sensitive
+    const points = authAction === 'request-reset'
+      ? 5
+      : sensitive
       ? Number(this.config.get('RATE_LIMIT_AUTH_IP_PER_MINUTE') ?? 30)
       : group === 'regenerate' || group === 'snapshot'
         ? 8
@@ -90,9 +92,20 @@ export class RateLimitGuard implements CanActivate {
     ) {
       buckets.push({
         key: `rl:v2:account:${this.digest(email.trim().toLowerCase())}:${authAction}`,
-        points: 6,
+        points: authAction === 'request-reset' ? 1 : 6,
         windowMs: WINDOW_MS,
       });
+      if (authAction === 'request-reset') {
+        buckets.push({
+          key: `rl:v2:account:${this.digest(email.trim().toLowerCase())}:reset-hour`,
+          points: 5,
+          windowMs: 60 * WINDOW_MS,
+        });
+      }
+    }
+    if (authAction === 'request-reset') {
+      // Share this sending budget across IPs and backend replicas.
+      buckets.push({ key: 'rl:v2:password-reset:all', points: 10, windowMs: WINDOW_MS });
     }
     let result: RateLimitResult;
     try {

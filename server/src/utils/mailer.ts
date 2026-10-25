@@ -1,35 +1,70 @@
 import nodemailer from 'nodemailer';
-import { Logger } from '@nestjs/common';
+import { Injectable, Logger, type OnApplicationShutdown } from '@nestjs/common';
+import { setTimeout as delay } from 'node:timers/promises';
 
 const logger = new Logger('Mailer');
 
-// Transport selection:
-//  - Local dev (NODE_ENV=development) uses Gmail SMTP — it works on a dev machine
-//    and can send to any recipient without a verified domain.
-//  - Staging/production send over HTTPS via Resend, because some PaaS hosts
-//    block outbound SMTP (ETIMEDOUT on connect). NODE_ENV must be exactly
-//    'development' for SMTP, so staging never tries (and hangs on) a blocked port.
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-// Resend sender. 'Moodies <onboarding@resend.dev>' only delivers to your own
-// Resend account email; set a verified-domain sender for real recipients.
-const MAIL_FROM = process.env.MAIL_FROM || 'Moodies <onboarding@resend.dev>';
+const MAX_PENDING_EMAILS = 20;
+const pendingEmails = new Set<Promise<void>>();
+let smtpTransporter: ReturnType<typeof nodemailer.createTransport> | undefined;
+let shuttingDown = false;
 
-const useLocalSmtp =
-  process.env.NODE_ENV === 'development' &&
-  !!process.env.MAIL_USER &&
-  !!process.env.MAIL_PASS;
+function getTransporter() {
+  if (smtpTransporter) return smtpTransporter;
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-const smtpTransporter = useLocalSmtp
-  ? nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: process.env.MAIL_USER, pass: process.env.MAIL_PASS },
-      // Fail fast instead of hanging if SMTP is slow/unreachable.
-      connectionTimeout: 10_000,
-      greetingTimeout: 10_000,
-      socketTimeout: 15_000,
-    })
-  : null;
+  // Auth modules import this file before ConfigModule loads .env.
+  const user = process.env.MAIL_USER?.trim();
+  const pass = process.env.MAIL_PASS;
+  if (!user || !pass) {
+    throw new Error('Email is not configured: set MAIL_USER and MAIL_PASS.');
+  }
+  const port = Number(process.env.SMTP_PORT || 465);
+  if (port !== 465 && port !== 587) {
+    throw new Error('SMTP_PORT must be 465 (TLS) or 587 (STARTTLS).');
+  }
+  smtpTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST?.trim() || 'smtp.hostinger.com',
+    port,
+    secure: port === 465,
+    requireTLS: port === 587,
+    auth: { user, pass },
+    pool: true,
+    maxConnections: 2,
+    maxMessages: 100,
+    // Retry only explicit SMTP rejections below; a dropped connection can be ambiguous.
+    maxRequeues: 0,
+    dnsTimeout: 5_000,
+    connectionTimeout: 10_000,
+    greetingTimeout: 5_000,
+    socketTimeout: 15_000,
+    disableFileAccess: true,
+    disableUrlAccess: true,
+  });
+  return smtpTransporter;
+}
+
+@Injectable()
+export class MailerLifecycle implements OnApplicationShutdown {
+  async onApplicationShutdown() {
+    shuttingDown = true;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        Promise.allSettled([...pendingEmails]),
+        new Promise<void>((resolve) => {
+          timeout = setTimeout(resolve, 25_000);
+        }),
+      ]);
+      if (pendingEmails.size) {
+        logger.warn(`Email shutdown deadline reached with ${pendingEmails.size} pending deliveries.`);
+      }
+    } finally {
+      clearTimeout(timeout);
+      smtpTransporter?.close();
+      smtpTransporter = undefined;
+    }
+  }
+}
 
 async function deliverEmail(opts: {
   to: string;
@@ -37,44 +72,40 @@ async function deliverEmail(opts: {
   html: string;
   text: string;
 }) {
-  // Local dev: real send via Gmail SMTP (any recipient, no domain needed).
-  if (smtpTransporter) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    await smtpTransporter.sendMail({
-      from: `"Moodies Support" <${process.env.MAIL_USER}>`,
-      to: opts.to,
-      subject: opts.subject,
-      text: opts.text,
-      html: opts.html,
-    });
-    return;
+  if (shuttingDown || pendingEmails.size >= MAX_PENDING_EMAILS) {
+    throw new Error('Email delivery is temporarily at capacity.');
   }
-
-  // Staging/production: HTTPS via Resend (SMTP is blocked on PaaS).
-  if (!RESEND_API_KEY) {
-    throw new Error(
-      'No email transport configured — set MAIL_USER/MAIL_PASS for local SMTP, or RESEND_API_KEY for hosted sending.',
-    );
-  }
-
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: MAIL_FROM,
-      to: [opts.to],
-      subject: opts.subject,
-      html: opts.html,
-      text: opts.text,
-    }),
-  });
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Resend API error ${res.status}: ${detail}`);
+  const transport = getTransporter();
+  const delivery = (async () => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await transport.sendMail({
+          from: process.env.MAIL_FROM?.trim() || `Moodies <${process.env.MAIL_USER?.trim()}>`,
+          replyTo: process.env.MAIL_SUPPORT?.trim() || process.env.MAIL_USER?.trim(),
+          ...opts,
+        });
+        return;
+      } catch (error) {
+        const smtpError = error as { responseCode?: number; command?: string } | null;
+        if (
+          attempt > 0 ||
+          !smtpError?.responseCode ||
+          smtpError.responseCode < 400 ||
+          smtpError.responseCode >= 500 ||
+          smtpError.command?.startsWith('AUTH')
+        ) {
+          throw error;
+        }
+        logger.warn(`SMTP temporarily rejected a delivery (${smtpError.responseCode}); retrying once.`);
+        await delay(1_000);
+      }
+    }
+  })();
+  pendingEmails.add(delivery);
+  try {
+    await delivery;
+  } finally {
+    pendingEmails.delete(delivery);
   }
 }
 
@@ -91,16 +122,22 @@ type MoodiesEmailTemplateOptions = {
   footerNote?: string;
 };
 
-const APP_URL = (process.env.CLIENT_URL || 'https://moodies.com').replace(
-  /\/$/,
-  '',
-);
-
-const MOODIES_BRAND = {
-  name: 'Moodies',
-  supportEmail: process.env.MAIL_SUPPORT || 'moodies.support@gmail.com',
-  appUrl: APP_URL,
-};
+function getEmailBrand() {
+  const appUrl = process.env.CLIENT_URL?.trim();
+  if (!appUrl) throw new Error('CLIENT_URL is required for email links.');
+  const url = new URL(appUrl);
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    throw new Error('CLIENT_URL must be an HTTP or HTTPS URL.');
+  }
+  if (process.env.NODE_ENV !== 'development' && url.protocol !== 'https:') {
+    throw new Error('Hosted email links require an HTTPS CLIENT_URL.');
+  }
+  return {
+    name: 'Moodies',
+    supportEmail: process.env.MAIL_SUPPORT?.trim() || 'support@moodies.tech',
+    appUrl: appUrl.replace(/\/$/, ''),
+  };
+}
 
 const SUPPORT_EMAIL_SUBJECT = 'Moodies Support Request';
 
@@ -120,6 +157,7 @@ function supportMailtoHref(email: string) {
 }
 
 function createMoodiesEmailTemplate(options: MoodiesEmailTemplateOptions) {
+  const MOODIES_BRAND = getEmailBrand();
   const {
     title,
     previewText = 'A message from Moodies',
@@ -239,6 +277,7 @@ function createMoodiesEmailTemplate(options: MoodiesEmailTemplateOptions) {
 }
 
 function createPlainTextEmail(options: MoodiesEmailTemplateOptions) {
+  const MOODIES_BRAND = getEmailBrand();
   const {
     title,
     greeting = 'Hi there,',
@@ -287,6 +326,7 @@ export async function sendMoodiesEmail(
 }
 
 export async function sendVerificationCode(email: string, code: string) {
+  const MOODIES_BRAND = getEmailBrand();
   const verifyUrl = `${MOODIES_BRAND.appUrl}/auth/verify-code?email=${encodeURIComponent(
     email,
   )}`;
@@ -307,5 +347,5 @@ export async function sendVerificationCode(email: string, code: string) {
       'You received this email because a password reset was requested for your Moodies account.',
   });
 
-  logger.log(`Sent password reset verification email to ${email}`);
+  logger.log('SMTP accepted a password-reset email.');
 }

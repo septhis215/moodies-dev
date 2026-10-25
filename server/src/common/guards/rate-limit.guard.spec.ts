@@ -93,6 +93,16 @@ describe('layered rate limits', () => {
     await guard.canActivate(context('/api/auth/refresh', 'POST').context);
     expect(consumeRateLimits.mock.calls[0][0][1].points).toBe(120);
   });
+  it('limits reset requests per account, per IP and across the deployment', async () => {
+    const { guard, consumeRateLimits, context } = setup();
+    await guard.canActivate(context('/api/auth/request-reset', 'POST', { email: ' Member@Example.com ' }).context);
+    const buckets = consumeRateLimits.mock.calls[0][0];
+    expect(buckets[1].points).toBe(5);
+    expect(buckets[2]).toMatchObject({ points: 1, windowMs: 60_000 });
+    expect(buckets[3]).toMatchObject({ points: 5, windowMs: 3_600_000 });
+    expect(buckets[4]).toEqual({ key: 'rl:v2:password-reset:all', points: 10, windowMs: 60_000 });
+    expect(JSON.stringify(buckets)).not.toContain('example.com');
+  });
   it('returns 429 and a usable Retry-After when a shared budget is exhausted', async () => {
     const { guard, consumeRateLimits, context } = setup();
     consumeRateLimits.mockResolvedValue({
