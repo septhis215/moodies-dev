@@ -66,7 +66,7 @@ Each pillar below maps to real, shipped code, not aspirations.
 | Secondary DBs present | MongoDB + TypeORM + Mongoose are installed and wired in `AppModule`/compose but are **legacy/side** stores, not the source of truth | — |
 | Auth | JWT access + refresh cookies, PostgreSQL session authority (legacy Redis reader), Argon2 and bcrypt both present, Passport Google OAuth2 | — |
 | Bot protection | Cloudflare Turnstile (`@marsidev/react-turnstile` client, Nest guard server) | — |
-| Email | Nodemailer with a `MAIL_SUPPORT` sender; Resend config key supported | — |
+| Email | Hostinger SMTP via Nodemailer; `MAIL_USER` / `MAIL_PASS` credentials, `MAIL_FROM` sender, `MAIL_SUPPORT` reply address | — |
 | Avatars / uploads | Supabase Storage | — |
 | Secrets | Doppler (`doppler.yaml` per workspace), with `.env` fallback | — |
 | Testing | Jest (server unit + e2e), Vitest 4 + Storybook 10 browser tests + Playwright 1.61 smoke (client), MSW for mocking | — |
@@ -207,7 +207,8 @@ server/
   generic otherwise".
 - Env validation is a **Joi schema in `app.module.ts`**, not `env.ts`. Required:
   `JWT_SECRET`, `DATABASE_URL`. Optional-with-defaults: TMDB, Redis, Turnstile, Google,
-  Resend, Supabase, `CORS_ORIGINS`, `CLIENT_URL`, `PORT`.
+  Supabase, `CORS_ORIGINS`, `CLIENT_URL`, `PORT`. Hosted SMTP requires `MAIL_USER`
+  and `MAIL_PASS`; see `ENVIRONMENTS.md` for email configuration.
 - IP-based security uses `ClientIpService`, socket-first and explicit trusted
   CIDRs. `TRUST_PROXY=true` requires `TRUSTED_PROXY_CIDRS`; arbitrary forwarded/CF
   headers are not identity. Redis token buckets enforce aggregate/route/account
@@ -413,9 +414,9 @@ Full spec: [`docs/typography-spec.md`](typography-spec.md). Summary:
 - Product naming to keep consistent: **Moodies**, **Moodies Feed**, **Moodies guide**
   (nav drawer label), **Critics' Corner**, **Community Picks**, **Community Pulse**,
   **Personality Quiz**.
-- Support contact is `moodies.support@gmail.com` with a `MAIL_SUPPORT` sender; the
-  long-term plan is Cloudflare Email Routing (see `README.md`). Do not introduce other
-  contact addresses.
+- Support contact is `support@moodies.tech`, hosted by Hostinger. `MAIL_FROM`
+  controls the SMTP sender; `MAIL_SUPPORT` controls template links and Reply-To.
+  Cloudflare hosts email DNS records; Email Routing and Resend are not used.
 
 ### 7.4 Mood taxonomy — the product's vocabulary
 

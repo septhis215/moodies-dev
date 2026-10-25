@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "verifiedOn": "2026-10-25",
+  "verificationScope": "Identifiable upstream baselines and a reviewed local snapshot. Original install commands and installation dates were not recorded.",
+  "snapshotFormat": "SHA-256 over sorted relative POSIX paths, NUL, decimal byte length, NUL, contents, NUL. UTF-8 text uses LF line endings; binary bytes are unchanged. Excludes .git, __pycache__, .pyc and .pyo. Implemented by scripts/check-skill-sources.cjs.",
+  "sources": {
+    "ponytail": {
+      "repository": "https://github.com/DietrichGebert/ponytail",
+      "commit": "09c434ab73ca43761c5d8b0c5d341926c2fba710",
+      "path": "skills/ponytail",
+      "verification": "Local SKILL.md matches immutable Git blob d64edd32265ba21cbf5270158f04e97d96925f27.",
+      "licenseFiles": [
+        "licenses/ponytail-MIT.txt"
+      ]
+    },
+    "i-have-adhd": {
+      "repository": "https://github.com/ayghri/i-have-adhd",
+      "commit": "1ecea1993b7fce257ffbd686c070948b5e07eda6",
+      "path": "skills/i-have-adhd",
+      "verification": "Compared against upstream SKILL.md blob 6c42757ffae37e442adfb52fbba2a8609f1cff00; local activation metadata is intentionally adapted.",
+      "licenseFiles": [
+        "licenses/i-have-adhd-MIT.txt"
+      ]
+    },
+    "browser-use": {
+      "repository": "https://github.com/browser-use/browser-use",
+      "tag": "0.13.11",
+      "commit": "914c59bdd4acd50e9628a97a96a3919313aebc85",
+      "path": "browser_use/skills/browser-use",
+      "verification": "Local skill matches the installed Python distribution and Git blob ca98fee56eb23fba5b25a4804691a80061544c91 after line-ending normalization.",
+      "runtime": {
+        "browser-use": "0.13.11",
+        "browser-harness": "0.1.13",
+        "browser-use-sdk": "3.4.2",
+        "python": "3.12.13"
+      },
+      "licenseFiles": [
+        "licenses/browser-use-MIT.txt",
+        "licenses/browser-harness-MIT.txt"
+      ]
+    },
+    "ui-ux-pro-max": {
+      "repository": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+      "commit": "a38d04c3d5c298c851dbe5e6ee1965ee3de42cb5",
+      "package": "ui-ux-pro-max-cli",
+      "version": "2.15.0",
+      "tarball": "https://registry.npmjs.org/ui-ux-pro-max-cli/-/ui-ux-pro-max-cli-2.15.0.tgz",
+      "integrity": "sha512-D0J/C40xrzzi5si6ZLtRGbEE5v3QjL7d4wJNnasmP3yfDSrGiuqVCdwQiqCNnIkbqOuVoA/uonR2o1WKXh3urw==",
+      "verification": "Cached npm package and registry integrity agree. UI data and upstream scripts match; the generated Codex skill and bundled sibling workflows have local adaptations listed below.",
+      "licenseFiles": [
+        "licenses/ui-ux-pro-max-MIT.txt",
+        "skills/ui-styling/LICENSE.txt"
+      ],
+      "licenseNote": "The package declares MIT; ui-styling includes an Apache-2.0 notice while its frontmatter says MIT. Both upstream notices are preserved."
+    },
+    "humanizer": {
+      "repository": "https://github.com/blader/humanizer",
+      "commit": "8c307f367c91bd974002f10f2be2965d642c13df",
+      "path": ".",
+      "version": "3.1.0",
+      "verification": "All 14 installed package files match the immutable source after line-ending normalization.",
+      "licenseFiles": [
+        "skills/humanizer/LICENSE"
+      ]
+    }
+  },
+  "skills": [
+    {
+      "name": "ponytail",
+      "source": "ponytail",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "b999ba97184ae368ac054f8261e90377a1ee596b649cfaf99462859c5bcbe5cf"
+    },
+    {
+      "name": "i-have-adhd",
+      "source": "i-have-adhd",
+      "adaptations": [
+        "Enabled implicit invocation and adapted the description for the repository's default communication policy."
+      ],
+      "fileCount": 3,
+      "sha256": "dd6274152efb5b452e3ac647506772026872e2ac552963f50a445e5301682815"
+    },
+    {
+      "name": "browser-use",
+      "source": "browser-use",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "8eadb95fb2b9829a5e1409c26f93bf7a9e606c76c1b0f17b5cee28d4d65daabb"
+    },
+    {
+      "name": "ui-ux-pro-max",
+      "source": "ui-ux-pro-max",
+      "sourcePath": "cli/assets/templates/platforms/codex.json",
+      "adaptations": [
+        "Documented the existing offline uv Python launcher for Moodies."
+      ],
+      "fileCount": 68,
+      "sha256": "a3b6de9d6e60c9d696f713d03dcd31a543e01445321c9b8faf51b1109e01fb66"
+    },
+    {
+      "name": "humanizer",
+      "source": "humanizer",
+      "adaptations": [],
+      "fileCount": 14,
+      "sha256": "3318aa175d1cf832b1c2de31686b7b360755651db57ddba37b29e922ec5dad24"
+    },
+    {
+      "name": "banner-design",
+      "source": "ui-ux-pro-max",
+      "sourcePath": "cli/assets/skills/banner-design",
+      "adaptations": [
+        "Replaced unavailable agent-specific skill/tool dependencies with capabilities available in this setup."
+      ],
+      "fileCount": 2,
+      "sha256": "11aabd81d246ae1b56ac13abe12ac2b6fd52e0142ac47486f6f3e44106caf79b"
+    },
+    {
+      "name": "brand",
+      "source": "ui-ux-pro-max",
+      "sourcePath": "cli/assets/skills/brand",
+      "adaptations": [
+        "Resolved sibling token generator portably, reported generation failures, and added isolated regression tests.",
+        "Adapted project paths, invocation syntax, and Moodies brand precedence."
+      ],
+      "fileCount": 19,
+      "sha256": "289425870ba1dd9063c5f92b5f55866570bb6e1f49331213daa8f7ecccac826b"
+    },
+    {
+      "name": "design",
+      "source": "ui-ux-pro-max",
+      "sourcePath": "cli/assets/skills/design",
+      "adaptations": [
+        "Adapted project paths, capability routing, and optional generator prerequisites; removed other agents' home environment-file fallbacks."
+      ],
+      "fileCount": 35,
+      "sha256": "3d5cd1c05507b301f84e24300d74f1fa2352e233bfd64113648d62a6a8de625e"
+    },
+    {
+      "name": "design-system",
+      "source": "ui-ux-pro-max",
+      "sourcePath": "cli/assets/skills/design-system",
+      "adaptations": [
+        "Adapted project paths and documented precedence of existing Moodies tokens."
+      ],
+      "fileCount": 27,
+      "sha256": "2f7642ed2ee338a7e04e2960e665b0ef6d4886b62108396657ff197ad82da6e2"
+    },
+    {
+      "name": "slides",
+      "source": "ui-ux-pro-max",
+      "sourcePath": "cli/assets/skills/slides",
+      "adaptations": [
+        "Adapted project paths and references to available capabilities."
+      ],
+      "fileCount": 6,
+      "sha256": "f294f7dda1511c5a079596a59a00d6897b71c178eb6889502918d202aa635bc2"
+    },
+    {
+      "name": "ui-styling",
+      "source": "ui-ux-pro-max",
+      "sourcePath": "cli/assets/skills/ui-styling",
+      "adaptations": [
+        "Adapted project paths and guarded against applying legacy Tailwind setup to Moodies."
+      ],
+      "fileCount": 16,
+      "sha256": "5a8b4297cd4e464ab6f3b88130936e368a422508112b1cc10ba33047e430a8ad"
+    }
+  ]
+}
