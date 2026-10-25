@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('node:path').join(require('node:child_process').execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim(), '.codex/hooks/skill-gate.cjs')).main()\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

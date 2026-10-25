@@ -1,4 +1,4 @@
-export const DEFAULT_SUPPORT_EMAIL = "moodies.support@gmail.com";
+export const DEFAULT_SUPPORT_EMAIL = "support@moodies.tech";
 
 export const appConfig = {
   supportEmail:

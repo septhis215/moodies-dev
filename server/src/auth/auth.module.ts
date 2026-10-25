@@ -11,6 +11,7 @@ import { AuthSessionService } from './auth-session.service';
 import { accessTtlMs } from './auth.config';
 import { AuthSessionCleanupService } from './auth-session-cleanup.service';
 import { CookieOriginGuard } from './cookie-origin.guard';
+import { MailerLifecycle } from '../utils/mailer';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { CookieOriginGuard } from './cookie-origin.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthSessionService, AuthSessionCleanupService, CookieOriginGuard, JwtStrategy, PrismaService, GoogleStrategy],
+  providers: [AuthService, AuthSessionService, AuthSessionCleanupService, CookieOriginGuard, JwtStrategy, PrismaService, GoogleStrategy, MailerLifecycle],
   exports: [PassportModule, JwtModule, JwtStrategy, AuthService],
 })
 export class AuthModule { }

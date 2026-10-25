@@ -98,6 +98,73 @@ proxy rather than exposing the frontend/API or database ports directly.
 - Configure `CLIENT_URL`, `CORS_ORIGINS`, and `GOOGLE_CALLBACK_URL` with the real public
   origins for each environment.
 
+### Transactional email: Hostinger SMTP
+
+Configure these variables on the **backend** in Dokploy (or in the active Doppler
+configuration if it supplies runtime secrets). Never put mailbox credentials in
+frontend variables, build arguments, or committed files.
+
+```dotenv
+MAIL_USER=support@moodies.tech
+MAIL_PASS='YOUR_MAILBOX_PASSWORD'
+MAIL_FROM="Moodies <support@moodies.tech>"
+MAIL_SUPPORT=support@moodies.tech
+SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=465
+CLIENT_URL=https://dev.moodies.tech
+```
+
+`SMTP_HOST` and `SMTP_PORT` default to the values above, so existing deployments
+only need the mailbox credentials and sender/link settings. Port 465 uses TLS
+immediately; port 587 requires STARTTLS. Certificate verification stays enabled.
+Hosted backends fail configuration validation if credentials are missing.
+Set an HTTPS `CLIENT_URL` matching the frontend for each hosted environment.
+The sender should be the authenticated mailbox, not a Webmail-only alias.
+
+For Dokploy **Applications**, save runtime variables on the backend service and
+redeploy. For **Docker Compose**, the editor's `.env` is not automatically
+injected into containers: add these names to the backend service's existing
+`environment` mapping, or load the appropriate `env_file`. The root Compose file
+currently reads `server/.env.staging`; it does not load Dokploy's root `.env` into
+the backend automatically. Give the backend at least 30 seconds to stop normally
+(`stop_grace_period: 30s` for Compose) so SMTP deliveries can drain.
+
+Set `NEXT_PUBLIC_SUPPORT_EMAIL=support@moodies.tech` in the frontend **build**
+environment and rebuild to replace any older configured public support address.
+
+One SMTP pool per backend process reuses up to two connections and permits at most
+20 pending messages. DNS/connect/greeting/socket timeouts bound stalled SMTP work.
+Explicit temporary SMTP 4xx rejections get one retry; authentication failures,
+permanent rejections and ambiguous network failures do not. SMTP acceptance does
+not prove inbox delivery. Normal shutdown drains pending work for up to 25 seconds.
+The in-memory buffer is not a durable outbox: crashes, forced termination, capacity
+rejection or provider outages can require the user to request another reset.
+
+Reset requests retain Turnstile and Redis-backed protection. Additional shared
+token buckets allow one request per minute and five per hour per normalized email,
+five per minute per IP, and ten per minute across the deployment (these permit an
+initial burst and refill gradually). Unknown accounts consume the same budgets.
+These budgets do not replace Hostinger's daily mailbox quota, which includes mail
+sent outside the app. Check the exact allowance in hPanel before launch or scaling.
+Daily active users are not the same as daily email sends. If recovery emails need
+to survive crashes automatically, add a durable outbox before increasing volume.
+
+Manual deployment/security check:
+
+1. Request a reset for an existing test account; the response remains generic and
+   responsive while SMTP runs in the background. Verify the sender, Reply-To, both
+   message formats, HTTPS frontend link, and SPF/DKIM/DMARC results in the inbox.
+2. Complete code verification and password reset, then confirm the new password
+   works and prior sessions are revoked. Never paste reset codes into logs/tickets.
+3. Request another reset within a minute: expect 429 and `Retry-After`. An unknown
+   account must return the same generic response and be rate limited too.
+4. In an isolated staging deployment, use deliberately invalid SMTP credentials:
+   check backend delivery-error logs without exposing credentials or reset codes.
+   Restore credentials and redeploy. Never perform this check on the live backend.
+5. Test delivery at Gmail and Outlook. During a normal redeploy, check that pending
+   deliveries finish before the process exits. Monitor delivery errors and hPanel
+   sending quota; public browsing must remain available during email outages.
+
 ### Google OAuth
 
 OAuth credentials were moved to **our own Google Cloud project**. The OAuth client has these

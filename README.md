@@ -59,31 +59,16 @@ Backend: http://localhost:4000 or the port configured in `server/.env`
 The app uses `NEXT_PUBLIC_SUPPORT_EMAIL` to display the public support contact.
 The server email templates use `MAIL_SUPPORT` for the same support contact.
 
-Default:
+The support mailbox is hosted by Hostinger:
 
 ```txt
-moodies.support@gmail.com
+support@moodies.tech
 ```
 
-For now, this is a dedicated Gmail inbox. Do not use a hosting-provider
-subdomain as an email domain because the project does not control the root DNS records.
-
-When a custom domain is added later, change the public support email to:
-
-```txt
-support@yourcustomdomain.com
-```
-
-The intended future setup is Cloudflare Email Routing:
-
-```txt
-support@yourcustomdomain.com -> moodies.support@gmail.com
-```
-
-Future deployment steps: add the domain to your DNS provider, configure DNS and
-Email Routing, verify `moodies.support@gmail.com` as the destination inbox,
-create the support route, then update `NEXT_PUBLIC_SUPPORT_EMAIL` and
-`MAIL_SUPPORT`.
+Cloudflare manages DNS; Hostinger receives mail and sends password-reset emails
+over authenticated SMTP. Cloudflare Email Routing and Resend are not used.
+See [ENVIRONMENTS.md](ENVIRONMENTS.md#transactional-email-hostinger-smtp) for
+Dokploy configuration, delivery limits, and deployment checks.
 
 ## Verification
 
