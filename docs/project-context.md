@@ -55,7 +55,7 @@ Each pillar below maps to real, shipped code, not aspirations.
 
 | Layer | Choice | Pin |
 |---|---|---|
-| Frontend framework | Next.js App Router, React Server Components + client components | Next `^15.5.19`, React `^19.1.0` |
+| Frontend framework | Next.js App Router, React Server Components + client components | Next `^16.4.3`, React `^19.3.1` |
 | Frontend styling | Tailwind CSS v4 (CSS-first config, `@theme` in `globals.css`), `tw-animate-css`, `class-variance-authority`, Radix primitives | Tailwind `^4.1.12` |
 | Frontend motion | Framer Motion | `^12.23.12` |
 | Frontend data | `@tanstack/react-query` v5 for client cache; native `fetch` with `next: { revalidate }` in server components | `^5.85.5` |

@@ -12,7 +12,8 @@ Full product, structure, and identity brief: [docs/project-context.md](./docs/pr
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 20.9+ for the app and API
+- Node.js 22+ for Cloudflare builds and Wrangler
 - npm
 - Docker, if you want local Postgres through `docker-compose.yml`
 - Local secrets from the project owner or deployment provider

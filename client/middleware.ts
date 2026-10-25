@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Keep Edge middleware for Cloudflare; OpenNext's Node.js proxy middleware remains experimental.
 export function middleware(request: NextRequest) {
   const headers = new Headers(request.headers);
   headers.set("x-pathname", request.nextUrl.pathname);

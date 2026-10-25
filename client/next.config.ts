@@ -25,9 +25,6 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_API_URL: apiUrl,
     NEST_API_URL: apiUrl,
   },
-  eslint: {
-    ignoreDuringBuilds: false,
-  },
   typescript: {
     ignoreBuildErrors: false,
   },
