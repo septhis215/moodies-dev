@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import CommunityForum from "@/components/community/CommunityForum";
 
 export const metadata: Metadata = {
@@ -8,5 +9,18 @@ export const metadata: Metadata = {
 };
 
 export default function CommunityPage() {
-  return <CommunityForum />;
+  return (
+    <Suspense
+      fallback={
+        <div
+          role="status"
+          className="ui-shell py-8 text-sm text-[var(--ink-muted)] lg:pt-32"
+        >
+          Loading the forum...
+        </div>
+      }
+    >
+      <CommunityForum />
+    </Suspense>
+  );
 }

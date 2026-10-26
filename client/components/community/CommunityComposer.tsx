@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Send } from "lucide-react";
-import { communityError, communityFetch } from "@/lib/api/community";
+import {
+  communityError,
+  communityFetch,
+  type CommunityPost,
+  type CommunityReply,
+} from "@/lib/api/community";
 
 const fieldClass =
   "w-full rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)] px-4 py-3 text-base leading-6 text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] disabled:opacity-60";
@@ -13,7 +18,7 @@ export function CommunityComposer({
   onCancel,
 }: {
   postId?: string;
-  onPosted: () => void;
+  onPosted: (post: CommunityPost | CommunityReply) => void;
   onCancel: () => void;
 }) {
   const [title, setTitle] = useState("");
@@ -49,15 +54,18 @@ export function CommunityComposer({
     setPending(true);
     setError("");
     try {
-      await communityFetch(postId ? `posts/${postId}/replies` : "posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(!postId && { title: title.trim() }),
-          content: content.trim(),
-        }),
-      });
-      onPosted();
+      const posted = await communityFetch<CommunityPost | CommunityReply>(
+        postId ? `posts/${postId}/replies` : "posts",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...(!postId && { title: title.trim() }),
+            content: content.trim(),
+          }),
+        },
+      );
+      onPosted(posted);
     } catch (cause) {
       setError(communityError(cause));
     } finally {
@@ -68,7 +76,7 @@ export function CommunityComposer({
   return (
     <form
       onSubmit={submit}
-      aria-label={postId ? "Write a reply" : "Share website feedback"}
+      aria-label={postId ? "Write a reply" : "Start a discussion"}
       aria-busy={pending}
       className="space-y-4"
     >
@@ -78,7 +86,7 @@ export function CommunityComposer({
             htmlFor={`${prefix}-title`}
             className="mb-2 block text-sm font-semibold text-[var(--ink)]"
           >
-            Title
+            Topic title
           </label>
           <input
             ref={titleRef}
@@ -106,7 +114,7 @@ export function CommunityComposer({
           htmlFor={`${prefix}-content`}
           className="mb-2 block text-sm font-semibold text-[var(--ink)]"
         >
-          {postId ? "Your reply" : "Your feedback"}
+          {postId ? "Your reply" : "Your thoughts"}
         </label>
         <textarea
           ref={contentRef}
@@ -130,8 +138,8 @@ export function CommunityComposer({
           id={`${prefix}-hint`}
           className="mt-1 text-xs leading-4 text-[var(--ink-muted)]"
         >
-          {minLength} characters minimum. {content.length}/{maxLength}{" "}
-          characters.
+          This is a public discussion. {minLength} characters minimum.{" "}
+          {content.length}/{maxLength} characters.
         </p>
       </div>
       {error && (
@@ -160,7 +168,7 @@ export function CommunityComposer({
           className="ui-primary-action disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Send className="h-4 w-4" aria-hidden="true" />
-          {pending ? "Posting..." : postId ? "Post reply" : "Post feedback"}
+          {pending ? "Posting..." : postId ? "Post reply" : "Post topic"}
         </button>
       </div>
     </form>
