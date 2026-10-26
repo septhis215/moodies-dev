@@ -26,5 +26,6 @@ import { ContentSnapshotController } from './content-snapshot.controller';
     JwtGuard,
     TmdbClientService,
   ],
+  exports: [ProfanityFilterService, ToxicityAnalysisService, ReviewBanGuard],
 })
 export class ReviewModule {}

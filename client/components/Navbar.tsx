@@ -39,6 +39,7 @@ const routes = [
   { name: "Celebrities", href: "/celeb" },
   { name: "Moods", href: "/moods/explore" },
   { name: "Feed", href: "/feed" },
+  { name: "Community", href: "/community" },
   { name: "Collection", href: "/collection" },
 ];
 
@@ -50,6 +51,7 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
     { label: "New Releases", path: "/fresh-off-the-screen" },
     { label: "Korean Hits", path: "/korean-hits" },
     { label: "Moods", path: "/moods/explore" },
+    { label: "Community", path: "/community" },
     { label: "Coming Soon", path: "/coming-soon" },
   ],
   "/movies": [
@@ -96,6 +98,10 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
     { label: "Movies", path: "/movies" },
     { label: "TV shows", path: "/tv" },
   ],
+  "/community": [
+    { label: "Website feedback", path: "/community" },
+    { label: "Moodies Feed", path: "/feed" },
+  ],
 };
 
 const MOODIES_LOGO = "/images/moodies-transparent.png";
@@ -105,6 +111,7 @@ const NAVIGATION_ICON_SOURCES: Record<string, string> = {
   "/tv": "/images/badges/binge-legend.png",
   "/moods/explore": "/images/badges/mood-starter.png",
   "/feed": "/images/mascot-feed.png",
+  "/community": "/images/badges/community-star.png",
 };
 const sectionIntroductions: Record<
   string,
@@ -147,6 +154,11 @@ const sectionIntroductions: Record<
     title: "Moodies Feed",
     description: "See what the Moodies community is sharing.",
     mascot: "funny",
+  },
+  "/community": {
+    title: "The Moodies community",
+    description: "Share feedback and help shape what comes next for Moodies.",
+    mascot: "happy",
   },
 };
 const focusRing =

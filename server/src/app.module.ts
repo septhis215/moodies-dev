@@ -21,6 +21,7 @@ import { QuizModule } from './quiz/quiz.module';
 import { CategoryModule } from './media/category/category.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
 import { ReviewModule } from './routes/review/review.module';
+import { CommunityModule } from './routes/community/community.module';
 import { ModerationModule } from './routes/moderation/moderation.module';
 import { LikedModule } from './liked/liked.module';
 import { MediaStatsModule } from './media-stats/media-stats.module';
@@ -197,6 +198,7 @@ import { TurnstileModule } from './common/security/turnstile.module';
     MoodsModule,
     CategoryModule,
     ReviewModule,
+    CommunityModule,
     ModerationModule,
     TurnstileModule,
   ],
