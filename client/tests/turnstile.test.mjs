@@ -45,6 +45,8 @@ test("route/action policy covers all protected endpoints, never GETs or third pa
     ["/auth/request-reset", "password_reset"],
     ["/reviews", "review"],
     ["/reviews/id/replies", "reply"],
+    ["/community/posts", "review"],
+    ["/community/posts/id/replies", "reply"],
     ["/reviews/id/snapshot", "snapshot"],
     ["/content/movie/1/snapshot", "snapshot"],
   ]) {
@@ -60,6 +62,8 @@ test("route/action policy covers all protected endpoints, never GETs or third pa
     "/auth/logout",
     "/auth/bootstrap",
     "/watchlist/toggle",
+    "/community/posts/id/reactions",
+    "/community/replies/id/reactions",
   ])
     assert.equal(humanActionFor(base + path, "POST"), null);
 });

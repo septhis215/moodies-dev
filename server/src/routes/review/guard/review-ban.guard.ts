@@ -39,7 +39,7 @@ export class ReviewBanGuard implements CanActivate {
 
     if (bannedUntil > now) {
       throw new ForbiddenException(
-        'You are temporarily banned from writing reviews.',
+        'You are temporarily unable to write reviews or community posts and replies.',
       );
     }
 

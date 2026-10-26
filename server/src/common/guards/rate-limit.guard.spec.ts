@@ -123,6 +123,9 @@ describe('layered rate limits', () => {
     '/api/auth/request-reset',
     '/api/content/movie/1/snapshot',
     '/api/reviews',
+    '/api/community/posts',
+    '/api/community/posts/id/replies',
+    '/api/community/posts/id/reactions',
   ])(
     'fails closed for protected writes when Redis is unavailable (%s)',
     async (path) => {

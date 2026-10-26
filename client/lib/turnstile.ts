@@ -53,8 +53,8 @@ export function humanActionFor(
   if (path === "/auth/signup") return "signup";
   if (path === "/auth/signin") return "signin";
   if (path === "/auth/request-reset") return "password_reset";
-  if (path === "/reviews") return "review";
-  if (/^\/reviews\/[^/]+\/replies$/.test(path)) return "reply";
+  if (path === "/reviews" || path === "/community/posts") return "review";
+  if (/^\/(?:reviews\/[^/]+|community\/posts\/[^/]+)\/replies$/.test(path)) return "reply";
   if (
     /^\/reviews\/[^/]+\/snapshot$/.test(path) ||
     /^\/content\/[^/]+\/[^/]+\/snapshot$/.test(path)

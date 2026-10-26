@@ -43,6 +43,10 @@ model User {
   reviewReplies      ReviewReply[]
   reviewReactions    ReviewReaction[]
   reviewReplyReactions ReviewReplyReaction[]
+  communityPosts     CommunityPost[]
+  communityReplies   CommunityReply[]
+  communityPostReactions CommunityPostReaction[]
+  communityReplyReactions CommunityReplyReaction[]
   userAchievements   UserAchievement[]
   authVersion        Int           @default(0)
   authSessions       AuthSession[]
@@ -255,6 +259,70 @@ model ReviewReplyReaction {
   @@index([replyId, type])
   @@index([userId])
   @@map("review_reply_reactions")
+}
+
+model CommunityPost {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String   @db.VarChar(120)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  replies   CommunityReply[]
+  reactions CommunityPostReaction[]
+
+  @@index([createdAt, id])
+  @@index([userId])
+  @@map("community_posts")
+}
+
+model CommunityReply {
+  id        String   @id @default(uuid())
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reactions CommunityReplyReaction[]
+
+  @@index([postId, createdAt, id])
+  @@index([userId])
+  @@map("community_replies")
+}
+
+model CommunityPostReaction {
+  id        String   @id @default(uuid())
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ReactionType
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([postId, userId])
+  @@index([postId, type])
+  @@index([userId])
+  @@map("community_post_reactions")
+}
+
+model CommunityReplyReaction {
+  id        String   @id @default(uuid())
+  replyId   String
+  reply     CommunityReply @relation(fields: [replyId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ReactionType
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([replyId, userId])
+  @@index([replyId, type])
+  @@index([userId])
+  @@map("community_reply_reactions")
 }
 
 model Mood {
