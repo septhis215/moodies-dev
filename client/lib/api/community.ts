@@ -29,6 +29,7 @@ export type CommunityPost = ReactionSummary & {
   createdAt: string;
   replyCount: number;
   user: CommunityAuthor;
+  latestReply?: { id: string; createdAt: string; user: CommunityAuthor } | null;
 };
 export type CommunityPagination = {
   page: number;

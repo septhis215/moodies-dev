@@ -1,6 +1,8 @@
 import { Transform, Type } from 'class-transformer';
 import {
   IsInt,
+  IsIn,
+  IsOptional,
   IsString,
   Max,
   MaxLength,
@@ -23,6 +25,22 @@ export class CommunityPageDto {
   @Min(1)
   @Max(20)
   limit = 10;
+}
+
+export class CommunityTopicsQueryDto extends CommunityPageDto {
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(100)
+  search?: string;
+
+  @IsOptional()
+  @IsIn(['newest', 'most-replies'])
+  sort?: 'newest' | 'most-replies';
+
+  @IsOptional()
+  @IsIn(['all', 'unanswered', 'mine'])
+  filter?: 'all' | 'unanswered' | 'mine';
 }
 
 export class CreateCommunityPostDto {

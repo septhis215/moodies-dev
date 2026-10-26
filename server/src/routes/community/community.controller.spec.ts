@@ -22,6 +22,7 @@ describe('community HTTP boundaries', () => {
   let authenticated = false;
   let banned = false;
   const service = {
+    getPost: jest.fn().mockResolvedValue({ id }),
     getPosts: jest
       .fn()
       .mockResolvedValue({ posts: [], pagination: { total: 0 } }),
@@ -95,6 +96,7 @@ describe('community HTTP boundaries', () => {
 
   it('allows guests to read posts and replies', async () => {
     await request(httpServer).get('/api/community/posts').expect(200);
+    await request(httpServer).get(`/api/community/posts/${id}`).expect(200);
     await request(httpServer)
       .get(`/api/community/posts/${id}/replies`)
       .expect(200);
@@ -179,6 +181,15 @@ describe('community HTTP boundaries', () => {
 
   it('rejects malformed IDs, unbounded pagination, whitespace, and unsupported reactions', async () => {
     authenticated = true;
+    await request(httpServer)
+      .get('/api/community/posts?sort=invalid')
+      .expect(400);
+    await request(httpServer)
+      .get('/api/community/posts?filter=invalid')
+      .expect(400);
+    await request(httpServer)
+      .get('/api/community/posts/not-a-uuid')
+      .expect(400);
     await request(httpServer)
       .get('/api/community/posts?limit=1000')
       .expect(400);

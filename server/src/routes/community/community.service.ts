@@ -2,13 +2,15 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
-import { ReactionType } from '@prisma/client';
+import { ReactionType, type Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ProfanityFilterService } from '../moderation/profanity-filter.service';
 import { ToxicityAnalysisService } from '../moderation/toxicity-analysis.service';
 import {
   CommunityPageDto,
+  CommunityTopicsQueryDto,
   CreateCommunityPostDto,
   CreateCommunityReplyDto,
 } from './dto/community.dto';
@@ -48,28 +50,70 @@ export class CommunityService {
     private readonly toxicity: ToxicityAnalysisService,
   ) {}
 
-  async getPosts({ page, limit }: CommunityPageDto, viewerId?: string) {
+  async getPosts(
+    { page, limit, search, filter, sort }: CommunityTopicsQueryDto,
+    viewerId?: string,
+  ) {
+    if (filter === 'mine' && !viewerId)
+      throw new UnauthorizedException('Sign in to see your discussions.');
+    const where: Prisma.CommunityPostWhereInput = {
+      ...(filter === 'mine' && { userId: viewerId }),
+      ...(filter === 'unanswered' && { replies: { none: {} } }),
+      ...(search && {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { content: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
     const [posts, total] = await Promise.all([
       this.prisma.communityPost.findMany({
-        select: postSelect,
+        where,
+        select: {
+          ...postSelect,
+          replies: {
+            take: 1,
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            select: { id: true, createdAt: true, user: { select: userSelect } },
+          },
+        },
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        orderBy: [
+          ...(sort === 'most-replies'
+            ? [{ replies: { _count: 'desc' as const } }]
+            : []),
+          { createdAt: 'desc' },
+          { id: 'desc' },
+        ],
       }),
-      this.prisma.communityPost.count(),
+      this.prisma.communityPost.count({ where }),
     ]);
     const reactions = await this.postReactions(
       posts.map((post) => post.id),
       viewerId,
     );
     return {
-      posts: posts.map(({ _count, ...post }) => ({
+      posts: posts.map(({ _count, replies, ...post }) => ({
         ...post,
         replyCount: _count.replies,
+        latestReply: replies?.[0] ?? null,
         ...reactions.get(post.id),
       })),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  async getPost(id: string, viewerId?: string) {
+    const post = await this.prisma.communityPost.findUnique({
+      where: { id },
+      select: postSelect,
+    });
+    if (!post)
+      throw new NotFoundException('This discussion could not be found.');
+    const { _count, ...details } = post;
+    const reactions = await this.postReactions([id], viewerId);
+    return { ...details, replyCount: _count.replies, ...reactions.get(id) };
   }
 
   async createPost(userId: string, dto: CreateCommunityPostDto) {

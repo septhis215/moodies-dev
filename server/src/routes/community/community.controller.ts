@@ -20,6 +20,7 @@ import { ReviewBanGuard } from '../review/guard/review-ban.guard';
 import { CommunityService } from './community.service';
 import {
   CommunityPageDto,
+  CommunityTopicsQueryDto,
   CreateCommunityPostDto,
   CreateCommunityReplyDto,
 } from './dto/community.dto';
@@ -32,8 +33,20 @@ export class CommunityController {
 
   @Get('posts')
   @UseGuards(OptionalJwtGuard)
-  getPosts(@Req() req: CommunityRequest, @Query() query: CommunityPageDto) {
+  getPosts(
+    @Req() req: CommunityRequest,
+    @Query() query: CommunityTopicsQueryDto,
+  ) {
     return this.community.getPosts(query, req.user?.id);
+  }
+
+  @Get('posts/:id')
+  @UseGuards(OptionalJwtGuard)
+  getPost(
+    @Req() req: CommunityRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.community.getPost(id, req.user?.id);
   }
 
   @Post('posts')

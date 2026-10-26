@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { ReactionType } from '@prisma/client';
@@ -8,6 +12,7 @@ import { ToxicityAnalysisService } from '../moderation/toxicity-analysis.service
 import { CommunityService } from './community.service';
 import {
   CommunityPageDto,
+  CommunityTopicsQueryDto,
   CreateCommunityPostDto,
   CreateCommunityReplyDto,
 } from './dto/community.dto';
@@ -51,6 +56,102 @@ describe('community forum', () => {
     );
     return { service, prisma, profanity, toxicity };
   };
+
+  it('filters and counts the full forum query consistently before pagination', async () => {
+    const { service, prisma } = setup();
+    await service.getPosts({
+      page: 1,
+      limit: 10,
+      search: 'mood',
+      filter: 'unanswered',
+      sort: 'most-replies',
+    });
+    const where = {
+      replies: { none: {} },
+      OR: [
+        { title: { contains: 'mood', mode: 'insensitive' } },
+        { content: { contains: 'mood', mode: 'insensitive' } },
+      ],
+    };
+    expect(prisma.communityPost.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where,
+        take: 10,
+        orderBy: [
+          { replies: { _count: 'desc' } },
+          { createdAt: 'desc' },
+          { id: 'desc' },
+        ],
+      }),
+    );
+    expect(prisma.communityPost.count).toHaveBeenCalledWith({ where });
+  });
+
+  it('requires a session for personal topics and scopes them to that session', async () => {
+    const { service, prisma } = setup();
+    await expect(
+      service.getPosts({ page: 1, limit: 10, filter: 'mine' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(prisma.communityPost.findMany).not.toHaveBeenCalled();
+    await service.getPosts({ page: 1, limit: 10, filter: 'mine' }, 'member');
+    expect(prisma.communityPost.count).toHaveBeenCalledWith({
+      where: { userId: 'member' },
+    });
+  });
+
+  it('returns a direct topic with its reaction summary and rejects a missing topic', async () => {
+    const { service, prisma } = setup();
+    prisma.communityPost.findUnique.mockResolvedValue({
+      id: 'post',
+      content: 'The discussion',
+      _count: { replies: 3 },
+    });
+    await expect(service.getPost('post')).resolves.toMatchObject({
+      id: 'post',
+      replyCount: 3,
+      reactionCounts: [],
+      myReaction: null,
+    });
+    prisma.communityPost.findUnique.mockResolvedValue(null);
+    await expect(service.getPost('missing')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('includes only the newest reply as a topic activity summary', async () => {
+    const { service, prisma } = setup();
+    const latestReply = {
+      id: 'reply',
+      createdAt: new Date(),
+      user: { id: 'other', username: 'Sam' },
+    };
+    prisma.communityPost.findMany.mockResolvedValue([
+      { id: 'post', _count: { replies: 20 }, replies: [latestReply] },
+    ]);
+    const result = await service.getPosts({ page: 1, limit: 10 });
+    expect(result.posts[0].latestReply).toEqual(latestReply);
+    expect(result.posts[0]).not.toHaveProperty('replies');
+  });
+
+  it('validates bounded forum search and supported view and sort options', async () => {
+    const query = plainToInstance(CommunityTopicsQueryDto, {
+      search: '  mood  ',
+      sort: 'most-replies',
+      filter: 'unanswered',
+    });
+    expect(query.search).toBe('mood');
+    expect(await validate(query)).toHaveLength(0);
+    for (const invalid of [
+      { search: 'x'.repeat(101) },
+      { sort: 'invalid' },
+      { filter: 'invalid' },
+    ]) {
+      expect(
+        (await validate(plainToInstance(CommunityTopicsQueryDto, invalid)))
+          .length,
+      ).toBeGreaterThan(0);
+    }
+  });
 
   it('creates feedback using the authenticated author and moderates its title and content together', async () => {
     const { service, prisma, toxicity } = setup();
