@@ -29,12 +29,86 @@
   background: var(--surface-1);
 }
 .threadPost {
+  padding-block: 1.25rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+.threadPost:last-child {
+  border-bottom: 0;
+}
+.originalPost {
+  padding: 1.25rem;
   border: 1px solid var(--surface-border);
   border-radius: 1rem;
   background: var(--surface-1);
 }
-.originalPost {
-  border-top-color: var(--brand-coral);
+.replyLayout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+}
+.reactionTrigger,
+.reactionOption {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.reactionTrigger {
+  background: var(--surface-2);
+}
+.reactionTrigger:hover,
+.reactionOption:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.reactionSelected {
+  color: var(--brand-coral-strong);
+  border-color: var(--surface-border);
+}
+.reactionPicker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: fit-content;
+  max-width: 100%;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding: 0.375rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.875rem;
+  background: var(--surface-0);
+}
+.reactionOption {
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 3.5rem;
+  min-height: 3.5rem;
+  font-size: 0.75rem;
+}
+.reactionTrigger:focus-visible,
+.reactionOption:focus-visible {
+  outline: 2px solid var(--brand-coral-strong);
+  outline-offset: 2px;
+}
+.reactionTrigger:disabled,
+.reactionOption:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+@media (min-width: 640px) {
+  .reactionPicker {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .originalPost {
+    padding: 1.75rem;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .topic {

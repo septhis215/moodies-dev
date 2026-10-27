@@ -362,7 +362,32 @@ try {
     exact: true,
   });
   await newPost.getByRole("button", { name: "React", exact: true }).click();
+  const reactionPicker = newPost.getByRole("group", {
+    name: "Choose a reaction",
+  });
+  await reactionPicker.waitFor();
+  assert.equal(
+    await reactionPicker
+      .getByRole("button", { name: "Like", exact: true })
+      .evaluate((element) => element === document.activeElement),
+    true,
+  );
+  await page.keyboard.press("Escape");
+  await reactionPicker.waitFor({ state: "hidden" });
+  assert.equal(
+    await newPost
+      .getByRole("button", { name: "React", exact: true })
+      .evaluate((element) => element === document.activeElement),
+    true,
+  );
+  await newPost.getByRole("button", { name: "React", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "A useful community idea", exact: true })
+    .click();
+  await reactionPicker.waitFor({ state: "hidden" });
+  await newPost.getByRole("button", { name: "React", exact: true }).click();
   await newPost.getByRole("button", { name: "Like", exact: true }).click();
+  await newPost.locator('[aria-label="Like: 1"]').waitFor();
   await openTopic(newId, "A useful community idea");
   await newPost.getByRole("button", { name: "Like", exact: true }).click();
   await newPost.getByRole("button", { name: "Love", exact: true }).click();
@@ -388,6 +413,25 @@ try {
   await reply.getByRole("button", { name: "Love", exact: true }).click();
   await openTopic(newId, "A useful community idea");
   await reply.getByRole("button", { name: "Love", exact: true }).waitFor();
+  if (output) {
+    for (const width of [375, 1366]) {
+      await page.setViewportSize({ width, height: 900 });
+      await reply.getByRole("button", { name: "Love", exact: true }).click();
+      const picker = reply.getByRole("group", { name: "Choose a reaction" });
+      await picker.waitFor();
+      assert.equal(
+        await picker
+          .getByRole("button", { name: "Love", exact: true })
+          .evaluate((element) => element === document.activeElement),
+        true,
+      );
+      await page
+        .locator("main")
+        .last()
+        .screenshot({ path: `${output}/discussion-reactions-${width}.png` });
+      await page.keyboard.press("Escape");
+    }
+  }
   await openIndex("?filter=mine");
   await page.getByText("1 topic", { exact: true }).waitFor();
   await page.goto(`${base}/community/00000000-0000-4000-8000-000000000099`, {

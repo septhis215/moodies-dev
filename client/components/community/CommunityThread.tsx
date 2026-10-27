@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronRight, MessageCircle, Reply } from "lucide-react";
+import { ArrowLeft, ChevronRight, Link2, Reply } from "lucide-react";
 import { useAuth } from "@/app/context/AuthProvider";
 import { useCommunityPage } from "@/hooks/useCommunityPage";
 import type {
@@ -29,6 +29,8 @@ function DiscussionPost({
   summary,
   href,
   onReact,
+  title,
+  replyAction,
 }: {
   id: string;
   user: CommunityAuthor;
@@ -39,6 +41,8 @@ function DiscussionPost({
   summary: ReactionSummary;
   href: string;
   onReact: (summary: ReactionSummary) => void;
+  title?: string;
+  replyAction?: ReactNode;
 }) {
   return (
     <article
@@ -48,44 +52,60 @@ function DiscussionPost({
           ? `Original post by ${user.username}`
           : `Reply by ${user.username}`
       }
-      className={`${styles.threadPost} ${number === 1 ? styles.originalPost : ""} min-w-0 scroll-mt-24 p-5 sm:p-6`}
+      className={`${number === 1 ? styles.originalPost : styles.threadPost} min-w-0 scroll-mt-24`}
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <CommunityAvatar user={user} />
-        <div className="min-w-0 flex-1">
-          <Link
-            href={`/profile/${encodeURIComponent(user.id)}`}
-            className="text-sm font-semibold text-[var(--ink)] hover:text-[var(--brand-coral-strong)] [overflow-wrap:anywhere]"
-          >
-            {user.username}
-          </Link>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs leading-5 text-[var(--ink-muted)]">
-            {starter && (
-              <span className="font-semibold text-[var(--brand-coral-strong)]">
-                Topic starter
-              </span>
-            )}
-            <time dateTime={createdAt}>{communityDate(createdAt)}</time>
+      {title && (
+        <header className="mb-6">
+          <p className="ui-kicker">Community discussion</p>
+          <h1 className="mt-3 text-3xl font-bold leading-tight text-[var(--ink)] sm:text-4xl [overflow-wrap:anywhere]">
+            {title}
+          </h1>
+        </header>
+      )}
+      <div className={number === 1 ? "" : styles.replyLayout}>
+        {number !== 1 && <CommunityAvatar user={user} />}
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-3">
+            {number === 1 && <CommunityAvatar user={user} />}
+            <div className="min-w-0 flex-1">
+              <Link
+                href={`/profile/${encodeURIComponent(user.id)}`}
+                className="text-sm font-semibold text-[var(--ink)] hover:text-[var(--brand-coral-strong)] [overflow-wrap:anywhere]"
+              >
+                {user.username}
+              </Link>
+              <div className="flex flex-wrap items-center gap-x-2 text-xs leading-5 text-[var(--ink-muted)]">
+                {starter && (
+                  <span className="font-semibold text-[var(--brand-coral-strong)]">
+                    Topic starter
+                  </span>
+                )}
+                <time dateTime={createdAt}>{communityDate(createdAt)}</time>
+              </div>
+            </div>
+            <Link
+              href={href}
+              aria-label={`Link to post ${number}`}
+              className="inline-flex min-h-11 items-center rounded-sm px-2 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--brand-coral-strong)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
+            >
+              <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
           </div>
-        </div>
-        <Link
-          href={href}
-          aria-label={`Link to post ${number}`}
-          className="inline-flex min-h-11 items-center rounded-sm px-2 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--brand-coral-strong)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
-        >
-          #{number}
-        </Link>
-      </div>
-      <div className="mt-5 min-w-0">
-        <p className="max-w-3xl whitespace-pre-wrap text-base leading-7 text-[var(--ink)] [overflow-wrap:anywhere]">
-          {content}
-        </p>
-        <div className="mt-5 border-t border-[var(--surface-border)] pt-4">
-          <CommunityReactions
-            target={number === 1 ? `posts/${id}` : `replies/${id}`}
-            summary={summary}
-            onChange={onReact}
-          />
+          <div className={`${number === 1 ? "mt-5" : "mt-2"} min-w-0`}>
+            <p className="max-w-3xl whitespace-pre-wrap text-base leading-7 text-[var(--ink)] [overflow-wrap:anywhere]">
+              {content}
+            </p>
+            <div
+              className={`${number === 1 ? "mt-6" : "mt-2"} flex flex-wrap items-start justify-between gap-3`}
+            >
+              <CommunityReactions
+                target={number === 1 ? `posts/${id}` : `replies/${id}`}
+                summary={summary}
+                onChange={onReact}
+              />
+              {replyAction}
+            </div>
+          </div>
         </div>
       </div>
     </article>
@@ -138,7 +158,7 @@ export function CommunityThread({
 
   return (
     <main className="min-h-screen bg-[var(--surface-0)] pb-12 text-[var(--ink)] lg:pt-24">
-      <div className="ui-shell max-w-5xl py-6 sm:py-8">
+      <div className="ui-shell max-w-4xl py-6 sm:py-8">
         <nav
           aria-label="Breadcrumb"
           className="mb-6 flex flex-wrap items-center gap-2 text-sm text-[var(--ink-muted)]"
@@ -188,40 +208,20 @@ export function CommunityThread({
         )}
         {post && (
           <>
-            <header className={`${styles.hero} mb-6 p-5 sm:p-6`}>
-              <p className="ui-kicker">Community discussion</p>
-              <h1 className="mt-2 max-w-4xl text-3xl font-bold leading-tight text-[var(--ink)] sm:text-4xl [overflow-wrap:anywhere]">
-                {post.title}
-              </h1>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-                <p className="flex flex-wrap items-center gap-x-3 text-sm leading-6 text-[var(--ink-muted)]">
-                  <span>
-                    Started by{" "}
-                    <Link
-                      href={`/profile/${encodeURIComponent(post.user.id)}`}
-                      className="font-semibold text-[var(--ink)] hover:text-[var(--brand-coral-strong)] [overflow-wrap:anywhere]"
-                    >
-                      {post.user.username}
-                    </Link>
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                    {replyCount} {replyCount === 1 ? "reply" : "replies"}
-                  </span>
-                </p>
-                <button
-                  ref={replyTrigger}
-                  type="button"
-                  onClick={openReply}
-                  className="ui-primary-action"
-                >
-                  <Reply className="h-4 w-4" aria-hidden="true" />
-                  Reply to topic
-                </button>
-              </div>
-            </header>
             <div className="space-y-6">
               <DiscussionPost
+                title={post.title}
+                replyAction={
+                  <button
+                    ref={replyTrigger}
+                    type="button"
+                    onClick={openReply}
+                    className="ui-secondary-action"
+                  >
+                    <Reply className="h-4 w-4" aria-hidden="true" />
+                    Reply to topic
+                  </button>
+                }
                 id={post.id}
                 user={post.user}
                 content={post.content}
@@ -238,16 +238,16 @@ export function CommunityThread({
               />
               <section
                 aria-labelledby="discussion-replies-heading"
-                className="space-y-4"
+                className="space-y-0"
               >
                 <h2
                   ref={repliesHeading}
                   tabIndex={-1}
                   id="discussion-replies-heading"
-                  className="scroll-mt-24 flex items-center gap-3 text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
+                  className="scroll-mt-24 mb-2 flex items-center gap-3 border-b border-[var(--surface-border)] pb-4 text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
                 >
                   Replies
-                  <span className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-1)] px-2.5 py-1 font-sans text-sm font-semibold text-[var(--ink-muted)]">
+                  <span className="text-sm font-medium text-[var(--ink-muted)] [font-family:var(--font-body)]">
                     {replyCount}
                   </span>
                 </h2>
