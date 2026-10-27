@@ -100,9 +100,12 @@ const Toast: React.FC<ToastProps> = ({
 
     clearTimer();
     startedAtRef.current = performance.now();
-    timeoutRef.current = window.setTimeout(() => {
-      onCloseRef.current();
-    }, Math.max(remainingRef.current, 0));
+    timeoutRef.current = window.setTimeout(
+      () => {
+        onCloseRef.current();
+      },
+      Math.max(remainingRef.current, 0),
+    );
   }, [clearTimer, isPersistent]);
 
   React.useEffect(() => {
@@ -146,7 +149,8 @@ const Toast: React.FC<ToastProps> = ({
       onMouseLeave={() => resumeTimer("pointer")}
       onFocus={() => pauseTimer("focus")}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) resumeTimer("focus");
+        if (!event.currentTarget.contains(event.relatedTarget))
+          resumeTimer("focus");
       }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -162,8 +166,6 @@ const Toast: React.FC<ToastProps> = ({
       </div>
 
       <div className={styles.content}>
-        <div className={styles.title}>{displayTitle}</div>
-        <div className={styles.message}>{message}</div>
         {posterUrl && (
           <div className={styles.poster}>
             <img
@@ -182,18 +184,22 @@ const Toast: React.FC<ToastProps> = ({
             />
           </div>
         )}
-        {action && (
-          <button
-            type="button"
-            className={styles.action}
-            onClick={() => {
-              action.onClick();
-              onClose();
-            }}
-          >
-            {action.label}
-          </button>
-        )}
+        <div className={styles.copy}>
+          <div className={styles.title}>{displayTitle}</div>
+          <div className={styles.message}>{message}</div>
+          {action && (
+            <button
+              type="button"
+              className={styles.action}
+              onClick={() => {
+                action.onClick();
+                onClose();
+              }}
+            >
+              {action.label}
+            </button>
+          )}
+        </div>
       </div>
 
       <button
