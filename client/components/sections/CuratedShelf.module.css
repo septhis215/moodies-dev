@@ -1,12 +1,9 @@
 .frame {
-  display: grid;
-  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
-  align-items: center;
-  gap: 0.625rem;
+  min-width: 0;
 }
 .rail {
-  min-width: 0;
   display: flex;
+  min-width: 0;
   gap: 0.75rem;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -21,76 +18,60 @@
 .arrow {
   display: grid;
   place-items: center;
+  flex-shrink: 0;
   width: 2.75rem;
   height: 2.75rem;
   border: 1px solid var(--surface-border);
-  border-radius: 50%;
+  border-radius: 0.625rem;
   color: var(--ink);
   background: var(--surface-1);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
-  transition:
-    transform 150ms ease,
-    background 150ms ease,
-    border-color 150ms ease,
-    box-shadow 150ms ease;
+  cursor: pointer;
 }
 .arrow:hover:not(:disabled) {
-  background: var(--surface-2);
   border-color: var(--brand-coral-strong);
-  box-shadow: 0 0 0 3px rgb(240 100 75 / 9%);
-  transform: scale(1.06);
-}
-.arrow:active:not(:disabled) {
-  transform: scale(0.9);
+  background: var(--surface-2);
 }
 .arrow:disabled {
   opacity: 0.3;
-  box-shadow: none;
   cursor: default;
 }
-.arrow:focus-visible {
-  outline: 2px solid var(--brand-coral-strong);
-  outline-offset: 3px;
+@media (max-width: 639px) {
+  .arrow { display: none; }
 }
 .swipe {
-  display: none;
+  margin-top: 0.75rem;
+  color: var(--ink-muted);
+  font-size: 0.75rem;
 }
-
 .card {
   box-sizing: border-box;
-  flex: 0 0 calc((100% - 1.5rem) / 3);
-  min-width: 0;
   display: flex;
-  align-items: stretch;
-  min-height: 12rem;
+  flex: 0 0 88%;
+  min-width: 0;
+  min-height: 15rem;
   overflow: hidden;
   border: 1px solid var(--surface-border);
-  border-radius: 1rem;
-  background: linear-gradient(135deg, var(--surface-2), var(--surface-1) 65%);
+  border-radius: 0.875rem;
+  background: var(--surface-1);
   scroll-snap-align: start;
-  transition:
-    border-color 180ms ease,
-    box-shadow 180ms ease;
 }
-
-.card:hover {
+.card:focus-within {
   border-color: var(--brand-coral-strong);
-  box-shadow: inset 0 1px rgb(240 100 75 / 18%);
 }
 .poster {
   position: relative;
-  flex: 0 0 34%;
+  flex: 0 0 32%;
   align-self: stretch;
   overflow: hidden;
   background: var(--surface-2);
 }
 .copy {
-  flex: 1;
-  min-width: 0;
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: flex-start;
-  padding: 1rem;
+  min-width: 0;
+  padding: 0.75rem;
 }
 .title {
   display: -webkit-box;
@@ -98,7 +79,7 @@
   -webkit-line-clamp: 2;
   overflow: hidden;
   overflow-wrap: anywhere;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1.35;
   color: var(--ink);
@@ -111,28 +92,62 @@
   font-size: 0.75rem;
   color: var(--ink-muted);
 }
-.save {
+.overview {
+  display: none;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+.save,
+.details {
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
+  justify-content: center;
   gap: 0.375rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--ink-muted);
-  margin-top: auto;
   padding: 0 0.625rem;
   border: 1px solid var(--surface-border);
   border-radius: 0.5rem;
-  background: var(--surface-0);
-  transition:
-    transform 150ms ease,
-    border-color 150ms ease;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.save {
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.featured .save {
+  border-color: transparent;
+  background: var(--brand-coral);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 800;
 }
 .save:hover:not(:disabled) {
   border-color: var(--brand-coral-strong);
 }
-.save:active:not(:disabled) {
-  transform: scale(0.95);
+.featured .save:hover:not(:disabled) {
+  background: var(--brand-coral-strong);
+}
+.save[aria-pressed="true"] {
+  color: var(--brand-coral-strong);
+}
+.save:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.details {
+  border-color: transparent;
+  padding-inline: 0;
+  color: var(--ink-muted);
+}
+.details:hover {
+  color: var(--ink);
 }
 .rating {
   position: absolute;
@@ -144,74 +159,58 @@
   padding: 0.25rem 0.375rem;
   border-radius: 0.375rem;
   background: rgb(0 0 0 / 80%);
-  color: #f3cf87;
+  color: var(--brand-gold);
   font-size: 0.75rem;
   font-weight: 700;
 }
-.save[aria-pressed="true"] {
-  color: var(--brand-coral-strong);
-}
-.save:disabled {
-  opacity: 0.5;
-}
 .card a:focus-visible,
-.save:focus-visible {
+.save:focus-visible,
+.arrow:focus-visible,
+.rail:focus-visible {
   outline: 2px solid var(--brand-coral-strong);
   outline-offset: 3px;
 }
-@media (max-width: 1023px) {
-  .card {
-    flex-basis: calc((100% - 0.75rem) / 2);
-  }
-}
-@media (max-width: 639px) {
-  .frame {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.5rem;
-  }
+@media (min-width: 640px) {
   .rail {
-    grid-column: 1;
-    grid-row: 1;
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-auto-columns: calc((100% - 0.75rem) / 2);
   }
-  .arrow {
-    grid-column: 1;
-    grid-row: 2;
+  .card {
+    min-height: 9.5rem;
   }
-  .previous {
-    justify-self: start;
+  .featured {
+    grid-row: span 2;
   }
-  .next {
-    justify-self: end;
+  .poster {
+    flex-basis: 26%;
+  }
+  .featured .poster {
+    flex-basis: 36%;
+  }
+  .featured .copy {
+    padding: 1.25rem;
+  }
+  .featured .title {
+    font-size: 1.5rem;
+  }
+  .featured .overview {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    color: var(--ink-muted);
+    font-size: 0.875rem;
+    line-height: 1.5;
   }
   .swipe {
-    display: block;
-    grid-column: 1;
-    grid-row: 2;
-    justify-self: center;
-    font-size: 0.75rem;
-    color: var(--ink-muted);
-    pointer-events: none;
-  }
-  .card {
-    flex-basis: 88%;
-    min-height: 10.75rem;
-  }
-  .copy {
-    padding: 0.75rem;
-  }
-  .title {
-    font-size: 1rem;
+    display: none;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .card,
-  .arrow,
-  .save {
-    transition: none;
-  }
-  .arrow:hover:not(:disabled),
-  .arrow:active:not(:disabled),
-  .save:active:not(:disabled) {
-    transform: none;
+@media (min-width: 640px) and (max-width: 1023px) {
+  .rail {
+    grid-auto-columns: 72%;
   }
 }

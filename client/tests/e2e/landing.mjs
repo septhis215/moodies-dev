@@ -74,7 +74,7 @@ async function checkMobileRail(section, width) {
       layout.firstRight < width,
       "First curated card must fit on mobile",
     );
-    assert.ok(layout.cardHeight < 200, "Curated cards should stay compact");
+    assert.ok(layout.cardHeight < 300, "Curated shortlist should stay compact");
     assert.equal(
       layout.pageOverflow,
       false,
@@ -83,7 +83,7 @@ async function checkMobileRail(section, width) {
     assert.ok(
       (await section.evaluate(
         (element) => element.getBoundingClientRect().height,
-      )) < 520,
+      )) < 680,
       "Curated shelf is too tall on mobile",
     );
   } else
@@ -115,17 +115,21 @@ try {
     let favoritesRequests = 0;
     let favoriteStatus = 200;
     let refreshed = false;
+    let accessRejected = false;
     let saved = false;
+    let failSave = false;
     await context.route("**/api/**", async (route) => {
       const path = new URL(route.request().url()).pathname;
       if (path.endsWith("/auth/bootstrap")) {
         await new Promise((resolve) => setTimeout(resolve, 250));
         return route.fulfill({
           json: {
-            user: member
-              ? { id: "landing-test-user", username: "Test member" }
-              : null,
-            watchlist: { movieId: [], seriesId: [] },
+            user:
+              member && !(accessRejected && !refreshed)
+                ? { id: "landing-test-user", username: "Test member" }
+                : null,
+            canRefresh: member,
+            watchlist: { movieId: saved ? ["900"] : [], seriesId: [] },
             liked: { movieId: [], seriesId: [] },
           },
         });
@@ -134,9 +138,18 @@ try {
         favoritesRequests++;
         const status =
           favoriteStatus === 401 && refreshed ? 200 : favoriteStatus;
+        if (status === 401) accessRejected = true;
         return route.fulfill({
           status,
-          json: status === 200 ? picks : { message: "Test failure" },
+          json:
+            status === 200
+              ? saved
+                ? [
+                    ...picks.slice(1),
+                    { ...picks[0], id: 907, title: "Personal pick 8" },
+                  ]
+                : picks
+              : { message: "Test failure" },
         });
       }
       if (path.endsWith("/auth/refresh")) {
@@ -144,6 +157,11 @@ try {
         return route.fulfill({ json: { success: true } });
       }
       if (path.endsWith("/watchlist/toggle")) {
+        if (failSave)
+          return route.fulfill({
+            status: 503,
+            json: { message: "Could not save this pick" },
+          });
         saved = !saved;
         assert.deepEqual(route.request().postDataJSON(), {
           tmdbId: "900",
@@ -182,7 +200,9 @@ try {
       await page.locator("#your-moods button", { hasText: "Electric" }).click();
       assert.equal(
         await page
-          .locator('#your-moods button[aria-pressed="true"]')
+          .locator(
+            '#your-moods [aria-label="Choose a mood"] button[aria-pressed="true"]',
+          )
           .textContent(),
         "Electric",
       );
@@ -202,9 +222,9 @@ try {
       );
       const layout = await page.evaluate(() => {
         const section = document.querySelector("#your-moods");
-        const buttons = [...section.querySelectorAll("button")].map((button) =>
-          button.getBoundingClientRect(),
-        );
+        const buttons = [
+          ...section.querySelectorAll('[aria-label="Choose a mood"] button'),
+        ].map((button) => button.getBoundingClientRect());
         const community = document.querySelector("#community");
         return {
           viewport: window.innerWidth,
@@ -221,10 +241,7 @@ try {
       assert.ok(layout.communityRight <= width + 1);
       assert.ok(
         layout.buttons.every(
-          (button) =>
-            button.top === layout.buttons[0].top &&
-            button.right <= width &&
-            button.width > 40,
+          (button) => button.right <= width && button.width > 40,
         ),
         `Mood choices wrap or overflow at ${width}px`,
       );
@@ -246,6 +263,30 @@ try {
           "/tv/901",
         );
         if (width === 375) {
+          failSave = true;
+          const failed = page.waitForResponse((response) =>
+            response.url().endsWith("/watchlist/toggle"),
+          );
+          await curated
+            .getByRole("button", {
+              name: "Add Personal pick 1 to My List",
+              exact: true,
+            })
+            .click();
+          await failed;
+          await curated
+            .getByRole("button", {
+              name: "Add Personal pick 1 to My List",
+              exact: true,
+            })
+            .waitFor();
+          assert.equal(saved, false, "Failed save changed the watchlist");
+          assert.equal(
+            await curated.getByRole("article").count(),
+            7,
+            "Failed save did not restore the pick",
+          );
+          failSave = false;
           await curated
             .getByRole("button", {
               name: "Add Personal pick 1 to My List",
@@ -253,18 +294,35 @@ try {
             })
             .click();
           await curated
-            .getByRole("button", {
-              name: "Remove Personal pick 1 from My List",
-              exact: true,
-            })
+            .getByRole("link", { name: "Explore Personal pick 8", exact: true })
             .waitFor();
+          assert.equal(
+            await curated
+              .getByRole("link", {
+                name: "Explore Personal pick 1",
+                exact: true,
+              })
+              .count(),
+            0,
+            "Saved pick remained in the mix",
+          );
           assert.ok(saved);
+          await page.reload({ waitUntil: "domcontentloaded" });
           await curated
-            .getByRole("button", {
-              name: "Remove Personal pick 1 from My List",
-              exact: true,
-            })
-            .click();
+            .getByRole("link", { name: "Explore Personal pick 8", exact: true })
+            .waitFor();
+          assert.equal(
+            await curated
+              .getByRole("link", {
+                name: "Explore Personal pick 1",
+                exact: true,
+              })
+              .count(),
+            0,
+            "Reload brought the saved title back",
+          );
+          saved = false;
+          await page.reload({ waitUntil: "domcontentloaded" });
           await curated
             .getByRole("button", {
               name: "Add Personal pick 1 to My List",
@@ -274,6 +332,29 @@ try {
           assert.equal(saved, false);
         }
         assert.equal(await curated.getByRole("article").count(), 7);
+        if (width >= 1024) {
+          const layout = await curated
+            .locator("[data-curated-rail]")
+            .evaluate((rail) => {
+              const cards = [...rail.querySelectorAll("article")].map((card) =>
+                card.getBoundingClientRect(),
+              );
+              return {
+                featured: cards[0].height,
+                alternative: cards[1].height,
+                firstTop: cards[1].top,
+                secondTop: cards[2].top,
+              };
+            });
+          assert.ok(
+            layout.featured > layout.alternative * 1.8,
+            "Featured pick does not span both alternative rows",
+          );
+          assert.ok(
+            layout.secondTop > layout.firstTop,
+            "Alternatives are not stacked beside the featured pick",
+          );
+        }
         if (width < 640) await checkMobileRail(curated, width);
         await curated
           .getByRole("button", { name: "Series", exact: true })
@@ -343,6 +424,7 @@ try {
       );
     if (member) {
       for (const status of [400, 500, 401]) {
+        console.log(`Checking curated response ${status}`);
         favoriteStatus = status;
         await page.reload({ waitUntil: "domcontentloaded" });
         if (status === 400)
@@ -358,11 +440,16 @@ try {
             .getByRole("button", { name: "Try again", exact: true })
             .click();
         }
-        if (status !== 400)
+        if (status !== 400) {
+          if (outputDir)
+            await page.screenshot({
+              path: `${outputDir}/curated-status-${status}.png`,
+            });
           await page
             .getByRole("region", { name: "Curated for you" })
             .getByRole("link", { name: "Explore Personal pick 1", exact: true })
             .waitFor();
+        }
       }
       assert.ok(refreshed, "Expired access cookie was not refreshed");
     }

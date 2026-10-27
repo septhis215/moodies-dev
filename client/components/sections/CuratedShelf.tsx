@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bookmark, Check, ChevronLeft, ChevronRight, Star } from "lucide-react";
+import {
+  ArrowRight,
+  Bookmark,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+} from "lucide-react";
 import { TmdbImage } from "@/components/ui/TmdbImage";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import type { All } from "@/types/all";
@@ -12,7 +19,15 @@ function mediaType(item: All): "movie" | "tv" {
   return item.type === "tv" || item.first_air_date ? "tv" : "movie";
 }
 
-function CuratedCard({ item }: { item: All }) {
+function CuratedCard({
+  item,
+  onSaved,
+  featured = false,
+}: {
+  item: All;
+  onSaved: () => void;
+  featured?: boolean;
+}) {
   const { ready, isInWatchlist, add, remove } = useWatchlist();
   const [busy, setBusy] = useState(false);
   const type = mediaType(item);
@@ -37,6 +52,7 @@ function CuratedCard({ item }: { item: All }) {
         title,
         posterUrl: poster,
       });
+      if (!saved) onSaved();
     } catch {
       // The watchlist hook restores the previous state and reports the error.
     } finally {
@@ -45,7 +61,7 @@ function CuratedCard({ item }: { item: All }) {
   }
 
   return (
-    <article className={styles.card}>
+    <article className={`${styles.card} ${featured ? styles.featured : ""}`}>
       <Link
         href={`/${type}/${item.id}`}
         aria-label={`Explore ${title}`}
@@ -56,7 +72,7 @@ function CuratedCard({ item }: { item: All }) {
             src={poster}
             alt=""
             fill
-            sizes="(max-width: 639px) 30vw, (max-width: 1023px) 16vw, 140px"
+            sizes={featured ? "(max-width: 639px) 34vw, 220px" : "90px"}
             className="object-cover"
           />
         ) : (
@@ -78,6 +94,7 @@ function CuratedCard({ item }: { item: All }) {
         )}
       </Link>
       <div className={styles.copy}>
+        {featured && <p className="ui-kicker mb-3">Start here</p>}
         <p className="mb-2 text-xs font-semibold text-[var(--brand-coral-strong)]">
           {type === "tv" ? "Series" : "Movie"}
           {year ? ` · ${year}` : ""}
@@ -85,31 +102,59 @@ function CuratedCard({ item }: { item: All }) {
         <Link href={`/${type}/${item.id}`} className={styles.title}>
           {title}
         </Link>
-        <p className={`${styles.genre} mt-2 mb-3`}>
-          {item.genres?.slice(0, 2).join(" · ") || "In your personal mix"}
-        </p>
-        <button
-          type="button"
-          className={styles.save}
-          disabled={!ready || busy}
-          aria-pressed={saved}
-          aria-busy={busy}
-          aria-label={`${saved ? "Remove" : "Add"} ${title} ${saved ? "from" : "to"} My List`}
-          onClick={() => void toggleSave()}
-        >
-          {saved ? (
-            <Check size={15} aria-hidden="true" />
-          ) : (
-            <Bookmark size={15} aria-hidden="true" />
+        {featured && (
+          <p className={`${styles.genre} mt-2 mb-3`}>
+            {item.genres?.slice(0, 2).join(" · ") || "In your personal mix"}
+          </p>
+        )}
+        {featured && (
+          <p className={styles.overview}>
+            {item.overview ||
+              "Take a closer look at this pick from your personal mix."}
+          </p>
+        )}
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.save}
+            disabled={!ready || busy}
+            aria-pressed={saved}
+            aria-busy={busy}
+            aria-label={`${saved ? "Remove" : "Add"} ${title} ${saved ? "from" : "to"} My List`}
+            onClick={() => void toggleSave()}
+          >
+            {saved ? (
+              <Check size={15} aria-hidden="true" />
+            ) : (
+              <Bookmark size={15} aria-hidden="true" />
+            )}
+            {busy
+              ? "Saving…"
+              : saved
+                ? "Saved"
+                : featured
+                  ? "Save pick"
+                  : "Save"}
+          </button>
+          {featured && (
+            <Link href={`/${type}/${item.id}`} className={styles.details}>
+              View details
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
           )}
-          {busy ? "Updating…" : saved ? "Saved" : "Save"}
-        </button>
+        </div>
       </div>
     </article>
   );
 }
 
-export function CuratedShelf({ items }: { items: All[] }) {
+export function CuratedShelf({
+  items,
+  onSaved,
+}: {
+  items: All[];
+  onSaved?: () => void;
+}) {
   const [filter, setFilter] = useState<"all" | "movie" | "tv">("all");
   const railRef = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ start: true, end: true });
@@ -129,12 +174,14 @@ export function CuratedShelf({ items }: { items: All[] }) {
   useEffect(() => {
     const rail = railRef.current;
     if (!rail) return;
-    rail.scrollLeft = 0;
     const observer = new ResizeObserver(syncEdges);
     observer.observe(rail);
     syncEdges();
     return () => observer.disconnect();
-  }, [filter, items]);
+  }, [filter, filtered.length]);
+  useEffect(() => {
+    if (railRef.current) railRef.current.scrollLeft = 0;
+  }, [filter]);
 
   function scroll(direction: number) {
     const rail = railRef.current;
@@ -179,50 +226,68 @@ export function CuratedShelf({ items }: { items: All[] }) {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <span
-            className="text-xs text-[var(--ink-muted)]"
+            className="sr-only text-xs text-[var(--ink-muted)] sm:not-sr-only"
             aria-live="polite"
             aria-atomic="true"
           >
             {filtered.length} {filtered.length === 1 ? "pick" : "picks"}
           </span>
+          <Link
+            href="/watchlist"
+            aria-label="Your watchlist"
+            className="mr-auto inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] sm:mr-0"
+          >
+            <Bookmark className="h-4 w-4" aria-hidden="true" />
+            <span>Your watchlist</span>
+          </Link>
+          <button
+            type="button"
+            aria-label="Previous curated picks"
+            disabled={edges.start}
+            onClick={() => scroll(-1)}
+            aria-controls="curated-picks-rail"
+            className={styles.arrow}
+          >
+            <ChevronLeft size={18} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next curated picks"
+            disabled={edges.end}
+            onClick={() => scroll(1)}
+            aria-controls="curated-picks-rail"
+            className={styles.arrow}
+          >
+            <ChevronRight size={18} aria-hidden="true" />
+          </button>
         </div>
       </div>
       <div className={styles.frame}>
-        <button
-          type="button"
-          aria-label="Previous curated picks"
-          disabled={edges.start}
-          onClick={() => scroll(-1)}
-          aria-controls="curated-picks-rail"
-          className={`${styles.arrow} ${styles.previous}`}
-        >
-          <ChevronLeft size={18} />
-        </button>
         <div
           id="curated-picks-rail"
           key={filter}
           ref={railRef}
+          tabIndex={-1}
+          aria-label="Your curated picks"
           onScroll={syncEdges}
           className={styles.rail}
           data-curated-rail
         >
-          {filtered.map((item) => (
-            <CuratedCard key={`${mediaType(item)}-${item.id}`} item={item} />
+          {filtered.map((item, index) => (
+            <CuratedCard
+              key={`${mediaType(item)}-${item.id}`}
+              item={item}
+              featured={index === 0}
+              onSaved={() => {
+                if (document.activeElement === document.body)
+                  railRef.current?.focus({ preventScroll: true });
+                onSaved?.();
+              }}
+            />
           ))}
         </div>
-
-        <button
-          type="button"
-          aria-label="Next curated picks"
-          disabled={edges.end}
-          onClick={() => scroll(1)}
-          aria-controls="curated-picks-rail"
-          className={`${styles.arrow} ${styles.next}`}
-        >
-          <ChevronRight size={18} />
-        </button>
 
         {filtered.length > 1 && (
           <p className={styles.swipe}>Swipe to explore →</p>
@@ -251,10 +316,12 @@ export function CuratedShelfSkeleton() {
         <div className="h-3 w-12 rounded bg-[var(--surface-2)]" />
       </div>
       <div className={styles.frame} aria-hidden="true">
-        <div className={`${styles.arrow} ${styles.previous}`} />
         <div className={styles.rail}>
           {Array.from({ length: 3 }, (_, index) => (
-            <div key={index} className={`${styles.card} moodies-skeleton`}>
+            <div
+              key={index}
+              className={`${styles.card} ${index === 0 ? styles.featured : ""} moodies-skeleton`}
+            >
               <div className={styles.poster} />
               <div className={styles.copy}>
                 <div className="mt-1 h-3 w-1/2 rounded bg-[var(--surface-2)]" />
@@ -265,13 +332,6 @@ export function CuratedShelfSkeleton() {
             </div>
           ))}
         </div>
-        <div className={`${styles.arrow} ${styles.next}`} />
-      </div>
-      <div
-        aria-hidden="true"
-        className="mt-1 flex h-11 items-center moodies-skeleton"
-      >
-        <div className="h-3 w-28 rounded bg-[var(--surface-2)]" />
       </div>
     </div>
   );
