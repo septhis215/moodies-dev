@@ -384,6 +384,7 @@ export default function CardCarousel<T extends MediaItem>({
                     </div>
                     <RatingBadge
                       rating={rating}
+                      placement="poster"
                       variant="colored"
                       size="sm"
                       className="absolute right-2 top-2 z-20"

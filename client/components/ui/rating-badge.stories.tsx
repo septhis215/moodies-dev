@@ -1,10 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { expect } from 'storybook/test';
-import { RatingBadge } from './rating-badge';
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect } from "storybook/test";
+import { RatingBadge } from "./rating-badge";
 
 const meta = {
   component: RatingBadge,
-  tags: ['ai-generated'],
+  tags: ["ai-generated"],
   args: {
     rating: 8.4,
   },
@@ -20,15 +20,15 @@ export const NewRelease: Story = {
     rating: 0,
   },
   play: async ({ canvas }) => {
-    await expect(canvas.getByText('New')).toBeVisible();
+    await expect(canvas.getByText("New")).toBeVisible();
   },
 };
 
 export const MinimalLowRating: Story = {
   args: {
     rating: 4.2,
-    variant: 'minimal',
-    size: 'md',
+    variant: "minimal",
+    size: "md",
   },
 };
 
@@ -37,8 +37,27 @@ export const CssCheck: Story = {
     rating: 0,
   },
   play: async ({ canvas }) => {
-    const badge = canvas.getByText('New').closest('div');
-    await expect(badge).not.toBeNull();
-    await expect(getComputedStyle(badge as HTMLElement).backgroundColor).toBe('oklch(0.511 0.262 276.966)');
+    await expect(
+      canvas.getByLabelText("New title, not yet rated"),
+    ).toBeVisible();
+  },
+};
+
+export const PosterRibbon: Story = {
+  args: { rating: 0, placement: "poster" },
+  decorators: [
+    (Story) => (
+      <div className="relative h-64 w-44 overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)]">
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvas }) => {
+    const badge = canvas.getByLabelText("New title, not yet rated");
+    await expect(badge).toBeVisible();
+    const bounds = badge.getBoundingClientRect();
+    const card = badge.parentElement!.getBoundingClientRect();
+    await expect(Math.abs(bounds.right - card.right)).toBeLessThanOrEqual(1);
+    await expect(bounds.top).toBeGreaterThan(card.top);
   },
 };

@@ -689,12 +689,12 @@ export default function MovieQuizPage() {
                                   sizes="(max-width: 639px) 44vw, (max-width: 1023px) 28vw, 200px"
                                   className="object-cover"
                                 />
-                                <div className="absolute left-2 top-2">
                                   <RatingBadge
                                     rating={item.vote_average}
                                     size="sm"
+                                    placement="poster"
+                                    className="absolute left-2 top-2"
                                   />
-                                </div>
                               </div>
                               <h3 className="mt-2 min-h-10 line-clamp-2 break-words text-sm font-semibold leading-5">
                                 {titleOf(item)}

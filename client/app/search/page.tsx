@@ -615,8 +615,9 @@ export default function SearchResultsPage() {
                 const rating = item.vote_average ?? 0;
                 const hasRating =
                   item.type !== "person" &&
+                  item.vote_average != null &&
                   typeof rating === "number" &&
-                  rating > 0;
+                  Number.isFinite(rating) && rating >= 0;
                 const knownFor = item.known_for
                   ?.map((credit) => credit.title || credit.name)
                   .filter(Boolean)
@@ -641,12 +642,7 @@ export default function SearchResultsPage() {
                         }
                       />
                       {view === "grid" && hasRating && (
-                        <div
-                          className={styles.rating}
-                          aria-label={`TMDB rating ${rating.toFixed(1)} out of 10`}
-                        >
-                          <RatingBadge rating={rating} />
-                        </div>
+                        <RatingBadge rating={rating} placement="poster" className={rating === 0 ? undefined : styles.rating} />
                       )}
                     </div>
                     <div className={styles.cardBody}>

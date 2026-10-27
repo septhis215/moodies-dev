@@ -60,6 +60,7 @@ export function MediaPosterCard({ item, hrefBase, watchType }: Props) {
           />
           <RatingBadge
             rating={item.vote_average}
+            placement="poster"
             variant="colored"
             size="sm"
             className="absolute right-2 top-2 z-10"

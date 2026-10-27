@@ -420,6 +420,7 @@ export function CategoryContent({
                               variant="colored"
                               size="sm"
                               className="absolute right-2 top-2"
+                              placement="poster"
                             />
                             <div
                               aria-hidden="true"

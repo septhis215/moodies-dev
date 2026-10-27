@@ -675,13 +675,13 @@ export default function MoodRecommendationsSection({
                             className="object-cover transition-transform duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
                           />
 
-                          <div className="absolute right-2 top-2">
                             <RatingBadge
                               rating={rec.voteAverage}
                               variant="colored"
                               size="sm"
+                              placement="poster"
+                              className="absolute right-2 top-2"
                             />
-                          </div>
 
                           <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
                             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/65 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-md">

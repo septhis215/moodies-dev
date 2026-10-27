@@ -18,6 +18,7 @@ if (output) await mkdir(output, { recursive: true });
 const fixtureImage = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="960" viewBox="0 0 720 960"><rect width="720" height="960" fill="#1d1718"/><circle cx="360" cy="330" r="125" fill="#f0644b"/><path d="M130 860c0-350 460-350 460 0" fill="#e6b65c"/><text x="360" y="920" text-anchor="middle" fill="white" font-size="28">Test image</text></svg>`;
 let bundle = "";
 let css = "";
+let componentCss = "";
 const server = createServer((request, response) => {
   if (request.url.startsWith("/fixture.svg")) {
     response.writeHead(200, { "content-type": "image/svg+xml" });
@@ -127,6 +128,20 @@ try {
               throw new Error(`Unresolved harness import: ${args.path}`);
             return { path, namespace: "readable" };
           });
+          api.onLoad(
+            { filter: /\.module\.css$/, namespace: "readable" },
+            async (args) => {
+              const source = await readFile(args.path, "utf8");
+              componentCss += source;
+              const classes = [...source.matchAll(/\.([a-zA-Z_][\w-]*)/g)].map(
+                (match) => match[1],
+              );
+              return {
+                contents: `export default ${JSON.stringify(Object.fromEntries(classes.map((name) => [name, name])))};`,
+                loader: "js",
+              };
+            },
+          );
           api.onLoad({ filter: /.*/, namespace: "readable" }, async (args) => ({
             contents: await readFile(args.path, "utf8"),
             loader: args.path.endsWith(".tsx")
@@ -153,7 +168,7 @@ try {
       { from: resolve(root, "client/app/globals.css") },
     )
   ).css;
-  css += "\nbody{font-family:Arial,sans-serif}";
+  css += componentCss + "\nbody{font-family:Arial,sans-serif}";
   if (output) {
     await writeFile(resolve(output, "harness.js"), bundle);
     await writeFile(resolve(output, "harness.css"), css);
@@ -197,10 +212,11 @@ try {
           right: element.getBoundingClientRect().right,
           clamp: getComputedStyle(element).webkitLineClamp,
         }));
-        assert.equal(bounds.clamp, "2");
+        const lines = id !== "landing" && width < 640 ? 3 : 2;
+        assert.equal(bounds.clamp, String(lines));
         assert.ok(
-          bounds.height <= bounds.lineHeight * 2 + 2,
-          id + " exceeds two lines at " + width,
+          bounds.height <= bounds.lineHeight * lines + 2,
+          id + " exceeds its title line limit at " + width,
         );
         assert.ok(bounds.right <= width + 1, id + " heading overflows");
         const action = wrapper.getByRole(id === "landing" ? "button" : "link", {

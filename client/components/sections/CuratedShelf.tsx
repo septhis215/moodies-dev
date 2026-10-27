@@ -8,9 +8,9 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Star,
 } from "lucide-react";
 import { TmdbImage } from "@/components/ui/TmdbImage";
+import RatingBadge from "@/components/ui/rating-badge";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import type { All } from "@/types/all";
 import styles from "./CuratedShelf.module.css";
@@ -83,15 +83,7 @@ function CuratedCard({
             {type === "tv" ? "Series" : "Movie"}
           </span>
         )}
-        {Number.isFinite(item.vote_average) && (item.vote_average ?? 0) > 0 && (
-          <span
-            className={styles.rating}
-            aria-label={`Rating ${item.vote_average?.toFixed(1)} out of 10`}
-          >
-            <Star size={12} fill="currentColor" aria-hidden="true" />{" "}
-            {item.vote_average?.toFixed(1)}
-          </span>
-        )}
+        <RatingBadge rating={item.vote_average} placement="poster" className={item.vote_average === 0 ? undefined : styles.rating} />
       </Link>
       <div className={styles.copy}>
         {featured && <p className="ui-kicker mb-3">Start here</p>}

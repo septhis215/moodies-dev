@@ -302,11 +302,7 @@ function FootballCard({ item, index }: { item: FootballStory; index: number }) {
             </>
           )}
         </div>
-        {item.vote_average ? (
-          <div className="absolute right-2 top-2">
-            <RatingBadge rating={item.vote_average} size="sm" />
-          </div>
-        ) : null}
+        <RatingBadge rating={item.vote_average} size="sm" placement="poster" className="absolute right-2 top-2" />
 
         <div className="absolute inset-x-0 bottom-0 p-2.5 sm:p-3">
           <div className="mb-1.5 inline-flex max-w-full rounded bg-emerald-300/15 px-2 py-0.5 text-[9px] font-bold text-emerald-100 ring-1 ring-emerald-200/20 sm:py-1 sm:text-[10px]">

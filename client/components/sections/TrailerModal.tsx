@@ -429,6 +429,7 @@ export default function TrailerModal({
                               {/* Rating badge */}
                               <RatingBadge
                                 rating={rec.vote_average}
+                                placement="poster"
                                 variant="colored"
                                 size="sm"
                                 className="absolute right-2 top-2"

@@ -57,6 +57,7 @@ export function LibraryCard({
               : "(max-width: 767px) 30vw, (max-width: 1279px) 16vw, 140px"
           }
         />
+        {entry.summary?.vote_average === 0 && <RatingBadge rating={0} placement="poster" />}
       </Link>
       <div className={styles.copy}>
         <div className={styles.meta}>

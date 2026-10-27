@@ -63,9 +63,7 @@ export function MediaCard({
             className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/20" />
-          <div className="absolute right-2.5 top-2.5">
-            <RatingBadge rating={item.vote_average} size="sm" />
-          </div>
+          <RatingBadge rating={item.vote_average} size="sm" placement="poster" className="absolute right-2.5 top-2.5" />
           <div className="absolute inset-x-0 bottom-0 p-3">
             <p className="line-clamp-2 text-sm font-semibold leading-5 text-white">
               {title}

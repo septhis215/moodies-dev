@@ -1,11 +1,13 @@
 import React from "react";
 import { Star } from "lucide-react";
+import styles from "./rating-badge.module.css";
 
 interface RatingBadgeProps {
   rating: number | null | undefined;
   variant?: "colored" | "minimal";
   size?: "sm" | "md";
   className?: string;
+  placement?: "inline" | "poster";
 }
 
 function getRatingColor(variant: "colored" | "minimal") {
@@ -19,6 +21,7 @@ export function RatingBadge({
   variant = "colored",
   size = "sm",
   className = "",
+  placement = "inline",
 }: RatingBadgeProps) {
   if (rating === null || rating === undefined) return null;
 
@@ -34,24 +37,11 @@ export function RatingBadge({
 
   // ===== NEW STATE =====
   if (isNew) {
-    const sizeClasses =
-      size === "sm"
-        ? "gap-1.5 px-2 py-1 text-xs"
-        : "gap-2 px-2.5 py-1.5 text-sm";
-    const colorClasses =
-      variant === "colored"
-        ? "border-[var(--brand-coral)]/50 bg-[var(--surface-0)]/95 shadow-sm"
-        : "border-[var(--brand-coral)]/30 bg-[var(--brand-coral)]/10";
-
     return (
       <div
         aria-label="New title, not yet rated"
-        className={`inline-flex w-fit shrink-0 items-center rounded-md border font-semibold normal-case leading-none tracking-normal text-[var(--ink)] ${sizeClasses} ${colorClasses} ${className}`}
+        className={`${styles.newBadge} ${size === "md" ? styles.medium : ""} ${placement === "poster" ? styles.posterRibbon : ""} ${className}`}
       >
-        <span
-          aria-hidden="true"
-          className={`shrink-0 rounded-full border-2 border-[var(--brand-coral)] ${size === "sm" ? "h-2 w-2" : "h-2.5 w-2.5"}`}
-        />
         New
       </div>
     );
