@@ -62,8 +62,6 @@ type AuthContextValue = {
 
 /* ---------- Config ---------- */
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
-const MOODIES_LOGO = "/images/moodies-transparent.png";
-const MOODIES_SIZE = { width: 30, height: 30 };
 const SESSION_MARKER_KEY = "moodies:session";
 const SESSION_MARKER_COOKIE = "mood_session";
 const SESSION_MARKER_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
@@ -414,8 +412,6 @@ export function AuthProvider({
         appToast.success("Welcome back!", {
           title: "User",
           duration: 3000,
-          posterUrl: MOODIES_LOGO,
-          imageSize: MOODIES_SIZE,
         });
       }
     })();

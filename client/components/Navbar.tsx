@@ -105,7 +105,6 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
 };
 
 const MOODIES_LOGO = "/images/moodies-transparent.png";
-const MOODIES_SIZE = { width: 30, height: 30 };
 const NAVIGATION_ICON_SOURCES: Record<string, string> = {
   "/movies": "/images/badges/movie-buff.png",
   "/tv": "/images/badges/binge-legend.png",
@@ -239,8 +238,6 @@ export function NavbarComponent({
       appToast.info("You've been logged out successfully", {
         title: "See you next time",
         duration: 3000,
-        posterUrl: MOODIES_LOGO,
-        imageSize: MOODIES_SIZE,
       });
     } finally {
       setIsLoggingOut(false);

@@ -6,9 +6,6 @@ import { authenticateSession } from "@/lib/auth/session";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
-const MOODIES_LOGO = "/images/moodies-transparent.png";
-const MOODIES_SIZE = { width: 30, height: 30 };
-
 export function useAuth() {
     const [isLoading, setIsLoading] = useState(false);
 
@@ -19,8 +16,6 @@ export function useAuth() {
             const loadingToastId = appToast.loading("Signing you in...", {
                 id: "auth-signin-loading",
                 title: "Please wait",
-                posterUrl: MOODIES_LOGO,
-                imageSize: MOODIES_SIZE,
             });
 
             try {
@@ -52,8 +47,6 @@ export function useAuth() {
                     id: loadingToastId,
                     duration: 3000,
                     title: data.user?.username || data.user?.email || "User",
-                    posterUrl: data.user?.avatarUrl || MOODIES_LOGO,
-                    imageSize: data.user?.avatarUrl ? undefined : MOODIES_SIZE,
                 });
 
                 // Redirect to home
@@ -69,8 +62,6 @@ export function useAuth() {
                     id: loadingToastId,
                     duration: 5000,
                     title: "Sign-in Failed",
-                    posterUrl: MOODIES_LOGO,
-                    imageSize: MOODIES_SIZE,
                 });
 
                 return { success: false, error: appError.userMessage };
