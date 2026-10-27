@@ -276,7 +276,7 @@ export function CommunityThread({
                 {replies.data?.replies.length === 0 && (
                   <div className="flex items-center gap-4 rounded-2xl border border-dashed border-[var(--surface-border)] p-5">
                     <BadgeMascot
-                      name="first-post"
+                      name="review-voice"
                       sizes="64px"
                       className="h-16 w-16"
                     />
@@ -353,11 +353,11 @@ export function CommunityThread({
               ref={composerRef}
               id="join-discussion"
               aria-labelledby="reply-composer-heading"
-              className="ui-panel mt-6 scroll-mt-24 p-5 sm:p-6"
+              className="mt-6 scroll-mt-24 border-t border-[var(--surface-border)] pt-6"
             >
               <div className="mb-4 flex items-center gap-3">
                 <BadgeMascot
-                  name="conversation-starter"
+                  name="community-star"
                   sizes="64px"
                   className="h-16 w-16"
                 />
@@ -369,8 +369,7 @@ export function CommunityThread({
                     Join the conversation
                   </h2>
                   <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
-                    A thought, a question, a different perspective. There&apos;s
-                    room for yours.
+                    What do you think?
                   </p>
                 </div>
               </div>

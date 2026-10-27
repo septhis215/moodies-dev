@@ -13,10 +13,10 @@ import {
   Search,
   UserRound,
   MessageCircleQuestion,
-  Heart,
   X,
 } from "lucide-react";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
+import Image from "next/image";
 import { useAuth } from "@/app/context/AuthProvider";
 import { useCommunityPage } from "@/hooks/useCommunityPage";
 import type { CommunityPostsPage } from "@/lib/api/community";
@@ -107,16 +107,15 @@ export default function CommunityForum() {
           <span aria-current="page">Community</span>
         </nav>
         <div
-          className={`${styles.hero} flex items-center justify-between gap-4 p-5 sm:p-8`}
+          className={`${styles.hero} flex items-center justify-between gap-6 pb-6 sm:pb-8`}
         >
           <div className="relative z-10 max-w-xl">
-            <p className="ui-kicker pr-20 sm:pr-0">A shared love of stories</p>
+            <p className="ui-kicker pr-20 sm:pr-0">Every mood has a place</p>
             <h1 className="mt-2 pr-20 text-3xl font-bold leading-none text-[var(--ink)] sm:pr-0 sm:text-4xl">
               Community
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-              Make yourself at home. Share an idea, ask a question, or help
-              shape what comes next on Moodies.
+              Talk about your Moodies finds, ask for a hand, or share an idea.
             </p>
             <button
               ref={startButton}
@@ -130,12 +129,29 @@ export default function CommunityForum() {
               Start a topic
             </button>
           </div>
-          <div className={styles.artwork} aria-hidden="true">
-            <BadgeMascot
-              name="conversation-starter"
-              sizes="(min-width: 1024px) 256px, (min-width: 640px) 192px, 80px"
-              className="relative h-full w-full"
-            />
+          <div className={styles.artwork} aria-label="A place for every mood">
+            {(["funny", "bittersweet", "inspirational"] as const).map((mood, index) => (
+              <figure
+                key={mood}
+                className={
+                  index
+                    ? "hidden min-w-0 flex-1 text-center sm:block"
+                    : "min-w-0 flex-1 text-center"
+                }
+              >
+                <Image
+                  src={`/images/moods/${mood}.png`}
+                  alt=""
+                  width={112}
+                  height={112}
+                  sizes="(min-width: 640px) 96px, 80px"
+                  className="h-auto w-full"
+                />
+                <figcaption className="mt-1 hidden text-xs capitalize text-[var(--ink-muted)] sm:block">
+                  {mood}
+                </figcaption>
+              </figure>
+            ))}
           </div>
         </div>
       </header>
@@ -148,7 +164,7 @@ export default function CommunityForum() {
                 href={destination({ filter: key })}
                 scroll={false}
                 aria-current={filter === key ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] ${filter === key ? "border-[var(--brand-coral)]/40 bg-[var(--brand-coral)]/10 text-[var(--brand-coral-strong)]" : "border-transparent text-[var(--ink-muted)] hover:bg-[var(--surface-1)] hover:text-[var(--ink)]"}`}
+                className={`inline-flex min-h-11 items-center gap-2 border-b-2 px-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] ${filter === key ? "border-[var(--brand-coral)] text-[var(--ink)]" : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                 {label}
@@ -213,7 +229,7 @@ export default function CommunityForum() {
                 <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
                   {data
                     ? `${data.pagination.total.toLocaleString()} ${data.pagination.total === 1 ? "topic" : "topics"}${search ? ` matching "${search}"` : ""}`
-                    : "Conversations about the site, started by you."}
+                    : "What's happening around Moodies."}
                 </p>
               </div>
               <label className="flex items-center gap-2 text-sm text-[var(--ink-muted)]">
@@ -287,12 +303,12 @@ export default function CommunityForum() {
                   <div
                     role="status"
                     aria-label="Loading discussions"
-                    className="space-y-3"
+                    className="divide-y divide-[var(--surface-border)]"
                   >
                     {[0, 1, 2, 3].map((item) => (
                       <div
                         key={item}
-                        className="h-60 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] motion-safe:animate-pulse"
+                        className="h-44 bg-[var(--surface-1)]/40 motion-safe:animate-pulse"
                       />
                     ))}
                     <span className="sr-only">Loading discussions...</span>
@@ -356,13 +372,13 @@ export default function CommunityForum() {
                   </div>
                 )}
                 {data && data.posts.length > 0 && (
-                  <ul className="space-y-3" aria-label="Community topics">
+                  <ul aria-label="Community topics">
                     {data.posts.map((post) => {
                       const activity = post.latestReply ?? post;
                       return (
                         <li
                           key={post.id}
-                          className={`${styles.topic} group p-4 sm:p-5`}
+                          className={`${styles.topic} group py-5`}
                         >
                           <div className="mb-3 flex min-w-0 items-center gap-3">
                             <CommunityAvatar user={post.user} />
@@ -377,9 +393,7 @@ export default function CommunityForum() {
                                 {communityDate(post.createdAt)}
                               </time>
                             </div>
-                            <span
-                              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${post.replyCount === 0 ? "bg-[var(--brand-gold)]/10 text-[var(--brand-gold)]" : "bg-[var(--surface-0)] text-[var(--ink-muted)]"}`}
-                            >
+                            <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-[var(--ink-muted)]">
                               <MessageCircle
                                 className="h-3.5 w-3.5"
                                 aria-hidden="true"
@@ -400,7 +414,7 @@ export default function CommunityForum() {
                           <p className="mt-1 line-clamp-2 text-sm leading-6 text-[var(--ink-muted)] [overflow-wrap:anywhere]">
                             {post.content}
                           </p>
-                          <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-[var(--surface-border)] pt-3 text-xs leading-5 text-[var(--ink-muted)]">
+                          <div className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
                             <span className="min-w-0 [overflow-wrap:anywhere]">
                               {post.latestReply
                                 ? `Latest reply by ${activity.user.username} · ${communityDate(activity.createdAt)}`
@@ -408,17 +422,6 @@ export default function CommunityForum() {
                                   ? "Be the first to join in"
                                   : "Join the conversation"}
                             </span>
-                            <Link
-                              href={`/community/${post.id}`}
-                              aria-label={`Read discussion: ${post.title}`}
-                              className="inline-flex min-h-11 items-center gap-1.5 rounded-sm font-semibold text-[var(--brand-coral-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]"
-                            >
-                              Read discussion
-                              <ArrowRight
-                                className="h-3.5 w-3.5"
-                                aria-hidden="true"
-                              />
-                            </Link>
                           </div>
                         </li>
                       );
@@ -457,61 +460,50 @@ export default function CommunityForum() {
             </nav>
           )}
         </div>
-        <aside className="min-w-0 space-y-4 lg:sticky lg:top-28">
+        <aside className="min-w-0 space-y-6 lg:sticky lg:top-28">
           <section
-            aria-labelledby="forum-guide-heading"
-            className="ui-panel p-5"
+            aria-labelledby="forum-stories-heading"
+            className="border-b border-[var(--surface-border)] pb-6"
           >
             <BadgeMascot
-              name="community-star"
-              alt="Community star mascot"
-              sizes="80px"
-              className="mb-3 h-20 w-20"
+              name="mood-explorer"
+              sizes="96px"
+              className="mb-2 h-24 w-24"
             />
-            <p className="ui-kicker mb-2">You belong here</p>
+            <h2
+              id="forum-stories-heading"
+              className="text-2xl font-bold leading-tight"
+            >
+              What are you in the mood for?
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+              Start with how you feel. Find a film or series that fits.
+            </p>
+            <Link
+              href="/moods"
+              className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]"
+            >
+              Explore moods
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </section>
+          <section
+            aria-labelledby="forum-guide-heading"
+            className="text-sm leading-6 text-[var(--ink-muted)]"
+          >
             <h2
               id="forum-guide-heading"
               className="text-xl font-bold leading-tight text-[var(--ink)]"
             >
-              Good conversations start with kindness
+              A quick note
             </h2>
             <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
-              Every perspective is welcome. Stay curious, be thoughtful, and
-              give each other room to disagree.
+              Be kind to each other. Different tastes are welcome here.
             </p>
             <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
-              Found a problem? Include what happened and what you expected. Keep
-              personal details private.
+              Found a problem with Moodies? Tell us what happened. Keep personal
+              details private.
             </p>
-            <div className="mt-5 flex items-start gap-2 border-t border-[var(--surface-border)] pt-4 text-xs leading-5 text-[var(--ink-muted)]">
-              <Heart
-                className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-coral-strong)]"
-                aria-hidden="true"
-              />
-              A helpful reply can make someone&apos;s day.
-            </div>
-          </section>
-          <section
-            aria-labelledby="forum-stories-heading"
-            className="rounded-2xl border border-[var(--surface-border)] p-5"
-          >
-            <h2
-              id="forum-stories-heading"
-              className="text-xl font-bold leading-tight"
-            >
-              Looking for your next watch?
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-              Find a story for your mood. For thoughts on a film or series,
-              leave a review on its title page.
-            </p>
-            <Link
-              href="/moods"
-              className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--brand-coral-strong)]"
-            >
-              Explore by mood
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
           </section>
         </aside>
       </div>
