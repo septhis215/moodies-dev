@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { createYouTubePlayer, type YouTubePlayer, YT_PLAYER_STATE } from "@/lib/youtube-player";
 import { createTrailerReveal } from "@/lib/trailer-reveal";
 
-export default function MoodTrailerBackdrop({ videoKey, onPlaying }: {
-  videoKey: string; onPlaying: (playing: boolean) => void;
+export default function MoodTrailerBackdrop({ videoKey, muted, onPlaying }: {
+  videoKey: string; muted: boolean; onPlaying: (playing: boolean) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<YouTubePlayer | null>(null);
+  const mutedRef = useRef(muted);
   const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
@@ -42,8 +44,9 @@ export default function MoodTrailerBackdrop({ videoKey, onPlaying }: {
               const iframe = target.getIframe();
               iframe.tabIndex = -1;
               iframe.setAttribute("aria-hidden", "true");
-              iframe.title = "Muted mood trailer background";
-              target.mute();
+              iframe.title = "Mood trailer background";
+              if (mutedRef.current) target.mute();
+              else { target.unMute(); target.setVolume(70); }
               target.playVideo();
             },
             onStateChange: ({ data }) => reveal.update(data === YT_PLAYER_STATE.PLAYING),
@@ -52,17 +55,29 @@ export default function MoodTrailerBackdrop({ videoKey, onPlaying }: {
           },
         });
         if (cancelled) player.destroy();
+        else playerRef.current = player;
       } catch { reveal.update(false); }
     };
     void start();
     return () => {
       cancelled = true;
+      playerRef.current = null;
       reveal.dispose();
       observer.disconnect();
       onPlaying(false);
       try { player?.destroy(); } catch { /* Already removed by the player. */ }
     };
   }, [videoKey, onPlaying]);
+
+  useEffect(() => {
+    mutedRef.current = muted;
+    const player = playerRef.current;
+    if (!player) return;
+    try {
+      if (muted) player.mute();
+      else { player.unMute(); player.setVolume(70); }
+    } catch { /* The player is still initialising; onReady applies the state. */ }
+  }, [muted]);
 
   return <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden transition-opacity motion-reduce:transition-none ${playing ? "opacity-100 duration-700" : "opacity-0 duration-0"}`}>
     <div ref={hostRef} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 [&_iframe]:h-full [&_iframe]:w-full" />

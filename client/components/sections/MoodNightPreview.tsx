@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Pause, Play } from "lucide-react";
+import { ArrowRight, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
@@ -28,6 +28,7 @@ export default function MoodNightPreview() {
   const [failedSelection, setFailedSelection] = useState<string | null>(null);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [selectedPick, setSelectedPick] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const onPlaying = useCallback((value: boolean) => setPlaying(value), []);
@@ -95,7 +96,7 @@ export default function MoodNightPreview() {
       </header>
       <div className={styles.layout}>
         <div className={styles.choices} role="group" aria-label="Choose a mood">
-          {moodNightChoices.map(choice => <button key={choice.id} type="button" onClick={() => { if (choice.id !== selection) { setSelection(choice.id); setSelectedPick(null); setPaused(false); setPlaying(false); setFailedSelection(null); } }} aria-controls="landing-mood-preview" aria-pressed={choice.id === selection} className={`${styles.choice} text-sm font-semibold ${focus}`}>
+          {moodNightChoices.map(choice => <button key={choice.id} type="button" onClick={() => { if (choice.id !== selection) { setSelection(choice.id); setSelectedPick(null); setPaused(false); setMuted(true); setPlaying(false); setFailedSelection(null); } }} aria-controls="landing-mood-preview" aria-pressed={choice.id === selection} className={`${styles.choice} text-sm font-semibold ${focus}`}>
             <span aria-hidden="true" className={styles.moodDot} style={{ backgroundColor: choice.color }} />{choice.label}
           </button>)}
         </div>
@@ -103,7 +104,7 @@ export default function MoodNightPreview() {
     <div aria-hidden="true" className="pointer-events-none absolute inset-0">
       <div className={`${styles.sceneMedia} absolute inset-0`}>
       {backdrop && <Image key={backdrop} src={tmdbImage(backdrop, "w1280")} alt="" fill sizes="100vw" className={`${styles.backdrop} object-cover`} />}
-      {activeTrailer && motionAllowed && visible && pageVisible && !paused && <MoodTrailerBackdrop key={activeTrailer.key} videoKey={activeTrailer.key} onPlaying={onPlaying} />}
+      {activeTrailer && motionAllowed && visible && pageVisible && !paused && <MoodTrailerBackdrop key={activeTrailer.key} videoKey={activeTrailer.key} muted={muted} onPlaying={onPlaying} />}
       </div>
       <div className={`${styles.sceneShade} absolute inset-0`} />
     </div>
@@ -118,6 +119,7 @@ export default function MoodNightPreview() {
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <Link href={`/${activeItem.type === "movie" ? "movies" : "tv"}/${activeItem.id}`} className={`inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] ${focus}`}>Explore {activeItem.type === "movie" ? "movie" : "series"}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
             {activeTrailer && motionAllowed && <button type="button" onClick={() => setPaused(value => !value)} aria-pressed={paused} className={`inline-flex min-h-11 items-center gap-1.5 rounded-sm text-xs text-white ${focus}`}>{paused ? <Play className="h-3.5 w-3.5" aria-hidden="true" /> : <Pause className="h-3.5 w-3.5" aria-hidden="true" />}{paused ? "Play preview" : "Pause preview"}</button>}
+            {activeTrailer && motionAllowed && <button type="button" onClick={() => setMuted(value => !value)} aria-pressed={!muted} className={`inline-flex min-h-11 items-center gap-1.5 rounded-sm text-xs text-white ${focus}`}>{muted ? <Volume2 className="h-3.5 w-3.5" aria-hidden="true" /> : <VolumeX className="h-3.5 w-3.5" aria-hidden="true" />}{muted ? "Sound on" : "Sound off"}</button>}
           </div>
         </div>}
         {!activeItem && <p className={`${styles.scenePlaceholder} text-sm text-[var(--ink-muted)]`}>{failed ? "Your next story starts with a feeling." : "Finding a story for your night…"}</p>}
@@ -136,7 +138,7 @@ export default function MoodNightPreview() {
                   const selected = activeItem?.id === item.id && activeItem.type === item.type;
                   const hasTrailer = preview.trailers.some(trailer => trailer.item.id === item.id && trailer.item.type === item.type);
                   return <div key={key} className={`${styles.pickCard} ${selected ? styles.selected : ""}`}>
-                    <button type="button" aria-pressed={selected} aria-label={`Preview ${item.title}${hasTrailer ? " trailer" : " artwork"}`} onClick={() => { if (!selected) { setSelectedPick(key); setPaused(false); setPlaying(false); } }} className={`${styles.pick} flex w-full min-w-0 gap-2 p-3 text-left ${focus}`}>
+                    <button type="button" aria-pressed={selected} aria-label={`Preview ${item.title}${hasTrailer ? " trailer" : " artwork"}`} onClick={() => { if (!selected) { setSelectedPick(key); setPaused(false); setMuted(true); setPlaying(false); } }} className={`${styles.pick} flex w-full min-w-0 gap-2 p-3 text-left ${focus}`}>
                       <span className={styles.posterWrap}>
                         <Image src={item.poster ? tmdbImage(item.poster, "w185") : "/placeholder-poster.svg"} alt="" width={44} height={66} className={`${styles.poster} h-16 w-11 rounded object-cover`} />
                         {hasTrailer && <span className={styles.playIcon}><Play className="h-3 w-3" aria-hidden="true" /></span>}
