@@ -207,9 +207,7 @@ export function HomepageMediaHero({
                   <span className="hidden sm:inline">{mediaLabel}</span>
                   <span aria-hidden="true">/</span>
                   <span>{getYear(featured)}</span>
-                  <span className="sm:hidden">
-                    <RatingBadge rating={featured.vote_average} variant="colored" size="sm" />
-                  </span>
+                  <RatingBadge rating={featured.vote_average} variant="minimal" size="md" className="min-h-8" />
                 </div>
 
                 <motion.h2
@@ -245,25 +243,24 @@ export function HomepageMediaHero({
                     duration: reduceMotion ? 0 : 0.3,
                     delay: reduceMotion ? 0 : 0.18,
                   }}
-                  className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-wrap sm:gap-3"
+                  className="mt-5 grid max-w-sm grid-cols-2 items-stretch gap-3 sm:max-w-xs"
                 >
-                  <span className="hidden sm:contents">
-                    <RatingBadge rating={featured.vote_average} variant="colored" size="sm" />
-                  </span>
                   <Link
                     href={`/${routeBase}/${featured.id}`}
-                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[var(--brand-coral)] px-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--brand-coral-strong)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:min-h-11 sm:rounded-md sm:px-5"
+                    className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[var(--brand-coral)] px-3 text-sm font-bold text-white transition-colors hover:bg-[var(--brand-coral-strong)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:min-h-11 sm:px-5"
                   >
-                    <Info className="h-4 w-4" />
+                    <Info className="h-4 w-4 shrink-0" aria-hidden="true" />
                     {primaryCta}
                   </Link>
                   <button
                     type="button"
                     onClick={toggleWatchlist}
                     disabled={watchlistLoading}
-                    className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 sm:min-h-11 sm:rounded-md ${
+                    aria-pressed={saved}
+                    aria-busy={watchlistLoading}
+                    className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-wait disabled:opacity-60 sm:min-h-11 sm:px-5 ${
                       saved
-                        ? "border-[var(--brand-coral)] bg-[var(--brand-coral)] text-white"
+                        ? "border-[var(--brand-coral-strong)]/60 bg-black/40 text-[var(--brand-coral-strong)] hover:bg-black/55"
                         : "border-white/25 bg-black/30 text-white backdrop-blur-sm hover:border-white/55 hover:bg-black/50"
                     }`}
                     aria-label={
@@ -273,9 +270,9 @@ export function HomepageMediaHero({
                     {watchlistLoading ? (
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" />
                     ) : saved ? (
-                      <BookmarkCheck className="h-4 w-4" />
+                      <BookmarkCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
                     ) : (
-                      <Bookmark className="h-4 w-4" />
+                      <Bookmark className="h-4 w-4 shrink-0" aria-hidden="true" />
                     )}
                     <span>
                       {saved ? "Saved" : "My List"}
