@@ -776,6 +776,7 @@ export class TrendingService {
                     preferredGenres: true,
                     preferredLanguages: true,
                     age: true,
+                    watchlistItems: { select: { tmdbId: true, mediaType: true } },
                 },
             });
 
@@ -883,15 +884,17 @@ export class TrendingService {
             }
 
             const MAX_PAGES = 4; // per endpoint — keeps latency reasonable
-            const seenIds = new Set<number>();
+            const seenIds = new Set<string>();
+            const savedIds = new Set(user.watchlistItems.map(item => `${item.mediaType.toLowerCase()}:${item.tmdbId}`));
 
             // Scored intermediate store before splitting by type
             const scoredMovies: Array<TmdbAll & { _score: number }> = [];
             const scoredTv: Array<TmdbAll & { _score: number }> = [];
 
             const pushItem = (raw: RawItem, mediaType: 'movie' | 'tv') => {
-                if (seenIds.has(raw.id)) return;
-                seenIds.add(raw.id);
+                const key = `${mediaType}:${raw.id}`;
+                if (savedIds.has(key) || seenIds.has(key)) return;
+                seenIds.add(key);
 
                 const mapped: TmdbAll = {
                     id: raw.id,
