@@ -110,11 +110,14 @@
   .layout {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-areas: "choices choices" "scene recommendations";
-    gap: 1.5rem 2rem;
+    gap: 1rem 1.5rem;
     align-items: start;
   }
   .choice { flex: 0 1 auto; min-width: 7rem; }
-  .scene { aspect-ratio: auto; min-height: 24rem; align-self: stretch; }
+  .scene { aspect-ratio: auto; min-height: 20rem; align-self: stretch; }
+  .picks { gap: 0.5rem; }
+  .pick { min-height: 6rem; }
+  .pickSkeleton { height: 8.875rem; }
 }
 @keyframes scene-reveal { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {

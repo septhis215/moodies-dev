@@ -209,22 +209,26 @@ async function openTopic(id, title) {
 }
 try {
   await openIndex();
-  const table = page.getByRole("table", {
+  const topics = page.getByRole("list", {
     name: "Community topics",
     exact: true,
   });
-  await table.waitFor();
-  assert.equal(await table.locator("tbody tr").count(), 10);
+  await topics.waitFor();
+  assert.equal(await topics.locator(":scope > li").count(), 10);
   assert.equal(
-    await table.getByRole("button", { name: "React", exact: true }).count(),
+    await topics.getByRole("button", { name: "React", exact: true }).count(),
     0,
   );
   assert.equal(
-    await page.getByText(posts[0].content, { exact: true }).count(),
-    0,
+    await topics
+      .locator(":scope > li")
+      .first()
+      .getByText(posts[0].content, { exact: true })
+      .count(),
+    1,
   );
   assert.equal(sdk.scriptRequests(), 0);
-  await table.getByRole("link", { name: firstTitle, exact: true }).click();
+  await topics.getByRole("link", { name: firstTitle, exact: true }).click();
   await page.waitForURL(`**/community/${firstId}`);
   await page.getByRole("heading", { name: firstTitle, exact: true }).waitFor();
   await page
@@ -253,12 +257,12 @@ try {
   await page
     .getByRole("link", { name: "Back to discussions", exact: true })
     .click();
-  await table.waitFor();
+  await topics.waitFor();
   await page
     .getByRole("navigation", { name: "Discussion views", exact: true })
     .getByRole("link", { name: "Awaiting replies", exact: true })
     .click();
-  await table
+  await topics
     .getByRole("link", { name: firstTitle, exact: true })
     .waitFor({ state: "hidden" });
   await page.getByText("11 topics", { exact: true }).waitFor();
@@ -273,7 +277,7 @@ try {
   await page
     .getByText('1 topic matching "long link"', { exact: true })
     .waitFor();
-  assert.equal(await table.locator("tbody tr").count(), 1);
+  assert.equal(await topics.locator(":scope > li").count(), 1);
   await openIndex();
   await page
     .getByLabel("Sort discussions", { exact: true })
@@ -297,7 +301,7 @@ try {
     .waitFor();
   failRead = false;
   await page.getByRole("button", { name: "Try again", exact: true }).click();
-  await table.waitFor();
+  await topics.waitFor();
   empty = true;
   await openIndex();
   await page
@@ -315,7 +319,7 @@ try {
   empty = false;
   authenticated = true;
   await openIndex();
-  await table.waitFor();
+  await topics.waitFor();
   await page
     .getByRole("button", { name: "Start a topic", exact: true })
     .click();
@@ -392,18 +396,24 @@ try {
   await page
     .getByRole("heading", { name: "Discussion unavailable", exact: true })
     .waitFor();
-  for (const width of [320, 375, 768, 1024, 1440]) {
-    await page.setViewportSize({ width, height: 1000 });
+  for (const width of [320, 375, 768, 1024, 1366, 1440]) {
+    await page.setViewportSize({ width, height: width === 1366 ? 768 : 1000 });
     await openIndex();
-    await table.waitFor();
+    await topics.waitFor();
     await page.evaluate(() => document.fonts.ready);
+    if (width <= 375) {
+      assert.ok(
+        (await page.locator("main > header").boundingBox()).height < 350,
+        `Community introduction is too tall at ${width}px`,
+      );
+    }
     assert.ok(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,
       ),
       `index overflow at ${width}px`,
     );
-    if (output && [375, 1440].includes(width))
+    if (output && [375, 1366, 1440].includes(width))
       await page.screenshot({ path: `${output}/forum-index-${width}.png` });
     await openTopic(posts[2].id, posts[2].title);
     await page.getByRole("article").first().waitFor();
@@ -413,7 +423,7 @@ try {
       ),
       `discussion overflow at ${width}px`,
     );
-    if (output && [375, 1440].includes(width))
+    if (output && [375, 1366, 1440].includes(width))
       await page.screenshot({ path: `${output}/forum-topic-${width}.png` });
   }
   const fonts = await page.evaluate(() => ({
@@ -427,7 +437,7 @@ try {
   assert.equal(new Set(submissions).size, submissions.length);
   assert.deepEqual(errors, []);
   console.log(
-    "Forum passed: topic rows, dedicated links, search, unanswered/personal views, sorting, pagination, posts, replies, reactions, drafts, CAPTCHA, typography and index/discussion layouts at 320/375/768/1024/1440px.",
+    "Forum passed: discussion cards, dedicated links, search, unanswered/personal views, sorting, pagination, posts, replies, reactions, drafts, CAPTCHA, typography and index/discussion layouts at 320/375/768/1024/1366/1440px.",
   );
 } catch (error) {
   if (output) await page.screenshot({ path: `${output}/forum-failure.png` });

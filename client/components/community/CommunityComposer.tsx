@@ -105,7 +105,8 @@ export function CommunityComposer({
             id={`${prefix}-title-hint`}
             className="mt-1 text-xs leading-4 text-[var(--ink-muted)]"
           >
-            3 to 120 characters.
+            A clear, specific title helps people find your discussion. 3 to 120
+            characters.
           </p>
         </div>
       )}
@@ -134,13 +135,15 @@ export function CommunityComposer({
               : "Tell us what works, what could be better, or an idea you would love to see on Moodies."
           }
         />
-        <p
-          id={`${prefix}-hint`}
-          className="mt-1 text-xs leading-4 text-[var(--ink-muted)]"
-        >
-          This is a public discussion. {minLength} characters minimum.{" "}
-          {content.length}/{maxLength} characters.
-        </p>
+        <div className="mt-2 flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs leading-5 text-[var(--ink-muted)]">
+          <p id={`${prefix}-hint`}>
+            Everyone can read this. Keep personal details private. {minLength}{" "}
+            characters minimum.
+          </p>
+          <span>
+            {content.length}/{maxLength} characters
+          </span>
+        </div>
       </div>
       {error && (
         <p
@@ -153,7 +156,7 @@ export function CommunityComposer({
           {error}
         </p>
       )}
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2 border-t border-[var(--surface-border)] pt-4">
         <button
           type="button"
           onClick={onCancel}

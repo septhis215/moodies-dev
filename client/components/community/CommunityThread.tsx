@@ -16,6 +16,8 @@ import type {
 import { CommunityAvatar, communityDate } from "./CommunityAuthor";
 import { CommunityComposer } from "./CommunityComposer";
 import { CommunityReactions } from "./CommunityReactions";
+import { BadgeMascot } from "@/components/ui/BadgeMascot";
+import styles from "./Community.module.css";
 
 function DiscussionPost({
   id,
@@ -46,39 +48,39 @@ function DiscussionPost({
           ? `Original post by ${user.username}`
           : `Reply by ${user.username}`
       }
-      className="grid min-w-0 scroll-mt-24 border-b border-[var(--surface-border)] last:border-b-0 md:grid-cols-[10rem_minmax(0,1fr)]"
+      className={`${styles.threadPost} ${number === 1 ? styles.originalPost : ""} min-w-0 scroll-mt-24 p-5 sm:p-6`}
     >
-      <div className="flex min-w-0 items-center gap-3 border-b border-[var(--surface-border)] bg-[var(--surface-0)]/40 p-5 md:flex-col md:items-start md:border-b-0 md:border-r md:p-6">
-        <CommunityAvatar user={user} large />
-        <div className="min-w-0">
+      <div className="flex min-w-0 items-center gap-3">
+        <CommunityAvatar user={user} />
+        <div className="min-w-0 flex-1">
           <Link
             href={`/profile/${encodeURIComponent(user.id)}`}
             className="text-sm font-semibold text-[var(--ink)] hover:text-[var(--brand-coral-strong)] [overflow-wrap:anywhere]"
           >
             {user.username}
           </Link>
-          <p
-            className={`mt-1 text-xs leading-5 ${starter ? "text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"}`}
-          >
-            {starter ? "Topic starter" : "Member"}
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs leading-5 text-[var(--ink-muted)]">
+            {starter && (
+              <span className="font-semibold text-[var(--brand-coral-strong)]">
+                Topic starter
+              </span>
+            )}
+            <time dateTime={createdAt}>{communityDate(createdAt)}</time>
+          </div>
         </div>
+        <Link
+          href={href}
+          aria-label={`Link to post ${number}`}
+          className="inline-flex min-h-11 items-center rounded-sm px-2 text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--brand-coral-strong)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
+        >
+          #{number}
+        </Link>
       </div>
-      <div className="min-w-0 p-5 sm:p-6">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-2 text-xs leading-5 text-[var(--ink-muted)]">
-          <time dateTime={createdAt}>{communityDate(createdAt)}</time>
-          <Link
-            href={href}
-            aria-label={`Link to post ${number}`}
-            className="inline-flex min-h-8 items-center px-2 font-semibold hover:text-[var(--brand-coral-strong)] pointer-coarse:min-h-11"
-          >
-            #{number}
-          </Link>
-        </div>
-        <p className="whitespace-pre-wrap text-base leading-7 text-[var(--ink)] [overflow-wrap:anywhere]">
+      <div className="mt-5 min-w-0">
+        <p className="max-w-3xl whitespace-pre-wrap text-base leading-7 text-[var(--ink)] [overflow-wrap:anywhere]">
           {content}
         </p>
-        <div className="mt-6">
+        <div className="mt-5 border-t border-[var(--surface-border)] pt-4">
           <CommunityReactions
             target={number === 1 ? `posts/${id}` : `replies/${id}`}
             summary={summary}
@@ -135,8 +137,8 @@ export function CommunityThread({
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface-0)] pb-12 text-[var(--ink)] lg:pt-24">
-      <div className="ui-shell py-8 sm:py-10">
+    <main className="min-h-screen bg-[var(--surface-0)] pb-12 text-[var(--ink)] lg:pt-24">
+      <div className="ui-shell max-w-5xl py-6 sm:py-8">
         <nav
           aria-label="Breadcrumb"
           className="mb-6 flex flex-wrap items-center gap-2 text-sm text-[var(--ink-muted)]"
@@ -186,7 +188,7 @@ export function CommunityThread({
         )}
         {post && (
           <>
-            <header className="mb-6 border-b border-[var(--surface-border)] pb-6">
+            <header className={`${styles.hero} mb-6 p-5 sm:p-6`}>
               <p className="ui-kicker">Community discussion</p>
               <h1 className="mt-2 max-w-4xl text-3xl font-bold leading-tight text-[var(--ink)] sm:text-4xl [overflow-wrap:anywhere]">
                 {post.title}
@@ -218,7 +220,7 @@ export function CommunityThread({
                 </button>
               </div>
             </header>
-            <div className="overflow-hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)]">
+            <div className="space-y-6">
               <DiscussionPost
                 id={post.id}
                 user={post.user}
@@ -236,15 +238,18 @@ export function CommunityThread({
               />
               <section
                 aria-labelledby="discussion-replies-heading"
-                className="border-t border-[var(--surface-border)]"
+                className="space-y-4"
               >
                 <h2
                   ref={repliesHeading}
                   tabIndex={-1}
                   id="discussion-replies-heading"
-                  className="scroll-mt-24 border-b border-[var(--surface-border)] bg-[var(--surface-2)]/40 px-5 py-4 text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
+                  className="scroll-mt-24 flex items-center gap-3 text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
                 >
                   Replies
+                  <span className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-1)] px-2.5 py-1 font-sans text-sm font-semibold text-[var(--ink-muted)]">
+                    {replyCount}
+                  </span>
                 </h2>
                 {replies.loading && (
                   <p
@@ -269,11 +274,18 @@ export function CommunityThread({
                   </div>
                 )}
                 {replies.data?.replies.length === 0 && (
-                  <p className="p-6 text-sm leading-6 text-[var(--ink-muted)]">
-                    {page === 1
-                      ? "Be the first to join this discussion."
-                      : "No replies on this page."}
-                  </p>
+                  <div className="flex items-center gap-4 rounded-2xl border border-dashed border-[var(--surface-border)] p-5">
+                    <BadgeMascot
+                      name="first-post"
+                      sizes="64px"
+                      className="h-16 w-16"
+                    />
+                    <p className="text-sm leading-6 text-[var(--ink-muted)]">
+                      {page === 1
+                        ? "Be the first to join this discussion."
+                        : "No replies on this page."}
+                    </p>
+                  </div>
                 )}
                 {replies.data?.replies.map((reply, index) => (
                   <DiscussionPost
@@ -341,17 +353,30 @@ export function CommunityThread({
               ref={composerRef}
               id="join-discussion"
               aria-labelledby="reply-composer-heading"
-              className="mt-6 scroll-mt-24 border-t border-[var(--surface-border)] pt-6"
+              className="ui-panel mt-6 scroll-mt-24 p-5 sm:p-6"
             >
-              <h2
-                id="reply-composer-heading"
-                className="mb-4 text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
-              >
-                Join the conversation
-              </h2>
+              <div className="mb-4 flex items-center gap-3">
+                <BadgeMascot
+                  name="conversation-starter"
+                  sizes="64px"
+                  className="h-16 w-16"
+                />
+                <div>
+                  <h2
+                    id="reply-composer-heading"
+                    className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
+                  >
+                    Join the conversation
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+                    A thought, a question, a different perspective. There&apos;s
+                    room for yours.
+                  </p>
+                </div>
+              </div>
               {isAuthenticated ? (
                 composing ? (
-                  <div className="ui-panel p-5 sm:p-6">
+                  <div>
                     <CommunityComposer
                       postId={postId}
                       onPosted={posted}
@@ -393,6 +418,6 @@ export function CommunityThread({
           </>
         )}
       </div>
-    </div>
+    </main>
   );
 }

@@ -1,0 +1,77 @@
+.hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--surface-border);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(
+      ellipse at 95% 10%,
+      color-mix(in srgb, var(--brand-coral) 15%, transparent),
+      transparent 65%
+    ),
+    var(--surface-1);
+}
+.artwork {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 5rem;
+  height: 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+@media (min-width: 640px) {
+  .artwork {
+    position: relative;
+    inset: auto;
+    width: 12rem;
+    height: 10rem;
+  }
+}
+@media (min-width: 1024px) {
+  .artwork {
+    width: 16rem;
+    height: 11rem;
+  }
+}
+.artwork::before {
+  content: "";
+  position: absolute;
+  width: 80%;
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--brand-coral) 20%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--brand-coral) 5%, transparent);
+}
+.topic {
+  border: 1px solid var(--surface-border);
+  border-radius: 1rem;
+  background: var(--surface-1);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+.topic:hover,
+.topic:focus-within {
+  border-color: color-mix(
+    in srgb,
+    var(--brand-coral) 55%,
+    var(--surface-border)
+  );
+  background: var(--surface-2);
+}
+.threadPost {
+  border: 1px solid var(--surface-border);
+  border-radius: 1rem;
+  background: var(--surface-1);
+}
+.originalPost {
+  border-top-color: var(--brand-coral);
+}
+@media (prefers-reduced-motion: reduce) {
+  .topic {
+    transition: none;
+  }
+}

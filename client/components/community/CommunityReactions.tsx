@@ -119,7 +119,7 @@ export function CommunityReactions({
           <div
             role="group"
             aria-label="Choose a reaction"
-            className="mt-2 flex flex-wrap gap-2"
+            className="mt-3 flex w-fit max-w-full flex-wrap gap-2 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-0)] p-2"
           >
             {reactions.map(({ type, label, icon: Icon }) => (
               <button

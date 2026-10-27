@@ -84,7 +84,7 @@ export default function MoodNightPreview() {
 
   const focus = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]";
   return <section ref={sectionRef} id="your-moods" className={`${styles.section} scroll-mt-24`} aria-labelledby="mood-shelf-heading">
-    <div className="ui-shell py-8 sm:py-10">
+    <div className="ui-shell py-8 sm:py-10 lg:py-8">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div>
           <p className="ui-kicker">Choose by mood</p>
@@ -123,8 +123,8 @@ export default function MoodNightPreview() {
         {!activeItem && <p className={`${styles.scenePlaceholder} text-sm text-[var(--ink-muted)]`}>{failed ? "Your next story starts with a feeling." : "Finding a story for your night…"}</p>}
       </div>
         <div id="landing-mood-preview" className={styles.recommendations}>
-          <div className="mb-4 flex min-h-16 items-center gap-3">
-            <BadgeMascot name={nightMascots[mood.id]} alt={`${mood.label} night guide`} sizes="64px" className="h-16 w-16 shrink-0" />
+          <div className="mb-4 flex min-h-16 items-center gap-3 lg:mb-3 lg:min-h-12">
+            <BadgeMascot name={nightMascots[mood.id]} alt={`${mood.label} night guide`} sizes="(min-width: 1024px) 48px, 64px" className="h-16 w-16 shrink-0 lg:h-12 lg:w-12" />
             <div className={styles.copy} aria-live="polite" aria-atomic="true"><h3 className="text-base font-bold text-[var(--ink)] sm:text-lg">{mood.id === "easy" || mood.id === "electric" ? "An" : "A"} {mood.label.toLowerCase()} night</h3><p className="mt-1 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">{mood.note}</p></div>
           </div>
           <div aria-busy={!preview && !failed} className="min-h-28">
