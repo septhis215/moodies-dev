@@ -16,6 +16,10 @@ const LoadingScreenContext = createContext<{
   register: () => () => void;
 } | null>(null);
 
+export function usePageLoadingVisible() {
+  return useContext(LoadingScreenContext)?.visible ?? false;
+}
+
 export function LoadingScreenProvider({ children }: { children: ReactNode }) {
   const [visible, setVisible] = useState(false);
   const [loadingState] = useState(() => createLoadingScreenState(setVisible));

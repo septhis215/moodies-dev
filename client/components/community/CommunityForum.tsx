@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, type FormEvent } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -16,22 +17,54 @@ import {
   X,
 } from "lucide-react";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
-import Image from "next/image";
 import { useAuth } from "@/app/context/AuthProvider";
+import { usePageLoadingVisible } from "@/components/loading/LoadingScreenProvider";
 import { useCommunityPage } from "@/hooks/useCommunityPage";
 import type { CommunityPostsPage } from "@/lib/api/community";
+import { communitySignInHref } from "@/lib/community-navigation";
 import { CommunityComposer } from "./CommunityComposer";
 import { CommunityAvatar, communityDate } from "./CommunityAuthor";
-import styles from "./Community.module.css";
+import styles from "./CommunityForum.module.css";
 
 const views = [
-  { key: "all", label: "All discussions", icon: MessagesSquare },
-  { key: "unanswered", label: "Awaiting replies", icon: MessageCircleQuestion },
-  { key: "mine", label: "Your discussions", icon: UserRound },
+  {
+    key: "all",
+    label: "All discussions",
+    mobileLabel: "All",
+    icon: MessagesSquare,
+  },
+  {
+    key: "unanswered",
+    label: "Awaiting replies",
+    mobileLabel: "Unanswered",
+    icon: MessageCircleQuestion,
+  },
+  {
+    key: "mine",
+    label: "Your discussions",
+    mobileLabel: "Yours",
+    icon: UserRound,
+  },
+] as const;
+
+const prompts = [
+  {
+    key: "comfort",
+    title: "What's your comfort rewatch?",
+  },
+  {
+    key: "discovery",
+    title: "What did you watch that stayed with you?",
+  },
+  {
+    key: "next-watch",
+    title: "Help me find my next watch",
+  },
 ] as const;
 
 export default function CommunityForum() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const pageLoading = usePageLoadingVisible();
   const router = useRouter();
   const params = useSearchParams();
   const search = (params.get("search") ?? "").slice(0, 100);
@@ -46,7 +79,8 @@ export default function CommunityForum() {
     requestedPage <= 10000
       ? requestedPage
       : 1;
-  const [composing, setComposing] = useState(false);
+  const composing = params.get("compose") === "1";
+  const prompt = prompts.find((item) => item.key === params.get("prompt"));
   const startButton = useRef<HTMLButtonElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const query = new URLSearchParams({
@@ -56,16 +90,41 @@ export default function CommunityForum() {
     filter,
     ...(search && { search }),
   });
-  const needsSignIn = filter === "mine" && !isAuthenticated;
+  const checkingPersonal = filter === "mine" && authLoading;
+  const needsSignIn = filter === "mine" && !isAuthenticated && !authLoading;
   const { data, loading, error, reload } = useCommunityPage<CommunityPostsPage>(
-    needsSignIn ? null : `posts?${query}`,
+    needsSignIn || checkingPersonal ? null : `posts?${query}`,
     user?.id,
   );
   const activeView = views.find((view) => view.key === filter)!;
+  const listParams = new URLSearchParams(params.toString());
+  listParams.delete("compose");
+  listParams.delete("prompt");
+  const listHref = `/community${listParams.size ? `?${listParams}` : ""}`;
+  const restoredHash = useRef("");
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (
+      loading ||
+      pageLoading ||
+      !data ||
+      !/^#topic-[0-9a-f-]{36}$/i.test(hash) ||
+      restoredHash.current === hash
+    )
+      return;
+    const element = document.getElementById(hash.slice(1));
+    if (!element) return;
+    const frame = requestAnimationFrame(() => {
+      element.scrollIntoView({ block: "center", behavior: "instant" });
+      restoredHash.current = hash;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [data, loading, pageLoading]);
 
   function destination(values: Record<string, string>) {
     const next = new URLSearchParams(params.toString());
-    next.delete("page");
+    if (["filter", "sort", "search"].some((key) => key in values))
+      next.delete("page");
     for (const [key, value] of Object.entries(values)) {
       if (
         !value ||
@@ -93,6 +152,12 @@ export default function CommunityForum() {
     headingRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
   }
 
+  function startDiscussion(promptKey = "") {
+    router.replace(destination({ compose: "1", prompt: promptKey }), {
+      scroll: false,
+    });
+  }
+
   return (
     <main className="min-h-screen bg-[var(--surface-0)] pb-12 text-[var(--ink)] lg:pt-24">
       <header className="ui-shell pt-6 sm:pt-8">
@@ -106,68 +171,56 @@ export default function CommunityForum() {
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
           <span aria-current="page">Community</span>
         </nav>
-        <div
-          className={`${styles.hero} flex items-center justify-between gap-6 pb-6 sm:pb-8`}
-        >
-          <div className="relative z-10 max-w-xl">
-            <p className="ui-kicker pr-20 sm:pr-0">Every mood has a place</p>
-            <h1 className="mt-2 pr-20 text-3xl font-bold leading-none text-[var(--ink)] sm:pr-0 sm:text-4xl">
-              Community
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-              Talk about your Moodies finds, ask for a hand, or share an idea.
-            </p>
-            <button
-              ref={startButton}
-              type="button"
-              onClick={() => setComposing((value) => !value)}
-              aria-expanded={composing}
-              aria-controls="new-topic"
-              className="ui-primary-action mt-5"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Start a topic
-            </button>
+        <div className={styles.hero}>
+          <div className="flex min-w-0 max-w-xl items-center gap-4">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
+                Community
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+                Talk about what you watched. Find something for tonight.
+              </p>
+            </div>
+            <Image
+              src="/images/moods/funny.png"
+              alt="Funny mood mascot"
+              width={64}
+              height={64}
+              sizes="64px"
+              className="h-16 w-16 shrink-0 object-contain"
+            />
           </div>
-          <div className={styles.artwork} aria-label="A place for every mood">
-            {(["funny", "bittersweet", "inspirational"] as const).map((mood, index) => (
-              <figure
-                key={mood}
-                className={
-                  index
-                    ? "hidden min-w-0 flex-1 text-center sm:block"
-                    : "min-w-0 flex-1 text-center"
-                }
-              >
-                <Image
-                  src={`/images/moods/${mood}.png`}
-                  alt=""
-                  width={112}
-                  height={112}
-                  sizes="(min-width: 640px) 96px, 80px"
-                  className="h-auto w-full"
-                />
-                <figcaption className="mt-1 hidden text-xs capitalize text-[var(--ink-muted)] sm:block">
-                  {mood}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
+          <button
+            ref={startButton}
+            type="button"
+            onClick={() =>
+              composing
+                ? router.replace(listHref, { scroll: false })
+                : startDiscussion()
+            }
+            aria-expanded={composing}
+            aria-controls="new-topic"
+            className="ui-primary-action shrink-0"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Start a discussion
+          </button>
         </div>
       </header>
       <div className="ui-shell grid items-start gap-6 py-6 sm:py-8 lg:grid-cols-[minmax(0,1fr)_17rem] lg:gap-8">
         <div className="min-w-0 space-y-5">
-          <nav aria-label="Discussion views" className="flex flex-wrap gap-2">
-            {views.map(({ key, label, icon: Icon }) => (
+          <nav aria-label="Discussion views" className={styles.views}>
+            {views.map(({ key, label, mobileLabel, icon: Icon }) => (
               <Link
                 key={key}
                 href={destination({ filter: key })}
                 scroll={false}
                 aria-current={filter === key ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center gap-2 border-b-2 px-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] ${filter === key ? "border-[var(--brand-coral)] text-[var(--ink)]" : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+                className={styles.view}
               >
                 <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {label}
+                <span className="sm:hidden">{mobileLabel}</span>
+                <span className="hidden sm:inline">{label}</span>
               </Link>
             ))}
           </nav>
@@ -192,20 +245,25 @@ export default function CommunityForum() {
                 </p>
               ) : isAuthenticated ? (
                 <CommunityComposer
+                  key={`${user?.id}:${prompt?.key ?? "new"}`}
+                  initialTitle={prompt?.title}
                   onPosted={(post) =>
                     router.push(`/community/${encodeURIComponent(post.id)}`)
                   }
                   onCancel={() => {
-                    setComposing(false);
+                    router.replace(listHref, { scroll: false });
                     startButton.current?.focus();
                   }}
                 />
               ) : (
                 <div className="space-y-4">
                   <p className="text-sm leading-6 text-[var(--ink-muted)]">
-                    Sign in to start a topic. Everyone can read the forum.
+                    Sign in to start a discussion. Everyone can read along.
                   </p>
-                  <Link href="/auth/login" className="ui-primary-action">
+                  <Link
+                    href={communitySignInHref(destination({ compose: "1" }))}
+                    className="ui-primary-action"
+                  >
                     Sign in to post
                   </Link>
                 </div>
@@ -253,7 +311,7 @@ export default function CommunityForum() {
               onSubmit={findTopics}
               role="search"
               aria-label="Search community discussions"
-              className="flex items-center gap-3 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 sm:px-4"
+              className="flex items-center gap-3 border-b border-[var(--surface-border)] py-3"
             >
               <Search
                 className="h-4 w-4 shrink-0 text-[var(--ink-muted)]"
@@ -288,12 +346,22 @@ export default function CommunityForum() {
                 <X className="h-4 w-4 shrink-0" aria-hidden="true" />
               </Link>
             )}
-            {needsSignIn ? (
+            {checkingPersonal ? (
+              <p
+                role="status"
+                className="p-6 text-sm leading-6 text-[var(--ink-muted)]"
+              >
+                Checking your sign-in...
+              </p>
+            ) : needsSignIn ? (
               <div className="space-y-4 p-6">
                 <p className="text-sm leading-6 text-[var(--ink-muted)]">
                   Sign in to see the discussions you have started.
                 </p>
-                <Link href="/auth/login" className="ui-primary-action">
+                <Link
+                  href={communitySignInHref(listHref)}
+                  className="ui-primary-action"
+                >
                   Sign in
                 </Link>
               </div>
@@ -354,14 +422,14 @@ export default function CommunityForum() {
                         ? "Try another search or browse all discussions."
                         : filter === "unanswered"
                           ? "You're all caught up. Find another conversation to join."
-                          : "Share something on your mind about Moodies."}
+                          : "Ask for a recommendation or share something you watched."}
                     </p>
                     <button
                       type="button"
                       onClick={() =>
                         search || page > 1 || filter === "unanswered"
                           ? router.push("/community")
-                          : setComposing(true)
+                          : startDiscussion()
                       }
                       className="ui-secondary-action mt-4"
                     >
@@ -372,13 +440,14 @@ export default function CommunityForum() {
                   </div>
                 )}
                 {data && data.posts.length > 0 && (
-                  <ul aria-label="Community topics">
+                  <ul aria-label="Community topics" className={styles.topics}>
                     {data.posts.map((post) => {
                       const activity = post.latestReply ?? post;
                       return (
                         <li
                           key={post.id}
-                          className={`${styles.topic} group py-5`}
+                          id={`topic-${post.id}`}
+                          className={`${styles.topic} group scroll-mt-28`}
                         >
                           <div className="mb-3 flex min-w-0 items-center gap-3">
                             <CommunityAvatar user={post.user} />
@@ -405,7 +474,7 @@ export default function CommunityForum() {
                           </div>
                           <h3>
                             <Link
-                              href={`/community/${post.id}`}
+                              href={`/community/${post.id}?from=${encodeURIComponent(`${listHref}#topic-${post.id}`)}`}
                               className="inline-flex min-h-11 items-center text-lg font-semibold leading-6 text-[var(--ink)] group-hover:text-[var(--brand-coral-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] [overflow-wrap:anywhere]"
                             >
                               {post.title}
@@ -414,7 +483,7 @@ export default function CommunityForum() {
                           <p className="mt-1 line-clamp-2 text-sm leading-6 text-[var(--ink-muted)] [overflow-wrap:anywhere]">
                             {post.content}
                           </p>
-                          <div className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
+                          <div className={styles.topicFooter}>
                             <span className="min-w-0 [overflow-wrap:anywhere]">
                               {post.latestReply
                                 ? `Latest reply by ${activity.user.username} · ${communityDate(activity.createdAt)}`
@@ -460,24 +529,44 @@ export default function CommunityForum() {
             </nav>
           )}
         </div>
-        <aside className="min-w-0 space-y-6 lg:sticky lg:top-28">
+        <aside className="min-w-0 space-y-6">
+          {!composing && !search && filter === "all" && page === 1 && (
+            <section
+              aria-labelledby="conversation-starters-heading"
+              className={styles.starters}
+            >
+              <h2
+                id="conversation-starters-heading"
+                className="text-xl font-bold leading-tight text-[var(--ink)]"
+              >
+                Start with a question
+              </h2>
+              <div className={styles.promptList}>
+                {prompts.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => startDiscussion(item.key)}
+                    className={styles.prompt}
+                  >
+                    {item.title}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
           <section
             aria-labelledby="forum-stories-heading"
             className="border-b border-[var(--surface-border)] pb-6"
           >
-            <BadgeMascot
-              name="mood-explorer"
-              sizes="96px"
-              className="mb-2 h-24 w-24"
-            />
             <h2
               id="forum-stories-heading"
-              className="text-2xl font-bold leading-tight"
+              className="text-xl font-bold leading-tight"
             >
-              What are you in the mood for?
+              Looking for a film?
             </h2>
             <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-              Start with how you feel. Find a film or series that fits.
+              Find a film or series by mood.
             </p>
             <Link
               href="/moods"
@@ -495,14 +584,14 @@ export default function CommunityForum() {
               id="forum-guide-heading"
               className="text-xl font-bold leading-tight text-[var(--ink)]"
             >
-              A quick note
+              Before you post
             </h2>
             <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
-              Be kind to each other. Different tastes are welcome here.
+              Discuss the film, not the person. Different tastes are welcome.
             </p>
             <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
-              Found a problem with Moodies? Tell us what happened. Keep personal
-              details private.
+              Keep spoilers out of titles and previews. Keep personal details
+              private.
             </p>
           </section>
         </aside>

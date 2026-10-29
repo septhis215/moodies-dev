@@ -5,7 +5,7 @@ import CommunityForum from "@/components/community/CommunityForum";
 export const metadata: Metadata = {
   title: "Community",
   description:
-    "Share feedback about Moodies, suggest ideas, and join the community conversation.",
+    "Share what you watched, talk about how it made you feel, and find your next film or series with the Moodies community.",
 };
 
 export default function CommunityPage() {

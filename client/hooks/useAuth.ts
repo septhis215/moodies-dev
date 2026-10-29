@@ -3,6 +3,7 @@ import { markSessionPresent } from "@/app/context/AuthProvider";
 import { handleAppError, normalizeResponseError } from "@/lib/errors";
 import { appToast } from "@/lib/toast";
 import { authenticateSession } from "@/lib/auth/session";
+import { communityAuthReturnHref } from "@/lib/community-navigation";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
@@ -10,7 +11,7 @@ export function useAuth() {
     const [isLoading, setIsLoading] = useState(false);
 
     const signIn = useCallback(
-        async (email: string, password: string) => {
+        async (email: string, password: string, returnTo?: string) => {
             setIsLoading(true);
 
             const loadingToastId = appToast.loading("Signing you in...", {
@@ -49,8 +50,7 @@ export function useAuth() {
                     title: data.user?.username || data.user?.email || "User",
                 });
 
-                // Redirect to home
-                window.location.href = "/";
+                window.location.href = communityAuthReturnHref(returnTo);
 
                 return { success: true, data };
             } catch (error: unknown) {

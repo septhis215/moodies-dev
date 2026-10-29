@@ -75,10 +75,14 @@ function paginate(items, url, key) {
     },
   };
 }
-await context.route("**/api/**", async (route) => {
+const routeApi = async (route) => {
   const req = route.request(),
     url = new URL(req.url()),
     method = req.method();
+  if (url.pathname.endsWith("/auth/signin")) {
+    authenticated = true;
+    return route.fulfill({ json: { user: member } });
+  }
   if (
     url.pathname.endsWith("/auth/bootstrap") ||
     url.pathname.endsWith("/auth/me")
@@ -183,7 +187,8 @@ await context.route("**/api/**", async (route) => {
       ? paginate(replies.get(postId) || [], url, "replies")
       : present(post),
   });
-});
+};
+await context.route("**/api/**", routeApi);
 const page = await context.newPage(),
   errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
@@ -229,7 +234,8 @@ try {
   );
   assert.equal(sdk.scriptRequests(), 0);
   await topics.getByRole("link", { name: firstTitle, exact: true }).click();
-  await page.waitForURL(`**/community/${firstId}`);
+  await page.waitForURL((url) => url.pathname === `/community/${firstId}`);
+  assert.equal(new URL(page.url()).searchParams.get("from"), `/community#topic-${firstId}`);
   await page.getByRole("heading", { name: firstTitle, exact: true }).waitFor();
   await page
     .getByText("I would find this helpful too. Reply 1", { exact: true })
@@ -250,6 +256,8 @@ try {
   await original
     .getByText("to react to the conversation.", { exact: false })
     .waitFor();
+  const reactionSignIn = new URL(await original.getByRole("link", { name: "Sign in", exact: true }).getAttribute("href"), base);
+  assert.match(reactionSignIn.searchParams.get("returnTo"), new RegExp(`/community/${firstId}`));
   await page
     .getByRole("button", { name: "Reply to topic", exact: true })
     .click();
@@ -278,6 +286,17 @@ try {
     .getByText('1 topic matching "long link"', { exact: true })
     .waitFor();
   assert.equal(await topics.locator(":scope > li").count(), 1);
+  const filteredTitle = await topics.getByRole("heading").first().innerText();
+  const filteredLink = topics.getByRole("link", { name: filteredTitle, exact: true });
+  const filteredDestination = new URL(await filteredLink.getAttribute("href"), base);
+  const listReturn = filteredDestination.searchParams.get("from");
+  assert.match(listReturn, /^\/community\?search=long\+link#topic-/);
+  await filteredLink.click();
+  await page.getByRole("heading", { name: filteredTitle, exact: true }).waitFor();
+  await page.getByRole("link", { name: "Back to discussions", exact: true }).last().click();
+  await topics.waitFor();
+  assert.equal(`${new URL(page.url()).pathname}${new URL(page.url()).search}${new URL(page.url()).hash}`, listReturn);
+  assert.equal(await page.getByLabel("Search discussions", { exact: true }).inputValue(), "long link");
   await openIndex();
   await page
     .getByLabel("Sort discussions", { exact: true })
@@ -311,29 +330,41 @@ try {
     })
     .waitFor();
   await page
-    .getByRole("button", { name: "Start a topic", exact: true })
+    .locator("main > header")
+    .getByRole("button", { name: "Start a discussion", exact: true })
     .click();
   await page
     .getByRole("link", { name: "Sign in to post", exact: true })
     .waitFor();
+  const postSignIn = new URL(await page.getByRole("link", { name: "Sign in to post", exact: true }).getAttribute("href"), base);
+  assert.equal(postSignIn.searchParams.get("returnTo"), "/community?compose=1");
   empty = false;
   authenticated = true;
   await openIndex();
   await topics.waitFor();
-  await page
-    .getByRole("button", { name: "Start a topic", exact: true })
-    .click();
+  await page.getByRole("button", { name: /What's your comfort rewatch/ }).click();
   const form = page.getByRole("form", { name: "Start a discussion" });
+  assert.equal(await form.getByLabel("Discussion title", { exact: true }).inputValue(), "What's your comfort rewatch?");
   await form
-    .getByLabel("Topic title", { exact: true })
+    .getByLabel("Discussion title", { exact: true })
     .fill("  A useful community idea  ");
   await form
     .getByLabel("Your thoughts", { exact: true })
     .fill("  Please add a language filter to the mood recommendations.  ");
+  const postDraftKey = "moodies:community-draft:member:new";
+  await page.waitForFunction((key) => sessionStorage.getItem(key)?.includes("language filter"), postDraftKey);
+  await form.getByRole("button", { name: "Save for later", exact: true }).click();
+  await page.getByRole("button", { name: /What did you watch that stayed with you/ }).click();
+  assert.equal(await form.getByLabel("Discussion title", { exact: true }).inputValue(), "  A useful community idea  ");
+  assert.match(await form.getByLabel("Your thoughts", { exact: true }).inputValue(), /language filter/);
+  await page.reload();
+  await form.waitFor();
+  assert.equal(await form.getByLabel("Discussion title", { exact: true }).inputValue(), "  A useful community idea  ");
+  assert.match(await form.getByLabel("Your thoughts", { exact: true }).inputValue(), /language filter/);
   await page.evaluate(() => {
     window.__turnstileTestMode = "hang";
   });
-  await form.getByRole("button", { name: "Post topic", exact: true }).click();
+  await form.getByRole("button", { name: "Post discussion", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Quick security check" });
   await dialog.waitFor();
   await page.locator("[data-turnstile-fixture]").waitFor();
@@ -348,23 +379,35 @@ try {
     window.__turnstileTestMode = "success";
   });
   failWrite = true;
-  await form.getByRole("button", { name: "Post topic", exact: true }).click();
+  await form.getByRole("button", { name: "Post discussion", exact: true }).click();
   await form.getByRole("alert").filter({ hasText: "constructive" }).waitFor();
+  assert.match(await form.getByLabel("Your thoughts", { exact: true }).inputValue(), /language filter/);
   failWrite = false;
-  await form.getByRole("button", { name: "Post topic", exact: true }).click();
+  await form.getByRole("button", { name: "Post discussion", exact: true }).click();
   await page
     .getByRole("heading", { name: "A useful community idea", exact: true })
     .waitFor();
   const newId = posts[0].id;
-  await page.waitForURL(`**/community/${newId}`);
+  await page.waitForURL((url) => url.pathname === `/community/${newId}`);
+  assert.equal(await page.evaluate((key) => sessionStorage.getItem(key), postDraftKey), null);
   const newPost = page.getByRole("article", {
     name: "Original post by Alex",
     exact: true,
   });
-  await newPost.getByRole("button", { name: "React", exact: true }).click();
   const reactionPicker = newPost.getByRole("group", {
     name: "Choose a reaction",
   });
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await page.getByRole("heading", { name: "A useful community idea", exact: true }).click();
+  const activeBeforeHover = await page.evaluateHandle(() => document.activeElement);
+  await newPost.getByRole("button", { name: "React", exact: true }).hover();
+  await reactionPicker.waitFor();
+  assert.equal(await page.evaluate((element) => document.activeElement === element, activeBeforeHover), true, "Hover must not move keyboard focus");
+  await activeBeforeHover.dispose();
+  assert.equal(await reactionPicker.getByRole("button").count(), 6);
+  await page.getByRole("heading", { name: "A useful community idea", exact: true }).hover();
+  await reactionPicker.waitFor({ state: "hidden" });
+  await newPost.getByRole("button", { name: "React", exact: true }).click();
   await reactionPicker.waitFor();
   assert.equal(
     await reactionPicker
@@ -403,6 +446,10 @@ try {
   await page
     .getByLabel("Your reply", { exact: true })
     .fill("I would enjoy this feature too.");
+  await page.waitForFunction((key) => sessionStorage.getItem(key)?.includes("I would enjoy this feature too."), `moodies:community-draft:member:${newId}`);
+  await page.reload();
+  await page.getByLabel("Your reply", { exact: true }).waitFor();
+  assert.equal(await page.getByLabel("Your reply", { exact: true }).inputValue(), "I would enjoy this feature too.");
   await page.getByRole("button", { name: "Post reply", exact: true }).click();
   const reply = page.getByRole("article", {
     name: "Reply by Alex",
@@ -413,12 +460,39 @@ try {
   await reply.getByRole("button", { name: "Love", exact: true }).click();
   await openTopic(newId, "A useful community idea");
   await reply.getByRole("button", { name: "Love", exact: true }).waitFor();
+  assert.equal(await page.evaluate((key) => sessionStorage.getItem(key), `moodies:community-draft:member:${newId}`), null);
+  const touchContext = await browser.newContext({
+    viewport: { width: 375, height: 812 },
+    isMobile: true,
+    hasTouch: true,
+    reducedMotion: "reduce",
+  });
+  try {
+    await touchContext.route("**/api/**", routeApi);
+    const touchPage = await touchContext.newPage();
+    await touchPage.goto(`${base}/community/${newId}`, { waitUntil: "domcontentloaded" });
+    const touchPost = touchPage.getByRole("article", { name: "Original post by Alex", exact: true });
+    const touchTrigger = touchPost.getByRole("button", { name: "React", exact: true });
+    await touchTrigger.waitFor();
+    await touchPage.waitForFunction(() => !document.querySelector("[inert], [data-loading-screen]"));
+    await touchTrigger.tap();
+    const touchPicker = touchPost.getByRole("group", { name: "Choose a reaction" });
+    await touchPicker.waitFor();
+    assert.equal(await touchPicker.getByRole("button").count(), 6);
+    assert.ok(await touchPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    await touchPicker.getByRole("button", { name: "Love", exact: true }).tap();
+    await touchPost.locator('[aria-label="Love: 1"]').waitFor();
+    await touchPicker.waitFor({ state: "hidden" });
+  } finally {
+    await touchContext.close();
+  }
   if (output) {
     for (const width of [375, 1366]) {
       await page.setViewportSize({ width, height: 900 });
       await reply.getByRole("button", { name: "Love", exact: true }).click();
       const picker = reply.getByRole("group", { name: "Choose a reaction" });
       await picker.waitFor();
+      await picker.screenshot({ path: `${output}/reaction-picker-${width}.png` });
       assert.equal(
         await picker
           .getByRole("button", { name: "Love", exact: true })
@@ -432,6 +506,14 @@ try {
       await page.keyboard.press("Escape");
     }
   }
+  await openIndex("?compose=1");
+  await form.waitFor();
+  await form.getByLabel("Discussion title", { exact: true }).fill("A draft to discard");
+  await form.getByRole("button", { name: "Discard draft", exact: true }).click();
+  await form.getByRole("group", { name: "Discard draft?", exact: true })
+    .getByRole("button", { name: "Discard draft", exact: true }).click();
+  assert.equal(await form.getByLabel("Discussion title", { exact: true }).inputValue(), "");
+  assert.equal(await page.evaluate((key) => sessionStorage.getItem(key), postDraftKey), null);
   await openIndex("?filter=mine");
   await page.getByText("1 topic", { exact: true }).waitFor();
   await page.goto(`${base}/community/00000000-0000-4000-8000-000000000099`, {
@@ -440,6 +522,17 @@ try {
   await page
     .getByRole("heading", { name: "Discussion unavailable", exact: true })
     .waitFor();
+  authenticated = false;
+  await openTopic(newId, "A useful community idea");
+  await page.getByRole("link", { name: "Sign in to reply", exact: true }).click();
+  await page.waitForLoadState("networkidle");
+  await page.waitForFunction(() => !document.querySelector("[inert], [data-loading-screen]"));
+  await page.getByLabel("Email address", { exact: true }).fill("member@example.test");
+  await page.getByLabel("Password", { exact: true }).fill("test-only-password");
+  await page.getByRole("button", { name: "Log in", exact: true }).click();
+  await page.waitForURL((url) => url.pathname === `/community/${newId}` && url.hash === "#join-discussion");
+  await page.getByLabel("Your reply", { exact: true }).waitFor();
+  await page.waitForFunction(() => document.activeElement?.tagName === "TEXTAREA");
   for (const width of [320, 375, 768, 1024, 1366, 1440]) {
     await page.setViewportSize({ width, height: width === 1366 ? 768 : 1000 });
     await openIndex();

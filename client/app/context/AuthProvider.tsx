@@ -11,6 +11,8 @@ import React, {
 import AppLoading from "@/components/ui/AppLoading";
 import { appToast, TOAST_IDS } from "@/lib/toast";
 import { handleAppError } from "@/lib/errors";
+import { consumeCommunityAuthReturn } from "@/lib/community-navigation";
+import { clearCommunityDrafts } from "@/lib/community-drafts";
 import {
   endSession, fetchSessionBootstrap, refreshSession, resetSessionRequests,
   sessionFetch, sessionEpoch, subscribeSession, type RefreshResult,
@@ -164,7 +166,11 @@ function getLastAccountId(): string | undefined {
 
 function setLastAccountId(userId?: string): void {
   if (typeof window === "undefined" || !userId) return;
-  try { window.localStorage.setItem(LAST_ACCOUNT_KEY, userId); } catch { /* Optional cache hint. */ }
+  try {
+    const previousId = window.localStorage.getItem(LAST_ACCOUNT_KEY);
+    if (previousId && previousId !== userId) clearCommunityDrafts();
+    window.localStorage.setItem(LAST_ACCOUNT_KEY, userId);
+  } catch { /* Optional cache hint. */ }
 }
 
 function toSet(values?: string[]) {
@@ -247,6 +253,12 @@ export function AuthProvider({
 
   const userId = user?.id;
 
+  useEffect(() => {
+    if (loading || !userId || window.location.pathname !== "/") return;
+    const destination = consumeCommunityAuthReturn();
+    if (destination) window.location.replace(destination);
+  }, [loading, userId]);
+
   const applyBuckets = useCallback(
     (nextUserId: string | undefined, watchlist?: IdBuckets | null, liked?: IdBuckets | null) => {
       if (watchlist) {
@@ -322,13 +334,14 @@ export function AuthProvider({
   }, [clearAccountState]);
 
   const logout = useCallback(async () => {
-    try { await endSession(); } catch (error) {
+    try { await endSession(); clearCommunityDrafts(); } catch (error) {
       handleAppError(error, { fallbackMessage: "We could not sign you out. Please try again.", toastKey: "logout-unavailable" });
       throw error;
     }
   }, []);
 
   useEffect(() => subscribeSession((event) => {
+    if (event === "signed-out") clearCommunityDrafts();
     if (event === "recovered") {
       markSessionPresent();
       return;

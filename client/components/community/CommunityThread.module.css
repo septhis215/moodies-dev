@@ -1,0 +1,39 @@
+.threadPage {
+  overflow-wrap: anywhere;
+}
+
+.originalPost {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.threadPost {
+  position: relative;
+  padding-block: 1.25rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.threadPost:last-child {
+  border-bottom: 0;
+}
+
+.replyLayout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.conversation {
+  padding: 0;
+}
+
+.composer {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--surface-border);
+}
+
+@media (min-width: 640px) {
+  .replyLayout {
+    gap: 1rem;
+  }
+}

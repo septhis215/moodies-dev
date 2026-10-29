@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { LockKeyhole, Mail } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { communityAuthReturnHref, rememberCommunityAuthReturn } from "@/lib/community-navigation";
 import {
   AuthBrand,
   AuthButton,
@@ -34,7 +35,8 @@ export default function LoginPage() {
     if (authLoading) return;
     setErr("");
 
-    const result = await signIn(email.trim().toLowerCase(), password);
+    const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+    const result = await signIn(email.trim().toLowerCase(), password, communityAuthReturnHref(returnTo));
 
     if (!result.success) {
       setErr(result.error || "Login failed");
@@ -44,6 +46,8 @@ export default function LoginPage() {
   const handleGoogleLogin = () => {
     if (googleLoading) return;
     setGoogleLoading(true);
+
+    rememberCommunityAuthReturn(new URLSearchParams(window.location.search).get("returnTo") ?? "/");
 
     const from = typeof window !== "undefined" ? window.location.pathname : "/";
     window.location.href = `${API}/auth/google?from=${encodeURIComponent(
