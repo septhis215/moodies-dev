@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { RedisService } from 'src/redis/redis.service';
+import { rankRecommendations } from 'src/utils/recommendation-ranking';
+import { Injectable, NotFoundException, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { TMDBService } from 'src/external-apis/services/tmdb.service';
 import { GetRecommendationsDto } from './dto/get-recommendations.dto';
@@ -6,38 +8,22 @@ import { LogMoodDto } from './dto/log-mood.dto';
 import { RecommendationFeedbackDto } from './dto/recommendation-feedback.dto';
 import { Mood, MoodLog, Recommendation, MediaType, Prisma } from '@prisma/client';
 
-// ---------------------------------------------------------------------------
-// Scoring weights — must sum to 1.0
-//
-// v2 → v3 delta:
-//   Genre      0.45 → 0.30  over-dominant; small-genre moods had near-zero
-//                            Jaccard scores even for perfect thematic matches
-//   Valence    0.20 → 0.18  slight trim to make room for new signals
-//   Arousal    0.15 → 0.12  slight trim
-//   Popularity  NEW → 0.15  log-normalised TMDB popularity; rewards content
-//                            people actually watch without letting blockbusters
-//                            monopolise the results
-//   Quality    0.15 → 0.12  still present; popularity partially overlaps
-//   Recency     NEW → 0.08  exponential time-decay; fresher content gets a
-//                            mild boost so lists don't skew toward classics
-//   Keyword    0.05 → 0.05  unchanged
-// ---------------------------------------------------------------------------
-const W_GENRE = 0.34;
-const W_VALENCE = 0.10;
-const W_AROUSAL = 0.07;
-const W_POPULARITY = 0.18;
-const W_QUALITY = 0.16;
+// Emotional fit carries 70%; profile preferences cannot bypass mood eligibility.
+const W_GENRE = 0.40;
+const W_VALENCE = 0.11;
+const W_AROUSAL = 0.08;
+const W_POPULARITY = 0.09;
+const W_QUALITY = 0.10;
 const W_RECENCY = 0.06;
-const W_KEYWORD = 0.06;
-const W_LANGUAGE = 0.03;
+const W_KEYWORD = 0.11;
+const W_LANGUAGE = 0.02;
+const W_PREFERRED_GENRE = 0.03;
 
-
-const WEIGHT_SUM = W_GENRE + W_VALENCE + W_AROUSAL + W_POPULARITY + W_QUALITY + W_RECENCY + W_KEYWORD + W_LANGUAGE;
+const WEIGHT_SUM = W_GENRE + W_VALENCE + W_AROUSAL + W_POPULARITY + W_QUALITY + W_RECENCY + W_KEYWORD + W_LANGUAGE + W_PREFERRED_GENRE;
 if (Math.abs(WEIGHT_SUM - 1.0) > 0.001) {
     throw new Error(`Scoring weights must sum to 1.0, got ${WEIGHT_SUM}`);
 }
 
-const DISCOVER_PAGES = 8;
 
 // TMDB popularity is unbounded — cap before log-normalising so blockbusters
 // don't get unbounded advantage over solid mid-tier titles.
@@ -47,17 +33,11 @@ const POPULARITY_CEIL = 120;
 // many days ago scores 0.5; older items decay toward 0.
 const RECENCY_HALF_LIFE_DAYS = 365 * 2;
 
-// Maximum items sharing the same primary genre in one result set. Prevents
-// "all 12 results are pure comedies" for moods dominated by a single genre.
-const GENRE_DIVERSITY_CAP = 4;
-
-// Language allow-list applied as a hard filter. Callers may override via
-// dto.languages. Empty array = no language restriction.
-const DEFAULT_LANGUAGES = ['en', 'ko', 'ja', 'zh'];
 const FALLBACK_MOVIE_GENRES = [18, 35, 28, 12, 878, 14];
 const FALLBACK_TV_GENRES = [18, 35, 10759, 10765, 9648, 80];
-const MIN_STRONG_SCORE = 0.46;
-const RECOMMENDATION_ALGORITHM = 'mood-scored-v4';
+const RECOMMENDATION_ALGORITHM = 'mood-scored-v6';
+
+type ProfilePreferences = { preferredGenres: string[]; preferredLanguages: string[] };
 
 const TMDB_MOVIE_GENRES = [
     { id: 28, name: 'Action' },
@@ -292,7 +272,7 @@ const MEDIA_SPECIFIC_MOOD_GENRES: Record<string, MoodGenreProfile> = {
     gritty: { movie: { primary: [80, 18], secondary: [53, 36], excluded: [10751, 16] }, tv: { primary: [80, 18], secondary: [9648], excluded: [10751, 10762] }, related: ['dark', 'thrilling', 'documentary'] },
     'mind-bending': { movie: { primary: [9648, 878], secondary: [53, 18, 14], excluded: [10751, 35] }, tv: { primary: [9648, 10765], secondary: [80], excluded: [10751, 10762] }, related: ['dark', 'sci-fi', 'thrilling'] },
     'sci-fi': { movie: { primary: [878], secondary: [12, 28, 14, 53], excluded: [10749, 10751] }, tv: { primary: [10765], secondary: [10759, 18], excluded: [10751, 10762] }, related: ['mind-bending', 'epic', 'thrilling'] },
-    western: { movie: { primary: [37], secondary: [28, 12, 80, 18], excluded: [10749, 10751] }, tv: { primary: [10759, 80], secondary: [18], excluded: [10751, 10762] }, related: ['gritty', 'epic', 'thrilling'] },
+    western: { movie: { primary: [37], secondary: [28, 12, 80, 18], excluded: [10749, 10751] }, tv: { primary: [37], secondary: [18, 10759, 80], excluded: [10751, 10762] }, related: ['gritty', 'epic', 'thrilling'] },
     documentary: { movie: { primary: [99], secondary: [36, 10402, 18], excluded: [27, 28] }, tv: { primary: [99], secondary: [10764, 18], excluded: [10759, 10765] }, related: ['inspirational', 'serenity', 'gritty'] },
 };
 
@@ -366,6 +346,7 @@ interface ScoreBreakdown {
     recencyScore: number;
     keywordScore: number;
     languageScore: number;
+    preferredGenreScore: number;
     sourceScore: number;
 }
 
@@ -387,6 +368,7 @@ export class MoodsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly tmdbService: TMDBService,
+        private readonly redis: RedisService,
     ) { }
 
     // ---------------------------------------------------------------------------
@@ -426,11 +408,16 @@ export class MoodsService {
 
     private getMoodConfig(mood: Pick<Mood, 'name'>): MoodGenreConfig | undefined {
         const moodKey = this.getMoodKey(mood);
-        return MOOD_GENRE_CONFIG[moodKey] ?? MOOD_GENRE_CONFIG[MOOD_CONFIG_ALIASES[moodKey]];
+        return MOOD_GENRE_CONFIG[moodKey] ?? (MEDIA_SPECIFIC_MOOD_GENRES[moodKey] ? undefined : MOOD_GENRE_CONFIG[MOOD_CONFIG_ALIASES[moodKey]]);
     }
 
     private getMoodKeywords(mood: Mood): string[] {
-        const configured = this.getMoodConfig(mood)?.keywords ?? [];
+        const thematic: Record<string, string[]> = {
+            serenity: ['nature', 'peaceful', 'countryside'], chill: ['slice of life', 'friendship', 'relaxing'],
+            inspirational: ['underdog', 'biography', 'perseverance'], nostalgic: ['nostalgia', 'coming of age', 'childhood'],
+            bittersweet: ['grief', 'farewell', 'coming of age'],
+        };
+        const configured = thematic[this.getMoodKey(mood)] ?? this.getMoodConfig(mood)?.keywords ?? [];
         const stored = (mood.keywords as string[] | null) ?? [];
         return Array.from(new Set([...configured, ...stored].map(keyword => keyword.toLowerCase())));
     }
@@ -460,16 +447,6 @@ export class MoodsService {
         };
     }
 
-    private getMoodGenresForMedia(mood: Mood, mediaType: 'movie' | 'tv'): number[] {
-        const profile = this.getMoodGenreProfile(mood, mediaType);
-        return Array.from(new Set([...profile.primary, ...profile.secondary]));
-    }
-
-    private getScoringGenreSet(mood: Mood, mediaType?: 'movie' | 'tv'): Set<number> {
-        if (mediaType) return new Set(this.getMoodGenresForMedia(mood, mediaType));
-        return new Set((mood.tmdbGenres as number[] | null) ?? []);
-    }
-
     private getItemSearchText(item: any): string {
         const metadata = typeof item.metadata === 'object' && item.metadata ? item.metadata : {};
         return [
@@ -479,6 +456,7 @@ export class MoodsService {
             item.original_name,
             item.overview,
             item.tagline,
+            item.keywords,
             item.status,
             item.origin_country,
             item.original_language,
@@ -497,27 +475,13 @@ export class MoodsService {
         const text = this.getItemSearchText(item);
         if (!text.trim()) return 0;
 
-        const matches = keywords.filter(term => text.includes(term.toLowerCase())).length;
+        const normalized = ' ' + text.normalize('NFKC').replace(/[^\p{L}\p{N}]+/gu, ' ') + ' ';
+        const matches = keywords.filter(term => normalized.includes(' ' + term.toLowerCase().normalize('NFKC').replace(/[^\p{L}\p{N}]+/gu, ' ') + ' ')).length;
         return Math.min(1, matches / 3);
     }
 
     private getRomanceTextScore(item: any): number {
         return this.getKeywordMatchScore(item, ROMANCE_TEXT_TERMS);
-    }
-
-    private async getRelatedMoodGenres(
-        mood: Mood,
-        mediaType: 'movie' | 'tv',
-    ): Promise<number[]> {
-        const profile = MEDIA_SPECIFIC_MOOD_GENRES[this.getMoodKey(mood)];
-        const direct = this.getMoodGenresForMedia(mood, mediaType);
-        if (!profile?.related?.length) return direct;
-
-        const related = profile.related.flatMap(key => {
-            const relatedProfile = MEDIA_SPECIFIC_MOOD_GENRES[key]?.[mediaType];
-            return relatedProfile ? [...relatedProfile.primary, ...relatedProfile.secondary] : [];
-        });
-        return Array.from(new Set([...direct.slice(0, 3), ...related]));
     }
 
     // ---------------------------------------------------------------------------
@@ -571,69 +535,47 @@ export class MoodsService {
         totalPages: number;
     }> {
         const mood = await this.getMoodById(dto.moodId);
-        const page = dto.page ?? 1;
-        const limit = dto.limit ?? 12;
-
-        if (!dto.forceRefresh) {
-            const cached = await this.getCachedRecommendations(dto);
-            if (cached.length >= limit) {
-                this.logger.debug(`Cache hit: ${cached.length} recs for mood "${mood.name}"`);
-                return this.paginateResults(
-                    this.selectVariedRecommendations(cached, limit * page, dto.shuffle !== false),
-                    page,
-                    limit,
-                );
-            }
-        }
-
-        this.logger.debug(`Cache miss — generating recs for mood "${mood.name}"`);
+        const page = dto.page ?? 1, limit = dto.limit ?? 12;
+        const seed = dto.seed ?? (dto.forceRefresh ? Math.floor(Math.random() * 4294967296) : 0);
+        const preferences = await this.getProfilePreferences(dto.userId);
+        const profileKey = JSON.stringify([preferences.preferredGenres, preferences.preferredLanguages]);
+        const filters = JSON.stringify([dto.mediaType ?? 'both', dto.minRating ?? 0, dto.includeAdult === true, [...(dto.languages ?? [])].sort()]);
+        const poolKey = RECOMMENDATION_ALGORITHM + ':' + mood.id + ':' + filters;
+        const sessionKey = poolKey + ':session:' + (dto.userId ?? 'anonymous') + ':' + profileKey + ':' + seed + ':' + Boolean(dto.excludeViewed) + ':' + JSON.stringify(dto.excludeKeys ?? []);
         try {
-            const fresh = await this.generateRecommendations(mood, dto);
-
-            if (fresh.length === 0) {
-                this.logger.warn(`No fresh recs for "${mood.name}", falling back to DB`);
-                const fallback = await this.getFallbackRecommendations(mood, dto);
-                await this.saveRecommendations(fallback);
-                return this.paginateResults(fallback, page, limit);
-            }
-
-            if (dto.forceRefresh) {
-                await this.clearCachedRecommendations(dto);
-            }
-
-            await this.saveRecommendations(fresh);
-            return this.paginateResults(
-                this.selectVariedRecommendations(fresh, limit * page, dto.shuffle !== false),
-                page,
-                limit,
-            );
+            const selected = await this.redis.getOrSet<any[]>(sessionKey, 1800, async () => {
+                const pool = await this.redis.getOrSet<any[]>(poolKey, 3600,
+                    () => this.generateRecommendations(mood, { ...dto, userId: 'anonymous', limit: 32 }),
+                    value => value.length > 0);
+                let eligible = this.personalizeRecommendations(pool, preferences);
+                if (dto.excludeViewed && dto.userId) {
+                    const viewed = await this.prisma.recommendation.findMany({ where: { userId: dto.userId, viewed: true }, select: { tmdbId: true, mediaType: true } });
+                    const viewedKeys = new Set(viewed.map(item => this.getContentKey(item)));
+                    eligible = eligible.filter(item => !viewedKeys.has(this.getContentKey(item)));
+                }
+                const ranked = this.selectVariedRecommendations(eligible, eligible.length, dto.shuffle !== false, seed);
+                const recent = new Set(dto.excludeKeys ?? []);
+                return [...ranked.filter(item => !recent.has(this.getContentKey(item))), ...ranked.filter(item => recent.has(this.getContentKey(item)))];
+            }, value => value.length > 0);
+            if (!selected.length) return this.paginateResults(await this.getFallbackRecommendations(mood, dto, preferences), page, limit);
+            const result = this.paginateResults(selected, page, limit);
+            result.recommendations = await this.saveRecommendations(result.recommendations.map(item => ({ ...item, userId: dto.userId ?? 'anonymous' })));
+            return result;
         } catch (error) {
-            this.logger.error(`Generation error for mood "${mood.name}":`, error);
-            const fallback = await this.getFallbackRecommendations(mood, dto);
+            this.logger.error('Mood recommendations unavailable', error);
+            const fallback = await this.getFallbackRecommendations(mood, dto, preferences);
+            if (!fallback.length) throw new ServiceUnavailableException('Recommendations are temporarily unavailable. Please try again.');
             return this.paginateResults(fallback, page, limit);
         }
     }
 
-    async regenerateRecommendations(dto: GetRecommendationsDto): Promise<{
-        recommendations: any[];
-        total: number;
-        page: number;
-        totalPages: number;
-    }> {
-        const where: Prisma.RecommendationWhereInput = {
-            moodId: dto.moodId,
-            ...(dto.userId ? { userId: dto.userId } : {}),
-        };
-        const { count } = await this.prisma.recommendation.deleteMany({ where });
-        this.logger.debug(
-            `Deleted ${count} stale recs for mood ${dto.moodId}${dto.userId ? ` / user ${dto.userId}` : ''}`,
-        );
-        return this.getRecommendations({ ...dto, forceRefresh: true, limit: dto.limit ?? 12, page: 1 });
+    async regenerateRecommendations(dto: GetRecommendationsDto) {
+        return this.getRecommendations({ ...dto, forceRefresh: true, page: 1 });
     }
 
-    async provideFeedback(dto: RecommendationFeedbackDto): Promise<Recommendation> {
+    async provideFeedback(dto: RecommendationFeedbackDto, userId: string): Promise<Recommendation> {
         const rec = await this.prisma.recommendation.findUnique({ where: { id: dto.recommendationId } });
-        if (!rec) throw new NotFoundException('Recommendation not found');
+        if (!rec || rec.userId !== userId) throw new NotFoundException('Recommendation not found');
         return this.prisma.recommendation.update({
             where: { id: dto.recommendationId },
             data: {
@@ -653,35 +595,7 @@ export class MoodsService {
     // Cache
     // ---------------------------------------------------------------------------
 
-    private async getCachedRecommendations(dto: GetRecommendationsDto): Promise<Recommendation[]> {
-        const genreMap = await this.getGenreMap();
-        const windowStart = new Date();
-        windowStart.setMinutes(windowStart.getMinutes() - this.REC_CACHE_WINDOW_MINUTES);
-
-        const where: Prisma.RecommendationWhereInput = {
-            moodId: dto.moodId,
-            algorithm: RECOMMENDATION_ALGORITHM,
-            createdAt: { gte: windowStart },
-            ...(dto.userId ? { userId: dto.userId } : {}),
-            ...(dto.mediaType && dto.mediaType !== 'both'
-                ? { mediaType: dto.mediaType.toUpperCase() as MediaType } : {}),
-            ...(dto.minRating ? { voteAverage: { gte: new Prisma.Decimal(dto.minRating) } } : {}),
-            ...(dto.excludeViewed ? { viewed: false } : {}),
-        };
-
-        const pool = await this.prisma.recommendation.findMany({
-            where,
-            orderBy: { score: 'desc' },
-            take: (dto.limit ?? 12) * 8,
-        });
-
-        return pool.map(r => ({
-            ...r,
-            genreNames: (r.genreIds ?? []).map((id: number) => genreMap.get(id)).filter(Boolean),
-        } as Recommendation & { genreNames: string[] }));
-    }
-
-    private async getFallbackRecommendations(mood: Mood, dto: GetRecommendationsDto): Promise<any[]> {
+    private async getFallbackRecommendations(mood: Mood, dto: GetRecommendationsDto, preferences: ProfilePreferences = { preferredGenres: [], preferredLanguages: [] }): Promise<any[]> {
         const genreMap = await this.getGenreMap();
         const windowStart = new Date();
         windowStart.setMinutes(windowStart.getMinutes() - this.REC_CACHE_WINDOW_MINUTES);
@@ -689,8 +603,9 @@ export class MoodsService {
         const rows = await this.prisma.recommendation.findMany({
             where: {
                 moodId: mood.id,
+                userId: dto.userId ?? 'anonymous',
                 algorithm: RECOMMENDATION_ALGORITHM,
-                createdAt: { gte: windowStart },
+                updatedAt: { gte: windowStart },
                 ...(dto.mediaType && dto.mediaType !== 'both'
                     ? { mediaType: dto.mediaType.toUpperCase() as MediaType } : {}),
                 ...(dto.minRating ? { voteAverage: { gte: new Prisma.Decimal(dto.minRating) } } : {}),
@@ -707,175 +622,114 @@ export class MoodsService {
             genreNames: (r.genreIds ?? []).map((id: number) => genreMap.get(id)).filter(Boolean),
         }));
 
-        return this.selectVariedRecommendations(mapped, dto.limit ?? 12, dto.shuffle !== false);
+        return this.selectVariedRecommendations(this.personalizeRecommendations(mapped.filter(item => {
+            const meta = item.metadata as any;
+            return (dto.includeAdult === true || meta?.adult === false)
+                && (!dto.languages?.length || dto.languages.includes(meta?.original_language));
+        }), preferences), mapped.length, dto.shuffle !== false, dto.seed ?? 0);
     }
 
-    private async clearCachedRecommendations(dto: GetRecommendationsDto): Promise<void> {
-        await this.prisma.recommendation.deleteMany({
-            where: {
-                moodId: dto.moodId,
-                algorithm: RECOMMENDATION_ALGORITHM,
-                ...(dto.userId ? { userId: dto.userId } : {}),
-                ...(dto.mediaType && dto.mediaType !== 'both'
-                    ? { mediaType: dto.mediaType.toUpperCase() as MediaType } : {}),
-            },
+    private async getProfilePreferences(userId?: string): Promise<ProfilePreferences> {
+        const empty = { preferredGenres: [], preferredLanguages: [] };
+        if (!userId || userId === 'anonymous') return empty;
+        try {
+            const profile = await this.prisma.user.findUnique({
+                where: { id: userId }, select: { preferredGenres: true, preferredLanguages: true },
+            });
+            const normalize = (values: string[]) => [...new Set(values.map(value => value.trim().toLowerCase()).filter(Boolean))].sort();
+            return profile ? { preferredGenres: normalize(profile.preferredGenres), preferredLanguages: normalize(profile.preferredLanguages) } : empty;
+        } catch (error) {
+            this.logger.warn('Profile preferences unavailable; using neutral mood ranking');
+            return empty;
+        }
+    }
+
+    // Personalize copies of the shared pool; never put one user's boosts into it.
+    private personalizeRecommendations(items: any[], preferences: ProfilePreferences): any[] {
+        const languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
+        return items.map(item => {
+            const breakdown = item.metadata?.scoreBreakdown;
+            if (!breakdown) return item;
+            const genres = (item.genreIds ?? []) as number[];
+            const matches = genres.filter(id => preferences.preferredGenres.includes(String(id))
+                || preferences.preferredGenres.includes(([...TMDB_MOVIE_GENRES, ...TMDB_TV_GENRES].find(genre => genre.id === id)?.name ?? '').toLowerCase())).length;
+            const preferredGenreScore = preferences.preferredGenres.length ? Math.min(1, matches / Math.min(genres.length || 1, 2)) : 0.5;
+            const lang = String(item.metadata?.original_language ?? '').toLowerCase();
+            const languageName = /^[a-z]{2,3}$/.test(lang) ? languageNames.of(lang)?.toLowerCase() : undefined;
+            const languageScore = preferences.preferredLanguages.length
+                ? Number(preferences.preferredLanguages.includes(lang) || Boolean(languageName && preferences.preferredLanguages.includes(languageName))) : 0.5;
+            const personalized = { ...breakdown, preferredGenreScore, languageScore };
+            return { ...item, score: new Prisma.Decimal(this.calculateScore(personalized)), metadata: { ...item.metadata, scoreBreakdown: personalized } };
         });
     }
 
-    // ---------------------------------------------------------------------------
-    // Content fetching — three passes
-    // ---------------------------------------------------------------------------
+    private calculateScore(breakdown: ScoreBreakdown): number {
+        const raw = W_GENRE * breakdown.genreScore + W_VALENCE * breakdown.valenceScore
+            + W_AROUSAL * breakdown.arousalScore + W_POPULARITY * breakdown.popularityScore
+            + W_QUALITY * breakdown.qualityScore + W_RECENCY * breakdown.recencyScore
+            + W_KEYWORD * breakdown.keywordScore + W_LANGUAGE * breakdown.languageScore
+            + W_PREFERRED_GENRE * breakdown.preferredGenreScore;
+        return Number(Math.max(0.01, Math.min(0.99, raw)).toFixed(3));
+    }
 
-    private async fetchCandidates(mood: Mood, dto: GetRecommendationsDto): Promise<any[]> {
-        const keywords = this.getMoodKeywords(mood);
-        const minVote = dto.minRating ?? 0;
-        const requestedMedia = dto.mediaType ?? 'both';
-        const wantMovies = requestedMedia === 'both' || requestedMedia === 'movie';
-        const wantTV = requestedMedia === 'both' || requestedMedia === 'tv';
-        const moodKey = this.getMoodKey(mood);
-        const movieGenres = this.getMoodGenresForMedia(mood, 'movie');
-        const tvGenres = this.getMoodGenresForMedia(mood, 'tv');
-        const allContent: any[] = [];
-
-        // Pass 1 — genre discover
-        const pages = this.pickRandomPages(1, DISCOVER_PAGES + 8, DISCOVER_PAGES);
-        await Promise.all(pages.flatMap(page => {
-            const tasks: Promise<void>[] = [];
-            if (wantMovies && movieGenres.length > 0) {
-                tasks.push(
-                    this.tmdbService.getMoviesByGenres(movieGenres, page, minVote)
-                        .then(r => { if (Array.isArray(r)) allContent.push(...r.map((m: any) => ({ ...m, mediaType: 'movie', _source: 'discover' }))); })
-                        .catch(e => this.logger.warn(`Discover movies p${page}: ${e?.message}`)),
-                );
+    private async fetchCandidates(mood: Mood, dto: GetRecommendationsDto, expanded = false): Promise<any[]> {
+        const types: Array<'movie' | 'tv'> = dto.mediaType && dto.mediaType !== 'both' ? [dto.mediaType] : ['movie', 'tv'];
+        const hour = Math.floor(Date.now() / 3600000);
+        const endpoints: Array<{ path: string; mediaType: 'movie' | 'tv'; keyword?: string }> = [];
+        for (const mediaType of types) {
+            const profile = this.getMoodGenreProfile(mood, mediaType);
+            const dateField = mediaType === 'movie' ? 'primary_release_date' : 'first_air_date';
+            for (const [index, sort] of ['popularity.desc', 'vote_average.desc', 'popularity.desc', 'popularity.desc'].entries()) {
+                const genres = index === 0 ? profile.primary : [...profile.primary, ...profile.secondary];
+                const params = new URLSearchParams({
+                    with_genres: genres.join('|'), without_genres: profile.excluded.join('|'),
+                    sort_by: sort, page: String(index < 2 ? (expanded ? 2 : 1) : 2 + ((hour + index + (expanded ? 3 : 0)) % 7)),
+                    include_adult: String(dto.includeAdult === true), language: 'en-US',
+                    'vote_count.gte': mediaType === 'movie' ? '50' : '25',
+                    'vote_average.gte': String(Math.max(5.5, dto.minRating ?? 0)),
+                });
+                if (index === 3) {
+                    if (this.getMoodKey(mood) === 'nostalgic') params.set(dateField + '.lte', '2009-12-31');
+                    else params.set(dateField + '.gte', new Date(Date.now() - 3 * 365 * 86400000).toISOString().slice(0, 10));
+                }
+                if (genres.length) endpoints.push({ path: 'discover/' + mediaType + '?' + params.toString(), mediaType });
             }
-            if (wantTV && tvGenres.length > 0) {
-                tasks.push(
-                    this.tmdbService.getTVShowsByGenres(tvGenres, page, minVote)
-                        .then(r => { if (Array.isArray(r)) allContent.push(...r.map((t: any) => ({ ...t, mediaType: 'tv', _source: 'discover' }))); })
-                        .catch(e => this.logger.warn(`Discover TV p${page}: ${e?.message}`)),
-                );
-            }
-            return tasks;
+        }
+        const terms = this.getMoodKeywords(mood).filter(term => term.length > 4).slice(0, 2);
+        const keywordResults = await Promise.allSettled(terms.map(term => this.tmdbService.request('search/keyword', { params: { query: term } })));
+        const keywords = keywordResults.flatMap((result, index) => result.status === 'fulfilled'
+            ? (result.value?.results ?? []).filter((keyword: any) => keyword.name?.toLowerCase() === terms[index]) : []);
+        for (const keyword of keywords) for (const mediaType of types) {
+            endpoints.push({ mediaType, keyword: keyword.name, path: 'discover/' + mediaType + '?' + new URLSearchParams({
+                with_keywords: String(keyword.id), include_adult: String(dto.includeAdult === true), language: 'en-US', page: expanded ? '2' : '1',
+                'vote_count.gte': '25', 'vote_average.gte': String(Math.max(5.5, dto.minRating ?? 0)),
+            }).toString() });
+        }
+        const responses = await Promise.allSettled(endpoints.map(async endpoint => {
+            const data = await this.tmdbService.request(endpoint.path);
+            if (!Array.isArray(data?.results)) throw new Error('Recommendation source unavailable');
+            return (data?.results ?? []).map((item: any) => ({ ...item, keywords: endpoint.keyword ? [endpoint.keyword] : [], mediaType: endpoint.mediaType, _source: 'discover' }));
         }));
-
-        // Pass 2 — keyword search
-        const searchKeywords = this.shuffleArray(keywords).slice(0, 5);
-        if (searchKeywords.length > 0) {
-            await Promise.all(searchKeywords.flatMap(kw => {
-                const tasks: Promise<void>[] = [];
-                if (wantMovies) {
-                    tasks.push(
-                        this.tmdbService.searchContent(kw, 'movie')
-                            .then(r => { if (Array.isArray(r)) allContent.push(...r.filter(i => !minVote || (i.vote_average ?? 0) >= minVote).map((m: any) => ({ ...m, mediaType: 'movie', _source: 'keyword' }))); })
-                            .catch(e => this.logger.warn(`Keyword movie "${kw}": ${e?.message}`)),
-                    );
-                }
-                if (wantTV) {
-                    tasks.push(
-                        this.tmdbService.searchContent(kw, 'tv')
-                            .then(r => { if (Array.isArray(r)) allContent.push(...r.filter(i => !minVote || (i.vote_average ?? 0) >= minVote).map((t: any) => ({ ...t, mediaType: 'tv', _source: 'keyword' }))); })
-                            .catch(e => this.logger.warn(`Keyword TV "${kw}": ${e?.message}`)),
-                    );
-                }
-                return tasks;
-            }));
-            this.logger.debug(`Pass 2 done; total: ${allContent.length} for mood "${mood.name}"`);
+        if (responses.length && responses.every(result => result.status === 'rejected')) {
+            throw new ServiceUnavailableException('Recommendation sources are temporarily unavailable.');
         }
-
-        // Pass 3 — broad fallback
-        const configuredMoodKey = MOOD_CONFIG_ALIASES[moodKey] ?? moodKey;
-        const internationalMood = ['romantic', 'sad', 'excited', 'scared'].includes(configuredMoodKey);
-        if (internationalMood && searchKeywords.length > 0) {
-            const languages = ['ko-KR', 'ja-JP', 'zh-CN'];
-            await Promise.all(this.shuffleArray(searchKeywords).slice(0, 3).flatMap(kw =>
-                languages.flatMap(language => {
-                    const tasks: Promise<void>[] = [];
-                    if (wantMovies) {
-                        tasks.push(
-                            this.tmdbService.searchContent(kw, 'movie', 1, language)
-                                .then(r => { if (Array.isArray(r)) allContent.push(...r.filter(i => !minVote || (i.vote_average ?? 0) >= minVote).map((m: any) => ({ ...m, mediaType: 'movie', _source: 'international-keyword' }))); })
-                                .catch(e => this.logger.warn(`International movie "${kw}" ${language}: ${e?.message}`)),
-                        );
-                    }
-                    if (wantTV) {
-                        tasks.push(
-                            this.tmdbService.searchContent(kw, 'tv', 1, language)
-                                .then(r => { if (Array.isArray(r)) allContent.push(...r.filter(i => !minVote || (i.vote_average ?? 0) >= minVote).map((t: any) => ({ ...t, mediaType: 'tv', _source: 'international-keyword' }))); })
-                                .catch(e => this.logger.warn(`International TV "${kw}" ${language}: ${e?.message}`)),
-                        );
-                    }
-                    return tasks;
-                }),
-            ));
-        }
-
-        if (moodKey === 'romantic' && wantTV) {
-            const romanticTvSearches = ['romance', 'romantic drama', 'love story', 'relationship drama'];
-            await Promise.all(romanticTvSearches.map(kw =>
-                this.tmdbService.searchContent(kw, 'tv')
-                    .then(r => {
-                        if (Array.isArray(r)) {
-                            allContent.push(
-                                ...r
-                                    .filter(i => !minVote || (i.vote_average ?? 0) >= minVote)
-                                    .map((t: any) => ({ ...t, mediaType: 'tv', _source: 'romance-keyword' })),
-                            );
-                        }
-                    })
-                    .catch(e => this.logger.warn(`Romantic TV keyword "${kw}": ${e?.message}`)),
-            ));
-        }
-
-        if (allContent.length < 60) {
-            this.logger.debug(`Only ${allContent.length} candidates — broadening with related mood genres`);
-            const extraPages = this.pickRandomPages(1, 10, 4);
-            const relatedMovieGenres = wantMovies ? await this.getRelatedMoodGenres(mood, 'movie') : [];
-            const relatedTvGenres = wantTV ? await this.getRelatedMoodGenres(mood, 'tv') : [];
-            await Promise.all(extraPages.flatMap(page => {
-                const tasks: Promise<void>[] = [];
-                if (wantMovies) {
-                    tasks.push(
-                        this.tmdbService.getMoviesByGenres(relatedMovieGenres.length > 0 ? relatedMovieGenres : FALLBACK_MOVIE_GENRES, page, minVote)
-                            .then(r => { if (Array.isArray(r)) allContent.push(...r.map((m: any) => ({ ...m, mediaType: 'movie', _source: 'related' }))); })
-                            .catch(() => { }),
-                    );
-                }
-                if (wantTV) {
-                    tasks.push(
-                        this.tmdbService.getTVShowsByGenres(relatedTvGenres.length > 0 ? relatedTvGenres : FALLBACK_TV_GENRES, page, minVote)
-                            .then(r => { if (Array.isArray(r)) allContent.push(...r.map((t: any) => ({ ...t, mediaType: 'tv', _source: 'related' }))); })
-                            .catch(() => { }),
-                    );
-                }
-                return tasks;
-            }));
-        }
-
-        this.logger.debug(`Fetched ${allContent.length} raw candidates for mood "${mood.name}"`);
-        return allContent;
+        return responses.flatMap(result => result.status === 'fulfilled' ? result.value : []);
     }
 
     // ---------------------------------------------------------------------------
     // Hard filters
     // ---------------------------------------------------------------------------
 
-    /**
-     * Gates that eliminate items entirely before scoring.
-     *
-     * minRating  — Drop below caller's vote_average threshold.
-     * adult      — Strip adult content unless dto.includeAdult is true.
-     * language   — Allow-list of original_language codes (default: ['en']).
-     *              Prevents non-English world cinema flooding results when a
-     *              mood's genres are broad (e.g. Drama covers everything).
-     *              Pass dto.languages = [] to disable the gate entirely.
-     * fromYear   — Optional lower bound on release year. Useful when the mood
-     *              or caller explicitly wants recent content only.
-     */
+    // Quality, explicit language preferences, release eligibility and safety apply to every source.
     private passesHardFilters(item: any, dto: GetRecommendationsDto): boolean {
-        if ((item.vote_count ?? 0) < (item.mediaType === 'tv' ? 40 : 80)) return false;
-        if ((item.vote_average ?? 0) > 0 && (item.vote_average ?? 0) < 5.5) return false;
+        if ((item.vote_count ?? 0) < (item.mediaType === 'tv' ? 25 : 50)) return false;
+        if ((item.vote_average ?? 0) < Math.max(5.5, dto.minRating ?? 0)) return false;
         if (!item.poster_path || !(item.overview ?? '').trim()) return false;
-        if (dto.includeAdult === false && item.adult === true) return false;
+        if (dto.includeAdult !== true && item.adult === true) return false;
+        if ((item.vote_average ?? 0) < (dto.minRating ?? 0)) return false;
+        if (dto.languages?.length && !dto.languages.includes(item.original_language)) return false;
+        const release = Date.parse(item.release_date ?? item.first_air_date ?? '');
+        if (!Number.isFinite(release) || release > Date.now()) return false;
 
         const fromYear = (dto as any).fromYear as number | undefined;
         if (fromYear) {
@@ -891,85 +745,11 @@ export class MoodsService {
     // Diversity rebalancing
     // ---------------------------------------------------------------------------
 
-    /**
-     * Prevents a single genre from dominating the final result set.
-     *
-     * Walks the scored list (highest first) and enforces GENRE_DIVERSITY_CAP
-     * per primary genre. Overflowing items are placed in a reserve list and
-     * used to fill any gap if the main pass can't reach `limit`.
-     */
-    private applyDiversityCap(scored: ScoredItem[], limit: number, perGenreCap = GENRE_DIVERSITY_CAP): ScoredItem[] {
-        const genreCount: Record<number, number> = {};
-        const selected: ScoredItem[] = [];
-        const overflow: ScoredItem[] = [];
-
-        for (const item of scored) {
-            const primaryGenre = (item.raw.genre_ids ?? [])[0] as number | undefined;
-            const count = primaryGenre !== undefined ? (genreCount[primaryGenre] ?? 0) : 0;
-
-            if (primaryGenre === undefined || count < perGenreCap) {
-                selected.push(item);
-                if (primaryGenre !== undefined) genreCount[primaryGenre] = count + 1;
-            } else {
-                overflow.push(item);
-            }
-
-            if (selected.length >= limit) break;
-        }
-
-        // Relax cap if we still can't fill the limit
-        if (selected.length < limit) {
-            for (const item of overflow) {
-                selected.push(item);
-                if (selected.length >= limit) break;
-            }
-        }
-
-        return selected.slice(0, limit);
-    }
-
     // ---------------------------------------------------------------------------
     // Scoring engine — 7 dimensions
     // ---------------------------------------------------------------------------
 
-    /**
-     * Scores a single TMDB item against a mood on seven independent signals,
-     * each clamped to [0, 1] before weighting.
-     *
-     * 1. genreScore      Jaccard similarity: |intersection| / |union| of the
-     *                    item's genre_ids and the mood's tmdbGenres. Reduced
-     *                    weight (0.30) avoids punishing moods with small genre
-     *                    sets or cross-genre items.
-     *
-     * 2. valenceScore    Emotional tone alignment. Averages GENRE_VALENCE for
-     *                    each genre on the item, then computes
-     *                    1 - |moodValence - itemValence| / 2. Scale is [-1,+1]
-     *                    on both sides so max distance = 2 and the result is
-     *                    always in [0, 1].
-     *
-     * 3. arousalScore    Energy/pace alignment via GENRE_AROUSAL. Same maths.
-     *
-     * 4. popularityScore Log-normalised TMDB popularity score. Raw TMDB
-     *                    popularity is unbounded and Pareto-skewed — blockbusters
-     *                    score 100-300+ while solid indie films score 5-20.
-     *                    Log compression: log(1+pop) / log(1+CEIL). Items at the
-     *                    cap score 1.0; the bottom 10% still score ~0.1 so they
-     *                    aren't completely disadvantaged.
-     *
-     * 5. qualityScore    vote_average / 10, discounted by a confidence factor
-     *                    that ramps 0→1 over the first 100 votes. A 10.0 from
-     *                    3 votes scores ~0.30; the same 10.0 from 1000 votes
-     *                    scores ~0.98.
-     *
-     * 6. recencyScore    Exponential time-decay from the release/air date.
-     *                    Formula: 2^(-daysSince / HALF_LIFE). Today = 1.0;
-     *                    HALF_LIFE days ago = 0.5; very old → approaches 0.
-     *                    Items with no date receive a neutral 0.5 so they
-     *                    compete on the other six signals.
-     *
-     * 7. keywordScore    Binary: 1 if any mood keyword appears in
-     *                    title + overview (case-insensitive), 0 otherwise.
-     */
+    // Genre tone is a proxy; explicit thematic evidence and exclusions gate eligibility separately.
     private scoreItem(item: any, mood: Mood): ScoredItem {
         const mediaType = item.mediaType === 'tv' ? 'tv' : 'movie';
         const moodGenreProfile = this.getMoodGenreProfile(mood, mediaType);
@@ -1036,32 +816,22 @@ export class MoodsService {
 
         // 6. Recency — exponential decay
         const releaseDateStr = item.release_date ?? item.first_air_date ?? null;
-        let recencyScore = 0.9;
+        let recencyScore = 0;
 
         if (releaseDateStr) {
             const releaseMs = new Date(releaseDateStr).getTime();
             const daysSince = Math.max(0, (Date.now() - releaseMs) / 86_400_000);
             recencyScore = Math.pow(2, -daysSince / RECENCY_HALF_LIFE_DAYS);
-            recencyScore = Math.pow(recencyScore, 0.85);
+            if (moodKey === 'nostalgic') recencyScore = 1 - recencyScore;
         }
 
         // 7. Keyword match from title, overview, tagline, metadata, and source
         // language/country hints.
         const keywordScore = this.getKeywordMatchScore(item, keywords);
 
-        // 8. Language preference (soft boost)
-        const lang = (item.original_language ?? '').toLowerCase();
-        const preferredLangs = ['en', 'ko', 'ja', 'zh'];
-
-        let languageScore = 0.6; // neutral baseline
-
-        if (preferredLangs.includes(lang)) {
-            languageScore = 1;
-        } else if (!lang) {
-            languageScore = 0.5;
-        } else {
-            languageScore = 0.4;
-        }
+        // Shared candidates remain neutral; profile boosts are applied per session.
+        const languageScore = 0.5;
+        const preferredGenreScore = 0.5;
 
         const sourceScore = item._source === 'discover'
             ? 1
@@ -1072,37 +842,23 @@ export class MoodsService {
                     : item._source === 'related'
                         ? 0.82
                         : 0.72;
-        const raw =
-            W_GENRE * genreScore +
-            W_VALENCE * valenceScore +
-            W_AROUSAL * arousalScore +
-            W_POPULARITY * popularityScore +
-            W_QUALITY * qualityScore +
-            W_RECENCY * recencyScore +
-            W_KEYWORD * keywordScore +
-            W_LANGUAGE * languageScore;
-
-        const score = parseFloat(Math.max(0.01, Math.min(0.99, raw * sourceScore)).toFixed(4));
-
-        return {
-            raw: item,
-            score,
-            breakdown: {
-                genreScore: parseFloat(genreScore.toFixed(3)),
-                primaryGenreMatches,
-                secondaryGenreMatches,
-                excludedGenreMatches,
-                romanceTextScore: parseFloat(romanceTextScore.toFixed(3)),
-                valenceScore: parseFloat(valenceScore.toFixed(3)),
-                arousalScore: parseFloat(arousalScore.toFixed(3)),
-                popularityScore: parseFloat(popularityScore.toFixed(3)),
-                qualityScore: parseFloat(qualityScore.toFixed(3)),
-                recencyScore: parseFloat(recencyScore.toFixed(3)),
-                keywordScore,
-                languageScore: parseFloat(languageScore.toFixed(3)),
-                sourceScore: parseFloat(sourceScore.toFixed(3)),
-            },
+        const breakdown: ScoreBreakdown = {
+            genreScore: parseFloat(genreScore.toFixed(3)),
+            primaryGenreMatches,
+            secondaryGenreMatches,
+            excludedGenreMatches,
+            romanceTextScore: parseFloat(romanceTextScore.toFixed(3)),
+            valenceScore: parseFloat(valenceScore.toFixed(3)),
+            arousalScore: parseFloat(arousalScore.toFixed(3)),
+            popularityScore: parseFloat(popularityScore.toFixed(3)),
+            qualityScore: parseFloat(qualityScore.toFixed(3)),
+            recencyScore: parseFloat(recencyScore.toFixed(3)),
+            keywordScore,
+            languageScore: parseFloat(languageScore.toFixed(3)),
+            preferredGenreScore,
+            sourceScore: parseFloat(sourceScore.toFixed(3)),
         };
+        return { raw: item, score: this.calculateScore(breakdown), breakdown };
     }
 
     private hasAcceptableMoodGenreFit(scored: ScoredItem, mood: Mood): boolean {
@@ -1110,8 +866,18 @@ export class MoodsService {
         const mediaType = scored.raw.mediaType === 'tv' ? 'tv' : 'movie';
         const { genreScore, primaryGenreMatches, secondaryGenreMatches, excludedGenreMatches, romanceTextScore, keywordScore } = scored.breakdown;
 
-        if (excludedGenreMatches >= 2) return false;
-        if (excludedGenreMatches > 0 && primaryGenreMatches === 0) return false;
+        if (excludedGenreMatches > 0) return false;
+
+        const thematicMoods = ['sad', 'bittersweet', 'serenity', 'chill', 'inspirational', 'nostalgic'];
+        if (thematicMoods.includes(moodKey) && keywordScore === 0) {
+            if (moodKey === 'nostalgic') {
+                const year = Number((scored.raw.release_date ?? scored.raw.first_air_date ?? '').slice(0, 4));
+                if (!year || year > new Date().getFullYear() - 15) return false;
+            } else return false;
+        }
+        if (moodKey === 'horror' && mediaType === 'tv' && this.getKeywordMatchScore(scored.raw, ['horror', 'haunted', 'ghost', 'supernatural', 'terror', 'demon', 'vampire', 'zombie']) === 0) return false;
+
+        if (['western', 'documentary', 'sci-fi', 'funny', 'horror'].includes(moodKey) && primaryGenreMatches === 0) return false;
 
         if (moodKey === 'romantic') {
             if (mediaType === 'tv') {
@@ -1154,32 +920,27 @@ export class MoodsService {
             return [];
         }
 
-        const scored = filtered
+        let scored = filtered
             .map(item => this.scoreItem(item, mood))
             .filter(item => this.hasAcceptableMoodGenreFit(item, mood))
             .sort((a, b) => b.score - a.score);
+
+        if (scored.length < 10) {
+            const extra = await this.fetchCandidates(mood, dto, true);
+            scored = this.removeDuplicateContent([...filtered, ...extra])
+                .filter(item => this.passesHardFilters(item, dto))
+                .map(item => this.scoreItem(item, mood))
+                .filter(item => this.hasAcceptableMoodGenreFit(item, mood))
+                .sort((a, b) => b.score - a.score);
+        }
 
         if (scored.length === 0) {
             this.logger.warn(`No candidates passed mood genre fit for "${mood.name}"`);
             return [];
         }
 
-        const requestedLimit = dto.limit ?? 12;
-        const limit = Math.min(50, Math.max(requestedLimit * 3, 24));
-        const strong = scored.filter(item => item.score >= MIN_STRONG_SCORE);
-        const rankedPool = strong.length >= Math.min(limit, 8) ? strong : scored;
-
-        const topPool = rankedPool.slice(0, limit * 5);
-        const randomizedPool = this.randomizeWithinScoreBands(topPool, 0.05);
-        const diverse = this.applyDiversityCap(randomizedPool, limit, Math.max(GENRE_DIVERSITY_CAP, Math.ceil(limit / 4)));
-
-        this.logger.debug(
-            `Final: ${diverse.length} items selected for mood "${mood.name}" (scores ${diverse[0]?.score ?? 0}–${diverse[diverse.length - 1]?.score ?? 0})`,
-        );
-
-        return diverse.map(s =>
-            this.buildRecommendationShape(s, mood, dto.userId ?? 'anonymous', genreMap),
-        );
+        // Cache relevance candidates; diversify and vary the ordering per session.
+        return scored.slice(0, 96).map(item => this.buildRecommendationShape(item, mood, dto.userId ?? 'anonymous', genreMap));
     }
 
     private buildRecommendationShape(
@@ -1210,11 +971,13 @@ export class MoodsService {
             posterPath: item.poster_path ?? null,
             backdropPath: item.backdrop_path ?? null,
             score: new Prisma.Decimal(scored.score),
-            reason: this.buildReason(mood, scored.breakdown, itemGenres, genreMap),
+            reason: this.buildReason(mood, scored.breakdown, itemGenres, genreMap, isMovie ? 'movie' : 'tv'),
             algorithm: RECOMMENDATION_ALGORITHM,
             metadata: {
                 scoreBreakdown: scored.breakdown,
                 source: item._source ?? 'unknown',
+                original_language: item.original_language ?? '',
+                adult: item.adult === true,
                 moodValence: Number(mood.valence),
                 moodArousal: Number(mood.arousal),
                 fetchedAt: new Date().toISOString(),
@@ -1225,28 +988,14 @@ export class MoodsService {
         };
     }
 
-    /**
-     * Generates a concise, signal-driven reason string for the user.
-     *
-     * Priority:
-     *   1. Genre match    — most informative; always shown when score ≥ 0.35
-     *   2. Emotional tone — shown when valence or arousal score is notably high
-     *   3. Popularity     — "widely popular" when that's a dominant driver
-     *   4. Recency        — "recently released" for fresh content
-     *   5. Keyword        — surfaces the exact keyword hit
-     *
-     * Capped at 2 signals to keep the string scannable.
-     */
     private buildReason(
         mood: Mood,
         breakdown: ScoreBreakdown,
         genreIds: number[],
         genreMap: Map<number, string>,
+        mediaType: 'movie' | 'tv',
     ): string {
         const moodName = mood.name.toLowerCase();
-        const mediaType = genreIds.some(id => id === 10766 || id === 10759 || id === 10765 || id === 10762 || id === 10764)
-            ? 'tv'
-            : 'movie';
         const profile = this.getMoodGenreProfile(mood, mediaType);
         const genreSet = new Set(genreIds);
         const primaryNames = profile.primary
@@ -1263,9 +1012,8 @@ export class MoodsService {
             parts.push(`${primaryNames.slice(0, 2).join(' and ')} as the main match`);
         }
 
-        if (secondaryNames.length > 0) {
-            parts.push(`${secondaryNames.slice(0, 2).join(' and ')} as supporting flavor`);
-        }
+        if (breakdown.keywordScore > 0) parts.push('matching story themes');
+        else if (secondaryNames.length > 0) parts.push(`${secondaryNames.slice(0, 2).join(' and ')} themes`);
 
         if (this.getMoodKey(mood) === 'romantic' && breakdown.romanceTextScore >= 0.5) {
             parts.push('romantic story signals');
@@ -1276,7 +1024,7 @@ export class MoodsService {
         }
 
         return parts.length > 0
-            ? `Matches your ${moodName} mood with ${parts.join(', ')}.`
+            ? `Matches your ${moodName} mood with ${parts.slice(0, 2).join(', ')}.`
             : `Matches your ${moodName} mood with a strong overall fit.`;
     }
 
@@ -1284,52 +1032,20 @@ export class MoodsService {
     // Persistence
     // ---------------------------------------------------------------------------
 
-    private async saveRecommendations(recommendations: any[]): Promise<void> {
-        if (!recommendations.length) return;
-
-        // Pre-dedup by (moodId, userId, tmdbId, mediaType) — createMany's
-        // skipDuplicates only guards exact full-row matches, not this key tuple.
-        const seen = new Set<string>();
-        const deduped = recommendations.filter(r => {
-            const key = `${r.moodId}:${r.userId}:${r.tmdbId}:${r.mediaType}`;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
-
-        const BATCH = 20;
-        for (let i = 0; i < deduped.length; i += BATCH) {
-            const batch = deduped.slice(i, i + BATCH);
-            try {
-                await this.prisma.recommendation.createMany({
-                    data: batch.map(r => ({
-                        userId: r.userId,
-                        moodId: r.moodId,
-                        tmdbId: r.tmdbId,
-                        mediaType: r.mediaType,
-                        title: r.title,
-                        overview: r.overview ?? null,
-                        genreIds: r.genreIds,
-                        voteAverage: new Prisma.Decimal(r.voteAverage),
-                        voteCount: r.voteCount,
-                        releaseDate: r.releaseDate ?? null,
-                        posterPath: r.posterPath ?? null,
-                        backdropPath: r.backdropPath ?? null,
-                        score: new Prisma.Decimal(r.score),
-                        reason: r.reason,
-                        algorithm: r.algorithm,
-                        metadata: r.metadata ?? Prisma.JsonNull,
-                        viewed: r.viewed,
-                        liked: r.liked,
-                        saved: r.saved,
-                        rating: r.rating ?? null,
-                    })),
-                    skipDuplicates: true,
+    private async saveRecommendations(recommendations: any[]): Promise<any[]> {
+        const persisted: any[] = [];
+        for (let index = 0; index < recommendations.length; index += 10) {
+            const batch = await Promise.all(recommendations.slice(index, index + 10).map(async item => {
+                const { id, genreNames, popularity, createdAt, updatedAt, viewed, liked, saved, rating, ...data } = item;
+                const key = { userId: item.userId, moodId: item.moodId, tmdbId: item.tmdbId, mediaType: item.mediaType };
+                const row = await this.prisma.recommendation.upsert({
+                    where: { userId_moodId_tmdbId_mediaType: key }, create: data, update: data,
                 });
-            } catch (error) {
-                this.logger.error(`Failed to save batch at index ${i}:`, (error as any).message);
-            }
+                return { ...row, genreNames };
+            }));
+            persisted.push(...batch);
         }
+        return persisted;
     }
 
     // ---------------------------------------------------------------------------
@@ -1381,7 +1097,7 @@ export class MoodsService {
     ): { recommendations: any[]; total: number; page: number; totalPages: number } {
         const total = recommendations.length;
         const totalPages = Math.max(1, Math.ceil(total / limit));
-        const safePage = Math.min(Math.max(1, page), totalPages);
+        const safePage = Math.max(1, page);
         const start = (safePage - 1) * limit;
         return {
             recommendations: recommendations.slice(start, start + limit),
@@ -1395,38 +1111,16 @@ export class MoodsService {
         recommendations: T[],
         limit: number,
         shuffle: boolean,
+        seed = 0,
     ): T[] {
-        const sorted = this.dedupeByContent(
-            [...recommendations].sort((a, b) => this.getRecommendationScore(b) - this.getRecommendationScore(a)),
-        );
-
-        if (!shuffle || sorted.length <= limit) return sorted.slice(0, limit);
-
-        const selected: T[] = [];
-        const seen = new Set<string>();
-        const add = (item: T) => {
-            const key = this.getContentKey(item);
-            if (seen.has(key)) return;
-            seen.add(key);
-            selected.push(item);
-        };
-
-        const candidatePool = sorted.slice(0, Math.min(sorted.length, limit * 8));
-        const jittered = this.randomizeWithinScoreBands(candidatePool, 0.05);
-
-        for (const item of jittered) {
-            add(item);
-            if (selected.length >= limit) break;
-        }
-
-        if (selected.length < limit) {
-            for (const item of sorted) {
-                add(item);
-                if (selected.length >= limit) break;
-            }
-        }
-
-        return selected.slice(0, limit);
+        const sorted = this.dedupeByContent([...recommendations].sort((a, b) => this.getRecommendationScore(b) - this.getRecommendationScore(a) || this.getContentKey(a).localeCompare(this.getContentKey(b))));
+        if (!shuffle) return sorted.slice(0, limit);
+        return rankRecommendations(sorted, item => {
+            const rec = item as any;
+            return { key: this.getContentKey(item), score: this.getRecommendationScore(item),
+                genres: rec.genreIds ?? [], language: rec.metadata?.original_language,
+                type: String(rec.mediaType), year: rec.releaseDate, collection: rec.metadata?.collectionId };
+        }, seed).slice(0, limit);
     }
 
     private dedupeByContent<T extends { tmdbId?: number; id?: number | string; mediaType?: MediaType | string }>(items: T[]): T[] {
@@ -1457,47 +1151,15 @@ export class MoodsService {
         return Number(score ?? 0);
     }
 
-    private randomizeWithinScoreBands<T extends { score?: any }>(items: T[], bandSize = 0.05): T[] {
-        const bands = new Map<number, T[]>();
-
-        for (const item of items) {
-            const score = this.getRecommendationScore(item);
-            const band = Math.floor(score / bandSize);
-            const current = bands.get(band) ?? [];
-            current.push(item);
-            bands.set(band, current);
-        }
-
-        return [...bands.entries()]
-            .sort(([a], [b]) => b - a)
-            .flatMap(([, bandItems]) => this.shuffleArray(bandItems));
-    }
-
-    private removeDuplicates<T>(array: T[], key: keyof T): T[] {
-        const seen = new Set();
-        return array.filter(item => {
-            const v = item[key];
-            if (seen.has(v)) return false;
-            seen.add(v);
-            return true;
-        });
-    }
-
     private removeDuplicateContent<T extends { id?: number; mediaType?: string }>(array: T[]): T[] {
-        return this.dedupeByContent(array);
-    }
-
-    private shuffleArray<T>(array: T[]): T[] {
-        const a = [...array];
-        for (let i = a.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [a[i], a[j]] = [a[j], a[i]];
+        const unique = new Map<string, T>();
+        for (const item of array) {
+            const key = this.getContentKey(item);
+            const previous = unique.get(key) as any;
+            unique.set(key, previous ? { ...previous, keywords: [...new Set([...(previous.keywords ?? []), ...((item as any).keywords ?? [])])] } : item);
         }
-        return a;
+        return [...unique.values()];
     }
 
-    private pickRandomPages(min: number, max: number, count: number): number[] {
-        const pool = Array.from({ length: max - min + 1 }, (_, i) => min + i);
-        return this.shuffleArray(pool).slice(0, Math.min(count, pool.length));
-    }
+
 }

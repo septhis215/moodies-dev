@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsBoolean,
   IsArray,
+  IsInt,
   Min,
   Max,
   ArrayMaxSize,
@@ -25,6 +26,22 @@ const BooleanTransform = () =>
   });
 
 export class GetRecommendationsDto {
+  @ApiPropertyOptional({ description: 'Stable session seed; change it to vary equally relevant matches' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(4294967295)
+  seed?: number;
+
+  @ApiPropertyOptional({ description: 'Recently displayed movie:ID or tv:ID keys, deprioritized on refresh', type: [String] })
+  @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? [value] : value)
+  @IsArray()
+  @ArrayMaxSize(100)
+  @Matches(/^(movie|tv):[1-9]\d{0,9}$/, { each: true })
+  excludeKeys?: string[];
+
   @ApiProperty({
     description: 'Mood ID to get recommendations for',
     example: 'clx1234abcd',
@@ -57,7 +74,7 @@ export class GetRecommendationsDto {
   })
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
   @Max(50)
   limit?: number = 12;
@@ -69,8 +86,9 @@ export class GetRecommendationsDto {
   })
   @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
+  @Max(100)
   page?: number = 1;
 
   @ApiPropertyOptional({
@@ -87,7 +105,7 @@ export class GetRecommendationsDto {
   minRating?: number = 0;
 
   @ApiPropertyOptional({
-    description: 'Force a fresh fetch from TMDB, bypassing the cache',
+    description: 'Start a new recommendation ordering while reusing cached candidates',
     default: false,
   })
   @IsOptional()

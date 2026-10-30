@@ -3,11 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 /**
- * Recommendation rows are effectively a 30-minute cache — the read path only
- * selects rows with createdAt >= now - REC_CACHE_WINDOW_MINUTES (see
- * moods.service). They were never deleted, so the table grew unbounded with rows
- * that can never be read again. Purge anything well past the read window daily.
- * `createdAt` is indexed, so the delete is cheap.
+ * Purge stale cache-only rows while retaining viewed/rated/saved feedback.
+ * Refreshed rows use updatedAt so a reused title is not immediately purged.
  */
 @Injectable()
 export class RecommendationCleanupService {
@@ -24,7 +21,7 @@ export class RecommendationCleanupService {
     const cutoff = new Date(Date.now() - this.RETENTION_HOURS * 60 * 60 * 1000);
     try {
       const { count } = await this.prisma.recommendation.deleteMany({
-        where: { createdAt: { lt: cutoff } },
+        where: { updatedAt: { lt: cutoff }, viewed: false, liked: false, saved: false, rating: null },
       });
       if (count > 0) {
         this.logger.log(

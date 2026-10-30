@@ -34,18 +34,21 @@ const browser = await chromium.launch({
 });
 try {
   const context = await browser.newContext({ reducedMotion: "reduce" });
+  const recommendationRequests = [];
   await context.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/auth/bootstrap"))
       return route.fulfill({
         json: {
           user: null,
+          canRefresh: false,
           watchlist: { movieId: [], seriesId: [] },
           liked: { movieId: [], seriesId: [] },
         },
       });
     if (url.pathname.endsWith("/moods")) return route.fulfill({ json: moods });
     if (url.pathname.includes("/moods/recommendations")) {
+      recommendationRequests.push(url);
       const moodId =
         url.searchParams.get("moodId") ||
         route.request().postDataJSON()?.moodId;
@@ -58,6 +61,9 @@ try {
               mediaType: "movie",
               voteAverage: 8.1,
               overview: "A story to suit your night.",
+              reason: "Warm family stories for a comforting night.",
+              releaseDate: "2024-03-12",
+              genreNames: ["Family", "Comedy"],
             },
           ],
         },
@@ -82,6 +88,34 @@ try {
       .getByRole("button", { name: "Select Cozy mood", exact: true })
       .waitFor();
     await page.getByRole("link", { name: /A cozy story/ }).waitFor();
+    const firstRequest = recommendationRequests.at(-1);
+    assert.equal(firstRequest.searchParams.get("limit"), "10");
+    assert.equal(firstRequest.searchParams.get("excludeViewed"), "true");
+    assert.match(firstRequest.searchParams.get("seed"), /^\d+$/);
+    const resultCard = page.getByRole("link", { name: /A cozy story/ });
+    await resultCard
+      .getByText("Why it fits: Warm family stories for a comforting night.")
+      .waitFor();
+    await resultCard.getByText("Family · Comedy").waitFor();
+    await resultCard.getByText("2024", { exact: true }).waitFor();
+    const refreshed = page.waitForResponse((response) =>
+      response.url().includes("/moods/recommendations"),
+    );
+    await page
+      .getByRole("button", { name: "Refresh recommendations", exact: true })
+      .click();
+    await refreshed;
+    const refreshedRequest = recommendationRequests.at(-1);
+    assert.notEqual(
+      refreshedRequest.searchParams.get("seed"),
+      firstRequest.searchParams.get("seed"),
+    );
+    assert.ok(
+      refreshedRequest.searchParams.getAll("excludeKeys").includes("movie:100"),
+    );
+    await page
+      .getByRole("button", { name: "Refresh recommendations", exact: true })
+      .waitFor({ state: "visible" });
     const layout = await wheel.evaluate((element) => {
       const rect = element.getBoundingClientRect();
       const header = document
@@ -161,7 +195,7 @@ try {
         .waitFor();
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(300);
-      await page.screenshot({ path: `${outputDir}/wheel-${width}.png` });
+      await page.screenshot({ path: `${outputDir}/wheel-${width}.png`, fullPage: true });
     }
     await wheel
       .getByRole("button", { name: "Spin the mood wheel", exact: true })
@@ -181,6 +215,28 @@ try {
   }
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await wheelSpin(page);
+  await page.evaluate(() => {
+    Storage.prototype.getItem = () => {
+      throw new Error("Storage blocked");
+    };
+    Storage.prototype.setItem = () => {
+      throw new Error("Storage blocked");
+    };
+  });
+  const storageBlockedRefresh = page.waitForResponse((response) =>
+    response.url().includes("/moods/recommendations"),
+  );
+  await page
+    .getByRole("button", { name: "Refresh recommendations", exact: true })
+    .click();
+  await storageBlockedRefresh;
+  assert.ok(
+    recommendationRequests
+      .at(-1)
+      .searchParams.getAll("excludeKeys")
+      .includes("movie:100"),
+    "Refresh lost recently displayed matches when storage was blocked",
+  );
   assert.deepEqual(errors, []);
   await context.close();
 } finally {

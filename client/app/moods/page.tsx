@@ -38,6 +38,7 @@ type RecommendationFromApi = {
   voteCount?: number;
   genres?: string[];
   releaseDate?: string;
+  reason?: string;
 };
 
 type RecommendationPayload = Partial<{
@@ -65,6 +66,7 @@ type RecommendationPayload = Partial<{
   release_date: string;
   releaseDate: string;
   first_air_date: string;
+  reason: string;
 }>;
 
 type MoodCluster = {
@@ -235,6 +237,7 @@ const normalizeRecommendations = (
       voteCount: r.vote_count ?? r.voteCount ?? 0,
       genres: r.genres ?? r.genreNames ?? [],
       releaseDate: r.release_date ?? r.releaseDate ?? r.first_air_date ?? "",
+      reason: r.reason ?? "",
     };
   });
 
@@ -306,6 +309,11 @@ export default function MoodDiscoveryWheel() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const spinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recommendationRequestRef = useRef(0);
+  const recommendationAbortRef = useRef<AbortController | null>(null);
+  const recommendationSessionsRef = useRef(
+    new Map<string, { seed: number; excludeKeys: string[] }>(),
+  );
+  const recentRecommendationKeysRef = useRef(new Map<string, string[]>());
 
   useEffect(() => {
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -394,67 +402,98 @@ export default function MoodDiscoveryWheel() {
 
   useEffect(() => {
     if (!selectedMoodId) return;
-    fetchRecommendationsForMood(selectedMoodId, false, 8);
+    void fetchRecommendationsForMood(selectedMoodId);
+    return () => {
+      recommendationRequestRef.current += 1;
+      recommendationAbortRef.current?.abort();
+    };
   }, [selectedMoodId]);
 
   async function fetchRecommendationsForMood(
     moodId: string,
     forceRefresh = false,
-    limit = 8,
+    limit = 10,
   ) {
     const requestId = ++recommendationRequestRef.current;
+    recommendationAbortRef.current?.abort();
+    const controller = new AbortController();
+    recommendationAbortRef.current = controller;
     setLoadingRecs(true);
     setRecError(null);
 
     try {
-      if (forceRefresh) {
-        const response = await sessionFetch(
-          `${API_BASE}/moods/recommendations/regenerate`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              moodId,
-              limit,
-              page: 1,
-              mediaType: "both",
-              userId: null,
-              shuffle: true,
-            }),
-          },
-        );
-
-        if (!response.ok)
-          throw new Error(
-            `Failed to fetch recommendations (${response.status})`,
+      const storageKey = `moodies:mood-recent:${moodId}`;
+      let recentKeys = recentRecommendationKeysRef.current.get(moodId);
+      if (!recentKeys) {
+        recentKeys = [];
+        try {
+          const stored: unknown = JSON.parse(
+            localStorage.getItem(storageKey) ?? "[]",
           );
-        const data = await response.json();
-        if (requestId !== recommendationRequestRef.current) return;
-        setRecommendations(
-          normalizeRecommendations(data?.recommendations ?? []),
-        );
-        return;
+          if (Array.isArray(stored)) {
+            recentKeys = stored
+              .filter(
+                (key): key is string =>
+                  typeof key === "string" &&
+                  /^(movie|tv):[1-9]\d{0,9}$/.test(key),
+              )
+              .slice(0, 100);
+          }
+        } catch {
+          // Keep in-visit history when persistent storage is unavailable.
+        }
+        recentRecommendationKeysRef.current.set(moodId, recentKeys);
       }
-
+      let session = recommendationSessionsRef.current.get(moodId);
+      if (!session || forceRefresh) {
+        session = {
+          seed: crypto.getRandomValues(new Uint32Array(1))[0],
+          excludeKeys: recentKeys,
+        };
+        recommendationSessionsRef.current.set(moodId, session);
+      }
       const url = new URL(`${API_BASE}/moods/recommendations`);
       url.searchParams.set("moodId", moodId);
       url.searchParams.set("limit", String(limit));
       url.searchParams.set("page", "1");
       url.searchParams.set("mediaType", "both");
       url.searchParams.set("shuffle", "true");
+      url.searchParams.set("excludeViewed", "true");
+      url.searchParams.set("seed", String(session.seed));
+      for (const key of session.excludeKeys)
+        url.searchParams.append("excludeKeys", key);
 
-      const response = await fetch(url.toString());
+      const response = await sessionFetch(url.toString(), {
+        signal: controller.signal,
+      });
       if (!response.ok)
         throw new Error(`Failed to fetch recommendations (${response.status})`);
       const data = await response.json();
       if (requestId !== recommendationRequestRef.current) return;
-      setRecommendations(
-        normalizeRecommendations(data?.recommendations ?? data?.results ?? []),
+      const next = normalizeRecommendations(
+        data?.recommendations ?? data?.results ?? [],
       );
+      setRecommendations(next);
+      const displayedKeys = next
+        .map((rec) => `${rec.type}:${rec.id}`)
+        .filter((key) => /^(movie|tv):[1-9]\d{0,9}$/.test(key));
+      const updatedRecentKeys = [
+        ...new Set([...displayedKeys, ...recentKeys]),
+      ].slice(0, 100);
+      recentRecommendationKeysRef.current.set(moodId, updatedRecentKeys);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(updatedRecentKeys));
+      } catch {
+        // A blocked storage write must not discard successful recommendations.
+      }
     } catch (error) {
-      if (requestId !== recommendationRequestRef.current) return;
+      if (
+        requestId !== recommendationRequestRef.current ||
+        controller.signal.aborted
+      )
+        return;
       console.error("fetchRecommendationsForMood error:", error);
-      setRecError("Unable to load recommendations");
+      setRecError("Unable to load recommendations. Use refresh to try again.");
       setRecommendations([]);
     } finally {
       if (requestId === recommendationRequestRef.current) setLoadingRecs(false);
@@ -727,7 +766,9 @@ export default function MoodDiscoveryWheel() {
                 {activeMoods.map((mood, index) => {
                   const angle =
                     index * (360 / activeMoods.length) +
-                    180 / activeMoods.length - 90 + (currentRotation % 360);
+                    180 / activeMoods.length -
+                    90 +
+                    (currentRotation % 360);
                   const point = polarToCartesian(50, 50, 31, angle);
                   const isSelected = mood.id === selectedMoodId && !isSpinning;
                   return (
@@ -740,8 +781,15 @@ export default function MoodDiscoveryWheel() {
                       <motion.span
                         key={`${activeClusterId}-${currentRotation}`}
                         initial={{ opacity: 0, y: reducedMotion ? 0 : 4 }}
-                        animate={{ opacity: isSpinning ? 0 : 1, y: isSpinning && !reducedMotion ? 4 : 0 }}
-                        transition={{ duration: reducedMotion ? 0 : 0.28, delay: reducedMotion || isSpinning ? 0 : 0.5, ease: "easeOut" }}
+                        animate={{
+                          opacity: isSpinning ? 0 : 1,
+                          y: isSpinning && !reducedMotion ? 4 : 0,
+                        }}
+                        transition={{
+                          duration: reducedMotion ? 0 : 0.28,
+                          delay: reducedMotion || isSpinning ? 0 : 0.5,
+                          ease: "easeOut",
+                        }}
                         className={`absolute inset-x-0 top-[82%] text-center text-xs font-semibold leading-tight sm:text-sm ${isSelected ? "text-white" : "text-white/80"}`}
                       >
                         {mood.name}
@@ -790,7 +838,10 @@ export default function MoodDiscoveryWheel() {
                   initial={{ opacity: 0, y: reducedMotion ? 0 : 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: reducedMotion ? 0 : -4 }}
-                  transition={{ duration: reducedMotion ? 0 : 0.32, ease: "easeOut" }}
+                  transition={{
+                    duration: reducedMotion ? 0 : 0.32,
+                    ease: "easeOut",
+                  }}
                   className="mx-auto mt-3 mb-4 flex max-w-xl items-center gap-3 border-l-2 px-3 py-2"
                   style={{
                     borderColor: selectedMood.color ?? activeCluster.color,
@@ -871,10 +922,8 @@ export default function MoodDiscoveryWheel() {
                   />
                 </span>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                    Recommendations
-                  </p>
-                  <h2 className="mt-1 text-lg font-black sm:text-xl">
+                  <p className="ui-kicker">Recommendations</p>
+                  <h2 className="mt-1 text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl">
                     {selectedMood?.name ?? "Mood"} picks
                   </h2>
                 </div>
@@ -882,18 +931,17 @@ export default function MoodDiscoveryWheel() {
               <button
                 onClick={() =>
                   selectedMoodId &&
-                  fetchRecommendationsForMood(
-                    selectedMoodId,
-                    true,
-                    recommendations.length || 8,
-                  )
+                  fetchRecommendationsForMood(selectedMoodId, true, 10)
                 }
                 disabled={loadingRecs || !selectedMoodId}
-                className="rounded-lg border border-white/10 bg-white/[0.04] p-2 text-zinc-300 transition hover:border-white/20 hover:bg-white/[0.08] disabled:opacity-50"
+                className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[var(--ink-muted)] transition hover:border-white/20 hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] active:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                 title="Refresh recommendations"
+                aria-label="Refresh recommendations"
+                aria-busy={loadingRecs}
               >
                 <RefreshCw
-                  className={`h-4 w-4 ${loadingRecs ? "animate-spin" : ""}`}
+                  aria-hidden="true"
+                  className={`h-4 w-4 ${loadingRecs && !reducedMotion ? "animate-spin" : ""}`}
                 />
               </button>
             </div>
@@ -944,6 +992,7 @@ export default function MoodDiscoveryWheel() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   className="rounded-lg border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-200"
+                  role="alert"
                 >
                   {recError}
                 </motion.div>
@@ -955,9 +1004,14 @@ export default function MoodDiscoveryWheel() {
                   exit={{ opacity: 0, y: -10 }}
                   className="rounded-lg border border-white/10 bg-black/20 p-6 text-center"
                 >
-                  <Sparkles className="mx-auto h-8 w-8 text-zinc-500" />
-                  <p className="mt-3 text-sm text-zinc-400">
-                    Select a mood to generate suggestions.
+                  <Sparkles
+                    aria-hidden="true"
+                    className="mx-auto h-8 w-8 text-[var(--ink-muted)]"
+                  />
+                  <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+                    {selectedMood
+                      ? `No close matches for ${selectedMood.name.toLowerCase()} right now. Try another mood or refresh.`
+                      : "Select a mood to generate suggestions."}
                   </p>
                 </motion.div>
               ) : (
@@ -972,10 +1026,10 @@ export default function MoodDiscoveryWheel() {
                     <motion.a
                       key={`${rec.type}-${rec.id}`}
                       href={`/${rec.type === "tv" ? "tv" : "movies"}/${rec.id}`}
-                      initial={{ opacity: 0, y: 12 }}
+                      initial={reducedMotion ? false : { opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.025 }}
-                      className="group flex gap-3 rounded-lg border border-white/10 bg-black/20 p-2.5 transition hover:border-white/25 hover:bg-white/[0.055] sm:p-3"
+                      transition={{ delay: reducedMotion ? 0 : index * 0.025 }}
+                      className="group flex cursor-pointer gap-3 rounded-lg border border-white/10 bg-black/20 p-2.5 transition hover:border-white/25 hover:bg-white/[0.055] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] active:bg-white/10 sm:p-3"
                     >
                       <span className="relative h-[5.5rem] w-14 shrink-0 overflow-hidden rounded-md bg-zinc-900 sm:h-24 sm:w-16">
                         <Image
@@ -991,10 +1045,10 @@ export default function MoodDiscoveryWheel() {
                         />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="line-clamp-2 text-sm font-bold text-white group-hover:text-red-200">
+                        <span className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] group-hover:text-[var(--brand-coral-strong)]">
                           {rec.title}
                         </span>
-                        <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                        <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--ink-muted)]">
                           <span className="inline-flex items-center gap-1">
                             {rec.type === "tv" ? (
                               <Tv className="h-3 w-3" />
@@ -1003,6 +1057,9 @@ export default function MoodDiscoveryWheel() {
                             )}
                             {rec.type === "tv" ? "Series" : "Movie"}
                           </span>
+                          {rec.releaseDate && (
+                            <span>{rec.releaseDate.slice(0, 4)}</span>
+                          )}
                           {Number(rec.voteAverage ?? 0) > 0 && (
                             <span className="inline-flex items-center gap-1 text-yellow-300">
                               <Star className="h-3 w-3 fill-current" />
@@ -1010,11 +1067,21 @@ export default function MoodDiscoveryWheel() {
                             </span>
                           )}
                         </span>
-                        <span className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-500">
-                          {rec.overview || "No description available."}
+                        {Boolean(rec.genres?.length) && (
+                          <span className="mt-1 block text-xs text-[var(--ink-muted)]">
+                            {rec.genres?.slice(0, 2).join(" · ")}
+                          </span>
+                        )}
+                        <span className="mt-2 block text-sm leading-6 text-[var(--ink-muted)]">
+                          {rec.reason
+                            ? `Why it fits: ${rec.reason}`
+                            : rec.overview || "No description available."}
                         </span>
                       </span>
-                      <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-zinc-600 transition-colors group-hover:text-red-200" />
+                      <ArrowRight
+                        aria-hidden="true"
+                        className="mt-1 h-4 w-4 shrink-0 text-[var(--ink-muted)] transition-colors group-hover:text-[var(--brand-coral-strong)]"
+                      />
                     </motion.a>
                   ))}
                 </motion.div>

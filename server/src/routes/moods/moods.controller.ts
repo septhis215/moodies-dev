@@ -80,7 +80,7 @@ export class MoodsController {
 
     @Post('recommendations/regenerate')
     @UseGuards(OptionalJwtGuard)
-    @ApiOperation({ summary: 'Delete cached recommendations and regenerate fresh ones' })
+    @ApiOperation({ summary: 'Vary recommendations using the cached candidate pool' })
     @ApiResponse({ status: 200, description: 'Fresh list of recommendations' })
     async regenerateRecommendations(@Req() req: any, @Body() dto: GetRecommendationsDto) {
         dto.userId = this.resolveUserId(req);
@@ -88,11 +88,12 @@ export class MoodsController {
     }
 
     @Post('recommendations/feedback')
+    @UseGuards(JwtGuard)
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Provide feedback on a recommendation' })
     @ApiResponse({ status: 200, description: 'Feedback recorded successfully' })
-    async provideFeedback(@Body() dto: RecommendationFeedbackDto) {
-        return this.moodsService.provideFeedback(dto);
+    async provideFeedback(@Req() req: any, @Body() dto: RecommendationFeedbackDto) {
+        return this.moodsService.provideFeedback(dto, this.resolveUserId(req)!);
     }
 
     // ── Param routes — declared after all static routes ─────────────────────
