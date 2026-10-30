@@ -1,23 +1,25 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
 import {
+  IconArrowRight,
   IconArrowUpRight,
+  IconBookmark,
   IconChevronDown,
-  IconLogin,
+  IconCompass,
+  IconDeviceTv,
   IconLogout,
   IconMenu2,
-  IconSparkles,
+  IconMoodSmile,
+  IconMovie,
+  IconUsers,
   IconUser,
-  IconUserPlus,
   IconX,
 } from "@tabler/icons-react";
-import { Bookmark, Heart } from "lucide-react";
 import { useAuth } from "@/app/context/AuthProvider";
 import { appToast } from "@/lib/toast";
 import DropdownPortal from "./ui/dropdownPortal";
@@ -25,14 +27,62 @@ import SearchBar from "./ui/searchbar";
 import {
   MobileNav,
   MobileNavHeader,
-  MobileNavMenu,
-  MobileNavToggle,
   NavBody,
   Navbar,
   NavbarLogo,
 } from "./ui/resizable-navbar";
 
-const routes = [
+type NavigationLink = { name: string; href: string };
+
+const primaryLinks: NavigationLink[] = [
+  { name: "Movies", href: "/movies" },
+  { name: "TV shows", href: "/tv" },
+  { name: "Moods", href: "/moods/explore" },
+  { name: "Feed", href: "/feed" },
+];
+
+const navigationGroups = [
+  {
+    title: "Discover",
+    icon: IconCompass,
+    links: [
+      { name: "Home", href: "/" },
+      { name: "Trending", href: "/trending" },
+      { name: "New releases", href: "/fresh-off-the-screen" },
+      { name: "Coming soon", href: "/coming-soon" },
+      { name: "Korean hits", href: "/korean-hits" },
+    ],
+  },
+  {
+    title: "Community & people",
+    icon: IconUsers,
+    links: [
+      { name: "Community", href: "/community" },
+      { name: "Celebrities", href: "/celeb" },
+    ],
+  },
+  {
+    title: "Mood tools",
+    icon: IconMoodSmile,
+    links: [
+      { name: "Mood wheel", href: "/moods" },
+      { name: "Personality quiz", href: "/quiz" },
+      { name: "Movies for your mood", href: "/movies#moods" },
+      { name: "TV for your mood", href: "/tv#moods" },
+    ],
+  },
+  {
+    title: "Your library",
+    icon: IconBookmark,
+    links: [
+      { name: "Collection", href: "/collection" },
+      { name: "Watchlist", href: "/watchlist" },
+      { name: "Liked titles", href: "/liked" },
+    ],
+  },
+];
+
+const mobileRoutes = [
   { name: "Home", href: "/" },
   { name: "Movies", href: "/movies" },
   { name: "TV shows", href: "/tv" },
@@ -43,7 +93,7 @@ const routes = [
   { name: "Collection", href: "/collection" },
 ];
 
-const routeOptions: Record<string, { label: string; path: string }[]> = {
+const mobileRouteOptions: Record<string, { label: string; path: string }[]> = {
   "/": [
     { label: "Movies", path: "/movies" },
     { label: "TV shows", path: "/tv" },
@@ -104,64 +154,19 @@ const routeOptions: Record<string, { label: string; path: string }[]> = {
   ],
 };
 
-const MOODIES_LOGO = "/images/moodies-transparent.png";
-const NAVIGATION_ICON_SOURCES: Record<string, string> = {
+const mobileMascotSources: Record<string, string> = {
+  "/": "/images/moods/happy.png",
   "/movies": "/images/badges/movie-buff.png",
   "/tv": "/images/badges/binge-legend.png",
+  "/celeb": "/images/moods/inspirational.png",
   "/moods/explore": "/images/badges/mood-starter.png",
   "/feed": "/images/mascot-feed.png",
   "/community": "/images/badges/community-star.png",
 };
-const sectionIntroductions: Record<
-  string,
-  { title: string; description: string; mascot: string }
-> = {
-  "/": {
-    title: "Moodies home",
-    description:
-      "A little of everything: movies, TV shows, and mood-led picks.",
-    mascot: "happy",
-  },
-  "/movies": {
-    title: "Movies",
-    description:
-      "Find your next film: fresh releases, favourites, and picks for your mood.",
-    mascot: "thrilling",
-  },
-  "/tv": {
-    title: "TV shows",
-    description:
-      "Find a series to settle into, from new arrivals to returning favourites.",
-    mascot: "chill",
-  },
-  "/moods/explore": {
-    title: "Explore your moods",
-    description: "Let how you feel guide your next movie or TV show.",
-    mascot: "mind-bending",
-  },
-  "/collection": {
-    title: "Collection",
-    description: "Keep your discoveries together: saved titles and favourites.",
-    mascot: "nostalgic",
-  },
-  "/celeb": {
-    title: "Explore people",
-    description: "Discover the people behind your favourite stories.",
-    mascot: "inspirational",
-  },
-  "/feed": {
-    title: "Moodies Feed",
-    description: "See what the Moodies community is sharing.",
-    mascot: "funny",
-  },
-  "/community": {
-    title: "The Moodies community",
-    description: "Share feedback and help shape what comes next for Moodies.",
-    mascot: "happy",
-  },
-};
+
 const focusRing =
   "outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]";
+const controlStyle = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink)] ${focusRing}`;
 
 export function NavbarComponent({
   sticky = false,
@@ -171,880 +176,708 @@ export function NavbarComponent({
   transparent?: boolean;
 }) {
   const pathname = usePathname();
-  const currentRoute =
-    routes.find((route) =>
-      route.href === "/"
-        ? pathname === "/"
-        : pathname === route.href || pathname.startsWith(`${route.href}/`),
-    )?.href ?? (
-      pathname === "/moods" || pathname === "/quiz"
-        ? "/moods/explore"
-        : ["/watchlist", "/liked", "/profile"].some(route => pathname === route || pathname.startsWith(`${route}/`))
-          ? "/collection"
-          : "/"
-    );
+  const { user, isAuthenticated, logout: doLogout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [activeRoute, setActiveRoute] = useState(currentRoute);
   const [mobileExpandedRoute, setMobileExpandedRoute] = useState<string | null>(
     null,
   );
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const createdPortalRef = useRef(false);
-  const dropdownTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const dropdownContentRef = useRef<HTMLDivElement | null>(null);
-  const hoverTimeoutRef = useRef<number | null>(null);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
-  const { user, isAuthenticated, logout: doLogout } = useAuth();
-
-  const profileHref = isAuthenticated ? "/profile" : "/auth/login";
-  const displayName = user?.username ?? user?.name ?? "Guest";
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const accountTriggerRef = useRef<HTMLButtonElement>(null);
+  const accountContentRef = useRef<HTMLElement>(null);
+  const previousPathRef = useRef(pathname);
+  const displayName = user?.username ?? user?.name ?? "Account";
   const initial = (user?.username?.[0] || user?.name?.[0] || "M").toUpperCase();
-  const activeIntroduction = sectionIntroductions[activeRoute];
-  const openExploreMenu = () => {
-    setActiveRoute(currentRoute);
-    setIsMenuOpen((open) => !open);
-  };
 
-  const openProfile = () => {
-    if (!dropdownTriggerRef.current) return;
-    const rect = dropdownTriggerRef.current.getBoundingClientRect();
-    setDropdownPosition({
-      top: rect.bottom + 10,
-      left: Math.max(12, rect.right - 256),
-    });
-    if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
-    hoverTimeoutRef.current = null;
-    setIsProfileOpen(true);
-  };
+  useEffect(() => {
+    const element = document.createElement("div");
+    element.id = "menu-portal";
+    document.body.appendChild(element);
+    setPortalRoot(element);
+    return () => element.remove();
+  }, []);
 
-  const closeProfile = (delay = 120) => {
-    if (hoverTimeoutRef.current) window.clearTimeout(hoverTimeoutRef.current);
-    hoverTimeoutRef.current = window.setTimeout(() => {
+  useEffect(() => {
+    if (previousPathRef.current !== pathname) {
+      setIsMenuOpen(false);
+      setMobileExpandedRoute(null);
       setIsProfileOpen(false);
-      hoverTimeoutRef.current = null;
-    }, delay);
+      previousPathRef.current = pathname;
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    const breakpoint = window.matchMedia("(min-width: 1024px)");
+    const closeOverlays = () => {
+      setIsMenuOpen(false);
+      setMobileExpandedRoute(null);
+      setIsProfileOpen(false);
+    };
+    breakpoint.addEventListener("change", closeOverlays);
+    window.addEventListener("popstate", closeOverlays);
+    return () => {
+      breakpoint.removeEventListener("change", closeOverlays);
+      window.removeEventListener("popstate", closeOverlays);
+    };
+  }, []);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || !isMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = "hidden";
+    // Native modal behavior makes the page inert and contains keyboard focus.
+    if (!dialog.open) dialog.showModal();
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected && previousFocus.getClientRects().length)
+        previousFocus.focus({ preventScroll: true });
+    };
+  }, [isMenuOpen, portalRoot]);
+
+  useEffect(() => {
+    if (!isProfileOpen) return;
+    const closeOutside = (event: Event) => {
+      const target = event.target as Node;
+      if (
+        !accountTriggerRef.current?.contains(target) &&
+        !accountContentRef.current?.contains(target)
+      )
+        setIsProfileOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsProfileOpen(false);
+        accountTriggerRef.current?.focus();
+      }
+    };
+    const openedAt = { x: window.scrollX, y: window.scrollY };
+    const closeOnScroll = () => {
+      if (window.scrollX !== openedAt.x || window.scrollY !== openedAt.y)
+        setIsProfileOpen(false);
+    };
+    const closeOnResize = () => setIsProfileOpen(false);
+    const frame = window.requestAnimationFrame(() =>
+      accountContentRef.current
+        ?.querySelector<HTMLElement>("a, button")
+        ?.focus({ preventScroll: true }),
+    );
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("focusin", closeOutside);
+    document.addEventListener("keydown", escape);
+    window.addEventListener("scroll", closeOnScroll, { passive: true });
+    window.addEventListener("resize", closeOnResize);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("focusin", closeOutside);
+      document.removeEventListener("keydown", escape);
+      window.removeEventListener("scroll", closeOnScroll);
+      window.removeEventListener("resize", closeOnResize);
+    };
+  }, [isProfileOpen]);
+
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+    setMobileExpandedRoute(null);
+  };
+  const openMenu = () => {
+    setIsProfileOpen(false);
+    setIsMenuOpen(true);
+  };
+  const toggleAccount = () => {
+    const rect = accountTriggerRef.current?.getBoundingClientRect();
+    if (rect)
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        left: Math.max(12, rect.right - 240),
+      });
+    setIsProfileOpen((open) => !open);
   };
 
   const logout = async () => {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
     setIsProfileOpen(false);
-
+    closeMenu();
     try {
       await doLogout();
       appToast.info("You've been logged out successfully", {
         title: "See you next time",
         duration: 3000,
       });
+    } catch {
+      appToast.error("Could not sign out. Please try again.");
     } finally {
       setIsLoggingOut(false);
     }
   };
 
-  useEffect(() => {
-    let element = document.getElementById("menu-portal");
-    if (!element) {
-      element = document.createElement("div");
-      element.id = "menu-portal";
-      document.body.appendChild(element);
-      createdPortalRef.current = true;
-    }
-    setPortalRoot(element);
+  const isPrimaryActive = (href: string) =>
+    href === "/moods/explore"
+      ? pathname === "/quiz" ||
+        pathname === "/moods" ||
+        pathname.startsWith("/moods/")
+      : pathname === href || pathname.startsWith(`${href}/`);
+  const isDestinationActive = (href: string) =>
+    !href.includes("#") &&
+    (pathname === href ||
+      (href !== "/" && href !== "/moods" && pathname.startsWith(`${href}/`)));
+  const isMoreActive =
+    navigationGroups.some((group) =>
+      group.links.some(
+        (link) => link.href !== "/" && isDestinationActive(link.href),
+      ),
+    ) && !primaryLinks.some((link) => isPrimaryActive(link.href));
+  const destinationClass = (href: string) =>
+    `group flex min-h-11 items-center justify-between gap-2 rounded-lg border-l-2 px-3 py-2 text-sm leading-5 transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink)] ${isDestinationActive(href) ? "border-[var(--brand-coral-strong)] bg-[var(--surface-2)] font-semibold text-[var(--brand-coral-strong)]" : "border-transparent text-[var(--ink-muted)]"} ${focusRing}`;
 
-    return () => {
-      if (createdPortalRef.current && element?.parentNode) {
-        element.parentNode.removeChild(element);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsMenuOpen(false);
-        setIsMobileOpen(false);
-        setIsProfileOpen(false);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
-    if (isMenuOpen || isMobileOpen) document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isMenuOpen, isMobileOpen]);
-
-  useEffect(() => {
-    if (!isMenuOpen && !isMobileOpen) return;
-    const previousFocus = document.activeElement as HTMLElement | null;
-    const dialog = document.querySelector<HTMLElement>(
-      isMenuOpen
-        ? "#site-menu"
-        : '[role="dialog"][aria-label="Mobile navigation"]',
-    );
-    if (!dialog) return;
-    const focusable = () =>
-      Array.from(
-        dialog.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), [tabindex="0"]',
-        ),
-      ).filter((element) => element.getClientRects().length > 0);
-    focusable()[0]?.focus();
-    const trapFocus = (event: KeyboardEvent) => {
-      if (event.key !== "Tab") return;
-      const elements = focusable();
-      const first = elements[0];
-      const last = elements[elements.length - 1];
-      if (!first || !last) return;
-      if (
-        event.shiftKey &&
-        (document.activeElement === first ||
-          !dialog.contains(document.activeElement))
-      ) {
-        event.preventDefault();
-        last.focus();
-      } else if (
-        !event.shiftKey &&
-        (document.activeElement === last ||
-          !dialog.contains(document.activeElement))
-      ) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", trapFocus);
-    return () => {
-      document.removeEventListener("keydown", trapFocus);
-      if (previousFocus?.isConnected) previousFocus.focus();
-    };
-  }, [isMenuOpen, isMobileOpen]);
-
-  useEffect(() => {
-    const onDocumentPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        dropdownTriggerRef.current?.contains(target) ||
-        dropdownContentRef.current?.contains(target)
-      ) {
-        return;
-      }
-      setIsProfileOpen(false);
-    };
-    document.addEventListener("mousedown", onDocumentPointerDown);
-    return () =>
-      document.removeEventListener("mousedown", onDocumentPointerDown);
-  }, []);
-
-  useEffect(() => {
-    // The navbar scrolls with the page, so the fixed-positioned profile
-    // dropdown would detach from its trigger — close it as soon as scrolling
-    // starts.
-    const onWindowScroll = () => {
-      if (hoverTimeoutRef.current) {
-        window.clearTimeout(hoverTimeoutRef.current);
-        hoverTimeoutRef.current = null;
-      }
-      setIsProfileOpen(false);
-    };
-    window.addEventListener("scroll", onWindowScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onWindowScroll);
-  }, []);
-
-  const avatar = (size: "small" | "large" = "small") => {
-    const dimensions = size === "large" ? "h-12 w-12" : "h-11 w-11";
-    return (
-      <span
-        className={`grid ${dimensions} shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.055] text-sm font-semibold text-white/80`}
-      >
-        {isAuthenticated && user?.avatarUrl ? (
-          <Image
-            src={user.avatarUrl}
-            alt=""
-            width={size === "large" ? 48 : 44}
-            height={size === "large" ? 48 : 44}
-            unoptimized
-            className="h-full w-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-        ) : isAuthenticated ? (
-          initial
-        ) : (
-          <IconUser className="h-5 w-5" aria-hidden="true" />
-        )}
-      </span>
-    );
-  };
-
-  const desktopMenu = (
-    <AnimatePresence>
-      {isMenuOpen && (
-        <motion.div
-          id="site-menu"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Explore Moodies"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-3 backdrop-blur-md sm:p-5"
-          onClick={() => setIsMenuOpen(false)}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.985 }}
-            transition={{ type: "spring", stiffness: 320, damping: 30 }}
-            className="relative grid h-[min(640px,88svh)] min-h-0 w-full max-w-5xl grid-cols-[minmax(230px,0.78fr)_minmax(0,1.45fr)] overflow-hidden rounded-[28px] border border-[var(--surface-border)] bg-[var(--surface-0)] text-[var(--ink)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <aside className="flex min-h-0 flex-col border-r border-white/[0.08] bg-white/[0.025] p-5 xl:p-6">
-              <div className="mb-5 flex items-center justify-between gap-4">
-                <div>
-                  <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#ef775f]">
-                    <IconSparkles className="h-4 w-4" aria-hidden="true" />
-                    Moodies guide
-                  </div>
-                  <h2 className="text-2xl font-bold">Explore</h2>
-                  <p className="mt-1 text-sm text-[var(--ink-muted)]">
-                    Find your next watch by story or mood.
-                  </p>
-                </div>
-                <div
-                  className="relative hidden h-16 w-16 shrink-0 sm:block"
-                  aria-hidden="true"
-                >
-                  <div className="absolute inset-2 rounded-full bg-[#e94f37]/10 blur-xl" />
-                  <Image
-                    src={MOODIES_LOGO}
-                    alt=""
-                    fill
-                    sizes="64px"
-                    className="relative object-contain drop-shadow-[0_8px_14px_rgba(0,0,0,0.35)]"
-                  />
-                </div>
-              </div>
-
-              <nav
-                aria-label="Explore sections"
-                className="min-h-0 space-y-1.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-color:rgba(255,255,255,0.16)_transparent] [scrollbar-width:thin]"
-              >
-                {routes.map((route, index) => {
-                  const isActive = activeRoute === route.href;
-
-                  return (
-                    <motion.div
-                      key={route.href}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.04 + index * 0.035 }}
-                      className={`group flex items-center rounded-xl border transition-colors ${
-                        isActive
-                          ? "border-[#e94f37]/25 bg-[#e94f37]/10"
-                          : "border-transparent hover:border-white/[0.08] hover:bg-white/[0.045]"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setActiveRoute(route.href)}
-                        aria-pressed={isActive}
-                        className={`flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-1 text-left ${focusRing}`}
-                      >
-                        <NavigationMascot
-                          href={route.href}
-                          className="h-12 w-12"
-                        />
-                        <span
-                          className={`truncate text-sm font-medium ${
-                            isActive ? "text-white" : "text-white/68"
-                          }`}
-                        >
-                          {route.name}
-                        </span>
-                      </button>
-                      <IconChevronDown
-                        className="mr-3 h-4 w-4 -rotate-90 text-[var(--ink-muted)]"
-                        aria-hidden="true"
-                      />
-                    </motion.div>
-                  );
-                })}
-              </nav>
-
-              <p className="mt-auto pt-5 text-xs text-white/28">
-                © {new Date().getFullYear()} Moodies
-              </p>
-            </aside>
-
-            <section className="flex min-h-0 min-w-0 flex-col overflow-hidden p-5 xl:p-6">
-              <div className="mb-4 flex shrink-0 items-center justify-between gap-4">
-                <div>
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#ef775f]">
-                    {routes.find((route) => route.href === activeRoute)?.name}
-                  </p>
-                  <h3 className="text-xl font-bold">
-                    Explore{" "}
-                    {activeRoute === "/tv"
-                      ? "TV shows"
-                      : routes
-                          .find((route) => route.href === activeRoute)
-                          ?.name.toLowerCase()}
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsMenuOpen(false)}
-                  aria-label="Close explore menu"
-                  className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-[var(--ink-muted)] hover:bg-white/5 ${focusRing}`}
-                >
-                  <IconX className="h-5 w-5" aria-hidden="true" />
-                </button>
-              </div>
-
-              <motion.div
-                key={activeRoute}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                aria-label={`${routes.find((route) => route.href === activeRoute)?.name} destinations`}
-                tabIndex={0}
-                className={`min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-2xl border border-white/[0.07] bg-black/10 p-2 pr-1.5 [scrollbar-color:rgba(233,79,55,0.38)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin] ${focusRing}`}
-              >
-                <Link
-                  href={activeRoute}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={`mb-4 flex min-h-28 items-center gap-4 rounded-xl border border-[var(--brand-coral)]/35 bg-[var(--surface-2)] p-4 transition-colors hover:border-[var(--brand-coral-strong)] ${focusRing}`}
-                >
-                  {activeIntroduction.mascot && (
-                    <Image
-                      src={`/images/moods/${activeIntroduction.mascot}.png`}
-                      alt={`${activeIntroduction.mascot} mood mascot`}
-                      width={80}
-                      height={80}
-                      unoptimized
-                      className="h-20 w-20 shrink-0 object-contain"
-                    />
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-base font-bold text-[var(--ink)]">
-                      {activeIntroduction.title}
-                    </span>
-                    <span className="mt-1 block text-sm leading-5 text-[var(--ink-muted)]">
-                      {activeIntroduction.description}
-                    </span>
-                    <span className="mt-2 block text-sm font-semibold text-[var(--brand-coral-strong)]">
-                      Go to {activeIntroduction.title.toLowerCase()}
-                    </span>
-                  </span>
-                  <IconArrowUpRight
-                    className="h-5 w-5 shrink-0 text-[var(--brand-coral-strong)]"
-                    aria-hidden="true"
-                  />
-                </Link>
-                <p className="mb-2 px-2 text-xs font-semibold text-[var(--ink-muted)]">
-                  Quick links
-                </p>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {(routeOptions[activeRoute] || []).map((option, index) => (
-                    <motion.div
-                      key={option.path}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.025 }}
-                    >
-                      <Link
-                        href={option.path}
-                        onClick={() => setIsMenuOpen(false)}
-                        className={`group flex min-h-14 items-center justify-between gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-[var(--surface-2)] ${focusRing}`}
-                      >
-                        <div className="min-w-0">
-                          <span className="block text-sm font-medium text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
-                            {option.label}
-                          </span>
-                        </div>
-                        <IconArrowUpRight
-                          className="h-4 w-4 shrink-0 text-white/25 transition group-hover:text-[#f2836d]"
-                          aria-hidden="true"
-                        />
-                      </Link>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-
-              <div className="mt-4 flex shrink-0 items-center gap-3 border-t border-white/[0.08] pt-4">
-                <Link
-                  href={profileHref}
-                  onClick={() => setIsMenuOpen(false)}
-                  aria-label={
-                    isAuthenticated
-                      ? "View your Moodies profile"
-                      : "Sign in to Moodies"
-                  }
-                  className={`rounded-xl transition hover:border-[#e94f37]/35 ${focusRing}`}
-                >
-                  {avatar("large")}
-                </Link>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">
-                    {isAuthenticated ? displayName : "Welcome to Moodies"}
-                  </p>
-                  <p className="truncate text-xs text-white/42">
-                    {user?.email || "Sign in to save your discoveries"}
-                  </p>
-                </div>
-                {isAuthenticated ? (
-                  <button
-                    type="button"
-                    disabled={isLoggingOut}
-                    onClick={() => {
-                      setIsMenuOpen(false);
-                      void logout().catch(() => {});
-                    }}
-                    className={`inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3.5 text-sm font-medium text-white/65 transition hover:border-[#e94f37]/25 hover:bg-[#e94f37]/[0.07] hover:text-white disabled:cursor-wait disabled:opacity-55 ${focusRing}`}
-                  >
-                    <IconLogout
-                      className="h-[18px] w-[18px]"
-                      aria-hidden="true"
-                    />
-                    {isLoggingOut ? "Signing out…" : "Sign out"}
-                  </button>
-                ) : (
-                  <Link
-                    href="/auth/login"
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#e94f37]/30 bg-[#e94f37]/12 px-4 text-sm font-semibold text-[#ffb09f] transition hover:bg-[#e94f37]/18 hover:text-white ${focusRing}`}
-                  >
-                    <IconLogin
-                      className="h-[18px] w-[18px]"
-                      aria-hidden="true"
-                    />
-                    Sign in
-                  </Link>
-                )}
-              </div>
-            </section>
-          </motion.div>
-        </motion.div>
+  const avatar = () => (
+    <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--surface-2)] text-xs font-semibold text-[var(--ink)]">
+      {user?.avatarUrl ? (
+        <Image
+          src={user.avatarUrl}
+          alt=""
+          width={32}
+          height={32}
+          unoptimized
+          className="h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        initial
       )}
-    </AnimatePresence>
+    </span>
   );
 
-  return (
-    <Navbar sticky={sticky} transparent={transparent}>
-      <NavBody className="hidden lg:flex lg:py-3">
-        <NavbarLogo />
+  const mobileAvatar = (large = false) => (
+    <span
+      className={`grid ${large ? "h-12 w-12" : "h-11 w-11"} shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-white/[0.055] text-sm font-semibold text-white/80`}
+    >
+      {isAuthenticated && user?.avatarUrl ? (
+        <Image
+          src={user.avatarUrl}
+          alt=""
+          width={large ? 48 : 44}
+          height={large ? 48 : 44}
+          unoptimized
+          className="h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+      ) : isAuthenticated ? (
+        initial
+      ) : (
+        <IconUser className="h-5 w-5" aria-hidden="true" />
+      )}
+    </span>
+  );
 
-        <nav
-          aria-label="Primary navigation"
-          className="flex items-center gap-1"
-        >
-          {routes.filter(route => route.href !== "/" && route.href !== "/collection").map((item) => {
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={pathname === item.href ? "page" : undefined}
-                className={`inline-flex h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-xl px-3 text-sm font-semibold leading-5 transition-colors hover:bg-white/[0.055] hover:text-[var(--ink)] ${currentRoute === item.href ? "bg-[var(--surface-2)] text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"} ${focusRing}`}
-              >
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
+  const accountControl = isAuthenticated ? (
+    <button
+      ref={accountTriggerRef}
+      type="button"
+      aria-label="Account"
+      aria-expanded={isProfileOpen}
+      aria-controls="account-navigation"
+      onClick={toggleAccount}
+      className={`${controlStyle} pl-1.5 pr-2 text-[var(--ink)]`}
+    >
+      {avatar()}
+      <span className="hidden max-w-28 truncate xl:block">{displayName}</span>
+      <IconChevronDown
+        className={`h-4 w-4 text-[var(--ink-muted)] ${isProfileOpen ? "rotate-180" : ""}`}
+        aria-hidden="true"
+      />
+    </button>
+  ) : (
+    <Link
+      href="/auth/login"
+      className={`${controlStyle} border border-[var(--surface-border)] text-[var(--ink)]`}
+    >
+      Sign in
+    </Link>
+  );
 
-        <div className="flex shrink-0 items-center gap-2">
-          <SearchBar
-            placeholder="Search movies, series..."
-            onSearch={() => undefined}
-          />
+  const search = (
+    <SearchBar
+      placeholder="Search movies, series..."
+      onSearch={() => undefined}
+    />
+  );
+  const modal = (
+    <dialog
+      ref={dialogRef}
+      id="site-menu"
+      aria-label="Navigation menu"
+      onCancel={closeMenu}
+      onClose={closeMenu}
+      onKeyDown={(event) => {
+        if (event.key !== "Tab") return;
+        const links = Array.from(
+          event.currentTarget.querySelectorAll<HTMLElement>(
+            "a[href], button:not([disabled])",
+          ),
+        ).filter((element) => element.getClientRects().length > 0);
+        const first = links[0];
+        const last = links[links.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) closeMenu();
+      }}
+      className="fixed inset-0 m-0 ml-auto h-dvh max-h-dvh w-full max-w-none overflow-hidden border-0 bg-transparent p-0 text-[var(--ink)] backdrop:bg-black/65 lg:m-auto lg:h-auto lg:max-h-[min(760px,calc(100dvh-3rem))] lg:w-[min(1000px,calc(100vw-3rem))] lg:max-w-none lg:rounded-2xl lg:backdrop:bg-black/45"
+    >
+      <div
+        className="flex h-full max-h-dvh flex-col border-0 border-[var(--surface-border)] lg:border bg-[var(--surface-0)] lg:h-auto lg:max-h-[min(760px,calc(100dvh-3rem))] lg:rounded-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mx-auto flex w-full shrink-0 items-center justify-end gap-4 border-[var(--surface-border)] px-4 pb-0 sm:max-w-[calc(36rem+3rem)] sm:px-6 lg:max-w-none lg:justify-between lg:border-b lg:pb-4 pt-[max(1rem,env(safe-area-inset-top))] lg:px-6 lg:pt-5">
+          <div className="hidden lg:block">
+            <p className="ui-kicker">Explore Moodies</p>
+            <h2 className="mt-2 text-xl font-bold leading-tight sm:text-2xl">
+              What will you watch?
+            </h2>
+          </div>
           <button
             type="button"
-            aria-expanded={isMenuOpen}
-            aria-controls="site-menu"
-            aria-label={isMenuOpen ? "Close explore menu" : "Open explore menu"}
-            onClick={openExploreMenu}
-            className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white/70 transition hover:border-[#e94f37]/25 hover:bg-white/[0.075] hover:text-white ${focusRing}`}
+            onClick={closeMenu}
+            aria-label="Close menu"
+            className={`grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-[var(--ink-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink)] lg:rounded-lg lg:border-0 lg:bg-transparent ${focusRing}`}
           >
-            <IconMenu2 className="h-5 w-5" aria-hidden="true" />
+            <IconX className="h-5 w-5" aria-hidden="true" />
           </button>
-
-          <div className="mx-1 h-7 w-px bg-white/10" />
-
-          <div
-            className="relative flex items-center"
-            onMouseEnter={openProfile}
-            onMouseLeave={() => closeProfile()}
-          >
-            <Link
-              href={profileHref}
-              aria-label={
-                isAuthenticated ? "View your profile" : "Sign in to Moodies"
-              }
-              className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition hover:ring-1 hover:ring-[#e94f37]/35 ${focusRing}`}
-            >
-              {avatar()}
-            </Link>
-            <button
-              ref={dropdownTriggerRef}
-              type="button"
-              onClick={() =>
-                isProfileOpen ? setIsProfileOpen(false) : openProfile()
-              }
-              aria-haspopup="menu"
-              aria-expanded={isProfileOpen}
-              aria-label="Open account menu"
-              className={`ml-1 flex h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-xl px-2 text-left transition hover:bg-white/[0.05] ${focusRing}`}
-            >
-              <span className="hidden xl:block">
-                <span className="block max-w-28 truncate text-sm font-semibold leading-5 text-white">
-                  {displayName}
-                </span>
-                <span className="block text-xs leading-4 text-white/40">
-                  {isAuthenticated ? "View account" : "Sign in"}
-                </span>
-              </span>
-              <IconChevronDown
-                className={`h-4 w-4 shrink-0 text-white/40 transition-transform ${
-                  isProfileOpen ? "rotate-180" : ""
-                }`}
-                aria-hidden="true"
-              />
-            </button>
-
-            <DropdownPortal>
-              {isProfileOpen && (
-                <div
-                  ref={dropdownContentRef}
-                  role="menu"
-                  onMouseEnter={openProfile}
-                  onMouseLeave={() => closeProfile()}
-                  className="fixed z-[999999] w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#0c0d10]/95 p-2 text-white shadow-[0_18px_55px_rgba(0,0,0,0.5)] backdrop-blur-xl"
-                  style={{
-                    top: dropdownPosition.top,
-                    left: dropdownPosition.left,
-                  }}
-                >
-                  <Link
-                    href={profileHref}
-                    onClick={() => setIsProfileOpen(false)}
-                    className={`flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-3 transition hover:bg-white/[0.055] ${focusRing}`}
-                  >
-                    {avatar()}
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold">
-                        {displayName}
-                      </span>
-                      <span className="block truncate text-xs text-white/42">
-                        {user?.email || "Sign in for your Moodies profile"}
-                      </span>
-                    </span>
-                  </Link>
-
-                  <div className="mt-1 space-y-0.5">
-                    {isAuthenticated ? (
-                      <>
-                        <ProfileMenuLink
-                          href="/profile"
-                          icon={IconUser}
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          My profile
-                        </ProfileMenuLink>
-                        <ProfileMenuLink
-                          href="/watchlist"
-                          icon={Bookmark}
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          My list
-                        </ProfileMenuLink>
-                        <ProfileMenuLink
-                          href="/liked"
-                          icon={Heart}
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          My likes
-                        </ProfileMenuLink>
-                        <div className="my-1.5 h-px bg-white/[0.08]" />
-                        <button
-                          type="button"
-                          role="menuitem"
-                          disabled={isLoggingOut}
-                          onClick={() => void logout().catch(() => {})}
-                          className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-white/62 transition hover:bg-[#e94f37]/[0.07] hover:text-white disabled:cursor-wait disabled:opacity-55 ${focusRing}`}
-                        >
-                          <IconLogout
-                            className="h-[18px] w-[18px] text-[#ef775f]"
-                            aria-hidden="true"
-                          />
-                          {isLoggingOut ? "Signing out…" : "Sign out"}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <ProfileMenuLink
-                          href="/auth/login"
-                          icon={IconLogin}
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          Sign in
-                        </ProfileMenuLink>
-                        <ProfileMenuLink
-                          href="/auth/signup"
-                          icon={IconUserPlus}
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          Create account
-                        </ProfileMenuLink>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-            </DropdownPortal>
-          </div>
         </div>
-      </NavBody>
-
-      <MobileNav visible transparent={transparent}>
-        <MobileNavHeader>
-          <NavbarLogo />
-          <div className="flex shrink-0 items-center gap-2">
-            <SearchBar
-              placeholder="Search movies, series..."
-              onSearch={() => undefined}
-            />
-            <Link
-              href={profileHref}
-              aria-label={
-                isAuthenticated ? "View your profile" : "Sign in to Moodies"
-              }
-              className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition active:scale-95 ${focusRing}`}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-6 lg:flex-initial lg:px-6 lg:py-6">
+          <div className="hidden lg:block">
+            <nav
+              aria-label="Main destinations"
+              className="mb-6 grid grid-cols-2 gap-3 border-b border-[var(--surface-border)] pb-6 lg:grid-cols-[1fr_1fr_1.3fr]"
             >
-              {avatar()}
-            </Link>
-            <MobileNavToggle
-              isOpen={isMobileOpen}
-              onClick={() => setIsMobileOpen((open) => !open)}
-            />
-          </div>
-        </MobileNavHeader>
-      </MobileNav>
-
-      <MobileNavMenu
-        isOpen={isMobileOpen}
-        onClose={() => setIsMobileOpen(false)}
-      >
-        <div className="mx-auto w-full max-w-xl pb-6">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="relative h-12 w-12 shrink-0" aria-hidden="true">
-              <Image
-                src={MOODIES_LOGO}
-                alt=""
-                fill
-                sizes="48px"
-                className="object-contain"
-              />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ef775f]">
-                Moodies guide
-              </p>
-              <h2 className="text-xl font-bold text-[var(--ink)]">
-                Where to next?
-              </h2>
-              <p className="mt-1 text-sm text-[var(--ink-muted)]">
-                Find something to watch and explore your moods.
-              </p>
-            </div>
-          </div>
-
-          <nav aria-label="Mobile navigation" className="space-y-2">
-            {routes.filter((route) => route.href !== "/collection").map((route) => {
-              const subOptions = routeOptions[route.href] || [];
-              const isExpanded = mobileExpandedRoute === route.href;
-
-              return (
-                <div
-                  key={route.href}
-                  className={`overflow-hidden rounded-2xl border transition-colors ${
-                    isExpanded
-                      ? "border-[#e94f37]/20 bg-white/[0.045]"
-                      : "border-white/[0.08] bg-white/[0.025]"
-                  }`}
-                >
-                  <div className="flex min-h-14 items-center">
-                    <Link
-                      href={route.href}
-                      onClick={() => setIsMobileOpen(false)}
-                      aria-current={
-                        pathname === route.href ? "page" : undefined
-                      }
-                      className={`flex min-h-14 min-w-0 flex-1 items-center gap-3 px-3.5 text-left ${focusRing}`}
-                    >
-                      <NavigationMascot
-                        href={route.href}
-                        className="h-10 w-10"
-                      />
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-[var(--ink)]">
-                          {route.name}
-                        </span>
-                      </span>
-                    </Link>
-                    <button
-                      type="button"
-                      aria-label={`${isExpanded ? "Hide" : "Show"} ${route.name} quick links`}
-                      aria-expanded={isExpanded}
-                      aria-controls={`mobile-collections-${route.href.replaceAll("/", "-")}`}
-                      onClick={() =>
-                        setMobileExpandedRoute(isExpanded ? null : route.href)
-                      }
-                      className={`mr-2 flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-2 text-xs font-semibold text-[var(--ink-muted)] hover:bg-white/5 ${focusRing}`}
-                    >
-                      More
-                      <IconChevronDown
-                        className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+              {primaryLinks.map((link, index) => {
+                const HubIcon =
+                  link.href === "/movies" ? IconMovie : IconDeviceTv;
+                const isHub = index < 2;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={closeMenu}
+                    aria-current={
+                      pathname === link.href
+                        ? "page"
+                        : isPrimaryActive(link.href)
+                          ? "location"
+                          : undefined
+                    }
+                    className={`group flex min-h-12 flex-col items-start justify-center rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 text-left transition-colors hover:border-[var(--brand-coral-strong)] hover:bg-[var(--surface-2)] ${isHub ? "lg:min-h-40" : "lg:hidden"} ${isPrimaryActive(link.href) ? "text-[var(--brand-coral-strong)]" : "text-[var(--ink)]"} ${focusRing}`}
+                  >
+                    {isHub && (
+                      <HubIcon
+                        className="mb-3 h-7 w-7 text-[var(--brand-coral-strong)]"
                         aria-hidden="true"
                       />
-                    </button>
-                  </div>
-
-                  <AnimatePresence initial={false}>
-                    {isExpanded && (
-                      <motion.div
-                        id={`mobile-collections-${route.href.replaceAll("/", "-")}`}
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="grid grid-cols-1 gap-1.5 border-t border-white/[0.06] p-2.5 sm:grid-cols-2">
-                          {subOptions.map((option) => (
+                    )}
+                    <span className="flex w-full items-center justify-between gap-2 text-base font-semibold leading-5">
+                      {link.name}
+                      <IconArrowRight
+                        className="h-4 w-4 shrink-0 text-[var(--ink-muted)] transition-colors group-hover:text-[var(--brand-coral-strong)]"
+                        aria-hidden="true"
+                      />
+                    </span>
+                    {isHub && (
+                      <span className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
+                        {link.href === "/movies"
+                          ? "Discover your next film."
+                          : "Find your next series."}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+              <Link
+                href="/moods"
+                onClick={closeMenu}
+                className={`group col-span-2 flex items-center justify-between gap-3 overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--brand-gold)_32%,var(--surface-border))] bg-[color-mix(in_srgb,var(--brand-gold)_8%,var(--surface-1))] p-4 transition-colors hover:border-[var(--brand-gold)] hover:bg-[color-mix(in_srgb,var(--brand-gold)_12%,var(--surface-1))] lg:col-span-1 ${focusRing}`}
+              >
+                <span className="min-w-0">
+                  <span className="block text-base font-semibold leading-5 text-[var(--ink)]">
+                    Let your mood lead
+                  </span>
+                  <span className="mt-2 block text-xs leading-5 text-[var(--ink-muted)]">
+                    Find a watch for how you feel.
+                  </span>
+                  <span className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--brand-gold)]">
+                    Find my mood{" "}
+                    <IconArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                </span>
+                <Image
+                  src="/images/moodies-mascot.png"
+                  alt=""
+                  width={128}
+                  height={128}
+                  sizes="(min-width: 1024px) 160px, 120px"
+                  className="h-24 w-24 shrink-0 scale-125 object-contain motion-safe:transition-transform motion-safe:group-hover:-rotate-3 lg:h-32 lg:w-32"
+                />
+              </Link>
+            </nav>
+            <nav
+              aria-label="More destinations"
+              className="grid grid-cols-1 gap-6 min-[360px]:grid-cols-2 lg:grid-cols-4 lg:gap-5"
+            >
+              {navigationGroups.map((group) => {
+                const GroupIcon = group.icon;
+                return (
+                  <section key={group.title} aria-label={group.title}>
+                    <h3 className="mb-2 flex items-center gap-2 px-3 text-sm font-semibold leading-5 text-[var(--ink)]">
+                      <GroupIcon
+                        className="h-4 w-4 shrink-0 text-[var(--brand-coral-strong)]"
+                        aria-hidden="true"
+                      />
+                      {group.title}
+                    </h3>
+                    <ul className="space-y-0.5">
+                      {group.links.map((link) => (
+                        <li key={link.href}>
+                          <Link
+                            href={link.href}
+                            onClick={closeMenu}
+                            aria-current={
+                              pathname === link.href
+                                ? "page"
+                                : isDestinationActive(link.href)
+                                  ? "location"
+                                  : undefined
+                            }
+                            className={destinationClass(link.href)}
+                          >
+                            <span>{link.name}</span>
+                            <IconArrowRight
+                              className="h-3.5 w-3.5 shrink-0 text-[var(--brand-coral-strong)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                              aria-hidden="true"
+                            />
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })}
+            </nav>
+          </div>
+          <div className="mx-auto w-full max-w-xl pb-6 lg:hidden">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="relative h-12 w-12 shrink-0" aria-hidden="true">
+                <Image
+                  src="/images/moodies-transparent.png"
+                  alt=""
+                  fill
+                  sizes="48px"
+                  className="object-contain"
+                />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand-coral-strong)]">
+                  Moodies guide
+                </p>
+                <h2 className="text-xl font-bold text-[var(--ink)]">
+                  Where to next?
+                </h2>
+                <p className="mt-1 text-sm text-[var(--ink-muted)]">
+                  Find something to watch and explore your moods.
+                </p>
+              </div>
+            </div>
+            <nav aria-label="Mobile navigation" className="space-y-2">
+              {mobileRoutes
+                .filter((route) => route.href !== "/collection")
+                .map((route) => {
+                  const options = mobileRouteOptions[route.href] || [];
+                  const isExpanded = mobileExpandedRoute === route.href;
+                  const collectionId =
+                    "mobile-collections-" + route.href.replaceAll("/", "-");
+                  return (
+                    <div
+                      key={route.href}
+                      className={`overflow-hidden rounded-2xl border transition-colors ${isExpanded ? "border-[var(--brand-coral)]/20 bg-white/[0.045]" : "border-white/[0.08] bg-white/[0.025]"}`}
+                    >
+                      <div className="flex min-h-14 items-center">
+                        <Link
+                          href={route.href}
+                          onClick={closeMenu}
+                          aria-current={
+                            pathname === route.href ? "page" : undefined
+                          }
+                          className={`flex min-h-14 min-w-0 flex-1 items-center gap-3 px-3.5 text-left ${focusRing}`}
+                        >
+                          <Image
+                            src={mobileMascotSources[route.href]}
+                            alt=""
+                            aria-hidden="true"
+                            width={48}
+                            height={48}
+                            unoptimized
+                            className="h-10 w-10 shrink-0 object-contain"
+                          />
+                          <span className="text-sm font-semibold text-[var(--ink)]">
+                            {route.name}
+                          </span>
+                        </Link>
+                        <button
+                          type="button"
+                          aria-label={`${isExpanded ? "Hide" : "Show"} ${route.name} quick links`}
+                          aria-expanded={isExpanded}
+                          aria-controls={collectionId}
+                          onClick={() =>
+                            setMobileExpandedRoute(
+                              isExpanded ? null : route.href,
+                            )
+                          }
+                          className={`mr-2 flex min-h-11 shrink-0 cursor-pointer items-center gap-1 rounded-xl px-2 text-xs font-semibold text-[var(--ink-muted)] hover:bg-white/5 ${focusRing}`}
+                        >
+                          More{" "}
+                          <IconChevronDown
+                            className={`h-4 w-4 motion-safe:transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                            aria-hidden="true"
+                          />
+                        </button>
+                      </div>
+                      {isExpanded && (
+                        <div
+                          id={collectionId}
+                          className="grid grid-cols-1 gap-1.5 border-t border-white/[0.06] p-2.5 sm:grid-cols-2"
+                        >
+                          {options.map((option) => (
                             <Link
                               key={option.path}
                               href={option.path}
-                              onClick={() => setIsMobileOpen(false)}
-                              className={`flex min-h-12 items-center justify-between rounded-xl px-3 text-sm font-medium text-[var(--ink-muted)] transition-colors hover:bg-white/[0.045] hover:text-[var(--ink)] ${focusRing}`}
+                              onClick={closeMenu}
+                              className={`flex min-h-12 items-center justify-between gap-2 rounded-xl px-3 text-sm font-medium text-[var(--ink-muted)] transition-colors hover:bg-white/[0.045] hover:text-[var(--ink)] ${focusRing}`}
                             >
                               {option.label}
                               <IconArrowUpRight
-                                className="h-4 w-4 text-white/28"
+                                className="h-4 w-4 shrink-0 text-white/28"
                                 aria-hidden="true"
                               />
                             </Link>
                           ))}
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            })}
-          </nav>
-
-          <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3">
-            <Link
-              href={profileHref}
-              onClick={() => setIsMobileOpen(false)}
-              aria-label={
-                isAuthenticated ? "View your profile" : "Sign in to Moodies"
-              }
-              className={`rounded-xl ${focusRing}`}
-            >
-              {avatar("large")}
-            </Link>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">
-                {isAuthenticated ? displayName : "Welcome to Moodies"}
-              </p>
-              <p className="truncate text-xs text-white/42">
-                {user?.email || "Sign in to save your discoveries"}
-              </p>
+                      )}
+                    </div>
+                  );
+                })}
+            </nav>
+            <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3">
+              <Link
+                href={isAuthenticated ? "/profile" : "/auth/login"}
+                onClick={closeMenu}
+                aria-label={
+                  isAuthenticated ? "View your profile" : "Sign in to Moodies"
+                }
+                className={`rounded-xl ${focusRing}`}
+              >
+                {mobileAvatar(true)}
+              </Link>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-white">
+                  {isAuthenticated ? displayName : "Welcome to Moodies"}
+                </p>
+                <p className="truncate text-xs text-white/42">
+                  {user?.email || "Sign in to save your discoveries"}
+                </p>
+              </div>
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  disabled={isLoggingOut}
+                  onClick={() => void logout()}
+                  aria-label="Sign out of Moodies"
+                  className={`grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-white/10 bg-white/[0.035] text-[var(--brand-coral-strong)] transition-colors hover:border-[var(--brand-coral)]/25 hover:bg-[var(--brand-coral)]/[0.07] disabled:cursor-wait disabled:opacity-55 ${focusRing}`}
+                >
+                  <IconLogout className="h-5 w-5" aria-hidden="true" />
+                </button>
+              ) : (
+                <Link
+                  href="/auth/login"
+                  onClick={closeMenu}
+                  className={`inline-flex min-h-11 items-center rounded-xl border border-[var(--brand-coral)]/30 bg-[var(--brand-coral)]/12 px-3.5 text-sm font-semibold text-[var(--brand-coral-strong)] ${focusRing}`}
+                >
+                  Sign in
+                </Link>
+              )}
             </div>
-            {isAuthenticated ? (
+          </div>
+        </div>
+        <div className="hidden shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[var(--surface-border)] px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 lg:flex lg:px-6 lg:pb-5">
+          {isAuthenticated ? (
+            <>
+              <Link
+                href="/profile"
+                onClick={closeMenu}
+                className={`flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-1 text-sm font-semibold ${focusRing}`}
+              >
+                {avatar()}
+                <span className="max-w-44 truncate">My profile</span>
+              </Link>
               <button
                 type="button"
                 disabled={isLoggingOut}
-                onClick={() => {
-                  setIsMobileOpen(false);
-                  void logout().catch(() => {});
-                }}
-                aria-label="Sign out of Moodies"
-                className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.035] text-[#ef775f] transition hover:border-[#e94f37]/25 hover:bg-[#e94f37]/[0.07] disabled:cursor-wait disabled:opacity-55 ${focusRing}`}
+                onClick={() => void logout()}
+                className={`${controlStyle} cursor-pointer text-[var(--ink-muted)] disabled:cursor-wait disabled:opacity-50`}
               >
-                <IconLogout className="h-5 w-5" aria-hidden="true" />
+                <IconLogout className="h-4 w-4" aria-hidden="true" />
+                {isLoggingOut ? "Signing out…" : "Sign out"}
               </button>
-            ) : (
+            </>
+          ) : (
+            <>
+              <Link
+                href="/auth/signup"
+                onClick={closeMenu}
+                className={`${controlStyle} text-[var(--ink-muted)]`}
+              >
+                Create account
+              </Link>
               <Link
                 href="/auth/login"
-                onClick={() => setIsMobileOpen(false)}
-                className={`inline-flex min-h-11 items-center rounded-xl border border-[#e94f37]/30 bg-[#e94f37]/12 px-3.5 text-sm font-semibold text-[#ffb09f] ${focusRing}`}
+                onClick={closeMenu}
+                className={`${controlStyle} border border-[var(--surface-border)] bg-[var(--surface-2)] text-[var(--ink)]`}
               >
                 Sign in
               </Link>
-            )}
-          </div>
+            </>
+          )}
         </div>
-      </MobileNavMenu>
-
-      {portalRoot ? createPortal(desktopMenu, portalRoot) : null}
-    </Navbar>
+      </div>
+    </dialog>
   );
-}
 
-function NavigationMascot({
-  href,
-  className,
-}: {
-  href: string;
-  className: string;
-}) {
   return (
-    <Image
-      src={
-        NAVIGATION_ICON_SOURCES[href] ??
-        `/images/moods/${sectionIntroductions[href].mascot}.png`
-      }
-      alt=""
-      aria-hidden="true"
-      width={48}
-      height={48}
-      unoptimized
-      className={`shrink-0 object-contain ${className}`}
-    />
-  );
-}
-
-function ProfileMenuLink({
-  href,
-  icon: Icon,
-  children,
-  onClick,
-}: {
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <Link
-      href={href}
-      role="menuitem"
-      onClick={onClick}
-      className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-white/62 transition hover:bg-white/[0.05] hover:text-white ${focusRing}`}
-    >
-      <Icon className="h-[18px] w-[18px] text-white/42" aria-hidden="true" />
-      {children}
-    </Link>
+    <>
+      <Navbar sticky={sticky} transparent={transparent}>
+        <NavBody className="hidden lg:flex lg:py-3">
+          <NavbarLogo />
+          <nav
+            aria-label="Primary navigation"
+            className="flex items-center gap-1"
+          >
+            {primaryLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={
+                  pathname === link.href
+                    ? "page"
+                    : isPrimaryActive(link.href)
+                      ? "location"
+                      : undefined
+                }
+                className={`${controlStyle} ${isPrimaryActive(link.href) ? "bg-[var(--surface-2)] text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"}`}
+              >
+                {link.name}
+              </Link>
+            ))}
+            <button
+              type="button"
+              onClick={openMenu}
+              aria-expanded={isMenuOpen}
+              aria-controls="site-menu"
+              aria-haspopup="dialog"
+              className={`${controlStyle} cursor-pointer ${isMoreActive ? "text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"}`}
+            >
+              More
+              <IconChevronDown className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </nav>
+          <div className="flex shrink-0 items-center gap-2">
+            {search}
+            <span
+              className="mx-1 h-6 w-px bg-[var(--surface-border)]"
+              aria-hidden="true"
+            />
+            {accountControl}
+          </div>
+        </NavBody>
+        <MobileNav visible transparent={transparent}>
+          <MobileNavHeader>
+            <NavbarLogo />
+            <div className="flex shrink-0 items-center gap-2">
+              {search}
+              <Link
+                href={isAuthenticated ? "/profile" : "/auth/login"}
+                aria-label={
+                  isAuthenticated ? "View your profile" : "Sign in to Moodies"
+                }
+                className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition active:scale-95 ${focusRing}`}
+              >
+                {mobileAvatar()}
+              </Link>
+              <button
+                type="button"
+                onClick={openMenu}
+                aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={isMenuOpen}
+                aria-controls="site-menu"
+                aria-haspopup="dialog"
+                className={`grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white/70 outline-none transition-colors hover:border-[var(--brand-coral)]/25 hover:bg-white/[0.075] hover:text-white ${focusRing}`}
+              >
+                <IconMenu2 className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+          </MobileNavHeader>
+        </MobileNav>
+      </Navbar>
+      <DropdownPortal>
+        {isProfileOpen && (
+          <nav
+            ref={accountContentRef}
+            id="account-navigation"
+            aria-label="Account"
+            className="fixed z-[9999] w-60 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-2 text-[var(--ink)] shadow-xl"
+            style={dropdownPosition}
+          >
+            <p className="truncate border-b border-[var(--surface-border)] px-3 py-3 text-sm font-semibold">
+              {displayName}
+            </p>
+            {[
+              { name: "My profile", href: "/profile" },
+              { name: "Watchlist", href: "/watchlist" },
+              { name: "Liked titles", href: "/liked" },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setIsProfileOpen(false)}
+                className={destinationClass(link.href)}
+              >
+                {link.name}
+              </Link>
+            ))}
+            <button
+              type="button"
+              disabled={isLoggingOut}
+              onClick={() => void logout()}
+              className={`${controlStyle} mt-1 w-full cursor-pointer justify-start border-t border-[var(--surface-border)] text-[var(--ink-muted)] disabled:cursor-wait disabled:opacity-50`}
+            >
+              <IconLogout className="h-4 w-4" aria-hidden="true" />
+              {isLoggingOut ? "Signing out…" : "Sign out"}
+            </button>
+          </nav>
+        )}
+      </DropdownPortal>
+      {portalRoot ? createPortal(modal, portalRoot) : null}
+    </>
   );
 }
 
