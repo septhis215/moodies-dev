@@ -16,7 +16,7 @@ import {
 } from "@/lib/api/community";
 
 const fieldClass =
-  "w-full rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)] px-4 py-3 text-base leading-6 text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] disabled:opacity-60";
+  "min-h-14 w-full rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)] px-5 py-4 text-base leading-6 text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] disabled:opacity-60";
 
 export function CommunityComposer({
   postId,

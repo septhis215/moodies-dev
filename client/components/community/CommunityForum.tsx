@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
+import CustomSelect from "@/components/ui/custom-select";
 import { useAuth } from "@/app/context/AuthProvider";
 import { usePageLoadingVisible } from "@/components/loading/LoadingScreenProvider";
 import { useCommunityPage } from "@/hooks/useCommunityPage";
@@ -290,28 +291,29 @@ export default function CommunityForum() {
                     : "What's happening around Moodies."}
                 </p>
               </div>
-              <label className="flex items-center gap-2 text-sm text-[var(--ink-muted)]">
-                Sort by
-                <select
-                  aria-label="Sort discussions"
+              <div className="flex items-center gap-3 text-sm text-[var(--ink-muted)]">
+                <span>Sort by</span>
+                <CustomSelect
+                  label="Sort discussions"
+                  widthClass="w-44 max-w-full"
                   value={sort}
-                  onChange={(event) =>
-                    router.push(destination({ sort: event.target.value }), {
+                  onChange={(value) =>
+                    router.push(destination({ sort: value }), {
                       scroll: false,
                     })
                   }
-                  className="min-h-11 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)] px-3 text-sm font-semibold text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
-                >
-                  <option value="newest">Newest topics</option>
-                  <option value="most-replies">Most replies</option>
-                </select>
-              </label>
+                  options={[
+                    { value: "newest", label: "Newest topics" },
+                    { value: "most-replies", label: "Most replies" },
+                  ]}
+                />
+              </div>
             </div>
             <form
               onSubmit={findTopics}
               role="search"
               aria-label="Search community discussions"
-              className="flex items-center gap-3 border-b border-[var(--surface-border)] py-3"
+              className="flex items-center gap-2 border-b border-[var(--surface-border)] px-3 py-2 sm:px-4"
             >
               <Search
                 className="h-4 w-4 shrink-0 text-[var(--ink-muted)]"
@@ -328,7 +330,7 @@ export default function CommunityForum() {
                 defaultValue={search}
                 maxLength={100}
                 placeholder="Search discussions..."
-                className="min-h-11 w-full min-w-0 bg-transparent text-base text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
+                className="min-h-12 w-full min-w-0 bg-transparent px-2 py-3 text-base text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
               />
               <button type="submit" className="ui-secondary-action">
                 Search

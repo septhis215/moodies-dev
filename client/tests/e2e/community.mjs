@@ -298,9 +298,21 @@ try {
   assert.equal(`${new URL(page.url()).pathname}${new URL(page.url()).search}${new URL(page.url()).hash}`, listReturn);
   assert.equal(await page.getByLabel("Search discussions", { exact: true }).inputValue(), "long link");
   await openIndex();
-  await page
-    .getByLabel("Sort discussions", { exact: true })
-    .selectOption("most-replies");
+  const sortTrigger = page.getByRole("button", { name: /^Sort discussions:/ });
+  const sortMenu = page.getByRole("listbox", { name: "Sort discussions", exact: true });
+  await sortTrigger.click();
+  await sortMenu.waitFor();
+  const triggerBox = await sortTrigger.boundingBox();
+  const menuBox = await sortMenu.boundingBox();
+  assert.ok(Math.abs(triggerBox.width - menuBox.width) <= 1, "Sort popup must match trigger width");
+  assert.ok(Math.abs(triggerBox.x - menuBox.x) <= 1, "Sort popup must align to its trigger");
+  await page.keyboard.press("Escape");
+  await sortMenu.waitFor({ state: "hidden" });
+  assert.ok(await sortTrigger.evaluate((element) => document.activeElement === element));
+  await sortTrigger.press("ArrowDown");
+  await page.keyboard.press("m");
+  assert.ok(await sortMenu.getByRole("option", { name: "Most replies", exact: true }).evaluate((element) => document.activeElement === element));
+  await page.keyboard.press("Enter");
   await page.waitForURL(/sort=most-replies/);
   await page
     .getByRole("navigation", { name: "Discussion pages" })
@@ -483,6 +495,10 @@ try {
     await touchPicker.getByRole("button", { name: "Love", exact: true }).tap();
     await touchPost.locator('[aria-label="Love: 1"]').waitFor();
     await touchPicker.waitFor({ state: "hidden" });
+    await touchPage.goto(`${base}/community`, { waitUntil: "domcontentloaded" });
+    await touchPage.getByRole("button", { name: /^Sort discussions:/ }).tap();
+    await touchPage.getByRole("option", { name: "Most replies", exact: true }).tap();
+    await touchPage.waitForURL(/sort=most-replies/);
   } finally {
     await touchContext.close();
   }
@@ -538,6 +554,14 @@ try {
     await openIndex();
     await topics.waitFor();
     await page.evaluate(() => document.fonts.ready);
+    await sortTrigger.click();
+    await sortMenu.waitFor();
+    const popup = await sortMenu.boundingBox();
+    const control = await sortTrigger.boundingBox();
+    assert.ok(Math.abs(popup.width - control.width) <= 1);
+    assert.ok(popup.x >= 0 && popup.x + popup.width <= width + 1, `sort popup overflow at ${width}px`);
+    if (output && [375, 1366].includes(width)) await page.screenshot({ path: `${output}/forum-sort-${width}.png` });
+    await page.keyboard.press("Escape");
     if (width <= 375) {
       assert.ok(
         (await page.locator("main > header").boundingBox()).height < 350,
