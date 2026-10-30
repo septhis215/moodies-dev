@@ -1,0 +1,202 @@
+{
+  "reference": "ea4e30caf02bea7cfb0b32a9ce2633bde6df46b0",
+  "mode": "synthetic regression fixtures; not live catalogue quality",
+  "generatedAt": "2026-10-30T02:43:01.519Z",
+  "pagination": {
+    "duplicateTitlesBefore": 5,
+    "duplicateTitlesAfter": 0,
+    "reportedFirstPageTotalBefore": 10,
+    "reportedFirstPageTotalAfter": 30
+  },
+  "moods": [
+    {
+      "mood": "Happy",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.817,
+      "fixtureScoreAfter": 0.881,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Funny",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7006,
+      "fixtureScoreAfter": 0.88,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Cozy",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.8282,
+      "fixtureScoreAfter": 0.894,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Whimsy",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.818,
+      "fixtureScoreAfter": 0.882,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Romantic",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.808,
+      "fixtureScoreAfter": 0.871,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Serenity",
+      "fixtureAcceptedBefore": false,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.4305,
+      "fixtureScoreAfter": 0.865,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Chill",
+      "fixtureAcceptedBefore": false,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.4635,
+      "fixtureScoreAfter": 0.857,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Inspirational",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7022,
+      "fixtureScoreAfter": 0.816,
+      "genericDramaAcceptedBefore": true,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Nostalgic",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7875,
+      "fixtureScoreAfter": 0.916,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Bittersweet",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.8065,
+      "fixtureScoreAfter": 0.86,
+      "genericDramaAcceptedBefore": true,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Sad",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.788,
+      "fixtureScoreAfter": 0.847,
+      "genericDramaAcceptedBefore": true,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Thrilling",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.644,
+      "fixtureScoreAfter": 0.847,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Epic",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7128,
+      "fixtureScoreAfter": 0.881,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Chaos",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7048,
+      "fixtureScoreAfter": 0.871,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Horror",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7227,
+      "fixtureScoreAfter": 0.848,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Dark",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7755,
+      "fixtureScoreAfter": 0.799,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Gritty",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7777,
+      "fixtureScoreAfter": 0.802,
+      "genericDramaAcceptedBefore": true,
+      "genericDramaAcceptedAfter": true
+    },
+    {
+      "mood": "Mind-Bending",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7947,
+      "fixtureScoreAfter": 0.838,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Sci-Fi",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7732,
+      "fixtureScoreAfter": 0.796,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Western",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7853,
+      "fixtureScoreAfter": 0.828,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    },
+    {
+      "mood": "Documentary",
+      "fixtureAcceptedBefore": true,
+      "fixtureAcceptedAfter": true,
+      "fixtureScoreBefore": 0.7542,
+      "fixtureScoreAfter": 0.774,
+      "genericDramaAcceptedBefore": false,
+      "genericDramaAcceptedAfter": false
+    }
+  ]
+}

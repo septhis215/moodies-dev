@@ -1,0 +1,64 @@
+{
+  "reference": "ea4e30caf02bea7cfb0b32a9ce2633bde6df46b0",
+  "mode": "same live candidate pool scored by both engines; not a user relevance study",
+  "generatedAt": "2026-10-30T02:36:36.928Z",
+  "pagination": {
+    "duplicateTitlesBefore": 5,
+    "duplicateTitlesAfter": 0,
+    "reportedFirstPageTotalBefore": 10,
+    "reportedFirstPageTotalAfter": 30
+  },
+  "moods": [],
+  "feed": {
+    "mixed": {
+      "eligibleCandidates": 287,
+      "coldPoolMs": 1323,
+      "warmPoolMs": 0,
+      "warmSourceRequests": 0,
+      "languages": [
+        "af",
+        "de",
+        "en",
+        "es",
+        "fr",
+        "hi",
+        "it",
+        "ja",
+        "ko",
+        "nl",
+        "no",
+        "pl",
+        "pt",
+        "ro",
+        "te",
+        "th",
+        "tl",
+        "tr",
+        "zh",
+        "zu"
+      ],
+      "mediaTypes": [
+        "movie",
+        "tv"
+      ],
+      "titlesWithGenres": 287
+    },
+    "upcoming": {
+      "eligibleCandidates": 21,
+      "coldPoolMs": 460,
+      "warmPoolMs": 0,
+      "warmSourceRequests": 0,
+      "languages": [
+        "en",
+        "hi",
+        "ja",
+        "ko"
+      ],
+      "mediaTypes": [
+        "movie",
+        "tv"
+      ],
+      "titlesWithGenres": 21
+    }
+  }
+}
