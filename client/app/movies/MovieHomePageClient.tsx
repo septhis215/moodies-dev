@@ -62,7 +62,7 @@ function BoxOfficeRanking({ items }: { items: All[] }) {
           </h2>
         </div>
         <Link
-          href="/movies/popular"
+          href="/movies/box-office"
           className="border-b border-[var(--surface-border)] pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)] transition-colors hover:border-[var(--brand-coral)] hover:text-[var(--ink)]"
         >
           View chart

@@ -127,6 +127,12 @@ function AiringSchedule({ today }: { today: All[] }) {
         description="Episodes currently scheduled"
         items={todayItems}
       />
+      <Link
+        href="/tv/airing/today"
+        className="mt-4 inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-[var(--ink-muted)] outline-none transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]"
+      >
+        View all airing today
+      </Link>
     </section>
   );
 }
