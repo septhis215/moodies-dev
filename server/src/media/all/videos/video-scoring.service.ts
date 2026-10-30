@@ -45,9 +45,9 @@ export class VideoScoringService {
 
     if (DISQUALIFY_RE.test(name)) return -100000;
 
-    if (video.official) score += 10;
+    if (video.official) score += 20;
 
-    if (type === 'Trailer') score += 9;
+    if (type === 'Trailer') score += 20;
     else if (type === 'Teaser') score += 7;
     else if (type === 'Preview') score += 6;
     else if (type === 'Featurette') score += 5;
@@ -99,17 +99,18 @@ export class VideoScoringService {
   }
 
   filterVideos(videos: any[], allowedRegions: string[]): any[] {
+    const seen = new Set<string>();
     return videos.filter(
       (v) =>
         v.site === 'YouTube' &&
         this.supportedVideoTypes.has(this.normalizeVideoType(v)) &&
         v.key &&
-        v.key.length > 5 &&
-        (allowedRegions.includes(v.iso_3166_1) || !v.iso_3166_1) &&
+        /^[a-zA-Z0-9_-]{11}$/.test(v.key) &&
+        (allowedRegions.length === 0 || allowedRegions.includes(v.iso_3166_1) || !v.iso_3166_1) &&
         v.name &&
-        !/reaction/i.test(v.name) &&
-        !/review/i.test(v.name) &&
-        !DISQUALIFY_RE.test(v.name),
+        !/\b(reaction|review|fan[- ]?made|concept|leaked?)\b/i.test(v.name) &&
+        !DISQUALIFY_RE.test(v.name) &&
+        !seen.has(v.key) && Boolean(seen.add(v.key)),
     );
   }
 

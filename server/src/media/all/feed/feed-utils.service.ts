@@ -26,26 +26,6 @@ export type ViewedTrailerEntry = {
 @Injectable()
 export class FeedUtilsService {
   private readonly logger = new Logger(FeedUtilsService.name);
-  private readonly allowedRegions = [
-    'MY',
-    'SG',
-    'ID',
-    'TH',
-    'PH',
-    'VN',
-    'BN',
-    'KH',
-    'LA',
-    'HK',
-    'TW',
-    'IN',
-    'AU',
-    'NZ',
-    'US',
-    'GB',
-    'KR',
-    'JP',
-  ];
 
   constructor(
     private readonly client: TmdbClientService,
@@ -56,7 +36,7 @@ export class FeedUtilsService {
   cacheKey(...parts: Array<string | number | boolean | null | undefined>) {
     return parts
       .filter((part) => part !== undefined && part !== null && part !== '')
-      .map((part) => String(part).replace(/[^a-zA-Z0-9:_-]/g, '_'))
+      .map((part) => encodeURIComponent(String(part)))
       .join(':');
   }
 
@@ -355,10 +335,19 @@ export class FeedUtilsService {
         item.id,
         item.videos,
       );
-      const filteredVideos = this.videoScoring.filterVideos(
+      let filteredVideos = this.videoScoring.filterVideos(
         videos,
-        this.allowedRegions,
+        [],
       );
+      if (!filteredVideos.length && item.original_language && item.original_language !== 'en') {
+        const original = await this.redisService.getOrSet(
+          this.cacheKey('feed-videos-original', mediaType, item.id, item.original_language),
+          CACHE_TTL.TRAILERS,
+          () => this.client.tmdb(`${mediaType}/${item.id}/videos?language=${encodeURIComponent(item.original_language)}`),
+          value => Boolean(value),
+        );
+        filteredVideos = this.videoScoring.filterVideos(original?.results || [], []);
+      }
       if (filteredVideos.length === 0) return null;
 
       const sortedCandidates = this.videoScoring
@@ -389,9 +378,10 @@ export class FeedUtilsService {
       );
       const primaryPool =
         unviewedTopVideos.length > 0 ? unviewedTopVideos : topVideos;
-      const primaryCandidates = primaryPool.slice(
-        0,
-        Math.min(4, primaryPool.length),
+      // Rotate only among comparable promotional videos, never trade a trailer for bloopers.
+      const bestScore = this.videoScoring.calculateVideoScore(primaryPool[0]);
+      const primaryCandidates = primaryPool.filter(video =>
+        this.videoScoring.calculateVideoScore(video) >= bestScore - 3,
       );
       const primaryIndex = getSeededRandom(
         item.id + seed,
@@ -432,8 +422,9 @@ export class FeedUtilsService {
 
   private async getCachedAvailableVideos(videos: any[]) {
     const candidates = videos.slice(0, Math.min(videos.length, 5));
-    const checks = await Promise.allSettled(
-      candidates.map(async (video) => {
+    // Most titles have a working top trailer; probe lower choices only if both top choices fail.
+    for (const batch of [candidates.slice(0, 2), candidates.slice(2)]) {
+      const checks = await Promise.allSettled(batch.map(async (video) => {
         const available = await this.redisService.getOrSet(
           this.cacheKey('youtube-oembed', video.key),
           CACHE_TTL.TRAILERS,
@@ -441,15 +432,17 @@ export class FeedUtilsService {
         );
 
         return available ? { ...video, available: true } : null;
-      }),
-    );
+      }));
 
-    return checks
+      const available = checks
       .filter(
         (result): result is PromiseFulfilledResult<any> =>
           result.status === 'fulfilled' && result.value,
       )
       .map((result) => result.value);
+      if (available.length) return available;
+    }
+    return [];
   }
 
   private prioritizeVideosForItem(

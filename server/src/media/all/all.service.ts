@@ -70,8 +70,8 @@ export class AllService implements OnModuleInit {
   }
 
   // --- Upcoming Feed ---
-  getUpcomingFeeds(page = 1, limit = 35, viewerId?: string) {
-    return this.upcomingFeedService.getUpcomingFeeds(page, limit, viewerId);
+  getUpcomingFeeds(page = 1, limit = 35, viewerId?: string, salt = 0) {
+    return this.upcomingFeedService.getUpcomingFeeds(page, limit, viewerId, salt);
   }
 
   // --- Recommendations ---

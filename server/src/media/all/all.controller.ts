@@ -281,14 +281,16 @@ export class AllController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('viewerId') viewerId?: string,
+    @Query('salt') salt?: string,
   ) {
     const pageNum = page ? parseInt(page, 10) : 1;
-    const limitNum = limit ? parseInt(limit, 30) : 30;
+    const limitNum = limit ? parseInt(limit, 10) : 30;
 
     const response = await this.allService.getUpcomingFeeds(
       pageNum,
       limitNum,
       viewerId,
+      Number(salt) || 0,
     );
 
     // Format the results - handle both enriched and non-enriched data
