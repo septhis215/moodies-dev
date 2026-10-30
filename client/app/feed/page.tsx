@@ -93,6 +93,14 @@ const feedTabs: Array<{
   },
 ];
 
+function getFeedRatingBadge(item: FeedContentLike, today = new Date().toISOString().slice(0, 10)) {
+  const releaseDate = (item.release_date || item.first_air_date || "").slice(0, 10);
+  const isUpcoming = /^\d{4}-\d{2}-\d{2}$/.test(releaseDate) && releaseDate > today;
+  const rating = Number(item.vote_average);
+  const hasRating = !isUpcoming && Number.isFinite(rating) && rating > 0;
+  return { isUpcoming, hasRating, label: isUpcoming ? "Upcoming" : hasRating ? rating.toFixed(1) : "Not rated" };
+}
+
 export default function VideoFeedPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -113,7 +121,7 @@ export default function VideoFeedPage() {
   const [activeCategory, setActiveCategory] = useState<Category>("all");
   const isFetchingRef = useRef(false);
   const nextPageRef = useRef(1);
-  const sessionSaltRef = useRef(Math.floor(Math.random() * 500)); // random 0-499 per tab session
+  const sessionSaltRef = useRef(Math.floor(Math.random() * 4294967296));
   const seenVideoIdsRef = useRef<Set<string>>(new Set());
   const indexOffsetRef = useRef(0);
   const retryCountRef = useRef(0);
@@ -321,7 +329,7 @@ export default function VideoFeedPage() {
           : "";
         const endpoint =
           activeCategory === "upcoming"
-            ? `${base}/all/upcoming-trailers-feed?page=${currentPage}&limit=${limit}${viewerParam}`
+            ? `${base}/all/upcoming-trailers-feed?page=${currentPage}&limit=${limit}&salt=${sessionSaltRef.current}${viewerParam}`
             : `${base}/all/video-feed?page=${currentPage}&limit=${limit}&salt=${sessionSaltRef.current}${viewerParam}`;
 
         const res = await fetch(endpoint, { signal: controller.signal });
@@ -375,6 +383,11 @@ export default function VideoFeedPage() {
             }
             setHasMore(false);
           }
+        } else if (data.hasMore && data.nextPage > currentPage) {
+          nextPageRef.current = data.nextPage;
+          isFetchingRef.current = false;
+          setLoadingMode("idle");
+          retryTimerRef.current = window.setTimeout(() => fetchMoreVideos(false), 180);
         } else {
           setHasMore(false);
         }
@@ -439,7 +452,7 @@ export default function VideoFeedPage() {
       indexOffsetRef.current = 0;
       seenVideoIdsRef.current = new Set();
       nextPageRef.current = 1;
-      sessionSaltRef.current = Math.floor(Math.random() * 500);
+      sessionSaltRef.current = Math.floor(Math.random() * 4294967296);
       retryCountRef.current = 0;
       reportedViewsRef.current = new Set();
       setFeedError(null);
@@ -1223,26 +1236,24 @@ export default function VideoFeedPage() {
                     </h2>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-white/80">
                       {/* Rating / Upcoming badge */}
-                      {Number.isFinite(Number(currentVideo.vote_average)) &&
-                        (() => {
-                          const va = Number(currentVideo.vote_average);
-                          const isUpcomingItem = va === 0;
+                      {(() => {
+                          const badge = getFeedRatingBadge(currentVideo);
                           return (
                             <span
                               className={cn(
                                 "inline-flex min-h-7 items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-2.5 backdrop-blur-md",
-                                isUpcomingItem
+                                badge.isUpcoming
                                   ? "text-indigo-200"
                                   : "text-amber-200",
                               )}
                             >
-                              {!isUpcomingItem && (
+                              {badge.hasRating && (
                                 <Star
                                   className="h-3.5 w-3.5 text-amber-300"
                                   fill="currentColor"
                                 />
                               )}
-                              {isUpcomingItem ? "Upcoming" : va.toFixed(1)}
+                              {badge.label}
                             </span>
                           );
                         })()}
@@ -1560,26 +1571,24 @@ export default function VideoFeedPage() {
                       ))}
                     </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {Number.isFinite(Number(currentVideo.vote_average)) &&
-                    (() => {
-                      const va = Number(currentVideo.vote_average);
-                      const isUpcomingItem = va === 0;
+                  {(() => {
+                          const badge = getFeedRatingBadge(currentVideo);
                       return (
                         <span
                           className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold
                         ${
-                          isUpcomingItem
+                          badge.isUpcoming
                             ? "bg-indigo-500/25 text-indigo-200 border-indigo-400/35"
                             : "bg-amber-500/25 text-amber-200 border-amber-400/35"
                         }`}
                         >
-                          {!isUpcomingItem && (
+                          {badge.hasRating && (
                             <Star
                               className="h-3 w-3 text-amber-300"
                               fill="currentColor"
                             />
                           )}
-                          {isUpcomingItem ? "Upcoming" : va.toFixed(1)}
+                          {badge.label}
                         </span>
                       );
                     })()}

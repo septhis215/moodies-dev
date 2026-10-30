@@ -136,3 +136,19 @@ test("stalled playback offers a gesture and teardown cancels the playback check"
   removed.tick();
   assert.deepEqual(removed.statuses, ["muted"]);
 });
+
+
+test("feed badges distinguish release status from missing ratings", () => {
+  const mod = { exports: {} };
+  vm.runInNewContext(compiled + "\nmodule.exports.badge = getFeedRatingBadge;", {
+    module: mod, exports: mod.exports,
+    require(name) { return name === "react/jsx-runtime" ? { jsx: () => ({}), jsxs: () => ({}) } : {}; },
+  });
+  const badge = (item) => mod.exports.badge(item, "2026-10-30");
+  assert.equal(badge({ release_date: "2020-01-01", vote_average: 0 }).label, "Not rated");
+  assert.equal(badge({ release_date: "2026-10-30", vote_average: 0 }).label, "Not rated");
+  assert.equal(badge({ first_air_date: "2026-11-01", vote_average: 8 }).label, "Upcoming");
+  assert.equal(badge({ first_air_date: "2026-11-01", vote_average: 8 }).hasRating, false);
+  assert.equal(badge({ release_date: "2020-01-01", vote_average: 8.15 }).label, "8.2");
+  assert.equal(badge({ vote_average: undefined }).label, "Not rated");
+});
