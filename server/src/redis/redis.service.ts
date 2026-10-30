@@ -12,6 +12,7 @@ export class RedisService implements OnModuleDestroy {
   private connectPromise?: Promise<RedisClient | null>;
   private nextConnectAt = 0;
   private nextErrorLog = 0;
+  private readonly pendingCacheLoads = new Map<string, Promise<unknown>>();
 
   constructor(private readonly config: ConfigService) {}
 
@@ -129,9 +130,16 @@ export class RedisService implements OnModuleDestroy {
     if (cached !== null) {
       try { return JSON.parse(cached) as T; } catch { await this.del(key); }
     }
-    const value = await fetchFn();
-    if (shouldCache(value)) await this.set(key, JSON.stringify(value), ttlSeconds);
-    return value;
+    const pending = this.pendingCacheLoads.get(key);
+    if (pending) return pending as Promise<T>;
+    const load = (async () => {
+      const value = await fetchFn();
+      if (shouldCache(value)) await this.set(key, JSON.stringify(value), ttlSeconds);
+      return value;
+    })();
+    this.pendingCacheLoads.set(key, load);
+    try { return await load; }
+    finally { this.pendingCacheLoads.delete(key); }
   }
 
   async deleteByPrefix(prefix: string, batchSize = 100): Promise<number> {

@@ -7,6 +7,15 @@ jest.mock('redis', () => ({ createClient: jest.fn() }));
 
 describe('bounded Redis availability', () => {
   const create = createClient as jest.Mock;
+  it('coalesces concurrent cache misses and releases failed loads for retry', async () => {
+    const service = new RedisService(new ConfigService());
+    const load = jest.fn(async () => { await new Promise(resolve => setTimeout(resolve, 5)); return [1, 2]; });
+    const values = await Promise.all(Array.from({ length: 20 }, () => service.getOrSet('pool', 60, load)));
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(values).toEqual(Array.from({ length: 20 }, () => [1, 2]));
+    await expect(service.getOrSet('failure', 60, async () => { throw new Error('upstream'); })).rejects.toThrow('upstream');
+    await expect(service.getOrSet('failure', 60, async () => 'recovered')).resolves.toBe('recovered');
+  });
   afterEach(() => {
     jest.restoreAllMocks();
     create.mockReset();
