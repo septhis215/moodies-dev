@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "verifiedOn": "2026-10-25",
+  "verifiedOn": "2026-10-31",
   "verificationScope": "Identifiable upstream baselines and a reviewed local snapshot. Original install commands and installation dates were not recorded.",
   "snapshotFormat": "SHA-256 over sorted relative POSIX paths, NUL, decimal byte length, NUL, contents, NUL. UTF-8 text uses LF line endings; binary bytes are unchanged. Excludes .git, __pycache__, .pyc and .pyo. Implemented by scripts/check-skill-sources.cjs.",
   "sources": {
@@ -61,6 +61,14 @@
       "verification": "All 14 installed package files match the immutable source after line-ending normalization.",
       "licenseFiles": [
         "skills/humanizer/LICENSE"
+      ]
+    },
+    "addyosmani-agent-skills": {
+      "repository": "https://github.com/addyosmani/agent-skills",
+      "ref": "main",
+      "verification": "Installed from the public GitHub repository using the skill-installer helper; upstream commit was not pinned.",
+      "licenseFiles": [
+        ".agents/skills/licenses/addyosmani-agent-skills-MIT.txt"
       ]
     }
   },
@@ -165,6 +173,206 @@
       ],
       "fileCount": 16,
       "sha256": "5a8b4297cd4e464ab6f3b88130936e368a422508112b1cc10ba33047e430a8ad"
+    },
+    {
+      "name": "api-and-interface-design",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/api-and-interface-design",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "a4d31e0579d867b748787beb939ed792258fdc820282ba94c9129cf1744915cc"
+    },
+    {
+      "name": "browser-testing-with-devtools",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/browser-testing-with-devtools",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "b194eb50ebe9f41409f13a47829c5bcaaa0ae4d211947be3143d1df9e1e64da7"
+    },
+    {
+      "name": "ci-cd-and-automation",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/ci-cd-and-automation",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "a132fb055d46570bc1930c30de060fd7025f21e20dd2e3486417fb8994c9dbd2"
+    },
+    {
+      "name": "code-review-and-quality",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/code-review-and-quality",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "e077d0e208ac60fe4ca5bfb28b213c8199f9497c7ce563ae4f54195d4e3235d0"
+    },
+    {
+      "name": "code-simplification",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/code-simplification",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "a8e0cf0cf683e32f8817b71c826a4d81e7d50f566e5bdede053ce951fe2bb206"
+    },
+    {
+      "name": "constraint-driven-development",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/constraint-driven-development",
+      "adaptations": [],
+      "fileCount": 3,
+      "sha256": "8057fee1236f3822dd0cf01a9f5c2bb2a8df2016d1904bb89508268e64ab4da8"
+    },
+    {
+      "name": "context-engineering",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/context-engineering",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "3066bc9779be1663bbf6534eaf3d10a2accbde4f9b48145aba1c8086ce6e8199"
+    },
+    {
+      "name": "debugging-and-error-recovery",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/debugging-and-error-recovery",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "7fd2aac9270d911b4a4bb7a08c4a36a7ed2afe5a6c33231e28910499bd59dfe8"
+    },
+    {
+      "name": "deprecation-and-migration",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/deprecation-and-migration",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "b38f0d87e49721d0a5bd0f12a483e0b558550706d0ef5ff324d294d2c9993cb2"
+    },
+    {
+      "name": "documentation-and-adrs",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/documentation-and-adrs",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "aa1a917f8cffdcc9dc19401978a0394b03119d8b136165c38374872422d9f43d"
+    },
+    {
+      "name": "doubt-driven-development",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/doubt-driven-development",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "f6290a84c6f93a77b738a52d27d70b60cea0ab9f966b90a788bf2741f4775883"
+    },
+    {
+      "name": "frontend-ui-engineering",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/frontend-ui-engineering",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "ccae87f6ede205a4416177ff4920e25bd4394af7b6d9f9e65e8a833cfc6c78df"
+    },
+    {
+      "name": "git-workflow-and-versioning",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/git-workflow-and-versioning",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "38f94af2ec194bb9254c061de2bded737bee09a5fc7fa39716302f1c0cfac060"
+    },
+    {
+      "name": "idea-refine",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/idea-refine",
+      "adaptations": [],
+      "fileCount": 5,
+      "sha256": "7b9ac23a37b1d43c9b532bf92c0235ae5fb43517ef6bd53975dea3e42b4f3aea"
+    },
+    {
+      "name": "incremental-implementation",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/incremental-implementation",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "af3d8e8850085be2428a50a36eadf0964a8f9cea50f78b1972df57de09e217b1"
+    },
+    {
+      "name": "interview-me",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/interview-me",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "f2f556eddefc6a06e612d01b05a2f5f13e7bea25611f7e063908e3709e669664"
+    },
+    {
+      "name": "observability-and-instrumentation",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/observability-and-instrumentation",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "1fb4491169d2bdd0107821456359633a4f19c72e4966bc2666756ddc9d7cdc14"
+    },
+    {
+      "name": "performance-optimization",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/performance-optimization",
+      "adaptations": [],
+      "fileCount": 2,
+      "sha256": "ede2ef0eceeff5ea0343bafcfa26196a150886defdf9bcb68a7d2b631cb775b6"
+    },
+    {
+      "name": "planning-and-task-breakdown",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/planning-and-task-breakdown",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "33f42c23ffa1716c277733468df15b87e285565b7e6a49d97c9ad20d1f35a290"
+    },
+    {
+      "name": "security-and-hardening",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/security-and-hardening",
+      "adaptations": [],
+      "fileCount": 2,
+      "sha256": "16446b19a73d290ff9b0be2efd002d07954222b649f49a36b3f4b8dc18ba0b9f"
+    },
+    {
+      "name": "shipping-and-launch",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/shipping-and-launch",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "04d6ebb1187ba24fe2682c5b41153638c9dcee2f6d89f825e0c6184233e1cf98"
+    },
+    {
+      "name": "source-driven-development",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/source-driven-development",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "a511b56e453dfaef6218cbfab37a26298683188e9726842d0b6f3cf252f77919"
+    },
+    {
+      "name": "spec-driven-development",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/spec-driven-development",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "3f9b24d66498cbff5ef9c7f97e9888253df03921398dcf4f0588470c0ddf4631"
+    },
+    {
+      "name": "test-driven-development",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/test-driven-development",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "6b14ac87330940e84a51dc79dab27ef0cb39b0b53553e0d131df91076c8173d5"
+    },
+    {
+      "name": "using-agent-skills",
+      "source": "addyosmani-agent-skills",
+      "sourcePath": "skills/using-agent-skills",
+      "adaptations": [],
+      "fileCount": 1,
+      "sha256": "6aea2c74527a189c9ffed6086977cff44b4d82c503488042b2ff2d987c25b1bf"
     }
   ]
 }

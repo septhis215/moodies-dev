@@ -19,6 +19,8 @@ import { SnapshotShareModal } from "@/components/snapshot/SnapshotShareModal";
 import { useLiked } from "@/hooks/useLiked";
 import { useMediaStats } from "@/hooks/useMediaStats";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { useAuth } from '@/app/context/AuthProvider';
+import { AudienceMood } from '../AudienceMood';
 import { fmtCount } from "@/utils/mediaStatsClient";
 import { tmdbImage } from "@/lib/tmdb";
 import { loadYouTubeApi, YT_PLAYER_STATE, type YouTubePlayer } from "@/lib/youtube-player";
@@ -46,6 +48,7 @@ type HeroContentCardProps = {
   content?: Content;
   data?: MovieDetailsData | TvDetailsData;
   topMoods?: Array<{ emoji: string; count: number }>;
+  totalMoodVotes?: number;
   reviewStats?: { totalRatings: number; averageRating: number };
   trailers?: TrailerData[];
 };
@@ -71,24 +74,6 @@ function findDirectorOrCreator(
   if (director) return director.name;
   if (createdBy?.length) return createdBy[0].name;
   return "Unknown";
-}
-
-function isPublicImagePath(value?: string): boolean {
-  return Boolean(
-    value && /^\/images\/.+\.(png|jpe?g|webp|gif|svg)$/i.test(value),
-  );
-}
-
-function getMoodLabel(value: string, index: number): string {
-  if (!isPublicImagePath(value)) return `Mood ${index + 1}`;
-
-  const fileName = value.split("/").pop() ?? "";
-  return fileName
-    .replace(/\.(png|jpe?g|webp|gif|svg)$/i, "")
-    .split("-")
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }
 
 function ScoreCard({
@@ -394,13 +379,15 @@ export function HeroContentCard({
   content,
   data,
   topMoods = [],
+  totalMoodVotes,
   reviewStats,
   trailers = [],
 }: HeroContentCardProps) {
   const router = useRouter();
   const [isSnapshotOpen, setIsSnapshotOpen] = useState(false);
-  const [likeDelta, setLikeDelta] = useState(0);
-  const [savedDelta, setSavedDelta] = useState(0);
+  const { isAuthenticated, loading: sessionLoading } = useAuth();
+  const likeLock = useRef(false);
+  const saveLock = useRef(false);
   const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
   const [isTogglingLiked, setIsTogglingLiked] = useState(false);
   const { isInWatchlist, add, remove, ready } = useWatchlist();
@@ -442,12 +429,13 @@ export function HeroContentCard({
     ? `/${contentType === "tv" ? "tv" : "movies"}/${contentId}/reviews`
     : "#";
   const watchType = contentType === "tv" ? "series" : "movie";
-  const { getStat } = useMediaStats(
+  const { stats, getStat, loading: statsLoading, error: statsError, refresh: refreshStats } = useMediaStats(
     contentId ? [{ id: contentId, type: contentType }] : [],
   );
   const engagementStat = contentId
     ? getStat(contentId, contentType)
     : { likeCount: 0, savedCount: 0, reviewCount: 0 };
+  const initialStatsLoading = statsLoading && (!contentId || !stats[`${contentId}:${contentType}`]);
   const inWatchlist = contentId ? isInWatchlist(String(contentId), watchType) : false;
   const inLiked = contentId ? isLiked(String(contentId), watchType) : false;
   const trailerOptions = useMemo(() => {
@@ -458,19 +446,16 @@ export function HeroContentCard({
       return true;
     });
   }, [data?.trailer, trailers]);
-  const moods = topMoods.slice(0, 3);
-  const moodTotal = moods.reduce((total, mood) => total + mood.count, 0);
-  const liveLikeCount = engagementStat.likeCount + likeDelta;
-  const liveSavedCount = engagementStat.savedCount + savedDelta;
   const hasReviewScore = Boolean(reviewStats?.totalRatings);
 
   const handleWatchlistToggle = async () => {
-    if (!contentId) return;
-    if (!ready) {
+    if (!contentId || saveLock.current || sessionLoading) return;
+    if (!isAuthenticated) {
       router.push("/auth/login");
       return;
     }
-
+    if (!ready) return;
+    saveLock.current = true;
     setIsTogglingWatchlist(true);
     try {
       const options = {
@@ -481,23 +466,25 @@ export function HeroContentCard({
       };
       if (inWatchlist) {
         await remove(String(contentId), watchType, options);
-        setSavedDelta((value) => value - 1);
       } else {
         await add(String(contentId), watchType, options);
-        setSavedDelta((value) => value + 1);
       }
+    } catch {
+      // The shared hook reports the failure and reloads the saved state.
     } finally {
+      saveLock.current = false;
       setIsTogglingWatchlist(false);
     }
   };
 
   const handleLikeToggle = async () => {
-    if (!contentId) return;
-    if (!likedReady) {
+    if (!contentId || likeLock.current || sessionLoading) return;
+    if (!isAuthenticated) {
       router.push("/auth/login");
       return;
     }
-
+    if (!likedReady) return;
+    likeLock.current = true;
     setIsTogglingLiked(true);
     try {
       const options = {
@@ -507,12 +494,11 @@ export function HeroContentCard({
       };
       if (inLiked) {
         await removeFromLiked(String(contentId), watchType, options);
-        setLikeDelta((value) => value - 1);
       } else {
         await addToLiked(String(contentId), watchType, options);
-        setLikeDelta((value) => value + 1);
       }
     } finally {
+      likeLock.current = false;
       setIsTogglingLiked(false);
     }
   };
@@ -638,38 +624,18 @@ export function HeroContentCard({
               </div>
             </div>
 
-            {moods.length > 0 ? (
-              <div className="mt-5 rounded-xl border border-brand-coral/20 bg-brand-coral/[0.07] p-3.5 sm:p-4">
-                <div className="flex items-start gap-3">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-coral/15 text-xl" aria-hidden="true">
-                    {isPublicImagePath(moods[0].emoji) ? (
-                      <Image src={moods[0].emoji} alt="" width={34} height={34} className="h-8 w-8 object-contain" />
-                    ) : (
-                      moods[0].emoji
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="mt-1 text-base font-bold text-[var(--ink)]">
-                      Mostly {getMoodLabel(moods[0].emoji, 0)}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
-                      {moods[0].count} vote{moods[0].count === 1 ? "" : "s"} · {moodTotal ? Math.round((moods[0].count / moodTotal) * 100) : 0}% of the top audience moods
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : null}
+            {topMoods.length > 0 ? <div className="mt-5 max-w-2xl"><AudienceMood moods={topMoods} totalVotes={totalMoodVotes} compact /></div> : null}
 
             <div className="mt-5 grid auto-cols-fr grid-flow-col gap-2.5 sm:flex sm:flex-wrap">
               <Link href={reviewHref} className="ui-primary-action leading-none">
                 <MessageCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span className="sr-only sm:not-sr-only">Reviews</span>
               </Link>
-              <button type="button" onClick={handleWatchlistToggle} disabled={isTogglingWatchlist} className="ui-secondary-action leading-none">
+              <button type="button" onClick={handleWatchlistToggle} disabled={sessionLoading || isTogglingWatchlist || (isAuthenticated && !ready)} aria-pressed={inWatchlist} aria-busy={isTogglingWatchlist} className="ui-secondary-action leading-none">
                 {inWatchlist ? <BookmarkCheck className="h-4 w-4 shrink-0" aria-hidden="true" /> : <Bookmark className="h-4 w-4 shrink-0" aria-hidden="true" />}
                 <span className="sr-only sm:not-sr-only">{inWatchlist ? "Saved" : "Save"}</span>
               </button>
-              <button type="button" onClick={handleLikeToggle} disabled={isTogglingLiked} className="ui-secondary-action leading-none">
+              <button type="button" onClick={handleLikeToggle} disabled={sessionLoading || isTogglingLiked || (isAuthenticated && !likedReady)} aria-pressed={inLiked} aria-busy={isTogglingLiked} className="ui-secondary-action leading-none">
                 <Heart className="h-4 w-4 shrink-0" fill={inLiked ? "currentColor" : "none"} aria-hidden="true" />
                 <span className="sr-only sm:not-sr-only">{inLiked ? "Liked" : "Like"}</span>
               </button>
@@ -681,13 +647,17 @@ export function HeroContentCard({
               ) : null}
             </div>
 
-            {(liveLikeCount > 0 || liveSavedCount > 0 || engagementStat.reviewCount > 0) ? (
-              <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--ink-muted)]">
-                {liveLikeCount > 0 ? <span>{fmtCount(liveLikeCount)} likes</span> : null}
-                {liveSavedCount > 0 ? <span>{fmtCount(liveSavedCount)} saves</span> : null}
-                {engagementStat.reviewCount > 0 ? <span>{fmtCount(engagementStat.reviewCount)} reviews</span> : null}
-              </div>
-            ) : null}
+            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t border-[var(--surface-border)] pt-4 text-sm text-[var(--ink-muted)]" role="status" aria-atomic="true" aria-busy={statsLoading}>
+              {statsError ? (
+                <button type="button" onClick={refreshStats} className="min-h-11 text-sm font-semibold underline underline-offset-4">Counts unavailable · Retry</button>
+              ) : (
+                <>
+                  <span><span className="font-semibold tabular-nums text-[var(--ink)]">{initialStatsLoading ? '—' : engagementStat.likeCount.toLocaleString()}</span> likes</span>
+                  <span><span className="font-semibold tabular-nums text-[var(--ink)]">{initialStatsLoading ? '—' : engagementStat.reviewCount.toLocaleString()}</span> reviews</span>
+                  <span><span className="font-semibold tabular-nums text-[var(--ink)]">{initialStatsLoading ? '—' : engagementStat.savedCount.toLocaleString()}</span> saves</span>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="min-w-0 lg:col-span-2">

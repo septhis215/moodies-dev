@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { MediaType } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PrismaService } from '../prisma/prisma.service';
+import { serializableTransaction } from '../prisma/serializable-transaction';
 
 type Kind = 'movie' | 'series';
 
@@ -27,30 +27,30 @@ export class LikedService {
   }
 
   /** Toggle a title in/out of the liked list — a single-row insert or delete. */
-  async toggle(userId: string, tmdbId: string, type: Kind) {
+  async toggle(userId: string, tmdbId: string, type: Kind, active?: boolean) {
     const mediaType = type === 'movie' ? MediaType.MOVIE : MediaType.TV;
     const numericId = Number(tmdbId);
+    if (!Number.isInteger(numericId) || numericId <= 0 || numericId > 2147483647) {
+      throw new BadRequestException('Invalid title ID.');
+    }
 
-    return this.prisma.$transaction(async (tx) => {
+    return serializableTransaction(this.prisma, async (tx) => {
       const existing = await tx.likedItem.findUnique({
         where: { userId_tmdbId_mediaType: { userId, tmdbId: numericId, mediaType } },
         select: { id: true },
       });
 
+      const liked = active ?? !existing;
+      if (liked === Boolean(existing)) return { liked };
       let delta = 0;
-      if (existing) {
+      if (!liked) {
         const { count } = await tx.likedItem.deleteMany({
           where: { userId, tmdbId: numericId, mediaType },
         });
         delta = count > 0 ? -1 : 0;
       } else {
-        try {
-          await tx.likedItem.create({ data: { userId, tmdbId: numericId, mediaType } });
-          delta = 1;
-        } catch (e) {
-          // Lost the add race to a concurrent toggle — the row exists now, no net change.
-          if (!(e instanceof PrismaClientKnownRequestError && e.code === 'P2002')) throw e;
-        }
+        await tx.likedItem.create({ data: { userId, tmdbId: numericId, mediaType } });
+        delta = 1;
       }
 
       if (delta !== 0) {
@@ -61,7 +61,7 @@ export class LikedService {
         });
       }
 
-      return { liked: !existing };
+      return { liked };
     });
   }
 
@@ -69,7 +69,7 @@ export class LikedService {
     const mediaType = type === 'movie' ? MediaType.MOVIE : MediaType.TV;
     const label = type === 'movie' ? 'Movie' : 'Series';
 
-    return this.prisma.$transaction(async (tx) => {
+    return serializableTransaction(this.prisma, async (tx) => {
       const { count } = await tx.likedItem.deleteMany({
         where: { userId, tmdbId, mediaType },
       });

@@ -42,12 +42,11 @@ export function useWatchlist() {
 
       const id = String(tmdbId);
       setError("");
-      watchlist.setItem(type, id, true);
 
       try {
-        const res = await toggleWatchlist(id, type);
+        const res = await toggleWatchlist(id, type, true);
+        watchlist.setItem(type, id, !res.removed);
         if (res.removed) {
-          watchlist.setItem(type, id, false);
           return;
         }
 
@@ -57,7 +56,7 @@ export function useWatchlist() {
           posterUrl: meta?.posterUrl ?? null,
         });
       } catch (e: unknown) {
-        watchlist.setItem(type, id, false);
+        await watchlist.refresh().catch(() => undefined);
         const appError = handleAppError(e, {
           fallbackMessage: "Could not update your watchlist. Please try again.",
           toastTitle: "Watchlist",
@@ -82,12 +81,11 @@ export function useWatchlist() {
 
       const id = String(tmdbId);
       setError("");
-      watchlist.setItem(type, id, false);
 
       try {
-        const res = await toggleWatchlist(id, type);
+        const res = await toggleWatchlist(id, type, false);
+        watchlist.setItem(type, id, !res.removed);
         if (!res.removed) {
-          watchlist.setItem(type, id, true);
           return;
         }
 
@@ -97,7 +95,7 @@ export function useWatchlist() {
           posterUrl: meta?.posterUrl ?? null,
         });
       } catch (e: unknown) {
-        watchlist.setItem(type, id, true);
+        await watchlist.refresh().catch(() => undefined);
         const appError = handleAppError(e, {
           fallbackMessage: "Could not update your watchlist. Please try again.",
           toastTitle: "Watchlist",

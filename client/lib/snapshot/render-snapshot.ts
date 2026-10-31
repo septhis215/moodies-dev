@@ -1,765 +1,260 @@
-import type { SnapshotPayload } from "./snapshot-types";
+import { DEFAULT_SNAPSHOT_OPTIONS, type SnapshotOptions, type SnapshotPayload } from './snapshot-types';
 
-export const MAX_SNAPSHOT_REVIEW_LENGTH = 180;
+export const MAX_SNAPSHOT_REVIEW_LENGTH = 240;
+const artworkCache = new Map<string, Promise<HTMLImageElement | null>>();
+type Box = { x: number; y: number; w: number; h: number };
 
-const BRAND = "Moodies";
-const WIDTH = 1080;
-const HEIGHT = 1080;
-
-type SnapshotTheme = {
-  accent: string;
-  deep: string;
-  glow: string;
-  text: string;
-  muted: string;
-};
-
-type LoadedArtwork = {
-  backdrop: HTMLImageElement | null;
-  poster: HTMLImageElement | null;
-};
-
-export function truncateReviewText(
-  value: string | undefined,
-  maxLength = MAX_SNAPSHOT_REVIEW_LENGTH,
-) {
-  const clean = (value ?? "").replace(/\s+/g, " ").trim();
+export function truncateReviewText(value: string | undefined, maxLength = MAX_SNAPSHOT_REVIEW_LENGTH) {
+  const clean = (value ?? '').replace(/\s+/g, ' ').trim();
   if (clean.length <= maxLength) return clean;
-
   const candidate = clean.slice(0, maxLength + 1);
-  const lastSpace = candidate.lastIndexOf(" ");
-  const truncated = candidate
-    .slice(0, lastSpace > maxLength * 0.65 ? lastSpace : maxLength)
-    .replace(/[.,;:!?-]+$/, "")
-    .trim();
-
-  return `${truncated}...`;
+  const space = candidate.lastIndexOf(' ');
+  return `${candidate.slice(0, space > maxLength * 0.65 ? space : maxLength).replace(/[.,;:!?-]+$/, '').trim()}…`;
 }
 
-export async function renderSnapshotToDataUrl(payload: SnapshotPayload) {
-  return renderSnapshot(payload, true);
+export function snapshotDimensions(format: SnapshotOptions['format']) {
+  if (format === 'landscape') return { width: 1600, height: 900 };
+  return { width: 1080, height: format === 'story' ? 1920 : format === 'portrait' ? 1350 : 1080 };
 }
 
-async function renderSnapshot(
-  payload: SnapshotPayload,
-  allowImages: boolean,
-): Promise<string> {
-  const canvas = document.createElement("canvas");
-  canvas.width = payload.width || WIDTH;
-  canvas.height = payload.height || HEIGHT;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas is not available in this browser.");
-
-  const artwork: LoadedArtwork = allowImages
-    ? {
-        backdrop: await loadCanvasImage(payload.content.backdropUrl),
-        poster: await loadCanvasImage(payload.content.posterUrl),
-      }
-    : { backdrop: null, poster: null };
-
-  const theme = getSnapshotTheme(payload);
-
-  drawSnapshotBackground(ctx, payload, artwork, theme);
-  drawArtworkLedPoster(ctx, payload, artwork, theme);
-
-  try {
-    return canvas.toDataURL("image/png");
-  } catch (error) {
-    if (allowImages) return renderSnapshot(payload, false);
-    throw error;
-  }
-}
-
-function drawArtworkLedPoster(
-  ctx: CanvasRenderingContext2D,
-  payload: SnapshotPayload,
-  artwork: LoadedArtwork,
-  theme: SnapshotTheme,
-) {
-  const posterBox = { x: 78, y: 112, width: 356, height: 534 };
-  drawSnapshotPosterArt(ctx, artwork.poster, posterBox, theme);
-
-  drawSnapshotInfoComposition(ctx, payload, {
-    x: 480,
-    y: 112,
-    width: 480,
-    height: 534,
-    variant: "side",
-  }, theme);
-
-  const quote = getSnapshotQuote(payload);
-  drawSnapshotQuote(ctx, quote, {
-    x: 84,
-    y: 684,
-    width: 884,
-    height: 206,
-    maxLines: 3,
-    preferredSize: quote.length <= 72 ? 62 : 48,
-    minSize: 36,
-  });
-
-  drawSnapshotRating(ctx, payload, 84, 950, theme);
-  drawSnapshotBrandFooter(ctx, payload, theme);
-}
-
-function drawSnapshotBackground(
-  ctx: CanvasRenderingContext2D,
-  payload: SnapshotPayload,
-  artwork: LoadedArtwork,
-  theme: SnapshotTheme,
-) {
-  const image = artwork.backdrop ?? artwork.poster;
-
-  if (image) {
-    ctx.save();
-    ctx.filter = "blur(30px) brightness(0.55) saturate(1.05)";
-    drawCoverImage(ctx, image, -54, -54, WIDTH + 108, HEIGHT + 108);
-    ctx.restore();
-  } else {
-    drawFallbackBackground(ctx, payload, theme);
-  }
-
-  const vertical = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-  vertical.addColorStop(0, "rgba(0,0,0,0.20)");
-  vertical.addColorStop(0.48, "rgba(0,0,0,0.48)");
-  vertical.addColorStop(1, "rgba(0,0,0,0.88)");
-  ctx.fillStyle = vertical;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-  const side = ctx.createLinearGradient(0, 0, WIDTH, 0);
-  side.addColorStop(0, "rgba(0,0,0,0.72)");
-  side.addColorStop(0.55, "rgba(0,0,0,0.28)");
-  side.addColorStop(1, "rgba(0,0,0,0.58)");
-  ctx.fillStyle = side;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-  const glow = ctx.createRadialGradient(220, 360, 40, 220, 360, 520);
-  glow.addColorStop(0, theme.glow);
-  glow.addColorStop(0.62, "rgba(0,0,0,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-  ctx.fillStyle = "rgba(255,255,255,0.035)";
-  ctx.fillRect(58, 58, 964, 1);
-  ctx.fillRect(58, 1021, 964, 1);
-}
-
-function drawFallbackBackground(
-  ctx: CanvasRenderingContext2D,
-  payload: SnapshotPayload,
-  theme: SnapshotTheme,
-) {
-  const bg = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT);
-  bg.addColorStop(0, theme.deep);
-  bg.addColorStop(0.48, "#101114");
-  bg.addColorStop(1, "#020305");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-  const genreHint = (payload.content.genres[0] ?? "").toLowerCase();
-  const accent =
-    genreHint.includes("romance") || genreHint.includes("comedy")
-      ? "rgba(251, 113, 133, 0.22)"
-      : genreHint.includes("documentary")
-        ? "rgba(45, 212, 191, 0.18)"
-        : theme.glow;
-
-  ctx.fillStyle = accent;
-  ctx.beginPath();
-  ctx.ellipse(820, 190, 340, 260, -0.2, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "rgba(255,255,255,0.055)";
-  ctx.beginPath();
-  ctx.ellipse(180, 890, 420, 190, 0.18, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawSnapshotPosterArt(
-  ctx: CanvasRenderingContext2D,
-  poster: HTMLImageElement | null,
-  box: { x: number; y: number; width: number; height: number },
-  theme: SnapshotTheme,
-) {
-  ctx.save();
-  ctx.shadowColor = theme.glow;
-  ctx.shadowBlur = 44;
-  ctx.shadowOffsetY = 20;
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
-  roundedRect(ctx, box.x, box.y, box.width, box.height, 26);
-  ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  roundedRect(ctx, box.x, box.y, box.width, box.height, 26);
-  ctx.clip();
-
-  if (poster) {
-    drawCoverImage(ctx, poster, box.x, box.y, box.width, box.height);
-  } else {
-    const fill = ctx.createLinearGradient(
-      box.x,
-      box.y,
-      box.x + box.width,
-      box.y + box.height,
-    );
-    fill.addColorStop(0, theme.accent);
-    fill.addColorStop(0.56, "#242733");
-    fill.addColorStop(1, "#050507");
-    ctx.fillStyle = fill;
-    ctx.fillRect(box.x, box.y, box.width, box.height);
-    ctx.fillStyle = "rgba(255,255,255,0.84)";
-    ctx.font = font(34, 850);
-    ctx.textAlign = "center";
-    ctx.fillText("Artwork", box.x + box.width / 2, box.y + box.height / 2 - 8);
-    ctx.font = font(20, 750);
-    ctx.fillStyle = "rgba(255,255,255,0.58)";
-    ctx.fillText("unavailable", box.x + box.width / 2, box.y + box.height / 2 + 28);
-    ctx.textAlign = "left";
-  }
-
-  ctx.restore();
-
-  ctx.strokeStyle = "rgba(255,255,255,0.13)";
-  ctx.lineWidth = 1.5;
-  roundedRect(ctx, box.x, box.y, box.width, box.height, 26);
-  ctx.stroke();
-}
-
-function drawSnapshotInfoComposition(
-  ctx: CanvasRenderingContext2D,
-  payload: SnapshotPayload,
-  opts: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    variant: "side" | "wide";
-  },
-  theme: SnapshotTheme,
-) {
-  if (opts.variant === "wide") {
-    drawWideInfoComposition(ctx, payload, opts, theme);
-    return;
-  }
-
-  const { content } = payload;
-  const year = content.releaseYear ?? "NOW";
-  const director = formatDirectorParts(content.directors);
-  const genres = content.genres.slice(0, 2);
-  const runtime = content.runtimeLabel ?? (content.mediaType === "TV" ? "Series" : "Feature");
-  const left = opts.x;
-  const top = opts.y;
-  const width = opts.width;
-
-  const field = ctx.createLinearGradient(opts.x, opts.y, opts.x + opts.width, opts.y + opts.height);
-  field.addColorStop(0, "rgba(0,0,0,0.32)");
-  field.addColorStop(0.55, "rgba(0,0,0,0.11)");
-  field.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = field;
-  roundedRect(ctx, left - 24, top - 10, width + 40, opts.height + 20, 34);
-  ctx.fill();
-
-  ctx.fillStyle = theme.accent;
-  ctx.beginPath();
-  ctx.arc(left + 8, top + 14, 6, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = theme.muted;
-  ctx.font = font(18, 850);
-  ctx.fillText("SNAPSHOT DETAILS", left + 28, top + 21);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = font(year.length > 4 ? 58 : 86, 950);
-  ctx.fillText(year, left, top + 112);
-
-  const pillY = top + 132;
-  const typeWidth = drawInfoPill(ctx, content.typeLabel, left + 2, pillY, theme, "solid");
-  drawInfoPill(ctx, runtime, left + typeWidth + 18, pillY, theme, "soft");
-
-  const genreTop = top + 236;
-  drawSoftPanel(ctx, left, genreTop - 42, width - 32, 154, 28);
-  ctx.fillStyle = "rgba(255,255,255,0.32)";
-  ctx.font = font(16, 850);
-  ctx.fillText("MOOD", left + 26, genreTop - 10);
-
-  const primaryGenre = genres[0] ?? "Watchlist";
-  const secondaryGenre = genres[1];
-  ctx.fillStyle = "#ffffff";
-  ctx.font = font(primaryGenre.length > 10 ? 44 : 56, 930);
-  ctx.fillText(primaryGenre, left + 26, genreTop + 48);
-
-  if (secondaryGenre) {
-    ctx.fillStyle = theme.accent;
-    ctx.font = font(32, 900);
-    ctx.fillText(`/ ${secondaryGenre}`, left + 28, genreTop + 94);
-  }
-
-  drawDirectorCredit(ctx, director, left, top + 420, width - 32, theme);
-  drawDecorativePulse(ctx, left + width - 58, top + 334, theme);
-}
-
-function drawSnapshotQuote(
-  ctx: CanvasRenderingContext2D,
-  quote: string,
-  opts: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    maxLines: number;
-    preferredSize: number;
-    minSize: number;
-  },
-) {
-  const text = `"${quote}"`;
-  const size = fitTextSize(
-    ctx,
-    text,
-    opts.width,
-    opts.maxLines,
-    opts.preferredSize,
-    opts.minSize,
-    1.08,
-  );
-  const lineHeight = size * 1.08;
-  ctx.font = font(size, 850);
-  const lines = wrapTextLines(ctx, text, opts.width, opts.maxLines);
-  const textHeight = size + (lines.length - 1) * lineHeight;
-  const baselineY = opts.y + (opts.height - textHeight) / 2 + size * 0.82;
-
-  drawQuoteScrim(ctx, opts.x - 26, opts.y, opts.width + 52, opts.height);
-
-  ctx.fillStyle = "#ffffff";
-  drawLines(ctx, lines, opts.x, baselineY, lineHeight);
-}
-
-function drawQuoteScrim(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-) {
-  const fill = ctx.createLinearGradient(x, y, x + width, y + height);
-  fill.addColorStop(0, "rgba(0,0,0,0.58)");
-  fill.addColorStop(0.72, "rgba(0,0,0,0.18)");
-  fill.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = fill;
-  roundedRect(ctx, x, y, width, height, 28);
-  ctx.fill();
-}
-
-function drawSnapshotRating(
-  ctx: CanvasRenderingContext2D,
-  payload: SnapshotPayload,
-  x: number,
-  y: number,
-  theme: SnapshotTheme,
-) {
-  const rating = payload.review?.rating;
-  const label =
-    rating != null
-      ? `${ratingStars(rating / 2)} ${(rating / 2).toFixed(1)}`
-      : payload.content.ratingLabel || formatPopularity(payload.content.popularity);
-
-  if (!label) return;
-
-  ctx.fillStyle = theme.accent;
-  ctx.font = font(34, 850);
-  ctx.fillText(label, x, y);
-
-  const byline = payload.review?.username
-    ? `Reviewed by @${payload.review.username}`
-    : payload.review?.authorName
-      ? `Reviewed by ${payload.review.authorName}`
-      : payload.snapshotType === "review"
-        ? "Reviewed on Moodies"
-        : "On Moodies";
-
-  ctx.fillStyle = theme.muted;
-  ctx.font = font(24, 700);
-  ctx.fillText(byline, x, y + 42);
-}
-
-function drawSnapshotBrandFooter(
-  ctx: CanvasRenderingContext2D,
-  payload: SnapshotPayload,
-  theme: SnapshotTheme,
-) {
-  const cta =
-    payload.snapshotType === "review"
-      ? "Share the mood on Moodies"
-      : "Find your next watch on Moodies";
-
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
-  roundedRect(ctx, 686, 946, 326, 64, 32);
-  ctx.fill();
-
-  ctx.fillStyle = theme.accent;
-  ctx.beginPath();
-  ctx.arc(724, 978, 11, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = font(24, 900);
-  ctx.fillText(BRAND, 748, 970);
-
-  ctx.fillStyle = theme.muted;
-  ctx.font = font(19, 700);
-  ctx.fillText(cta.replace(`${BRAND}`, "").replace(" on ", " "), 748, 998);
-}
-
-function getSnapshotQuote(payload: SnapshotPayload) {
-  if (payload.review?.content) {
-    return truncateReviewText(payload.review.content);
-  }
-
-  const genres = payload.content.genres.map((genre) => genre.toLowerCase());
-  if (genres.some((genre) => genre.includes("horror"))) {
-    return "One for the lights-off crowd.";
-  }
-  if (genres.some((genre) => genre.includes("romance"))) {
-    return "A soft watch for the weekend.";
-  }
-  if (genres.some((genre) => genre.includes("comedy"))) {
-    return "For when you need an easy laugh.";
-  }
-  if (genres.some((genre) => genre.includes("thriller"))) {
-    return "Tension for your watchlist.";
-  }
-  if (genres.some((genre) => genre.includes("documentary"))) {
-    return "A story worth sitting with.";
-  }
-
-  return "Now on my radar.";
-}
-
-function drawWideInfoComposition(
-  ctx: CanvasRenderingContext2D,
-  payload: SnapshotPayload,
-  opts: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    variant: "side" | "wide";
-  },
-  theme: SnapshotTheme,
-) {
-  const { content } = payload;
-  const year = content.releaseYear ?? "Now";
-  const runtime = content.runtimeLabel ?? content.typeLabel;
-  const genres = content.genres.slice(0, 2);
-  const director = formatDirectorParts(content.directors);
-
-  const fill = ctx.createLinearGradient(opts.x, opts.y, opts.x + opts.width, opts.y + opts.height);
-  fill.addColorStop(0, "rgba(0,0,0,0.42)");
-  fill.addColorStop(0.48, "rgba(255,255,255,0.075)");
-  fill.addColorStop(1, "rgba(0,0,0,0.18)");
-  ctx.fillStyle = fill;
-  roundedRect(ctx, opts.x - 8, opts.y - 24, opts.width + 16, opts.height, 30);
-  ctx.fill();
-
-  ctx.fillStyle = theme.accent;
-  roundedRect(ctx, opts.x, opts.y - 12, 74, 6, 3);
-  ctx.fill();
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = font(54, 950);
-  ctx.fillText(year, opts.x, opts.y + 54);
-
-  drawInfoPill(ctx, content.typeLabel, opts.x + 160, opts.y + 14, theme, "solid");
-  drawInfoPill(ctx, runtime, opts.x + 322, opts.y + 14, theme, "soft");
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = font(34, 900);
-  ctx.fillText(genres.length ? genres.join(" / ") : "On your radar", opts.x, opts.y + 116);
-
-  if (director.name) {
-    ctx.fillStyle = theme.muted;
-    ctx.font = font(20, 760);
-    ctx.fillText("Directed by", opts.x, opts.y + 158);
-
-    ctx.fillStyle = theme.accent;
-    ctx.font = font(27, 900);
-    ctx.fillText(`${director.name}${director.extra ? ` +${director.extra}` : ""}`, opts.x + 128, opts.y + 158);
-  }
-
-  drawDecorativePulse(ctx, opts.x + opts.width - 118, opts.y + 136, theme);
-}
-
-function formatDirectorParts(directors?: string[]) {
-  if (!directors?.length) return { name: "", extra: 0 };
-  const [first, ...rest] = directors;
-  return { name: first, extra: rest.length };
-}
-
-function drawInfoPill(
-  ctx: CanvasRenderingContext2D,
-  label: string,
-  x: number,
-  y: number,
-  theme: SnapshotTheme,
-  variant: "solid" | "soft",
-) {
-  ctx.font = font(22, 850);
-  const width = Math.min(150, ctx.measureText(label).width + 34);
-  ctx.fillStyle = variant === "solid" ? theme.accent : "rgba(255,255,255,0.105)";
-  roundedRect(ctx, x, y, width, 42, 21);
-  ctx.fill();
-  ctx.fillStyle = variant === "solid" ? "#0b0b0c" : "#ffffff";
-  ctx.fillText(label, x + 17, y + 28);
-  return width;
-}
-
-function drawSoftPanel(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-) {
-  const fill = ctx.createLinearGradient(x, y, x + width, y + height);
-  fill.addColorStop(0, "rgba(255,255,255,0.095)");
-  fill.addColorStop(1, "rgba(255,255,255,0.028)");
-  ctx.fillStyle = fill;
-  roundedRect(ctx, x, y, width, height, radius);
-  ctx.fill();
-}
-
-function drawDirectorCredit(
-  ctx: CanvasRenderingContext2D,
-  director: { name: string; extra: number },
-  x: number,
-  y: number,
-  width: number,
-  theme: SnapshotTheme,
-) {
-  const fill = ctx.createLinearGradient(x, y, x + width, y + 128);
-  fill.addColorStop(0, "rgba(255,255,255,0.105)");
-  fill.addColorStop(1, "rgba(255,255,255,0.035)");
-  ctx.fillStyle = fill;
-  roundedRect(ctx, x, y, width, 128, 30);
-  ctx.fill();
-
-  ctx.fillStyle = theme.accent;
-  ctx.beginPath();
-  ctx.arc(x + 30, y + 36, 8, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = theme.muted;
-  ctx.font = font(18, 800);
-  ctx.fillText("DIRECTED BY", x + 52, y + 43);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = font(31, 930);
-  const name = director.name || "Moodies pick";
-  const credit = `${name}${director.extra ? ` +${director.extra}` : ""}`;
-  drawLines(ctx, wrapTextLines(ctx, credit, width - 60, 2), x + 30, y + 88, 34);
-}
-
-function drawDecorativePulse(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  theme: SnapshotTheme,
-) {
-  ctx.save();
-  ctx.strokeStyle = theme.accent;
-  ctx.globalAlpha = 0.9;
-  ctx.lineWidth = 3;
-  for (let i = 0; i < 3; i += 1) {
-    ctx.beginPath();
-    ctx.arc(x, y, 18 + i * 22, 0, Math.PI * 1.55);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 0.28;
-  ctx.fillStyle = "#ffffff";
-  for (let i = 0; i < 5; i += 1) {
-    ctx.beginPath();
-    ctx.arc(x - 80 + i * 28, y + 74, 3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-function getSnapshotTheme(payload: SnapshotPayload): SnapshotTheme {
-  const genres = payload.content.genres.map((genre) => genre.toLowerCase());
-
-  if (genres.some((genre) => genre.includes("horror") || genre.includes("thriller"))) {
-    return {
-      accent: "#f43f5e",
-      deep: "#12070d",
-      glow: "rgba(244,63,94,0.32)",
-      text: "#ffffff",
-      muted: "rgba(255,255,255,0.70)",
-    };
-  }
-
-  if (genres.some((genre) => genre.includes("romance") || genre.includes("comedy"))) {
-    return {
-      accent: "#fb923c",
-      deep: "#170b12",
-      glow: "rgba(251,146,60,0.28)",
-      text: "#ffffff",
-      muted: "rgba(255,255,255,0.72)",
-    };
-  }
-
-  if (payload.content.mediaType === "TV") {
-    return {
-      accent: "#38bdf8",
-      deep: "#07111f",
-      glow: "rgba(56,189,248,0.28)",
-      text: "#ffffff",
-      muted: "rgba(255,255,255,0.70)",
-    };
-  }
-
-  return {
-    accent: "#facc15",
-    deep: "#101014",
-    glow: "rgba(250,204,21,0.24)",
-    text: "#ffffff",
-    muted: "rgba(255,255,255,0.70)",
+export async function renderSnapshotToDataUrl(payload: SnapshotPayload, options = DEFAULT_SNAPSHOT_OPTIONS, allowImages = true): Promise<string> {
+  const dimensions = snapshotDimensions(options.format);
+  const canvas = document.createElement('canvas');
+  canvas.width = dimensions.width; canvas.height = dimensions.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Image export is unavailable in this browser.');
+  await document.fonts.ready;
+  const body = getComputedStyle(document.body).fontFamily;
+  const display = getComputedStyle(document.querySelector('h1, h2') ?? document.body).fontFamily;
+  await Promise.all([document.fonts.load(`700 72px ${display}`), document.fonts.load(`400 32px ${body}`)]);
+  const [poster, backdrop] = allowImages ? await Promise.all([loadImage(payload.content.posterUrl), loadImage(payload.content.backdropUrl)]) : [null, null];
+  const photo = options.artwork === 'none' ? null : options.artwork === 'poster' ? poster : options.artwork === 'backdrop' ? backdrop : backdrop ?? poster;
+  const accent = options.accent === 'custom' && /^#[\da-f]{6}$/i.test(options.customAccent) ? options.customAccent : { coral: '#ff765f', gold: '#e7bc72', ivory: '#f0e7dc', custom: '#ff765f' }[options.accent];
+  const paper = options.tone === 'paper';
+  const bg = paper ? '#f0e7dc' : options.tone === 'warm' ? '#291c17' : '#121110';
+  const ink = paper ? '#241b17' : '#f5f1ed';
+  const muted = paper ? '#6a574b' : '#b9aca7';
+  const rule = paper ? '#cdbcaa' : '#45362f';
+  const scale = dimensions.width / 1080;
+  ctx.scale(scale, scale);
+  const W = 1080, H = dimensions.height / scale, wide = H < 800;
+  const M = 64;
+  const title = options.displayTitle.trim() || payload.content.title;
+  const quote = options.showQuote ? (payload.review ? truncateReviewText(payload.review.content) : options.caption.trim()) : '';
+  const credit = options.showCredit ? payload.content.directors?.slice(0, 2).join(', ') : '';
+  const creditLine = credit ? `${payload.content.mediaType === 'TV' ? 'Created' : 'Directed'} by ${credit}` : '';
+  const metadata = options.showDetails ? [payload.content.releaseYear, payload.content.runtimeLabel, ...payload.content.genres.slice(0, 2)].filter(Boolean).join(' · ') : '';
+  const rating = options.showRating ? payload.review ? `${(payload.review.rating / 2).toFixed(1)} / 5` : payload.content.ratingLabel || '' : '';
+  const byline = payload.review ? `A review by ${payload.review.username ? `@${payload.review.username}` : payload.review.authorName || 'the Moodies community'}` : 'Find your next watch';
+  const font = (size: number, weight = 400, heading = false) => `${weight} ${size}px ${heading ? display : body}`;
+  const text = (value: string, x: number, y: number, size: number, color = ink, weight = 400, heading = false) => {
+    ctx.font = font(size, weight, heading); ctx.fillStyle = color; ctx.fillText(value, x, y);
   };
-}
+  const line = (x: number, y: number, w: number, color = rule) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, 1); };
+  const block = (value: string, box: Box, preferred: number, color = ink, heading = false, maxLines = 3, align = options.align) => {
+    if (!value || box.h < 22) return 0;
+    let size = preferred * (heading ? options.titleScale / 100 : 1);
+    let lines: string[] = [];
+    while (true) {
+      ctx.font = font(size, heading ? 700 : 400, heading);
+      lines = wrap(ctx, value, box.w);
+      if ((lines.length <= maxLines && lines.length * size * 1.12 <= box.h) || size <= 22) break;
+      size -= 2;
+    }
+    lines = ellipsize(ctx, lines, Math.max(1, Math.min(maxLines, Math.floor(box.h / (size * 1.12)))), box.w);
+    ctx.textAlign = align;
+    const x = align === 'center' ? box.x + box.w / 2 : box.x;
+    lines.forEach((value, index) => text(value, x, box.y + size * 0.84 + index * size * 1.12, size, color, heading ? 700 : 400, heading));
+    ctx.textAlign = 'left';
+    return lines.length * size * 1.12;
+  };
+  const image = (art: HTMLImageElement | null, box: Box, radius = 0) => {
+    ctx.save(); ctx.beginPath(); ctx.roundRect(box.x, box.y, box.w, box.h, radius); ctx.clip();
+    ctx.fillStyle = paper ? '#d7c8b7' : '#30231d'; ctx.fillRect(box.x, box.y, box.w, box.h);
+    if (art) cover(ctx, art, box, options.imageZoom / 100, options.imagePosition / 100);
+    else {
+      const gradient = ctx.createLinearGradient(box.x, box.y, box.x + box.w, box.y + box.h);
+      gradient.addColorStop(0, accent); gradient.addColorStop(1, bg);
+      ctx.globalAlpha = 0.35; ctx.fillStyle = gradient; ctx.fillRect(box.x, box.y, box.w, box.h);
+    }
+    if (options.layout === 'ticket' || options.layout === 'editorial') {
+      ctx.fillStyle = `rgba(0,0,0,${Math.max(0, options.overlay - 45) / 150})`;
+      ctx.fillRect(box.x, box.y, box.w, box.h);
+    }
+    ctx.restore();
+  };
+  const shade = (box: Box) => {
+    const rgb = paper ? '240,231,220' : options.tone === 'warm' ? '41,28,23' : '10,8,7';
+    const gradient = ctx.createLinearGradient(0, box.y, 0, box.y + box.h);
+    gradient.addColorStop(0, `rgba(${rgb},0.1)`);
+    gradient.addColorStop(0.45, `rgba(${rgb},${options.overlay / 140})`);
+    gradient.addColorStop(1, `rgba(${rgb},0.98)`);
+    ctx.fillStyle = gradient; ctx.fillRect(box.x, box.y, box.w, box.h);
+  };
+  const masthead = (onImage = false) => {
+    const color = onImage ? '#f5f1ed' : ink;
+    if (onImage) {
+      const scrim = ctx.createLinearGradient(0, 0, 0, 160);
+      scrim.addColorStop(0, 'rgba(0,0,0,0.5)'); scrim.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = scrim; ctx.fillRect(0, 0, W, 160);
+    }
+    text('Moodies', M, 78, 44, color, 700, true);
+    ctx.textAlign = 'right'; text(payload.snapshotType === 'review' ? 'AUDIENCE NOTES' : 'A WATCH WORTH SHARING', W - M, 74, 18, color, 500); ctx.textAlign = 'left';
+  };
+  const footer = (color = ink) => {
+    line(M, H - 112, W - 2 * M, color === '#f5f1ed' ? '#655047' : rule);
+    block(byline, { x: M, y: H - 82, w: 590, h: 48 }, 24, color, false, 1, 'left');
+    ctx.textAlign = 'right'; text('moodies.tech', W - M, H - 54, 24, color, 600); ctx.textAlign = 'left';
+  };
 
-function ratingStars(value: number) {
-  const rounded = Math.max(0, Math.min(5, Math.round(value)));
-  return "★".repeat(rounded) + "☆".repeat(5 - rounded);
-}
-
-function formatPopularity(value?: number | null) {
-  if (!value || value <= 0) return null;
-  return `${Math.round(value)} popularity`;
-}
-
-function fitTextSize(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number,
-  maxLines: number,
-  preferredSize: number,
-  minSize: number,
-  lineHeightRatio: number,
-) {
-  for (let size = preferredSize; size >= minSize; size -= 2) {
-    ctx.font = font(size, 850);
-    const lines = wrapTextLines(ctx, text, maxWidth, maxLines + 1);
-    if (lines.length <= maxLines) return size;
-    const height = lines.length * size * lineHeightRatio;
-    if (height <= maxLines * size * lineHeightRatio) return size;
-  }
-  return minSize;
-}
-
-function wrapTextLines(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number,
-  maxLines: number,
-) {
-  const words = text.split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let line = "";
-
-  for (const word of words) {
-    const testLine = line ? `${line} ${word}` : word;
-    if (ctx.measureText(testLine).width > maxWidth && line) {
-      lines.push(line);
-      line = word;
-      if (lines.length === maxLines) break;
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  if (options.layout === 'premiere') {
+    if (wide) {
+      image(photo, { x: 0, y: 0, w: 570, h: H });
+      shade({ x: 0, y: 0, w: 570, h: H });
+      text('Moodies', 44, 68, 44, '#f5f1ed', 700, true);
+      const x = 620, w = 400;
+      text(payload.content.typeLabel.toUpperCase(), x, 76, 20, muted, 500);
+      const titleH = block(title, { x, y: 124, w, h: 216 }, 78, ink, true, 3);
+      const metaY = 140 + titleH;
+      block(metadata, { x, y: metaY, w, h: 58 }, 24, muted, false, 2);
+      block([quote, creditLine].filter(Boolean).join(' · '), { x, y: metaY + 78, w, h: Math.max(30, H - 114 - metaY - 78) }, 25, ink, false, 2);
+      if (rating) text(rating, x, H - 68, 30, paper ? ink : accent, 600);
+      text('moodies.tech', 44, H - 44, 24, '#f5f1ed', 500);
     } else {
-      line = testLine;
+      const artH = H * 0.60;
+      image(photo, { x: 0, y: 0, w: W, h: artH + 70 });
+      shade({ x: 0, y: 0, w: W, h: artH + 70 });
+      ctx.fillStyle = bg; ctx.fillRect(0, artH, W, H - artH);
+      masthead(true);
+      ctx.fillStyle = accent; ctx.fillRect(M, artH - 8, 80, 8);
+      text(payload.content.typeLabel.toUpperCase(), M, artH + 46, 22, muted, 500);
+      if (rating) { ctx.textAlign = 'right'; text(rating, W - M, artH + 46, 28, paper ? ink : accent, 600); ctx.textAlign = 'left'; }
+      const titleY = artH + 68;
+      const available = H - 132 - titleY;
+      const titleH = block(title, { x: M, y: titleY, w: W - M * 2, h: Math.min(available * 0.54, 225) }, 106, ink, true, 2);
+      let y = titleY + titleH + 16;
+      if (metadata) { y += block(metadata, { x: M, y, w: W - M * 2, h: 64 }, 28, muted, false, 2) + 16; }
+      block(quote, { x: M, y, w: W - M * 2, h: H - 132 - y - (credit ? 38 : 0) }, 30, ink, false, 3);
+      if (credit) block(creditLine, { x: M, y: quote ? H - 162 : y, w: W - M * 2, h: 30 }, 24, muted, false, 1);
+      footer();
     }
-  }
-
-  if (line && lines.length < maxLines) lines.push(line);
-
-  if (words.length && lines.length === maxLines) {
-    const consumed = lines.join(" ").replace(/\.\.\.$/, "");
-    if (consumed.length < text.length) {
-      lines[lines.length - 1] = ellipsizeLine(ctx, lines[lines.length - 1], maxWidth);
+  } else if (options.layout === 'ticket') {
+    masthead();
+    const ticket = { x: 40, y: 124, w: W - 80, h: H - 170 };
+    ctx.fillStyle = paper ? '#e7dac8' : '#201b18'; ctx.beginPath(); ctx.roundRect(ticket.x, ticket.y, ticket.w, ticket.h, 20); ctx.fill();
+    const split = wide ? 340 : 426;
+    image(options.artwork === 'auto' ? poster ?? photo : photo, { x: 64, y: 148, w: split - 110, h: ticket.h - 48 }, 8);
+    ctx.strokeStyle = rule; ctx.lineWidth = 2; ctx.setLineDash([6, 10]); ctx.beginPath(); ctx.moveTo(split, ticket.y + 24); ctx.lineTo(split, H - 64); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = bg;
+    [ticket.y, H - 46].forEach((y) => { ctx.beginPath(); ctx.arc(split, y, 19, 0, Math.PI * 2); ctx.fill(); });
+    const x = split + 46, w = W - x - 76;
+    text('ADMIT ONE GOOD WATCH', x, 184, 20, muted, 600);
+    if (wide) {
+      block(title, { x, y: 212, w, h: 108 }, 72, ink, true, 2);
+      block(metadata, { x, y: 338, w, h: 32 }, 25, muted, false, 1);
+      block(creditLine, { x, y: 380, w, h: 28 }, 22, muted, false, 1);
+      block(quote, { x, y: 420, w, h: 45 }, 24, ink, false, 1);
+      line(x, H - 128, w);
+      if (rating) { ctx.textAlign = 'right'; text(rating, W - 76, 184, 25, paper ? ink : accent, 600); ctx.textAlign = 'left'; }
+      block(byline, { x, y: H - 100, w, h: 30 }, 22, muted, false, 1, 'left');
+    } else {
+    const titleH = block(title, { x, y: 222, w, h: Math.min(H * 0.28, 330) }, wide ? 70 : 88, ink, true, 3);
+    let y = 242 + titleH;
+    if (metadata) y += block(metadata, { x, y, w, h: 76 }, 26, muted, false, 2) + 24;
+    block(quote || 'The next story starts here.', { x, y, w, h: H - 265 - y }, 32, ink, false, 5);
+    block(creditLine, { x, y: H - 240, w, h: 32 }, 23, muted, false, 1);
+    line(x, H - 192, w);
+    if (rating) text(rating, x, H - 138, 34, paper ? ink : accent, 600);
+    block(byline, { x, y: H - 104, w: w - 140, h: 32 }, 20, muted, false, 1, 'left');
+    for (let i = 0; i < 35; i++) { ctx.fillStyle = ink; ctx.fillRect(W - 192 + i * 3, H - 142, i % 3 === 0 ? 2 : 1, 50); }
     }
+  } else if (options.layout === 'editorial') {
+    masthead(); line(M, 110, W - M * 2, accent);
+    const artW = wide ? 230 : 360;
+    const artH = wide ? 330 : Math.min(H * 0.46, 760);
+    const artY = wide ? 150 : 170;
+    image(options.artwork === 'auto' ? poster ?? photo : photo, { x: M, y: artY, w: artW, h: artH }, 4);
+    const x = M + artW + 56, w = W - M - x;
+    text(`${payload.content.typeLabel.toUpperCase()} / ${payload.content.releaseYear || 'NOW'}`, x, artY + 22, 21, muted, 500);
+    if (wide) {
+      block(title, { x, y: 204, w, h: 126 }, 74, ink, true, 2);
+      block(metadata, { x, y: 348, w, h: 32 }, 25, muted, false, 1);
+      block([quote, creditLine].filter(Boolean).join(' · '), { x, y: 405, w, h: 65 }, 26, ink, false, 2);
+      if (rating) { ctx.textAlign = 'right'; text(rating, W - M, artY + 22, 27, paper ? ink : accent, 600); ctx.textAlign = 'left'; }
+    } else {
+    const titleH = block(title, { x, y: artY + 66, w, h: Math.min(artH * 0.5, 320) }, 92, ink, true, 3);
+    let y = artY + titleH + 90;
+    if (metadata) y += block(metadata, { x, y, w, h: 90 }, 27, muted, false, 3) + 28;
+    if (credit) block(`${payload.content.mediaType === 'TV' ? 'Created' : 'Directed'} by ${credit}`, { x, y, w, h: Math.max(32, artY + artH - y - 50) }, 27, muted, false, 2);
+    if (rating) text(rating, x, artY + artH - 8, 32, paper ? ink : accent, 600);
+    if (!wide && quote) {
+      const y = artY + artH + 55;
+      text(payload.review ? 'IN THEIR WORDS' : 'A PERSONAL NOTE', M, y, 20, muted, 500);
+      block(quote, { x: M, y: y + 30, w: W - M * 2, h: H - 150 - y - 30 }, H > 1500 ? 58 : 42, ink, false, 5);
+    }
+    }
+    footer();
+  } else {
+    image(photo, { x: 0, y: 0, w: W, h: H });
+    shade({ x: 0, y: 0, w: W, h: H });
+    masthead(true);
+    const bottom = H - 150;
+    const titleY = Math.max(160, H * (wide ? 0.35 : 0.55));
+    const photoInk = paper ? ink : '#f5f1ed';
+    const photoMuted = paper ? muted : '#dfd3ca';
+    const titleH = block(title, { x: M, y: titleY, w: W - M * 2, h: (bottom - titleY) * 0.52 }, wide ? 88 : 126, photoInk, true, 3);
+    let y = titleY + titleH + 20;
+    if (metadata) y += block(metadata, { x: M, y, w: W - M * 2, h: 70 }, 29, photoMuted, false, 2) + 20;
+    block(quote, { x: M, y, w: W - M * 2 - (rating ? 170 : 0), h: bottom - y - (credit ? 38 : 0) }, 32, photoInk, false, 4);
+    if (credit) block(creditLine, { x: M, y: H - 174, w: W - M * 2 - (rating ? 170 : 0), h: 28 }, 23, photoMuted, false, 1);
+    if (rating) { ctx.textAlign = 'right'; text(rating, W - M, H - 148, 32, accent, 600); ctx.textAlign = 'left'; }
+    footer(photoInk);
   }
 
-  return lines;
-}
-
-function ellipsizeLine(
-  ctx: CanvasRenderingContext2D,
-  line: string,
-  maxWidth: number,
-) {
-  let output = line.replace(/[.,;:!?-]+$/, "").trim();
-  while (output.length > 0 && ctx.measureText(`${output}...`).width > maxWidth) {
-    output = output.slice(0, output.lastIndexOf(" "));
-    if (!output) break;
+  if (options.texture) {
+    ctx.save(); ctx.globalAlpha = paper ? 0.035 : 0.045;
+    for (let i = 0; i < 2400; i++) { ctx.fillStyle = i % 2 ? '#ffffff' : '#000000'; ctx.fillRect((i * 139.7) % W, (i * 97.3) % H, 1.5, 1.5); }
+    ctx.restore();
   }
-  return output ? `${output}...` : "...";
+  if (options.border) { ctx.strokeStyle = accent; ctx.lineWidth = 2; ctx.strokeRect(24, 24, W - 48, H - 48); }
+  try { return canvas.toDataURL(options.fileType === 'jpeg' ? 'image/jpeg' : 'image/png', 0.94); }
+  catch (error) { if (allowImages) return renderSnapshotToDataUrl(payload, options, false); throw error; }
 }
 
-function drawLines(
-  ctx: CanvasRenderingContext2D,
-  lines: string[],
-  x: number,
-  y: number,
-  lineHeight: number,
-) {
-  lines.forEach((line, index) => {
-    ctx.fillText(line, x, y + index * lineHeight);
+function wrap(ctx: CanvasRenderingContext2D, value: string, width: number) {
+  const lines: string[] = []; let line = '';
+  for (const word of value.split(/\s+/)) {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width <= width) { line = next; continue; }
+    if (line) lines.push(line); line = '';
+    for (const char of word) { if (line && ctx.measureText(line + char).width > width) { lines.push(line); line = ''; } line += char; }
+  }
+  if (line) lines.push(line); return lines;
+}
+
+function ellipsize(ctx: CanvasRenderingContext2D, lines: string[], max: number, width: number) {
+  if (lines.length <= max) return lines;
+  const result = lines.slice(0, max); let last = result[max - 1];
+  while (last && ctx.measureText(`${last}…`).width > width) last = last.slice(0, -1);
+  result[max - 1] = `${last.trim()}…`; return result;
+}
+
+function cover(ctx: CanvasRenderingContext2D, image: HTMLImageElement, box: Box, zoom: number, position: number) {
+  const ratio = Math.max(box.w / image.naturalWidth, box.h / image.naturalHeight) * zoom;
+  const w = image.naturalWidth * ratio, h = image.naturalHeight * ratio;
+  ctx.drawImage(image, box.x + (box.w - w) / 2, box.y + (box.h - h) * position, w, h);
+}
+
+function loadImage(src?: string | null): Promise<HTMLImageElement | null> {
+  if (!src) return Promise.resolve(null);
+  const cached = artworkCache.get(src); if (cached) return cached;
+  const promise = new Promise<HTMLImageElement | null>((resolve) => {
+    const image = new Image(); image.crossOrigin = 'anonymous';
+    const timeout = window.setTimeout(() => { artworkCache.delete(src); resolve(null); }, 8000);
+    const finish = (value: HTMLImageElement | null) => { window.clearTimeout(timeout); if (!value) artworkCache.delete(src); resolve(value); };
+    image.onload = () => finish(image); image.onerror = () => finish(null); image.src = src;
   });
-}
-
-function drawCoverImage(
-  ctx: CanvasRenderingContext2D,
-  image: HTMLImageElement,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-) {
-  const scale = Math.max(width / image.width, height / image.height);
-  const scaledWidth = image.width * scale;
-  const scaledHeight = image.height * scale;
-  const offsetX = x + (width - scaledWidth) / 2;
-  const offsetY = y + (height - scaledHeight) / 2;
-  ctx.drawImage(image, offsetX, offsetY, scaledWidth, scaledHeight);
-}
-
-function roundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-) {
-  const r = Math.min(radius, width / 2, height / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + width, y, x + width, y + height, r);
-  ctx.arcTo(x + width, y + height, x, y + height, r);
-  ctx.arcTo(x, y + height, x, y, r);
-  ctx.arcTo(x, y, x + width, y, r);
-  ctx.closePath();
-}
-
-function loadCanvasImage(src?: string | null) {
-  if (!src) return Promise.resolve<HTMLImageElement | null>(null);
-
-  return new Promise<HTMLImageElement | null>((resolve) => {
-    const image = new Image();
-    if (/^https?:\/\//i.test(src)) image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = () => resolve(null);
-    image.src = src;
-  });
-}
-
-function font(size: number, weight: number) {
-  return `${weight} ${size}px Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+  if (artworkCache.size >= 12) artworkCache.delete(artworkCache.keys().next().value!);
+  artworkCache.set(src, promise); return promise;
 }

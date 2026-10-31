@@ -5,12 +5,14 @@ import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import type { MovieDetailsData, TrailerData, TvDetailsData } from "@/components/selected-content/types";
 import { tmdbImage } from "@/lib/tmdb";
 import TrailerBackground from "./TrailerBackground";
+import { AudienceMood } from '../AudienceMood';
 
 type DecisionPanelProps = {
   data: MovieDetailsData | TvDetailsData;
   trailers?: TrailerData[];
   children?: ReactNode;
   topMoods?: Array<{ emoji: string; count: number }>;
+  totalMoodVotes?: number;
   reviewStats?: { totalRatings: number; averageRating: number } | null;
 };
 
@@ -25,14 +27,11 @@ function yearOf(date: string): string | null {
   return date ? date.slice(0, 4) : null;
 }
 
-function isImagePath(value: string): boolean {
-  return value.startsWith("/") || value.startsWith("http://") || value.startsWith("https://");
-}
-
 export default function DecisionPanel({
   data,
   trailers = [],
   topMoods = [],
+  totalMoodVotes,
   reviewStats,
   children,
 }: DecisionPanelProps) {
@@ -44,7 +43,6 @@ export default function DecisionPanel({
   const rating = appRating ?? info.vote_average;
   const ratingLabel = appRating ? "Moodies audience" : "TMDB";
   const date = info.release_date || tvInfo?.first_air_date || "";
-  const moodLabels = topMoods.slice(0, 3);
   const firstTrailer = [data.trailer, ...trailers].find(
     (video) => video?.key && (!video.site || video.site.toLowerCase() === "youtube"),
   );
@@ -98,36 +96,7 @@ export default function DecisionPanel({
               </span>
             ) : null}
           </div>
-          {moodLabels.length ? (
-            <div className="mt-5" role="group" aria-labelledby="audience-mood-heading">
-              <h3 id="audience-mood-heading" className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
-                Audience mood
-              </h3>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-              {moodLabels.map((mood) => (
-                <span
-                  key={mood.emoji}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-brand-coral/25 bg-brand-coral/[0.08] py-1 pl-1.5 pr-2 text-xs font-semibold text-brand-coral-strong"
-                >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.08] p-1">
-                    {isImagePath(mood.emoji) ? (
-                      <Image
-                        src={mood.emoji}
-                        alt=""
-                        width={32}
-                        height={32}
-                        className="h-full w-full object-contain"
-                      />
-                    ) : (
-                      mood.emoji
-                    )}
-                  </span>
-                  <span>{mood.count}</span>
-                </span>
-              ))}
-              </div>
-            </div>
-          ) : null}
+          <div className="mt-5 max-w-xl"><AudienceMood moods={topMoods} totalVotes={totalMoodVotes} /></div>
         </div>
         <Link href={`/${mediaPath}/${info.id}/reviews`} className="ui-primary-action w-full sm:w-auto">
           Reviews

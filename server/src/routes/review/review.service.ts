@@ -979,7 +979,7 @@ export class ReviewService {
   ) {
     const skip = (page - 1) * limit;
 
-    const [reviews, total] = await Promise.all([
+    const [reviews, total, moodGroups] = await Promise.all([
       this.prisma.review.findMany({
         where: {
           tmdbId,
@@ -1030,12 +1030,23 @@ export class ReviewService {
           status: { in: [ReviewStatus.PUBLISHED, ReviewStatus.FLAGGED] },
         },
       }),
+      this.prisma.review.groupBy({
+        by: ['moodEmojis'],
+        where: {
+          tmdbId,
+          mediaType: mediaType as MediaType,
+          status: { in: [ReviewStatus.PUBLISHED, ReviewStatus.FLAGGED] },
+        },
+        _count: { _all: true },
+      }),
     ]);
 
-    const allMoodEmojis = reviews.flatMap((r) => r.moodEmojis);
+    const allMoodEmojis = moodGroups.flatMap((group) =>
+      group.moodEmojis.map((emoji) => ({ emoji, count: group._count._all })),
+    );
     const moodCounts = allMoodEmojis.reduce(
-      (acc, emoji) => {
-        acc[emoji] = (acc[emoji] || 0) + 1;
+      (acc, { emoji, count }) => {
+        acc[emoji] = (acc[emoji] || 0) + count;
         return acc;
       },
       {} as Record<string, number>,
@@ -1054,6 +1065,7 @@ export class ReviewService {
     return {
       reviews: reviewEntities.map((r) => r.toPublic()),
       topMoods,
+      totalMoodVotes: Object.values(moodCounts).reduce((sum, count) => sum + count, 0),
       pagination: {
         page,
         limit,

@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { MediaType } from '@prisma/client';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PrismaService } from '../prisma/prisma.service';
+import { serializableTransaction } from '../prisma/serializable-transaction';
 
 type Kind = 'movie' | 'series';
 
@@ -28,32 +28,30 @@ export class WatchlistService {
   }
 
   /** Toggle a title in/out of the watchlist — a single-row insert or delete. */
-  async toggle(userId: string, tmdbId: string, type: Kind) {
+  async toggle(userId: string, tmdbId: string, type: Kind, active?: boolean) {
     const mediaType = type === 'movie' ? MediaType.MOVIE : MediaType.TV;
     const numericId = Number(tmdbId);
+    if (!Number.isInteger(numericId) || numericId <= 0 || numericId > 2147483647) {
+      throw new BadRequestException('Invalid title ID.');
+    }
 
-    return this.prisma.$transaction(async (tx) => {
+    return serializableTransaction(this.prisma, async (tx) => {
       const existing = await tx.watchlistItem.findUnique({
         where: { userId_tmdbId_mediaType: { userId, tmdbId: numericId, mediaType } },
         select: { id: true },
       });
 
-      // delta drives the counter and reflects the *actual* transition, so it can't
-      // drift even under a concurrent toggle of the same title.
+      const saved = active ?? !existing;
+      if (saved === Boolean(existing)) return { removed: !saved };
       let delta = 0;
-      if (existing) {
+      if (!saved) {
         const { count } = await tx.watchlistItem.deleteMany({
           where: { userId, tmdbId: numericId, mediaType },
         });
         delta = count > 0 ? -1 : 0;
       } else {
-        try {
-          await tx.watchlistItem.create({ data: { userId, tmdbId: numericId, mediaType } });
-          delta = 1;
-        } catch (e) {
-          // Lost the add race to a concurrent toggle — the row exists now, no net change.
-          if (!(e instanceof PrismaClientKnownRequestError && e.code === 'P2002')) throw e;
-        }
+        await tx.watchlistItem.create({ data: { userId, tmdbId: numericId, mediaType } });
+        delta = 1;
       }
 
       if (delta !== 0) {
@@ -64,13 +62,13 @@ export class WatchlistService {
         });
       }
 
-      return { removed: !!existing };
+      return { removed: !saved };
     });
   }
 
   /** Clear the entire watchlist. */
   async clear(userId: string) {
-    return this.prisma.$transaction(async (tx) => {
+    return serializableTransaction(this.prisma, async (tx) => {
       const items = await tx.watchlistItem.findMany({
         where: { userId },
         select: { tmdbId: true, mediaType: true },
@@ -107,7 +105,7 @@ export class WatchlistService {
     const mediaType = type === 'movie' ? MediaType.MOVIE : MediaType.TV;
     const label = type === 'movie' ? 'Movie' : 'Series';
 
-    return this.prisma.$transaction(async (tx) => {
+    return serializableTransaction(this.prisma, async (tx) => {
       // deleteMany returns the count, so the counter decrements exactly once and
       // never for a no-op.
       const { count } = await tx.watchlistItem.deleteMany({
