@@ -4,33 +4,13 @@ export type SnapshotMediaType = "MOVIE" | "TV";
 
 export type SnapshotOptions = {
   layout: 'premiere' | 'ticket' | 'editorial' | 'cinematic';
-  format: 'square' | 'portrait' | 'story' | 'landscape';
   accent: 'coral' | 'gold' | 'ivory' | 'custom';
   customAccent: string;
   tone: 'midnight' | 'paper' | 'warm';
-  artwork: 'auto' | 'poster' | 'backdrop' | 'none';
-  imagePosition: number;
-  imageZoom: number;
-  overlay: number;
-  titleScale: number;
-  align: 'left' | 'center';
-  showDetails: boolean;
-  showRating: boolean;
-  showCredit: boolean;
-  showQuote: boolean;
-  texture: boolean;
-  border: boolean;
-  caption: string;
-  displayTitle: string;
-  fileType: 'png' | 'jpeg';
 };
 
 export const DEFAULT_SNAPSHOT_OPTIONS: SnapshotOptions = {
-  layout: 'premiere', format: 'portrait', accent: 'coral', customAccent: '#ff765f',
-  tone: 'midnight', artwork: 'auto', imagePosition: 50, imageZoom: 100, overlay: 60,
-  titleScale: 100, align: 'left', showDetails: true, showRating: true,
-  showCredit: true, showQuote: true, texture: false, border: false,
-  caption: '', displayTitle: '', fileType: 'png',
+  layout: 'premiere', accent: 'coral', customAccent: '#ff765f', tone: 'midnight',
 };
 
 export type SnapshotContent = {

@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { ArrowDownToLine, Check, Copy, Loader2, RefreshCw, RotateCcw, X } from 'lucide-react';
+import { ArrowDownToLine, Check, Copy, Loader2, RefreshCw, X } from 'lucide-react';
 import { appToast } from '@/lib/toast';
+import { isAppError } from '@/lib/errors/app-error';
 import { requestContentSnapshot, requestReviewSnapshot } from '@/lib/snapshot/snapshot-api';
-import { renderSnapshotToDataUrl, snapshotDimensions } from '@/lib/snapshot/render-snapshot';
+import { renderSnapshotToDataUrl, SNAPSHOT_DIMENSIONS } from '@/lib/snapshot/render-snapshot';
+import { useTurnstileGate } from '@/hooks/useTurnstileGate';
 import { DEFAULT_SNAPSHOT_OPTIONS, type SnapshotOptions, type SnapshotPayload, type SnapshotSource } from '@/lib/snapshot/snapshot-types';
 import { SNAPSHOT_DESIGNS, SnapshotControls } from './SnapshotControls';
 import styles from './SnapshotShareModal.module.css';
@@ -20,7 +22,7 @@ export function SnapshotShareModal({ open, onClose, source }: { open: boolean; o
   const [renderedKey, setRenderedKey] = useState('');
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
-  const [editing, setEditing] = useState(false);
+  const { action: securityAction } = useTurnstileGate();
   const sourceType = source?.type;
   const sourceId = source?.type === 'review' ? source.reviewId : source?.tmdbId;
   const mediaType = source?.type === 'content' ? source.mediaType : undefined;
@@ -44,12 +46,13 @@ export function SnapshotShareModal({ open, onClose, source }: { open: boolean; o
   useEffect(() => {
     if (!open || !sourceType || sourceId === undefined) return;
     let cancelled = false;
-    setLoading(true); setPayload(null); setDataUrl(null); setError(''); setEditing(false);
-    const request = sourceType === 'review' ? requestReviewSnapshot(String(sourceId)) : requestContentSnapshot({ mediaType: mediaType!, tmdbId: sourceId });
+    const controller = new AbortController();
+    setLoading(true); setPayload(null); setDataUrl(null); setError('');
+    const request = sourceType === 'review' ? requestReviewSnapshot(String(sourceId), controller.signal) : requestContentSnapshot({ mediaType: mediaType!, tmdbId: sourceId, signal: controller.signal });
     request.then((next) => { if (!cancelled) setPayload(next); })
-      .catch((failure: unknown) => { if (!cancelled) setError(failure instanceof Error ? failure.message : 'Could not create this snapshot.'); })
+      .catch((failure: unknown) => { if (!cancelled) setError(isAppError(failure) ? failure.userMessage : failure instanceof Error ? failure.message : 'Could not create this snapshot.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); };
   }, [open, sourceType, sourceId, mediaType, retry]);
 
   useEffect(() => {
@@ -69,13 +72,12 @@ export function SnapshotShareModal({ open, onClose, source }: { open: boolean; o
   function update<K extends keyof SnapshotOptions>(key: K, value: SnapshotOptions[K]) { setOptions((current) => ({ ...current, [key]: value })); }
   const busy = loading || rendering;
   const ready = Boolean(dataUrl && payload && !busy && !error && renderedKey === renderKey);
-  const dimensions = snapshotDimensions(options.format);
   const design = SNAPSHOT_DESIGNS.find((item) => item.value === options.layout)!;
 
   function download() {
     if (!ready || !dataUrl || !payload) return;
     const link = document.createElement('a'); link.href = dataUrl;
-    link.download = `${payload.content.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'moodies'}-${options.layout}-${options.format}.${options.fileType === 'jpeg' ? 'jpg' : 'png'}`;
+    link.download = `${payload.content.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'moodies'}-${options.layout}.png`;
     link.click(); appToast.success('Snapshot downloaded.');
   }
 
@@ -83,10 +85,7 @@ export function SnapshotShareModal({ open, onClose, source }: { open: boolean; o
     if (!ready || !dataUrl || !payload) return;
     try {
       if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
-        const blob = (async () => {
-          const png = options.fileType === 'png' ? dataUrl : await renderSnapshotToDataUrl(payload, { ...options, fileType: 'png' });
-          return (await fetch(png)).blob();
-        })();
+        const blob = fetch(dataUrl).then((response) => response.blob());
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); appToast.success('Snapshot copied.');
       } else {
         await navigator.clipboard.writeText(`${window.location.origin}/${payload.content.mediaType === 'TV' ? 'tv' : 'movies'}/${payload.content.tmdbId}`);
@@ -101,28 +100,23 @@ export function SnapshotShareModal({ open, onClose, source }: { open: boolean; o
         <div><p className="ui-kicker">Made on Moodies</p><h2 id={headingId} className="mt-1.5 text-3xl font-bold leading-none">Snapshot studio</h2></div>
         <button type="button" onClick={onClose} className={styles.close} aria-label="Close snapshot"><X size={20} aria-hidden="true" /></button>
       </header>
-      <div className={styles.mobileMode} aria-label="Studio view">
-        <button type="button" aria-pressed={!editing} onClick={() => setEditing(false)}>Preview</button><button type="button" aria-pressed={editing} onClick={() => setEditing(true)}>Customize</button>
-      </div>
-      <div className={`${styles.workspace} ${editing ? styles.editing : ''}`}>
+      <div className={styles.workspace}>
         <section className={styles.stage} aria-label="Snapshot preview" aria-busy={busy}>
           <div className={styles.stageHeading}><span>{design.label}</span><span className={styles.live}>{busy ? <Loader2 size={12} className="animate-spin" aria-hidden="true" /> : <Check size={12} aria-hidden="true" />}{busy ? 'Updating' : 'Live preview'}</span></div>
           <div className={styles.artboard}>
             {dataUrl && !error ? <img src={dataUrl} alt={`Snapshot of ${payload?.content.title ?? 'this title'}`} className={busy ? styles.updating : ''} /> : null}
-            {loading || (rendering && !dataUrl) ? <div className={styles.loading} role="status"><Loader2 size={24} className="animate-spin" aria-hidden="true" /><p>Preparing your canvas…</p></div> : null}
+            {loading || (rendering && !dataUrl) ? <div className={styles.loading} role="status"><Loader2 size={24} className="animate-spin" aria-hidden="true" /><p>{securityAction === 'snapshot' ? 'Waiting for the security check…' : loading ? 'Loading your title…' : 'Preparing your canvas…'}</p></div> : null}
             {error ? <div className={styles.loading} role="alert"><p>{error}</p><button type="button" onClick={() => setRetry((value) => value + 1)} className="ui-secondary-action"><RefreshCw size={16} aria-hidden="true" />Try again</button></div> : null}
           </div>
-          <div className={styles.canvasMeta}><span>{dimensions.width} × {dimensions.height}</span><span>{options.format === 'story' ? 'Made for stories' : options.format === 'landscape' ? 'The wider view' : 'Ready for your feed'}</span></div>
+          <div className={styles.canvasMeta}><span>{SNAPSHOT_DIMENSIONS.width} × {SNAPSHOT_DIMENSIONS.height}</span><span>PNG · Ready to share</span></div>
         </section>
         <aside className={styles.settings} aria-label="Customize snapshot">
           <SnapshotControls options={options} update={update} payload={payload} />
-          <div className={styles.settingsFooter}><span>Make every detail yours.</span><button type="button" onClick={() => setOptions(DEFAULT_SNAPSHOT_OPTIONS)}><RotateCcw size={14} aria-hidden="true" />Reset</button></div>
         </aside>
       </div>
       {payload?.review?.isPrivate ? <p className={styles.privacy}>This image includes your private review. Sharing it makes that text visible to others.</p> : null}
       <footer className={styles.footer}>
-        <label className={styles.exportFormat}><span className="sr-only">Export file type</span><select aria-label="Export file type" value={options.fileType} onChange={(event) => update('fileType', event.target.value as SnapshotOptions['fileType'])}><option value="png">PNG</option><option value="jpeg">JPG</option></select></label>
-        <span className={styles.exportNote}>Your design. Full resolution.</span>
+        <span className={styles.exportNote}>Full resolution. Ready to share.</span>
         <div className={styles.actions}><button type="button" onClick={() => void copy()} disabled={!ready} className="ui-secondary-action"><Copy size={16} aria-hidden="true" /><span>Copy</span></button><button type="button" onClick={download} disabled={!ready} className="ui-primary-action"><ArrowDownToLine size={16} aria-hidden="true" />Download</button></div>
       </footer>
     </div>

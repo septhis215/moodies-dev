@@ -40,6 +40,7 @@ try {
     await expect(composer.getByRole('radio', { name: '1 out of 5 stars', exact: true })).toBeChecked();
     await composer.getByRole('radio', { name: '4.5 out of 5 stars', exact: true }).check();
     await composer.getByRole('radio', { name: 'Loved it', exact: true }).check();
+    await expect(composer.locator('img[src*="review-icons"]')).toHaveCount(6);
     await composer.getByLabel('Your review', { exact: true }).fill('A thoughtful story with a great cast.');
     await page.screenshot({ path: `${output}/review-${width}.png` });
     if (width === 320) {
@@ -60,33 +61,33 @@ try {
     const snapshot = page.getByRole('dialog', { name: 'Snapshot studio' });
     await expect(snapshot.getByRole('button', { name: 'Download' })).toBeEnabled({ timeout: 20_000 });
     assert.equal(await snapshot.evaluate((node) => node.scrollHeight <= node.clientHeight + 1 && [...node.querySelectorAll('aside')].every((el) => el.scrollHeight <= el.clientHeight + 1)), true, `Snapshot fits without scrolling at ${width}`);
-    if (width < 768) await snapshot.getByRole('button', { name: 'Customize', exact: true }).click();
-    await snapshot.getByLabel('Format', { exact: true }).selectOption('portrait');
+    await expect(snapshot.getByRole('radio', { name: 'Editorial', exact: true })).toBeVisible();
+    await snapshot.getByRole('radio', { name: 'Editorial', exact: true }).check();
     await expect(snapshot.getByRole('button', { name: 'Download' })).toBeEnabled();
     const size = await snapshot.locator('img[alt^="Snapshot of"]').evaluate((img) => ({ width: img.naturalWidth, height: img.naturalHeight }));
     assert.deepEqual(size, { width: 1080, height: 1350 });
-    if (width < 768) {
-      await page.screenshot({ path: `${output}/snapshot-customize-${width}.png` });
-      await snapshot.getByRole('button', { name: 'Preview', exact: true }).click();
-    }
+    const previewBounds = await snapshot.locator('img[alt^="Snapshot of"]').boundingBox();
+    assert.ok(previewBounds.height >= 100 && previewBounds.width >= 100, `Preview remains visible beside controls at ${width}`);
     await page.screenshot({ path: `${output}/snapshot-${width}.png` });
     await snapshot.getByRole('button', { name: 'Close snapshot' }).click();
     if (width === 1440) {
       await page.getByRole('button', { name: 'Share content snapshot' }).click();
       await snapshot.getByRole('radio', { name: 'Full bleed', exact: true }).check();
-      await snapshot.getByLabel('Format', { exact: true }).selectOption('square');
-      await snapshot.getByRole('tab', { name: 'Finish', exact: true }).click();
       await snapshot.getByRole('radio', { name: 'gold accent' }).check();
-      await snapshot.getByRole('tab', { name: 'Content', exact: true }).click();
-      await snapshot.getByLabel('Your note').fill('A film to come back to.');
       await expect(snapshot.getByRole('button', { name: 'Download' })).toBeEnabled();
-      await expect(snapshot.locator('img[alt^="Snapshot of"]')).toHaveJSProperty('naturalHeight', 1080);
+      await expect(snapshot.locator('img[alt^="Snapshot of"]')).toHaveJSProperty('naturalHeight', 1350);
       const exported = page.waitForEvent('download');
       await snapshot.getByRole('button', { name: 'Download' }).click();
       await (await exported).saveAs(`${output}/cinematic-export.png`);
       await snapshot.getByRole('button', { name: 'Close snapshot' }).click();
       await page.getByRole('heading', { name: 'Does this fit your mood?' }).scrollIntoViewIfNeeded();
       await page.screenshot({ path: `${output}/audience-moods-desktop.png` });
+      const reviewCard = page.locator('article').filter({ hasText: 'A beautifully observed story' }).first();
+      const moodIcon = reviewCard.locator('img[src*="review-icons"]');
+      await moodIcon.scrollIntoViewIfNeeded();
+      await expect(moodIcon).toBeVisible();
+      await expect.poll(() => moodIcon.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+      await reviewCard.screenshot({ path: '../artifacts/snapshot-preview/review-card.png' });
     }
   }
 
@@ -124,10 +125,9 @@ try {
   const reviewSnapshot = page.getByRole('dialog', { name: 'Snapshot studio' });
   await expect(reviewSnapshot.getByRole('button', { name: 'Download', exact: true })).toBeEnabled();
   await expect(reviewSnapshot.getByText('This image includes your private review.', { exact: false })).toBeVisible();
-  await reviewSnapshot.getByRole('button', { name: 'Customize', exact: true }).click();
-  await reviewSnapshot.getByRole('tab', { name: 'Content', exact: true }).click();
-  await expect(reviewSnapshot.getByText('From your review', { exact: true })).toBeVisible();
-  await reviewSnapshot.getByRole('checkbox', { name: 'Review quote', exact: true }).uncheck();
+  await expect(reviewSnapshot.locator('input[type="text"], textarea')).toHaveCount(0);
+  await expect(reviewSnapshot.getByRole('checkbox')).toHaveCount(0);
+  await reviewSnapshot.getByRole('radio', { name: 'The ticket', exact: true }).check();
   await expect(reviewSnapshot.getByRole('button', { name: 'Download', exact: true })).toBeEnabled();
   await reviewSnapshot.getByRole('button', { name: 'Close snapshot', exact: true }).click();
 

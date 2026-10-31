@@ -145,6 +145,11 @@ client/
   must not wait on CAPTCHA/status requests. `lib/turnstile.ts` maps protected POSTs
   to fresh single-use tokens; the backend validates hostname and action, not a
   reusable clearance cookie. See root `BOT_PROTECTION.md` for rollout and edge setup.
+- The snapshot studio exports a fixed 1080 × 1350 PNG using four templates. Only
+  the template and colors are customizable; title details, artwork, credits and review
+  excerpts come from the snapshot API. Its preview stays visible alongside the controls
+  on mobile. Font failures fall back without blocking the canvas; closing the studio
+  aborts its pending request and security check.
 - `app/layout.tsx` injects an inline "auth pre-hide" script that blanks the page when a
   session marker exists in `localStorage` (`moodies:session`) — relevant to any flash,
   hydration, or white-screen bug report.

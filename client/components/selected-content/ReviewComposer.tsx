@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowUpRight, Check, Loader2, X } from 'lucide-react';
+import { ArrowUpRight, Loader2, X } from 'lucide-react';
 import { motion, useAnimationControls, useDragControls, useReducedMotion } from 'framer-motion';
 import { useAuth } from '@/app/context/AuthProvider';
 import { useReviewBanStatus } from '@/hooks/useReviewBanStatus';
@@ -160,7 +160,8 @@ export function ReviewComposer({ open, onClose, contentId, contentType = 'movie'
                 <div className={styles.moods}>
                   {MOODS.map((option) => <label key={option.image} className={styles.mood}>
                     <input className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" type="radio" name={`${titleId}-mood`} checked={mood === option.image} onChange={() => setMood(option.image)} />
-                    {option.label}<Check size={13} className={mood === option.image ? '' : 'invisible'} aria-hidden="true" />
+                    <TmdbImage src={`/images/review-icons/${option.image}.png`} alt="" width={28} height={28} className={styles.moodIcon} />
+                    {option.label}
                   </label>)}
                 </div>
               </fieldset>
