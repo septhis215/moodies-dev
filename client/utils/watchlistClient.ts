@@ -4,6 +4,7 @@ import {
   normalizeResponseError,
 } from "@/lib/errors";
 import { sessionFetch } from "@/lib/auth/session";
+import { notifyMediaStatsChanged } from './mediaStatsClient';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
@@ -31,13 +32,13 @@ export async function fetchWatchlist() {
   }
 }
 
-export async function toggleWatchlist(tmdbId: string, type: "movie" | "series") {
+export async function toggleWatchlist(tmdbId: string, type: "movie" | "series", active?: boolean) {
   try {
     const r = await sessionFetch(`${API_BASE}/watchlist/toggle`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ tmdbId, type }),
+      body: JSON.stringify({ tmdbId, type, active }),
     });
     if (r.status === 401 || r.status === 498) {
       throw createAppError({
@@ -57,5 +58,7 @@ export async function toggleWatchlist(tmdbId: string, type: "movie" | "series") 
     return r.json() as Promise<{ removed: boolean }>;
   } catch (error) {
     throw normalizeApiError(error, "Could not update your watchlist.");
+  } finally {
+    notifyMediaStatsChanged();
   }
 }

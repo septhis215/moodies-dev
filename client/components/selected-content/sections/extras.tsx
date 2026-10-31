@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { tmdbImage } from "@/lib/tmdb";
 import { selectKeyCrewGroups } from "@/components/selected-content/keyCrew";
+import { ExpandableList } from '../ExpandableList';
 import type {
   MovieDetailsData,
   ProviderCountry,
@@ -68,7 +69,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
   const visibleCast = credits.cast.slice(0, castLimit);
   const mobileCast = credits.cast.slice(0, 4);
   const hasDistribution =
-    info.production_countries.length > 0 || allProviders.length > 0;
+    info.production_countries.length > 0 || info.production_companies.length > 0 || allProviders.length > 0;
 
   const renderCast = (people: typeof credits.cast) =>
     people.map((actor) => (
@@ -224,11 +225,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
               {info.production_companies.length > 0 ? (
                 <div>
                   <p className="text-xs font-semibold text-[var(--ink-muted)]">Production companies</p>
-                  <ul className="mt-2 space-y-2 text-sm leading-6 text-[var(--ink)]">
-                    {info.production_companies.map((company) => (
-                      <li key={company.id}>{company.name}</li>
-                    ))}
-                  </ul>
+                  <div className="mt-2"><ExpandableList items={info.production_companies} limit={3} label="studios" className="text-sm leading-6 text-[var(--ink)]" renderItem={(company) => <li key={company.id} className="border-b border-[var(--surface-border)] py-2">{company.name}</li>} /></div>
                 </div>
               ) : null}
             </div>
@@ -266,12 +263,12 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
                     className="h-10 w-full border-b border-[var(--surface-border)] bg-transparent pl-9 pr-3 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] focus:border-brand-coral-strong"
                   />
                 </label>
-                <div className="mt-4 grid gap-x-6 sm:grid-cols-2">
+                <div className="mt-4">
                   {visibleProviders.length > 0 ? (
-                    visibleProviders.map((provider) => (
-                      <div
+                    <ExpandableList key={providerSearch.trim()} items={visibleProviders} limit={4} label="providers" className="grid grid-cols-2 gap-x-4" renderItem={(provider) => (
+                      <li
                         key={provider.provider_name}
-                        className="flex items-center gap-3 border-b border-[var(--surface-border)] py-3"
+                        className="flex min-w-0 items-center gap-2 border-b border-[var(--surface-border)] py-3"
                       >
                         {provider.logo_path ? (
                           <Image
@@ -279,18 +276,18 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
                             alt=""
                             width={28}
                             height={28}
-                            className="h-7 w-7 rounded-xl object-cover"
+                            className="h-7 w-7 shrink-0 rounded-lg object-cover"
                           />
                         ) : (
                           <span className="grid h-7 w-7 place-items-center rounded-xl bg-[var(--surface-2)] text-[10px] font-bold text-[var(--ink-muted)]">
                             {initials(provider.provider_name).slice(0, 2)}
                           </span>
                         )}
-                        <span className="truncate text-sm text-[var(--ink)]">
+                        <span className="min-w-0 break-words text-sm text-[var(--ink)]">
                           {provider.provider_name}
                         </span>
-                      </div>
-                    ))
+                      </li>
+                    )} />
                   ) : (
                     <p className="text-sm text-[var(--ink-muted)]">
                       No providers match that search.
