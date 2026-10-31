@@ -12,6 +12,7 @@
 .fields { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 1rem 1rem; display: flex; flex-direction: column; gap: 1rem; }
 .label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; line-height: 1.4; }
 .moods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.375rem; }
+.moodIcon { width: 24px; height: 24px; flex-shrink: 0; object-fit: contain; }
 .mood { position: relative; display: flex; min-height: 44px; align-items: center; justify-content: center; gap: 0.25rem; padding: 0.375rem; border: 1px solid var(--surface-border); border-radius: 8px; color: var(--ink-muted); font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: color 150ms, border-color 150ms, background 150ms; }
 .mood:has(:checked) { color: var(--brand-coral-strong); border-color: var(--brand-coral-strong); background: rgb(255 118 95 / 0.06); }
 .mood:not(:has(:checked)):hover { color: var(--ink); border-color: var(--ink-muted); }
