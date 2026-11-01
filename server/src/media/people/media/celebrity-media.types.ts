@@ -20,6 +20,14 @@ export interface CelebrityIdentity {
   wikidataId?: string;
   commonsCategory?: string;
   officialChannelIds: string[];
+  works?: CelebrityWork[];
+}
+export interface CelebrityWork {
+  id: number;
+  mediaType: 'movie' | 'tv';
+  title: string;
+  posterPath?: string | null;
+  backdropPath?: string | null;
 }
 export interface CelebrityPhoto {
   id: string;
@@ -52,6 +60,8 @@ export interface CelebrityVideo {
   canEmbed: boolean;
   regionRestrictions?: { allowed?: string[]; blocked?: string[] };
   context?: string;
+  content?: CelebrityWork;
+  person?: { id: number; name: string };
 }
 export interface ProviderMedia {
   photos: CelebrityPhoto[];

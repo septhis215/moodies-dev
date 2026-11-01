@@ -13,7 +13,7 @@ export default function CelebrityVideosPage() {
       <CelebrityHubHeader
         active="/celeb/videos"
         title="Their world, in motion"
-        description="Recent interviews, trailers and appearances from the last 90 days. Choose someone to explore their screen moments."
+        description="Fresh trailers, interviews and a little closer to the action. Press play and stay a while."
       />
       <section className="ui-shell py-8 sm:py-10" aria-label="Celebrity videos">
         <CelebrityVideoBrowser />

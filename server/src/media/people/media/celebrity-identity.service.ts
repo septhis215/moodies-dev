@@ -72,6 +72,11 @@ export class CelebrityIdentityService {
       officialChannelIds: strings(hints.officialChannelIds).filter((value) =>
         /^UC[\w-]{22}$/.test(value),
       ),
+      works: (person.combined_credits?.cast || []).filter((credit: { id?: number; media_type?: string; title?: string; name?: string }) =>
+        Number.isSafeInteger(credit.id) && ['movie', 'tv'].includes(credit.media_type || '') && (credit.title || credit.name || '').length >= 4,
+      ).slice(0, 60).map((credit: { id: number; media_type: 'movie' | 'tv'; title?: string; name?: string; poster_path?: string; backdrop_path?: string }) => ({
+        id: credit.id, mediaType: credit.media_type, title: credit.title || credit.name!, posterPath: credit.poster_path, backdropPath: credit.backdrop_path,
+      })),
     };
     try {
       const result = await this.cache.get(

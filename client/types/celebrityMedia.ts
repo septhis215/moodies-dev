@@ -39,8 +39,25 @@ export interface CelebrityVideo {
   official: boolean;
   relevanceScore?: number;
   context?: string;
+  content?: {
+    id: number;
+    mediaType: "movie" | "tv";
+    title: string;
+    posterPath?: string | null;
+    backdropPath?: string | null;
+  };
+  person?: { id: number; name: string };
   canEmbed: boolean;
   regionRestrictions?: { allowed?: string[]; blocked?: string[] };
+}
+export interface CelebrityVideoFeed {
+  videos: CelebrityVideo[];
+  status: "ready" | "stale" | "unavailable";
+  sources: {
+    tmdb: "ready" | "unavailable";
+    youtube: "ready" | "unavailable" | "disabled";
+  };
+  updatedAt: string | null;
 }
 export interface CelebrityMedia {
   photos: CelebrityPhoto[];

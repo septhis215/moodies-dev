@@ -25,7 +25,9 @@ import { useWatchlist } from "@/hooks/useWatchlist";
 import CelebrityMediaSections from "@/components/celeb/CelebrityMediaSections";
 import CelebrityPortrait from "@/components/celeb/CelebrityPortrait";
 import PeopleRail from "@/components/celeb/PeopleRail";
+import CelebrityPersonCard from "@/components/celeb/CelebrityPersonCard";
 import type { CelebrityPhoto } from "@/types/celebrityMedia";
+import CustomSelect from "@/components/ui/custom-select";
 import CelebrityProfileNav from "@/components/celeb/CelebrityProfileNav";
 import CelebrityNewsFeed from "@/components/celeb/CelebrityNewsFeed";
 
@@ -810,24 +812,16 @@ export default function CelebrityDetailPage({
                   className="h-11 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] pl-10 pr-3 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
                 />
               </label>
-              <label className="flex min-w-0 items-center gap-3 text-sm text-[var(--ink-muted)]">
-                <span className="shrink-0">Sort by</span>
-                <select
-                  aria-label="Sort filmography"
-                  value={sortMode}
-                  onChange={(event) => {
-                    setSortMode(event.target.value as SortMode);
-                    setVisibleCount(12);
-                  }}
-                  className="h-11 min-w-0 flex-1 rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--ink)] sm:flex-none"
-                >
-                  {sortOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <CustomSelect
+                label="Sort filmography"
+                value={sortMode}
+                onChange={(value) => {
+                  setSortMode(value);
+                  setVisibleCount(12);
+                }}
+                options={sortOptions}
+                widthClass="w-full sm:w-56"
+              />
             </div>
           </div>
           {filtered.length ? (
@@ -903,40 +897,13 @@ export default function CelebrityDetailPage({
                 Loading collaborators…
               </p>
             ) : (
-              <ul className="grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4 lg:grid-cols-6">
                 {collaborations.slice(0, 4).map((collaborator) => (
                   <li key={collaborator.id}>
-                    <Link
-                      href={`/celeb/${collaborator.id}`}
-                      className="group flex items-center gap-3"
-                    >
-                      <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-md bg-[var(--surface-2)]">
-                        <Image
-                          src={
-                            tmdbImage(collaborator.profile_path, "w185") ||
-                            "/placeholder-person.svg"
-                          }
-                          alt={collaborator.name}
-                          fill
-                          sizes="56px"
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="line-clamp-2 text-sm font-semibold leading-5 group-hover:text-[var(--brand-coral-strong)]">
-                          {collaborator.name}
-                        </h3>
-                        <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
-                          {collaborator.count} shared{" "}
-                          {collaborator.count === 1 ? "credit" : "credits"}
-                        </p>
-                        {collaborator.projects?.[0] && (
-                          <p className="line-clamp-1 text-xs leading-5 text-[var(--ink-muted)]">
-                            {collaborator.projects[0]}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
+                    <CelebrityPersonCard
+                      person={collaborator}
+                      subtitle={`${collaborator.count} shared ${collaborator.count === 1 ? "credit" : "credits"}`}
+                    />
                   </li>
                 ))}
               </ul>

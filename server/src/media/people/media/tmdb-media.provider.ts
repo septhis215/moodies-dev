@@ -51,6 +51,17 @@ export class TmdbMediaProvider implements CelebrityMediaProvider {
           url: `https://www.youtube.com/watch?v=${video.video_key}`,
           official: Boolean(video.official),
           context: video.media_title,
+          content:
+            Number.isSafeInteger(video.media_id) &&
+            ['movie', 'tv'].includes(video.media_type)
+              ? {
+                  id: video.media_id,
+                  mediaType: video.media_type,
+                  title: video.media_title,
+                  posterPath: video.media_poster_path,
+                  backdropPath: video.media_backdrop_path,
+                }
+              : undefined,
           canEmbed: false,
           relevanceScore: Math.min(
             0.94,

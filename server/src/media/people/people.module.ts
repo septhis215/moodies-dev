@@ -13,6 +13,7 @@ import { OpenverseMediaProvider } from './media/openverse-media.provider';
 import { PeopleRecommendationsService } from './people-recommendations.service';
 import { CelebrityNewsService } from './news/celebrity-news.service';
 import { CelebrityHubService } from './celebrity-hub.service';
+import { CelebrityHubVideosService } from './celebrity-hub-videos.service';
 
 @Module({
   imports: [RedisModule],
@@ -29,6 +30,7 @@ import { CelebrityHubService } from './celebrity-hub.service';
     PeopleRecommendationsService,
     CelebrityNewsService,
     CelebrityHubService,
+    CelebrityHubVideosService,
   ],
   controllers: [PeopleController],
 })

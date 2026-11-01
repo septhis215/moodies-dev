@@ -11,6 +11,7 @@ import {
   matchesIdentity,
   mergeNews,
   parseNewsFeed,
+  newsImage,
 } from './celebrity-news';
 import type {
   CelebrityNews,
@@ -27,6 +28,10 @@ export class CelebrityNewsService {
     minTime: 100,
     highWater: 12,
     strategy: Bottleneck.strategy.OVERFLOW,
+  });
+  private readonly imageLimiter = new Bottleneck({
+    maxConcurrent: 3,
+    minTime: 100,
   });
   constructor(
     private readonly identity: CelebrityIdentityService,
@@ -89,7 +94,7 @@ export class CelebrityNewsService {
         };
         try {
           const result = await this.cache.get<Snapshot>(
-            `celebrity:news:v1:${publisher.id}:${slug || 'all'}`,
+            `celebrity:news:v2:${publisher.id}:${slug || 'all'}`,
             600,
             async () => {
               try {
@@ -166,9 +171,80 @@ export class CelebrityNewsService {
       await reader.cancel();
     }
     const xml = Buffer.concat(chunks).toString('utf8');
+    const articles = parseNewsFeed(xml, publisher);
+    // Only canonical publisher article URLs parsed above can reach this request.
+    await Promise.all(
+      articles
+        .filter((article) => !article.imageUrl)
+        .slice(0, 6)
+        .map(async (article) => {
+          try {
+            const result = await this.cache.get(
+              `celebrity:news:image:${article.id}:v1`,
+              86400,
+              () =>
+                this.imageLimiter.schedule(() =>
+                  this.loadImage(article, publisher),
+                ),
+            );
+            article.imageUrl = result.value;
+          } catch {
+            /* A missing photograph must not discard a valid headline. */
+          }
+        }),
+    );
     return {
-      articles: parseNewsFeed(xml, publisher),
+      articles,
       fetchedAt: new Date().toISOString(),
     };
+  }
+
+  private async loadImage(
+    article: CelebrityArticle,
+    publisher: NewsPublisher,
+  ): Promise<string | null> {
+    const response = await fetch(article.url, {
+      signal: AbortSignal.timeout(4000),
+      redirect: 'error',
+      headers: {
+        accept: 'text/html',
+        'User-Agent': 'Moodies/1.0 (support@moodies.tech)',
+      },
+    });
+    if (
+      !response.ok ||
+      !response.body ||
+      !/text\/html/i.test(response.headers.get('content-type') || '')
+    ) {
+      await response.body?.cancel();
+      return null;
+    }
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    try {
+      while (size < NEWS_MAX_BYTES) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        chunks.push(
+          value.subarray(
+            0,
+            Math.max(0, NEWS_MAX_BYTES - size + value.byteLength),
+          ),
+        );
+      }
+    } finally {
+      await reader.cancel();
+    }
+    const head = Buffer.concat(chunks).toString('utf8').split('</head>')[0];
+    for (const tag of head.match(/<meta\b[^>]+>/gi) || []) {
+      if (!/(?:property|name)=["']og:image["']/i.test(tag)) continue;
+      return newsImage(
+        tag.match(/\bcontent=["']([^"']+)["']/i)?.[1],
+        publisher,
+      );
+    }
+    return null;
   }
 }

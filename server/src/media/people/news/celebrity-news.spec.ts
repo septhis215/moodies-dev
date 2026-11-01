@@ -26,6 +26,34 @@ const feed = (items: string) =>
   `<rss version="2.0"><channel><title>Variety</title>${items}</channel></rss>`;
 
 describe('celebrity news ingestion', () => {
+  it('keeps the actual publisher story image and rejects untrusted image hosts', () => {
+    const story = item().replace(
+      '</item>',
+      '<media:thumbnail url="https://variety.com/wp-content/uploads/2026/11/story.jpg?resize=800&amp;quality=80" /></item>',
+    );
+    expect(parseNewsFeed(feed(story), publisher, now)[0].imageUrl).toBe(
+      'https://variety.com/wp-content/uploads/2026/11/story.jpg?resize=800&quality=80',
+    );
+    for (const host of [
+      'http://variety.com',
+      'https://variety.com.evil.test',
+      'https://user@variety.com',
+      'https://127.0.0.1',
+    ]) {
+      expect(
+        parseNewsFeed(
+          feed(
+            story.replace(
+              'https://variety.com/wp-content',
+              `${host}/wp-content`,
+            ),
+          ),
+          publisher,
+          now,
+        )[0].imageUrl,
+      ).toBeNull();
+    }
+  });
   it('preserves publisher attribution and publication time, decodes entities and strips markup', () => {
     const [article] = parseNewsFeed(
       feed(item('Tom Hanks &#038; friends <b>return</b>')),

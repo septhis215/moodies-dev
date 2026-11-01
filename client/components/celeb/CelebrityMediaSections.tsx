@@ -2,9 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ChevronLeft, ChevronRight, Play, X } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { tmdbImage } from "@/lib/tmdb";
+import CustomSelect from "@/components/ui/custom-select";
+import CelebrityVideoCard from "./CelebrityVideoCard";
+import CelebrityVideoPlayer from "./CelebrityVideoPlayer";
+import styles from "./celebrity-hub.module.css";
 import type {
   MediaSource,
   CelebrityMedia,
@@ -43,14 +47,6 @@ type Profile = {
 type Selection =
   | { kind: "photo"; photo: CelebrityPhoto }
   | { kind: "video"; video: CelebrityVideo };
-function durationLabel(value: string | null) {
-  const match = value?.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
-  if (!match) return null;
-  const [, hours, minutes, seconds] = match;
-  return hours
-    ? `${hours}:${(minutes || "0").padStart(2, "0")}:${(seconds || "0").padStart(2, "0")}`
-    : `${minutes || "0"}:${(seconds || "0").padStart(2, "0")}`;
-}
 function fallbackPhotos(person: Profile): CelebrityPhoto[] {
   const images = person.images?.profiles?.length
     ? person.images.profiles
@@ -73,93 +69,6 @@ function fallbackPhotos(person: Profile): CelebrityPhoto[] {
     relevanceScore: 1,
   }));
 }
-function Thumbnail({ video }: { video: CelebrityVideo }) {
-  const [failed, setFailed] = useState(false);
-  return (
-    <Image
-      src={failed ? "/placeholder-backdrop.svg" : video.thumbnail}
-      alt=""
-      fill
-      unoptimized
-      sizes="(max-width: 639px) 90vw, 640px"
-      className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-105"
-      onError={() => setFailed(true)}
-    />
-  );
-}
-function VideoCard({
-  video,
-  onPlay,
-}: {
-  video: CelebrityVideo;
-  onPlay: () => void;
-}) {
-  const duration = durationLabel(video.duration);
-  return (
-    <article className="group min-w-0">
-      <button
-        type="button"
-        onClick={onPlay}
-        aria-label={"Play " + video.title}
-        className="relative block aspect-video w-full overflow-hidden rounded-lg bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)]"
-      >
-        <Thumbnail key={video.id} video={video} />
-        <span className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-        <span className="absolute inset-0 grid place-items-center">
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-black/65 text-white transition-colors group-hover:bg-[var(--brand-coral)]">
-            <Play className="h-5 w-5 fill-current" aria-hidden="true" />
-          </span>
-        </span>
-        {duration && (
-          <span className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-1 text-xs text-white">
-            {duration}
-          </span>
-        )}
-      </button>
-      <div className="mt-3 flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="mb-1 text-xs text-[var(--brand-coral-strong)]">
-            {categories[video.category]}
-          </p>
-          <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)]">
-            {video.title}
-          </h3>
-          <p className="mt-1 line-clamp-1 text-xs leading-5 text-[var(--ink-muted)]">
-            {video.channel}
-            {video.official ? " · Official" : ""}
-          </p>
-          {video.publishedAt &&
-            Number.isFinite(Date.parse(video.publishedAt)) && (
-              <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
-                <time dateTime={video.publishedAt}>
-                  {new Intl.DateTimeFormat("en", {
-                    dateStyle: "medium",
-                    timeZone: "UTC",
-                  }).format(new Date(video.publishedAt))}
-                </time>
-              </p>
-            )}
-          {video.context && (
-            <p className="line-clamp-1 text-xs leading-5 text-[var(--ink-muted)]">
-              From {video.context}
-            </p>
-          )}
-        </div>
-        <a
-          href={video.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={"Watch " + video.title + " on YouTube"}
-          title="Watch on YouTube"
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-[var(--ink-muted)] hover:bg-[var(--surface-1)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
-        >
-          <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-        </a>
-      </div>
-    </article>
-  );
-}
-
 export default function CelebrityMediaSections({
   person,
   onPhotosReady,
@@ -344,7 +253,7 @@ export default function CelebrityMediaSections({
           <div
             role="group"
             aria-label="Filter on-screen moments"
-            className="mobile-native-scroll flex gap-5 overflow-x-auto border-b border-[var(--surface-border)] sm:flex-wrap sm:gap-x-6"
+            className="mobile-native-scroll flex gap-2 overflow-x-auto pb-1"
           >
             {(
               [
@@ -362,7 +271,7 @@ export default function CelebrityMediaSections({
                   setCategory(value);
                   setVideoLimit(8);
                 }}
-                className={`min-h-11 shrink-0 border-b-2 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] ${category === value ? "border-[var(--brand-coral)] text-[var(--ink)]" : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+                className={styles.chip}
               >
                 {value === "all" ? "All moments" : categories[value]}
               </button>
@@ -381,7 +290,7 @@ export default function CelebrityMediaSections({
             <>
               <div className="grid min-w-0 grid-cols-1 gap-x-5 gap-y-7 sm:grid-cols-2 xl:grid-cols-3">
                 {shownVideos.map((video) => (
-                  <VideoCard
+                  <CelebrityVideoCard
                     key={video.id}
                     video={video}
                     onPlay={() => setSelection({ kind: "video", video })}
@@ -403,7 +312,14 @@ export default function CelebrityMediaSections({
               {failed
                 ? "We couldn’t load these moments. You can still explore the profile and photos."
                 : "No moments are available yet. Explore the filmography for more of their work."}
-              {latest && <Link href={`/celeb/${person.id}#on-screen-moments`} className="ui-secondary-action mt-4">Browse all screen moments</Link>}
+              {latest && (
+                <Link
+                  href={`/celeb/${person.id}#on-screen-moments`}
+                  className="ui-secondary-action mt-4"
+                >
+                  Browse all screen moments
+                </Link>
+              )}
             </div>
           )}
         </section>
@@ -452,25 +368,25 @@ export default function CelebrityMediaSections({
                 {photos.length} {photos.length === 1 ? "photo" : "photos"}
               </p>
               {photoSources.length > 1 && (
-                <label className="flex items-center gap-3 text-sm text-[var(--ink-muted)]">
-                  Source
-                  <select
-                    aria-label="Photo source"
-                    value={activeSource}
-                    onChange={(event) => {
-                      setPhotoSource(event.target.value as MediaSource | "all");
-                      setPhotoLimit(5);
-                    }}
-                    className="min-h-11 max-w-[12rem] rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
-                  >
-                    <option value="all">All sources</option>
-                    {photoSources.map((source) => (
-                      <option key={source} value={source}>
-                        {sourceNames[source]}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <CustomSelect
+                  label="Photo source"
+                  value={activeSource}
+                  onChange={(value) => {
+                    setPhotoSource(value);
+                    setPhotoLimit(5);
+                  }}
+                  options={[
+                    {
+                      value: "all" as MediaSource | "all",
+                      label: "All sources",
+                    },
+                    ...photoSources.map((source) => ({
+                      value: source,
+                      label: sourceNames[source],
+                    })),
+                  ]}
+                  widthClass="w-56 max-w-full"
+                />
               )}
             </div>
           )}
@@ -564,7 +480,7 @@ export default function CelebrityMediaSections({
             movePhoto(event.key === "ArrowLeft" ? -1 : 1);
           }
         }}
-        className="fixed m-auto max-h-[94dvh] w-[94vw] max-w-5xl overflow-y-auto rounded-lg border border-[var(--surface-border)] bg-[var(--surface-0)] p-0 text-[var(--ink)] backdrop:bg-black/90"
+        className={`${styles.mediaDialog} fixed m-auto max-h-[94dvh] w-[94vw] max-w-5xl overflow-y-auto rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)] p-0 text-[var(--ink)] backdrop:bg-black/90`}
       >
         {selection && (
           <>
@@ -588,20 +504,12 @@ export default function CelebrityMediaSections({
             </div>
             {selection.kind === "video" ? (
               <>
-                {selection.video.canEmbed ? (
-                  <iframe
-                    key={selection.video.id}
-                    src={`https://www.youtube.com/embed/${selection.video.id}?autoplay=1&rel=0`}
-                    title={selection.video.title}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    className="aspect-video min-h-[200px] w-full"
-                  />
-                ) : (
-                  <div className="p-5 text-sm text-[var(--ink-muted)]">
-                    This moment opens on YouTube.
-                  </div>
-                )}
+                <CelebrityVideoPlayer
+                  key={selection.video.id}
+                  video={selection.video}
+                  autoplay
+                  initialMuted={false}
+                />
                 <div className="p-4">
                   <p className="text-sm text-[var(--ink-muted)]">
                     {selection.video.channel}
@@ -612,8 +520,7 @@ export default function CelebrityMediaSections({
                     rel="noopener noreferrer"
                     className="mt-2 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-[var(--brand-coral-strong)]"
                   >
-                    Playback unavailable? Watch on YouTube{" "}
-                    <ArrowUpRight className="h-4 w-4" />
+                    YouTube <ArrowUpRight className="h-4 w-4" />
                   </a>
                 </div>
               </>

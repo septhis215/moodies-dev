@@ -1,4 +1,5 @@
 import Link from "next/link";
+import styles from "./celebrity-hub.module.css";
 
 export default function CelebrityProfileNav({
   id,
@@ -10,7 +11,7 @@ export default function CelebrityProfileNav({
   return (
     <nav
       aria-label="Celebrity content"
-      className="mt-6 flex flex-wrap gap-x-6 border-b border-[var(--surface-border)] sm:mt-8"
+      className={`${styles.nav} mt-6 sm:mt-8`}
     >
       {[
         { key: "overview", label: "Profile", href: `/celeb/${id}` },
@@ -22,7 +23,6 @@ export default function CelebrityProfileNav({
           key={item.key}
           href={item.href}
           aria-current={active === item.key ? "page" : undefined}
-          className={`inline-flex min-h-11 items-center border-b-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)] ${active === item.key ? "border-[var(--brand-coral)] text-[var(--ink)]" : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
         >
           {item.label}
         </Link>

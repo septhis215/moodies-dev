@@ -7,6 +7,7 @@ import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { tmdbImage } from "@/lib/tmdb";
 import { selectKeyCrewGroups } from "@/components/selected-content/keyCrew";
 import { ExpandableList } from '../ExpandableList';
+import CelebrityPersonCard from "@/components/celeb/CelebrityPersonCard";
 import type {
   MovieDetailsData,
   ProviderCountry,
@@ -73,31 +74,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
 
   const renderCast = (people: typeof credits.cast) =>
     people.map((actor) => (
-      <Link
-        key={actor.id}
-        href={`/celeb/${actor.id}`}
-        className="group min-w-0 border-b border-[var(--surface-border)] pb-4 transition-colors hover:border-brand-coral/60"
-      >
-        <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-[var(--surface-1)]">
-          <Image
-            src={
-              actor.profile_path
-                ? tmdbImage(actor.profile_path, "w185")
-                : "/placeholder-person.svg"
-            }
-            alt={actor.name}
-            fill
-            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 16vw"
-            className="object-cover"
-          />
-        </div>
-        <p className="mt-3 truncate text-sm font-semibold leading-5 text-[var(--ink)]">
-          {actor.name}
-        </p>
-        <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">
-          {actor.character || "Cast"}
-        </p>
-      </Link>
+      <CelebrityPersonCard key={actor.id} person={actor} subtitle={actor.character || "Cast"} />
     ));
 
   return (

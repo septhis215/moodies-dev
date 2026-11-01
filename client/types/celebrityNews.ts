@@ -8,6 +8,7 @@ export interface CelebrityArticle {
   publisher: string;
   publishedAt: string;
   topic: NewsTopic;
+  imageUrl?: string | null;
 }
 export interface CelebrityNews {
   articles: CelebrityArticle[];
@@ -27,6 +28,13 @@ export interface HubPerson {
   profile_path: string | null;
   known_for_department: string;
   trending_title?: string;
+  known_for?: Array<{
+    id: number;
+    title: string;
+    media_type: "movie" | "tv";
+    poster_path?: string | null;
+    backdrop_path?: string | null;
+  }>;
 }
 export interface CelebrityHub {
   people: HubPerson[];

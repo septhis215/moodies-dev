@@ -75,8 +75,8 @@ export default function CelebrityContentPage({
                 }
                 alt={person.name}
                 width={80}
-                height={104}
-                className="h-26 w-20 shrink-0 rounded-lg object-cover"
+                height={100}
+                className="h-25 w-20 shrink-0 rounded-xl object-cover"
               />
               <div className="min-w-0">
                 <p className="ui-kicker">

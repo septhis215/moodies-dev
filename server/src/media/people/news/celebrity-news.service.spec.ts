@@ -36,7 +36,7 @@ function setup() {
 }
 function response(origin: string) {
   return new Response(
-    `<rss><channel><item><title>Tom Hanks returns to Toy Story</title><link>${origin}/2026/news/story/</link><pubDate>${new Date().toUTCString()}</pubDate></item></channel></rss>`,
+    `<rss><channel><item><title>Tom Hanks returns to Toy Story</title><link>${origin}/2026/news/story/</link><pubDate>${new Date().toUTCString()}</pubDate><media:thumbnail url="${origin}/wp-content/story.jpg" /></item></channel></rss>`,
     { headers: { 'content-type': 'application/rss+xml' } },
   );
 }
@@ -113,7 +113,7 @@ describe('CelebrityNewsService', () => {
     const fetchedAt = new Date().toISOString();
     for (const publisher of NEWS_PUBLISHERS) {
       await cache.remember(
-        `celebrity:news:v1:${publisher.id}:all`,
+        `celebrity:news:v2:${publisher.id}:all`,
         { articles: [], fetchedAt },
         -1,
         6 * 3600,

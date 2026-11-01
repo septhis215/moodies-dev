@@ -127,7 +127,7 @@ export default function CelebrityPortrait({
         onClick={() => setExpanded(true)}
         disabled={!photo}
         aria-label={`View ${person.name}'s portrait`}
-        className="relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)]"
+        className="relative block aspect-[4/5] w-full overflow-hidden rounded-xl bg-[var(--surface-1)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)]"
       >
         <Image
           key={photo?.url || "placeholder"}

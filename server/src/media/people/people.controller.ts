@@ -4,6 +4,7 @@ import { CelebrityMediaService } from './media/celebrity-media.service';
 import { PeopleRecommendationsService } from './people-recommendations.service';
 import { CelebrityNewsService } from './news/celebrity-news.service';
 import { CelebrityHubService } from './celebrity-hub.service';
+import { CelebrityHubVideosService } from './celebrity-hub-videos.service';
 
 @Controller('people')
 export class PeopleController {
@@ -13,9 +14,16 @@ export class PeopleController {
     private readonly recommendations: PeopleRecommendationsService,
     private readonly news: CelebrityNewsService,
     private readonly hub: CelebrityHubService,
+    private readonly hubVideos: CelebrityHubVideosService,
   ) {}
 
   // Static hub routes must precede :id.
+  @Get('hub/videos')
+  @Header('Cache-Control', 'no-store')
+  getHubVideos() {
+    return this.hubVideos.getVideos();
+  }
+
   @Get('hub')
   @Header('Cache-Control', 'no-store')
   getHub() {

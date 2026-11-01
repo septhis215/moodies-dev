@@ -13,6 +13,7 @@ import type {
   CelebrityMediaProvider,
   MediaSource,
   ProviderMedia,
+  CelebrityIdentity,
 } from './celebrity-media.types';
 
 @Injectable()
@@ -32,7 +33,7 @@ export class CelebrityMediaService {
     const version = createHash('sha256')
       .update(
         JSON.stringify([
-          this.youtube.enabled,
+          this.youtube.cacheVersion,
           this.config.get('YOUTUBE_REGION_CODE'),
           this.config.get('CELEBRITY_MEDIA_IDENTITIES'),
         ]),
@@ -57,7 +58,7 @@ export class CelebrityMediaService {
               media:
                 source === 'youtube'
                   ? await this.youtube.discover(identity, true)
-                  : await this.tmdb.discover(identity),
+                  : await this.tmdbMedia(identity),
               fetchedAt: new Date().toISOString(),
             }),
             6 * 3600,
@@ -99,7 +100,7 @@ export class CelebrityMediaService {
     const version = createHash('sha256')
       .update(
         JSON.stringify([
-          this.youtube.enabled,
+          this.youtube.cacheVersion,
           this.config.get('YOUTUBE_REGION_CODE'),
           this.config.get('CELEBRITY_MEDIA_IDENTITIES'),
         ]),
@@ -138,7 +139,10 @@ export class CelebrityMediaService {
               const result = await this.cache.get<ProviderMedia>(
                 `celebrity:${id}:${source}:v2:${version}`,
                 ttl,
-                () => provider.discover(identity),
+                () =>
+                  source === 'tmdb'
+                    ? this.tmdbMedia(identity)
+                    : provider.discover(identity),
               );
               sources[source] = result.stale ? 'stale' : 'ready';
               return result.value;
@@ -170,5 +174,17 @@ export class CelebrityMediaService {
         ]),
       ) as CelebrityMedia['sources'],
     };
+  }
+
+  private async tmdbMedia(identity: CelebrityIdentity): Promise<ProviderMedia> {
+    const media = await this.tmdb.discover(identity);
+    if (this.youtube.enabled) {
+      try {
+        media.videos = await this.youtube.verify(media.videos);
+      } catch {
+        /* Exact TMDB video links remain available during a YouTube outage. */
+      }
+    }
+    return media;
   }
 }
