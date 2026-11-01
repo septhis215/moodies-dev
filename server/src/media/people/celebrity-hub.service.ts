@@ -8,6 +8,13 @@ export interface HubPerson {
   profile_path: string | null;
   known_for_department: string;
   trending_title?: string;
+  known_for?: Array<{
+    id: number;
+    title: string;
+    media_type: 'movie' | 'tv';
+    poster_path?: string | null;
+    backdrop_path?: string | null;
+  }>;
 }
 @Injectable()
 export class CelebrityHubService {
@@ -23,7 +30,7 @@ export class CelebrityHubService {
   }> {
     try {
       const result = await this.cache.get(
-        'celebrity:hub:trending:v3',
+        'celebrity:hub:trending:v4',
         900,
         async () => {
           const trending: unknown = await this.people.getHubPeople();
@@ -56,6 +63,17 @@ export class CelebrityHubService {
                 typeof person.trending_title === 'string'
                   ? person.trending_title
                   : undefined,
+              known_for: Array.isArray(person.known_for)
+                ? person.known_for
+                    .filter(
+                      (work) =>
+                        work &&
+                        Number.isSafeInteger(work.id) &&
+                        typeof work.title === 'string' &&
+                        ['movie', 'tv'].includes(work.media_type),
+                    )
+                    .slice(0, 2)
+                : [],
             }));
           return { people, updatedAt: new Date().toISOString() };
         },

@@ -2,12 +2,61 @@
 
 ## Objective and scope
 
-Public film and TV discovery at `/celeb`, with news, happenings, videos, a searchable
+### November 2026 redesign contract
+
+The landing page leads with up to ten recent film/TV videos, with YouTube metadata
+and playback checks taking priority. One player is active at a time; sound follows
+a viewer gesture. Next/previous, swipe, reduced motion and playback failures have
+explicit behavior. Exact TMDB credit IDs supply film and series links.
+
+Four hub destinations: Home, News, Videos and People. The old happenings route
+redirects to News. News uses publisher story photographs and linked headlines in
+an editorial lead/story grid inspired by Tudum. Videos use landscape thumbnails,
+clear titles and channel/date metadata inspired by YouTube. Moodies typography,
+warm surfaces and existing selected-content people cards remain canonical.
+
+People cards share a 4:5 portrait, rounded-xl corners, border-bottom and existing
+cast typography. A short dark overlay reveals recent credited work on hover,
+keyboard focus or a touch control. Work links remain separate from profile links.
+Use the existing accessible custom select. Motion uses opacity/transform and
+respects reduced motion. Keep provider provenance available without repetitive
+instructions or decorative action labels.
+
+No database changes. News images come from bounded, allowlisted publisher feeds
+or article metadata; no invented story imagery. Server caches coalesce requests,
+retain bounded stale results and isolate provider failures. YouTube configuration
+changes invalidate failed cached data and quota cooldowns are credential scoped.
+
+Public film and TV discovery at `/celeb`, with news, videos, a searchable
 TMDB directory, and individual news/video/photo pages. The existing profile and
 filmography remain available. A newsletter means an on-site news digest here;
 email subscriptions are outside this change. No database migration is needed.
 
 ## Contract and implementation
+
+- `GET /api/people/hub/videos`: at most ten distinct videos published within 90
+  days, with exact film/TV references. Search discoveries take priority only when
+  a credited work is named and the channel is established by that title's
+  TMDB-linked official videos. Current YouTube metadata validates public status,
+  processing, embeddability, child-directed status and configured region before
+  embedding. Missing/blocked players retain an original YouTube link.
+- The global video snapshot refreshes hourly (five minutes with a failed source),
+  uses at most two searches per refresh and retains a saved snapshot for six
+  hours. Exact-ID checks use `videos.list`, without a search request. Redis and
+  bounded process memory coalesce requests. The application daily search cap
+  remains shared across credentials; rotating a key is not a quota reset.
+- YouTube key/region fingerprints scope media caches and quota cooldowns. Only
+  quota/rate failures create an hourly cooldown. Backend diagnostic event
+  `celebrity_youtube_request_failed` includes operation, HTTP status and a safe
+  Google reason such as `ipRefererBlocked` or `accessNotConfigured`, never the
+  URL, key or raw upstream message. Configure `YOUTUBE_API_KEY` on the Nest
+  backend; HTTP referrer restrictions are unsuitable for this server-to-server
+  request. Use the deployment's backend configuration and restart it after a key
+  change. No frontend YouTube API key is needed.
+- Images are extracted from the actual story's RSS media attributes. Missing
+  images use bounded, cached Open Graph metadata requests to canonical publisher
+  article URLs, with fixed HTTPS image hosts and no redirects. A failed image
+  never removes the headline. No article body is republished.
 
 - `GET /api/people/hub`: credited cast from at most four TMDB weekly trending films
   and series, using the directory's existing person/title safety checks, with source status. The shared
@@ -64,6 +113,45 @@ existing backend `YOUTUBE_API_KEY`; TMDB videos remain the fallback.
 - [x] Live source comparison, browser checks, repository checks and final review.
 
 ## Source checks
+
+### Redesign verification, 2026-11-01
+
+The supplied temporary key returned HTTP 200 for both YouTube search and video
+metadata. The deployed staging endpoint for Zendaya also returned YouTube data.
+A real browser opened her staging videos page, selected a video, and observed
+the embedded player advancing with `paused=false`, `readyState=4` and no player
+error. The reported key failure could not be reproduced during this check.
+No deployment or staging configuration change was made.
+
+The final isolated API returned ten eligible embedded videos from the featured
+titles, with studios including 20th Century Studios, Sony Pictures and Amazon MGM
+Studios. Both upstream sources were available. Repeated cached responses took
+24ms and 3ms locally; these timings are observations, not a production SLA.
+Local Redis was unavailable, so these measurements exercised the bounded process
+cache fallback. Distributed-cache behavior is covered by the mocked Redis tests.
+All 22 returned news stories had publisher photographs. A fresh
+[Variety story](https://variety.com/2026/tv/news/inde-navarrette-snl-halloween-the-inventors-wife-penis-robot-1236936629/)
+matched the original headline and publication time (`2026-11-01T08:33:26Z`),
+and its feed photograph matched the original Open Graph image before cropping.
+Publisher attribution does not mean every reported claim is independently verified.
+
+Production builds and typechecks passed for both workspaces. Lint has no errors
+and six existing auth/profile navigation warnings. The full backend suite passed
+295 tests with nine existing skips before the final three regression cases;
+all 57 celebrity tests passed after those cases were added. A final sequel-link
+regression also passed, ensuring a title such as Toy Story 5 links to the sequel
+rather than the shorter matching original. Client checks passed
+31 session/security/community tests and 29 Storybook tests. All four hub routes
+passed real Next.js browser tests at 320, 390, 768 and 1440px, including one-player
+enforcement, the ten-video cap, sound, next/previous, keyboard filters and work
+links, blocked/error playback, reduced motion, offscreen pause, source failures,
+retry and redirects. Existing profile and media harnesses also passed at all
+four widths. Real-content desktop/mobile captures had no page exceptions or
+horizontal overflow. No database migration is required.
+
+Current Next.js, NestJS, YouTube and fast-xml-parser documentation was consulted
+through Context7. Visual references were Netflix Tudum and YouTube, adapted to
+Moodies' existing typography and selected-content cast pattern.
 
 On 2026-11-01, live requests returned RSS XML for all three main feeds and their
 Zendaya topic feeds, and for Deadline's Tom Hanks topic feed. Search URLs returned

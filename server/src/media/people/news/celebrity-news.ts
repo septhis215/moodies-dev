@@ -35,6 +35,7 @@ export interface CelebrityArticle {
   publisher: string;
   publishedAt: string;
   topic: NewsTopic;
+  imageUrl?: string | null;
 }
 export interface CelebrityNews {
   articles: CelebrityArticle[];
@@ -50,7 +51,7 @@ export interface CelebrityNews {
 }
 
 const parser = new XMLParser({
-  ignoreAttributes: true,
+  ignoreAttributes: false,
   parseTagValue: false,
   processEntities: false,
   ignorePiTags: true,
@@ -89,6 +90,50 @@ function text(value: unknown): string {
     .replace(/\p{Cc}/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+export function newsImage(
+  value: unknown,
+  publisher: NewsPublisher,
+): string | null {
+  try {
+    if (typeof value !== 'string') return null;
+    const url = new URL(text(value));
+    const hosts = [
+      new URL(publisher.origin).hostname,
+      'www.hollywoodreporter.com',
+      'www.variety.com',
+      'www.deadline.com',
+      'hollywoodreporter.com',
+    ];
+    if (
+      url.protocol !== 'https:' ||
+      !hosts.includes(url.hostname) ||
+      url.username ||
+      url.password ||
+      (url.port && url.port !== '443') ||
+      !/\.(?:jpe?g|png|webp|avif)(?:$|\/)/i.test(url.pathname)
+    )
+      return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function feedImage(item: Record<string, unknown>, publisher: NewsPublisher) {
+  for (const tag of ['media:content', 'media:thumbnail', 'enclosure']) {
+    const values = Array.isArray(item[tag]) ? item[tag] : [item[tag]];
+    for (const value of values as Array<Record<string, unknown> | undefined>) {
+      const url = newsImage(value?.['@_url'], publisher);
+      if (url) return url;
+    }
+  }
+  const html = typeof item.description === 'string' ? item.description : '';
+  return newsImage(
+    html.match(/<img\b[^>]*\bsrc=["']([^"']+)["']/i)?.[1],
+    publisher,
+  );
 }
 function canonicalUrl(value: unknown, publisher: NewsPublisher): string | null {
   try {
@@ -161,6 +206,7 @@ export function parseNewsFeed(
       publisher: publisher.name,
       publishedAt: new Date(date).toISOString(),
       topic: newsTopic(title),
+      imageUrl: feedImage(item, publisher),
     };
     if (isRecent(article, now)) articles.push(article);
   }

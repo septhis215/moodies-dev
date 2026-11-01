@@ -95,6 +95,7 @@ try {
     },
     bundle: true,
     write: false,
+    outfile: resolve(root, "output/playwright/celebrity-media-harness.js"),
     format: "iife",
     jsx: "automatic",
     tsconfigRaw: { compilerOptions: { jsx: "react-jsx" } },
@@ -108,6 +109,10 @@ try {
       {
         name: "native-image-fixture",
         setup(api) {
+          api.onResolve({ filter: /^next\/link$/ }, () => ({
+            path: "link",
+            namespace: "fixture",
+          }));
           api.onResolve({ filter: /^next\/image$/ }, () => ({
             path: "image",
             namespace: "fixture",
@@ -118,9 +123,11 @@ try {
           }));
           api.onLoad({ filter: /.*/, namespace: "fixture" }, (args) => ({
             contents:
-              args.path === "icons"
-                ? `import React from 'react';const Icon=(props)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M5 12h14m-7-7 7 7-7 7"/></svg>;export const ArrowUpRight=Icon,ChevronLeft=Icon,ChevronRight=Icon,Play=Icon,X=Icon;`
-                : `import React from 'react';export default function Image({fill,unoptimized,priority,sizes,style,...props}){return <img {...props} loading={priority?'eager':'lazy'} style={{...(fill?{position:'absolute',inset:0,width:'100%',height:'100%'}:{}),...style}}/>}`,
+              args.path === "link"
+                ? "import React from 'react';export default function Link({href,prefetch,children,...props}){return <a href={href} {...props}>{children}</a>}"
+                : args.path === "icons"
+                  ? `import React from 'react';const Icon=(props)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M5 12h14m-7-7 7 7-7 7"/></svg>;export const ArrowUpRight=Icon,ChevronLeft=Icon,ChevronRight=Icon,Play=Icon,X=Icon,ChevronDown=Icon,Check=Icon,ExternalLink=Icon,Volume2=Icon,VolumeX=Icon;`
+                  : `import React from 'react';export default function Image({fill,unoptimized,priority,sizes,style,...props}){return <img {...props} loading={priority?'eager':'lazy'} style={{...(fill?{position:'absolute',inset:0,width:'100%',height:'100%'}:{}),...style}}/>}`,
             loader: "jsx",
             resolveDir: root,
           }));
@@ -159,20 +166,22 @@ try {
           });
           api.onLoad({ filter: /.*/, namespace: "readable" }, async (args) => ({
             contents: await readFile(args.path, "utf8"),
-            loader: args.path.endsWith(".tsx")
-              ? "tsx"
-              : args.path.endsWith(".ts")
-                ? "ts"
-                : args.path.endsWith(".json")
-                  ? "json"
-                  : "jsx",
+            loader: args.path.endsWith(".css")
+              ? "local-css"
+              : args.path.endsWith(".tsx")
+                ? "tsx"
+                : args.path.endsWith(".ts")
+                  ? "ts"
+                  : args.path.endsWith(".json")
+                    ? "json"
+                    : "jsx",
             resolveDir: dirname(args.path),
           }));
         },
       },
     ],
   });
-  bundle = result.outputFiles[0].text;
+  bundle = result.outputFiles.find((file) => file.path.endsWith(".js")).text;
   const sourceCss = await readFile(
     resolve(root, "client/app/globals.css"),
     "utf8",
@@ -184,6 +193,8 @@ try {
     )
   ).css;
   css += "\nbody{font-family:Arial,sans-serif}";
+  css +=
+    result.outputFiles.find((file) => file.path.endsWith(".css"))?.text || "";
   if (output) {
     await writeFile(resolve(output, "harness.js"), bundle);
     await writeFile(resolve(output, "harness.css"), css);
@@ -193,8 +204,33 @@ try {
     channel: process.env.BROWSER_CHANNEL || undefined,
   });
   const page = await browser.newPage();
+  await page.addInitScript(() => {
+    window.YT = {
+      Player: class {
+        constructor(mount, options) {
+          this.frame = document.createElement("iframe");
+          this.frame.src = `https://www.youtube.com/embed/${options.videoId}`;
+          mount.replaceWith(this.frame);
+          queueMicrotask(() => options.events.onReady({ target: this }));
+        }
+        getIframe() {
+          return this.frame;
+        }
+        playVideo() {}
+        pauseVideo() {}
+        mute() {}
+        unMute() {}
+        destroy() {
+          this.frame.remove();
+        }
+      },
+    };
+  });
   const errors = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (error) => {
+    errors.push(error.message);
+    console.error(error.message);
+  });
   await page.route("https://image.tmdb.org/**", (route) =>
     route.fulfill({ contentType: "image/svg+xml", body: fixtureImage }),
   );
@@ -250,6 +286,7 @@ try {
       .click();
     const viewer = page.getByRole("dialog");
     await viewer.waitFor();
+    await viewer.locator("iframe").waitFor();
     assert.ok(
       (await viewer.locator("iframe").getAttribute("src")).startsWith(
         "https://www.youtube.com/embed/",
@@ -288,8 +325,9 @@ try {
     await viewer.getByRole("button", { name: "Close media viewer" }).click();
     await viewer.waitFor({ state: "hidden" });
     await gallery
-      .getByRole("combobox", { name: "Photo source" })
-      .selectOption("openverse");
+      .getByRole("button", { name: "Photo source: All sources", exact: true })
+      .click();
+    await page.getByRole("option", { name: "Openverse", exact: true }).click();
     assert.equal(
       await gallery.getByRole("button", { name: /^Open photo/ }).count(),
       5,
@@ -309,8 +347,11 @@ try {
     await page.keyboard.press("Escape");
     await viewer.waitFor({ state: "hidden" });
     await gallery
-      .getByRole("combobox", { name: "Photo source" })
-      .selectOption("all");
+      .getByRole("button", { name: "Photo source: Openverse", exact: true })
+      .click();
+    await page
+      .getByRole("option", { name: "All sources", exact: true })
+      .click();
     if (output && [390, 1440].includes(width)) {
       await moments.screenshot({
         path: resolve(output, `moments-${width}.png`),

@@ -18,7 +18,7 @@ export default function ExploreCelebrities() {
         description="Search by name or explore the people behind your next watch."
       />
       <Suspense fallback={<PageSkeleton variant="people" />}>
-        <CelebritiesPageClient directoryOnly />
+        <CelebritiesPageClient />
       </Suspense>
     </div>
   );

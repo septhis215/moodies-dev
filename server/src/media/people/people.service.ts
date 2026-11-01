@@ -137,7 +137,11 @@ export class PeopleService {
       for (const person of (credits[index]?.cast || []).slice(0, 6)) {
         if (!this.isSafeDiscoveryPerson(person) || seen.has(person.id)) continue;
         seen.add(person.id);
-        people.push({ ...person, trending_title: titles[index].title || titles[index].name });
+        const title = titles[index];
+        people.push({ ...person, trending_title: title.title || title.name,
+          known_for: [{ id: title.id, title: title.title || title.name, media_type: title.media_type,
+            poster_path: title.poster_path || null, backdrop_path: title.backdrop_path || null }],
+        });
       }
     }
     return people.slice(0, 12);
@@ -1200,6 +1204,10 @@ export class PeopleService {
     );
 
     return Array.isArray(data?.results) ? data.results : [];
+  }
+
+  async getHubTitleVideos(type: 'movie' | 'tv', id: number) {
+    return this.getMediaVideosCached(type, id);
   }
 
   async getRelatedVideos(id: number) {
