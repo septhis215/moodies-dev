@@ -16,6 +16,8 @@ import {
   Tv,
 } from "lucide-react";
 import { tmdbImage } from "@/lib/tmdb";
+import { useAuth } from "@/app/context/AuthProvider";
+import { recordAchievementActivity } from "@/lib/achievements";
 
 type MoodFromApi = {
   id: string;
@@ -294,6 +296,7 @@ const getMoodsForCluster = (moods: MoodFromApi[], cluster: MoodCluster) => {
 };
 
 export default function MoodDiscoveryWheel() {
+  const { isAuthenticated } = useAuth();
   const [moods, setMoods] = useState<MoodFromApi[]>([]);
   const [loadingMoods, setLoadingMoods] = useState(true);
   const [activeClusterId, setActiveClusterId] = useState(moodClusters[0].id);
@@ -502,6 +505,7 @@ export default function MoodDiscoveryWheel() {
 
   const selectMood = (mood: MoodFromApi, alignWheel = true) => {
     if (isSpinning) return;
+    if (isAuthenticated) void recordAchievementActivity({ kind: "mood", moodId: mood.id }).catch(() => {});
     setSelectedMoodId(mood.id);
     setShowMoodBubble(true);
     const cluster = moodClusters.find((item) =>
@@ -559,6 +563,7 @@ export default function MoodDiscoveryWheel() {
         const mood = activeMoods[nextIndex];
         if (mood) {
           setSelectedMoodId(mood.id);
+          if (isAuthenticated) void recordAchievementActivity({ kind: "mood", moodId: mood.id }).catch(() => {});
           setShowMoodBubble(true);
         }
         setIsSpinning(false);

@@ -5,6 +5,7 @@ import {
   BadRequestException,
   UnauthorizedException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import {
   ChangePasswordDto,
@@ -25,6 +26,7 @@ import { uploadAvatarToStorage } from '../utils/storage';
 import { accessTtlMs } from './auth.config';
 import { AuthSessionService, type AccessIdentity } from './auth-session.service';
 import { MediaType } from '@prisma/client';
+import { AchievementsService } from '../achievements/achievements.service';
 
 
 
@@ -38,6 +40,7 @@ export class AuthService {
     private configService: ConfigService,
     private readonly redis: RedisService,
     private readonly sessions: AuthSessionService,
+    @Optional() private readonly achievements?: AchievementsService,
   ) { }
 
   /** Short-lived access token delivered as an HttpOnly cookie. */
@@ -244,171 +247,8 @@ export class AuthService {
   }
 
   async getAchievementProgress(userId: string) {
-    // ~11 queries + a write per call; cache briefly so repeated reads of the
-    // achievements page don't recompute every time. Progress is eventually
-    // consistent within the TTL (it persists on each cache miss).
-    return this.redis.getOrSet(
-      `achievements:${userId}`,
-      60, // seconds
-      () => this.computeAchievementProgress(userId),
-      (rows) => Array.isArray(rows) && rows.length > 0,
-    );
+    return this.achievements ? (await this.achievements.getMe(userId)).achievements : [];
   }
-
-  private async computeAchievementProgress(userId: string) {
-    const [
-      achievements,
-      user,
-      moodLogCount,
-      distinctMoodRows,
-      moodTotal,
-      reviewCount,
-      savedCount,
-      likedCount,
-      quizCount,
-      unlockedCount,
-      existingProgressRows,
-    ] = await Promise.all([
-      this.prismaService.achievement.findMany({
-        where: { active: true },
-        include: { badge: true },
-        orderBy: { badge: { displayOrder: 'asc' } },
-      }),
-      this.prismaService.user.findUnique({
-        where: { id: userId },
-        select: {
-          name: true,
-          username: true,
-          avatarUrl: true,
-          preferredGenres: true,
-          preferredLanguages: true,
-        },
-      }),
-      this.prismaService.moodLog.count({ where: { userId } }),
-      this.prismaService.moodLog.findMany({
-        where: { userId },
-        select: { moodId: true },
-        distinct: ['moodId'],
-      }),
-      this.prismaService.mood.count({ where: { isActive: true } }),
-      this.prismaService.review.count({ where: { userId } }),
-      this.prismaService.watchlistItem.count({ where: { userId } }),
-      this.prismaService.likedItem.count({ where: { userId } }),
-      this.prismaService.quiz.count({ where: { userId } }),
-      this.prismaService.userAchievement.count({ where: { userId, unlocked: true } }),
-      this.prismaService.userAchievement.findMany({ where: { userId } }),
-    ]);
-
-    const distinctMoods = distinctMoodRows.length;
-    const profileBasic = user?.name && user?.username ? 1 : 0;
-    const profileStyled =
-      user?.avatarUrl && (user.preferredGenres.length > 0 || user.preferredLanguages.length > 0) ? 1 : 0;
-    const fullIdentity = profileBasic && profileStyled && quizCount > 0 && moodLogCount > 0 ? 1 : 0;
-
-    const progressFor = (target: string, required: number | null) => {
-      switch (target) {
-        case 'mood_selections': return moodLogCount;
-        case 'distinct_moods': return distinctMoods;
-        case 'all_moods': return moodTotal > 0 ? Math.min(distinctMoods, moodTotal) : 0;
-        case 'reviews': return reviewCount;
-        case 'liked_titles': return likedCount;
-        case 'watchlist_titles': return savedCount;
-        case 'quizzes': return quizCount;
-        case 'profile_basic': return profileBasic;
-        case 'profile_stylist': return profileStyled ? 1 : 0;
-        case 'full_identity': return fullIdentity ? 1 : 0;
-        case 'badges_earned': return unlockedCount;
-        default: return 0;
-      }
-    };
-
-    const existingProgressByAchievement = new Map(
-      existingProgressRows.map((progress) => [progress.achievementId, progress])
-    );
-    const computedRows = achievements.map((achievement) => {
-      const required = achievement.requiredCount ?? (achievement.requirementTarget === 'all_moods' ? moodTotal : 1);
-      const currentProgress = progressFor(achievement.requirementTarget, required);
-      const completionPercentage = required > 0 ? Math.min(100, Math.round((currentProgress / required) * 100)) : 0;
-      const shouldUnlock = completionPercentage >= 100;
-      const existing = existingProgressByAchievement.get(achievement.id);
-      const progress = {
-        id: existing?.id,
-        userId,
-        achievementId: achievement.id,
-        currentProgress,
-        completionPercentage,
-        unlocked: existing?.unlocked || shouldUnlock,
-        unlockedAt: existing?.unlockedAt ?? (shouldUnlock ? new Date() : null),
-        relatedActivityRef: achievement.requirementTarget,
-        createdAt: existing?.createdAt,
-        updatedAt: existing?.updatedAt,
-      };
-
-      return {
-        achievement,
-        badge: achievement.badge,
-        progress,
-        existing,
-      };
-    });
-
-    const writes = computedRows.flatMap(({ achievement, progress, existing }) => {
-      const data = {
-        currentProgress: progress.currentProgress,
-        completionPercentage: progress.completionPercentage,
-        unlocked: progress.unlocked,
-        unlockedAt: progress.unlockedAt,
-        relatedActivityRef: achievement.requirementTarget,
-      };
-
-      if (existing) {
-        const unchanged =
-          existing.currentProgress === progress.currentProgress &&
-          existing.completionPercentage === progress.completionPercentage &&
-          existing.unlocked === progress.unlocked &&
-          (existing.unlockedAt?.getTime() ?? null) === (progress.unlockedAt?.getTime() ?? null) &&
-          existing.relatedActivityRef === achievement.requirementTarget;
-
-        return unchanged
-          ? []
-          : [this.prismaService.userAchievement.update({
-            where: { userId_achievementId: { userId, achievementId: achievement.id } },
-            data,
-          })];
-      }
-
-      return [this.prismaService.userAchievement.upsert({
-        where: { userId_achievementId: { userId, achievementId: achievement.id } },
-        update: data,
-        create: {
-          userId,
-          achievementId: achievement.id,
-          currentProgress: progress.currentProgress,
-          completionPercentage: progress.completionPercentage,
-          unlocked: progress.unlocked,
-          unlockedAt: progress.unlockedAt,
-          relatedActivityRef: achievement.requirementTarget,
-        },
-      })];
-    });
-
-    if (writes.length > 0) {
-      void this.prismaService.$transaction(writes).catch((error) => {
-        this.logger.error(
-          'Failed to persist achievement progress',
-          error instanceof Error ? error.stack : String(error),
-        );
-      });
-    }
-
-    return computedRows.map(({ achievement, badge, progress }) => ({
-      achievement,
-      badge,
-      progress,
-    }));
-  }
-
-  // ── Password reset (email-code flow) ───────────────────────────────────────
 
   async requestPasswordReset(email: string) {
     const normalizedEmail = String(email ?? '').toLowerCase().trim();

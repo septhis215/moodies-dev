@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { getMoodRecommendations, getAllMoods } from "@/app/tv/action";
 import { useAuth } from "@/app/context/AuthProvider";
+import { recordAchievementActivity } from "@/lib/achievements";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { RatingBadge } from "@/components/ui/rating-badge";
@@ -365,6 +366,7 @@ export default function MoodRecommendationsSection({
   const handleMoodClick = (mood: Mood) => {
     setRefreshedAt(null);
     setSelectedMood(mood);
+    if (isAuthenticated) void recordAchievementActivity({ kind: "mood", moodId: mood.id }).catch(() => {});
     void fetchRecommendations(mood);
   };
 

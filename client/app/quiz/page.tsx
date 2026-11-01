@@ -11,6 +11,8 @@ import { RatingBadge } from "@/components/ui/rating-badge";
 import { tmdbImage } from "@/lib/tmdb";
 import { apiRequest } from "@/lib/errors/api-client";
 import { handleAppError } from "@/lib/errors/handle-app-error";
+import { useAuth } from "@/app/context/AuthProvider";
+import { achievementRequest, browserTimezone, ACHIEVEMENTS_CHANGED } from "@/lib/achievements";
 import styles from "./quiz.module.css";
 import {
   QUIZ_SIGNALS,
@@ -36,6 +38,7 @@ type MovieItem = {
 };
 type ResponseData = {
   results: MovieItem[];
+  completionReceipt?: string;
   partialResults?: boolean;
   analysis?: { rankingVersion?: string };
 };
@@ -63,6 +66,10 @@ const resultGuides: Record<string, { name: BadgeMascotName; line: string }> = {
 };
 
 export default function MovieQuizPage() {
+  const { isAuthenticated, user } = useAuth();
+  const attemptRef = useRef("");
+  const [pendingCompletion, setPendingCompletion] = useState<{ owner: string; body: string } | null>(null);
+  const [savingCompletion, setSavingCompletion] = useState(false);
   const [stage, setStage] = useState<Stage>("welcome");
   const [questions, setQuestions] = useState(QUIZ_SIGNALS);
   const [current, setCurrent] = useState(0);
@@ -78,6 +85,16 @@ export default function MovieQuizPage() {
   const requestRef = useRef<AbortController | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const accountRef = useRef(user?.id);
+
+  useEffect(() => {
+    if (accountRef.current !== user?.id) {
+      requestRef.current?.abort();
+      requestRef.current = null;
+      setPendingCompletion(null);
+    }
+    accountRef.current = user?.id;
+  }, [user?.id]);
 
   useEffect(() => {
     try {
@@ -87,6 +104,7 @@ export default function MovieQuizPage() {
         answers?: unknown;
         current?: unknown;
         questionIds?: unknown;
+        attemptId?: unknown;
       } | null;
       const savedQuestions =
         saved &&
@@ -114,11 +132,13 @@ export default function MovieQuizPage() {
         setAnswers(saved.answers as (number | null)[]);
         setCurrent(Number(saved.current));
         setResumed(true);
+        if (typeof saved.attemptId === "string" && /^[0-9a-f-]{36}$/i.test(saved.attemptId)) attemptRef.current = saved.attemptId;
         setStage("quiz");
       }
     } catch {
       /* Storage is optional; private browsing must still work. */
     }
+    if (!attemptRef.current) attemptRef.current = crypto.randomUUID();
     setReady(true);
     return () => {
       requestRef.current?.abort();
@@ -135,6 +155,7 @@ export default function MovieQuizPage() {
           answers,
           current,
           questionIds: questions.map((question) => question.id),
+          attemptId: attemptRef.current,
         }),
       );
     } catch {
@@ -179,10 +200,12 @@ export default function MovieQuizPage() {
     requestRef.current?.abort();
     requestRef.current = null;
     const randomizedQuestions = createQuizSessionQuestions();
+    attemptRef.current = crypto.randomUUID();
     setQuestions(randomizedQuestions);
     setAnswers(emptyAnswers(randomizedQuestions.length));
     setCurrent(0);
     setResult(null);
+    setPendingCompletion(null);
     setResumed(false);
     setStage("quiz");
   };
@@ -195,6 +218,7 @@ export default function MovieQuizPage() {
       /* Optional persistence. */
     }
     setStage("welcome");
+    setPendingCompletion(null);
     setAnswers(emptyAnswers(questions.length));
     setCurrent(0);
     setResumed(false);
@@ -206,9 +230,11 @@ export default function MovieQuizPage() {
     requestRef.current = controller;
     const timeout = setTimeout(() => controller.abort(), 30000);
     setStage("loading");
+    setPendingCompletion(null);
     try {
       const base =
         process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
+      const completedAnswers = questions.map((signal, i) => ({ ...choice(i), category: signal.category }));
       const data = await apiRequest<ResponseData>(
         `${base}/quiz/recommendations`,
         {
@@ -216,10 +242,9 @@ export default function MovieQuizPage() {
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
-            answers: questions.map((signal, i) => ({
-              ...choice(i),
-              category: signal.category,
-            })),
+            answers: completedAnswers,
+            attemptId: attemptRef.current,
+            version: "signal-reel-v2",
           }),
         },
       );
@@ -238,6 +263,15 @@ export default function MovieQuizPage() {
       );
       setResult({ ...data, results: [...unique.values()].slice(0, 12) });
       setStage("results");
+      if (isAuthenticated && user?.id && data.completionReceipt) {
+        const body = JSON.stringify({ answers: completedAnswers, attemptId: attemptRef.current, version: "signal-reel-v2", receipt: data.completionReceipt, timezone: browserTimezone() });
+        try {
+          await achievementRequest("/quiz-completions", { method: "POST", signal: controller.signal, body });
+          window.dispatchEvent(new Event(ACHIEVEMENTS_CHANGED));
+        } catch {
+          if (requestRef.current === controller) setPendingCompletion({ owner: user.id, body });
+        }
+      }
     } catch (error) {
       if (requestRef.current === controller) {
         const normalized = handleAppError(error, {
@@ -254,6 +288,17 @@ export default function MovieQuizPage() {
     } finally {
       clearTimeout(timeout);
     }
+  };
+  const retryCompletion = async () => {
+    if (!pendingCompletion || pendingCompletion.owner !== user?.id || savingCompletion) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setSavingCompletion(true);
+    try {
+      await achievementRequest("/quiz-completions", { method: "POST", body: pendingCompletion.body, signal: controller.signal });
+      if (!controller.signal.aborted) { setPendingCompletion(null); window.dispatchEvent(new Event(ACHIEVEMENTS_CHANGED)); }
+    } catch { /* Keep the completed attempt available for an explicit retry. */ }
+    finally { setSavingCompletion(false); }
   };
   const question = questions[current];
   const questionCount = questions.length;
@@ -613,6 +658,12 @@ export default function MovieQuizPage() {
                 Start again
               </button>
             </div>
+            {pendingCompletion && pendingCompletion.owner === user?.id && (
+              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] px-4 py-3" role="status">
+                <p className="text-sm leading-6 text-[var(--ink-muted)]">Your matches are ready. Quiz progress hasn’t saved yet.</p>
+                <button type="button" disabled={savingCompletion} onClick={retryCompletion} className="ui-secondary-action">{savingCompletion ? "Saving…" : "Save quiz progress"}</button>
+              </div>
+            )}
             {result?.partialResults && (
               <p role="status" className="mb-4 text-sm text-[var(--ink-muted)]">
                 Some catalogue requests were unavailable. These are the matches

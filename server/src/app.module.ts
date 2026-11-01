@@ -29,6 +29,7 @@ import { RateLimitGuard } from './common/guards/rate-limit.guard';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TurnstileModule } from './common/security/turnstile.module';
+import { AchievementsModule } from './achievements/achievements.module';
 
 @Module({
   imports: [
@@ -58,6 +59,8 @@ import { TurnstileModule } from './common/security/turnstile.module';
         DIRECT_URL: Joi.string().empty('').optional(),
         TMDB_API_KEY: Joi.string().empty('').optional(),
         YOUTUBE_API_KEY: Joi.string().empty('').optional(),
+        ACHIEVEMENTS_ENABLED: Joi.string().valid('true', 'false').empty('').default('false'),
+        ACHIEVEMENTS_WORKER_ENABLED: Joi.string().valid('true', 'false').empty('').default('true'),
         YOUTUBE_DAILY_SEARCH_LIMIT: Joi.number()
           .integer()
           .min(1)
@@ -183,6 +186,7 @@ import { TurnstileModule } from './common/security/turnstile.module';
     ExternalApisModule,
     JobsModule,
     AuthModule,
+    AchievementsModule,
     UserModule,
     PrismaModule,
     WatchlistModule,
