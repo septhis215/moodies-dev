@@ -165,7 +165,11 @@ const formatPopularity = (value?: number) => {
   return Math.round(value).toString();
 };
 
-export default function CelebritiesPageClient() {
+export default function CelebritiesPageClient({
+  directoryOnly = false,
+}: {
+  directoryOnly?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -176,6 +180,7 @@ export default function CelebritiesPageClient() {
   const [status, setStatus] = useState<LoadState>("loading");
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<PeopleDiscoveryResponse | null>(null);
+  const [retry, setRetry] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const activeCategory =
     categoryOptions.find((option) => option.value === category) ||
@@ -247,7 +252,10 @@ export default function CelebritiesPageClient() {
         if (query.trim()) params.set("query", query.trim());
 
         const response = await fetch(`${API_BASE}/people/discover?${params}`, {
-          signal: controller.signal,
+          signal: AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(20000),
+          ]),
         });
 
         if (!response.ok) {
@@ -255,6 +263,8 @@ export default function CelebritiesPageClient() {
         }
 
         const payload = (await response.json()) as PeopleDiscoveryResponse;
+        if (!Array.isArray(payload.results))
+          throw new Error("Unable to load celebrity profiles.");
         if (controller.signal.aborted) return;
         setData(payload);
         setStatus(payload.results.length > 0 ? "success" : "empty");
@@ -273,7 +283,7 @@ export default function CelebritiesPageClient() {
     void loadCelebrities();
 
     return () => controller.abort();
-  }, [category, page, query]);
+  }, [category, page, query, retry]);
 
   const totalPages = Math.max(
     1,
@@ -290,34 +300,42 @@ export default function CelebritiesPageClient() {
       : "Live";
 
   return (
-    <main className="min-h-screen bg-[#030303] text-white">
+    <div className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
       <section className="relative isolate overflow-hidden border-b border-white/10">
-        <Image
-          src="/images/celeb-homepage-hero.png"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="absolute inset-0 -z-20 object-cover object-center"
-        />
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,#030303_0%,rgba(3,3,3,0.92)_30%,rgba(3,3,3,0.58)_63%,rgba(3,3,3,0.82)_100%)]" />
-        <div className="absolute inset-x-0 bottom-0 -z-10 h-48 bg-gradient-to-t from-[#030303] to-transparent" />
+        {!directoryOnly && (
+          <>
+            <Image
+              src="/images/celeb-homepage-hero.png"
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="absolute inset-0 -z-20 object-cover object-center"
+            />
+            <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,#030303_0%,rgba(3,3,3,0.92)_30%,rgba(3,3,3,0.58)_63%,rgba(3,3,3,0.82)_100%)]" />
+            <div className="absolute inset-x-0 bottom-0 -z-10 h-48 bg-gradient-to-t from-[#030303] to-transparent" />
+          </>
+        )}
 
-        <div className="mx-auto max-w-7xl px-4 pb-8 pt-24 sm:px-6 lg:px-8 lg:pb-12 lg:pt-32">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/35 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#ff9a84] backdrop-blur">
-              <Camera className="h-3.5 w-3.5" aria-hidden />
-              Moodies Celebs
+        <div
+          className={`ui-shell pb-8 ${directoryOnly ? "pt-6" : "pt-24 lg:pt-32"}`}
+        >
+          {!directoryOnly && (
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/35 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#ff9a84] backdrop-blur">
+                <Camera className="h-3.5 w-3.5" aria-hidden />
+                Moodies Celebs
+              </div>
+              <h1 className="mt-5 max-w-2xl text-4xl font-semibold leading-[1.02] tracking-normal text-white sm:text-6xl lg:text-7xl">
+                Find the faces behind every mood.
+              </h1>
+              <p className="mt-5 max-w-2xl text-sm leading-6 text-white/68 sm:text-base">
+                A people-first homepage for actors, directors, writers, icons,
+                and rising talent connected to the movies and shows you already
+                love on Moodies.
+              </p>
             </div>
-            <h1 className="mt-5 max-w-2xl text-4xl font-semibold leading-[1.02] tracking-normal text-white sm:text-6xl lg:text-7xl">
-              Find the faces behind every mood.
-            </h1>
-            <p className="mt-5 max-w-2xl text-sm leading-6 text-white/68 sm:text-base">
-              A people-first homepage for actors, directors, writers, icons,
-              and rising talent connected to the movies and shows you already
-              love on Moodies.
-            </p>
-          </div>
+          )}
 
           <div className="mt-8 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <div className="relative max-w-2xl">
@@ -325,7 +343,12 @@ export default function CelebritiesPageClient() {
                 className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/40"
                 aria-hidden
               />
+              <label htmlFor="celebrity-directory-search" className="sr-only">
+                Search actors, directors, writers
+              </label>
               <input
+                id="celebrity-directory-search"
+                maxLength={100}
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
                 placeholder="Search actors, directors, writers"
@@ -411,7 +434,7 @@ export default function CelebritiesPageClient() {
               </span>
               <div>
                 <p className="text-sm font-semibold text-white">
-                  Homepage-ready discovery
+                  A closer look at their work
                 </p>
                 <p className="mt-1 text-sm leading-5 text-white/50">
                   Search by name, browse by craft, then open each profile for
@@ -432,7 +455,7 @@ export default function CelebritiesPageClient() {
             action={
               <button
                 type="button"
-                onClick={() => updateParams({ page }, "replace")}
+                onClick={() => setRetry((value) => value + 1)}
                 className="mt-5 rounded-lg bg-[#e94f37] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#d7412a]"
               >
                 Try again
@@ -542,7 +565,7 @@ export default function CelebritiesPageClient() {
           </>
         )}
       </section>
-    </main>
+    </div>
   );
 }
 
@@ -663,7 +686,11 @@ function CelebrityCard({ person }: { person: CelebrityCard }) {
 
 function CelebrityGridSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading celebrities" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+    <div
+      aria-busy="true"
+      aria-label="Loading celebrities"
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6"
+    >
       {Array.from({ length: 24 }).map((_, index) => (
         <div key={index} className="space-y-3 rounded-lg bg-white/[0.028] p-2">
           <div className="aspect-[2/3] moodies-skeleton rounded-md bg-white/[0.06]" />

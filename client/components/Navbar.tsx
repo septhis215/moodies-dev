@@ -125,12 +125,12 @@ const mobileRouteOptions: Record<string, { label: string; path: string }[]> = {
     { label: "Match by mood", path: "/tv#moods" },
   ],
   "/celeb": [
-    { label: "Trending", path: "/celeb?category=trending&page=1" },
-    { label: "Actors", path: "/celeb?category=actors&page=1" },
-    { label: "Actresses", path: "/celeb?category=actresses&page=1" },
-    { label: "Directors", path: "/celeb?category=directors&page=1" },
-    { label: "Movie Stars", path: "/celeb?category=movie-stars&page=1" },
-    { label: "TV Stars", path: "/celeb?category=tv-stars&page=1" },
+    { label: "Celebrity hub", path: "/celeb" },
+    { label: "News digest", path: "/celeb/news" },
+    { label: "Happenings", path: "/celeb/happenings" },
+    { label: "Videos", path: "/celeb/videos" },
+    { label: "Trending people", path: "/celeb/explore?category=trending&page=1" },
+    { label: "Find a celebrity", path: "/celeb/explore" },
   ],
   "/moods/explore": [
     { label: "Mood wheel", path: "/moods" },

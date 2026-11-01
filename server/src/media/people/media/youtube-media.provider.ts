@@ -102,7 +102,10 @@ export class YoutubeMediaProvider implements CelebrityMediaProvider {
       throw error;
     }
   }
-  async discover(identity: CelebrityIdentity): Promise<ProviderMedia> {
+  async discover(
+    identity: CelebrityIdentity,
+    latest = false,
+  ): Promise<ProviderMedia> {
     if (!this.enabled) return { photos: [], videos: [] };
     // No unaided single-name searches. A known group/work disambiguates stage names.
     if (
@@ -121,7 +124,10 @@ export class YoutubeMediaProvider implements CelebrityMediaProvider {
       q: query,
       type: 'video',
       maxResults: '40',
-      order: 'relevance',
+      order: latest ? 'date' : 'relevance',
+      ...(latest
+        ? { publishedAfter: new Date(Date.now() - 90 * 86400000).toISOString() }
+        : {}),
       safeSearch: 'strict',
       videoEmbeddable: 'true',
       videoSyndicated: 'true',
