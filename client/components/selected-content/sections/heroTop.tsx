@@ -21,6 +21,7 @@ import { useMediaStats } from "@/hooks/useMediaStats";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useAuth } from '@/app/context/AuthProvider';
 import { AudienceMood } from '../AudienceMood';
+import WatchedTitleButton from "@/components/achievements/WatchedTitleButton";
 import { fmtCount } from "@/utils/mediaStatsClient";
 import { tmdbImage } from "@/lib/tmdb";
 import { loadYouTubeApi, YT_PLAYER_STATE, type YouTubePlayer } from "@/lib/youtube-player";
@@ -639,6 +640,9 @@ export function HeroContentCard({
                 <Heart className="h-4 w-4 shrink-0" fill={inLiked ? "currentColor" : "none"} aria-hidden="true" />
                 <span className="sr-only sm:not-sr-only">{inLiked ? "Liked" : "Like"}</span>
               </button>
+              {contentId ? (
+                <WatchedTitleButton id={Number(contentId)} type={contentType === "tv" ? "tv" : "movie"} />
+              ) : null}
               {contentId ? (
                 <button type="button" onClick={() => setIsSnapshotOpen(true)} className="ui-secondary-action leading-none" aria-label="Share content snapshot">
                   <Share2 className="h-4 w-4 shrink-0" aria-hidden="true" />

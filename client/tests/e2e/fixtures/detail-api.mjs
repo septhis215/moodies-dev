@@ -23,6 +23,7 @@ export async function startDetailApi(port = 4000) {
     const reply = (data, code = 200) => { res.statusCode = code; res.end(JSON.stringify(data)); };
     if (path === '/auth/bootstrap' || path === '/auth/me') return reply({ user: state.anonymous ? null : member, canRefresh: false, watchlist: buckets(state.saved), liked: buckets(state.liked) });
     if (path === '/reviews/me/ban-status') return reply({ banned: false });
+    if (path.startsWith('/achievements/')) return reply(path.endsWith('/notifications/claim') ? { enabled: false, token: null, notifications: [] } : { enabled: false, watched: false });
     if (/^\/(liked|watchlist)\/toggle$/.test(path)) {
       state.mutationCalls++;
       await new Promise((resolve) => setTimeout(resolve, 180));

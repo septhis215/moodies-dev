@@ -50,6 +50,14 @@ model User {
   userAchievements   UserAchievement[]
   authVersion        Int           @default(0)
   authSessions       AuthSession[]
+  achievementAccount AchievementAccount?
+  achievementEvents AchievementEvent[]
+  achievementFacts AchievementFact[]
+  achievementMetrics AchievementMetric[]
+  achievementAwards AchievementAwardLog[]
+  achievementNotifications AchievementNotification[]
+  watchedTitles WatchedTitle[]
+  quizCompletions QuizCompletion[]
 }
 
 model AuthSession {
@@ -86,10 +94,13 @@ model EmailVerification {
 model Quiz {
   id         String   @id @default(uuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers    Json
   resultMood String
   createdAt  DateTime @default(now())
+  completion QuizCompletion?
+
+  @@index([userId, createdAt])
 }
 
 model Achievement {
@@ -105,10 +116,13 @@ model Achievement {
   reasoningTemplate String
   lockedHint        String
   active            Boolean           @default(true)
+  ruleVersion       Int               @default(1)
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   badge             BadgeDefinition?
   userProgress      UserAchievement[]
+  ruleVersions      AchievementRuleVersion[]
+  awards            AchievementAwardLog[]
 
   @@index([category])
   @@index([active])
@@ -150,6 +164,7 @@ model UserAchievement {
   unlocked             Boolean     @default(false)
   unlockedAt           DateTime?
   relatedActivityRef   String?
+  ruleVersion          Int         @default(1)
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 
@@ -158,6 +173,177 @@ model UserAchievement {
   @@index([achievementId])
   @@index([unlocked])
   @@map("user_achievements")
+}
+
+model AchievementRuleVersion {
+  id String @id @default(uuid())
+  achievementId String
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  version Int
+  target String
+  requiredCount Int?
+  definition Json
+  publishedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([achievementId, version])
+  @@map("achievement_rule_versions")
+}
+
+model AchievementAccount {
+  userId String @id
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timezone String?
+  nextSequence BigInt @default(0)
+  projectedSequence BigInt @default(0)
+  revision Int @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("achievement_accounts")
+}
+
+model AchievementEvent {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sequence BigInt
+  kind String
+  key String
+  payload Json
+  occurredAt DateTime @default(now()) @db.Timestamptz(3)
+  status String @default("pending")
+  attempts Int @default(0)
+  availableAt DateTime @default(now()) @db.Timestamptz(3)
+  leaseToken String?
+  leaseUntil DateTime? @db.Timestamptz(3)
+  errorCode String?
+  processedAt DateTime? @db.Timestamptz(3)
+  facts AchievementFact[]
+  awards AchievementAwardLog[]
+
+  @@unique([userId, sequence])
+  @@unique([userId, key])
+  @@index([status, availableAt])
+  @@index([status, leaseUntil])
+  @@index([status, processedAt])
+  @@index([userId, status, sequence])
+  @@map("achievement_events")
+}
+
+model AchievementFact {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metric String
+  key String
+  day String? @db.VarChar(10)
+  details Json @default("{}")
+  occurredAt DateTime @db.Timestamptz(3)
+  sourceEventId String?
+  sourceEvent AchievementEvent? @relation(fields: [sourceEventId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, metric, key])
+  @@index([userId, metric, day])
+  @@index([sourceEventId])
+  @@map("achievement_facts")
+}
+
+model AchievementMetric {
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metric String
+  value Int @default(0)
+  lastSequence BigInt @default(0)
+
+  @@id([userId, metric])
+  @@map("achievement_metrics")
+}
+
+model AchievementAwardLog {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Restrict)
+  ruleVersion Int
+  action String
+  actor String
+  reason String @db.VarChar(500)
+  evidence Json
+  idempotencyKey String @unique
+  sourceEventId String?
+  sourceEvent AchievementEvent? @relation(fields: [sourceEventId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  notification AchievementNotification?
+
+  @@index([userId, createdAt])
+  @@index([achievementId])
+  @@index([sourceEventId])
+  @@map("achievement_award_log")
+}
+
+model AchievementNotification {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  awardId String @unique
+  award AchievementAwardLog @relation(fields: [awardId], references: [id], onDelete: Cascade)
+  seenAt DateTime? @db.Timestamptz(3)
+  leaseToken String?
+  leaseUntil DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, seenAt, leaseUntil])
+  @@map("achievement_notifications")
+}
+
+model WatchedTitle {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId Int
+  mediaType MediaType
+  watchedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([userId, tmdbId, mediaType])
+  @@index([userId, watchedAt])
+  @@map("watched_titles")
+}
+
+model QuizCompletion {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId String @unique
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  attemptId String
+  quizType String
+  version String
+  completedDay String @db.VarChar(10)
+  completedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([userId, attemptId])
+  @@unique([userId, quizType, completedDay])
+  @@map("quiz_completions")
+}
+
+model AchievementTitleSnapshot {
+  key String @id
+  metadata Json
+  fetchedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([fetchedAt])
+  @@map("achievement_title_snapshots")
+}
+
+model AchievementTrendSnapshot {
+  id String @id @default(uuid())
+  keys String[]
+  capturedAt DateTime @db.Timestamptz(3)
+  validUntil DateTime @db.Timestamptz(3)
+
+  @@index([capturedAt, validUntil])
+  @@map("achievement_trend_snapshots")
 }
 
 // One row per saved/liked title (replaced the legacy Watchlist/LikedList array
@@ -209,6 +395,7 @@ model Review {
   reactions     ReviewReaction[]
 
   @@index([tmdbId, mediaType])
+  @@index([userId, status])
   @@index([rating])
   @@index([status])
   @@index([createdAt])

@@ -152,3 +152,13 @@ Preserve the existing Context7 workflow for external-library documentation.
 
 Combine overlapping output requirements into a clear response.
 Report completed work, verification performed, and material limitations.
+
+## Standing user preference: autonomous execution
+
+The user explicitly prefers autonomous completion and has granted broad access for
+authorized tasks. Do not ask routine clarification or permission questions. Make
+reasonable implementation decisions, use the available resources, and continue
+until the requested work is complete. Do not repeatedly seek approval already
+given in the conversation. Preserve explicit task-specific limits, including
+preparing database migrations for the user to apply when requested. Platform
+permission controls and higher-priority safety requirements still apply.
