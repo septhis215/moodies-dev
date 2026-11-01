@@ -25,17 +25,22 @@ export class MediaCacheService {
       /* Redis must not prevent discovery. */
     }
   }
-  async remember<T>(key: string, value: T, ttl: number) {
+  async remember<T>(
+    key: string,
+    value: T,
+    ttl: number,
+    retentionSeconds = 7 * 86400,
+  ) {
     const entry = {
       value,
       freshUntil: Date.now() + ttl * 1000,
-      expires: Date.now() + 7 * 86400 * 1000,
+      expires: Date.now() + retentionSeconds * 1000,
     };
     if (this.memory.size >= 200)
       this.memory.delete(this.memory.keys().next().value!);
     this.memory.set(key, entry);
     try {
-      await this.redis.set(key, JSON.stringify(entry), 7 * 86400);
+      await this.redis.set(key, JSON.stringify(entry), retentionSeconds);
     } catch {
       /* use bounded process cache */
     }
@@ -44,6 +49,7 @@ export class MediaCacheService {
     key: string,
     ttl: number | ((value: T) => number),
     load: () => Promise<T>,
+    retentionSeconds = 7 * 86400,
   ): Promise<{ value: T; stale: boolean }> {
     const cached = await this.read<T>(key);
     if (cached && cached.freshUntil > Date.now())
@@ -61,6 +67,7 @@ export class MediaCacheService {
           key,
           value,
           typeof ttl === 'function' ? ttl(value) : ttl,
+          retentionSeconds,
         );
         this.failures.delete(key);
         return { value, stale: false };

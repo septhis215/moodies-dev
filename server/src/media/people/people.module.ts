@@ -11,6 +11,8 @@ import { WikimediaMediaProvider } from './media/wikimedia-media.provider';
 import { CelebrityMediaService } from './media/celebrity-media.service';
 import { OpenverseMediaProvider } from './media/openverse-media.provider';
 import { PeopleRecommendationsService } from './people-recommendations.service';
+import { CelebrityNewsService } from './news/celebrity-news.service';
+import { CelebrityHubService } from './celebrity-hub.service';
 
 @Module({
   imports: [RedisModule],
@@ -25,6 +27,8 @@ import { PeopleRecommendationsService } from './people-recommendations.service';
     OpenverseMediaProvider,
     CelebrityMediaService,
     PeopleRecommendationsService,
+    CelebrityNewsService,
+    CelebrityHubService,
   ],
   controllers: [PeopleController],
 })

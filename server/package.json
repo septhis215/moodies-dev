@@ -60,6 +60,7 @@
     "bottleneck": "^2.19.5",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "fast-xml-parser": "^5.11.2",
     "joi": "^18.0.1",
     "jsonwebtoken": "^9.0.2",
     "leo-profanity": "^1.8.0",

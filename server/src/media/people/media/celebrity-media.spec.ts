@@ -263,6 +263,14 @@ describe('YouTube provider', () => {
     expect((await provider.discover(woni)).videos).toEqual([]);
     expect(http.json).not.toHaveBeenCalled();
   });
+  it('uses a bounded date-ordered search for the latest feed', async () => {
+    const { provider, http } = setup([]);
+    await provider.discover(woni, true);
+    const url = http.json.mock.calls[0][0] as URL;
+    expect(url.searchParams.get('order')).toBe('date');
+    expect(Date.parse(url.searchParams.get('publishedAfter')!)).toBeGreaterThan(Date.now() - 91 * 86400000);
+    expect(url.searchParams.get('safeSearch')).toBe('strict');
+  });
   it('matches a short stage name on a confirmed channel without a group context', async () => {
     const { provider } = setup([youtubeItem('Woni interview')]);
     expect(
@@ -449,6 +457,25 @@ describe('Wikimedia provider', () => {
 });
 
 describe('media aggregation', () => {
+  it('keeps latest videos recent, dated and newest first while isolating provider failures', async () => {
+    const now = Date.now();
+    const recent = { ...video(), publishedAt: new Date(now - 86400000).toISOString() };
+    const newer = { ...video('lmnopqrstuv', 'Newer interview'), publishedAt: new Date(now - 3600000).toISOString() };
+    const tmdb = { discover: jest.fn().mockResolvedValue({ photos: [], videos: [recent, newer, video('undated0001'), { ...video('older000001'), publishedAt: '2020-01-01' }, { ...video('future00001'), publishedAt: new Date(now + 86400000).toISOString() }] }) };
+    const youtube = { enabled: true, discover: jest.fn().mockRejectedValue(new Error('quota')) };
+    const service = new CelebrityMediaService(
+      { resolve: jest.fn().mockResolvedValue(woni) } as unknown as CelebrityIdentityService,
+      new MediaCacheService(redisMock() as unknown as RedisService),
+      tmdb as unknown as TmdbMediaProvider, youtube as unknown as YoutubeMediaProvider,
+      {} as WikimediaMediaProvider, new ConfigService(), {} as OpenverseMediaProvider,
+    );
+    const result = await service.getLatestVideos(123);
+    expect(result.videos.map((entry) => entry.id)).toEqual([newer.id, recent.id]);
+    expect(result.sources).toMatchObject({ tmdb: 'ready', youtube: 'unavailable' });
+    await service.getLatestVideos(123);
+    expect(tmdb.discover).toHaveBeenCalledTimes(1);
+    expect(youtube.discover).toHaveBeenCalledTimes(1);
+  });
   it('returns TMDB photos when other providers fail and caches the partial response', async () => {
     const identity = { resolve: jest.fn().mockResolvedValue(woni) };
     const cache = new MediaCacheService(redisMock() as unknown as RedisService);

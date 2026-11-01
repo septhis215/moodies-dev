@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { ArrowUpRight, ChevronLeft, ChevronRight, Play, X } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { tmdbImage } from "@/lib/tmdb";
@@ -127,6 +128,17 @@ function VideoCard({
             {video.channel}
             {video.official ? " · Official" : ""}
           </p>
+          {video.publishedAt &&
+            Number.isFinite(Date.parse(video.publishedAt)) && (
+              <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
+                <time dateTime={video.publishedAt}>
+                  {new Intl.DateTimeFormat("en", {
+                    dateStyle: "medium",
+                    timeZone: "UTC",
+                  }).format(new Date(video.publishedAt))}
+                </time>
+              </p>
+            )}
           {video.context && (
             <p className="line-clamp-1 text-xs leading-5 text-[var(--ink-muted)]">
               From {video.context}
@@ -151,9 +163,13 @@ function VideoCard({
 export default function CelebrityMediaSections({
   person,
   onPhotosReady,
+  view = "all",
+  latest = false,
 }: {
   person: Profile;
   onPhotosReady?: (photos: CelebrityPhoto[]) => void;
+  view?: "all" | "videos" | "photos";
+  latest?: boolean;
 }) {
   const [response, setResponse] = useState<{
     personId: number;
@@ -161,7 +177,9 @@ export default function CelebrityMediaSections({
   } | null>(null);
   const media = response?.personId === person.id ? response.data : null;
   const [loading, setLoading] = useState(false);
-  const [started, setStarted] = useState(Boolean(onPhotosReady));
+  const [started, setStarted] = useState(
+    Boolean(onPhotosReady) || view !== "all",
+  );
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
   const [category, setCategory] = useState<VideoCategory | "all">("all");
@@ -192,9 +210,15 @@ export default function CelebrityMediaSections({
     const controller = new AbortController();
     setLoading(true);
     setFailed(false);
-    fetch(`${API_BASE}/people/${person.id}/media`, {
-      signal: controller.signal,
-    })
+    fetch(
+      `${API_BASE}/people/${person.id}/${latest ? "latest-videos" : "media"}`,
+      {
+        signal: AbortSignal.any([
+          controller.signal,
+          AbortSignal.timeout(30000),
+        ]),
+      },
+    )
       .then(async (response) => {
         if (!response.ok) throw new Error("Celebrity media unavailable");
         const data = (await response.json()) as CelebrityMedia;
@@ -221,7 +245,7 @@ export default function CelebrityMediaSections({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [person, started, retry, onPhotosReady]);
+  }, [person, started, retry, onPhotosReady, latest]);
   useEffect(() => {
     const element = dialog.current;
     if (!element) return;
@@ -268,221 +292,261 @@ export default function CelebrityMediaSections({
   }
   return (
     <>
-      <section
-        ref={section}
-        id="on-screen-moments"
-        aria-labelledby="celebrity-moments-heading"
-        className="mt-10 min-w-0 scroll-mt-24 space-y-5 border-t border-[var(--surface-border)] pt-8 sm:mt-12 sm:pt-10"
-      >
-        <header>
-          <h2
-            id="celebrity-moments-heading"
-            className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
-          >
-            On-Screen Moments
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-            Interviews, performances and stories from {person.name}’s world.
-          </p>
-        </header>
-        {unavailable && (
-          <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--ink-muted)]">
-            <p>
-              Some photos and videos couldn’t load. You can still browse the
-              moments available below.
-            </p>
-            <button
-              type="button"
-              disabled={loading}
-              className="ui-secondary-action"
-              onClick={() => setRetry((value) => value + 1)}
-            >
-              Try again
-            </button>
-          </div>
-        )}
-        <div
-          role="group"
-          aria-label="Filter on-screen moments"
-          className="mobile-native-scroll flex gap-5 overflow-x-auto border-b border-[var(--surface-border)] sm:flex-wrap sm:gap-x-6"
+      {view !== "photos" && (
+        <section
+          ref={section}
+          id="on-screen-moments"
+          aria-labelledby="celebrity-moments-heading"
+          className="mt-10 min-w-0 scroll-mt-24 space-y-5 border-t border-[var(--surface-border)] pt-8 sm:mt-12 sm:pt-10"
         >
-          {(
-            [
-              "all",
-              ...Object.keys(categories).filter((key) =>
-                media?.videos.some((video) => video.category === key),
-              ),
-            ] as Array<VideoCategory | "all">
-          ).map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={category === value}
-              onClick={() => {
-                setCategory(value);
-                setVideoLimit(8);
-              }}
-              className={`min-h-11 shrink-0 border-b-2 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] ${category === value ? "border-[var(--brand-coral)] text-[var(--ink)]" : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+          <header>
+            <h2
+              id="celebrity-moments-heading"
+              className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
             >
-              {value === "all" ? "All moments" : categories[value]}
-            </button>
-          ))}
-        </div>
-        {!started || (loading && !media) ? (
-          <div
-            role="status"
-            aria-label="Loading celebrity videos"
-            className="grid gap-4 sm:grid-cols-2"
-          >
-            <div className="ui-panel aspect-video moodies-skeleton" />
-            <div className="ui-panel aspect-video moodies-skeleton" />
-          </div>
-        ) : shownVideos.length > 0 ? (
-          <>
-            <div className="grid min-w-0 grid-cols-1 gap-x-5 gap-y-7 sm:grid-cols-2 xl:grid-cols-3">
-              {shownVideos.map((video) => (
-                <VideoCard
-                  key={video.id}
-                  video={video}
-                  onPlay={() => setSelection({ kind: "video", video })}
-                />
-              ))}
-            </div>
-            {videos.length > videoLimit && (
-              <button
-                type="button"
-                className="ui-secondary-action"
-                onClick={() => setVideoLimit((value) => value + 8)}
-              >
-                View more moments ({videos.length - videoLimit})
-              </button>
-            )}
-          </>
-        ) : (
-          <div className="ui-panel p-5 text-sm leading-6 text-[var(--ink-muted)]">
-            {failed
-              ? "We couldn’t load these moments. You can still explore the profile and photos."
-              : "No moments are available yet. Explore the filmography for more of their work."}
-          </div>
-        )}
-      </section>
-      <section
-        id="gallery"
-        aria-labelledby="celebrity-gallery-heading"
-        className="mt-10 scroll-mt-24 space-y-5 border-t border-[var(--surface-border)] pt-8 sm:mt-12 sm:pt-10"
-      >
-        <header>
-          <h2
-            id="celebrity-gallery-heading"
-            className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
-          >
-            Photo Gallery
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-            Portraits and public appearances. Open a photo for the full view and
-            source credits.
-          </p>
-        </header>
-        {allPhotos.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--surface-border)] pb-4">
-            <p role="status" className="text-sm text-[var(--ink-muted)]">
-              {photos.length} {photos.length === 1 ? "photo" : "photos"}
+              {latest ? "Recent videos" : "On-Screen Moments"}
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+              {latest
+                ? `Interviews, trailers and appearances featuring ${person.name} from the last 90 days. Title videos may feature an ensemble cast.`
+                : `Interviews, performances and stories from ${person.name}’s world.`}
             </p>
-            {photoSources.length > 1 && (
-              <label className="flex items-center gap-3 text-sm text-[var(--ink-muted)]">
-                Source
-                <select
-                  aria-label="Photo source"
-                  value={activeSource}
-                  onChange={(event) => {
-                    setPhotoSource(event.target.value as MediaSource | "all");
-                    setPhotoLimit(5);
-                  }}
-                  className="min-h-11 max-w-[12rem] rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
-                >
-                  <option value="all">All sources</option>
-                  {photoSources.map((source) => (
-                    <option key={source} value={source}>
-                      {sourceNames[source]}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            {latest && media && (
+              <p className="mt-2 text-xs leading-5 text-[var(--ink-muted)]">
+                {media.sources.youtube === "disabled"
+                  ? "YouTube discovery is unavailable. Showing title videos from TMDB where available."
+                  : "YouTube search can take time to index new uploads."}
+                {Object.values(media.sources).includes("stale") &&
+                  " Some results are from a saved snapshot."}
+                {Object.values(media.sources).some(
+                  (status) => status === "ready" || status === "stale",
+                ) &&
+                  ` Last fetched ${new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(media.updatedAt))} UTC.`}
+              </p>
             )}
-          </div>
-        )}
-        {photos.length > 0 ? (
-          <>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4 xl:grid-cols-5">
-              {photos.slice(0, photoLimit).map((photo, index) => (
-                <article key={photo.id} className="min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => setSelection({ kind: "photo", photo })}
-                    className="group relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)]"
-                    aria-label={
-                      "Open photo " + (index + 1) + ": " + photo.title
-                    }
-                  >
-                    <Image
-                      src={photo.thumbnail}
-                      alt={photo.title}
-                      fill
-                      unoptimized
-                      sizes="(max-width: 639px) 45vw, (max-width: 1023px) 30vw, 240px"
-                      className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-105"
-                      onError={() =>
-                        setBrokenPhotos(
-                          (previous) => new Set([...previous, photo.id]),
-                        )
-                      }
-                    />
-                  </button>
-                  <a
-                    href={photo.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={photo.attribution + " · " + photo.license}
-                    className="mt-2 flex min-h-11 items-start gap-1.5 rounded-sm py-1 text-xs leading-5 text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate">
-                        {photo.attribution}
-                      </span>
-                      <span className="block truncate">
-                        {sourceNames[photo.source]} · {photo.license}
-                      </span>
-                    </span>
-                    <ArrowUpRight
-                      className="mt-0.5 h-3.5 w-3.5 shrink-0"
-                      aria-hidden="true"
-                    />
-                  </a>
-                </article>
-              ))}
-            </div>
-            {photos.length > photoLimit && (
+          </header>
+          {unavailable && (
+            <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--ink-muted)]">
+              <p>
+                Some photos and videos couldn’t load. You can still browse the
+                moments available below.
+              </p>
               <button
                 type="button"
+                disabled={loading}
                 className="ui-secondary-action"
-                onClick={() => setPhotoLimit((value) => value + 5)}
+                onClick={() => setRetry((value) => value + 1)}
               >
-                Load more photos ({photos.length - photoLimit})
+                Try again
               </button>
-            )}
-          </>
-        ) : loading || !started ? (
+            </div>
+          )}
           <div
-            role="status"
-            aria-label="Loading celebrity photos"
-            className="ui-panel h-64 moodies-skeleton"
-          />
-        ) : (
-          <div className="ui-panel p-5 text-sm text-[var(--ink-muted)]">
-            No confidently matched photos are available yet.
+            role="group"
+            aria-label="Filter on-screen moments"
+            className="mobile-native-scroll flex gap-5 overflow-x-auto border-b border-[var(--surface-border)] sm:flex-wrap sm:gap-x-6"
+          >
+            {(
+              [
+                "all",
+                ...Object.keys(categories).filter((key) =>
+                  media?.videos.some((video) => video.category === key),
+                ),
+              ] as Array<VideoCategory | "all">
+            ).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={category === value}
+                onClick={() => {
+                  setCategory(value);
+                  setVideoLimit(8);
+                }}
+                className={`min-h-11 shrink-0 border-b-2 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] ${category === value ? "border-[var(--brand-coral)] text-[var(--ink)]" : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+              >
+                {value === "all" ? "All moments" : categories[value]}
+              </button>
+            ))}
           </div>
-        )}
-      </section>
+          {!started || (loading && !media) ? (
+            <div
+              role="status"
+              aria-label="Loading celebrity videos"
+              className="grid gap-4 sm:grid-cols-2"
+            >
+              <div className="ui-panel aspect-video moodies-skeleton" />
+              <div className="ui-panel aspect-video moodies-skeleton" />
+            </div>
+          ) : shownVideos.length > 0 ? (
+            <>
+              <div className="grid min-w-0 grid-cols-1 gap-x-5 gap-y-7 sm:grid-cols-2 xl:grid-cols-3">
+                {shownVideos.map((video) => (
+                  <VideoCard
+                    key={video.id}
+                    video={video}
+                    onPlay={() => setSelection({ kind: "video", video })}
+                  />
+                ))}
+              </div>
+              {videos.length > videoLimit && (
+                <button
+                  type="button"
+                  className="ui-secondary-action"
+                  onClick={() => setVideoLimit((value) => value + 8)}
+                >
+                  View more moments ({videos.length - videoLimit})
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="ui-panel p-5 text-sm leading-6 text-[var(--ink-muted)]">
+              {failed
+                ? "We couldn’t load these moments. You can still explore the profile and photos."
+                : "No moments are available yet. Explore the filmography for more of their work."}
+              {latest && <Link href={`/celeb/${person.id}#on-screen-moments`} className="ui-secondary-action mt-4">Browse all screen moments</Link>}
+            </div>
+          )}
+        </section>
+      )}
+      {view !== "videos" && (
+        <section
+          ref={view === "photos" ? section : undefined}
+          id="gallery"
+          aria-labelledby="celebrity-gallery-heading"
+          className="mt-10 scroll-mt-24 space-y-5 border-t border-[var(--surface-border)] pt-8 sm:mt-12 sm:pt-10"
+        >
+          <header>
+            <h2
+              id="celebrity-gallery-heading"
+              className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
+            >
+              Photo Gallery
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+              Portraits and public appearances. Open a photo for the full view
+              and source credits.
+            </p>
+          </header>
+          {view === "photos" && unavailable && (
+            <div
+              className="flex flex-wrap items-center gap-3 text-sm leading-6 text-[var(--ink-muted)]"
+              role="status"
+            >
+              <p>
+                Some photo sources couldn’t load. Available portraits are shown
+                below.
+              </p>
+              <button
+                type="button"
+                disabled={loading}
+                className="ui-secondary-action"
+                onClick={() => setRetry((value) => value + 1)}
+              >
+                Try again
+              </button>
+            </div>
+          )}
+          {allPhotos.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--surface-border)] pb-4">
+              <p role="status" className="text-sm text-[var(--ink-muted)]">
+                {photos.length} {photos.length === 1 ? "photo" : "photos"}
+              </p>
+              {photoSources.length > 1 && (
+                <label className="flex items-center gap-3 text-sm text-[var(--ink-muted)]">
+                  Source
+                  <select
+                    aria-label="Photo source"
+                    value={activeSource}
+                    onChange={(event) => {
+                      setPhotoSource(event.target.value as MediaSource | "all");
+                      setPhotoLimit(5);
+                    }}
+                    className="min-h-11 max-w-[12rem] rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
+                  >
+                    <option value="all">All sources</option>
+                    {photoSources.map((source) => (
+                      <option key={source} value={source}>
+                        {sourceNames[source]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+          )}
+          {photos.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-4 xl:grid-cols-5">
+                {photos.slice(0, photoLimit).map((photo, index) => (
+                  <article key={photo.id} className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setSelection({ kind: "photo", photo })}
+                      className="group relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)]"
+                      aria-label={
+                        "Open photo " + (index + 1) + ": " + photo.title
+                      }
+                    >
+                      <Image
+                        src={photo.thumbnail}
+                        alt={photo.title}
+                        fill
+                        unoptimized
+                        sizes="(max-width: 639px) 45vw, (max-width: 1023px) 30vw, 240px"
+                        className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-105"
+                        onError={() =>
+                          setBrokenPhotos(
+                            (previous) => new Set([...previous, photo.id]),
+                          )
+                        }
+                      />
+                    </button>
+                    <a
+                      href={photo.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={photo.attribution + " · " + photo.license}
+                      className="mt-2 flex min-h-11 items-start gap-1.5 rounded-sm py-1 text-xs leading-5 text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate">
+                          {photo.attribution}
+                        </span>
+                        <span className="block truncate">
+                          {sourceNames[photo.source]} · {photo.license}
+                        </span>
+                      </span>
+                      <ArrowUpRight
+                        className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                        aria-hidden="true"
+                      />
+                    </a>
+                  </article>
+                ))}
+              </div>
+              {photos.length > photoLimit && (
+                <button
+                  type="button"
+                  className="ui-secondary-action"
+                  onClick={() => setPhotoLimit((value) => value + 5)}
+                >
+                  Load more photos ({photos.length - photoLimit})
+                </button>
+              )}
+            </>
+          ) : loading || !started ? (
+            <div
+              role="status"
+              aria-label="Loading celebrity photos"
+              className="ui-panel h-64 moodies-skeleton"
+            />
+          ) : (
+            <div className="ui-panel p-5 text-sm text-[var(--ink-muted)]">
+              No confidently matched photos are available yet.
+            </div>
+          )}
+        </section>
+      )}
       <dialog
         ref={dialog}
         aria-labelledby="celebrity-media-dialog-title"

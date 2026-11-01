@@ -26,6 +26,8 @@ import CelebrityMediaSections from "@/components/celeb/CelebrityMediaSections";
 import CelebrityPortrait from "@/components/celeb/CelebrityPortrait";
 import PeopleRail from "@/components/celeb/PeopleRail";
 import type { CelebrityPhoto } from "@/types/celebrityMedia";
+import CelebrityProfileNav from "@/components/celeb/CelebrityProfileNav";
+import CelebrityNewsFeed from "@/components/celeb/CelebrityNewsFeed";
 
 interface Credit {
   id: number;
@@ -628,6 +630,7 @@ export default function CelebrityDetailPage({
             <ExternalLinks person={person} />
           </div>
         </header>
+        <CelebrityProfileNav id={person.id} />
         <nav
           aria-label="Celebrity page sections"
           className="mobile-native-scroll mt-6 flex gap-5 overflow-x-auto border-b border-[var(--surface-border)] pb-1 sm:mt-8 sm:gap-7"
@@ -649,6 +652,20 @@ export default function CelebrityDetailPage({
             </a>
           ))}
         </nav>
+        <section
+          aria-labelledby="person-news-heading"
+          className="pt-8 sm:pt-10"
+        >
+          <SectionHeading id="person-news-heading" title="In the news">
+            <Link
+              href={`/celeb/${person.id}/news`}
+              className="ui-secondary-action"
+            >
+              All news
+            </Link>
+          </SectionHeading>
+          <CelebrityNewsFeed personId={person.id} limit={2} compact />
+        </section>
         <section
           id="about"
           aria-labelledby="about-heading"
