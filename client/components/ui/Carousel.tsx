@@ -43,7 +43,7 @@ export const Carousel = ({
       <div
         id={railId}
         ref={containerRef}
-        className={`mobile-native-scroll scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 sm:mx-0 sm:scroll-px-0 sm:gap-4 sm:px-0 ${mobileBleed ? "-mx-4 scroll-px-4 px-4" : "px-0"} ${items.length === 1 ? "justify-center sm:justify-start" : ""}`}
+        className={`mobile-native-scroll scrollbar-hide flex snap-x snap-proximity gap-3 overflow-x-auto pb-3 sm:mx-0 sm:scroll-px-0 sm:gap-4 sm:px-0 ${mobileBleed ? "-mx-4 scroll-px-4 px-4" : "px-0"} ${items.length === 1 ? "justify-center sm:justify-start" : ""}`}
       >
         {items.map((item) => (
           <div

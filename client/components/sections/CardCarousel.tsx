@@ -222,7 +222,7 @@ export default function CardCarousel<T extends MediaItem>({
           <div
             id={railId}
             ref={containerRef}
-            className={`mobile-native-scroll -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:scroll-px-0 sm:gap-5 sm:px-0 ${items.length === 1 ? "justify-center sm:justify-start" : ""}`}
+            className={`mobile-native-scroll -mx-4 flex snap-x snap-proximity scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:scroll-px-0 sm:gap-5 sm:px-0 ${items.length === 1 ? "justify-center sm:justify-start" : ""}`}
           >
             {items.map((item) => {
               const type = mediaType(item);

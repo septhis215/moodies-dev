@@ -184,7 +184,7 @@ export default function CelebSection() {
           <motion.div
             id={railId}
             ref={containerRef}
-            className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 mobile-native-scroll sm:gap-6"
+            className="flex snap-x snap-proximity gap-3 overflow-x-auto pb-3 mobile-native-scroll sm:gap-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}

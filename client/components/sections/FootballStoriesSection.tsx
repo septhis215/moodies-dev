@@ -215,7 +215,7 @@ export default function FootballStoriesSection() {
                 <div
                   id={railId}
                   ref={carouselRef}
-                  className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4"
+                  className="mobile-native-scroll flex snap-x snap-proximity gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-4"
                 >
                   {loading
                     ? Array.from({ length: 10 }).map((_, index) => (

@@ -243,10 +243,9 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
           />
         </div>
         <div
-          className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 [overscroll-behavior-x:contain] [scrollbar-width:none] sm:gap-4 lg:hidden [&::-webkit-scrollbar]:hidden"
-          style={{ WebkitOverflowScrolling: "touch" }}
+          className="mobile-native-scroll flex snap-x snap-proximity gap-3 overflow-x-auto pb-3 sm:gap-4 lg:hidden"
         >
-          {trailerItems.map((item, index) => (
+          {trailerItems.map((item) => (
             <div
               key={item.id}
               className="group relative w-[74vw] max-w-[300px] flex-[0_0_auto] snap-start cursor-pointer sm:w-[46vw] sm:max-w-[360px]"
@@ -256,14 +255,13 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                 <Image
                   src={
                     item.backdrop_path
-                      ? tmdbImage(item.backdrop_path, "original")
+                      ? tmdbImage(item.backdrop_path, "backdropCard")
                       : "/placeholder-backdrop.svg"
                   }
                   alt={item.title}
                   fill
                   sizes="(max-width: 640px) 74vw, 46vw"
                   className="object-cover"
-                  priority={index === 0}
                 />
 
                 <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(0,0,0,0.94),rgba(0,0,0,0.45),rgba(0,0,0,0.08))]" />
@@ -362,7 +360,6 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                         fill
                         sizes="(max-width: 1024px) 100vw, 33vw"
                         className="object-cover"
-                        priority={index === 0}
                       />
 
                       {/* Cinematic overlay */}

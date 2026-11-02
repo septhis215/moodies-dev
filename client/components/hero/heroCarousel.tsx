@@ -108,14 +108,14 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
       const item = all[i];
       if (!item) return;
 
-      const backdrop =
-        tmdbImage(item.backdrop_path, "w1280") ||
-        tmdbImage(item.poster_path, "w1280");
+      const hero = window.matchMedia("(width < 640px)").matches
+        ? tmdbImage(item.poster_path, "posterLarge")
+        : tmdbImage(item.backdrop_path || item.poster_path, "backdropHero");
       const poster = tmdbImage(item.poster_path, "w342");
 
-      if (backdrop) {
+      if (hero) {
         const img = new window.Image();
-        img.src = backdrop;
+        img.src = hero;
       }
 
       if (poster) {
@@ -144,6 +144,8 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
   const backdropSrc =
     tmdbImage(current.backdrop_path || current.poster_path, "w1280") ??
     "/placeholder-backdrop.svg";
+  const posterSrc =
+    tmdbImage(current.poster_path, "posterLarge") ?? "/placeholder-poster.svg";
   const mobileOverview = getOverview(current, 105);
   const desktopOverview = getOverview(current, 180);
   const progress = all.length > 0 ? ((index + 1) / all.length) * 100 : 0;
@@ -213,15 +215,19 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           }}
           className="absolute inset-0"
         >
-          <Image
-            src={backdropSrc}
-            alt=""
-            fill
-            sizes="100vw"
-            priority={index === 0}
-            aria-hidden
-            className="object-cover object-[58%_center] sm:object-center"
-          />
+          <picture>
+            <source media="(width < 640px)" srcSet={posterSrc} />
+            <Image
+              src={backdropSrc}
+              alt=""
+              fill
+              sizes="100vw"
+              loading="eager"
+              fetchPriority={index === 0 ? "high" : "auto"}
+              aria-hidden
+              className="object-cover object-center"
+            />
+          </picture>
           <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,rgba(5,4,4,0.9)_0%,rgba(5,4,4,0.62)_42%,rgba(5,4,4,0.12)_78%)] sm:block" />
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,4,0.12)_0%,rgba(5,4,4,0.15)_25%,rgba(5,4,4,0.8)_60%,var(--surface-0)_100%)] sm:bg-[linear-gradient(180deg,rgba(5,4,4,0.24)_0%,rgba(5,4,4,0.06)_38%,var(--surface-0)_100%)]" />
         </motion.div>

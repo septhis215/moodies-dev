@@ -374,7 +374,7 @@ export default function TrailerModal({
                     )}
 
                     <div
-                      className={`mobile-native-scroll -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:-mx-5 sm:scroll-px-5 sm:px-5 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:scroll-px-0 lg:px-0 2xl:grid-cols-3 ${trailer.recommendations.length === 1 ? "justify-center lg:justify-normal" : ""}`}
+                      className={`mobile-native-scroll -mx-4 flex snap-x snap-proximity scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 sm:-mx-5 sm:scroll-px-5 sm:px-5 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:scroll-px-0 lg:px-0 2xl:grid-cols-3 ${trailer.recommendations.length === 1 ? "justify-center lg:justify-normal" : ""}`}
                     >
                       {trailer.recommendations.slice(0, 20).map((rec) => {
                         const isPending = pendingTrailerId === rec.id;

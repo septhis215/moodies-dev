@@ -372,7 +372,7 @@ export function ComingSoonSection({
                               Most anticipated this month
                             </h4>
                           </div>
-                          <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
+                          <div className="mobile-native-scroll flex snap-x snap-proximity gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:pb-0 lg:grid-cols-6">
                             {topPicks.map((item) => {
                               const releaseDate = new Date(
                                 getReleaseDate(item) ?? "",

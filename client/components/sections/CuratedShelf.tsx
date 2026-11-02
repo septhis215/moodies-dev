@@ -156,11 +156,14 @@ export function CuratedShelf({
 
   function syncEdges() {
     const rail = railRef.current;
-    if (rail)
-      setEdges({
-        start: rail.scrollLeft <= 1,
-        end: rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 1,
-      });
+    if (!rail) return;
+    const next = {
+      start: rail.scrollLeft <= 1,
+      end: rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 1,
+    };
+    setEdges((current) =>
+      current.start === next.start && current.end === next.end ? current : next,
+    );
   }
 
   useEffect(() => {

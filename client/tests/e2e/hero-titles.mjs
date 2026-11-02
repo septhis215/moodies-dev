@@ -20,7 +20,7 @@ let bundle = "";
 let css = "";
 let componentCss = "";
 const server = createServer((request, response) => {
-  if (request.url.startsWith("/fixture.svg")) {
+  if ((request.url.startsWith("/fixture.svg") || request.url.startsWith("/placeholder-"))) {
     response.writeHead(200, { "content-type": "image/svg+xml" });
     response.end(fixtureImage);
   } else if (request.url === "/app.js") {
@@ -42,7 +42,7 @@ let browser;
 try {
   const result = await build({
     stdin: {
-      contents: `import React from 'react';import { createRoot } from 'react-dom/client';import LandingHero from './client/components/hero/heroCarousel';import { HomepageMediaHero } from './client/components/hero/HomepageMediaHero';const title=new URLSearchParams(location.search).get('title');const item={id:123,title,name:title,type:'movie',overview:'A story of friendship and finding a place to call home.',poster_path:null,backdrop_path:null,genres:['Drama'],vote_average:8.2,release_date:'2025-01-01',recommendations:[]};createRoot(document.getElementById('root')).render(<><div id="landing"><LandingHero all={[item]} /></div>{['movie','tv'].map(type=><div id={type} key={type}><HomepageMediaHero items={[{...item,type}]} mediaType={type} icon={null} eyebrow="Discover" title={type==='tv'?'TV shows':'Movies'} description="Find your next watch" spotlightLabel="Featured" mediaLabel={type==='tv'?'Series':'Movie'} /></div>)}</>);`,
+      contents: `import React from 'react';import { createRoot } from 'react-dom/client';import LandingHero from './client/components/hero/heroCarousel';import { HomepageMediaHero } from './client/components/hero/HomepageMediaHero';const title=new URLSearchParams(location.search).get('title');const item={id:123,title,name:title,type:'movie',overview:'A story of friendship and finding a place to call home.',poster_path:new URLSearchParams(location.search).has('artwork')?'/hero-poster.jpg':null,backdrop_path:new URLSearchParams(location.search).has('artwork')?'/hero-backdrop.jpg':null,genres:['Drama'],vote_average:8.2,release_date:'2025-01-01',recommendations:[]};createRoot(document.getElementById('root')).render(<><div id="landing"><LandingHero all={[item]} /></div>{['movie','tv'].map(type=><div id={type} key={type}><HomepageMediaHero items={[{...item,type}]} mediaType={type} icon={null} eyebrow="Discover" title={type==='tv'?'TV shows':'Movies'} description="Find your next watch" spotlightLabel="Featured" mediaLabel={type==='tv'?'Series':'Movie'} /></div>)}</>);`,
       resolveDir: root,
       loader: "tsx",
     },
@@ -91,7 +91,7 @@ try {
                     ? "import React from 'react';export default function Link(props){return <a {...props}/>;}"
                     : args.path === "icons"
                       ? `import React from 'react';const Icon=(props)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M5 12h14m-7-7 7 7-7 7"/></svg>;export const ArrowUpRight=Icon,ChevronLeft=Icon,ChevronRight=Icon,Play=Icon,X=Icon,Bookmark=Icon,BookmarkCheck=Icon,Film=Icon,Info=Icon,Tv=Icon,Star=Icon;`
-                      : `import React from 'react';export default function Image({fill,unoptimized,priority,sizes,style,...props}){return <img {...props} loading={priority?'eager':'lazy'} style={{...(fill?{position:'absolute',inset:0,width:'100%',height:'100%'}:{}),...style}}/>}`,
+                      : `import React from 'react';export default function Image({fill,unoptimized,priority,loading,sizes,style,...props}){return <img {...props} loading={loading??(priority?'eager':'lazy')} style={{...(fill?{position:'absolute',inset:0,width:'100%',height:'100%'}:{}),...style}}/>}`,
             loader: "jsx",
             resolveDir: root,
           }));
@@ -196,15 +196,25 @@ try {
       5,
     ),
   ];
-  for (const width of [320, 390, 768, 1024, 1280, 1366, 1440]) {
+  for (const width of [320, 390, 639, 640, 768, 1024, 1280, 1366, 1440]) {
     const height = width === 1024 ? 600 : width >= 1280 ? 720 : 900;
     await page.setViewportSize({ width, height });
     for (const [caseIndex, title] of titles.entries()) {
-      await page.goto(base + "?title=" + encodeURIComponent(title));
+      await page.goto(base + "?title=" + encodeURIComponent(title) + (caseIndex === 0 ? "&artwork=1" : ""));
       for (const id of ["landing", "movie", "tv"]) {
         const wrapper = page.locator("#" + id);
         const heading = wrapper.locator(id === "landing" ? "h1" : "h2");
         await heading.waitFor();
+        const artwork = wrapper.locator("picture img");
+        await artwork.evaluate((image) => image.decode());
+        assert.ok(
+          (await artwork.evaluate((image) => image.currentSrc)).endsWith(
+            caseIndex === 0
+              ? width < 640 ? "/w500/hero-poster.jpg" : "/w1280/hero-backdrop.jpg"
+              : width < 640 ? "/placeholder-poster.svg" : "/placeholder-backdrop.svg",
+          ),
+          id + " uses the wrong hero artwork at " + width,
+        );
         assert.equal(await heading.getAttribute("aria-label"), title);
         const bounds = await heading.evaluate((element) => ({
           height: element.getBoundingClientRect().height,

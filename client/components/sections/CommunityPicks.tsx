@@ -80,6 +80,36 @@ function MobileReviews({ reviews }: { reviews: ReviewItem[] }) {
   const railId = useId();
   const [active, setActive] = useState(0);
 
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const settle = () => {
+      clearTimeout(timer);
+      const cards = Array.from(rail.children) as HTMLElement[];
+      const first = cards[0]?.offsetLeft ?? 0;
+      const nearest = cards.reduce(
+        (best, card, index) =>
+          Math.abs(card.offsetLeft - first - rail.scrollLeft) <
+          Math.abs(cards[best].offsetLeft - first - rail.scrollLeft) ? index : best,
+        0,
+      );
+      setActive(nearest);
+    };
+    // Keep expanded reviews stable while the finger and momentum move the rail.
+    const onScroll = () => {
+      clearTimeout(timer);
+      timer = setTimeout(settle, 180);
+    };
+    rail.addEventListener("scroll", onScroll, { passive: true });
+    rail.addEventListener("scrollend", settle);
+    return () => {
+      clearTimeout(timer);
+      rail.removeEventListener("scroll", onScroll);
+      rail.removeEventListener("scrollend", settle);
+    };
+  }, [reviews]);
+
   const selectReview = (index: number) => {
     const rail = railRef.current;
     const card = rail?.children[index] as HTMLElement | undefined;
@@ -90,14 +120,7 @@ function MobileReviews({ reviews }: { reviews: ReviewItem[] }) {
 
   return (
     <div className={styles.mobile}>
-      <div ref={railRef} id={railId} className={styles.rail} role="region" aria-label="Member reviews" aria-roledescription="carousel" onScroll={() => {
-        const rail = railRef.current;
-        if (!rail) return;
-        const cards = Array.from(rail.children) as HTMLElement[];
-        const first = cards[0]?.offsetLeft ?? 0;
-        const nearest = cards.reduce((best, card, index) => Math.abs(card.offsetLeft - first - rail.scrollLeft) < Math.abs(cards[best].offsetLeft - first - rail.scrollLeft) ? index : best, 0);
-        setActive(nearest);
-      }}>
+      <div ref={railRef} id={railId} className={styles.rail} role="region" aria-label="Member reviews" aria-roledescription="carousel">
         {reviews.map((review, index) => <MobileReviewCard key={`${review.mediaType}-${review.tmdbId}-${review.user?.id || review.name}-${index}`} review={review} index={index} count={reviews.length} isActive={active === index} />)}
       </div>
       {reviews.length > 1 && <div className={styles.navigation}>

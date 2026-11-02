@@ -167,16 +167,26 @@ export function HomepageMediaHero({
             className="absolute inset-0"
             style={{ touchAction: "pan-y pinch-zoom" }}
           >
-            <Image
-              src={getBackdropUrl(
-                featured.backdrop_path || featured.poster_path,
-              )}
-              alt=""
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover object-center"
-            />
+            <picture>
+              <source
+                media="(width < 640px)"
+                srcSet={
+                  tmdbImage(featured.poster_path, "posterLarge") ??
+                  "/placeholder-poster.svg"
+                }
+              />
+              <Image
+                src={getBackdropUrl(
+                  featured.backdrop_path || featured.poster_path,
+                )}
+                alt=""
+                fill
+                loading="eager"
+                fetchPriority="high"
+                sizes="100vw"
+                className="object-cover object-center"
+              />
+            </picture>
             <div className="absolute inset-0 hidden bg-gradient-to-r from-[#080707] via-[#080707]/82 to-[#080707]/24 sm:block" />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,7,7,0.06)_0%,rgba(8,7,7,0.12)_30%,rgba(8,7,7,0.82)_62%,var(--surface-0)_100%)] sm:bg-gradient-to-t sm:from-[#080707] sm:via-transparent sm:to-black/20" />
           </motion.div>

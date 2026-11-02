@@ -24,10 +24,15 @@ export default function PeopleRail({ people }: { people: RelatedPerson[] }) {
     if (!element) return;
     const update = () => {
       const maximum = Math.max(0, element.scrollWidth - element.clientWidth);
-      setEdges({
+      const next = {
         previous: element.scrollLeft > 2,
         next: maximum - element.scrollLeft > 2,
-      });
+      };
+      setEdges((current) =>
+        current.previous === next.previous && current.next === next.next
+          ? current
+          : next,
+      );
     };
     update();
     const observer = new ResizeObserver(update);
@@ -107,7 +112,7 @@ export default function PeopleRail({ people }: { people: RelatedPerson[] }) {
         id="related-people-rail"
         tabIndex={0}
         aria-label="Related celebrity profiles"
-        className="mobile-native-scroll min-w-0 snap-x snap-mandatory overflow-x-auto pb-3 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
+        className="mobile-native-scroll min-w-0 snap-x snap-proximity overflow-x-auto pb-3 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
       >
         <ul ref={track} className="flex w-max min-w-full gap-4 sm:gap-5">
           {people.map((person) => (
