@@ -149,6 +149,7 @@ try {
     },
     bundle: true,
     write: false,
+    outfile: resolve(root, "output/playwright/celebrity-page-harness.js"),
     format: "iife",
     jsx: "automatic",
     tsconfigRaw: { compilerOptions: { jsx: "react-jsx" } },
@@ -165,7 +166,7 @@ try {
           api.onResolve(
             {
               filter:
-                /^(next\/link|next\/navigation|@\/hooks\/useWatchlist|@\/components\/ui\/AppLoading)$/,
+                /^(next\/link|next\/navigation|@\/hooks\/useWatchlist|@\/components\/ui\/AppLoading|@\/components\/loading\/PageSkeleton)$/,
             },
             (args) => ({ path: args.path, namespace: "page-fixture" }),
           );
@@ -192,7 +193,7 @@ try {
           api.onLoad({ filter: /.*/, namespace: "fixture" }, (args) => ({
             contents:
               args.path === "icons"
-                ? `import React from 'react';const Icon=(props)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M5 12h14m-7-7 7 7-7 7"/></svg>;export const ArrowUpRight=Icon,ChevronLeft=Icon,ChevronRight=Icon,Play=Icon,X=Icon,Shuffle=Icon,ArrowLeft=Icon,Bookmark=Icon,BookmarkCheck=Icon,Search=Icon,Star=Icon;`
+                ? `import React from 'react';const Icon=(props)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M5 12h14m-7-7 7 7-7 7"/></svg>;export const ArrowUpRight=Icon,ChevronLeft=Icon,ChevronRight=Icon,Play=Icon,X=Icon,Shuffle=Icon,ArrowLeft=Icon,Bookmark=Icon,BookmarkCheck=Icon,Search=Icon,Star=Icon,Newspaper=Icon,RefreshCw=Icon,ChevronDown=Icon,Check=Icon,ExternalLink=Icon,Volume2=Icon,VolumeX=Icon,Info=Icon;`
                 : `import React from 'react';export default function Image({fill,unoptimized,priority,sizes,style,...props}){return <img {...props} loading={priority?'eager':'lazy'} style={{...(fill?{position:'absolute',inset:0,width:'100%',height:'100%'}:{}),...style}}/>}`,
             loader: "jsx",
             resolveDir: root,
@@ -232,20 +233,22 @@ try {
           });
           api.onLoad({ filter: /.*/, namespace: "readable" }, async (args) => ({
             contents: await readFile(args.path, "utf8"),
-            loader: args.path.endsWith(".tsx")
-              ? "tsx"
-              : args.path.endsWith(".ts")
-                ? "ts"
-                : args.path.endsWith(".json")
-                  ? "json"
-                  : "jsx",
+            loader: args.path.endsWith(".css")
+              ? "local-css"
+              : args.path.endsWith(".tsx")
+                ? "tsx"
+                : args.path.endsWith(".ts")
+                  ? "ts"
+                  : args.path.endsWith(".json")
+                    ? "json"
+                    : "jsx",
             resolveDir: dirname(args.path),
           }));
         },
       },
     ],
   });
-  bundle = result.outputFiles[0].text;
+  bundle = result.outputFiles.find((file) => file.path.endsWith(".js")).text;
   const sourceCss = await readFile(
     resolve(root, "client/app/globals.css"),
     "utf8",
@@ -257,6 +260,8 @@ try {
     )
   ).css;
   css += "\nbody{font-family:Arial,sans-serif}";
+  css +=
+    result.outputFiles.find((file) => file.path.endsWith(".css"))?.text || "";
   if (output) {
     await writeFile(resolve(output, "harness.js"), bundle);
     await writeFile(resolve(output, "harness.css"), css);

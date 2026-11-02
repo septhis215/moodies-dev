@@ -157,6 +157,7 @@ export default async function MoviePage({
       <HeroContentCard
         data={data}
         topMoods={reviews.topMoods || []}
+        totalMoodVotes={reviews.totalMoodVotes}
         reviewStats={reviewStats}
         trailers={videos?.videos ?? []}
       />
@@ -164,6 +165,7 @@ export default async function MoviePage({
         data={data}
         trailers={videos?.videos ?? []}
         topMoods={reviews.topMoods || []}
+        totalMoodVotes={reviews.totalMoodVotes}
         reviewStats={reviewStats}
       >
         <CommonCardCarousel
@@ -176,6 +178,8 @@ export default async function MoviePage({
 
       <div className="bg-[var(--surface-0)]">
         <ReviewsSection
+          title={data.info.title}
+          posterPath={data.info.poster_path}
           reviews={reviews.reviews}
           contentId={id}
           contentType="movie"

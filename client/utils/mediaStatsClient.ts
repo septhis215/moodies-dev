@@ -18,6 +18,12 @@ export const ZERO_STAT: EngagementStat = {
   reviewCount: 0,
 };
 
+export const MEDIA_STATS_CHANGED = 'moodies:media-stats-changed';
+
+export function notifyMediaStatsChanged() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(MEDIA_STATS_CHANGED));
+}
+
 export function fmtCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;

@@ -197,6 +197,34 @@ describe('media cache', () => {
 });
 
 describe('YouTube provider', () => {
+  it('keeps only safe Google error codes, without URLs, keys or upstream messages', async () => {
+    const original = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            message: 'secret-key-in-message',
+            errors: [{ reason: 'ipRefererBlocked' }],
+          },
+        }),
+        { status: 403 },
+      ),
+    );
+    try {
+      const service = new MediaHttpService(new ConfigService());
+      const error = await service
+        .json(
+          new URL(
+            'https://www.googleapis.com/youtube/v3/search?key=test-private',
+          ),
+        )
+        .catch((value: unknown) => value);
+      expect(error).toMatchObject({ status: 403, reason: 'ipRefererBlocked' });
+      expect(String(error)).not.toMatch(/secret-key|test-private|https:/);
+    } finally {
+      global.fetch = original;
+    }
+  });
   function setup(items: unknown[], config: Record<string, unknown> = {}) {
     const http = {
       json: jest
@@ -263,6 +291,62 @@ describe('YouTube provider', () => {
     expect((await provider.discover(woni)).videos).toEqual([]);
     expect(http.json).not.toHaveBeenCalled();
   });
+  it('links a named sequel to the most specific credited title', async () => {
+    const { provider } = setup([
+      youtubeItem('Tom Hanks Toy Story 5 interview'),
+    ]);
+    const result = await provider.discover({
+      ...actor,
+      contexts: ['Toy Story'],
+      works: [
+        { id: 1, title: 'Toy Story', mediaType: 'movie' },
+        { id: 2, title: 'Toy Story 5', mediaType: 'movie' },
+      ],
+    });
+    expect(result.videos[0].content?.id).toBe(2);
+  });
+  it('does not turn a restricted key into a global quota cooldown', async () => {
+    const { provider, http, redis } = setup([]);
+    http.json
+      .mockReset()
+      .mockRejectedValue(new MediaProviderError(403, 'ipRefererBlocked'));
+    await expect(provider.discover(actor)).rejects.toThrow('ipRefererBlocked');
+    expect(redis.set).not.toHaveBeenCalled();
+    const other = setup([], { YOUTUBE_API_KEY: 'replacement' }).provider;
+    expect(other.cacheVersion).not.toBe(provider.cacheVersion);
+  });
+  it('verifies exact TMDB video IDs without spending search quota and drops deleted videos', async () => {
+    const { provider, http, redis } = setup([]);
+    http.json.mockReset().mockResolvedValue({
+      items: [
+        youtubeItem('A trailer', 'abcdefghijk', {
+          status: {
+            privacyStatus: 'public',
+            embeddable: true,
+            uploadStatus: 'processed',
+            madeForKids: false,
+          },
+        }),
+      ],
+    });
+    const result = await provider.verify([video(), video('deleted0001')]);
+    expect(result).toHaveLength(1);
+    expect(result[0].canEmbed).toBe(true);
+    expect((http.json.mock.calls[0][0] as URL).pathname).toBe(
+      '/youtube/v3/videos',
+    );
+    expect(redis.rateLimitHit).not.toHaveBeenCalled();
+  });
+  it('uses a bounded date-ordered search for the latest feed', async () => {
+    const { provider, http } = setup([]);
+    await provider.discover(woni, true);
+    const url = http.json.mock.calls[0][0] as URL;
+    expect(url.searchParams.get('order')).toBe('date');
+    expect(Date.parse(url.searchParams.get('publishedAfter')!)).toBeGreaterThan(
+      Date.now() - 91 * 86400000,
+    );
+    expect(url.searchParams.get('safeSearch')).toBe('strict');
+  });
   it('matches a short stage name on a confirmed channel without a group context', async () => {
     const { provider } = setup([youtubeItem('Woni interview')]);
     expect(
@@ -294,14 +378,16 @@ describe('YouTube provider', () => {
   });
   it('shares quota cooldown in Redis and never exposes API keys in errors', async () => {
     const { provider, http, redis } = setup([]);
-    http.json.mockReset().mockRejectedValue(new MediaProviderError(403));
+    http.json
+      .mockReset()
+      .mockRejectedValue(new MediaProviderError(403, 'quotaExceeded'));
     await expect(provider.discover(woni)).rejects.toThrow(
       'Media provider returned 403',
     );
     await expect(provider.discover(woni)).rejects.toThrow('quota cooldown');
     expect(http.json).toHaveBeenCalledTimes(1);
     expect(redis.set).toHaveBeenCalledWith(
-      'celebrity:youtube:cooldown',
+      `celebrity:youtube:cooldown:${provider.cacheVersion}`,
       '1',
       3600,
     );
@@ -449,6 +535,59 @@ describe('Wikimedia provider', () => {
 });
 
 describe('media aggregation', () => {
+  it('keeps latest videos recent, dated and newest first while isolating provider failures', async () => {
+    const now = Date.now();
+    const recent = {
+      ...video(),
+      publishedAt: new Date(now - 86400000).toISOString(),
+    };
+    const newer = {
+      ...video('lmnopqrstuv', 'Newer interview'),
+      publishedAt: new Date(now - 3600000).toISOString(),
+    };
+    const tmdb = {
+      discover: jest.fn().mockResolvedValue({
+        photos: [],
+        videos: [
+          recent,
+          newer,
+          video('undated0001'),
+          { ...video('older000001'), publishedAt: '2020-01-01' },
+          {
+            ...video('future00001'),
+            publishedAt: new Date(now + 86400000).toISOString(),
+          },
+        ],
+      }),
+    };
+    const youtube = {
+      enabled: true,
+      discover: jest.fn().mockRejectedValue(new Error('quota')),
+    };
+    const service = new CelebrityMediaService(
+      {
+        resolve: jest.fn().mockResolvedValue(woni),
+      } as unknown as CelebrityIdentityService,
+      new MediaCacheService(redisMock() as unknown as RedisService),
+      tmdb as unknown as TmdbMediaProvider,
+      youtube as unknown as YoutubeMediaProvider,
+      {} as WikimediaMediaProvider,
+      new ConfigService(),
+      {} as OpenverseMediaProvider,
+    );
+    const result = await service.getLatestVideos(123);
+    expect(result.videos.map((entry) => entry.id)).toEqual([
+      newer.id,
+      recent.id,
+    ]);
+    expect(result.sources).toMatchObject({
+      tmdb: 'ready',
+      youtube: 'unavailable',
+    });
+    await service.getLatestVideos(123);
+    expect(tmdb.discover).toHaveBeenCalledTimes(1);
+    expect(youtube.discover).toHaveBeenCalledTimes(1);
+  });
   it('returns TMDB photos when other providers fail and caches the partial response', async () => {
     const identity = { resolve: jest.fn().mockResolvedValue(woni) };
     const cache = new MediaCacheService(redisMock() as unknown as RedisService);

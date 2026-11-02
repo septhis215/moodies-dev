@@ -1,0 +1,326 @@
+.nav {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.375rem;
+  width: max-content;
+  max-width: 100%;
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  background: var(--surface-1);
+}
+.nav a {
+  min-height: 44px;
+  padding: 0.75rem 1.25rem;
+  border-radius: 999px;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    background-color 160ms,
+    color 160ms;
+}
+.nav a:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.nav a[aria-current="page"] {
+  color: var(--surface-0);
+  background: var(--brand-coral);
+}
+.nav a:focus-visible,
+.personCard a:focus-visible,
+.personCard button:focus-visible {
+  outline: 2px solid var(--brand-coral-strong);
+  outline-offset: 3px;
+}
+.personCard {
+  min-width: 0;
+  border-bottom: 1px solid var(--surface-border);
+  padding-bottom: 1rem;
+  transition: border-color 160ms;
+}
+.personCard:hover,
+.personCard:focus-within {
+  border-color: var(--brand-coral);
+}
+.personOverlay {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 2;
+  padding: 2.5rem 0.875rem 0.875rem;
+  background: linear-gradient(transparent, rgb(0 0 0 / 0.92) 40%);
+  color: white;
+  opacity: 0;
+  transform: translateY(0.75rem);
+  transition:
+    opacity 180ms,
+    transform 180ms;
+  pointer-events: none;
+}
+.personCard:hover .personOverlay,
+.personCard:has(a:focus-visible) .personOverlay,
+.personOverlay[data-open="true"] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.personOverlay a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 36px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.personOverlay a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.touchInfo {
+  display: none;
+}
+.newsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2rem 1.5rem;
+}
+.story {
+  min-width: 0;
+}
+.storyImage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: var(--surface-2);
+}
+.storyImage img {
+  transition: transform 200ms;
+}
+.story:hover .storyImage img {
+  transform: scale(1.025);
+}
+.story a:focus-visible {
+  outline: 2px solid var(--brand-coral-strong);
+  outline-offset: 4px;
+}
+.story:first-child {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+.story:first-child .storyImage {
+  aspect-ratio: 16 / 10;
+}
+.story:first-child h3 {
+  font-size: clamp(1.5rem, 2.5vw, 2.25rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.heroPlayer {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: var(--surface-1);
+}
+.heroStage {
+  position: relative;
+  aspect-ratio: 21 / 10;
+  min-height: 300px;
+  overflow: hidden;
+  background: black;
+}
+.playerHost,
+.playerHost iframe {
+  width: 100%;
+  height: 100%;
+}
+.playerHost {
+  position: absolute;
+  inset: 0;
+}
+.heroShade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(0deg, rgb(0 0 0 / 0.88), transparent 50%);
+}
+.heroInfo {
+  position: relative;
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  color: var(--ink);
+}
+.heroInfo a,
+.heroInfo button {
+  pointer-events: auto;
+}
+.iconButton {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 0.3);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.55);
+  color: white;
+  transition: background-color 160ms;
+}
+.iconButton:hover {
+  background: rgb(255 255 255 / 0.2);
+}
+.iconButton:focus-visible {
+  outline: 2px solid var(--brand-coral-strong);
+  outline-offset: 3px;
+}
+.videoStrip {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 1rem;
+  scroll-snap-type: x mandatory;
+}
+.videoStrip button {
+  width: 180px;
+  flex-shrink: 0;
+  text-align: left;
+  scroll-snap-align: start;
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+  border: 1px solid transparent;
+}
+.videoStrip button[aria-pressed="true"] {
+  border-color: var(--brand-coral);
+  background: var(--surface-2);
+}
+.videoStrip button:focus-visible {
+  outline: 2px solid var(--brand-coral-strong);
+}
+.chip {
+  min-height: 44px;
+  flex-shrink: 0;
+  padding: 0.625rem 1rem;
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--surface-1);
+  color: var(--ink-muted);
+  transition:
+    color 160ms,
+    background-color 160ms;
+}
+.chip:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.chip[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--surface-0);
+}
+.chip:focus-visible {
+  outline: 2px solid var(--brand-coral-strong);
+  outline-offset: 2px;
+}
+.mediaDialog[open] {
+  animation: celeb-dialog-in 180ms ease-out;
+}
+@keyframes celeb-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (hover: none) {
+  .touchInfo {
+    display: grid;
+  }
+  .personCard:hover .personOverlay:not([data-open="true"]) {
+    opacity: 0;
+    transform: translateY(0.75rem);
+    pointer-events: none;
+  }
+  .personCard:has(a:focus-visible) .personOverlay {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
+@media (max-width: 767px) {
+  .nav {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .nav a {
+    padding-inline: 0.5rem;
+    text-align: center;
+  }
+  .newsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem 1rem;
+  }
+  .story:first-child {
+    grid-column: span 2;
+    grid-row: auto;
+  }
+  .story:first-child .storyImage {
+    aspect-ratio: 16 / 9;
+  }
+  .story h3 {
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+  .heroStage {
+    aspect-ratio: 16 / 9;
+    min-height: 0;
+  }
+  .heroInfo {
+    position: static;
+    padding: 1.25rem;
+    background: var(--surface-1);
+    color: var(--ink);
+    align-items: start;
+  }
+  .heroInfo h2 {
+    font-size: 1.75rem;
+  }
+  .heroShade {
+    display: none;
+  }
+  .heroPlayer {
+    border-radius: 0.75rem;
+  }
+  .videoStrip {
+    border-top: 1px solid var(--surface-border);
+    padding: 0.75rem;
+  }
+  .videoStrip button {
+    width: 140px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mediaDialog[open] {
+    animation: none;
+  }
+  .nav a,
+  .personCard,
+  .personOverlay,
+  .storyImage img,
+  .iconButton,
+  .chip {
+    transition: none;
+  }
+  .story:hover .storyImage img {
+    transform: none;
+  }
+}

@@ -122,6 +122,31 @@ export class PeopleService {
     return data.results;
   }
 
+  async getHubPeople() {
+    const response = await this.withTimeout(this.tmdb('trending/all/week'), 8000);
+    if (!Array.isArray(response?.results)) throw new Error('Invalid TMDB trend response');
+    const titles = response.results.filter((title: any) =>
+      Number.isSafeInteger(title?.id) && ['movie', 'tv'].includes(title.media_type) && !this.isAdultishKnownFor(title),
+    ).slice(0, 4);
+    const credits = await Promise.all(titles.map((title: any) => this.withTimeout(this.getTitleCreditsCached(title.id, title.media_type), 6000)));
+    if (titles.length && credits.every((value) => !value)) throw new Error('TMDB credits unavailable');
+    const people: any[] = [];
+    const seen = new Set<number>();
+    // Credit links establish why a person is featured; raw person trends often include mistagged adult performers.
+    for (let index = 0; index < titles.length; index++) {
+      for (const person of (credits[index]?.cast || []).slice(0, 6)) {
+        if (!this.isSafeDiscoveryPerson(person) || seen.has(person.id)) continue;
+        seen.add(person.id);
+        const title = titles[index];
+        people.push({ ...person, trending_title: title.title || title.name,
+          known_for: [{ id: title.id, title: title.title || title.name, media_type: title.media_type,
+            poster_path: title.poster_path || null, backdrop_path: title.backdrop_path || null }],
+        });
+      }
+    }
+    return people.slice(0, 12);
+  }
+
   async getPersonDetails(id: number) {
     return this.cached(
       `people:profile:${id}:v3`,
@@ -1179,6 +1204,10 @@ export class PeopleService {
     );
 
     return Array.isArray(data?.results) ? data.results : [];
+  }
+
+  async getHubTitleVideos(type: 'movie' | 'tv', id: number) {
+    return this.getMediaVideosCached(type, id);
   }
 
   async getRelatedVideos(id: number) {

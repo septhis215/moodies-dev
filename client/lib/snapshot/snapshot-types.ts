@@ -2,6 +2,17 @@ export type SnapshotFormat = "square";
 export type SnapshotType = "content" | "review";
 export type SnapshotMediaType = "MOVIE" | "TV";
 
+export type SnapshotOptions = {
+  layout: 'premiere' | 'ticket' | 'editorial' | 'cinematic';
+  accent: 'coral' | 'gold' | 'ivory' | 'custom';
+  customAccent: string;
+  tone: 'midnight' | 'paper' | 'warm';
+};
+
+export const DEFAULT_SNAPSHOT_OPTIONS: SnapshotOptions = {
+  layout: 'premiere', accent: 'coral', customAccent: '#ff765f', tone: 'midnight',
+};
+
 export type SnapshotContent = {
   tmdbId: number;
   mediaType: SnapshotMediaType;

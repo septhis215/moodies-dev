@@ -3,8 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import Bottleneck from 'bottleneck';
 
 export class MediaProviderError extends Error {
-  constructor(public readonly status: number) {
-    super(`Media provider returned ${status}`);
+  constructor(
+    public readonly status: number,
+    public readonly reason?: string,
+  ) {
+    super(`Media provider returned ${status}${reason ? ` (${reason})` : ''}`);
   }
 }
 @Injectable()
@@ -25,7 +28,30 @@ export class MediaHttpService {
         redirect: 'error',
       });
       // Do not log the URL: the YouTube key is a query parameter.
-      if (!response.ok) throw new MediaProviderError(response.status);
+      if (!response.ok) {
+        let reason: string | undefined;
+        if (url.hostname === 'www.googleapis.com') {
+          const data = (await response.json().catch(() => null)) as {
+            error?: { errors?: Array<{ reason?: string }> };
+          } | null;
+          const code = data?.error?.errors?.[0]?.reason;
+          if (
+            code &&
+            [
+              'quotaExceeded',
+              'dailyLimitExceeded',
+              'rateLimitExceeded',
+              'keyInvalid',
+              'accessNotConfigured',
+              'ipRefererBlocked',
+              'forbidden',
+              'youtubeSignupRequired',
+            ].includes(code)
+          )
+            reason = code;
+        }
+        throw new MediaProviderError(response.status, reason);
+      }
       return (await response.json()) as T;
     });
   }

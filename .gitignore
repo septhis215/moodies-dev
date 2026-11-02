@@ -26,6 +26,7 @@ coverage/
 .playwright-cli/
 .qoder-scratch/
 /output/playwright/
+/output/achievements/
 /client/output/
 
 # Logs

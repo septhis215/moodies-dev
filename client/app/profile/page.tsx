@@ -3,8 +3,8 @@ import { sessionFetch } from "@/lib/auth/session";
 import { handleAppError } from "@/lib/errors";
 
 import { tmdbImage } from "@/lib/tmdb";
-import { BadgeMascot } from "@/components/ui/BadgeMascot";
-import { resolveBadgeMascot } from "@/lib/badge-mascots";
+import AchievementCollection from "@/components/achievements/AchievementCollection";
+import useAchievements from "@/hooks/useAchievements";
 import React, {
   useEffect,
   useState,
@@ -23,20 +23,16 @@ import {
   LogOut,
   Star,
   TrendingUp,
-  Award,
   Calendar,
   Search,
   Filter,
   Grid,
   List,
-  Heart,
   X,
   Sparkles,
   Shield,
   Lock,
   Unlock,
-  Flame,
-  Medal,
   Camera,
   Mail,
   UserRound,
@@ -133,7 +129,6 @@ type ServerUser = {
   role?: string;
   avatarUrl?: string | null;
   disclosure?: ProfileDisclosure;
-  achievements?: UserAchievementView[];
   reviewWarningScore?: number | null;
   reviewBannedUntil?: string | null;
 };
@@ -166,36 +161,6 @@ type UserReview = {
   tmdbYear?: string;
 };
 
-type UserAchievementView = {
-  achievement: {
-    key: string;
-    title: string;
-    description: string;
-    category: string;
-    requirementType: string;
-    requirementTarget: string;
-    requiredCount: number | null;
-    reasoningTemplate: string;
-    lockedHint: string;
-  };
-  badge: {
-    badgeName: string;
-    icon: string;
-    rarity: string;
-    mascotMood: string;
-    mascotMotion: string;
-    colorTheme?: { accent?: string; glow?: string };
-    displayOrder: number;
-  } | null;
-  progress: {
-    currentProgress: number;
-    completionPercentage: number;
-    unlocked: boolean;
-    unlockedAt?: string | null;
-    relatedActivityRef?: string | null;
-  };
-};
-
 export default function ProfilePage() {
   const {
     user: decodedUser,
@@ -221,7 +186,8 @@ export default function ProfilePage() {
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [reviews, setReviews] = useState<UserReview[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [achievements, setAchievements] = useState<UserAchievementView[]>([]);
+  const achievementState = useAchievements();
+  const achievements = achievementState.data?.achievements || [];
   const [reviewsVisible, setReviewsVisible] = useState(3);
   const [cardReviewsVisible, setCardReviewsVisible] = useState<
     Record<string, number>
@@ -249,7 +215,6 @@ export default function ProfilePage() {
     setProfile(null);
     setWatchlist(null);
     setReviews([]);
-    setAchievements([]);
     setEditOpen(false);
     setAvatarPreview(null);
   }, [decodedUser?.id]);
@@ -469,34 +434,6 @@ export default function ProfilePage() {
     };
   }, [isAuthenticated, decodedUser?.id]);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    let alive = true;
-
-    (async () => {
-      try {
-        const res = await sessionFetch(`${API_BASE}/auth/me/achievements`, {
-          credentials: "include",
-          cache: "no-store",
-        });
-
-        if (!alive) return;
-        if (res.ok) {
-          const payload = await res.json();
-          setAchievements(
-            Array.isArray(payload.achievements) ? payload.achievements : [],
-          );
-        }
-      } catch {
-        if (alive) setAchievements([]);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [isAuthenticated, decodedUser?.id]);
-
   /* ---------------- Fetch TMDB details ---------------- */
   const movieIds = useMemo(() => watchlist?.movieId ?? [], [watchlist]);
   const seriesIds = useMemo(() => watchlist?.seriesId ?? [], [watchlist]);
@@ -608,48 +545,7 @@ export default function ProfilePage() {
     };
   }, [averageRating, movieCount, reviewCount, seriesCount, totalCount]);
 
-  const earnedBadges = useMemo(
-    () => [
-      {
-        name: "First Save",
-        earned: totalCount >= 1,
-        icon: <Bookmark className="w-3.5 h-3.5" />,
-      },
-      {
-        name: "Movie Buff",
-        earned: movieCount >= 10,
-        icon: <Film className="w-3.5 h-3.5" />,
-      },
-      {
-        name: "Series Scout",
-        earned: seriesCount >= 10,
-        icon: <Tv className="w-3.5 h-3.5" />,
-      },
-      {
-        name: "Century Club",
-        earned: totalCount >= 100,
-        icon: <Medal className="w-3.5 h-3.5" />,
-      },
-      {
-        name: "Taste Signal",
-        earned: averageRating >= 8 && totalCount >= 5,
-        icon: <Sparkles className="w-3.5 h-3.5" />,
-      },
-      {
-        name: "Active Critic",
-        earned: reviewCount >= 10,
-        icon: <Flame className="w-3.5 h-3.5" />,
-      },
-    ],
-    [averageRating, movieCount, reviewCount, seriesCount, totalCount],
-  );
-  const achievementRows =
-    achievements.length > 0 ? achievements : (user?.achievements ?? []);
-  const unlockedAchievementRows = achievementRows.filter(
-    (row) => row.progress.unlocked,
-  );
-  const visibleAchievementRows =
-    achievementRows.length > 0 ? achievementRows.slice(0, 9) : [];
+  const unlockedAchievementRows = achievements.filter((row) => row.progress.unlocked);
   const disclosureItems = [
     ["profileInfo", "Profile info"],
     ["watchlist", "Watchlist"],
@@ -678,69 +574,6 @@ export default function ProfilePage() {
   const bannedUntil = user?.reviewBannedUntil
     ? new Date(user.reviewBannedUntil)
     : null;
-
-  function Badge({
-    name,
-    color,
-    icon,
-  }: {
-    name: string;
-    color: string;
-    icon?: React.ReactNode;
-  }) {
-    return (
-      <div
-        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold ${color}`}
-      >
-        {icon}
-        <span>{name}</span>
-      </div>
-    );
-  }
-
-  function Achievement({
-    title,
-    description,
-    progress,
-    icon,
-  }: {
-    title: string;
-    description: string;
-    progress: number;
-    icon: React.ReactNode;
-  }) {
-    const percentage = Math.min(Math.floor(progress * 100), 100);
-    const isComplete = percentage >= 100;
-
-    return (
-      <div
-        className={`border bg-[var(--surface-1)] p-4 ${isComplete ? "border-[var(--brand-coral)]/40" : "border-[var(--surface-border)]"}`}
-      >
-        <div className="flex items-start gap-3 mb-3">
-          <div
-            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center ${isComplete ? "bg-[var(--brand-coral)] text-white" : "bg-[var(--surface-2)] text-[var(--ink-muted)]"}`}
-          >
-            {icon}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm mb-1">{title}</p>
-            <p className="line-clamp-2 text-xs text-[var(--ink-muted)]">{description}</p>
-          </div>
-        </div>
-        <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${percentage}%` }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="h-1.5 bg-[var(--brand-coral)]"
-          />
-        </div>
-        <p className="mt-2 text-xs font-semibold text-[var(--ink-muted)]">
-          {percentage}% complete
-        </p>
-      </div>
-    );
-  }
 
   function ReviewEmptyState({ filter }: { filter: "all" | "MOVIE" | "TV" }) {
     const isMovie = filter === "MOVIE";
@@ -1074,74 +907,7 @@ export default function ProfilePage() {
         <div>
           {tab === "profile" && (
             <div>
-              {/* Achievements */}
-              <section className="mb-4 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:p-6">
-                <SectionHeading
-                  icon={<Award className="h-6 w-6 text-[var(--brand-coral-strong)]" />}
-                  title="Achievements"
-                  caption={`${visibleAchievementRows.length || 3} active goals`}
-                />
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-                  {visibleAchievementRows.length > 0 ? (
-                    visibleAchievementRows.map((row) => (
-                      <AchievementCard key={row.achievement.key} row={row} />
-                    ))
-                  ) : (
-                    <>
-                      <Achievement
-                        title="Movie Collector"
-                        description="Save 50 movies to your watchlist"
-                        progress={movieCount / 50}
-                        icon={<Film className="w-4 h-4 sm:w-5 sm:h-5" />}
-                      />
-                      <Achievement
-                        title="Binge Watcher"
-                        description="Add 25 TV series"
-                        progress={seriesCount / 25}
-                        icon={<Tv className="w-4 h-4 sm:w-5 sm:h-5" />}
-                      />
-                      <Achievement
-                        title="Critic's Choice"
-                        description="Write 10 reviews"
-                        progress={reviewCount / 10}
-                        icon={<Star className="w-4 h-4 sm:w-5 sm:h-5" />}
-                      />
-                    </>
-                  )}
-                </div>
-              </section>
-
-              {/* Badges */}
-              <section className="mb-7 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 sm:mb-10 sm:p-6">
-                <SectionHeading
-                  icon={<TrendingUp className="h-6 w-6 text-[var(--brand-coral-strong)]" />}
-                  title="Earned Badges"
-                  caption={`${unlockedAchievementRows.length} unlocked`}
-                />
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {unlockedAchievementRows.length > 0
-                    ? unlockedAchievementRows
-                        .slice(0, 6)
-                        .map((row) => (
-                          <RewardBadgeCard
-                            key={row.achievement.key}
-                            row={row}
-                          />
-                        ))
-                    : earnedBadges.map((badge) => (
-                        <Badge
-                          key={badge.name}
-                          name={badge.name}
-                          color={
-                            badge.earned
-                              ? "bg-[var(--brand-coral)]/15 text-[var(--brand-coral-strong)] border border-[var(--brand-coral)]/30"
-                              : "bg-[var(--surface-2)] text-[var(--ink-muted)] border border-[var(--surface-border)]"
-                          }
-                          icon={badge.icon}
-                        />
-                      ))}
-                </div>
-              </section>
+              <AchievementCollection state={achievementState} compact />
 
             </div>
           )}
@@ -2320,37 +2086,6 @@ export default function ProfilePage() {
 }
 
 /* ---------------- UI Components ---------------- */
-function resolveBadgeIcon(icon?: string) {
-  const className = "w-4 h-4";
-  if (
-    icon?.toLowerCase().includes("tv") ||
-    icon?.toLowerCase().includes("monitor")
-  )
-    return <Tv className={className} />;
-  if (
-    icon?.toLowerCase().includes("film") ||
-    icon?.toLowerCase().includes("ticket")
-  )
-    return <Film className={className} />;
-  if (icon?.toLowerCase().includes("heart"))
-    return <Heart className={className} />;
-  if (
-    icon?.toLowerCase().includes("bookmark") ||
-    icon?.toLowerCase().includes("library")
-  )
-    return <Bookmark className={className} />;
-  if (icon?.toLowerCase().includes("calendar"))
-    return <Calendar className={className} />;
-  if (
-    icon?.toLowerCase().includes("crown") ||
-    icon?.toLowerCase().includes("trophy")
-  )
-    return <Award className={className} />;
-  if (icon?.toLowerCase().includes("search"))
-    return <Search className={className} />;
-  return <Sparkles className={className} />;
-}
-
 function InsightTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)]/60 px-3.5 py-3">
@@ -2358,114 +2093,6 @@ function InsightTile({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <p className="mt-1 text-sm font-bold text-[var(--ink)]">{value}</p>
-    </div>
-  );
-}
-
-function SectionHeading({
-  icon,
-  title,
-  caption,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  caption: string;
-}) {
-  return (
-    <div className="mb-4 flex items-end justify-between gap-4 sm:mb-5">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--brand-coral)]/10">
-          {icon}
-        </div>
-        <h2 className="text-2xl font-bold leading-none text-[var(--ink)] sm:text-3xl">{title}</h2>
-      </div>
-      <p className="hidden text-xs font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)] sm:block">
-        {caption}
-      </p>
-    </div>
-  );
-}
-
-function AchievementCard({ row }: { row: UserAchievementView }) {
-  const percent = Math.min(Math.max(row.progress.completionPercentage, 0), 100);
-  const required = row.achievement.requiredCount ?? 1;
-  const unlocked = row.progress.unlocked;
-  const badgeName = row.badge?.badgeName ?? row.achievement.title;
-  const mascot = resolveBadgeMascot(row.badge?.badgeName);
-
-  return (
-    <div
-      className={`rounded-xl border p-4 transition-colors ${unlocked ? "border-[var(--brand-coral)]/70 bg-[var(--brand-coral)]/[0.06]" : "border-[var(--surface-border)] bg-[var(--surface-2)]/50 hover:border-white/15"}`}
-    >
-      <div className="flex items-start gap-3">
-        <div
-          className={mascot ? "h-16 w-16 flex-shrink-0" : `flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg ${unlocked ? "bg-[var(--brand-coral)] text-white" : "bg-[var(--surface-2)] text-[var(--ink-muted)]"}`}
-        >
-          {mascot ? <BadgeMascot name={mascot} className={`h-16 w-16 max-w-none ${unlocked ? "" : "opacity-60 grayscale"}`} sizes="64px" /> : resolveBadgeIcon(row.badge?.icon)}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-bold text-[var(--ink)]">{row.achievement.title}</p>
-            <span className="rounded-md border border-[var(--surface-border)] px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-[var(--ink-muted)]">
-              {row.achievement.category}
-            </span>
-          </div>
-          <p className="mt-1 text-xs leading-5 text-[var(--ink-muted)]">
-            {unlocked
-              ? row.achievement.reasoningTemplate
-              : row.achievement.lockedHint}
-          </p>
-        </div>
-      </div>
-      <div className="mt-4">
-        <div className="mb-2 flex items-center justify-between text-xs">
-          <span className="font-semibold text-[var(--ink-muted)]">{badgeName}</span>
-          <span className="tabular-nums text-[var(--ink-muted)]">
-            {row.progress.currentProgress}/{required}
-          </span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
-          <div
-            className="h-full rounded-full bg-[var(--brand-coral)]"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-        <p className="mt-2 text-xs text-[var(--ink-muted)]">{percent}% complete</p>
-      </div>
-    </div>
-  );
-}
-
-function RewardBadgeCard({ row }: { row: UserAchievementView }) {
-  const accent = row.badge?.colorTheme?.accent ?? "var(--brand-coral)";
-  const mascot = resolveBadgeMascot(row.badge?.badgeName);
-  return (
-    <div className="relative overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)]/50 p-4 transition-colors hover:border-white/15">
-      <div className="relative flex items-start gap-3">
-        {mascot ? <BadgeMascot name={mascot} alt={row.badge?.badgeName ?? "Your earned badge"}
-          reaction="A little celebration, earned by you." className="h-24 w-24" sizes="96px" /> : <div
-          className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-white"
-          style={{ backgroundColor: accent }}
-        >
-          {resolveBadgeIcon(row.badge?.icon)}
-        </div>}
-        <div className="min-w-0">
-          <p className="font-bold text-[var(--ink)]">
-            {row.badge?.badgeName ?? row.achievement.title}
-          </p>
-          <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-[var(--ink-muted)]">
-            {row.badge?.rarity ?? "Common"}
-          </p>
-        </div>
-      </div>
-      <p className="relative mt-3 text-xs leading-5 text-[var(--ink-muted)]">
-        {row.achievement.reasoningTemplate}
-      </p>
-      {row.progress.unlockedAt && (
-        <p className="relative mt-3 text-xs text-[var(--ink-muted)]">
-          Earned {new Date(row.progress.unlockedAt).toLocaleDateString()}
-        </p>
-      )}
     </div>
   );
 }

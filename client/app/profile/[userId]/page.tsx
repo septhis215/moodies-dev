@@ -11,10 +11,8 @@ import {
   Bookmark,
   Calendar,
   Film,
-  Flame,
   Heart,
   Medal,
-  Sparkles,
   Star,
   Tv,
   UserRound,
@@ -324,43 +322,6 @@ function getMoodPersona(profile: PublicProfile): MoodPersona {
   };
 }
 
-function getBadges(profile: PublicProfile) {
-  const { totalReviews, movieReviews, tvReviews, averageRating, topMoods } =
-    profile.stats;
-  return [
-    {
-      name: "First Impression",
-      earned: totalReviews >= 1,
-      icon: <Sparkles size={14} />,
-    },
-    {
-      name: "Conversation Starter",
-      earned: totalReviews >= 10,
-      icon: <Flame size={14} />,
-    },
-    {
-      name: "Movie Minded",
-      earned: movieReviews >= 5,
-      icon: <Film size={14} />,
-    },
-    {
-      name: "Series Scout",
-      earned: tvReviews >= 5,
-      icon: <Tv size={14} />,
-    },
-    {
-      name: "Mood Mapper",
-      earned: topMoods.length >= 3,
-      icon: <Heart size={14} />,
-    },
-    {
-      name: "High Bar",
-      earned: totalReviews >= 5 && averageRating / 2 >= 4,
-      icon: <Medal size={14} />,
-    },
-  ];
-}
-
 export default function PublicProfilePage() {
   const params = useParams<{ userId: string }>();
   const profileId = params.userId;
@@ -504,8 +465,6 @@ export default function PublicProfilePage() {
           tone: "text-[var(--ink-muted)]",
         }
       : persona;
-  const badges = profile ? getBadges(profile) : [];
-  const earnedBadges = badges.filter((badge) => badge.earned);
   const disclosureItems = [
     ["profileInfo", "Profile info"],
     ["watchlist", "Watchlist"],
@@ -653,7 +612,7 @@ export default function PublicProfilePage() {
               label="Badges"
               value={
                 disclosure.badges
-                  ? profile.achievements.length || earnedBadges.length
+                  ? profile.achievements.length
                   : "Hidden"
               }
               icon={<Medal size={18} />}
@@ -726,25 +685,7 @@ export default function PublicProfilePage() {
                           </p>
                         </div>
                       ))
-                    : badges.map((badge) => (
-                        <div
-                          key={badge.name}
-                          className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm ${
-                            badge.earned
-                              ? "border-[var(--brand-coral)]/25 bg-[var(--brand-coral)]/10 text-[var(--ink)]"
-                              : "border-[var(--surface-border)] bg-[var(--surface-1)] text-[var(--ink-muted)]"
-                          }`}
-                        >
-                          <span
-                            className={
-                              badge.earned ? "text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"
-                            }
-                          >
-                            {badge.icon}
-                          </span>
-                          <span className="font-semibold">{badge.name}</span>
-                        </div>
-                      ))}
+                    : <p className="text-sm leading-6 text-[var(--ink-muted)]">No achievements shared yet.</p>}
                   {profile.badges.length > 0 && (
                     <p className="pt-2 text-sm text-[var(--ink-muted)]">
                       {profile.badges.length} account badge
@@ -783,7 +724,7 @@ export default function PublicProfilePage() {
                 {disclosure.badges && (
                   <InsightMini
                     label="Earned"
-                    value={`${earnedBadges.length}/${badges.length}`}
+                    value={`${profile.achievements.length}`}
                   />
                 )}
                 {disclosure.recentActivity && (

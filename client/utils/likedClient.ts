@@ -4,6 +4,7 @@ import {
   normalizeResponseError,
 } from "@/lib/errors";
 import { sessionFetch } from "@/lib/auth/session";
+import { notifyMediaStatsChanged } from './mediaStatsClient';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 
@@ -28,13 +29,13 @@ export async function fetchLikedList() {
   }
 }
 
-export async function toggleLiked(tmdbId: string, type: LikeType) {
+export async function toggleLiked(tmdbId: string, type: LikeType, active?: boolean) {
   try {
     const r = await sessionFetch(`${API_BASE}/liked/toggle`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ tmdbId, type }),
+      body: JSON.stringify({ tmdbId, type, active }),
     });
     if (r.status === 401 || r.status === 498) {
       throw createAppError({
@@ -51,5 +52,7 @@ export async function toggleLiked(tmdbId: string, type: LikeType) {
     return r.json() as Promise<{ liked: boolean }>;
   } catch (error) {
     throw normalizeApiError(error, "Could not update your likes.");
+  } finally {
+    notifyMediaStatsChanged();
   }
 }

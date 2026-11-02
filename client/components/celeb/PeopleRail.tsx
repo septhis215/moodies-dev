@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import { tmdbImage } from "@/lib/tmdb";
+import CelebrityPersonCard from "./CelebrityPersonCard";
 
 type RelatedPerson = {
   id: number;
@@ -117,28 +115,10 @@ export default function PeopleRail({ people }: { people: RelatedPerson[] }) {
         <ul ref={track} className="flex w-max min-w-full gap-4 sm:gap-5">
           {people.map((person) => (
             <li key={person.id} className="w-32 shrink-0 snap-start sm:w-40">
-              <Link href={`/celeb/${person.id}`} className="group block">
-                <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-[var(--surface-2)]">
-                  <Image
-                    src={
-                      tmdbImage(person.profile_path, "w342") ||
-                      "/placeholder-person.svg"
-                    }
-                    alt={person.name}
-                    fill
-                    sizes="(max-width: 639px) 128px, 160px"
-                    className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-105"
-                  />
-                </div>
-                <h3 className="mt-3 line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] group-hover:text-[var(--brand-coral-strong)]">
-                  {person.name}
-                </h3>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">
-                  {person.relationship ||
-                    person.known_for_department ||
-                    "Entertainment"}
-                </p>
-              </Link>
+              <CelebrityPersonCard
+                person={person}
+                subtitle={person.relationship || person.known_for_department}
+              />
             </li>
           ))}
         </ul>

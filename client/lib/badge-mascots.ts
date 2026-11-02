@@ -13,6 +13,7 @@ export const badgeMascots = [
 export type BadgeMascotName = typeof badgeMascots[number];
 
 export function resolveBadgeMascot(name?: string | null): BadgeMascotName | null {
-  const key = name?.trim().toLowerCase().replace(/\s+/g, "-");
+  const normalized = name?.trim().toLowerCase().replace(/\s+/g, "-");
+  const key = normalized === "k-drama-soul" ? "kdrama-soul" : normalized === "trend-rider" ? "trend-builder" : normalized;
   return badgeMascots.find(mascot => mascot === key) ?? null;
 }

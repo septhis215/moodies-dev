@@ -1,11 +1,40 @@
-import { Controller, Get, Param, Query, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Header, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { PeopleService } from './people.service';
 import { CelebrityMediaService } from './media/celebrity-media.service';
 import { PeopleRecommendationsService } from './people-recommendations.service';
+import { CelebrityNewsService } from './news/celebrity-news.service';
+import { CelebrityHubService } from './celebrity-hub.service';
+import { CelebrityHubVideosService } from './celebrity-hub-videos.service';
 
 @Controller('people')
 export class PeopleController {
-  constructor(private readonly peopleService: PeopleService, private readonly mediaService: CelebrityMediaService, private readonly recommendations: PeopleRecommendationsService) {}
+  constructor(
+    private readonly peopleService: PeopleService,
+    private readonly mediaService: CelebrityMediaService,
+    private readonly recommendations: PeopleRecommendationsService,
+    private readonly news: CelebrityNewsService,
+    private readonly hub: CelebrityHubService,
+    private readonly hubVideos: CelebrityHubVideosService,
+  ) {}
+
+  // Static hub routes must precede :id.
+  @Get('hub/videos')
+  @Header('Cache-Control', 'no-store')
+  getHubVideos() {
+    return this.hubVideos.getVideos();
+  }
+
+  @Get('hub')
+  @Header('Cache-Control', 'no-store')
+  getHub() {
+    return this.hub.getHub();
+  }
+
+  @Get('news')
+  @Header('Cache-Control', 'no-store')
+  getNews() {
+    return this.news.getNews();
+  }
 
   @Get('trending/:type')
   async getTrending(@Param('type') type: string) {
@@ -43,6 +72,18 @@ export class PeopleController {
   @Get(':id/media')
   async getMedia(@Param('id', ParseIntPipe) id: number) {
     return this.mediaService.getMedia(id);
+  }
+
+  @Get(':id/news')
+  @Header('Cache-Control', 'no-store')
+  getPersonNews(@Param('id', ParseIntPipe) id: number) {
+    return this.news.getNews(id);
+  }
+
+  @Get(':id/latest-videos')
+  @Header('Cache-Control', 'no-store')
+  getLatestVideos(@Param('id', ParseIntPipe) id: number) {
+    return this.mediaService.getLatestVideos(id);
   }
 
   @Get(':id/videos')

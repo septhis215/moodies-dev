@@ -37,12 +37,11 @@ export function useLiked() {
       }
 
       const id = String(tmdbId);
-      liked.setItem(type, id, true);
 
       try {
-        const res = await toggleLiked(id, type);
+        const res = await toggleLiked(id, type, true);
+        liked.setItem(type, id, res.liked);
         if (!res.liked) {
-          liked.setItem(type, id, false);
           return;
         }
 
@@ -52,7 +51,7 @@ export function useLiked() {
           posterUrl: meta?.posterUrl ?? null,
         });
       } catch (e) {
-        liked.setItem(type, id, false);
+        await liked.refresh().catch(() => undefined);
         handleAppError(e, {
           fallbackMessage: "Could not update favorites. Please try again.",
           toastTitle: "Likes",
@@ -74,12 +73,11 @@ export function useLiked() {
       }
 
       const id = String(tmdbId);
-      liked.setItem(type, id, false);
 
       try {
-        const res = await toggleLiked(id, type);
+        const res = await toggleLiked(id, type, false);
+        liked.setItem(type, id, res.liked);
         if (res.liked) {
-          liked.setItem(type, id, true);
           return;
         }
 
@@ -89,7 +87,7 @@ export function useLiked() {
           posterUrl: meta?.posterUrl ?? null,
         });
       } catch (e) {
-        liked.setItem(type, id, true);
+        await liked.refresh().catch(() => undefined);
         handleAppError(e, {
           fallbackMessage: "Could not update favorites. Please try again.",
           toastTitle: "Likes",

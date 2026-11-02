@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
 import { CelebrityIdentityService } from './celebrity-identity.service';
@@ -13,6 +13,7 @@ import type {
   CelebrityMediaProvider,
   MediaSource,
   ProviderMedia,
+  CelebrityIdentity,
 } from './celebrity-media.types';
 
 @Injectable()
@@ -26,12 +27,80 @@ export class CelebrityMediaService {
     private readonly config: ConfigService,
     private readonly openverse: OpenverseMediaProvider,
   ) {}
+  async getLatestVideos(id: number): Promise<CelebrityMedia> {
+    if (!Number.isSafeInteger(id) || id < 1)
+      throw new BadRequestException('Invalid person ID');
+    const version = createHash('sha256')
+      .update(
+        JSON.stringify([
+          this.youtube.cacheVersion,
+          this.config.get('YOUTUBE_REGION_CODE'),
+          this.config.get('CELEBRITY_MEDIA_IDENTITIES'),
+        ]),
+      )
+      .digest('hex')
+      .slice(0, 12);
+    const identity = await this.identity.resolve(id);
+    const sources: CelebrityMedia['sources'] = {
+      tmdb: 'unavailable',
+      youtube: this.youtube.enabled ? 'unavailable' : 'disabled',
+      wikimedia: 'disabled',
+      openverse: 'disabled',
+    };
+    const results = await Promise.all(
+      (['tmdb', 'youtube'] as const).map(async (source) => {
+        if (source === 'youtube' && !this.youtube.enabled) return null;
+        try {
+          const cached = await this.cache.get(
+            `celebrity:${id}:latest:${source}:v1:${version}`,
+            1800,
+            async () => ({
+              media:
+                source === 'youtube'
+                  ? await this.youtube.discover(identity, true)
+                  : await this.tmdbMedia(identity),
+              fetchedAt: new Date().toISOString(),
+            }),
+            6 * 3600,
+          );
+          sources[source] = cached.stale ? 'stale' : 'ready';
+          return cached.value;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    const videos = dedupeVideos(
+      results.flatMap((result) => result?.media.videos || []),
+    )
+      .filter((video) => {
+        const time = Date.parse(video.publishedAt || '');
+        return (
+          Number.isFinite(time) &&
+          time >= Date.now() - 90 * 86400000 &&
+          time <= Date.now() + 5 * 60000
+        );
+      })
+      .sort((a, b) => Date.parse(b.publishedAt!) - Date.parse(a.publishedAt!));
+    const timestamps = results
+      .flatMap((result) => (result ? [result.fetchedAt] : []))
+      .sort();
+    return {
+      photos: [],
+      videos,
+      totalPhotos: 0,
+      totalVideos: videos.length,
+      sources,
+      updatedAt: timestamps[0] || new Date().toISOString(),
+    };
+  }
+
   async getMedia(id: number): Promise<CelebrityMedia> {
     // Operator identity hints / region changes must not reuse a differently filtered feed.
     const version = createHash('sha256')
       .update(
         JSON.stringify([
-          this.youtube.enabled,
+          this.youtube.cacheVersion,
           this.config.get('YOUTUBE_REGION_CODE'),
           this.config.get('CELEBRITY_MEDIA_IDENTITIES'),
         ]),
@@ -70,7 +139,10 @@ export class CelebrityMediaService {
               const result = await this.cache.get<ProviderMedia>(
                 `celebrity:${id}:${source}:v2:${version}`,
                 ttl,
-                () => provider.discover(identity),
+                () =>
+                  source === 'tmdb'
+                    ? this.tmdbMedia(identity)
+                    : provider.discover(identity),
               );
               sources[source] = result.stale ? 'stale' : 'ready';
               return result.value;
@@ -102,5 +174,17 @@ export class CelebrityMediaService {
         ]),
       ) as CelebrityMedia['sources'],
     };
+  }
+
+  private async tmdbMedia(identity: CelebrityIdentity): Promise<ProviderMedia> {
+    const media = await this.tmdb.discover(identity);
+    if (this.youtube.enabled) {
+      try {
+        media.videos = await this.youtube.verify(media.videos);
+      } catch {
+        /* Exact TMDB video links remain available during a YouTube outage. */
+      }
+    }
+    return media;
   }
 }

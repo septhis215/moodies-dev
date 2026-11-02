@@ -5,26 +5,34 @@ import {
   Get,
   Query,
   BadRequestException,
+  Optional,
 } from '@nestjs/common';
 import { QuizRecommendationService } from './quiz.service';
 import type { QuizAnswer } from './quiz-ranking';
+import { AchievementsService } from 'src/achievements/achievements.service';
 export type QuizAnswerDto = QuizAnswer;
 
 export interface QuizRequestDto {
   answers: QuizAnswerDto[];
+  attemptId?: string;
+  version?: string;
+  timezone?: string;
 }
 
 @Controller('quiz')
 export class QuizRecommendationController {
   constructor(
     private readonly quizRecommendationService: QuizRecommendationService,
+    @Optional() private readonly achievements?: AchievementsService,
   ) {}
 
   @Post('recommendations')
   async getRecommendations(@Body() quizRequest: QuizRequestDto) {
-    return this.quizRecommendationService.getRecommendations(
+    const receipt = this.achievements?.enabled && quizRequest?.attemptId ? this.achievements.createQuizReceipt(quizRequest.answers, quizRequest.attemptId, quizRequest.version || '') : null;
+    const result = await this.quizRecommendationService.getRecommendations(
       quizRequest?.answers,
     );
+    return { ...result, ...(receipt ? { completionReceipt: receipt } : {}) };
   }
 
   @Get('recommendations')
