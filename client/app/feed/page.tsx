@@ -4,9 +4,11 @@ import { cn } from "@/lib/utils";
 import { tmdbImage } from "@/lib/tmdb";
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { animate, AnimatePresence, motion, useMotionValue, useReducedMotion } from "framer-motion";
 import {
   Calendar,
+  ChevronDown,
+  ChevronUp,
   Clapperboard,
   ExternalLink,
   Maximize2,
@@ -72,6 +74,9 @@ type Category = "all" | "upcoming";
 type LoadingMode = "idle" | "initial" | "more" | "refresh";
 /** Playback signals the mounted player reports back to the page. */
 type FeedPlayerStatus = "playing" | "paused" | "blocked" | "error" | "muted";
+
+const feedStepClass =
+  "grid size-11 cursor-pointer place-items-center rounded-full bg-black/45 text-white transition-colors hover:bg-black/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-default disabled:opacity-35";
 
 const feedTabs: Array<{
   value: Category;
@@ -158,7 +163,10 @@ export default function VideoFeedPage() {
     remove: removeFromWatchlist,
   } = useWatchlist();
 
-  const panelRef = useRef<HTMLDivElement | null>(null);
+  const reduceMotion = useReducedMotion();
+  const slideOffset = useMotionValue(0);
+  const touchGesture = useRef<{ x: number; y: number; time: number; offset: number } | null>(null);
+  const wheelGesture = useRef({ time: 0, direction: 0, distance: 0, stepped: false });
   const containerRef = useRef<HTMLDivElement>(null);
   /** Live player instance, published by the mounted slide's own player. */
   const playerRef = useRef<YouTubePlayer | null>(null);
@@ -173,7 +181,6 @@ export default function VideoFeedPage() {
   const [feedVisible, setFeedVisible] = useState(true);
 
   const currentVideo = videos[currentIndex];
-  const [showScrollHint, setShowScrollHint] = useState(true);
 
   useEffect(() => {
     if (user?.id) {
@@ -445,6 +452,8 @@ export default function VideoFeedPage() {
       fetchAbortRef.current?.abort();
       if (retryTimerRef.current) window.clearTimeout(retryTimerRef.current);
       destroyActivePlayer();
+      touchGesture.current = null;
+      slideOffset.jump(0);
       setVideoReady(false);
       setAutoplayBlocked(false);
       setVideos([]);
@@ -463,7 +472,7 @@ export default function VideoFeedPage() {
       const timer = window.setTimeout(() => fetchMoreVideos(true, mode), 80);
       return () => window.clearTimeout(timer);
     },
-    [fetchMoreVideos, destroyActivePlayer],
+    [fetchMoreVideos, destroyActivePlayer, slideOffset],
   );
 
   useEffect(() => {
@@ -497,16 +506,6 @@ export default function VideoFeedPage() {
     // This reset should only run when the selected feed changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (containerRef.current)
-        setShowScrollHint(containerRef.current.scrollTop <= 50);
-    };
-    const container = containerRef.current;
-    if (container) container.addEventListener("scroll", handleScroll);
-    return () => container?.removeEventListener("scroll", handleScroll);
-  }, []);
 
   // Close panel when video changes
   useEffect(() => {
@@ -730,69 +729,126 @@ export default function VideoFeedPage() {
     }
   }, [muted, enableAudio]);
 
-  const handleScroll = useCallback(
-    (e: WheelEvent) => {
-      if (panelOpen) return;
-      if (panelRef.current?.contains(e.target as Node)) return;
-      e.preventDefault();
-      if (Math.abs(e.deltaY) < 50) return;
-      if (e.deltaY > 0 && currentIndex < videos.length - 1) {
-        setCurrentIndex((i) => i + 1);
-        setPanelOpen(false);
-      } else if (e.deltaY > 0 && hasMore && !isFetchingRef.current) {
-        fetchMoreVideos(false);
-      } else if (e.deltaY < 0 && currentIndex > 0) {
-        setCurrentIndex((i) => i - 1);
-        setPanelOpen(false);
-      }
-    },
-    [currentIndex, videos.length, hasMore, fetchMoreVideos, panelOpen],
-  );
+  const settleSlide = useCallback((from: number) => {
+    slideOffset.jump(reduceMotion ? 0 : from);
+    if (!reduceMotion && from) {
+      void animate(slideOffset, 0, { type: "spring", stiffness: 320, damping: 32 });
+    }
+  }, [reduceMotion, slideOffset]);
 
-  const touchStartY = useRef(0);
-  const handleTouchStart = useCallback(
-    (e: TouchEvent) => {
-      if (panelOpen) return;
-      touchStartY.current = e.touches[0].clientY;
-    },
-    [panelOpen],
-  );
-  const handleTouchEnd = useCallback(
-    (e: TouchEvent) => {
-      if (panelOpen) return;
-      const diff = touchStartY.current - e.changedTouches[0].clientY;
-      if (Math.abs(diff) < 50) return;
-      if (diff > 0 && currentIndex < videos.length - 1) {
-        setCurrentIndex((prev) => prev + 1);
-        setPanelOpen(false);
-      } else if (diff > 0 && hasMore && !isFetchingRef.current) {
-        fetchMoreVideos(false);
-      } else if (diff < 0 && currentIndex > 0) {
-        setCurrentIndex((prev) => prev - 1);
-        setPanelOpen(false);
-      }
-    },
-    [currentIndex, videos.length, hasMore, fetchMoreVideos, panelOpen],
-  );
+  const stepFeed = useCallback((direction: number) => {
+    touchGesture.current = null;
+    const next = currentIndex + direction;
+    if (next < 0 || next >= videos.length) {
+      settleSlide(slideOffset.get());
+      if (direction > 0 && hasMore) void fetchMoreVideos(false);
+      return;
+    }
+    settleSlide(direction * (48 + Math.abs(slideOffset.get()) * 0.4));
+    setCurrentIndex(next);
+  }, [currentIndex, fetchMoreVideos, hasMore, settleSlide, slideOffset, videos.length]);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || panelOpen) return;
-    container.addEventListener("wheel", handleScroll, { passive: false });
-    container.addEventListener("touchstart", handleTouchStart as EventListener);
-    container.addEventListener("touchend", handleTouchEnd as EventListener);
-    return () => {
-      container.removeEventListener("wheel", handleScroll);
-      container.removeEventListener(
-        "touchstart",
-        handleTouchStart as EventListener,
-      );
-      container.removeEventListener(
-        "touchend",
-        handleTouchEnd as EventListener,
-      );
+    const cancelTouch = () => {
+      if (!touchGesture.current) return;
+      touchGesture.current = null;
+      settleSlide(slideOffset.get());
     };
-  }, [handleScroll, handleTouchStart, handleTouchEnd, panelOpen]);
+    if (!container || panelOpen || isMobileFullscreen || !currentVideo) {
+      cancelTouch();
+      return;
+    }
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY) || !event.deltaY) return;
+      event.preventDefault();
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? container.clientHeight : 1;
+      const delta = event.deltaY * unit;
+      const direction = Math.sign(delta);
+      const now = performance.now();
+      const gesture = wheelGesture.current;
+      if (now - gesture.time > 140 || gesture.direction !== direction) {
+        gesture.distance = 0;
+        gesture.stepped = false;
+      }
+      gesture.time = now;
+      gesture.direction = direction;
+      if (gesture.stepped) return;
+      gesture.distance += Math.abs(delta);
+      if (gesture.distance >= 36) {
+        gesture.stepped = true;
+        stepFeed(direction);
+      }
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) {
+        cancelTouch();
+        return;
+      }
+      const control = (event.target as Element).closest("a, button, input");
+      if (control && !control.hasAttribute("data-feed-gesture")) return;
+      const point = event.touches[0];
+      slideOffset.stop();
+      touchGesture.current = {
+        x: point.clientX,
+        y: point.clientY,
+        time: performance.now(),
+        offset: slideOffset.get(),
+      };
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      const touch = touchGesture.current;
+      if (!touch || reduceMotion || event.touches.length !== 1) return;
+      const point = event.touches[0];
+      const vertical = point.clientY - touch.y;
+      if (Math.abs(vertical) <= Math.abs(point.clientX - touch.x)) {
+        slideOffset.set(touch.offset);
+        return;
+      }
+      const edge = vertical > 0 ? currentIndex === 0 : currentIndex === videos.length - 1;
+      slideOffset.set(touch.offset + vertical / (1 + Math.abs(vertical) / (edge ? 32 : 112)));
+    };
+    const onTouchEnd = (event: TouchEvent) => {
+      const touch = touchGesture.current;
+      if (!touch) return;
+      const point = event.changedTouches[0];
+      const distance = touch.y - point.clientY;
+      const horizontal = Math.abs(touch.x - point.clientX);
+      const duration = Math.max(performance.now() - touch.time, 1);
+      touchGesture.current = null;
+      const verticalSwipe = Math.abs(distance) > horizontal && Math.abs(distance) >= 14;
+      if (verticalSwipe && (Math.abs(distance) >= 48 || Math.abs(distance) / duration > 0.45)) {
+        if (event.cancelable) event.preventDefault();
+        stepFeed(Math.sign(distance));
+      } else {
+        settleSlide(slideOffset.get());
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
+      if ((event.target as HTMLElement | null)?.closest?.("input, textarea, select, [contenteditable]")) return;
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+      event.preventDefault();
+      stepFeed(event.key === "ArrowDown" ? 1 : -1);
+    };
+
+    container.addEventListener("wheel", onWheel, { passive: false });
+    container.addEventListener("touchstart", onTouchStart, { passive: true });
+    container.addEventListener("touchmove", onTouchMove, { passive: true });
+    container.addEventListener("touchend", onTouchEnd, { passive: false });
+    container.addEventListener("touchcancel", cancelTouch);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      container.removeEventListener("wheel", onWheel);
+      container.removeEventListener("touchstart", onTouchStart);
+      container.removeEventListener("touchmove", onTouchMove);
+      container.removeEventListener("touchend", onTouchEnd);
+      container.removeEventListener("touchcancel", cancelTouch);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [currentIndex, currentVideo, isMobileFullscreen, panelOpen, reduceMotion, settleSlide, slideOffset, stepFeed, videos.length]);
 
   // Playback gate: a trailer only runs while the tab is visible, the details
   // panel is closed, the user has not paused it and the browser has not blocked
@@ -949,9 +1005,10 @@ export default function VideoFeedPage() {
       ref={containerRef}
       className={cn(
         "fixed inset-0 h-[100svh] w-full overflow-hidden overscroll-none bg-black",
-        panelOpen ? "touch-pan-y" : "touch-none",
+        panelOpen ? "touch-pan-y" : "touch-pinch-zoom",
       )}
     >
+      <p role="status" className="sr-only">{videoTitle}</p>
       {loading && videos.length === 0 && <div className="pointer-events-none absolute inset-0"><PageSkeleton variant="feed" /></div>}
       {/* ── TOP NAVBAR ──────────────────────────────────────────── */}
       <motion.nav
@@ -1072,14 +1129,13 @@ export default function VideoFeedPage() {
         <div className="pointer-events-none absolute inset-0 bg-black/30" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_44%,transparent_20%,rgba(0,0,0,0.14)_58%,rgba(0,0,0,0.72)_100%)]" />
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-black/35 via-black/10 to-transparent" />
-        <AnimatePresence mode="wait">
+        <motion.div className="absolute inset-0" style={{ y: slideOffset }}>
           {currentVideo && (
             <motion.div
-              key={`${currentVideoIdentity}:${currentVideo.primary_video.key}`}
-              initial={{ opacity: 0, scale: 1.03 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.97 }}
-              transition={{ duration: 0.28, ease: "easeOut" }}
+              key={currentVideoIdentity}
+              initial={reduceMotion ? false : { opacity: 0.7 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
               className="absolute inset-0 flex items-center justify-center"
             >
               {/* Video iframe */}
@@ -1128,6 +1184,7 @@ export default function VideoFeedPage() {
                    */}
                   <button
                     type="button"
+                    data-feed-gesture
                     onClick={togglePlayPause}
                     aria-label={isPlaying ? "Pause video" : "Play video"}
                     className="absolute inset-0 z-[12] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
@@ -1135,6 +1192,7 @@ export default function VideoFeedPage() {
                   {autoplayBlocked && !playerError && (
                     <button
                       type="button"
+                      data-feed-gesture
                       onClick={startPlaybackFromGesture}
                       aria-label={`Play ${videoTitle || "video"}`}
                       className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/40 transition hover:bg-black/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70"
@@ -1202,11 +1260,7 @@ export default function VideoFeedPage() {
                * title readable while leaving most of the trailer clear.
                * Right side is padded to avoid the action buttons column.
                */}
-              <motion.div
-                key={`titlebar-${currentVideo.id}`}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
+              <div
                 className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center"
               >
                 <div
@@ -1272,7 +1326,7 @@ export default function VideoFeedPage() {
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
 
               {/* Action Buttons — always visible, Info included */}
               <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
@@ -1309,7 +1363,7 @@ export default function VideoFeedPage() {
               </div>
             </motion.div>
           )}
-        </AnimatePresence>
+        </motion.div>
 
         {/* ── LOADING INDICATOR ───────────────────────────────────── */}
         <AnimatePresence>
@@ -1387,41 +1441,29 @@ export default function VideoFeedPage() {
           </motion.div>
         )}
 
-        {/* ── SCROLL HINT ─────────────────────────────────────────── */}
-        <AnimatePresence>
-          {showScrollHint && videos.length > 1 && !panelOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 0.55, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-col items-center gap-0.5 pointer-events-none sm:bottom-5 max-[760px]:hidden"
+        {currentVideo && (videos.length > 1 || hasMore) && !panelOpen && (
+          <div className="absolute left-3 top-24 z-40 flex flex-col gap-1 sm:left-5" role="group" aria-label="Browse feed">
+            <button
+              type="button"
+              aria-label="Previous video"
+              disabled={currentIndex === 0}
+              onClick={() => stepFeed(-1)}
+              className={feedStepClass}
             >
-              <motion.div
-                animate={{ y: [0, 4, 0] }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 1.6,
-                  ease: "easeInOut",
-                }}
-              >
-                <svg
-                  className="w-4 h-6 text-white/42"
-                  viewBox="0 0 24 40"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <rect x="2" y="2" width="20" height="36" rx="10" />
-                  <circle cx="12" cy="10" r="2.5" fill="currentColor" />
-                </svg>
-              </motion.div>
-              <span className="text-[9px] text-white/35 tracking-widest uppercase">
-                Scroll
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <ChevronUp className="size-5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label="Next video"
+              disabled={currentIndex === videos.length - 1 && (!hasMore || loading)}
+              onClick={() => stepFeed(1)}
+              className={feedStepClass}
+            >
+              <ChevronDown className="size-5" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
       </div>
 
       {/* ── DETAIL PANEL ────────────────────────────────────────── */}
@@ -1487,7 +1529,6 @@ export default function VideoFeedPage() {
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.035] via-transparent to-black/35" />
 
               <div
-                ref={panelRef}
                 className="relative flex min-h-0 flex-1 touch-pan-y flex-col overflow-y-auto overscroll-contain mobile-native-scroll"
               >
               <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/[0.08] bg-[#0b0c0f]/72 px-4 pb-3 pt-5 backdrop-blur-2xl sm:px-5 sm:pt-3">
@@ -1694,9 +1735,8 @@ export default function VideoFeedPage() {
  * One slide, one `YT.Player`.
  *
  * The player lives in its own component so that its lifecycle is tied to the
- * exact DOM node it renders into. An exiting slide stays mounted while the next
- * one fades in, so a page-level effect can just as easily find the node that is
- * about to disappear; owning the mount here makes that impossible.
+ * exact DOM node it renders into. Each feed step immediately tears down the
+ * old player and mounts the next one as the slide settles.
  *
  * The instance is published upward through `attachPlayer` because the page still
  * drives play/pause from its own gestures, and playback is reported through

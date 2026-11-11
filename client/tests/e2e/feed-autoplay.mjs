@@ -54,7 +54,7 @@ try {
       },
     };
   });
-  const clips = ["abcdefghijk", "lmnopqrstuv"].map((key, index) => ({
+  const clips = ["abcdefghijk", "lmnopqrstuv", "12345678901"].map((key, index) => ({
     id: index + 1, title: `Feed fixture ${index + 1}`, overview: "A test clip.",
     media_type: "movie", vote_average: 8, videos: [],
     primary_video: { key, name: "Trailer", type: "Trailer", site: "YouTube" },
@@ -72,13 +72,21 @@ try {
   await page.getByRole("button", { name: "Sound", exact: true }).waitFor();
   assert.ok(await page.evaluate(() => window.feedPlayers.at(-1).calls.some(call => call.method === "unmute" && call.gesture)));
 
-  await page.locator('div[class*="overscroll-none"]').first().evaluate(element => {
-    for (const [type, property, y] of [["touchstart", "touches", 600], ["touchend", "changedTouches", 200]]) {
-      const event = new Event(type, { bubbles: true });
-      Object.defineProperty(event, property, { value: [{ clientY: y }] });
-      element.dispatchEvent(event);
-    }
-  });
+  const feed = page.locator('div[class*="overscroll-none"]').first();
+  const initialPlayerCount = await page.evaluate(() => window.feedPlayers.length);
+  const touch = (type, property, x, y) => feed.evaluate((element, { type, property, x, y }) => {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.defineProperty(event, property, { value: [{ clientX: x, clientY: y }] });
+    element.dispatchEvent(event);
+    return event.defaultPrevented;
+  }, { type, property, x, y });
+  await touch("touchstart", "touches", 120, 600);
+  await touch("touchmove", "touches", 120, 520);
+  await page.waitForFunction(() =>
+    document.querySelector('iframe[title="Feed fixture 1"]')?.getBoundingClientRect().top < -10,
+  );
+  assert.equal(await page.evaluate(() => window.feedPlayers.length), initialPlayerCount, "Dragging must keep the active player mounted");
+  assert.equal(await touch("touchend", "changedTouches", 120, 200), true);
   await page.waitForFunction(() => window.feedPlayers.at(-1)?.options.videoId === "lmnopqrstuv" && window.feedPlayers.at(-1).state === 1);
   await page.getByRole("button", { name: "Tap for sound", exact: true }).waitFor();
   assert.equal(await page.evaluate(() => window.feedPlayers.at(-1).muted), true);
@@ -94,7 +102,22 @@ try {
   await recovery.click();
   await recovery.waitFor({ state: "detached" });
   await page.waitForFunction(() => window.feedPlayers.at(-1).state === 1);
-  console.log("WebKit iPhone Feed passed: muted startup, gesture audio, swipe autoplay, blocked recovery (mock YouTube API).");
+
+  await touch("touchstart", "touches", 120, 600);
+  assert.equal(await touch("touchend", "changedTouches", 270, 580), false);
+  assert.equal(await page.getByRole("heading", { name: "Feed fixture 2", exact: true }).count(), 1);
+  await page.keyboard.press("ArrowDown");
+  await page.getByRole("heading", { name: "Feed fixture 3", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Previous video", exact: true }).click();
+  await page.getByRole("heading", { name: "Feed fixture 2", exact: true }).waitFor();
+
+  await feed.evaluate(element => {
+    for (let index = 0; index < 9; index++) {
+      element.dispatchEvent(new WheelEvent("wheel", { deltaY: -8, bubbles: true, cancelable: true }));
+    }
+  });
+  await page.getByRole("heading", { name: "Feed fixture 1", exact: true }).waitFor();
+  console.log("WebKit iPhone Feed passed: live drag, swipe autoplay, keyboard and wheel navigation, and gesture audio (mock YouTube API).");
 } finally {
   await browser.close();
 }
