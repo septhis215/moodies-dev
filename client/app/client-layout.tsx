@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { NavbarComponent } from "@/components/Navbar";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef } from "react";
 import { useScrollToHash } from "@/hooks/useScrollToHash";
 
 // Routes where the navbar should not appear.
@@ -11,8 +11,19 @@ const NAVBAR_HIDDEN_PREFIXES = ["/auth", "/feed"];
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const mainRef = useRef<HTMLElement>(null);
+  const isFeed = pathname === "/feed";
 
   useScrollToHash(100);
+
+  useLayoutEffect(() => {
+    if (isFeed || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const entrance = mainRef.current?.animate?.([{ opacity: 0.94 }, { opacity: 1 }], {
+      duration: 180,
+      easing: "ease-out",
+    });
+    return () => entrance?.cancel();
+  }, [pathname, isFeed]);
 
   // Scroll to top on every route change.
   useEffect(() => {
@@ -33,7 +44,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <NavbarComponent transparent={isSelectedContentPage} />
         </Suspense>
       )}
-      <main className={mainClassName}>{children}</main>
+      <main ref={mainRef} className={mainClassName}>{children}</main>
     </>
   );
 }
