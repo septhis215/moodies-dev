@@ -117,7 +117,7 @@ export default async function ReviewsPage({ params }: Props) {
   const tvInfo = data.info;
   const reviewStats = await fetchReviewStats(id, "TV");
 
-  const transformedReviews = reviewsData.reviews.map((r: ApiReview) => ({
+  const transformReview = (r: ApiReview) => ({
     id: r.id,
     userId: r.user?.id,
     author: r.user?.name || r.user?.username || "Anonymous",
@@ -148,15 +148,19 @@ export default async function ReviewsPage({ params }: Props) {
           avatar_path: reply.user?.avatarUrl,
         },
       })) || [],
-  }));
+  });
+  const transformedReviews = reviewsData.reviews.map(transformReview);
 
   return (
     <main className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
       <AllReviews
         reviews={transformedReviews}
+        featuredReviews={reviewsData.featuredReviews?.map(transformReview)}
         info={tvInfo}
         id={id}
         topMoods={reviewsData.topMoods || []}
+        allMoods={reviewsData.allMoods}
+        totalMoodVotes={reviewsData.totalMoodVotes}
         reviewStats={reviewStats}
       />
     </main>

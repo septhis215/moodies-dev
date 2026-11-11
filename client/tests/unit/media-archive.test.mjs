@@ -41,7 +41,7 @@ function tab(app, label) { app.render().find((node) => node.type === "button" &&
 
 test("posters use portrait previews and uncropped portrait thumbnails on both layouts", () => {
   const nodes = harness().render();
-  assert.ok(nodes.some((node) => /lg:grid-cols-\[20rem_minmax/.test(node.props.className)));
+  assert.ok(nodes.some((node) => /lg:grid-cols-\[minmax\(0,1fr\)_20rem\]/.test(node.props.className)));
   assert.ok(nodes.some((node) => /relative.*aspect-\[2\/3\]/.test(node.props.className)));
   const thumbnail = control(nodes, "Select poster 1");
   assert.match(thumbnail.props.className, /aspect-\[2\/3\].*w-20/);

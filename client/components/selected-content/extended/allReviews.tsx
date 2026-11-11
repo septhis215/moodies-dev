@@ -8,12 +8,15 @@ import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import { ArrowLeft, ArrowDownWideNarrow, ChevronDown, ChevronUp, Eye, Film, MessageCircle, Reply as ReplyIcon, Send, Star, Search, PenSquare, Share2, ThumbsUp, X } from "lucide-react";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { AudienceMood, audienceMoodImage, audienceMoodLabel, type MoodVote } from '../AudienceMood';
+import { Pill } from '@/components/ui/pill';
 import { useAuth } from "@/app/context/AuthProvider";
 import { useReviewBanStatus } from "@/hooks/useReviewBanStatus";
 import { useToast } from "@/app/context/ToastContext";
 import { SnapshotShareModal } from "@/components/snapshot/SnapshotShareModal";
 import type { SnapshotSource } from "@/lib/snapshot/snapshot-types";
+import styles from './AllReviews.module.css';
 
 type ReactionType = "LIKE" | "LOVE" | "HAHA" | "WOW" | "SAD" | "ANGRY";
 type ReactionCount = { type: ReactionType; count: number };
@@ -38,47 +41,22 @@ function toAccentColor(rating?: number): string | null {
   return "#f87171";
 }
 
-function isPublicImagePath(value?: string): boolean {
-  return Boolean(
-    value && /^\/images\/.+\.(png|jpe?g|webp|gif|svg)$/i.test(value),
-  );
-}
-
-function moodLabelFromValue(value: string): string {
-  if (!isPublicImagePath(value)) return "Mood";
-
-  const fileName = value.split("/").pop() ?? "";
-  const baseName = fileName.replace(/\.(png|jpe?g|webp|gif|svg)$/i, "");
-
-  return baseName
-    .split("-")
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
 function MoodChip({ value }: { value?: string }) {
   if (!value) return null;
 
-  const label = moodLabelFromValue(value);
-
   return (
-    <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-[var(--surface-border)] bg-[var(--surface-2)] py-1 pl-1 pr-2.5 text-[var(--ink-muted)]">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] ring-1 ring-[var(--surface-border)]">
-        {isPublicImagePath(value) ? (
+    <span className="inline-flex min-w-0 flex-wrap items-center gap-1 text-[var(--ink)]">
+      <span className="flex shrink-0 items-center justify-center">
           <Image
-            src={value}
+            src={audienceMoodImage(value)}
             alt=""
-            width={36}
-            height={36}
-            className="h-8 w-8 object-contain opacity-95"
+            width={96}
+            height={96}
+            className={styles.moodImage}
           />
-        ) : (
-          <span className="text-lg leading-none">{value}</span>
-        )}
       </span>
-      <span className="min-w-0 max-w-24 truncate text-xs font-semibold leading-none text-[var(--ink-muted)]">
-        {label}
+      <span className="min-w-0 break-words text-base font-bold leading-none">
+        {audienceMoodLabel(value)}
       </span>
     </span>
   );
@@ -90,13 +68,16 @@ function ReactionBar({
   onReact,
   disabled = false,
   pickerPlacement = "left",
+  clickOnly = false,
 }: {
   counts?: ReactionCount[];
   myReaction?: ReactionType | null;
   onReact: (type: ReactionType) => void;
   disabled?: boolean;
   pickerPlacement?: "left" | "right";
+  clickOnly?: boolean;
 }) {
+  const reducedMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
   const selected = REACTIONS.find((reaction) => reaction.type === myReaction);
   const total = counts.reduce((sum, item) => sum + item.count, 0);
@@ -109,11 +90,14 @@ function ReactionBar({
 
   return (
     <div
-      className="relative inline-flex items-center gap-1.5"
-      onMouseEnter={() => !disabled && setOpen(true)}
+      className="relative inline-flex min-w-0 max-w-full flex-wrap items-center gap-1.5"
+      onMouseEnter={() => !clickOnly && !disabled && setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onKeyDown={(event) => {
-        if (event.key === "Escape") setOpen(false);
+        if (event.key === "Escape") {
+          setOpen(false);
+          event.currentTarget.querySelector<HTMLButtonElement>('button')?.focus();
+        }
       }}
     >
       <button
@@ -125,21 +109,23 @@ function ReactionBar({
         className={`${THREAD_ACTION_CLASS} disabled:cursor-not-allowed disabled:opacity-45`}
       >
         <span>{selected?.label ?? "React"}</span>
-        {selected ? <span aria-hidden="true">{selected.emoji}</span> : <ThumbsUp className="h-4 w-4" aria-hidden="true" />}
+        <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center leading-none" aria-hidden="true">
+          {selected ? <span className="block text-sm leading-none">{selected.emoji}</span> : <ThumbsUp className="block h-4 w-4" />}
+        </span>
       </button>
 
       {total > 0 && (
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink-muted)]">
-          <span className="flex -space-x-1">
+        <span className="inline-flex items-center gap-1 text-xs font-semibold leading-none text-[var(--ink-muted)]">
+          <span className="inline-flex items-center -space-x-1">
             {topCounts.map((item) => {
               const reaction = REACTIONS.find((r) => r.type === item.type);
               return (
                 <span
                   key={item.type}
-                  className="flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-xs ring-1 ring-[var(--surface-border)]"
+                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-black/50 text-xs leading-none ring-1 ring-[var(--surface-border)]"
                   title={`${reaction?.label ?? item.type}: ${item.count}`}
                 >
-                  {reaction?.emoji}
+                  <span className="block leading-none">{reaction?.emoji}</span>
                 </span>
               );
             })}
@@ -151,11 +137,13 @@ function ReactionBar({
       <AnimatePresence>
         {open && !disabled && (
           <motion.div
-            initial={{ opacity: 0, y: 4, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.96 }}
-            transition={{ duration: 0.12 }}
-            className={`absolute bottom-full z-40 grid grid-cols-3 gap-0.5 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] p-1 shadow-xl shadow-black/30 sm:flex ${pickerPlacementClass}`}
+            role="group"
+            aria-label="Choose a reaction"
+            initial={reducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reducedMotion ? 0 : 0.12 }}
+            className={`absolute bottom-full z-40 grid w-max grid-cols-3 gap-0.5 rounded-2xl bg-[var(--surface-2)] p-1 shadow-xl shadow-black/30 sm:flex ${pickerPlacementClass}`}
           >
             {REACTIONS.map((reaction) => (
               <button
@@ -232,9 +220,12 @@ type Info = {
 
 interface AllReviewsProps {
   reviews: Review[];
+  featuredReviews?: Review[];
   info: Info;
   id?: string;
   topMoods?: Array<{ emoji: string; count: number }>;
+  allMoods?: MoodVote[];
+  totalMoodVotes?: number;
   reviewStats?: { totalRatings: number; averageRating: number };
 }
 
@@ -242,16 +233,36 @@ const API =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
   "https://dev.api.moodies.tech/api";
 
+function reviewActivity(review: Review): number {
+  const reactions = (counts: ReactionCount[] = []) => counts.reduce((sum, reaction) => sum + Math.max(0, reaction.count), 0);
+  return reactions(review.reactionCounts) + (review.replies?.length ?? 0)
+    + (review.replies ?? []).reduce((sum, reply) => sum + reactions(reply.reactionCounts), 0);
+}
+
+function byActivity(a: Review, b: Review): number {
+  return reviewActivity(b) - reviewActivity(a)
+    || new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    || a.id.localeCompare(b.id);
+}
+
+function mergeReviews(reviews: Review[], featuredReviews: Review[] = []): Review[] {
+  return Array.from(new Map([...featuredReviews, ...reviews].map(review => [review.id, review])).values());
+}
+
 export default function AllReviews({
   reviews,
+  featuredReviews,
   info,
   id,
   topMoods = [],
+  allMoods,
+  totalMoodVotes,
   reviewStats,
 }: AllReviewsProps) {
   const { isAuthenticated, user } = useAuth();
   const { banStatus } = useReviewBanStatus();
   const { toast } = useToast();
+  const reducedMotion = useReducedMotion();
   const [sortBy, setSortBy] = useState<"latest" | "highest" | "popularity">(
     "latest",
   );
@@ -266,16 +277,15 @@ export default function AllReviews({
     new Set(),
   );
   const [writeModalOpen, setWriteModalOpen] = useState(false);
-  const [localReviews, setLocalReviews] = useState<Review[]>(reviews);
+  const [localReviews, setLocalReviews] = useState<Review[]>(() => mergeReviews(reviews, featuredReviews));
   const [snapshotSource, setSnapshotSource] = useState<SnapshotSource | null>(null);
 
   useEffect(() => {
-    setLocalReviews(reviews);
-  }, [reviews]);
+    setLocalReviews(mergeReviews(reviews, featuredReviews));
+  }, [reviews, featuredReviews]);
 
   const basePath = info.content_type === "movie" ? "movies" : "tv";
   const titleHref = `/${basePath}/${id ?? info.id}`;
-  const leadingMood = [...topMoods].sort((a, b) => b.count - a.count)[0];
   const openWriteModal = () => {
     if (!isAuthenticated) {
       toast("Sign in to write a review.", "warning", 3000, "Not Logged In", null);
@@ -284,12 +294,8 @@ export default function AllReviews({
     setWriteModalOpen(true);
   };
 
-  function popularityProxy(r: Review) {
-    return (
-      (r.author_details?.rating ?? 0) +
-      Math.min(5, (r.content?.length ?? 0) / 200)
-    );
-  }
+  const featured = useMemo(() => localReviews.filter(review => reviewActivity(review) > 0).sort(byActivity).slice(0, 3), [localReviews]);
+  const featuredIds = new Set(featured.map(review => review.id));
 
   const filteredAndSorted = useMemo(() => {
     let arr = [...localReviews];
@@ -319,11 +325,13 @@ export default function AllReviews({
         });
         break;
       case "popularity":
-        arr.sort((a, b) => popularityProxy(b) - popularityProxy(a));
+        arr.sort(byActivity);
         break;
     }
     return arr;
   }, [localReviews, sortBy, searchQuery]);
+
+  const visibleFeatured = filteredAndSorted.filter(review => featuredIds.has(review.id)).sort(byActivity);
 
   const toggleExpanded = (id: string) =>
     setExpandedReviews((p) => {
@@ -362,8 +370,8 @@ export default function AllReviews({
       setTimeout(() => {
         const el = document.getElementById(`review-${highlightId}`);
         if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-          el.style.transition = "box-shadow 0.3s";
+          el.scrollIntoView({ behavior: reducedMotion ? "instant" : "smooth", block: "center" });
+          el.style.transition = reducedMotion ? "none" : "box-shadow 0.3s";
           el.style.boxShadow = "0 0 0 2px rgba(233,79,55,0.5)";
           setTimeout(() => {
             el.style.boxShadow = "";
@@ -371,7 +379,7 @@ export default function AllReviews({
         }
       }, 300);
     }
-  }, [filteredAndSorted]);
+  }, [filteredAndSorted, reducedMotion]);
 
   const openReplyForm = (reviewId: string, prefill = "") => {
     setShowReplyForm({ reviewId, prefill });
@@ -538,19 +546,18 @@ export default function AllReviews({
     <div className="min-h-screen bg-[var(--surface-0)] pb-8 text-[var(--ink)]">
       {/* ── Hero banner ── */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0">
+        <div className="pointer-events-none absolute inset-0 opacity-40" aria-hidden="true">
           <Image
             src={
               info.backdrop_path
                 ? tmdbImage(info.backdrop_path, "w1280")
                 : "/placeholder-backdrop.svg"
             }
-            alt={info.title}
+            alt=""
             fill
             sizes="100vw"
             style={{
               objectFit: "cover",
-              filter: "brightness(0.45) saturate(0.7)",
             }}
             priority
           />
@@ -560,21 +567,21 @@ export default function AllReviews({
 
         <div className="ui-shell relative z-10 pb-8 pt-[calc(2rem+var(--mobile-nav-safe))] sm:pb-10 lg:pt-28">
           <nav aria-label="Title navigation" className="mb-6 flex flex-wrap items-center justify-between gap-3 sm:mb-8">
-            <Link href={titleHref} className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--brand-coral-strong)]" aria-label={`Back to ${info.title}`}>
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              <span className="max-w-48 truncate">{info.title}</span>
+            <Link href={titleHref} className="inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--brand-coral-strong)]" aria-label={`Back to ${info.title}`}>
+              <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 max-w-48 truncate">{info.title}</span>
             </Link>
-            <div className="flex items-center gap-2">
-              <Link href={titleHref} className="ui-secondary-action leading-none">Details <Film className="h-4 w-4" aria-hidden="true" /></Link>
-              <span aria-current="page" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--brand-coral)]/30 bg-[var(--brand-coral)]/10 px-4 text-sm font-semibold text-[var(--brand-coral-strong)]">Reviews <MessageCircle className="h-4 w-4" aria-hidden="true" /></span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link href={titleHref} className="ui-secondary-action rounded-full border-0 bg-[var(--surface-2)] leading-none">Details <Film className="h-4 w-4" aria-hidden="true" /></Link>
+              <span aria-current="page" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--brand-coral)]/10 px-4 text-sm font-semibold text-[var(--brand-coral-strong)]">Reviews <MessageCircle className="h-4 w-4" aria-hidden="true" /></span>
             </div>
           </nav>
 
-          <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-5 gap-y-6 sm:grid-cols-[10rem_minmax(0,1fr)] sm:gap-x-8 lg:grid-cols-[12rem_minmax(0,1fr)_19rem] lg:gap-x-10">
+          <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-5 gap-y-6 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-x-8 lg:grid-cols-[minmax(0,1fr)_12rem] lg:gap-x-10">
             <Link
               href={titleHref}
               aria-label={`View ${info.title} details`}
-              className="group relative block aspect-[2/3] self-start overflow-hidden rounded-xl border border-[var(--surface-border)] shadow-xl shadow-black/30 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral)]"
+              className="relative block aspect-[2/3] self-start overflow-hidden rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral)] lg:col-start-2 lg:row-start-1 lg:row-span-2"
             >
               <Image
                 src={
@@ -584,19 +591,19 @@ export default function AllReviews({
                 }
                 alt={info.title}
                 fill
-                sizes="(min-width: 1024px) 192px, (min-width: 640px) 160px, 80px"
-                className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-105"
+                sizes="(min-width: 1024px) 192px, (min-width: 640px) 128px, 80px"
+                className="object-cover"
               />
             </Link>
 
-            <div className="contents sm:block sm:min-w-0">
+            <div className="contents sm:block sm:min-w-0 lg:col-start-1 lg:row-start-1">
               <div className="min-w-0">
                 <p className="ui-kicker">Audience reviews</p>
-                <h1 className="mt-3 max-w-3xl break-words text-balance text-[2.1rem] font-bold leading-[0.98] tracking-normal text-white min-[390px]:text-[2.45rem] sm:text-[clamp(2.45rem,4.6vw,4rem)] sm:leading-[0.96] xl:text-[clamp(2.45rem,4.2vw,4.8rem)]">
+                <h1 className="mt-2 max-w-3xl break-words text-balance text-[2.1rem] font-bold leading-[0.98] tracking-normal text-[var(--ink)] min-[390px]:text-[2.45rem] sm:text-[clamp(2.45rem,4.6vw,4rem)] sm:leading-[0.96] xl:text-[clamp(2.45rem,4.2vw,4.8rem)]">
                   {info.title}
                 </h1>
 
-                <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/80">
+                <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--ink-muted)]">
                   <span>{info.content_type === "tv" ? "Series" : "Film"}</span>
                   {info.release_date && <span>{info.release_date.slice(0, 4)}</span>}
                   {info.content_type === "tv" && (info.number_of_seasons ?? 0) > 0 && (
@@ -612,35 +619,14 @@ export default function AllReviews({
                 </div>
               </div>
               <div className="col-span-2 min-w-0 sm:mt-5">
-                <p className="max-w-xl text-sm leading-6 text-white/80">Every watch feels different. See what stayed with the community.</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {info.genres.slice(0, 3).map((g) => (
-                    <span
-                      key={g.id}
-                      className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-1)]/80 px-3 py-1 text-xs font-semibold text-white/88"
-                    >
-                      {g.name}
-                    </span>
-                  ))}
-                </div>
+                <p className="max-w-xl text-sm leading-6 text-[var(--ink-muted)]">Every watch feels different. See what stayed with the community.</p>
+                {info.genres.length > 0 ? <div className="mt-4"><Pill variant="genre">{info.genres.map(genre => genre.name).join(' / ')}</Pill></div> : null}
               </div>
             </div>
 
-            <section aria-labelledby="audience-pulse-heading" className="col-span-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)]/90 p-5 backdrop-blur-sm lg:col-span-1 lg:col-start-3">
-              <h2 id="audience-pulse-heading" className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl">Audience pulse</h2>
-              {leadingMood && (
-                <div className="mt-4 flex items-center gap-3">
-                  {isPublicImagePath(leadingMood.emoji) ? (
-                    <Image src={leadingMood.emoji} alt="" width={64} height={64} className="h-16 w-16 shrink-0 object-contain" />
-                  ) : <span className="text-3xl" aria-hidden="true">{leadingMood.emoji}</span>}
-                  <div className="min-w-0">
-                    <p className="text-xs text-[var(--ink-muted)]">Most shared mood</p>
-                    <p className="break-words text-lg font-bold text-[var(--ink)]">{moodLabelFromValue(leadingMood.emoji)}</p>
-                    <p className="text-xs text-[var(--ink-muted)]">{leadingMood.count.toLocaleString()} viewer{leadingMood.count === 1 ? "" : "s"}</p>
-                  </div>
-                </div>
-              )}
-              <dl className="mt-5 grid grid-cols-2 gap-4">
+            <section aria-labelledby="audience-pulse-heading" className="col-span-2 lg:col-span-1 lg:col-start-1 lg:row-start-2">
+              <h2 id="audience-pulse-heading" className="sr-only">Audience ratings</h2>
+              <dl className="flex flex-wrap gap-x-10 gap-y-5">
                 <div>
                   <dt className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ink-muted)]"><MessageCircle className="h-4 w-4 text-[var(--brand-coral)]" aria-hidden="true" />Moodies</dt>
                   <dd className="mt-2">
@@ -649,7 +635,7 @@ export default function AllReviews({
                     <span className="mt-1 block text-xs text-[var(--ink-muted)]">{reviewStats && reviewStats.totalRatings > 0 ? `${reviewStats.totalRatings.toLocaleString()} rating${reviewStats.totalRatings === 1 ? "" : "s"}` : "Not rated yet"}</span>
                   </dd>
                 </div>
-                <div className="border-l border-[var(--surface-border)] pl-4">
+                <div>
                   <dt className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ink-muted)]"><Star className="h-4 w-4 text-[var(--brand-gold)]" aria-hidden="true" />TMDb</dt>
                   <dd className="mt-2">
                     <span data-display className="text-3xl font-bold leading-none text-[var(--brand-gold)]">{info.vote_count > 0 ? info.vote_average.toFixed(1) : "—"}</span>
@@ -663,16 +649,56 @@ export default function AllReviews({
         </div>
       </div>
 
+      <section className="ui-shell pt-6 pb-3 sm:pt-8 sm:pb-4" aria-labelledby="audience-moods-heading">
+        <h2 id="audience-moods-heading" className="mb-5 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">How it felt</h2>
+        <AudienceMood moods={allMoods ?? topMoods} totalVotes={totalMoodVotes} showAll />
+      </section>
+
+      {visibleFeatured.length > 0 ? <section className="ui-shell pt-6 pb-3 sm:pt-8 sm:pb-4" aria-labelledby="featured-reviews-heading">
+        <div className="mb-5">
+          <h2 id="featured-reviews-heading" className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">Featured reviews</h2>
+          <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">The conversations getting the most reactions and replies.</p>
+        </div>
+        <div className={styles.featuredGrid}>
+          {visibleFeatured.map((review, index) => {
+            const excerpt = Array.from(review.content);
+            const mood = review.moodEmojis?.[0];
+            return <article key={review.id} className={styles.featuredCard} data-featured-review={review.id}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="ui-kicker">Most active</p>
+                <p className="text-xs tabular-nums text-[var(--ink-muted)]">{reviewActivity(review).toLocaleString()} {reviewActivity(review) === 1 ? 'interaction' : 'interactions'}</p>
+              </div>
+              <div className={styles.featuredArt}>
+                <span className={styles.featuredRank} aria-label={`Rank ${index + 1}`}>{String(index + 1).padStart(2, '0')}</span>
+                {mood ? <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <Image src={audienceMoodImage(mood)} alt="" width={80} height={80} className="h-20 w-20 object-contain" />
+                  <span className="text-sm font-bold text-[var(--ink)]">{audienceMoodLabel(mood)}</span>
+                </div> : null}
+              </div>
+              <p className="whitespace-pre-wrap break-words text-base font-semibold leading-6 text-[var(--ink)]">{excerpt.length > 140 ? `${excerpt.slice(0, 139).join('').trimEnd()}…` : review.content}</p>
+              <div className={styles.featuredFooter}>
+                <div className="flex min-w-0 items-center gap-2">
+                  <AvatarBlock review={review} href={profileHrefFor(review.userId)} size={32} />
+                  <span className="min-w-0 truncate text-sm font-semibold text-[var(--ink-muted)]">{review.author}</span>
+                </div>
+                <a href={`#review-${review.id}`} onClick={() => setExpandedReviews(current => new Set(current).add(review.id))}
+                  aria-label={`Read featured review by ${review.author}`} className="ui-secondary-action rounded-full border-0 bg-[var(--surface-2)] leading-none">Read review <ChevronDown className="h-4 w-4" aria-hidden="true" /></a>
+              </div>
+            </article>;
+          })}
+        </div>
+      </section> : null}
+
       {/* ── Controls bar ── */}
-      <section className="ui-shell py-8 sm:py-10" aria-labelledby="all-reviews-heading">
+      <section className="ui-shell pt-6 pb-4 sm:pt-8" aria-labelledby="all-reviews-heading">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 id="all-reviews-heading" className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">Audience Reviews</h2>
             <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]" role="status">{filteredAndSorted.length} review{filteredAndSorted.length === 1 ? "" : "s"}{searchQuery && ` for “${searchQuery}”`}</p>
           </div>
-          {localReviews.length > 0 ? <button type="button" onClick={openWriteModal} className="ui-primary-action leading-none" aria-label="Write a review">Write <PenSquare className="h-4 w-4" aria-hidden="true" /></button> : null}
+          {localReviews.length > 0 ? <button type="button" onClick={openWriteModal} className="ui-primary-action rounded-full shadow-none leading-none hover:translate-y-0" aria-label="Write a review">Write <PenSquare className="h-4 w-4" aria-hidden="true" /></button> : null}
         </div>
-        <div className="ui-panel mb-5 flex flex-col gap-3 rounded-xl p-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {/* Search */}
           <div className="relative min-w-0 flex-1">
             <Search
@@ -680,18 +706,18 @@ export default function AllReviews({
               className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]"
             />
             <input
-              type="text"
+              type="search"
               aria-label="Search reviews by author or content"
               placeholder="Search reviews…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-11 w-full rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)] py-2 pl-10 pr-10 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] focus-visible:border-[var(--brand-coral-strong)] focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]/30"
+              className="h-11 w-full rounded-full border-0 bg-[var(--surface-1)] py-2 pl-10 pr-12 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)] [&::-webkit-search-cancel-button]:appearance-none"
             />
-            {searchQuery ? <button type="button" onClick={() => setSearchQuery("")} aria-label="Clear search" className="absolute right-1 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center text-[var(--ink-muted)] hover:text-[var(--ink)]"><X className="h-4 w-4" aria-hidden="true" /></button> : null}
+            {searchQuery ? <button type="button" onClick={() => setSearchQuery("")} aria-label="Clear search" className="absolute right-0 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)]"><X className="h-4 w-4" aria-hidden="true" /></button> : null}
           </div>
 
           <div className="relative shrink-0">
-            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} aria-label="Sort reviews" className="ui-secondary-action h-11 w-full appearance-none pr-10 leading-none [&>option]:bg-[var(--surface-1)]">
+            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} aria-label="Sort reviews" className="ui-secondary-action h-11 w-full appearance-none rounded-full border-0 bg-[var(--surface-2)] pr-10 leading-none [&>option]:bg-[var(--surface-1)]">
               <option value="latest">Latest</option><option value="highest">Highest</option><option value="popularity">Popular</option>
             </select>
             <ArrowDownWideNarrow className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true" />
@@ -701,13 +727,14 @@ export default function AllReviews({
 
       {/* ── Reviews list ── */}
       <div className="ui-shell pb-8 sm:pb-10">
-        <div className="space-y-5">
+        <div className={styles.feed} role="region" aria-label="All reviews">
           <AnimatePresence mode="popLayout">
             {filteredAndSorted.length === 0 ? (
               <motion.div
-                initial={{ opacity: 0 }}
+                initial={reducedMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="ui-panel flex flex-col items-center justify-center gap-4 rounded-xl px-6 py-16 text-center"
+                transition={{ duration: reducedMotion ? 0 : 0.18 }}
+                className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-[var(--surface-1)] px-6 py-12 text-center"
               >
                 <BadgeMascot name="conversation-starter" className="h-24 w-24" sizes="96px" />
                 <p className="text-sm font-bold text-[var(--ink)]">
@@ -716,7 +743,7 @@ export default function AllReviews({
                     : "No reviews yet."}
                 </p>
                 <p className="max-w-sm text-sm leading-6 text-[var(--ink-muted)]">{searchQuery ? "Try another name or phrase." : "Be the first to share how this made you feel."}</p>
-                <button type="button" aria-label={searchQuery ? "Clear search" : "Write a review"} onClick={searchQuery ? () => setSearchQuery("") : openWriteModal} className="ui-secondary-action leading-none">
+                <button type="button" aria-label={searchQuery ? "Clear search" : "Write a review"} onClick={searchQuery ? () => setSearchQuery("") : openWriteModal} className="ui-secondary-action rounded-full border-0 bg-[var(--surface-2)] leading-none">
                   {searchQuery ? "Clear" : "Write"}{searchQuery ? <X className="h-4 w-4" aria-hidden="true" /> : <PenSquare className="h-4 w-4" aria-hidden="true" />}
                 </button>
               </motion.div>
@@ -741,13 +768,14 @@ export default function AllReviews({
                   <motion.div
                     key={review.id}
                     id={`review-${review.id}`}
-                    layout
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    className="ui-panel group scroll-mt-28 rounded-xl transition-colors duration-200 hover:border-[var(--brand-coral)]/40"
+                    layout={!reducedMotion}
+                    initial={reducedMotion ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: reducedMotion ? 0 : 0.18 }}
+                    className={`scroll-mt-28 ${styles.reviewRow}`}
                   >
-                    <div className="flex flex-col gap-4 px-4 pt-4 sm:px-5 sm:pt-5">
+                    <div className={styles.header}>
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="flex min-w-0 items-start gap-3">
                           <AvatarBlock
@@ -770,6 +798,9 @@ export default function AllReviews({
                             )}
                             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--ink-muted)]">
                               <span>{formatDate(review.created_at)}</span>
+                              {review.updated_at && review.updated_at !== review.created_at ? (
+                                <span title={`Updated ${formatDate(review.updated_at)}`} aria-label={`Updated ${formatDate(review.updated_at)}`}>Edited</span>
+                              ) : null}
                               {review.author_details?.username && (
                                 <span className="text-[var(--ink-muted)]">
                                   @{review.author_details.username}
@@ -779,20 +810,18 @@ export default function AllReviews({
                           </div>
                         </div>
 
-                        <div className="flex flex-shrink-0 items-center gap-2">
-                          <MoodChip value={review.moodEmojis?.[0]} />
+                        <div className="flex min-w-0 flex-wrap items-center gap-3">
                           {normalizedRating !== null && (
                             <div
-                              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+                              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-base font-bold tabular-nums"
                               style={{
                                 color: accentColor!,
                                 background: `${accentColor}18`,
-                                border: `1px solid ${accentColor}40`,
                               }}
                             >
                               <svg
-                                width="10"
-                                height="10"
+                                width="16"
+                                height="16"
                                 viewBox="0 0 24 24"
                                 fill={accentColor!}
                                 aria-hidden
@@ -800,6 +829,7 @@ export default function AllReviews({
                                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                               </svg>
                               {normalizedRating.toFixed(1)}
+                              <span className="text-xs font-normal text-[var(--ink-muted)]">/ 5</span>
                             </div>
                           )}
                         </div>
@@ -807,8 +837,9 @@ export default function AllReviews({
                     </div>
 
                     {/* Review text — hero */}
-                    <div className="px-4 pb-5 pt-4 sm:px-5">
-                      <p className="whitespace-pre-wrap break-words text-base leading-7 text-[var(--ink)]">
+                    <div className={styles.story}>
+                      <div className={styles.copy}>
+                      <p id={`content-${review.id}`} className="max-w-3xl whitespace-pre-wrap break-words text-base leading-7 text-[var(--ink)]">
                         {shouldTruncate && !isExpanded ? (
                           <>
                             {review.content.slice(0, 400)}
@@ -822,26 +853,28 @@ export default function AllReviews({
                         <button
                           onClick={() => toggleExpanded(review.id)}
                           aria-expanded={isExpanded}
+                          aria-controls={`content-${review.id}`}
                           className={`${THREAD_ACTION_CLASS} mt-3`}
                         >
-                          {isExpanded ? "Less" : "More"}
+                          {isExpanded ? "Show less" : "Keep reading"}
                           {isExpanded ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
                         </button>
                       )}
+                      </div>
                     </div>
 
                     {/* Replies */}
                     {review.replies && review.replies.length > 0 && (
-                      <div className="mx-4 mb-4 rounded-xl border border-[var(--surface-border)] bg-black/20 p-3 sm:mx-5 sm:p-4">
+                      <div className={`mx-4 mb-4 rounded-2xl bg-[var(--surface-0)] p-3 sm:mx-5 sm:p-4 ${styles.thread}`}>
                         <div className="mb-3 flex items-center justify-between gap-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--ink-muted)]">
+                          <p className="text-sm font-semibold text-[var(--ink-muted)]">
                             Replies
                           </p>
-                          <span className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-2)] px-2 py-0.5 text-xs text-[var(--ink-muted)]">
+                          <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs text-[var(--ink-muted)]">
                             {review.replies.length}
                           </span>
                         </div>
-                        <div className="relative space-y-2.5 pl-3 before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-gradient-to-b before:from-[var(--brand-coral)]/45 before:via-white/12 before:to-transparent sm:pl-4">
+                        <div id={`replies-${review.id}`} className="relative space-y-2.5 pl-3 before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-gradient-to-b before:from-[var(--brand-coral)]/45 before:via-white/12 before:to-transparent sm:pl-4">
                           {(repliesExpanded
                             ? review.replies
                             : review.replies.slice(0, 2)
@@ -850,7 +883,7 @@ export default function AllReviews({
                             return (
                               <div
                                 key={reply.id ?? i}
-                                className="relative rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 py-3 transition-colors hover:border-[var(--surface-border)] hover:bg-[var(--surface-2)]"
+                                className="relative rounded-xl bg-[var(--surface-1)] px-3 py-3"
                               >
                                 <span className="absolute -left-3 top-5 h-px w-3 bg-[var(--surface-2)] sm:-left-4 sm:w-4" />
                                 <div className="flex items-start gap-2.5">
@@ -961,9 +994,10 @@ export default function AllReviews({
                           <button
                             onClick={() => toggleReplies(review.id)}
                             aria-expanded={repliesExpanded}
+                            aria-controls={`replies-${review.id}`}
                             className={`${THREAD_ACTION_CLASS} mt-3`}
                           >
-                            {repliesExpanded ? "Less" : "More"}
+                            {repliesExpanded ? "Show fewer replies" : `Show all ${review.replies.length} replies`}
                             {repliesExpanded ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
                           </button>
                         )}
@@ -974,13 +1008,14 @@ export default function AllReviews({
                     <AnimatePresence>
                       {showReplyForm?.reviewId === review.id && (
                         <motion.div
-                          initial={{ opacity: 0, height: 0 }}
+                          initial={reducedMotion ? false : { opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
-                        className="mx-4 mb-4 space-y-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] p-3 sm:mx-5"
+                          transition={{ duration: reducedMotion ? 0 : 0.18 }}
+                          className={`mx-4 mb-4 space-y-3 rounded-2xl bg-[var(--surface-0)] p-3 sm:mx-5 ${styles.thread}`}
                         >
                           {showReplyForm?.prefill && (
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black/20 border border-[var(--surface-border)] rounded-xl">
+                            <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-[var(--surface-2)] px-3 py-1.5">
                               <span
                                 className="text-xs font-semibold"
                                 style={{ color: "var(--brand-coral)" }}
@@ -999,19 +1034,19 @@ export default function AllReviews({
                             placeholder="Write your reply…"
                             rows={3}
                             autoFocus
-                            className="w-full bg-black/20 border border-[var(--surface-border)] focus:border-[var(--brand-coral)]/45 rounded-xl px-3 py-2.5 text-sm text-[var(--ink-muted)] placeholder:text-[var(--ink-muted)] resize-none outline-none transition-colors"
+                            className="w-full resize-none rounded-xl border-0 bg-[var(--surface-2)] px-3 py-2.5 text-sm leading-6 text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)]"
                           />
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() => closeReplyForm()}
-                              className="ui-secondary-action leading-none"
+                              className="ui-secondary-action rounded-full border-0 bg-[var(--surface-2)] leading-none"
                             >
                               Cancel <X className="h-4 w-4" aria-hidden="true" />
                             </button>
                             <button
                               onClick={() => handleReplySubmit(review.id)}
                               disabled={submittingReply}
-                              className="ui-primary-action leading-none disabled:cursor-not-allowed disabled:opacity-40"
+                              className="ui-primary-action rounded-full shadow-none leading-none hover:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               {submittingReply ? "Posting…" : "Post"} <Send className="h-4 w-4" aria-hidden="true" />
                             </button>
@@ -1021,24 +1056,15 @@ export default function AllReviews({
                     </AnimatePresence>
 
                     {/* Action footer */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-[var(--surface-border)] px-4 py-3 sm:px-5">
+                    <div className={styles.actions}>
                       <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-[var(--ink-muted)]">
+                        {review.moodEmojis?.[0] ? <MoodChip value={review.moodEmojis[0]} /> : null}
                         <span>
-                          {review.replies?.length ?? 0} repl
-                          {(review.replies?.length ?? 0) === 1 ? "y" : "ies"}
+                          {reviewActivity(review).toLocaleString()} {reviewActivity(review) === 1 ? 'interaction' : 'interactions'}
                         </span>
-                        {review.updated_at &&
-                          review.updated_at !== review.created_at && (
-                            <>
-                              <span className="text-[var(--ink-muted)]">/</span>
-                              <span>
-                                Updated {formatDate(review.updated_at)}
-                              </span>
-                            </>
-                          )}
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className={styles.toolbar}>
                         {canShareReviewSnapshot && (
                           <button
                             type="button"
@@ -1055,6 +1081,7 @@ export default function AllReviews({
                           </button>
                         )}
                         <ReactionBar
+                          clickOnly
                           counts={review.reactionCounts}
                           myReaction={review.myReaction}
                           disabled={!isAuthenticated}

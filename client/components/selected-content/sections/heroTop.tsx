@@ -6,21 +6,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark,
   BookmarkCheck,
-  CalendarDays,
-  Clock3,
   Heart,
   MessageCircle,
   Play,
   Share2,
-  Sparkles,
 } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
+import { Pill } from "@/components/ui/pill";
 import { SnapshotShareModal } from "@/components/snapshot/SnapshotShareModal";
 import { useLiked } from "@/hooks/useLiked";
 import { useMediaStats } from "@/hooks/useMediaStats";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useAuth } from '@/app/context/AuthProvider';
-import { AudienceMood } from '../AudienceMood';
+import { AudienceMoodPoster } from '../AudienceMoodPoster';
+import styles from "./HeroTop.module.css";
 import WatchedTitleButton from "@/components/achievements/WatchedTitleButton";
 import { fmtCount } from "@/utils/mediaStatsClient";
 import { tmdbImage } from "@/lib/tmdb";
@@ -41,6 +40,7 @@ export type Content = {
   runtime: string;
   rating: number;
   overview: string;
+  tagline?: string;
   director?: string;
   ageRating?: string;
 };
@@ -81,23 +81,21 @@ function ScoreCard({
   label,
   score,
   detail,
-  accent = "coral",
 }: {
   label: string;
   score?: number | null;
   detail: string;
-  accent?: "coral" | "gold";
 }) {
   const hasScore = typeof score === "number" && score > 0;
   const displayScore = hasScore ? score.toFixed(1) : "—";
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-      <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--ink-muted)]">
+    <div>
+      <p className="text-xs font-semibold text-[var(--ink-muted)]">
         {label}
       </p>
       <p
-        className={`mt-1 text-2xl font-bold leading-none ${accent === "gold" ? "text-brand-gold" : "text-[var(--ink)]"}`}
+        className="mt-2 text-2xl font-bold leading-none tabular-nums text-[var(--ink)]"
       >
         {displayScore}
         {hasScore ? (
@@ -127,6 +125,7 @@ function ReadMore({ text, limit = 240 }: { text: string; limit?: number }) {
         <button
           type="button"
           className="ml-1 font-semibold text-brand-coral-strong underline-offset-4 hover:underline"
+          aria-expanded={expanded}
           onClick={() => setExpanded((value) => !value)}
         >
           {expanded ? "Less" : "More"}
@@ -137,7 +136,8 @@ function ReadMore({ text, limit = 240 }: { text: string; limit?: number }) {
 }
 
 function trailerEmbedUrl(videoKey: string) {
-  return `https://www.youtube-nocookie.com/embed/${videoKey}?autoplay=1&mute=1&playsinline=1&controls=1&rel=0&iv_load_policy=3&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
+  const autoplay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 1;
+  return `https://www.youtube-nocookie.com/embed/${videoKey}?autoplay=${autoplay}&mute=1&playsinline=1&controls=1&rel=0&iv_load_policy=3&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
 }
 
 function TrailerVideoPlayer({
@@ -179,6 +179,11 @@ function TrailerVideoPlayer({
     if (!host) return;
     let cancelled = false;
     let player: YouTubePlayer | null = null;
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handleMotionChange = () => {
+      if (motionPreference.matches) playerRef.current?.pauseVideo();
+    };
+    motionPreference.addEventListener("change", handleMotionChange);
     // Render the working embed immediately; API loading must never leave an empty player.
     // This child is owned imperatively so API cleanup cannot remove a React-owned node.
     const frame = document.createElement("iframe");
@@ -200,9 +205,10 @@ function TrailerVideoPlayer({
             if (cancelled) return;
             playerRef.current = target;
             readyRef.current = true;
+            handleMotionChange();
           },
           onStateChange: ({ data }) => {
-            if (!cancelled && data === YT_PLAYER_STATE.ENDED) {
+            if (!cancelled && !motionPreference.matches && data === YT_PLAYER_STATE.ENDED) {
               const nextKey = onEndedRef.current();
               // Restart a one-video list without recreating the player or resetting audio.
               if (nextKey === videoKeyRef.current) {
@@ -222,6 +228,7 @@ function TrailerVideoPlayer({
       readyRef.current = false;
       playerRef.current = null;
       frameRef.current = null;
+      motionPreference.removeEventListener("change", handleMotionChange);
       player?.destroy();
       frame.remove();
     };
@@ -255,7 +262,7 @@ function TrailerPlayer({
         <div className="mb-3">
           <h2
             id="trailer-heading"
-            className="text-xl font-bold leading-tight text-[var(--ink)]"
+            className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
           >
             Trailer
           </h2>
@@ -288,7 +295,7 @@ function TrailerPlayer({
         <div className="min-w-0">
           <h2
             id="trailer-heading"
-            className="text-xl font-bold leading-tight text-[var(--ink)]"
+            className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl"
           >
             Trailer
           </h2>
@@ -329,7 +336,7 @@ function TrailerPlayer({
 
         {youtubeTrailers.length > 1 ? (
           <aside
-            className="ui-panel flex min-h-0 min-w-0 flex-col overflow-hidden rounded-xl max-lg:border-0 max-lg:bg-transparent lg:h-full lg:p-3"
+            className="flex min-h-0 min-w-0 flex-col overflow-hidden lg:h-full"
             aria-label="Trailer playlist"
           >
             <div
@@ -415,6 +422,7 @@ export function HeroContentCard({
       runtime: formatRuntime(data.info.runtime || 0),
       rating: reviewStats?.totalRatings ? reviewStats.averageRating : data.info.vote_average,
       overview: data.info.overview,
+      tagline: data.info.tagline?.trim() || undefined,
       director:
         data.info.director ||
         findDirectorOrCreator(data.credits.crew, tvData?.info.created_by) ||
@@ -509,7 +517,7 @@ export function HeroContentCard({
       className="relative isolate overflow-hidden bg-surface-0"
       aria-labelledby="content-title"
     >
-      <div className="pointer-events-none absolute inset-0 opacity-60">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] opacity-40">
         <Image
           src={mappedContent.backdrop}
           alt=""
@@ -524,29 +532,65 @@ export function HeroContentCard({
       </div>
 
       <div className="ui-shell relative pt-[calc(2rem+var(--mobile-nav-safe))] pb-8 sm:pt-[calc(2.5rem+var(--mobile-nav-safe))] sm:pb-10 lg:pt-[calc(3rem+6rem)] lg:pb-12">
-        <div className="hidden" aria-hidden="true">
-          <p className="ui-kicker">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-            Content profile
-          </p>
-          <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-semibold text-[var(--ink-muted)]">
-            {contentType === "tv" ? "Series" : "Film"} · review before you decide
-          </span>
-        </div>
+        <div className="grid grid-cols-[calc(min(6rem,25%)_+_4.5rem)_minmax(0,1fr)] items-start gap-x-5 gap-y-6 sm:grid-cols-[calc(min(8rem,25%)_+_4.5rem)_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-x-16 lg:gap-y-8 xl:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="col-start-1 row-start-1 lg:col-start-2 lg:row-span-2">
+            <AudienceMoodPoster poster={mappedContent.poster} title={mappedContent.title} moods={topMoods} totalVotes={totalMoodVotes} />
+          </div>
 
-        <div className="grid items-start gap-5 lg:grid-cols-[12rem_minmax(0,1fr)] xl:grid-cols-[14rem_minmax(0,1fr)] xl:gap-7">
-          <div>
-            <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-surface-1 shadow-2xl shadow-black/40">
-              <Image
-                src={mappedContent.poster}
-                alt={`${mappedContent.title} poster`}
-                fill
-                sizes="(max-width: 1023px) 10rem, 14rem"
-                priority
-                className="object-cover"
-              />
+          <div className="col-start-2 row-start-1 min-w-0 self-center lg:col-start-1 lg:self-start">
+            <p className="ui-kicker">{contentType === "tv" ? "Series" : "Film"}</p>
+
+            <h1
+              id="content-title"
+              className="mt-2 max-w-3xl text-balance text-[2.1rem] font-bold leading-[0.98] tracking-normal text-[var(--ink)] [overflow-wrap:anywhere] min-[390px]:text-[2.45rem] sm:text-[clamp(2.45rem,4.6vw,4rem)] sm:leading-[0.96] xl:text-[clamp(2.45rem,4.2vw,4.8rem)]"
+            >
+              {mappedContent.title}
+            </h1>
+
+            {mappedContent.tagline?.trim() ? (
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-muted)] sm:text-base">
+                {mappedContent.tagline.trim()}
+              </p>
+            ) : null}
+
+            <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-[var(--ink-muted)]">
+              <span>{mappedContent.year}</span>
+              <span aria-hidden="true">&middot;</span>
+              <span>{mappedContent.runtime}</span>
+              {contentType === "tv" && tvInfo?.number_of_seasons ? (
+                <><span aria-hidden="true">&middot;</span><span>{tvInfo.number_of_seasons} {tvInfo.number_of_seasons === 1 ? "season" : "seasons"}</span></>
+              ) : null}
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
+          </div>
+
+          <div className="col-span-2 min-w-0 lg:col-span-1 lg:col-start-1 lg:row-start-2">
+            {mappedContent.genres.length > 0 || mappedContent.ageRating ? (
+              <div className="flex flex-wrap items-start gap-2">
+                {mappedContent.genres.length > 0 ? (
+                  <Pill variant="genre">
+                    {mappedContent.genres.join(" / ")}
+                  </Pill>
+                ) : null}
+                {mappedContent.ageRating ? (
+                  <Pill variant="age-rating">
+                    {mappedContent.ageRating}
+                  </Pill>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="mt-5 max-w-xl sm:max-w-2xl">
+              <ReadMore text={mappedContent.overview} />
+            </div>
+
+            {mappedContent.director && mappedContent.director !== "Unknown" ? (
+              <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
+                {contentType === "tv" ? "Created by" : "Directed by"}{" "}
+                <span className="font-semibold text-[var(--ink)]">{mappedContent.director}</span>
+              </p>
+            ) : null}
+
+            <div className="mt-6 flex flex-wrap gap-x-8 gap-y-4" aria-label="Audience ratings">
               <ScoreCard
                 label="Moodies"
                 score={hasReviewScore ? reviewStats?.averageRating : null}
@@ -556,78 +600,10 @@ export function HeroContentCard({
                 label="TMDb"
                 score={data?.info.vote_average}
                 detail={`${fmtCount(data?.info.vote_count ?? 0)} votes`}
-                accent="gold"
               />
             </div>
-          </div>
 
-          <div className="min-w-0 lg:pt-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-[var(--ink-muted)]">
-              <span>{mappedContent.year}</span>
-              <span aria-hidden="true">·</span>
-              <span>{mappedContent.runtime}</span>
-              {mappedContent.ageRating ? (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span>{mappedContent.ageRating}</span>
-                </>
-              ) : null}
-              {contentType === "tv" && tvInfo?.number_of_seasons ? (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span>{tvInfo.number_of_seasons} seasons</span>
-                </>
-              ) : null}
-            </div>
-
-            <h1
-              id="content-title"
-              className="mt-3 max-w-3xl text-balance text-[2.1rem] font-bold leading-[0.98] tracking-normal text-[var(--ink)] min-[390px]:text-[2.45rem] sm:text-[clamp(2.45rem,4.6vw,4rem)] sm:leading-[0.96] xl:text-[clamp(2.45rem,4.2vw,4.8rem)]"
-            >
-              {mappedContent.title}
-            </h1>
-
-            {data?.info.tagline ? (
-              <p className="mt-3 max-w-2xl text-base font-semibold leading-6 text-[var(--ink)]/80">
-                {data.info.tagline}
-              </p>
-            ) : null}
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {mappedContent.genres.slice(0, 4).map((genre) => (
-                <span
-                  key={genre}
-                  className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs font-semibold text-[var(--ink-muted)]"
-                >
-                  {genre}
-                </span>
-              ))}
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs text-[var(--ink-muted)]">
-              <span className="inline-flex items-center gap-1.5">
-                <CalendarDays className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
-                {contentType === "tv" ? "First aired" : "Released"} {mappedContent.year}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Clock3 className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
-                {mappedContent.runtime}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
-                {contentType === "tv" ? "Created by" : "Directed by"} {mappedContent.director || "Unknown"}
-              </span>
-            </div>
-
-            <div className="mt-5 max-w-2xl">
-              <div className="mt-2">
-                <ReadMore text={mappedContent.overview} />
-              </div>
-            </div>
-
-            {topMoods.length > 0 ? <div className="mt-5 max-w-2xl"><AudienceMood moods={topMoods} totalVotes={totalMoodVotes} compact /></div> : null}
-
-            <div className="mt-5 grid auto-cols-fr grid-flow-col gap-2.5 sm:flex sm:flex-wrap">
+            <div className={`${styles.actions} mt-6 flex flex-wrap gap-2.5`}>
               <Link href={reviewHref} className="ui-primary-action leading-none">
                 <MessageCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span className="sr-only sm:not-sr-only">Reviews</span>
@@ -651,7 +627,7 @@ export function HeroContentCard({
               ) : null}
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t border-[var(--surface-border)] pt-4 text-sm text-[var(--ink-muted)]" role="status" aria-atomic="true" aria-busy={statsLoading}>
+            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[var(--ink-muted)]" role="status" aria-atomic="true" aria-busy={statsLoading}>
               {statsError ? (
                 <button type="button" onClick={refreshStats} className="min-h-11 text-sm font-semibold underline underline-offset-4">Counts unavailable · Retry</button>
               ) : (
@@ -664,7 +640,7 @@ export function HeroContentCard({
             </div>
           </div>
 
-          <div className="min-w-0 lg:col-span-2">
+          <div className="col-span-2 mt-2 min-w-0 lg:mt-4">
             <TrailerPlayer
               trailers={trailerOptions}
               title={mappedContent.title}

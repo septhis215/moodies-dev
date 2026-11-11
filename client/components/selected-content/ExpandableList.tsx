@@ -21,11 +21,11 @@ export function ExpandableList<T>({ items, limit, label, renderItem, className =
           </motion.div> : null}
         </AnimatePresence>
       </div>
-      {more > 0 ? <button type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded} aria-controls={id}
-        className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-coral-strong focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-coral-strong">
+      {more > 0 ? <div className="mt-3 flex justify-end"><button type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded} aria-controls={id}
+        className="ui-secondary-action leading-none rounded-full border-0 bg-[var(--surface-2)]">
         {expanded ? `Show fewer ${label}` : `Show all ${items.length} ${label}`}
         <ChevronDown size={16} className={`transition-transform motion-reduce:transition-none ${expanded ? 'rotate-180' : ''}`} aria-hidden="true" />
-      </button> : null}
+      </button></div> : null}
     </div>
   );
 }

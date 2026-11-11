@@ -1,0 +1,51 @@
+.actions > :global(.ui-primary-action),
+.actions > :global(.ui-secondary-action) {
+  border: 0;
+  border-radius: 999px;
+  flex: 1 0 2.75rem;
+  box-shadow: none;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+@media (min-width: 640px) {
+  .actions > :global(.ui-primary-action),
+  .actions > :global(.ui-secondary-action) {
+    flex: 0 1 auto;
+  }
+}
+
+.actions > :global(.ui-primary-action):hover {
+  transform: none;
+}
+
+.actions > :global(.ui-secondary-action) {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.actions > :global(.ui-secondary-action):hover {
+  background: var(--surface-border);
+}
+
+.actions > :global(.ui-secondary-action)[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--brand-coral-strong) 16%, var(--surface-2));
+  color: var(--brand-coral-strong);
+}
+
+.actions > button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+.actions > :global(.ui-primary-action):active,
+.actions > :global(.ui-secondary-action):active {
+  background: var(--surface-border);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actions > :global(.ui-primary-action),
+  .actions > :global(.ui-secondary-action) {
+    transition: none;
+  }
+}
