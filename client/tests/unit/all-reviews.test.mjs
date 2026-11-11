@@ -11,10 +11,15 @@ function compile(path) {
 }
 const reviewsCode = compile("../../components/selected-content/extended/allReviews.tsx");
 const layoutCode = compile("../../app/client-layout.tsx");
+const audienceModule = { exports: {} };
+vm.runInNewContext(compile('../../components/selected-content/AudienceMood.tsx'), {
+  module: audienceModule, exports: audienceModule.exports,
+  require: () => ({}),
+});
 const info = { id: 123, title: "Lanterns", release_date: "2026", content_type: "tv", genres: [], vote_average: 8.4, vote_count: 477 };
 const review = (id, author, rating, date) => ({ id, author, author_details: { rating }, content: `${author}'s thoughtful review`, created_at: date, updated_at: date, url: "" });
 
-function harness(code, { reviews = [], authenticated = true, pathname = "/tv/123/reviews" } = {}) {
+function harness(code, { reviews = [], authenticated = true, pathname = "/tv/123/reviews", reducedMotion = false } = {}) {
   const mod = { exports: {} }, states = [], messages = [];
   let cursor = 0;
   const jsx = (type, props) => ({ type, props });
@@ -32,7 +37,9 @@ function harness(code, { reviews = [], authenticated = true, pathname = "/tv/123
       };
       if (name === "next/link") return { default: "Link" };
       if (name === "next/navigation") return { usePathname: () => pathname, useRouter: () => ({ refresh() {} }) };
-      if (name === "framer-motion") return { motion: { div: "motion.div" }, AnimatePresence: "AnimatePresence" };
+      if (name === "framer-motion") return { motion: { div: "motion.div" }, AnimatePresence: "AnimatePresence", useReducedMotion: () => reducedMotion };
+      if (name === '../AudienceMood') return audienceModule.exports;
+      if (name.endsWith('.module.css')) return { default: new Proxy({}, { get: (_, key) => String(key) }) };
       if (name === "@/app/context/AuthProvider") return { useAuth: () => ({ isAuthenticated: authenticated, user: { id: "me" } }) };
       if (name === "@/hooks/useReviewBanStatus") return { useReviewBanStatus: () => ({ banStatus: { banned: false } }) };
       if (name === "@/app/context/ToastContext") return { useToast: () => ({ toast: (...args) => messages.push(args) }) };
@@ -106,12 +113,25 @@ test("review header gives the title its own hierarchy and groups real audience s
   });
   assert.equal(nodes.find((n) => n.type === "h1").props.children, "Lanterns");
   assert.ok(nodes.some((n) => n.type === "section" && n.props["aria-labelledby"] === "audience-pulse-heading"));
-  assert.ok(nodes.some((n) => n.type === "p" && n.props.children === "Loved It"));
+  assert.ok(nodes.some((n) => n.props.showAll === true && n.props.moods === topMoods));
   assert.ok(nodes.some((n) => n.type === "span" && n.props.children === "10.0"));
   assert.ok(nodes.some((n) => n.type === "span" && n.props.children === "1 rating"));
   assert.ok(nodes.some((n) => n.type === "span" && n.props.children === "477 votes"));
   assert.equal(nodes.filter((n) => n.type === "circle").length, 0);
   assert.equal(topMoods[0].count, 1, "Rendering must not mutate API mood ordering");
+});
+
+test('the all-reviews chart receives the complete aggregate independently of search and pagination', () => {
+  const allMoods = ['amazing', 'loved-it', 'enjoyed-it', 'its-okay', 'meh', 'skip-it'].map((name, index) => ({ emoji: `/images/review-icons/${name}.png`, count: 6 - index }));
+  const app = harness(reviewsCode);
+  const props = { reviews: [review('one', 'Alex', 10, '2026-01-01')], info, allMoods, topMoods: allMoods.slice(0, 3), totalMoodVotes: 21 };
+  let nodes = app.render(props);
+  const chart = nodes.find(node => node.props.showAll);
+  assert.equal(chart.props.moods, allMoods);
+  assert.equal(chart.props.totalVotes, 21);
+  nodes.find(node => node.type === 'input').props.onChange({ target: { value: 'no match' } });
+  nodes = app.render(props);
+  assert.equal(nodes.find(node => node.props.showAll).props.moods, allMoods);
 });
 
 test("missing audience signals render honest empty summaries without a fabricated mood", () => {
@@ -161,4 +181,41 @@ test("mood badge shows only its value centered beside the mascot", () => {
   assert.equal(label.props.children, "Amazing");
   assert.match(label.props.className, /leading-none/);
   assert.doesNotMatch(label.props.className, /uppercase/);
+});
+
+test('reduced motion removes review entrances and layout movement', () => {
+  const nodes = harness(reviewsCode, { reviews: [review('one', 'Alex', 10, '2026-01-01')], reducedMotion: true }).render();
+  const card = nodes.find(node => node.props.id === 'review-one');
+  assert.equal(card.props.initial, false);
+  assert.equal(card.props.layout, false);
+  assert.equal(card.props.transition.duration, 0);
+});
+
+test('popular sorting counts reactions, replies, and reply reactions rather than ratings or length', () => {
+  const inactive = { ...review('inactive', 'Sam', 10, '2026-11-11'), content: 'Very long. '.repeat(100) };
+  const active = { ...review('active', 'Alex', 2, '2026-01-01'), reactionCounts: [{ type: 'LOVE', count: 2 }], replies: [{ content: 'A reply', created_at: '2026-02-01', user: { username: 'Jordan' }, reactionCounts: [{ type: 'LIKE', count: 3 }] }] };
+  const app = harness(reviewsCode, { reviews: [inactive, active] });
+  app.render().find(node => node.type === 'select').props.onChange({ target: { value: 'popularity' } });
+  const cards = app.render().filter(node => node.props.id?.startsWith('review-'));
+  assert.deepEqual(cards.map(node => node.props.id), ['review-active', 'review-inactive']);
+});
+
+test('featured previews lead to full reviews in a single shared list without duplicating full entries', () => {
+  const older = { ...review('featured', 'Alex', 2, '2026-01-01'), reactionCounts: [{ type: 'LOVE', count: 5 }] };
+  const newer = review('new', 'Sam', 10, '2026-11-11');
+  const props = { reviews: [newer, older], featuredReviews: [older], info };
+  const nodes = harness(reviewsCode).render(props);
+  const cards = nodes.filter(node => node.props.id?.startsWith('review-'));
+  assert.deepEqual(cards.map(node => node.props.id), ['review-new', 'review-featured']);
+  assert.equal(nodes.filter(node => node.props['data-featured-review'] === 'featured').length, 1);
+  assert.equal(nodes.filter(node => node.props['aria-label'] === 'All reviews').length, 1);
+  const read = nodes.find(node => node.props['aria-label'] === 'Read featured review by Alex');
+  assert.equal(read.props.href, '#review-featured');
+  const remote = harness(reviewsCode).render({ ...props, reviews: [newer] });
+  assert.ok(remote.some(node => node.props.id === 'review-featured'));
+});
+
+test('reviews without engagement are never labeled featured', () => {
+  const nodes = harness(reviewsCode, { reviews: [review('one', 'Alex', 10, '2026-11-11')] }).render();
+  assert.equal(nodes.some(node => node.props['data-featured-review']), false);
 });

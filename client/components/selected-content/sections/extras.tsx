@@ -83,18 +83,29 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
       className="ui-shell scroll-mt-24 py-8 sm:py-10"
       aria-labelledby="details-heading"
     >
-      <SectionHeader id="details-heading" title="Cast and production" />
+      <header className="max-w-2xl">
+        <h2
+          id="details-heading"
+          className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
+        >
+          The making of it
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
+          A useful credit trail, followed by where the title is made and where
+          it may be available.
+        </p>
+      </header>
 
       {credits.cast.length > 0 ? (
-        <div className="mt-8 border-t border-[var(--surface-border)] pt-6">
+        <div className="mt-8 sm:mt-10">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h3 className="text-xl font-semibold text-[var(--ink)]">Cast</h3>
+              <h3 className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl">Cast</h3>
               <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
                 The performers most closely tied to the story.
               </p>
             </div>
-            {contentId && <Link href={creditsHref} className="ui-secondary-action leading-none ml-auto sm:ml-0" aria-label="View full cast and crew">
+            {contentId && <Link href={creditsHref} className="ui-secondary-action leading-none rounded-full border-0 bg-[var(--surface-2)] ml-auto" aria-label="View full cast and crew">
               Credits <Users2 size={16} aria-hidden="true" />
             </Link>}
           </div>
@@ -107,7 +118,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
           </div>
 
           {credits.cast.length > 12 ? (
-            <div className="mt-6 hidden flex-wrap gap-2 sm:flex">
+            <div className="mt-6 hidden flex-wrap justify-end gap-2 sm:flex">
               {castLimit < credits.cast.length ? (
                 <button
                   type="button"
@@ -116,7 +127,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
                       Math.min(current + 12, credits.cast.length),
                     )
                   }
-                  className="ui-secondary-action leading-none"
+                  className="ui-secondary-action leading-none rounded-full border-0 bg-[var(--surface-2)]"
                 >
                   More
                   <ChevronDown className="h-4 w-4" aria-hidden="true" />
@@ -126,7 +137,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
                 <button
                   type="button"
                   onClick={() => setCastLimit(12)}
-                  className="ui-secondary-action leading-none"
+                  className="ui-secondary-action leading-none rounded-full border-0 bg-[var(--surface-2)]"
                 >
                   Less
                   <ChevronUp className="h-4 w-4" aria-hidden="true" />
@@ -138,7 +149,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
       ) : null}
 
       {keyCrew.length > 0 ? (
-        <section className="mt-8 border-t border-[var(--surface-border)] pt-6" aria-labelledby="key-crew-heading">
+        <section className="mt-8 sm:mt-10" aria-labelledby="key-crew-heading">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h3 id="key-crew-heading" className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl">
@@ -148,7 +159,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
                 The people shaping the story.
               </p>
             </div>
-            {contentId && <Link href={creditsHref} className="ui-secondary-action leading-none" aria-label="View full cast and crew">
+            {contentId && <Link href={creditsHref} className="ui-secondary-action leading-none rounded-full border-0 bg-[var(--surface-2)] ml-auto" aria-label="View full cast and crew">
               Credits <Users2 size={16} aria-hidden="true" />
             </Link>}
           </div>
@@ -172,9 +183,9 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
       ) : null}
 
       {hasDistribution ? (
-        <div className="mt-8 grid gap-8 border-t border-[var(--surface-border)] pt-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="mt-8 grid gap-8 sm:mt-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div>
-            <h3 className="text-xl font-semibold text-[var(--ink)]">Origin</h3>
+            <h3 className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl">Origin</h3>
             <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
               Production countries and companies attached to the title.
             </p>
@@ -201,7 +212,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
           <div>
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h3 className="text-xl font-semibold text-[var(--ink)]">
+                <h3 className="text-xl font-bold leading-tight text-[var(--ink)] sm:text-2xl">
                   Where to watch
                 </h3>
                 <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
@@ -227,7 +238,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
                     value={providerSearch}
                     onChange={(event) => setProviderSearch(event.target.value)}
                     placeholder="Search providers"
-                    className="h-10 w-full border-b border-[var(--surface-border)] bg-transparent pl-9 pr-3 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--ink-muted)] focus:border-brand-coral-strong"
+                    className="h-11 w-full rounded-full border-0 bg-[var(--surface-1)] pl-9 pr-4 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)]"
                   />
                 </label>
                 <div className="mt-4">

@@ -92,10 +92,12 @@ test("crew renders vertical labels without images and cast actions match the Cre
     assert.equal(link.props.children[0], "Credits ");
     assert.match(link.props.className, /^ui-secondary-action leading-none/);
   }
-  assert.match(links[0].props.className, /ml-auto sm:ml-0/);
-  assert.equal(links[1].props.className, "ui-secondary-action leading-none");
+  for (const link of links) {
+    assert.match(link.props.className, /ml-auto/);
+    assert.match(link.props.className, /rounded-full border-0/);
+  }
   const more = nodes.find((node) => node.type === "button" && node.props.children[0]?.trim() === "More");
-  assert.equal(more.props.className, links[1].props.className);
+  assert.equal(`${more.props.className} ml-auto`, links[1].props.className);
   const crewSection = nodes.find((node) => node.type === "section" && node.props["aria-labelledby"] === "key-crew-heading");
   nodes.length = 0;
   walk(crewSection);

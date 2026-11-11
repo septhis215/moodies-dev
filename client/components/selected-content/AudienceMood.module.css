@@ -1,17 +1,19 @@
-.panel { padding: 1.25rem; border: 1px solid var(--surface-border); border-radius: 12px; background: var(--surface-1); }
-.header { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
-.eyebrow { display: flex; align-items: center; gap: 0.5rem; color: var(--ink-muted); font-size: 0.75rem; }
-.header h3 { margin-top: 0.5rem; color: var(--ink); font-size: 1.5rem; font-weight: 600; line-height: 1.2; }
-.percentage { display: flex; align-items: baseline; gap: 2px; color: var(--brand-coral-strong); font-size: 2.25rem; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
-.percentage small { font-size: 1rem; }
-.spectrum { display: flex; gap: 3px; height: 6px; margin-top: 1.5rem; overflow: hidden; border-radius: 3px; }
-.spectrum span { min-width: 2px; border-radius: 1px; }
-.legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-top: 1.25rem; }
-.legend li { min-width: 0; }
-.legendLabel { display: flex; align-items: center; gap: 0.375rem; font-size: 0.875rem; font-weight: 500; color: var(--ink); }
-.legendLabel i { width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; }
-.legend li > span { display: block; margin-top: 0.375rem; color: var(--ink-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
-.source { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--surface-border); font-size: 0.75rem; color: var(--ink-muted); }
+.distribution { width: 100%; }
+.distributionHeader { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
+.spectrum { display: flex; gap: 0.25rem; height: 0.75rem; overflow: hidden; border-radius: 999px; }
+.spectrum span { min-width: 0; border-radius: 999px; }
+.moodGrid { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
+.moodItem { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; min-width: 0; }
+.moodImage { display: block; flex-shrink: 0; width: 7rem; max-width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; }
+.moodCopy { min-width: min(100%, 8rem); overflow-wrap: anywhere; }
+.dot { display: inline-block; width: 0.5rem; height: 0.5rem; margin-inline-end: 0.5rem; border-radius: 50%; vertical-align: middle; }
+.percentage { margin-top: 0.75rem; color: var(--ink); font-size: 1.875rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.percentage span { margin-inline-start: 0.125rem; font-size: 1rem; font-weight: 500; }
+.otherMoods { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 1.5rem; color: var(--ink-muted); font-size: 0.875rem; line-height: 1.5rem; font-variant-numeric: tabular-nums; }
+.empty { display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem; }
+.empty > div { flex: 1 1 8rem; min-width: 0; }
+
+/* Retain the compact presentation for callers that explicitly request it. */
 .compact { display: flex; align-items: center; gap: 1rem; padding: 0.875rem 0; border-top: 1px solid var(--surface-border); border-bottom: 1px solid var(--surface-border); }
 .compactIcon { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--surface-border); color: var(--brand-coral-strong); }
 .compactMain { flex: 1; min-width: 0; }
@@ -20,4 +22,16 @@
 .compactEnd { width: 6rem; flex-shrink: 0; }
 .compactEnd > span { display: block; color: var(--brand-coral-strong); font-size: 1.25rem; font-weight: 500; text-align: right; font-variant-numeric: tabular-nums; }
 .compactEnd .spectrum { margin-top: 0.5rem; height: 4px; }
-@media (min-width: 640px) { .panel { padding: 1.5rem; } }
+
+@media (min-width: 640px) {
+  .moodGrid { grid-template-columns: repeat(var(--mood-columns), minmax(0, 1fr)); gap: 2rem; margin-top: 2rem; }
+  .allMoods { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .moodItem { flex-direction: column; align-items: flex-start; }
+  .moodImage { width: 9rem; }
+  .percentage { font-size: 2.25rem; }
+}
+
+@media (min-width: 1024px) {
+  .allMoods { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .moodItem { flex-direction: row; align-items: center; }
+}
