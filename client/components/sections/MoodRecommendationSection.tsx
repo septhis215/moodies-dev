@@ -1,5 +1,6 @@
 "use client";
 
+import SectionHeader from "@/components/ui/SectionHeader";
 import { tmdbImage } from "@/lib/tmdb";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
@@ -460,21 +461,12 @@ export default function MoodRecommendationsSection({
       className="relative mx-auto w-full max-w-7xl overflow-hidden border-t border-[var(--surface-border)] pt-6 sm:pt-7"
       aria-labelledby="mood-matcher-heading"
     >
-      <div className="mb-5 max-w-2xl sm:mb-6">
-        <p className="ui-kicker">Find your mood</p>
-        <h2 id="mood-matcher-heading" className="mt-2 text-balance text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
-          Mood matcher
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-          Pick how you feel and find{" "}
-          {mediaType === "tv"
-            ? "a series"
-            : mediaType === "movie"
-              ? "a movie"
-              : "something"}{" "}
-          to watch.
-        </p>
-      </div>
+      <SectionHeader
+        id="mood-matcher-heading"
+        title="Mood matcher"
+        description={`Pick how you feel and find ${mediaType === "tv" ? "a series" : mediaType === "movie" ? "a movie" : "something"} to watch.`}
+        className="mb-5 sm:mb-6"
+      />
 
       <AnimatePresence mode="wait">
         {!selectedMood && (

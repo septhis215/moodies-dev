@@ -1,3 +1,4 @@
+import SectionHeader from "@/components/ui/SectionHeader";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import styles from "./celebrity-hub.module.css";
@@ -20,21 +21,10 @@ export default function CelebrityHubHeader({
   hero?: boolean;
 }) {
   return (
-    <header className="ui-shell pt-8 lg:pt-24">
+    <div className="ui-shell pt-8 lg:pt-24">
       <div className="mb-6 flex items-end justify-between gap-6 sm:mb-7">
-        <div>
-          <p className="ui-kicker mb-3">
-            {hero ? "Moodies / People & stories" : "Moodies / Celebrity hub"}
-          </p>
-          <h1 className="text-4xl font-bold leading-none sm:text-5xl">
-            {title}
-          </h1>
-          {!hero && (
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
-              {description}
-            </p>
-          )}
-        </div>
+        <SectionHeader as="h1" title={title} description={hero ? undefined : description} />
+
         {hero && (
           <p className="hidden max-w-xs text-sm leading-6 text-[var(--ink-muted)] md:block">
             {description}
@@ -63,6 +53,6 @@ export default function CelebrityHubHeader({
           </Link>
         )}
       </div>
-    </header>
+    </div>
   );
 }

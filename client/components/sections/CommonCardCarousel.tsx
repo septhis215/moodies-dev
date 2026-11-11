@@ -1,6 +1,7 @@
 "use client";
 
 import type { All } from "@/types/all";
+import SectionHeader from "@/components/ui/SectionHeader";
 import { Carousel } from "@/components/ui/Carousel";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useRouter } from "next/navigation";
@@ -89,13 +90,8 @@ export default function CommonCardCarousel({
 
   return (
     <section className="relative" aria-label={title}>
-      {showHeader ? <div className="flex flex-col gap-2 mb-8">
-        <h2 className="text-3xl sm:text-4xl font-black text-white">{title}</h2>
-        {subtitle && (
-          <p className="text-gray-400 text-sm font-medium">{subtitle}</p>
-        )}
-      </div> : null}
-      <Carousel items={items} CardComponent={MovieCard} mobileBleed={false} />
+      {showHeader && <SectionHeader title={title} description={subtitle} className="mb-5" />}
+      <Carousel items={items} CardComponent={MovieCard} label={title} mobileBleed={false} />
     </section>
   );
 }

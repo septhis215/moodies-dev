@@ -1,5 +1,6 @@
 "use client";
 
+import SectionHeader from "@/components/ui/SectionHeader";
 import { ChevronLeft, ChevronRight, Expand, Play, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
@@ -129,18 +130,8 @@ export default function ImageVideoCarousel({
       className="ui-shell scroll-mt-24 py-8 sm:py-10"
       aria-labelledby="media-archive-heading"
     >
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-2xl">
-          <h2
-            id="media-archive-heading"
-            className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
-          >
-            Media archive
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-            Explore the artwork, stills, and videos.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <SectionHeader id="media-archive-heading" title="Media archive" />
 
         <div className="flex items-center gap-3 text-xs text-[var(--ink-muted)]">
           <div className="flex flex-wrap gap-1" role="group" aria-label="Media type">
@@ -167,7 +158,7 @@ export default function ImageVideoCarousel({
             )}
           </div>
         </div>
-      </header>
+      </div>
 
       <div
         className={`mt-6 grid min-w-0 items-start gap-4 ${

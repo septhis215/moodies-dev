@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import SectionHeader from "@/components/ui/SectionHeader";
 import {
   useMemo,
   useState,
@@ -223,22 +224,14 @@ export function CategoryContent({
       ) : null}
 
       <div className="ui-shell pb-16 pt-24 sm:pt-32">
-        <header className="max-w-3xl">
-          <p className="ui-kicker">Featured collection</p>
-          <h1 className="mt-2 text-balance text-4xl font-bold leading-none text-[var(--ink)] sm:text-5xl">
-            {title}
-          </h1>
-          {subtitle ? (
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-              {subtitle}
-            </p>
-          ) : null}
+        <div className="max-w-3xl">
+          <SectionHeader as="h1" title={title} description={subtitle} />
           {total > 0 ? (
             <p className="mt-3 text-xs font-semibold text-[var(--ink-muted)]">
               {total.toLocaleString()} {total === 1 ? "title" : "titles"}
             </p>
           ) : null}
-        </header>
+        </div>
 
         <div className="mt-8 border-t border-[var(--surface-border)] pt-6 sm:mt-10 sm:pt-8">
           <div

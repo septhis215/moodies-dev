@@ -1,5 +1,6 @@
 "use client";
 
+import SectionHeader from "@/components/ui/SectionHeader";
 import Link from "next/link";
 import { ArrowUpRight, ChevronDown, ChevronUp, Search, Users2 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -82,18 +83,7 @@ export default function ExtraDetails({ data, contentId }: DetailsProps) {
       className="ui-shell scroll-mt-24 py-8 sm:py-10"
       aria-labelledby="details-heading"
     >
-      <header className="max-w-2xl">
-        <h2
-          id="details-heading"
-          className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
-        >
-          The making of it
-        </h2>
-        <p className="mt-3 text-base leading-7 text-[var(--ink-muted)]">
-          A useful credit trail, followed by where the title is made and where
-          it may be available.
-        </p>
-      </header>
+      <SectionHeader id="details-heading" title="Cast and production" />
 
       {credits.cast.length > 0 ? (
         <div className="mt-8 border-t border-[var(--surface-border)] pt-6">

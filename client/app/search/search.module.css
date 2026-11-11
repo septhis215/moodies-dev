@@ -8,13 +8,6 @@
   min-width: 0;
   padding-bottom: 1.5rem;
 }
-.heading {
-  font-size: 1.875rem;
-  font-weight: 700;
-  line-height: 1.05;
-  margin-bottom: 1.25rem;
-  overflow-wrap: anywhere;
-}
 .search {
   display: flex;
   gap: 0.5rem;
@@ -769,9 +762,6 @@
   margin-bottom: 0.75rem;
 }
 @media (min-width: 640px) {
-  .heading {
-    font-size: 2.25rem;
-  }
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.75rem 1rem;
@@ -836,12 +826,9 @@
   }
   .header .search {
     grid-column: 2;
-    grid-row: 1 / span 2;
+    grid-row: 1;
     width: 100%;
     align-self: end;
-  }
-  .heading {
-    margin-bottom: 0;
   }
   .grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));

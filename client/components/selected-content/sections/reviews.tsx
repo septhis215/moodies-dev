@@ -1,5 +1,6 @@
 "use client";
 
+import SectionHeader from "@/components/ui/SectionHeader";
 import { tmdbImage } from "@/lib/tmdb";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import React, { useMemo, useState } from "react";
@@ -157,19 +158,11 @@ export default function ReviewsSection({
       >
         {/* ── Header ── */}
         <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-          <div>
-            <h2
-              id="reviews-heading"
-              className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
-            >
-              Audience Reviews
-            </h2>
-            {sorted.length > 0 ? (
-              <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-                {sorted.length} review{sorted.length !== 1 ? "s" : ""} from the community
-              </p>
-            ) : null}
-          </div>
+          <SectionHeader
+            id="reviews-heading"
+            title="Audience Reviews"
+            description={sorted.length ? `${sorted.length} review${sorted.length === 1 ? "" : "s"} from the community` : undefined}
+          />
 
           <div className="flex flex-wrap items-center gap-2">
             {sorted.length > 0 ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import SectionHeader from "@/components/ui/SectionHeader";
 import { tmdbImage } from "@/lib/tmdb";
 import { LoadingRegion, SkeletonGrid } from "@/components/loading/PageSkeleton";
 import { ChevronDown, Bookmark, BookmarkCheck, Sparkles } from "lucide-react";
@@ -279,23 +280,18 @@ export function ComingSoonSection({
 
   return (
     <section
-      id="upcoming"
+      id="upcoming" aria-labelledby="upcoming-release-heading"
       className="relative mx-auto w-full max-w-7xl border-t border-[var(--surface-border)] py-6 sm:py-7"
       aria-busy={isLoading}
     >
       <div>
         <div className="mb-5 flex flex-wrap items-end justify-between gap-3 sm:mb-6">
-          <div className="min-w-0 flex-1 basis-64">
-            <p className="ui-kicker">Release radar</p>
-            <h2 className="mt-2 text-balance text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
-              {title}
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-              {type === "tv"
-                ? "Upcoming series premieres, organised by week. Save a show for later."
-                : "Upcoming movie releases, organised by week. Save a film for later."}
-            </p>
-          </div>
+          <SectionHeader
+            id="upcoming-release-heading"
+            title={title}
+            description={type === "tv" ? "Upcoming series premieres by week." : "Upcoming movie releases by week."}
+            className="min-w-0 flex-1 basis-64"
+          />
           {!isLoading && !error && <p className="shrink-0 text-sm text-[var(--ink-muted)]">
             <span className="font-semibold text-[var(--ink)]">
               {totalReleases}

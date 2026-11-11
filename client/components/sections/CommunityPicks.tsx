@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import SectionHeader from "@/components/ui/SectionHeader";
 import { ArrowUpRight, MessageCircle } from "lucide-react";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
@@ -414,20 +415,7 @@ export default function CommunityPicks({
     >
       <div>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="ui-kicker">
-              Community signal
-            </p>
-            <h2 id="community-heading" className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
-              {title}
-            </h2>
-
-            {subtitle && (
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-                {subtitle}
-              </p>
-            )}
-          </div>
+          <SectionHeader id="community-heading" title={title} description={subtitle} />
 
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[var(--ink-muted)] lg:border-l lg:border-[var(--surface-border)] lg:pl-3">
             <MessageCircle className="h-3.5 w-3.5 text-[var(--brand-coral-strong)]" />

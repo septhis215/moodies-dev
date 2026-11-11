@@ -158,9 +158,9 @@ export default function CollectionClient() {
     <main className="min-h-screen bg-[var(--surface-0)] pb-20 pt-24 text-[var(--ink)] sm:pt-32">
       <div className="ui-shell">
         <SectionHeader
-          eyebrow="Your collection"
-          title="Keep your next watches close."
-          description="One place for saved titles and favorites. Open a title for details, reviews, and recommendations."
+          as="h1"
+          title="Your collection"
+          description="Saved titles and favorites."
         />
 
         <div className="mt-8 overflow-x-auto mobile-native-scroll border-b border-[var(--surface-border)]">

@@ -1,5 +1,6 @@
 "use client";
 
+import SectionHeader from "@/components/ui/SectionHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -258,7 +259,7 @@ export default function SearchResultsPage() {
     const nextParams = new URLSearchParams(routeKey);
     if (next === "list") nextParams.set("view", "list");
     else nextParams.delete("view");
-    router.replace(`/search?${nextParams}`, { scroll: false });
+    window.history.replaceState(null, "", nextParams.size ? `/search?${nextParams}` : "/search");
   }
   function closeFilters() {
     dialogRef.current?.close();
@@ -385,13 +386,12 @@ export default function SearchResultsPage() {
   return (
     <main className={styles.page}>
       <div className="ui-shell">
-        <header className={styles.header}>
-          <p className="ui-kicker mb-2">Search Moodies</p>
-          <h1 className={styles.heading}>
-            {query
-              ? `Results for “${query}”`
-              : "Find movies, TV and people"}
-          </h1>
+        <div className={styles.header}>
+          <SectionHeader
+            as="h1"
+            title={query ? `Results for “${query}”` : "Find movies, TV and people"}
+            className="mb-5 lg:mb-0"
+          />
           <form
             role="search"
             className={styles.search}
@@ -420,7 +420,7 @@ export default function SearchResultsPage() {
               <span className="hidden sm:inline">Search</span>
             </button>
           </form>
-        </header>
+        </div>
         <section className={styles.controls} aria-label="Search controls">
           <div className={styles.types} role="group" aria-label="Result type">
             {TYPES.map(({ value, label }) => (
@@ -654,9 +654,7 @@ export default function SearchResultsPage() {
                             : `${item.type === "movie" ? "Movie" : "TV series"} · ${year || "Date TBA"}`}
                         </p>
                         {view === "list" && hasRating && (
-                          <span aria-label={`TMDB rating ${rating.toFixed(1)} out of 10`}>
-                            <RatingBadge rating={rating} variant="minimal" size="md" />
-                          </span>
+                          <RatingBadge rating={rating} variant="minimal" size="md" />
                         )}
                       </div>
                       {view === "list" && item.overview && (

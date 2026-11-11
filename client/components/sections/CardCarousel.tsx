@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { useCarouselScroll } from "@/hooks/useCarouselScroll";
 import Link from "next/link";
+import SectionHeader from "@/components/ui/SectionHeader";
 import {
   Bookmark,
   BookmarkCheck,
@@ -171,58 +172,41 @@ export default function CardCarousel<T extends MediaItem>({
       aria-labelledby={embedded ? undefined : `${sectionId || "media"}-heading`}
     >
       {!embedded && (
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0 flex-1 basis-48">
-            {titleLink ? (
-              <Link href={titleLink} className="group inline-block">
-                <h2
-                  id={`${sectionId || "media"}-heading`}
-                  className="text-3xl font-bold leading-none text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)] sm:text-4xl"
-                >
-                  {title}
-                </h2>
-              </Link>
-            ) : (
-              <h2
-                id={`${sectionId || "media"}-heading`}
-                className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
-              >
-                {title}
-              </h2>
-            )}
-            {subtitle ? (
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-                {subtitle}
-              </p>
-            ) : null}
-          </div>
-        </div>
+        <SectionHeader
+          id={`${sectionId || "media"}-heading`}
+          title={title}
+          titleHref={titleLink}
+          description={subtitle}
+          className="mb-5"
+        />
       )}
 
       {items.length ? (
-        <div className="group/carousel relative">
-          <div role="group" aria-label={`${title} navigation`}>
-            <CarouselNavButton
-              direction="previous"
-              onClick={() => scroll(-1)}
-              disabled={!canScrollLeft}
-              aria-controls={railId}
-              aria-label={`Scroll ${title} left`}
-              className="absolute -left-5 top-[42%] z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-left-6"
-            />
-            <CarouselNavButton
-              direction="next"
-              onClick={() => scroll(1)}
-              disabled={!canScrollRight}
-              aria-controls={railId}
-              aria-label={`Scroll ${title} right`}
-              className="absolute -right-5 top-[42%] z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-right-6"
-            />
-          </div>
+        <div className="relative">
+          {(canScrollLeft || canScrollRight) && (
+            <div role="group" aria-label={`${title} navigation`}>
+              <CarouselNavButton
+                direction="previous"
+                onClick={() => scroll(-1)}
+                disabled={!canScrollLeft}
+                aria-controls={railId}
+                aria-label={`Scroll ${title} left`}
+                className="absolute -left-5 top-[42%] z-30 -translate-y-1/2 xl:-left-6"
+              />
+              <CarouselNavButton
+                direction="next"
+                onClick={() => scroll(1)}
+                disabled={!canScrollRight}
+                aria-controls={railId}
+                aria-label={`Scroll ${title} right`}
+                className="absolute -right-5 top-[42%] z-30 -translate-y-1/2 xl:-right-6"
+              />
+            </div>
+          )}
           <div
             id={railId}
             ref={containerRef}
-            className={`mobile-native-scroll -mx-4 flex snap-x snap-proximity scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:scroll-px-0 sm:gap-5 sm:px-0 ${items.length === 1 ? "justify-center sm:justify-start" : ""}`}
+            className={`mobile-native-scroll -mx-4 flex snap-x snap-proximity scroll-px-4 gap-3 overflow-x-auto px-4 pb-3 sm:mx-0 sm:scroll-px-0 sm:gap-5 sm:px-0`}
           >
             {items.map((item) => {
               const type = mediaType(item);
@@ -236,7 +220,7 @@ export default function CardCarousel<T extends MediaItem>({
               return (
                 <article
                   key={`${type}-${item.id}`}
-                  className="group w-[calc((100%-0.75rem)/2)] min-w-0 shrink-0 snap-start sm:w-[31vw] sm:min-w-[204px] sm:max-w-[220px] md:w-[25vw] lg:w-[20vw] xl:max-w-[228px]"
+                  className="group w-[43%] min-w-0 shrink-0 snap-start sm:w-[31vw] sm:min-w-[204px] sm:max-w-[220px] md:w-[25vw] lg:w-[20vw] xl:max-w-[228px]"
                 >
                   <div className="relative aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-colors group-hover:border-white/25 group-focus-within:border-white/25">
                     <Link

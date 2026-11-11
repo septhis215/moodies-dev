@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import SectionHeader from "@/components/ui/SectionHeader";
 import { AlertCircle, Bookmark, Heart, MessageSquare } from "lucide-react";
 import type {
   CommunityPulseData,
@@ -115,18 +116,12 @@ export function CommunityPulseSection({
       aria-labelledby={`${mediaType}-community-pulse-heading`}
       aria-busy={showLoading}
     >
-      <div className="mb-4 max-w-2xl">
-        <p className="ui-kicker">Community signal</p>
-        <h2
-          id={`${mediaType}-community-pulse-heading`}
-          className="mt-2 text-balance text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl"
-        >
-          Community pulse
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--ink-muted)]">
-          The {mediaLabel} members are saving, reviewing and enjoying right now.
-        </p>
-      </div>
+      <SectionHeader
+        id={`${mediaType}-community-pulse-heading`}
+        title="Community pulse"
+        description={`The ${mediaLabel} members are saving, reviewing and enjoying right now.`}
+        className="mb-5"
+      />
 
       {showLoading ? (
         <><span role="status" className="sr-only">Loading community activity</span><PulseLoading /></>
