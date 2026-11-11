@@ -1,9 +1,0 @@
-.section {
-  position: relative;
-  overflow: hidden;
-  border-block: 1px solid var(--surface-border);
-  background: var(--surface-0);
-}
-.content {
-  position: relative;
-}

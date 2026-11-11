@@ -1,144 +1,31 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Bookmark,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { ArrowRight, Bookmark } from "lucide-react";
 import { TmdbImage } from "@/components/ui/TmdbImage";
-import RatingBadge from "@/components/ui/rating-badge";
+import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
+import { useCarouselScroll } from "@/hooks/useCarouselScroll";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { tmdbImage } from "@/lib/tmdb";
 import type { All } from "@/types/all";
-import styles from "./CuratedShelf.module.css";
 
-function mediaType(item: All): "movie" | "tv" {
-  return item.type === "tv" || item.first_air_date ? "tv" : "movie";
-}
+const filters = [
+  { value: "all", label: "All picks" },
+  { value: "movie", label: "Movies" },
+  { value: "tv", label: "Series" },
+] as const;
 
-function CuratedCard({
-  item,
-  onSaved,
-  featured = false,
-}: {
-  item: All;
-  onSaved: () => void;
-  featured?: boolean;
-}) {
-  const { ready, isInWatchlist, add, remove } = useWatchlist();
-  const [busy, setBusy] = useState(false);
-  const type = mediaType(item);
-  const watchType = type === "tv" ? "series" : "movie";
-  const saved = isInWatchlist(item.id, watchType);
-  const title = item.title || item.name || "Untitled";
-  const year = (
-    item.release_date ||
-    item.first_air_date ||
-    item.year ||
-    ""
-  ).slice(0, 4);
-  const poster = item.poster_path
-    ? `https://image.tmdb.org/t/p/w342${item.poster_path}`
-    : null;
+const mediaType = (item: All) => item.type === "tv" || item.first_air_date ? "tv" : "movie";
+const pickKey = (item: All) => `${mediaType(item)}:${item.id}`;
+const pickTitle = (item: All) => item.title || item.name || "Untitled";
+const posterUrl = (item: All) => item.poster_path
+  ? tmdbImage(item.poster_path, "w342")
+  : "/placeholder-poster.svg";
 
-  async function toggleSave() {
-    if (!ready || busy) return;
-    setBusy(true);
-    try {
-      await (saved ? remove : add)(item.id, watchType, {
-        title,
-        posterUrl: poster,
-      });
-      if (!saved) onSaved();
-    } catch {
-      // The watchlist hook restores the previous state and reports the error.
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <article className={`${styles.card} ${featured ? styles.featured : ""}`}>
-      <Link
-        href={`/${type}/${item.id}`}
-        aria-label={`Explore ${title}`}
-        className={styles.poster}
-      >
-        {poster ? (
-          <TmdbImage
-            src={poster}
-            alt=""
-            fill
-            sizes={featured ? "(max-width: 639px) 34vw, 220px" : "90px"}
-            className="object-cover"
-          />
-        ) : (
-          <span
-            aria-hidden="true"
-            className="flex h-full items-center justify-center text-xs text-[var(--ink-muted)]"
-          >
-            {type === "tv" ? "Series" : "Movie"}
-          </span>
-        )}
-        <RatingBadge rating={item.vote_average} placement="poster" className={item.vote_average === 0 ? undefined : styles.rating} />
-      </Link>
-      <div className={styles.copy}>
-        {featured && <p className="ui-kicker mb-3">Start here</p>}
-        <p className="mb-2 text-xs font-semibold text-[var(--brand-coral-strong)]">
-          {type === "tv" ? "Series" : "Movie"}
-          {year ? ` · ${year}` : ""}
-        </p>
-        <Link href={`/${type}/${item.id}`} className={styles.title}>
-          {title}
-        </Link>
-        {featured && (
-          <p className={`${styles.genre} mt-2 mb-3`}>
-            {item.genres?.slice(0, 2).join(" · ") || "In your personal mix"}
-          </p>
-        )}
-        {featured && (
-          <p className={styles.overview}>
-            {item.overview ||
-              "Take a closer look at this pick from your personal mix."}
-          </p>
-        )}
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.save}
-            disabled={!ready || busy}
-            aria-pressed={saved}
-            aria-busy={busy}
-            aria-label={`${saved ? "Remove" : "Add"} ${title} ${saved ? "from" : "to"} My List`}
-            onClick={() => void toggleSave()}
-          >
-            {saved ? (
-              <Check size={15} aria-hidden="true" />
-            ) : (
-              <Bookmark size={15} aria-hidden="true" />
-            )}
-            {busy
-              ? "Saving…"
-              : saved
-                ? "Saved"
-                : featured
-                  ? "Save pick"
-                  : "Save"}
-          </button>
-          {featured && (
-            <Link href={`/${type}/${item.id}`} className={styles.details}>
-              View details
-              <ArrowRight size={14} aria-hidden="true" />
-            </Link>
-          )}
-        </div>
-      </div>
-    </article>
-  );
-}
+const featureClass = "relative isolate flex min-h-60 items-end overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] sm:min-h-72 lg:min-h-80";
+const railClass = "mobile-native-scroll scrollbar-hide flex min-w-0 snap-x snap-proximity scroll-px-1 gap-3 overflow-x-auto p-1 pb-2";
+const pickClass = "relative w-[4.75rem] shrink-0 snap-start sm:w-24";
 
 export function CuratedShelf({
   items,
@@ -147,153 +34,147 @@ export function CuratedShelf({
   items: All[];
   onSaved?: () => void;
 }) {
-  const [filter, setFilter] = useState<"all" | "movie" | "tv">("all");
-  const railRef = useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = useState({ start: true, end: true });
-  const filtered = items.filter(
-    (item) => filter === "all" || mediaType(item) === filter,
-  );
-
-  function syncEdges() {
-    const rail = railRef.current;
-    if (!rail) return;
-    const next = {
-      start: rail.scrollLeft <= 1,
-      end: rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 1,
-    };
-    setEdges((current) =>
-      current.start === next.start && current.end === next.end ? current : next,
-    );
-  }
+  const [filter, setFilter] = useState<(typeof filters)[number]["value"]>("all");
+  const [selection, setSelection] = useState<{ key: string; index: number }>();
+  const [savingKey, setSavingKey] = useState<string>();
+  const railId = useId();
+  const detailsRef = useRef<HTMLAnchorElement>(null);
+  const filterRef = useRef<HTMLButtonElement>(null);
+  const { ready, add } = useWatchlist();
+  const picks = items.filter((item) => filter === "all" || mediaType(item) === filter);
+  const selected = picks.find((item) => pickKey(item) === selection?.key)
+    ?? picks[Math.min(selection?.index ?? 0, picks.length - 1)];
+  const { containerRef, canScrollLeft, canScrollRight, scroll } =
+    useCarouselScroll(picks.length);
 
   useEffect(() => {
-    const rail = railRef.current;
-    if (!rail) return;
-    const observer = new ResizeObserver(syncEdges);
-    observer.observe(rail);
-    syncEdges();
-    return () => observer.disconnect();
-  }, [filter, filtered.length]);
-  useEffect(() => {
-    if (railRef.current) railRef.current.scrollLeft = 0;
-  }, [filter]);
+    containerRef.current?.scrollTo({ left: 0, behavior: "instant" });
+  }, [containerRef, filter]);
 
-  function scroll(direction: number) {
-    const rail = railRef.current;
-    if (!rail) return;
-    const card = rail.querySelector("article");
-    if (!card) return;
-    const stride =
-      card.getBoundingClientRect().width +
-      parseFloat(getComputedStyle(rail).columnGap || "0");
-    const visibleCards = Math.max(1, Math.round(rail.clientWidth / stride));
-    rail.scrollBy({
-      left: direction * stride * visibleCards,
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-    });
+  async function savePick(item: All, trigger: HTMLButtonElement) {
+    if (!ready || savingKey) return;
+    const hadFocus = document.activeElement === trigger;
+    const tasteLink = trigger.closest("section")?.querySelector<HTMLAnchorElement>("header a");
+    setSavingKey(pickKey(item));
+    try {
+      await add(item.id, mediaType(item) === "tv" ? "series" : "movie", {
+        title: pickTitle(item),
+        posterUrl: posterUrl(item),
+      });
+      onSaved?.();
+      requestAnimationFrame(() => {
+        if (hadFocus && !trigger.isConnected && document.activeElement === document.body) {
+          (filterRef.current ?? tasteLink)?.focus();
+        }
+      });
+    } catch {
+      // The watchlist hook reports the failure and reconciles the saved state.
+    } finally {
+      setSavingKey(undefined);
+    }
   }
+
+  const year = (selected?.release_date || selected?.first_air_date || selected?.year)?.slice(0, 4);
+  const label = selected && [mediaType(selected) === "tv" ? "Series" : "Movie", year, selected.genres?.[0]]
+    .filter(Boolean).join(" · ");
+  const savingSelected = selected && savingKey === pickKey(selected);
 
   return (
     <div className="min-w-0">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3">
-        <div
-          role="group"
-          aria-label="Filter your curated picks"
-          className="flex min-w-0 flex-wrap gap-1"
-        >
-          {(
-            [
-              { value: "all", label: "All picks" },
-              { value: "movie", label: "Movies" },
-              { value: "tv", label: "Series" },
-            ] as const
-          ).map(({ value, label }) => (
+      {selected ? (
+        <article className={featureClass}>
+          <div key={pickKey(selected)} className="ui-overlay-enter pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+            <TmdbImage
+              src={selected.backdrop_path ? tmdbImage(selected.backdrop_path, "w1280") : posterUrl(selected)}
+              alt=""
+              fill
+              sizes="(max-width: 1280px) 100vw, 1216px"
+              className={selected.backdrop_path ? "object-cover object-center sm:object-[center_35%]" : "object-cover object-center opacity-65 sm:object-right"}
+            />
+          </div>
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-black via-black/60 to-black/5 sm:bg-linear-to-r sm:from-black/95 sm:via-black/65 sm:to-transparent" />
+          <div className="w-full max-w-2xl p-4 sm:p-8">
+            <p className="text-xs font-medium text-white/80 sm:text-sm">{label}</p>
+            <h3 aria-live="polite" data-display className="mt-1 line-clamp-2 text-3xl font-bold leading-none text-white [overflow-wrap:anywhere] sm:text-5xl">
+              {pickTitle(selected)}
+            </h3>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link ref={detailsRef} href={`/${mediaType(selected) === "tv" ? "tv" : "movies"}/${selected.id}`} aria-label={`Details for ${pickTitle(selected)}`} className="ui-primary-action">
+                Details <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+              <button
+                type="button"
+                aria-label={`Save ${pickTitle(selected)} to watchlist`}
+                aria-busy={savingSelected}
+                disabled={!ready}
+                aria-disabled={Boolean(savingKey) || !ready}
+                onClick={(event) => void savePick(selected, event.currentTarget)}
+                className="ui-secondary-action disabled:cursor-default disabled:opacity-60"
+              >
+                <Bookmark className="size-4" aria-hidden="true" />
+                {savingSelected ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </article>
+      ) : (
+        <div className="flex min-h-60 items-center justify-center rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-5 text-sm text-[var(--ink-muted)] sm:min-h-72 lg:min-h-80" role="status">
+          {filter === "tv" ? "No series in this mix." : "No movies in this mix."}
+        </div>
+      )}
+
+      <div className="mb-1 mt-2 flex items-center justify-between gap-3">
+        <div role="group" aria-label="Filter your curated picks" className="flex min-w-0 flex-wrap gap-1">
+          {filters.map(({ value, label }) => (
             <button
               key={value}
+              ref={filter === value ? filterRef : undefined}
               type="button"
               aria-pressed={filter === value}
-              onClick={() => setFilter(value)}
-              className={`min-h-11 rounded-md px-3 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] ${filter === value ? "bg-[var(--surface-2)] text-[var(--ink)]" : "text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+              onClick={() => {
+                if (filter === value) return;
+                setSelection(undefined);
+                setFilter(value);
+              }}
+              className="min-h-11 rounded-md px-2.5 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] aria-pressed:bg-[var(--surface-2)] aria-pressed:text-[var(--ink)]"
             >
               {label}
             </button>
           ))}
         </div>
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-          <span
-            className="sr-only text-xs text-[var(--ink-muted)] sm:not-sr-only"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            {filtered.length} {filtered.length === 1 ? "pick" : "picks"}
-          </span>
-          <Link
-            href="/watchlist"
-            aria-label="Your watchlist"
-            className="mr-auto inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md text-xs font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] sm:mr-0"
-          >
-            <Bookmark className="h-4 w-4" aria-hidden="true" />
-            <span>Your watchlist</span>
-          </Link>
-          <button
-            type="button"
-            aria-label="Previous curated picks"
-            disabled={edges.start}
-            onClick={() => scroll(-1)}
-            aria-controls="curated-picks-rail"
-            className={styles.arrow}
-          >
-            <ChevronLeft size={18} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            aria-label="Next curated picks"
-            disabled={edges.end}
-            onClick={() => scroll(1)}
-            aria-controls="curated-picks-rail"
-            className={styles.arrow}
-          >
-            <ChevronRight size={18} aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-      <div className={styles.frame}>
-        <div
-          id="curated-picks-rail"
-          key={filter}
-          ref={railRef}
-          tabIndex={-1}
-          aria-label="Your curated picks"
-          onScroll={syncEdges}
-          className={styles.rail}
-          data-curated-rail
-        >
-          {filtered.map((item, index) => (
-            <CuratedCard
-              key={`${mediaType(item)}-${item.id}`}
-              item={item}
-              featured={index === 0}
-              onSaved={() => {
-                if (document.activeElement === document.body)
-                  railRef.current?.focus({ preventScroll: true });
-                onSaved?.();
-              }}
-            />
-          ))}
-        </div>
-
-        {filtered.length > 1 && (
-          <p className={styles.swipe}>Swipe to explore →</p>
+        {(canScrollLeft || canScrollRight) && (
+          <div className="flex gap-1" role="group" aria-label="Curated pick navigation">
+            <CarouselNavButton direction="previous" aria-label="Previous curated picks" aria-controls={railId} disabled={!canScrollLeft} onClick={() => scroll(-1)} />
+            <CarouselNavButton direction="next" aria-label="Next curated picks" aria-controls={railId} disabled={!canScrollRight} onClick={() => scroll(1)} />
+          </div>
         )}
       </div>
-      {!filtered.length && (
-        <p className="py-6 text-sm text-[var(--ink-muted)]">
-          No {filter === "tv" ? "series" : "movies"} in this mix yet. Try All
-          picks or adjust your taste.
-        </p>
-      )}
+      <div id={railId} ref={containerRef} aria-label="Your curated picks" className={railClass} data-curated-rail>
+        {picks.map((item, index) => {
+          const key = pickKey(item);
+          const title = pickTitle(item);
+          return (
+            <button
+              key={key}
+              type="button"
+              aria-label={`Preview ${title}`}
+              aria-pressed={selected === item}
+              onClick={(event) => {
+                setSelection({ key, index });
+                if (event.detail === 0) {
+                  requestAnimationFrame(() => detailsRef.current?.focus());
+                }
+              }}
+              className={`${pickClass} group text-left text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-none aria-pressed:text-[var(--ink)]`}
+            >
+              <span className="relative block aspect-[2/3] overflow-hidden rounded-md border-2 border-transparent bg-[var(--surface-2)] transition-colors group-hover:border-[var(--ink-muted)] group-focus-visible:border-[var(--brand-coral-strong)] group-aria-pressed:border-[var(--brand-coral-strong)]">
+                <TmdbImage src={posterUrl(item)} alt="" fill sizes="(max-width: 639px) 76px, 96px" className="object-cover" />
+              </span>
+              <span className="mt-1 block truncate text-xs font-semibold">{title}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -301,32 +182,15 @@ export function CuratedShelf({
 export function CuratedShelfSkeleton() {
   return (
     <div role="status" aria-label="Loading your curated picks">
-      <span className="sr-only">Finding your picks…</span>
-      <div
-        aria-hidden="true"
-        className="mb-2 flex h-11 items-center gap-3 moodies-skeleton"
-      >
-        <div className="h-7 w-20 rounded bg-[var(--surface-2)]" />
-        <div className="h-3 w-12 rounded bg-[var(--surface-2)]" />
-        <div className="h-3 w-12 rounded bg-[var(--surface-2)]" />
-      </div>
-      <div className={styles.frame} aria-hidden="true">
-        <div className={styles.rail}>
-          {Array.from({ length: 3 }, (_, index) => (
-            <div
-              key={index}
-              className={`${styles.card} ${index === 0 ? styles.featured : ""} moodies-skeleton`}
-            >
-              <div className={styles.poster} />
-              <div className={styles.copy}>
-                <div className="mt-1 h-3 w-1/2 rounded bg-[var(--surface-2)]" />
-                <div className="mt-3 h-4 w-4/5 rounded bg-[var(--surface-2)]" />
-                <div className="mt-3 h-3 w-2/3 rounded bg-[var(--surface-2)]" />
-                <div className="mt-4 h-4 w-1/3 rounded bg-[var(--surface-2)]" />
-              </div>
-            </div>
-          ))}
-        </div>
+      <div aria-hidden="true" className={`${featureClass} moodies-skeleton`} />
+      <div aria-hidden="true" className="my-2 h-11 w-44 rounded-md bg-[var(--surface-2)] moodies-skeleton" />
+      <div aria-hidden="true" className={`${railClass} overflow-hidden`}>
+        {Array.from({ length: 7 }, (_, index) => (
+          <div key={index} className={`${pickClass} moodies-skeleton`}>
+            <div className="aspect-[2/3] rounded-md bg-[var(--surface-2)]" />
+            <div className="mt-1 h-4 w-4/5 rounded bg-[var(--surface-2)]" />
+          </div>
+        ))}
       </div>
     </div>
   );

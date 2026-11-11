@@ -41,73 +41,33 @@ const browser = await chromium.launch({
 });
 async function checkMobileRail(section, width) {
   const curated = await section.locator("[data-curated-rail]").count();
-  const rail = section
-    .locator('[data-curated-rail], [class*="overflow-x-auto"]')
-    .first();
-  await rail.locator("article").first().waitFor();
-  const spacing = await rail.evaluate((element) => {
-    const cards = element.querySelectorAll("article");
+  const rail = section.locator(curated ? "[data-curated-rail]" : '[class*="overflow-x-auto"]').first();
+  const cards = curated ? "button" : "article";
+  await rail.locator(cards).first().waitFor();
+  await rail.evaluate(element => { element.scrollTo({ left: 0, behavior: "instant" }); });
+  const layout = await rail.evaluate((element, selector) => {
+    const cards = [...element.querySelectorAll(selector)].map(card => card.getBoundingClientRect());
     return {
-      left: cards[0].getBoundingClientRect().left,
-      right: window.innerWidth - cards[1].getBoundingClientRect().right,
+      leadingGutter: cards[0].left,
+      singleRow: cards.every(card => Math.abs(card.top - cards[0].top) <= 1),
+      peeks: cards.some(card => card.left < innerWidth && card.right > innerWidth),
+      cardHeight: cards[0].height,
+      pageOverflow: document.documentElement.scrollWidth > window.innerWidth,
     };
-  });
-  assert.ok(spacing.left >= 15, `Missing leading gutter at ${width}px`);
+  }, cards);
+  assert.ok(layout.leadingGutter >= 15, `Missing leading gutter at ${width}px`);
+  assert.ok(layout.singleRow, "Shelf cards must remain in one horizontal row");
+  if (!curated) assert.ok(layout.peeks, `The next poster should peek into view at ${width}px`);
   if (curated) {
-    const layout = await rail.evaluate((element) => {
-      const cards = [...element.querySelectorAll("article")];
-      const first = cards[0].getBoundingClientRect();
-      return {
-        firstRight: first.right,
-        singleRow: cards.every(
-          (card) => Math.abs(card.getBoundingClientRect().top - first.top) <= 1,
-        ),
-        cardHeight: first.height,
-        pageOverflow: document.documentElement.scrollWidth > window.innerWidth,
-      };
-    });
-    assert.ok(
-      layout.singleRow,
-      "Curated cards must remain in one horizontal row",
-    );
-    assert.ok(
-      layout.firstRight < width,
-      "First curated card must fit on mobile",
-    );
-    assert.ok(layout.cardHeight < 300, "Curated shortlist should stay compact");
-    assert.equal(
-      layout.pageOverflow,
-      false,
-      "Curated rail must not overflow the page",
-    );
-    assert.ok(
-      (await section.evaluate(
-        (element) => element.getBoundingClientRect().height,
-      )) < 680,
-      "Curated shelf is too tall on mobile",
-    );
-  } else
-    assert.ok(
-      Math.abs(spacing.left - spacing.right) <= 1,
-      `Unbalanced card gutters at ${width}px: ${JSON.stringify(spacing)}`,
-    );
-  await rail.evaluate((element) => {
-    element.scrollLeft = element.scrollWidth;
-  });
+    assert.ok(layout.cardHeight < 180, "Curated poster choices should stay compact");
+    assert.ok((await section.boundingBox()).height < 680, "Curated shelf is too tall on mobile");
+  }
+  assert.equal(layout.pageOverflow, false, "The shelf must not overflow the page");
+  await rail.evaluate(element => { element.scrollLeft = element.scrollWidth; });
   await rail.page().waitForTimeout(250);
-  const endGutter = await rail
-    .locator("article")
-    .last()
-    .evaluate(
-      (element) => window.innerWidth - element.getBoundingClientRect().right,
-    );
-  assert.ok(
-    Math.abs(endGutter - spacing.left) <= 1,
-    `Missing trailing gutter at ${width}px: ${endGutter}`,
-  );
-  await rail.evaluate((element) => {
-    element.scrollLeft = 0;
-  });
+  const endGutter = await rail.locator(cards).last().evaluate(card => innerWidth - card.getBoundingClientRect().right);
+  assert.ok(Math.abs(endGutter - layout.leadingGutter) <= 1, `Missing trailing gutter at ${width}px: ${endGutter}`);
+  await rail.evaluate(element => { element.scrollLeft = 0; });
 }
 try {
   for (const member of [false, true]) {
@@ -166,6 +126,7 @@ try {
         assert.deepEqual(route.request().postDataJSON(), {
           tmdbId: "900",
           type: "movie",
+          active: true,
         });
         return route.fulfill({ json: { removed: !saved } });
       }
@@ -253,15 +214,14 @@ try {
             .count(),
           1,
         );
-        await curated
-          .getByRole("link", { name: "Explore Personal pick 1", exact: true })
-          .waitFor();
-        assert.equal(
-          await curated
-            .getByRole("link", { name: "Explore Personal pick 2", exact: true })
-            .getAttribute("href"),
-          "/tv/901",
-        );
+        const preview = (number) => curated.getByRole("button", { name: `Preview Personal pick ${number}`, exact: true });
+        const posterStrip = curated.locator("[data-curated-rail]");
+        await curated.getByRole("link", { name: "Details for Personal pick 1", exact: true }).waitFor();
+        assert.equal(await curated.getByRole("link", { name: "Details for Personal pick 1" }).getAttribute("href"), "/movies/900");
+        await preview(2).click();
+        assert.equal(await preview(2).getAttribute("aria-pressed"), "true");
+        assert.equal(await curated.getByRole("link", { name: "Details for Personal pick 2", exact: true }).getAttribute("href"), "/tv/901");
+        await preview(1).click();
         if (width === 375) {
           failSave = true;
           const failed = page.waitForResponse((response) =>
@@ -269,55 +229,41 @@ try {
           );
           await curated
             .getByRole("button", {
-              name: "Add Personal pick 1 to My List",
+              name: "Save Personal pick 1 to watchlist",
               exact: true,
             })
             .click();
           await failed;
           await curated
             .getByRole("button", {
-              name: "Add Personal pick 1 to My List",
+              name: "Save Personal pick 1 to watchlist",
               exact: true,
             })
             .waitFor();
           assert.equal(saved, false, "Failed save changed the watchlist");
           assert.equal(
-            await curated.getByRole("article").count(),
+            await posterStrip.getByRole("button").count(),
             7,
             "Failed save did not restore the pick",
           );
           failSave = false;
           await curated
             .getByRole("button", {
-              name: "Add Personal pick 1 to My List",
+              name: "Save Personal pick 1 to watchlist",
               exact: true,
             })
             .click();
-          await curated
-            .getByRole("link", { name: "Explore Personal pick 8", exact: true })
-            .waitFor();
+          await preview(8).waitFor({ state: "attached" });
           assert.equal(
-            await curated
-              .getByRole("link", {
-                name: "Explore Personal pick 1",
-                exact: true,
-              })
-              .count(),
+            await preview(1).count(),
             0,
             "Saved pick remained in the mix",
           );
           assert.ok(saved);
           await page.reload({ waitUntil: "domcontentloaded" });
-          await curated
-            .getByRole("link", { name: "Explore Personal pick 8", exact: true })
-            .waitFor();
+          await preview(8).waitFor({ state: "attached" });
           assert.equal(
-            await curated
-              .getByRole("link", {
-                name: "Explore Personal pick 1",
-                exact: true,
-              })
-              .count(),
+            await preview(1).count(),
             0,
             "Reload brought the saved title back",
           );
@@ -325,51 +271,29 @@ try {
           await page.reload({ waitUntil: "domcontentloaded" });
           await curated
             .getByRole("button", {
-              name: "Add Personal pick 1 to My List",
+              name: "Save Personal pick 1 to watchlist",
               exact: true,
             })
             .waitFor();
           assert.equal(saved, false);
         }
-        assert.equal(await curated.getByRole("article").count(), 7);
-        if (width >= 1024) {
-          const layout = await curated
-            .locator("[data-curated-rail]")
-            .evaluate((rail) => {
-              const cards = [...rail.querySelectorAll("article")].map((card) =>
-                card.getBoundingClientRect(),
-              );
-              return {
-                featured: cards[0].height,
-                alternative: cards[1].height,
-                firstTop: cards[1].top,
-                secondTop: cards[2].top,
-              };
-            });
-          assert.ok(
-            layout.featured > layout.alternative * 1.8,
-            "Featured pick does not span both alternative rows",
-          );
-          assert.ok(
-            layout.secondTop > layout.firstTop,
-            "Alternatives are not stacked beside the featured pick",
-          );
-        }
+        assert.equal(await posterStrip.getByRole("button").count(), 7);
+        assert.equal(await curated.getByRole("article").count(), 1, "The shelf should feature one pick");
         if (width < 640) await checkMobileRail(curated, width);
         await curated
           .getByRole("button", { name: "Series", exact: true })
           .click();
-        assert.equal(await curated.getByRole("article").count(), 3);
+        assert.equal(await posterStrip.getByRole("button").count(), 3);
         assert.equal(
           await curated
-            .getByRole("link", { name: "Explore Personal pick 1", exact: true })
+            .getByRole("link", { name: "Details for Personal pick 1", exact: true })
             .count(),
           0,
         );
         await curated
           .getByRole("button", { name: "Movies", exact: true })
           .click();
-        assert.equal(await curated.getByRole("article").count(), 4);
+        assert.equal(await posterStrip.getByRole("button").count(), 4);
         await curated
           .getByRole("button", { name: "All picks", exact: true })
           .click();
@@ -379,7 +303,7 @@ try {
             .count(),
           0,
         );
-        assert.equal(await curated.getByRole("article").count(), 7);
+        assert.equal(await posterStrip.getByRole("button").count(), 7);
         assert.equal(
           await curated
             .getByRole("link", { name: "Adjust your taste" })
@@ -429,11 +353,11 @@ try {
         await page.reload({ waitUntil: "domcontentloaded" });
         if (status === 400)
           await page
-            .getByRole("heading", { name: "Make this mix yours" })
+            .getByRole("heading", { name: "Choose your tastes" })
             .waitFor();
         if (status === 500) {
           await page
-            .getByRole("heading", { name: "Couldn’t load your mix" })
+            .getByRole("heading", { name: "Couldn’t load your picks" })
             .waitFor();
           favoriteStatus = 200;
           await page
@@ -447,7 +371,7 @@ try {
             });
           await page
             .getByRole("region", { name: "Curated for you" })
-            .getByRole("link", { name: "Explore Personal pick 1", exact: true })
+            .getByRole("link", { name: "Details for Personal pick 1", exact: true })
             .waitFor();
         }
       }
