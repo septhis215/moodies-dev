@@ -5,7 +5,7 @@ import { chromium } from "playwright";
 const base = process.env.BASE_URL || "http://localhost:3000";
 const output = process.env.NAV_SCREENSHOT_DIR;
 if (output) await mkdir(output, { recursive: true });
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL || undefined });
 try {
   const context = await browser.newContext({ reducedMotion: "reduce" });
   let signedIn = false;
@@ -41,24 +41,10 @@ try {
     await page.goto(`${base}/terms`, { waitUntil: "domcontentloaded", timeout: 120000 });
     await page.getByRole("link", { name: /^Sign in(?: to Moodies)?$/ }).filter({ visible: true }).waitFor();
     const { trigger, dialog } = await openMenu(width);
-    if (width < 1024) {
-      await dialog.getByRole("heading", { name: "Where to next?", exact: true }).waitFor();
-      const mobile = dialog.getByRole("navigation", { name: "Mobile navigation", exact: true });
-      for (const href of ["/", "/movies", "/tv", "/celeb", "/moods/explore", "/feed", "/community"]) {
-        assert.equal(await mobile.locator(`a[href="${href}"]`).filter({ visible: true }).count(), 1);
-      }
-      assert.equal(await mobile.locator("button[aria-expanded]").count(), 7);
-      await mobile.getByRole("button", { name: "Show Movies quick links", exact: true }).click();
-      await mobile.getByRole("link", { name: "Box Office Hits", exact: true }).waitFor();
-      await mobile.getByRole("button", { name: "Hide Movies quick links", exact: true }).click();
-      assert.equal(await mobile.getByRole("link", { name: "Box Office Hits", exact: true }).isVisible(), false);
-      assert.equal(await dialog.getByText("Let your mood lead", { exact: true }).isVisible(), false);
-    } else {
-      for (const href of ["/movies", "/tv", "/", "/trending", "/fresh-off-the-screen", "/coming-soon", "/korean-hits", "/celeb", "/community", "/moods", "/quiz", "/collection", "/watchlist", "/liked"]) {
-        assert.ok(await dialog.locator(`a[href="${href}"]`).filter({ visible: true }).count(), `Missing direct destination ${href} at ${width}px`);
-      }
-      assert.equal(await dialog.locator("button[aria-expanded]").filter({ visible: true }).count(), 0, "Desktop navigation must remain flat");
+    for (const href of ["/", "/movies", "/tv", "/moods/explore", "/feed", "/trending", "/fresh-off-the-screen", "/coming-soon", "/korean-hits", "/celeb", "/community", "/moods", "/quiz", "/collection", "/watchlist", "/liked"]) {
+      assert.equal(await dialog.locator(`a[href="${href}"]`).filter({ visible: true }).count(), 1, `Expected one direct link to ${href} at ${width}px`);
     }
+    assert.equal(await dialog.locator("button[aria-expanded]").count(), 0, "Navigation links must remain flat");
     const geometry = await dialog.evaluate(element => ({
       left: element.getBoundingClientRect().left, right: element.getBoundingClientRect().right,
       top: element.getBoundingClientRect().top, bottom: element.getBoundingClientRect().bottom,
@@ -67,6 +53,9 @@ try {
     assert.ok(geometry.nativeModal, "Background is not inert behind the navigation dialog");
     assert.ok(geometry.left >= -1 && geometry.right <= width + 1, `Menu overflow at ${width}px`);
     assert.ok(geometry.top >= -1 && geometry.bottom <= page.viewportSize().height + 1, `Menu exceeds viewport at ${width}px`);
+    if (width >= 1024) {
+      assert.ok(geometry.bottom - geometry.top < 500, "Desktop menu should fit its links");
+    }
     assert.ok(geometry.pageWidth <= width + 1, `Page overflow at ${width}px`);
     for (let index = 0; index < 30; index++) {
       await page.keyboard.press("Tab");
@@ -79,14 +68,6 @@ try {
     assert.notEqual(await page.evaluate(() => document.body.style.overflow), "hidden", "Scroll stayed locked");
     await trigger.click();
     await dialog.waitFor();
-    if (width >= 1024) {
-      const mascot = dialog.locator('img[src*="moodies-mascot"]');
-      await mascot.waitFor();
-      await page.waitForFunction(() => {
-      const image = document.querySelector('#site-menu img[src*="moodies-mascot"]');
-      return image?.complete && image.naturalWidth > 0;
-      });
-    }
     if (output && [390, 1440].includes(width)) {
       await page.evaluate(() => document.fonts.ready);
       await dialog.evaluate(element => {
@@ -94,7 +75,6 @@ try {
       });
       await page.screenshot({ path: `${output}/navigation-${width}.png` });
     }
-    if (width < 1024) await dialog.getByRole("button", { name: "Show Moods quick links", exact: true }).click();
     await dialog.getByRole("link", { name: "Mood wheel", exact: true }).click();
     await page.waitForURL("**/moods");
     await dialog.waitFor({ state: "hidden" });
@@ -174,11 +154,14 @@ try {
   await page.keyboard.press("Escape");
   await accountLinks.waitFor({ state: "hidden" });
   await page.setViewportSize({ width: 390, height: 900 });
-  const { dialog: memberMobileMenu } = await openMenu(390);
-  await memberMobileMenu.getByText("member@example.test", { exact: true }).waitFor();
-  await memberMobileMenu.getByRole("button", { name: "Sign out of Moodies", exact: true }).waitFor();
+  await account.click();
+  await accountLinks.getByText("Movie explorer", { exact: true }).waitFor();
+  await accountLinks.getByRole("button", { name: "Sign out", exact: true }).waitFor();
+  const mobileAccountBounds = await accountLinks.boundingBox();
+  assert.ok(mobileAccountBounds.x >= 0 && mobileAccountBounds.x + mobileAccountBounds.width <= 390);
   await page.keyboard.press("Escape");
-  await memberMobileMenu.waitFor({ state: "hidden" });
+  await accountLinks.waitFor({ state: "hidden" });
+  assert.ok(await account.evaluate(element => element === document.activeElement));
   await page.setViewportSize({ width: 1440, height: 900 });
   await account.click();
   await accountLinks.waitFor();
@@ -186,9 +169,9 @@ try {
   await accountLinks.waitFor({ state: "hidden" });
   await page.setViewportSize({ width: 1440, height: 900 });
   failLogout = true;
-  const { dialog: logoutDialog } = await openMenu(1440);
-  await logoutDialog.getByRole("button", { name: "Sign out", exact: true }).click();
-  await logoutDialog.waitFor({ state: "hidden" });
+  await account.click();
+  await accountLinks.getByRole("button", { name: "Sign out", exact: true }).click();
+  await accountLinks.waitFor({ state: "hidden" });
   await page.getByText("Could not sign out. Please try again.", { exact: true }).waitFor();
   await account.waitFor();
   failLogout = false;
