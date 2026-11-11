@@ -11,7 +11,7 @@ import {
   Eye,
   PenSquare,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
 import { useToast } from "@/app/context/ToastContext";
 import { SnapshotShareModal } from "@/components/snapshot/SnapshotShareModal";
@@ -69,6 +69,7 @@ export default function ReviewsSection({
 }: ReviewsSectionProps) {
   const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
+  const reducedMotion = useReducedMotion();
 
   const reviewsArray: Review[] = useMemo(
     () =>
@@ -179,7 +180,7 @@ export default function ReviewsSection({
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as SortOption)}
                     aria-label="Sort reviews"
-                    className="ui-secondary-action h-11 cursor-pointer appearance-none pr-10 leading-none [&>option]:bg-[var(--surface-1)] [&>option]:text-[var(--ink)]"
+                    className="ui-secondary-action h-11 cursor-pointer appearance-none rounded-full border-0 bg-surface-2 pr-10 leading-none [&>option]:bg-[var(--surface-1)] [&>option]:text-[var(--ink)]"
                   >
                     <option value="latest">Latest</option>
                     <option value="highest">Highest</option>
@@ -187,7 +188,7 @@ export default function ReviewsSection({
                   </select>
                   <ArrowDownWideNarrow className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true" />
                 </div>
-                <button type="button" onClick={openModal} className="ui-primary-action leading-none" aria-label="Write a review">
+                <button type="button" onClick={openModal} className="ui-primary-action rounded-full leading-none shadow-none hover:transform-none" aria-label="Write a review">
                   Write
                   <PenSquare className="h-4 w-4 shrink-0" aria-hidden="true" />
                 </button>
@@ -196,7 +197,7 @@ export default function ReviewsSection({
 
             <Link
               href={viewAllHref}
-              className="ui-secondary-action leading-none"
+              className="ui-secondary-action rounded-full border-0 bg-surface-2 leading-none"
               aria-label="View all reviews"
             >
               Reviews
@@ -206,13 +207,14 @@ export default function ReviewsSection({
         </div>
 
         {/* ── Cards ── */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout">
             {topThree.length === 0 ? (
               <motion.div
-                initial={{ opacity: 0 }}
+                initial={reducedMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="col-span-full flex flex-col items-center justify-center gap-4 border-y border-[var(--surface-border)] py-16"
+                transition={{ duration: reducedMotion ? 0 : 0.18 }}
+                className="col-span-full flex flex-col items-center justify-center gap-4 py-12 sm:py-16"
               >
                 <BadgeMascot name="conversation-starter" className="h-24 w-24" sizes="96px" />
                 <div className="text-center">
@@ -226,7 +228,7 @@ export default function ReviewsSection({
                 <button
                   type="button"
                   onClick={openModal}
-                  className="ui-secondary-action leading-none"
+                  className="ui-secondary-action rounded-full border-0 bg-surface-2 leading-none"
                   aria-label="Write a review"
                 >
                   Write
@@ -247,7 +249,7 @@ export default function ReviewsSection({
                 );
 
                 return (
-                  <motion.div key={r.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="min-w-0">
+                  <motion.div key={r.id} layout={!reducedMotion} initial={reducedMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: reducedMotion ? 0 : 0.18 }} className="flex min-w-0">
                     <ReviewPreviewCard author={r.author} authorHref={profileHref} date={r.created_at}
                       avatar={<AvatarBlock review={r} href={profileHref} size={36} />}
                       rating={normalizedRating} content={r.content} mood={r.moodEmojis?.[0]}

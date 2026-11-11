@@ -1,0 +1,12 @@
+.segmented { position: relative; isolation: isolate; display: inline-grid; max-width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem; padding: 0.25rem; border-radius: 1.5rem; background: var(--surface-1); }
+.segmented::before { position: absolute; z-index: -1; top: 0.25rem; bottom: 0.25rem; left: 0.25rem; width: calc((100% - 0.75rem) / 2); border-radius: 1.25rem; background: var(--ink); content: ''; transition: transform 180ms ease-out; }
+.segmented[data-view='crew']::before { transform: translateX(calc(100% + 0.25rem)); }
+.segment { display: inline-flex; min-width: 0; min-height: 2.75rem; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 1.25rem; color: var(--ink-muted); font-size: 0.875rem; font-weight: 600; line-height: 1.25rem; transition: color 160ms ease-out; }
+.segment[aria-pressed='true'] { color: var(--surface-0); }
+.personLink { transition: background-color 160ms ease-out, color 160ms ease-out; }
+.personLink:hover, .personLink:focus-visible { background: var(--surface-1); }
+.crewLink:hover, .crewLink:focus-visible { background: var(--surface-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .segmented::before, .segment, .personLink { transition: none; }
+}

@@ -172,13 +172,13 @@ export default function ImageVideoCarousel({
       <div
         className={`mt-6 grid min-w-0 items-start gap-4 ${
           totalItems > 1
-            ? isPoster ? "lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-6" : "lg:grid-cols-[16rem_minmax(0,1fr)]"
+            ? isPoster ? "lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6" : "lg:grid-cols-[16rem_minmax(0,1fr)]"
             : "lg:grid-cols-1"
         }`}
       >
         <div
-          className={`min-w-0 ${
-            isPoster ? "mx-auto w-full max-w-64 sm:max-w-80" : "w-full lg:order-last"
+          className={`min-w-0 lg:order-last ${
+            isPoster ? "mx-auto w-full max-w-64 sm:max-w-80" : "w-full"
           }`}
         >
           <div

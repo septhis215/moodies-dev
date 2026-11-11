@@ -44,6 +44,7 @@ function harness(props = { credits: { cast, crew }, info, id: "1405" }) {
       if (name === "next/link") return { default: "Link" };
       if (name === "@/components/ui/TmdbImage") return { TmdbImage: "Image" };
       if (name === "@/lib/tmdb") return { tmdbImage: (path) => path || null };
+      if (name.endsWith('.module.css')) return { default: new Proxy({}, { get: (_, key) => String(key) }) };
       return {};
     },
   });
@@ -112,7 +113,7 @@ test("crew search, department filtering and merged jobs preserve separate depart
 test("large lists reveal 24 entries at a time and reset after a search", () => {
   const many = Array.from({ length: 55 }, (_, index) => ({ id: index, name: `Person ${index}`, order: index }));
   const app = harness({ credits: { cast: many }, info, id: "1405" });
-  const more = () => app.render().find((node) => node.type === "button" && node.props["aria-controls"] === "credit-results");
+  const more = () => app.render().find((node) => node.type === "button" && node.props.children?.[0] === "Show more ");
   assert.equal(cards(app.render()).length, 24);
   more().props.onClick();
   assert.equal(cards(app.render()).length, 48);
