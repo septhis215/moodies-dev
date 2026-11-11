@@ -10,7 +10,7 @@ import { Film, Tv, Clock, Play } from "lucide-react";
 import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import SectionHeader from "@/components/ui/SectionHeader";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const TrailerModal = dynamic(() => import("./TrailerModal"), { ssr: false });
@@ -187,17 +187,12 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
 
   if (error) {
     return (
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto">
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight mb-8">
-          {title}
-        </h2>
-        <div className="p-12 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl text-center border border-gray-700">
-          <p className="text-gray-400 text-lg mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors font-semibold"
-          >
-            Retry
+      <section className="ui-shell border-b border-[var(--surface-border)] py-8 sm:py-10" aria-label={title}>
+        <SectionHeader title={title} className="mb-5" />
+        <div className="ui-panel flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
+          <p className="text-sm text-[var(--ink-muted)]">{error}</p>
+          <button type="button" onClick={() => window.location.reload()} className="ui-secondary-action">
+            Try again
           </button>
         </div>
       </section>
@@ -207,41 +202,29 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
   if (trailerItems.length === 0) return null;
 
   return (
-    <section id="upcoming" className="ui-shell scroll-mt-24 py-8 sm:py-10">
-      <div className="mb-4 flex items-end justify-between gap-4 sm:mb-8">
-        <div className="min-w-0">
-          <Link href="/coming-soon" className="group">
-            <h2 className="text-3xl font-bold leading-none text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)] sm:text-4xl">
-              {title}
-            </h2>
-          </Link>
+    <section id="upcoming" aria-labelledby="upcoming-heading" className="ui-shell scroll-mt-24 py-8 sm:py-10">
+      <SectionHeader id="upcoming-heading" title={title} titleHref="/coming-soon" description={subtitle} className="mb-5" />
 
-          {subtitle && (
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-              {subtitle}
-            </p>
-          )}
-        </div>
-      </div>
+      <div className="relative">
+        {(canScrollLeft || canScrollRight) && (
+          <div role="group" aria-label={`${title} navigation`}>
+            <CarouselNavButton
+              direction="previous"
+              onClick={scrollLeft}
+              disabled={!canScrollLeft}
+              aria-label={`Previous ${title}`}
+              className="absolute -left-5 top-1/2 z-30 -translate-y-1/2 xl:-left-6"
+            />
 
-      <div className="relative group/carousel">
-        <div role="group" aria-label={`${title} navigation`}>
-          <CarouselNavButton
-            direction="previous"
-            onClick={scrollLeft}
-            disabled={!canScrollLeft}
-            aria-label={`Previous ${title}`}
-            className="absolute -left-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-left-6"
-          />
-
-          <CarouselNavButton
-            direction="next"
-            onClick={scrollRight}
-            disabled={!canScrollRight}
-            aria-label={`Next ${title}`}
-            className="absolute -right-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100 xl:-right-6"
-          />
-        </div>
+            <CarouselNavButton
+              direction="next"
+              onClick={scrollRight}
+              disabled={!canScrollRight}
+              aria-label={`Next ${title}`}
+              className="absolute -right-5 top-1/2 z-30 -translate-y-1/2 xl:-right-6"
+            />
+          </div>
+        )}
         <div
           className="mobile-native-scroll flex snap-x snap-proximity gap-3 overflow-x-auto pb-3 sm:gap-4 lg:hidden"
         >
@@ -249,8 +232,13 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
             <div
               key={item.id}
               className="group relative w-[74vw] max-w-[300px] flex-[0_0_auto] snap-start cursor-pointer sm:w-[46vw] sm:max-w-[360px]"
-              onClick={() => handleSelectTrailer(item)}
             >
+              <button
+                type="button"
+                aria-label={`Play trailer for ${item.title}`}
+                onClick={() => handleSelectTrailer(item)}
+                className="absolute inset-0 z-30 cursor-pointer rounded-xl focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]"
+              />
               <div className="relative aspect-[16/11] overflow-hidden rounded-xl border border-white/10 bg-gray-900 shadow-2xl">
                 <Image
                   src={
@@ -346,8 +334,13 @@ export const UpcomingTrailers: React.FC<UpcomingTrailersProps> = ({
                     className="relative group cursor-pointer flex-shrink-0 w-full sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)]"
                     onMouseEnter={() => setHoveredId(item.id)}
                     onMouseLeave={() => setHoveredId(null)}
-                    onClick={() => handleSelectTrailer(item)}
                   >
+                    <button
+                      type="button"
+                      aria-label={`Play trailer for ${item.title}`}
+                      onClick={() => handleSelectTrailer(item)}
+                      className="absolute inset-0 z-30 cursor-pointer rounded-xl focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]"
+                    />
                     <div className="relative aspect-[16/11] rounded-3xl overflow-hidden bg-gray-900 shadow-2xl border border-white/10 group">
                       {/* Image */}
                       <Image
