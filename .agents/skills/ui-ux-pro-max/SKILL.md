@@ -4,6 +4,34 @@ description: "UI/UX design intelligence for web, mobile, and desktop. This skill
 ---
 # ui-ux-pro-max
 
+## Moodies: Apple Human Interface Guidelines
+
+Apply Apple's HIG to design work throughout this project. Preserve Moodies' typography
+specification, fonts, semantic tokens, and product identity when adapting native guidance
+to the web. Consult these official sources when making relevant design decisions:
+
+- [Motion](https://developer.apple.com/design/human-interface-guidelines/motion):
+  animate only to explain a change or give feedback. Keep feedback brief, consistent
+  with the action, and interruptible. Avoid decorative entrances, looping effects,
+  and repeated movement on frequent actions. Never communicate status through motion alone.
+  Honor `prefers-reduced-motion`; remove nonessential animation and transforms.
+- [Layout](https://developer.apple.com/design/human-interface-guidelines/layout):
+  prioritize content, align related elements, and group with space and restrained surfaces.
+  Adapt to narrow screens and enlarged text without clipping important artwork or labels.
+- [Typography](https://developer.apple.com/design/human-interface-guidelines/typography):
+  maintain readable sizes, contrast, hierarchy, and text resizing using Moodies' type recipes.
+- [Materials](https://developer.apple.com/design/human-interface-guidelines/materials):
+  distinguish controls from content. Reserve glass effects for functional layers;
+  use quiet standard fills for metadata. Prefer spacing to unnecessary borders.
+
+Native Liquid Glass, SF Symbols, and Dynamic Type are platform capabilities, not CSS
+features. Use accessible web equivalents without claiming native behavior. Capsule labels
+and timing values are project choices, not Apple-prescribed recipes. Verify layout,
+keyboard focus, interaction states, and reduced motion in the browser.
+
+Source guidance reviewed on 2026-11-11. Apple's pages provide Markdown at the same URL
+with `.md` appended. Recheck the sources when extending these patterns.
+
 UI/UX design intelligence for web, mobile, and desktop. This skill should be used when designing, building, reviewing, or fixing interfaces, including pages, components, design systems, accessibility, interaction, responsive layout, typography, color, charts, and stack-specific UI implementation. Searchable local data: 79 searchable styles (50 active), 192 product palettes and reasoning profiles, 74 font pairings, 119 UX guidelines, 105 icons, 17 GSAP presets, 25 chart types, and 22 stacks.
 
 ## When to Apply
