@@ -78,8 +78,17 @@ try {
     let accessRejected = false;
     let saved = false;
     let failSave = false;
+    let releaseRecommendations;
+    const delayedRecommendations = new Promise((resolve) => { releaseRecommendations = resolve; });
     await context.route("**/api/**", async (route) => {
       const path = new URL(route.request().url()).pathname;
+      if (path.endsWith("/all/upcoming-trailers")) {
+        return route.fulfill({ json: picks.map((item) => ({ ...item, trailer_key: "fixture-trailer" })) });
+      }
+      if (path.endsWith("/all/movie/900/recommendations")) {
+        await delayedRecommendations;
+        return route.fulfill({ json: [] });
+      }
       if (path.endsWith("/auth/bootstrap")) {
         await new Promise((resolve) => setTimeout(resolve, 250));
         return route.fulfill({
@@ -148,6 +157,18 @@ try {
       await page
         .locator(member ? "#curated-picks-heading" : "#moodies-intro-heading")
         .waitFor();
+      if (!member && width === 1440) {
+        try {
+          const play = page.locator("#upcoming").getByRole("button", { name: "Play trailer for Personal pick 1", exact: true });
+          await play.click();
+          const dialog = page.getByRole("dialog", { name: "Personal pick 1", exact: true });
+          await dialog.waitFor({ timeout: 8000 });
+          await page.keyboard.press("Escape");
+          await dialog.waitFor({ state: "hidden" });
+        } finally {
+          releaseRecommendations();
+        }
+      }
       assert.equal(
         await page
           .locator(member ? "#moodies-intro-heading" : "#curated-picks-heading")

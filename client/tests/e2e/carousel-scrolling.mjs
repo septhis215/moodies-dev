@@ -179,6 +179,27 @@ try {
     await page.waitForFunction(() => document.querySelector("#fixture-cards .mobile-native-scroll").scrollLeft < 2);
     assert.equal(await rail.evaluate(element => element.scrollLeft), 0);
     assert.equal(await page.evaluate(() => window.scrollBehaviors.at(-1)), reducedMotion === "reduce" ? "instant" : "smooth");
+
+    for (const [id, title] of [["upcoming", "Coming Soon"], ["premiere", "Fresh Off the Screen"]]) {
+      const shelf = page.locator(`#fixture-${id}`);
+      const trailerRail = shelf.locator(".mobile-native-scroll");
+      const firstCard = await trailerRail.locator(":scope > div").first().elementHandle();
+      const next = shelf.getByRole("button", { name: `Next ${title}` });
+      const previous = shelf.getByRole("button", { name: `Previous ${title}` });
+      await next.click({ force: true });
+      await page.waitForFunction(element => element.scrollLeft > 100, await trailerRail.elementHandle());
+      assert.equal(await firstCard.evaluate(element => element.isConnected), true, "Changing pages must keep the original card mounted");
+      await previous.click({ force: true });
+      await page.waitForFunction(element => element.scrollLeft < 2, await trailerRail.elementHandle());
+      assert.equal(await trailerRail.locator(":scope > div").count(), 12);
+      await trailerRail.scrollIntoViewIfNeeded();
+      const card = await firstCard.boundingBox();
+      await page.mouse.move(card.x + card.width * 0.7, card.y + 40);
+      await page.mouse.down();
+      await page.mouse.move(card.x + card.width * 0.3, card.y + 40, { steps: 8 });
+      await page.mouse.up();
+      await page.waitForFunction(element => element.scrollLeft > 100, await trailerRail.elementHandle());
+    }
   }
   assert.deepEqual(errors, []);
   console.log("Desktop navigation and reduced-motion checks passed.");

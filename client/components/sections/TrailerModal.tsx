@@ -146,7 +146,7 @@ export default function TrailerModal({
     setPendingTrailerId(null);
     setSelectionError(null);
     setIsExpanded(false);
-  }, [trailer.id]);
+  }, [contentType, trailer.id]);
 
   return (
     <div
@@ -432,7 +432,6 @@ export default function TrailerModal({
                                 placement="poster"
                                 variant="colored"
                                 size="sm"
-                                className="absolute right-2 top-2"
                               />
                             </div>
 
