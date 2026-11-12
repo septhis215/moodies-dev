@@ -98,14 +98,17 @@ const feedTabs: Array<{
   },
 ];
 
-function FeedRating({ item }: { item: FeedContentLike }) {
-  const today = new Date().toISOString().slice(0, 10);
+function getFeedRatingBadge(item: FeedContentLike, today = new Date().toISOString().slice(0, 10)) {
   const releaseDate = (item.release_date || item.first_air_date || "").slice(0, 10);
   const isUpcoming = /^\d{4}-\d{2}-\d{2}$/.test(releaseDate) && releaseDate > today;
   const rating = Number(item.vote_average);
-  if (!isUpcoming && Number.isFinite(rating) && rating > 0 && rating <= 10) {
-    return <RatingBadge rating={rating} />;
-  }
+  const hasRating = !isUpcoming && Number.isFinite(rating) && rating > 0 && rating <= 10;
+  return { isUpcoming, hasRating, label: isUpcoming ? "Upcoming" : hasRating ? rating.toFixed(1) : "Not rated" };
+}
+
+function FeedRating({ item }: { item: FeedContentLike }) {
+  const { isUpcoming, hasRating } = getFeedRatingBadge(item);
+  if (hasRating) return <RatingBadge rating={Number(item.vote_average)} />;
   return <span className="ui-label">{isUpcoming ? "Upcoming" : "Not rated"}</span>;
 }
 
