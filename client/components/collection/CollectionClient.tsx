@@ -263,7 +263,7 @@ export default function CollectionClient() {
               })}
             </div>
           ) : (
-            <div className="mt-5 border border-[var(--surface-border)] bg-[var(--surface-1)] p-8 text-center sm:p-10">
+            <div className="ui-panel mt-5 p-8 text-center sm:p-10">
               <h3 className="text-lg font-bold text-[var(--ink)]">
                 Nothing here yet.
               </h3>

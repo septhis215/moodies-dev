@@ -110,7 +110,7 @@ export default function CelebrityNewsFeed({
               <button
                 key={value}
                 type="button"
-                className={styles.chip}
+                className="ui-filter-chip shrink-0"
                 aria-pressed={selectedTopic === value}
                 onClick={() => setSelectedTopic(value)}
               >

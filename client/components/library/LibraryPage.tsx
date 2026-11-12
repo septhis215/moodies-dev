@@ -268,12 +268,7 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
                     type="button"
                     aria-pressed={filters.format === value}
                     onClick={() => change("format", value)}
-                    className={
-                      "min-h-11 rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] " +
-                      (filters.format === value
-                        ? "bg-[var(--brand-coral)] text-white shadow-sm"
-                        : "text-[var(--ink-muted)] hover:text-[var(--ink)]")
-                    }
+                    className="ui-filter-chip"
                   >
                     {label}
                   </button>
@@ -577,9 +572,9 @@ function LoadingGrid({
         {Array.from({ length: 6 }, (_, index) => (
           <div
             key={index}
-            className={`${styles.card} ${view === "posters" ? styles.posterCard : ""}`}
+            className={`ui-panel ${styles.card} ${view === "posters" ? styles.posterCard : ""}`}
           >
-            <Skeleton className={styles.poster} />
+            <Skeleton className={`${styles.poster} ${view === "posters" ? "ui-poster" : ""}`} />
             <div className={styles.copy}>
               <Skeleton className="h-3 w-1/2" />
               <Skeleton className="mt-4 h-4 w-full" />

@@ -597,7 +597,7 @@ export function HeroContentCard({
               {mappedContent.genres.slice(0, 4).map((genre) => (
                 <span
                   key={genre}
-                  className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs font-semibold text-[var(--ink-muted)]"
+                  className="ui-label"
                 >
                   {genre}
                 </span>

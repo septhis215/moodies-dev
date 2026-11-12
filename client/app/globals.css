@@ -280,6 +280,125 @@ body {
     box-shadow: none;
   }
 
+  .ui-media-artwork {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
+  }
+
+  .ui-poster {
+    aspect-ratio: 2 / 3;
+  }
+
+  .ui-poster-title {
+    display: -webkit-box;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    margin-top: 0.625rem;
+    color: var(--ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+  }
+
+  :where(.group:hover, .group:focus-within) .ui-poster-title {
+    color: var(--brand-coral-strong);
+  }
+
+  .ui-poster-meta {
+    margin-top: 0.125rem;
+    color: var(--ink-muted);
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  .ui-card-link {
+    border-radius: var(--radius-md);
+  }
+
+  .ui-card-link:focus-visible,
+  .ui-filter-chip:focus-visible,
+  .ui-poster-save:focus-visible {
+    outline: 2px solid var(--brand-coral-strong);
+    outline-offset: 2px;
+  }
+
+  .ui-label,
+  .ui-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .ui-label {
+    width: fit-content;
+    max-width: 100%;
+    padding: 0.125rem 0.5rem;
+    background: var(--surface-2);
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    overflow-wrap: anywhere;
+  }
+
+  .ui-filter-chip {
+    min-height: 2.75rem;
+    padding-inline: 0.75rem;
+    background: var(--surface-1);
+    font-size: 0.875rem;
+    transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+  }
+
+  .ui-filter-chip:hover:not(:disabled, [aria-pressed="true"]) {
+    border-color: var(--ink-muted);
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+
+  .ui-filter-chip[aria-pressed="true"] {
+    border-color: var(--brand-coral-strong);
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+
+  .ui-poster-save {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 20;
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    border: 1px solid rgb(255 255 255 / 25%);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--surface-0) 90%, transparent);
+    color: white;
+    transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+  }
+
+  .ui-poster-save:hover:not(:disabled) {
+    border-color: var(--ink);
+  }
+
+  .ui-poster-save[aria-pressed="true"] {
+    border-color: var(--brand-coral-strong);
+    color: var(--brand-coral-strong);
+  }
+
+  .ui-filter-chip:disabled,
+  .ui-poster-save:disabled {
+    opacity: 0.6;
+  }
+
   .ui-panel-interactive {
     border: 0;
     border-bottom: 1px solid var(--surface-border);
@@ -319,16 +438,15 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 0.875rem;
+    border-radius: var(--radius-md);
     padding-inline: 1rem;
     font-size: 0.875rem;
-    font-weight: 800;
+    font-weight: 700;
     outline: none;
     transition:
       background-color 180ms ease,
       border-color 180ms ease,
-      color 180ms ease,
-      transform 180ms ease;
+      color 180ms ease;
   }
 
   .ui-primary-action {
@@ -337,9 +455,9 @@ body {
     box-shadow: 0 10px 24px rgb(233 79 55 / 0.2);
   }
 
-  .ui-primary-action:hover {
+  .ui-primary-action:hover:not(:disabled),
+  .ui-primary-action:active:not(:disabled) {
     background: var(--brand-coral-strong);
-    transform: translateY(-1px);
   }
 
   .ui-secondary-action {
@@ -348,10 +466,14 @@ body {
     color: rgb(255 255 255 / 0.86);
   }
 
-  .ui-secondary-action:hover {
+  .ui-secondary-action:hover:not(:disabled) {
     border-color: rgb(255 255 255 / 0.2);
     background: rgb(255 255 255 / 0.09);
     color: white;
+  }
+
+  :where(.ui-primary-action, .ui-secondary-action):disabled {
+    opacity: 0.6;
   }
 
   :where(.ui-primary-action, .ui-secondary-action):focus-visible {
@@ -373,15 +495,24 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .ui-filter-chip,
+  .ui-poster-save,
   .ui-panel-interactive,
   .ui-primary-action,
   .ui-secondary-action {
     transition: none;
   }
 
-  .ui-panel-interactive:hover,
-  .ui-primary-action:hover {
+  .ui-panel-interactive:hover {
     transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .ui-filter-chip[aria-pressed="true"],
+  .ui-poster-save[aria-pressed="true"] {
+    border-color: Highlight;
+    color: Highlight;
   }
 }
 

@@ -116,7 +116,7 @@ export default function ActionButtons({
             onClick={button.onClick}
             aria-label={button.label}
             aria-pressed={button.active}
-            className="group flex min-h-14 min-w-12 flex-col items-center justify-center gap-0.5 rounded-full outline-none transition hover:bg-black/20 focus-visible:ring-2 focus-visible:ring-white/85 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:min-h-16 sm:min-w-14 sm:gap-1"
+            className="group flex min-h-14 min-w-12 flex-col items-center justify-center gap-0.5 rounded-md outline-none transition hover:bg-black/20 focus-visible:ring-2 focus-visible:ring-white/85 focus-visible:ring-offset-2 focus-visible:ring-offset-black sm:min-h-16 sm:min-w-14 sm:gap-1"
           >
             <motion.span
               animate={button.active ? { scale: [1, 1.18, 1] } : { scale: 1 }}

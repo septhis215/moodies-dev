@@ -271,7 +271,7 @@ export default function CelebrityMediaSections({
                   setCategory(value);
                   setVideoLimit(8);
                 }}
-                className={styles.chip}
+                className="ui-filter-chip shrink-0"
               >
                 {value === "all" ? "All moments" : categories[value]}
               </button>

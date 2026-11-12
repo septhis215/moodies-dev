@@ -326,7 +326,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
                 <button
                   type="button"
                   onClick={goToDetails}
-                  className="ui-primary-action min-h-12 rounded-xl sm:min-h-11 sm:rounded-md"
+                  className="ui-primary-action min-h-12 sm:min-h-11"
                 >
                   <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Explore

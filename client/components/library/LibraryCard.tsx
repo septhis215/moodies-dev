@@ -36,12 +36,12 @@ export function LibraryCard({
       : "Unlike " + title;
   return (
     <article
-      className={`${styles.card} ${view === "posters" ? styles.posterCard : ""}`}
+      className={`ui-panel ${styles.card} ${view === "posters" ? styles.posterCard : ""}`}
       aria-label={title}
     >
       <Link
         href={href}
-        className={styles.poster}
+        className={`${styles.poster} ${view === "posters" ? "ui-media-artwork ui-poster" : ""}`}
         aria-label={"Explore " + title}
       >
         <TmdbImage
@@ -57,7 +57,7 @@ export function LibraryCard({
               : "(max-width: 767px) 30vw, (max-width: 1279px) 16vw, 140px"
           }
         />
-        {entry.summary?.vote_average === 0 && <RatingBadge rating={0} placement="poster" />}
+        {view === "posters" && <RatingBadge rating={entry.summary?.vote_average} placement="poster" />}
       </Link>
       <div className={styles.copy}>
         <div className={styles.meta}>
@@ -65,8 +65,8 @@ export function LibraryCard({
             {entry.kind === "movie" ? "Movie" : "Series"}
             {date ? " · " + date.slice(0, 4) : ""}
           </span>
-          {!!entry.summary?.vote_average && (
-            <RatingBadge rating={entry.summary.vote_average} size="sm" />
+          {view === "cards" && (
+            <RatingBadge rating={entry.summary?.vote_average} variant="minimal" />
           )}
         </div>
         <h3 className={styles.title}>

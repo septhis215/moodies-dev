@@ -35,10 +35,10 @@ export function FilterDropdown<T extends string>({
             <button
                 onClick={() => setOpen(v => !v)}
                 className="
-          h-9 min-w-[140px]
+          min-h-11 min-w-[140px]
           px-3
-          rounded-xl
-          bg-neutral-900
+          rounded-md
+          bg-[var(--surface-1)]
           border border-white/10
           text-sm text-white
           flex items-center justify-between gap-2

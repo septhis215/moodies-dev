@@ -28,7 +28,7 @@ export default function CelebrityVideoCard({
         type="button"
         onClick={onPlay}
         aria-label={`Play ${video.title}`}
-        className="relative block aspect-video w-full overflow-hidden rounded-xl bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral)]"
+        className="ui-media-artwork block aspect-video w-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral)]"
       >
         <Image
           src={broken ? "/placeholder-backdrop.svg" : video.thumbnail}
@@ -45,7 +45,7 @@ export default function CelebrityVideoCard({
           </span>
         </span>
         {duration && (
-          <span className="absolute bottom-2 right-2 rounded bg-black/85 px-1.5 py-0.5 text-xs font-semibold text-white">
+          <span className="ui-label absolute bottom-2 right-2 bg-black/85 text-white tabular-nums">
             {duration}
           </span>
         )}

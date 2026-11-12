@@ -266,7 +266,7 @@ function PreferencePicker({ options, selected, onToggle, onClear, kind }: {
       <div className="min-h-0 overflow-y-auto overscroll-contain pb-2 [scrollbar-color:var(--surface-border)_transparent]">
       <div role="group" aria-label={`Preferred ${kind}s`} className="grid auto-rows-fr grid-cols-2 gap-2 p-1 sm:grid-cols-3">
         {options.map((option) => <button key={option} type="button" aria-pressed={selected.includes(option)} onClick={() => onToggle(option)}
-          className={`min-h-11 rounded-md border px-2 py-2 text-xs font-semibold leading-4 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] motion-reduce:transition-none ${selected.includes(option) ? "border-[var(--brand-coral)] bg-[var(--brand-coral)]/15 text-[var(--ink)]" : "border-[var(--surface-border)] bg-[var(--surface-1)] text-[var(--ink-muted)] hover:border-[var(--ink-muted)] hover:text-[var(--ink)]"}`}>{option}</button>)}
+          className="ui-filter-chip px-2 py-2 text-xs leading-4">{option}</button>)}
       </div>
       </div>
     </div>

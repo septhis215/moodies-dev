@@ -5,7 +5,6 @@ import type { CelebrityVideoFeed } from "@/types/celebrityMedia";
 import useCelebrityResource from "./useCelebrityResource";
 import CelebrityVideoHero from "./CelebrityVideoHero";
 import CelebrityVideoCard from "./CelebrityVideoCard";
-import styles from "./celebrity-hub.module.css";
 
 const categories = [
   { value: "all", label: "All videos" },
@@ -92,7 +91,7 @@ export default function CelebrityVideoBrowser({
                   type="button"
                   key={option.value}
                   aria-pressed={category === option.value}
-                  className={styles.chip}
+                  className="ui-filter-chip shrink-0"
                   onClick={() => setCategory(option.value)}
                 >
                   {option.label}

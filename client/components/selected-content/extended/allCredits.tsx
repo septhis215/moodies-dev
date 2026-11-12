@@ -183,7 +183,7 @@ export default function AllCredits({ credits, info, id, highlight }: {
                 onClick={() => { setTab(value); resetFilters(); }}
                 className={`inline-flex min-h-11 items-center gap-2 border-b-2 px-1 text-sm font-semibold transition-colors ${FOCUS} ${tab === value ? "border-[var(--brand-coral)] text-[var(--ink)]" : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}>
                 {value === "cast" ? <Users2 size={16} aria-hidden="true" /> : <Clapperboard size={16} aria-hidden="true" />}{value === "cast" ? "Cast" : "Crew"}
-                <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs">{value === "cast" ? cast.length : crewPeople.length}</span>
+                <span className="ui-label tabular-nums">{value === "cast" ? cast.length : crewPeople.length}</span>
               </button>)}
             </div>
             <p role="status" className="text-xs text-[var(--ink-muted)]">{results.length} {results.length === 1 ? "credit" : "credits"}{query.trim() || department ? " found" : ""}</p>

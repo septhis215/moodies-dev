@@ -28,7 +28,7 @@ function AchievementCard({ row }: { row: AchievementRow }) {
   const action = nextAction(row.achievement.requirementTarget);
   return (
     <article
-      className={`flex min-w-0 flex-col rounded-xl border p-5 transition-colors duration-150 motion-reduce:transition-none ${unlocked ? "border-[var(--brand-coral)]/40 bg-[var(--brand-coral)]/5" : "border-[var(--surface-border)] bg-[var(--surface-1)]"}`}
+      className={`ui-panel flex min-w-0 flex-col p-5 ${unlocked ? "border-[var(--brand-coral)]/40" : ""}`}
     >
       <div className="mb-4 flex items-start justify-between gap-4">
         {mascot ? (
@@ -45,7 +45,7 @@ function AchievementCard({ row }: { row: AchievementRow }) {
             />
           </span>
         )}
-        <span className="text-xs font-semibold text-[var(--ink-muted)]">
+        <span className="ui-label">
           {unlocked ? (
             <span className="inline-flex items-center gap-1 text-[var(--brand-coral-strong)]">
               <Check className="h-3.5 w-3.5" aria-hidden="true" />
@@ -236,7 +236,7 @@ export default function AchievementCollection({
                     type="button"
                     aria-pressed={filter === option.value}
                     onClick={() => setFilter(option.value)}
-                    className={`min-h-11 rounded-full px-4 text-sm font-semibold transition-colors duration-150 motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)] ${filter === option.value ? "bg-[var(--brand-coral)] text-[var(--surface-0)]" : "bg-[var(--surface-1)] text-[var(--ink-muted)] hover:text-[var(--ink)]"}`}
+                    className="ui-filter-chip"
                   >
                     {option.label}
                   </button>

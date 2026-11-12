@@ -630,7 +630,7 @@ export default function SearchResultsPage() {
                     className={styles.card}
                     aria-label={`View ${item.type === "person" ? "profile" : "details"} for ${title}`}
                   >
-                    <div className={styles.poster}>
+                    <div className={`ui-media-artwork ui-poster ${styles.poster}`}>
                       <Image
                         src={image}
                         alt=""
@@ -642,7 +642,7 @@ export default function SearchResultsPage() {
                         }
                       />
                       {view === "grid" && hasRating && (
-                        <RatingBadge rating={rating} placement="poster" className={rating === 0 ? undefined : styles.rating} />
+                        <RatingBadge rating={rating} placement="poster" />
                       )}
                     </div>
                     <div className={styles.cardBody}>
@@ -651,10 +651,10 @@ export default function SearchResultsPage() {
                         <p className={styles.meta}>
                           {item.type === "person"
                             ? `Person${item.known_for_department ? ` · ${item.known_for_department}` : ""}`
-                            : `${item.type === "movie" ? "Movie" : "TV series"} · ${year || "Date TBA"}`}
+                            : `${item.type === "movie" ? "Movie" : "Series"} · ${year || "Date TBA"}`}
                         </p>
                         {view === "list" && hasRating && (
-                          <RatingBadge rating={rating} variant="minimal" size="md" />
+                          <RatingBadge rating={rating} variant="minimal" />
                         )}
                       </div>
                       {view === "list" && item.overview && (

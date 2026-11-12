@@ -70,7 +70,7 @@ export default function DecisionPanel({
           {info.genres.length ? (
             <div className="mt-5 flex flex-wrap gap-2" aria-label="Genres">
               {info.genres.slice(0, 4).map((genre) => (
-                <span key={genre.id} className="rounded-full border border-[var(--surface-border)] bg-[var(--surface-1)]/70 px-3 py-1 text-xs font-semibold text-[var(--ink-muted)]">
+                <span key={genre.id} className="ui-label">
                   {genre.name}
                 </span>
               ))}

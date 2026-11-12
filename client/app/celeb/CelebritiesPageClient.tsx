@@ -172,7 +172,7 @@ export default function CelebritiesPageClient() {
               key={value}
               type="button"
               aria-pressed={category === value}
-              className={styles.chip}
+              className="ui-filter-chip shrink-0"
               onClick={() => update({ category: value, page: "1" })}
             >
               {options.find((option) => option.value === value)!.label}

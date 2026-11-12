@@ -118,7 +118,7 @@ export function CuratedShelf({
           </div>
         </article>
       ) : (
-        <div className="flex min-h-60 items-center justify-center rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-5 text-sm text-[var(--ink-muted)] sm:min-h-72 lg:min-h-80" role="status">
+        <div className="flex min-h-60 items-center justify-center ui-panel p-5 text-sm text-[var(--ink-muted)] sm:min-h-72 lg:min-h-80" role="status">
           {filter === "tv" ? "No series in this mix." : "No movies in this mix."}
         </div>
       )}
@@ -136,7 +136,7 @@ export function CuratedShelf({
                 setSelection(undefined);
                 setFilter(value);
               }}
-              className="min-h-11 rounded-md px-2.5 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] aria-pressed:bg-[var(--surface-2)] aria-pressed:text-[var(--ink)]"
+              className="ui-filter-chip"
             >
               {label}
             </button>
@@ -168,7 +168,7 @@ export function CuratedShelf({
               className={`${pickClass} group text-left text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-none aria-pressed:text-[var(--ink)]`}
             >
               <span className="relative block aspect-[2/3] overflow-hidden rounded-md border-2 border-transparent bg-[var(--surface-2)] transition-colors group-hover:border-[var(--ink-muted)] group-focus-visible:border-[var(--brand-coral-strong)] group-aria-pressed:border-[var(--brand-coral-strong)]">
-                <TmdbImage src={posterUrl(item)} alt="" fill sizes="(max-width: 639px) 76px, 96px" className="object-cover" />
+                <TmdbImage src={tmdbImage(item.poster_path, "posterSmall") || "/placeholder-poster.svg"} alt="" fill sizes="(max-width: 639px) 76px, 96px" className="object-cover" />
               </span>
               <span className="mt-1 block truncate text-xs font-semibold">{title}</span>
             </button>

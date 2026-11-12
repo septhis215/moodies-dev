@@ -28,7 +28,7 @@ const REACTIONS: Array<{ type: ReactionType; emoji: string; label: string }> = [
 ];
 
 // Thread utilities stay visually quiet; touch devices retain a generous hit area.
-const THREAD_ACTION_CLASS = "ui-secondary-action min-h-8 gap-1.5 rounded-lg border-transparent bg-transparent px-2.5 text-sm font-semibold leading-none text-[var(--ink-muted)] hover:border-[var(--surface-border)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)] pointer-coarse:min-h-11";
+const THREAD_ACTION_CLASS = "ui-secondary-action min-h-8 gap-1.5 border-transparent bg-transparent px-2.5 text-sm font-semibold leading-none text-[var(--ink-muted)] hover:border-[var(--surface-border)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)] pointer-coarse:min-h-11";
 
 function toAccentColor(rating?: number): string | null {
   if (rating == null) return null;

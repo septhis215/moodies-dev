@@ -96,7 +96,7 @@ export default function MoodNightPreview() {
       </header>
       <div className={styles.layout}>
         <div className={styles.choices} role="group" aria-label="Choose a mood">
-          {moodNightChoices.map(choice => <button key={choice.id} type="button" onClick={() => { if (choice.id !== selection) { setSelection(choice.id); setSelectedPick(null); setPaused(false); setMuted(true); setPlaying(false); setFailedSelection(null); } }} aria-controls="landing-mood-preview" aria-pressed={choice.id === selection} className={`${styles.choice} text-sm font-semibold ${focus}`}>
+          {moodNightChoices.map(choice => <button key={choice.id} type="button" onClick={() => { if (choice.id !== selection) { setSelection(choice.id); setSelectedPick(null); setPaused(false); setMuted(true); setPlaying(false); setFailedSelection(null); } }} aria-controls="landing-mood-preview" aria-pressed={choice.id === selection} className={`ui-filter-chip ${styles.choice}`}>
             <span aria-hidden="true" className={styles.moodDot} style={{ backgroundColor: choice.color }} />{choice.label}
           </button>)}
         </div>

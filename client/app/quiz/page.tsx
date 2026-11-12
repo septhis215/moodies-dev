@@ -744,7 +744,6 @@ export default function MovieQuizPage() {
                                     rating={item.vote_average}
                                     size="sm"
                                     placement="poster"
-                                    className="absolute left-2 top-2"
                                   />
                               </div>
                               <h3 className="mt-2 min-h-10 line-clamp-2 break-words text-sm font-semibold leading-5">

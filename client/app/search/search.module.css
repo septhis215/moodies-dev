@@ -68,7 +68,7 @@
   min-height: 44px;
   padding: 0.65rem 0.9rem;
   border: 1px solid var(--surface-border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: var(--surface-1);
   color: var(--ink);
   font-size: 0.875rem;
@@ -175,7 +175,7 @@
   gap: 0.5rem;
   padding: 0.625rem 0.75rem;
   border: 1px solid var(--surface-border);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   background: var(--surface-1);
   color: var(--ink);
   font-size: 0.875rem;
@@ -369,13 +369,6 @@
   transition:
     background-color 150ms ease;
 }
-.poster {
-  position: relative;
-  aspect-ratio: 2/3;
-  overflow: hidden;
-  border-radius: 0.5rem;
-  background: var(--surface-2);
-}
 .poster img {
   object-fit: cover;
   transition: transform 260ms ease;
@@ -391,7 +384,7 @@
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  padding: 0.75rem 0.25rem;
+  padding: 0.625rem 0 0;
 }
 .card h3 {
   overflow-wrap: anywhere;
@@ -411,22 +404,17 @@
 .meta {
   color: var(--ink-muted);
   font-size: 0.75rem;
-  line-height: 1.3rem;
+  line-height: 1rem;
 }
 .cardFacts {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem 0.75rem;
-  margin-top: 0.35rem;
+  margin-top: 0.125rem;
 }
 .knownFor {
   color: var(--ink);
-}
-.rating {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
 }
 .list {
   display: grid;
@@ -436,6 +424,7 @@
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
   align-items: start;
+  border-radius: var(--radius);
   gap: 0.875rem;
   padding: 0.875rem;
   border: 1px solid var(--surface-border);
@@ -836,7 +825,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .poster,
   .card,
   .card h3,
   .button,

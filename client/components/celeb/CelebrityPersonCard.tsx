@@ -97,7 +97,7 @@ export default function CelebrityPersonCard({
       onMouseEnter={reveal}
       onFocus={reveal}
     >
-      <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-[var(--surface-1)]">
+      <div className="ui-media-artwork aspect-[4/5]">
         <Link
           href={`/celeb/${person.id}`}
           className="absolute inset-0 block"

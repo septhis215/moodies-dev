@@ -3,6 +3,7 @@ import PageSkeleton from "@/components/loading/PageSkeleton";
 import { cn } from "@/lib/utils";
 import { tmdbImage } from "@/lib/tmdb";
 import { useState, useRef, useEffect, useCallback } from "react";
+import RatingBadge from "@/components/ui/rating-badge";
 import type { ReactNode } from "react";
 import { animate, AnimatePresence, motion, useMotionValue, useReducedMotion } from "framer-motion";
 import {
@@ -16,7 +17,6 @@ import {
   RefreshCw,
   Sparkles,
   Search,
-  Star,
   User,
   X,
 } from "lucide-react";
@@ -98,12 +98,15 @@ const feedTabs: Array<{
   },
 ];
 
-function getFeedRatingBadge(item: FeedContentLike, today = new Date().toISOString().slice(0, 10)) {
+function FeedRating({ item }: { item: FeedContentLike }) {
+  const today = new Date().toISOString().slice(0, 10);
   const releaseDate = (item.release_date || item.first_air_date || "").slice(0, 10);
   const isUpcoming = /^\d{4}-\d{2}-\d{2}$/.test(releaseDate) && releaseDate > today;
   const rating = Number(item.vote_average);
-  const hasRating = !isUpcoming && Number.isFinite(rating) && rating > 0;
-  return { isUpcoming, hasRating, label: isUpcoming ? "Upcoming" : hasRating ? rating.toFixed(1) : "Not rated" };
+  if (!isUpcoming && Number.isFinite(rating) && rating > 0 && rating <= 10) {
+    return <RatingBadge rating={rating} />;
+  }
+  return <span className="ui-label">{isUpcoming ? "Upcoming" : "Not rated"}</span>;
 }
 
 export default function VideoFeedPage() {
@@ -1290,30 +1293,10 @@ export default function VideoFeedPage() {
                     </h2>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-white/80">
                       {/* Rating / Upcoming badge */}
-                      {(() => {
-                          const badge = getFeedRatingBadge(currentVideo);
-                          return (
-                            <span
-                              className={cn(
-                                "inline-flex min-h-7 items-center gap-1.5 rounded-full border border-white/15 bg-black/30 px-2.5 backdrop-blur-md",
-                                badge.isUpcoming
-                                  ? "text-indigo-200"
-                                  : "text-amber-200",
-                              )}
-                            >
-                              {badge.hasRating && (
-                                <Star
-                                  className="h-3.5 w-3.5 text-amber-300"
-                                  fill="currentColor"
-                                />
-                              )}
-                              {badge.label}
-                            </span>
-                          );
-                        })()}
+                      <FeedRating item={currentVideo} />
 
-                      <span className="inline-flex min-h-7 items-center rounded-full border border-white/15 bg-black/30 px-2.5 uppercase tracking-[0.12em] text-white/80 backdrop-blur-md">
-                        {currentContentType}
+                      <span className="ui-label">
+                    {currentContentType === "tv" ? "Series" : "Movie"}
                       </span>
 
                       {activeCategory === "upcoming" &&
@@ -1597,7 +1580,7 @@ export default function VideoFeedPage() {
                   <div className="flex min-w-0 flex-1 flex-col justify-center gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                       {currentYear && Number.isFinite(currentYear) && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-white/[0.08] px-2.5 py-1 text-xs font-bold text-white/70">
+                        <span className="inline-flex items-center gap-1 ui-label">
                           <Calendar className="h-3 w-3" />
                           {currentYear}
                         </span>
@@ -1612,29 +1595,9 @@ export default function VideoFeedPage() {
                       ))}
                     </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  {(() => {
-                          const badge = getFeedRatingBadge(currentVideo);
-                      return (
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold
-                        ${
-                          badge.isUpcoming
-                            ? "bg-indigo-500/25 text-indigo-200 border-indigo-400/35"
-                            : "bg-amber-500/25 text-amber-200 border-amber-400/35"
-                        }`}
-                        >
-                          {badge.hasRating && (
-                            <Star
-                              className="h-3 w-3 text-amber-300"
-                              fill="currentColor"
-                            />
-                          )}
-                          {badge.label}
-                        </span>
-                      );
-                    })()}
-                  <span className="rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1 text-xs font-bold uppercase text-white/70">
-                    {currentContentType}
+                  <FeedRating item={currentVideo} />
+                  <span className="ui-label">
+                    {currentContentType === "tv" ? "Series" : "Movie"}
                   </span>
                   {currentVideoTypeLabel && (
                     <span className="rounded-full border border-red-400/25 bg-red-500/15 px-2.5 py-1 text-xs font-bold uppercase text-red-300">

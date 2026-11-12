@@ -202,31 +202,6 @@
 .videoStrip button:focus-visible {
   outline: 2px solid var(--brand-coral-strong);
 }
-.chip {
-  min-height: 44px;
-  flex-shrink: 0;
-  padding: 0.625rem 1rem;
-  border-radius: 0.625rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  background: var(--surface-1);
-  color: var(--ink-muted);
-  transition:
-    color 160ms,
-    background-color 160ms;
-}
-.chip:hover {
-  background: var(--surface-2);
-  color: var(--ink);
-}
-.chip[aria-pressed="true"] {
-  background: var(--ink);
-  color: var(--surface-0);
-}
-.chip:focus-visible {
-  outline: 2px solid var(--brand-coral-strong);
-  outline-offset: 2px;
-}
 .mediaDialog[open] {
   animation: celeb-dialog-in 180ms ease-out;
 }
@@ -316,8 +291,7 @@
   .personCard,
   .personOverlay,
   .storyImage img,
-  .iconButton,
-  .chip {
+  .iconButton {
     transition: none;
   }
   .story:hover .storyImage img {
