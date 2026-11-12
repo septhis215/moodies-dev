@@ -9,7 +9,7 @@ const compiled = ts.transpileModule(
   { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } },
 ).outputText;
 
-function render(reviews, expandedIds = []) {
+function render(reviews, reducedMotion = false) {
   const testModule = { exports: {} };
   const jsx = (type, props) => ({ type, props });
   vm.runInNewContext(compiled, {
@@ -17,11 +17,12 @@ function render(reviews, expandedIds = []) {
     require(name) {
       if (name === "react/jsx-runtime") return { jsx, jsxs: jsx, Fragment: "fragment" };
       if (name === "react") return {
-        useMemo: (callback) => callback(), useState: (initial) => [typeof initial?.has === "function" ? new Set(expandedIds) : initial, () => {}],
+        useMemo: (callback) => callback(), useState: (initial) => [initial, () => {}],
         useEffect() {}, useRef: (initial) => ({ current: initial }),
       };
       if (name === "next/link") return { default: "Link" };
-      if (name === "framer-motion") return { motion: { div: "motion.div" }, AnimatePresence: "AnimatePresence" };
+      if (name === "framer-motion") return { motion: { div: "motion.div" }, AnimatePresence: "AnimatePresence", useReducedMotion: () => reducedMotion };
+      if (name === "../ReviewPreviewCard") return { ReviewPreviewCard: "ReviewPreviewCard" };
       if (name === "@/app/context/AuthProvider") return { useAuth: () => ({ isAuthenticated: true, user: { id: "me" } }) };
       if (name === "@/app/context/ToastContext") return { useToast: () => ({ toast() {} }) };
       return {};
@@ -58,28 +59,31 @@ test("populated reviews have one sort control and concise actions", () => {
   assert.equal(view.props.href, "/tv/123/reviews");
 });
 
-test("short and long previews keep equal fixed heights and bottom footers", () => {
+test("review cards receive full text for local expansion and links to their details", () => {
+  const fullText = "A longer review. ".repeat(100);
   const nodes = render([
     { id: "short", content: "A thoughtful watch", createdAt: "2026-10-10" },
-    { id: "long", content: "A longer review. ".repeat(100), createdAt: "2026-10-09" },
+    { id: "long", content: fullText, createdAt: "2026-10-09", moodEmojis: ["/images/review-icons/amazing.png"] },
   ]);
-  const cards = nodes.filter((node) => node.type === "motion.div" && node.props.className?.includes("group flex"));
+  const cards = nodes.filter((node) => node.type === "ReviewPreviewCard");
   assert.equal(cards.length, 2);
-  for (const card of cards) {
-    assert.match(card.props.className, /h-80/);
-    const children = card.props.children;
-    assert.match(children[1].props.className, /min-h-0 flex-1/);
-    assert.match(children[2].props.className, /min-h-12 shrink-0/);
-  }
+  assert.equal(cards[1].props.content, fullText);
+  assert.equal(cards[1].props.href, "/tv/123/reviews?highlight=long");
+  assert.equal(cards[1].props.mood, "/images/review-icons/amazing.png");
 });
 
-test("expanding text scrolls inside the card without changing height or column layout", () => {
-  const nodes = render([{ id: "long", content: "A longer review. ".repeat(100), createdAt: "2026-10-10" }], ["long"]);
-  assert.ok(nodes.some((node) => node.props.className === "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"));
-  const text = nodes.find((node) => node.props.id === "review-preview-long");
-  assert.match(text.props.className, /overflow-y-auto/);
-  assert.equal(text.props.tabIndex, 0);
-  assert.equal(text.props.role, "region");
-  const toggle = nodes.find((node) => node.type === "button" && node.props["aria-controls"] === "review-preview-long");
-  assert.equal(toggle.props["aria-expanded"], true);
+test("owner sharing and the five-star rating remain available on previews", () => {
+  const nodes = render([{ id: "mine", userId: "me", rating: 10, content: "Loved it", createdAt: "2026-10-10" }]);
+  const card = nodes.find((node) => node.type === "ReviewPreviewCard");
+  assert.equal(card.props.rating, 5);
+  assert.equal(typeof card.props.onShare, "function");
+  assert.equal(card.props.authorHref, "/profile/me");
+});
+
+test("reduced motion disables review layout and entrance animations", () => {
+  const nodes = render([{ id: "one", content: "A thoughtful watch", createdAt: "2026-10-10" }], true);
+  const wrapper = nodes.find((node) => node.type === "motion.div");
+  assert.equal(wrapper.props.layout, false);
+  assert.equal(wrapper.props.initial, false);
+  assert.equal(wrapper.props.transition.duration, 0);
 });

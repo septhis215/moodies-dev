@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CalendarDays, Clock3, Eye, Heart, MessageSquare } from "lucide-react";
+import { ArrowUpRight, Star } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import type { MovieDetailsData, TrailerData, TvDetailsData } from "@/components/selected-content/types";
 import { tmdbImage } from "@/lib/tmdb";
 import TrailerBackground from "./TrailerBackground";
-import { AudienceMood } from '../AudienceMood';
+import { AudienceMood } from "../AudienceMood";
 
 type DecisionPanelProps = {
   data: MovieDetailsData | TvDetailsData;
@@ -16,17 +16,6 @@ type DecisionPanelProps = {
   reviewStats?: { totalRatings: number; averageRating: number } | null;
 };
 
-function formatRuntime(minutes: number): string {
-  if (!minutes) return "Runtime unavailable";
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return hours ? `${hours}h ${rest}m` : `${rest}m`;
-}
-
-function yearOf(date: string): string | null {
-  return date ? date.slice(0, 4) : null;
-}
-
 export default function DecisionPanel({
   data,
   trailers = [],
@@ -36,74 +25,52 @@ export default function DecisionPanel({
   children,
 }: DecisionPanelProps) {
   const info = data.info;
-  const isTv = info.content_type === "tv";
-  const tvInfo = isTv ? (data as TvDetailsData).info : null;
-  const mediaPath = isTv ? "tv" : "movies";
+  const mediaPath = info.content_type === "tv" ? "tv" : "movies";
   const appRating = reviewStats?.totalRatings ? reviewStats.averageRating : null;
   const rating = appRating ?? info.vote_average;
-  const ratingLabel = appRating ? "Moodies audience" : "TMDB";
-  const date = info.release_date || tvInfo?.first_air_date || "";
+  const ratingLabel = appRating !== null ? "Moodies" : "TMDb";
   const firstTrailer = [data.trailer, ...trailers].find(
     (video) => video?.key && (!video.site || video.site.toLowerCase() === "youtube"),
   );
 
   return (
-    <section className="relative isolate overflow-hidden bg-[var(--surface-0)]" aria-labelledby="decision-heading">
+    <section className="relative isolate overflow-hidden bg-surface-0" aria-labelledby="decision-heading">
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         {info.backdrop_path ? (
           <Image src={tmdbImage(info.backdrop_path, "original")} alt="" fill sizes="100vw" className="object-cover" />
         ) : null}
         {firstTrailer?.key ? <TrailerBackground videoKey={firstTrailer.key} /> : null}
-        <div className="absolute inset-0 bg-[var(--surface-0)]/60" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[var(--surface-0)] via-transparent to-[var(--surface-0)]" />
+        <div className="absolute inset-0 bg-surface-0/85" />
+        <div className="absolute inset-0 bg-gradient-to-b from-surface-0 via-transparent to-surface-0" />
       </div>
-      <div className="ui-shell relative flex min-h-[28rem] flex-col justify-center py-8 sm:min-h-[36rem] sm:py-10">
-      <div className="grid gap-6 border-b border-[var(--surface-border)] py-6 sm:py-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-        <div>
-          <p className="ui-kicker">Find your next watch</p>
-          <h2 id="decision-heading" className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
-            Does this fit your mood?
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
-            A quick read of the audience signal, score, and format before you spend time with it.
-          </p>
-          {info.genres.length ? (
-            <div className="mt-5 flex flex-wrap gap-2" aria-label="Genres">
-              {info.genres.slice(0, 4).map((genre) => (
-                <span key={genre.id} className="ui-label">
-                  {genre.name}
-                </span>
-              ))}
-            </div>
-          ) : null}
-          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-3 text-xs text-[var(--ink-muted)]">
-            <span className="inline-flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
-              {yearOf(date) || "Year unknown"}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Clock3 className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
-              {isTv ? `${tvInfo?.number_of_seasons || "?"} seasons` : formatRuntime(info.runtime)}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Heart className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
-              {rating ? `${rating.toFixed(1)} ${ratingLabel}` : "No score yet"}
-            </span>
-            {reviewStats?.totalRatings ? (
-              <span className="inline-flex items-center gap-1.5">
-                <MessageSquare className="h-3.5 w-3.5 text-brand-coral-strong" aria-hidden="true" />
-                {reviewStats.totalRatings} ratings
-              </span>
-            ) : null}
+      <div className="ui-shell relative py-8 sm:py-10">
+        <div className="mb-5 flex flex-col gap-5 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <p className="ui-kicker">Community perspective</p>
+            <h2 id="decision-heading" className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
+              Does this fit your mood?
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
+              See how viewers felt about {info.title}.
+            </p>
+            <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-[var(--ink-muted)]">
+              {rating > 0 ? <>
+                <Star className="h-4 w-4 text-[var(--brand-gold)]" aria-hidden="true" />
+                <span><strong className="font-semibold tabular-nums text-[var(--ink)]">{rating.toFixed(1)}</strong>/10 {ratingLabel}</span>
+              </> : <span>No score yet</span>}
+              {reviewStats?.totalRatings ? <>
+                <span aria-hidden="true">&middot;</span>
+                <span>{reviewStats.totalRatings.toLocaleString()} {reviewStats.totalRatings === 1 ? "rating" : "ratings"}</span>
+              </> : null}
+            </p>
           </div>
-          <div className="mt-5 max-w-xl"><AudienceMood moods={topMoods} totalVotes={totalMoodVotes} /></div>
+          <Link href={"/" + mediaPath + "/" + info.id + "/reviews"} className="ui-primary-action w-full shrink-0 rounded-full shadow-none hover:transform-none sm:w-auto">
+            Read reviews
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
         </div>
-        <Link href={`/${mediaPath}/${info.id}/reviews`} className="ui-primary-action w-full sm:w-auto">
-          Reviews
-          <Eye className="h-4 w-4" aria-hidden="true" />
-        </Link>
-      </div>
-      {children ? <div className="mt-8 min-w-0 sm:mt-10">{children}</div> : null}
+        <AudienceMood moods={topMoods} totalVotes={totalMoodVotes} />
+        {children ? <div className="mt-8 min-w-0 sm:mt-10">{children}</div> : null}
       </div>
     </section>
   );

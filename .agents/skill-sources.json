@@ -101,10 +101,11 @@
       "source": "ui-ux-pro-max",
       "sourcePath": "cli/assets/templates/platforms/codex.json",
       "adaptations": [
-        "Documented the existing offline uv Python launcher for Moodies."
+        "Documented the existing offline uv Python launcher for Moodies.",
+        "Added project-wide Apple HIG motion, layout, typography, and materials guidance at the user's request; official sources reviewed 2026-11-11."
       ],
       "fileCount": 68,
-      "sha256": "a3b6de9d6e60c9d696f713d03dcd31a543e01445321c9b8faf51b1109e01fb66"
+      "sha256": "1b793212c0060039a9462f164bf822e5af7394d099a23676172e7bb540823d43"
     },
     {
       "name": "humanizer",

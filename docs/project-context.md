@@ -299,6 +299,16 @@ separate desktop nav array. **Adding or removing a route means touching all of t
 | `quiz` | `GET /recommendations`, `POST /recommendations` |
 | `user` | public profile read |
 
+`GET /reviews/media/:mediaType/:tmdbId` returns `allMoods` (every recorded mood,
+sorted by count), `topMoods` (the first three), and `totalMoodVotes`. These aggregates
+cover all published and flagged reviews for the title, independently of review pagination.
+The full reviews page uses `allMoods` for its distribution; title summaries use `topMoods`.
+The response also includes up to three `featuredReviews`, selected across the title by
+review reactions + replies + reactions to replies (one point each). Only reviews with
+activity qualify; ties use newest creation date, then ID. Distinct featured previews link
+to their full review rows in one shared feed container. Popular uses the same activity
+formula, while Latest and Highest retain their own order in the full feed.
+
 > **Caution:** `GET /search/discover` and `GET /people/discover` are backend endpoints
 > that survived the removal of the `/discover` *frontend route*. Do not delete them while
 > doing navigation cleanup.

@@ -978,50 +978,32 @@ export class ReviewService {
     viewerId?: string,
   ) {
     const skip = (page - 1) * limit;
-
-    const [reviews, total, moodGroups] = await Promise.all([
-      this.prisma.review.findMany({
-        where: {
-          tmdbId,
-          mediaType: mediaType as any,
-          status: { in: [ReviewStatus.PUBLISHED, ReviewStatus.FLAGGED] },
+    const publicWhere = {
+      tmdbId,
+      mediaType: mediaType as MediaType,
+      status: { in: [ReviewStatus.PUBLISHED, ReviewStatus.FLAGGED] },
+    };
+    const include = {
+      user: { select: { id: true, username: true, name: true, avatarUrl: true } },
+      reactions: { select: reactionSelect },
+      replies: {
+        include: {
+          user: { select: { id: true, username: true, name: true, avatarUrl: true } },
+          reactions: { select: reactionSelect },
         },
+        orderBy: { createdAt: 'asc' },
+      },
+    } as const;
+
+    const [reviews, total, moodGroups, activity] = await Promise.all([
+      this.prisma.review.findMany({
+        where: publicWhere,
         skip,
         take: limit,
         orderBy: {
           createdAt: 'desc',
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-              name: true,
-              avatarUrl: true,
-            },
-          },
-          reactions: {
-            select: reactionSelect,
-          },
-          replies: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  username: true,
-                  name: true,
-                  avatarUrl: true,
-                },
-              },
-              reactions: {
-                select: reactionSelect,
-              },
-            },
-            orderBy: {
-              createdAt: 'asc',
-            },
-          },
-        },
+        include,
       }),
       this.prisma.review.count({
         where: {
@@ -1039,7 +1021,30 @@ export class ReviewService {
         },
         _count: { _all: true },
       }),
+      this.prisma.review.findMany({
+        where: publicWhere,
+        select: {
+          id: true,
+          createdAt: true,
+          _count: { select: { reactions: true, replies: true } },
+          replies: { select: { _count: { select: { reactions: true } } } },
+        },
+      }),
     ]);
+
+    const featuredIds = activity.map(review => ({
+      id: review.id,
+      createdAt: review.createdAt,
+      score: review._count.reactions + review._count.replies + review.replies.reduce((sum, reply) => sum + reply._count.reactions, 0),
+    })).filter(review => review.score > 0).sort((a, b) =>
+      b.score - a.score || b.createdAt.getTime() - a.createdAt.getTime() || a.id.localeCompare(b.id),
+    ).slice(0, 3).map(review => review.id);
+    const missingFeaturedIds = featuredIds.filter(id => !reviews.some(review => review.id === id));
+    const additionalFeatured = missingFeaturedIds.length ? await this.prisma.review.findMany({
+      where: { ...publicWhere, id: { in: missingFeaturedIds } },
+      include,
+    }) : [];
+    const byId = new Map([...reviews, ...additionalFeatured].map(review => [review.id, review]));
 
     const allMoodEmojis = moodGroups.flatMap((group) =>
       group.moodEmojis.map((emoji) => ({ emoji, count: group._count._all })),
@@ -1052,10 +1057,10 @@ export class ReviewService {
       {} as Record<string, number>,
     );
 
-    const topMoods = Object.entries(moodCounts)
+    const allMoods = Object.entries(moodCounts)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 3)
       .map(([emoji, count]) => ({ emoji, count }));
+    const topMoods = allMoods.slice(0, 3);
 
     // Convert to entities and sanitize
     const reviewEntities = reviews.map(
@@ -1064,7 +1069,10 @@ export class ReviewService {
 
     return {
       reviews: reviewEntities.map((r) => r.toPublic()),
+      featuredReviews: featuredIds.map(id => byId.get(id)).filter(review => review !== undefined)
+        .map(review => new ReviewWithRepliesEntity({ ...review, viewerId }).toPublic()),
       topMoods,
+      allMoods,
       totalMoodVotes: Object.values(moodCounts).reduce((sum, count) => sum + count, 0),
       pagination: {
         page,

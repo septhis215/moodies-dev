@@ -1,0 +1,176 @@
+.scene {
+  --peek-gutter: 4.5rem;
+  --tilt-x: -38%;
+  position: relative;
+  display: block;
+  width: 100%;
+  padding-inline-start: var(--peek-gutter);
+  isolation: isolate;
+}
+
+.artwork {
+  position: relative;
+  z-index: 1;
+  display: block;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: var(--surface-1);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 20%);
+}
+
+.reveal {
+  border: 0;
+  padding-block: 0;
+  padding-inline-end: 0;
+  background: none;
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+}
+
+.reveal:focus-visible {
+  outline: 2px solid var(--brand-coral-strong);
+  outline-offset: 5px;
+  border-radius: 1rem;
+}
+
+.reveal::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 3.25rem -1rem;
+}
+
+.reveal[data-expanded="true"],
+.reveal[data-closing="true"] { z-index: 5; }
+
+.mascot {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: var(--peek-gutter);
+  width: clamp(7rem, calc(80% - var(--peek-gutter)), 13rem);
+  transform: translate(-50%, 0) rotate(-20deg);
+  transform-origin: 100% 50%;
+  transition: transform 180ms ease-out;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 12px rgb(0 0 0 / 25%));
+}
+
+.mascotImage { display: block; width: 100%; height: auto; }
+
+.reveal[data-expanded="false"]:focus-visible .mascot {
+  transform: translate(var(--tilt-x), 0) rotate(-25deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .reveal[data-expanded="false"]:hover .mascot {
+    transform: translate(var(--tilt-x), 0) rotate(-25deg);
+  }
+}
+
+.reveal[data-expanded="true"] .mascot {
+  animation: slide-out 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.reveal[data-closing="true"] .mascot {
+  animation: slide-in 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes slide-out {
+  from { transform: translate(var(--tilt-x), 0) rotate(-25deg); }
+  /* Compensate for transparent artwork padding to expose about 80% of the character. */
+  to { transform: translate(-72%, -25%) rotate(-30deg); }
+}
+
+@keyframes slide-in {
+  from { transform: translate(-72%, -25%) rotate(-30deg); }
+  to { transform: translate(var(--tilt-x), 0) rotate(-25deg); }
+}
+
+.hint {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hintImage { flex-shrink: 0; width: 2.5rem; height: 2.5rem; object-fit: contain; }
+.hintLabel { display: none; }
+
+.caption {
+  position: absolute;
+  z-index: 4;
+  top: -1rem;
+  left: calc(100% + 0.75rem);
+  width: max-content;
+  max-width: min(16rem, calc(100vw - 2rem));
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  background: white;
+  color: black;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 25%);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(0.375rem);
+  transition: opacity 140ms ease, transform 140ms ease, visibility 140ms;
+}
+
+.caption::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -0.75rem;
+  width: 0.75rem;
+}
+
+.caption::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -0.375rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 0.125rem;
+  background: inherit;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.caption strong { display: block; font-size: 1rem; font-weight: 700; line-height: 1.25rem; }
+
+.reveal[data-expanded="true"] .caption {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 160ms;
+}
+
+@media (min-width: 640px) {
+  .hintLabel { display: inline; }
+  .caption strong { font-size: 1.125rem; }
+}
+
+@media (min-width: 1024px) {
+  .scene { --peek-gutter: 0rem; --tilt-x: -50%; }
+  .reveal::before { left: -10rem; }
+  .caption { top: -2.5rem; left: auto; right: calc(100% + 0.75rem); }
+  .caption::before { inset: 0 -0.75rem 0 auto; }
+  .caption::after { top: auto; bottom: -0.375rem; left: auto; right: 1rem; transform: rotate(45deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot { transition: none; }
+  .reveal[data-expanded="false"]:hover .mascot,
+  .reveal[data-expanded="false"]:focus-visible .mascot { transform: translate(-50%, 0) rotate(-20deg); }
+  .reveal[data-expanded="true"] .mascot { animation: none; transform: translate(-72%, -25%) rotate(-30deg); }
+  .reveal[data-closing="true"] .mascot { animation: none; transform: translate(-50%, 0) rotate(-20deg); z-index: 0; }
+  .caption { transition: none; transform: none; }
+}

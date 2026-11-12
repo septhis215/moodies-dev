@@ -17,6 +17,7 @@ function render(topMoods) {
     require(name) {
       if (name === "react/jsx-runtime") return { jsx, jsxs: jsx };
       if (name === "next/link") return { default: "Link" };
+      if (name === "../AudienceMood") return { AudienceMood: "AudienceMood" };
       return {};
     },
   });
@@ -34,16 +35,15 @@ function render(topMoods) {
   return nodes;
 }
 
-test("audience mood has a separate heading above a wrapping row of values", () => {
-  const nodes = render([{ emoji: "/images/review-icons/amazing.png", count: 2 }, { emoji: "/images/review-icons/loved-it.png", count: 1 }]);
-  const group = nodes.find((node) => node.props["aria-labelledby"] === "audience-mood-heading");
-  const [heading, values] = group.props.children;
-  assert.equal(heading.type, "h3");
-  assert.equal(heading.props.children, "Audience mood");
-  assert.match(values.props.className, /mt-3 flex flex-wrap/);
-  assert.equal(values.props.children.length, 2);
+test("decision panel passes its votes to the shared audience distribution and links to full reviews", () => {
+  const moods = [{ emoji: "/images/review-icons/amazing.png", count: 2 }, { emoji: "/images/review-icons/loved-it.png", count: 1 }];
+  const nodes = render(moods);
+  const distribution = nodes.find(node => node.type === 'AudienceMood');
+  assert.equal(distribution.props.moods, moods);
+  assert.equal(distribution.props.showAll, undefined, 'Title summaries retain the top-three view');
+  assert.ok(nodes.some(node => node.type === 'Link' && node.props.href === '/movies/123/reviews'));
 });
 
-test("no audience mood heading is shown without values", () => {
-  assert.equal(render([]).some((node) => node.props.id === "audience-mood-heading"), false);
+test("empty decision panels let the shared distribution render its honest empty state", () => {
+  assert.equal(render([]).find(node => node.type === 'AudienceMood').props.moods.length, 0);
 });

@@ -9,17 +9,25 @@ const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
 }).outputText;
 
-async function setup(keys, { delayApi = false } = {}) {
+async function setup(keys, { delayApi = false, reducedMotion = false } = {}) {
   let activeRunner;
   let options;
   const loaded = [];
   let destroyed = 0;
+  let paused = 0;
+  const motionListeners = new Set();
+  const motionPreference = {
+    matches: reducedMotion,
+    addEventListener: (_event, listener) => motionListeners.add(listener),
+    removeEventListener: (_event, listener) => motionListeners.delete(listener),
+  };
   const frames = [];
   let resolveApi;
   const apiPromise = new Promise((resolve) => { resolveApi = resolve; });
   const frame = {};
   const player = {
     loadVideoById: (key) => loaded.push(key),
+    pauseVideo: () => paused++,
     getIframe: () => frame,
     destroy: () => destroyed++,
   };
@@ -53,7 +61,7 @@ async function setup(keys, { delayApi = false } = {}) {
   const testModule = { exports: {} };
   vm.runInNewContext(compiled + "\nmodule.exports.testComponents = { TrailerPlayer, TrailerVideoPlayer };", {
     module: testModule, exports: testModule.exports, console,
-    window: { location: { origin: "https://moodies.test" } },
+    window: { location: { origin: "https://moodies.test" }, matchMedia: () => motionPreference },
     document: {
       createElement() {
         const iframe = { removed: false, remove() { this.removed = true; } };
@@ -108,6 +116,12 @@ async function setup(keys, { delayApi = false } = {}) {
   if (!delayApi) await finishApi();
   return {
     loaded,
+    get paused() { return paused; },
+    get motionListenerCount() { return motionListeners.size; },
+    setReducedMotion(matches) {
+      motionPreference.matches = matches;
+      motionListeners.forEach((listener) => listener(motionPreference));
+    },
     frames,
     finishApi,
     get initialized() { return Boolean(options); },
@@ -160,4 +174,23 @@ test("cleanup before API readiness prevents mounting an abandoned player", async
   await playback.finishApi();
   assert.equal(playback.initialized, false);
   assert.equal(playback.frames[0].removed, true);
+});
+
+test("reduced motion disables trailer autoplay and automatic advancement", async () => {
+  const playback = await setup(["first", "second"], { reducedMotion: true });
+  assert.equal(new URL(playback.frames[0].src).searchParams.get("autoplay"), "0");
+  assert.equal(new URL(playback.frames[0].src).searchParams.get("controls"), "1");
+  playback.state(0);
+  assert.deepEqual(playback.loaded, []);
+  playback.cleanup();
+});
+
+test("enabling reduced motion pauses playback and removes the listener on cleanup", async () => {
+  const playback = await setup(["first", "second"]);
+  playback.setReducedMotion(true);
+  assert.equal(playback.paused, 1);
+  playback.state(0);
+  assert.deepEqual(playback.loaded, []);
+  playback.cleanup();
+  assert.equal(playback.motionListenerCount, 0);
 });
