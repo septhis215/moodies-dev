@@ -41,6 +41,12 @@ try {
     await page.goto(`${base}/terms`, { waitUntil: "domcontentloaded", timeout: 120000 });
     await page.getByRole("link", { name: /^Sign in(?: to Moodies)?$/ }).filter({ visible: true }).waitFor();
     const { trigger, dialog } = await openMenu(width);
+    const shortcuts = dialog.getByRole("list", { name: "Main destinations" });
+    assert.deepEqual(await shortcuts.getByRole("link").allTextContents(), ["Movies", "TV shows", "Explore moods", "Video feed"]);
+    const library = dialog.getByRole("region", { name: "Your library" });
+    assert.deepEqual(await library.getByRole("link").allTextContents(), ["Collection", "Watchlist", "Liked titles"]);
+    assert.equal(await dialog.getByRole("region", { name: "People & community" }).getByRole("link", { name: "Discussions" }).getAttribute("href"), "/community");
+    if (width < 1024) assert.equal((await trigger.textContent()).trim(), "Menu");
     for (const href of ["/", "/movies", "/tv", "/moods/explore", "/feed", "/trending", "/fresh-off-the-screen", "/coming-soon", "/korean-hits", "/celeb", "/community", "/moods", "/quiz", "/collection", "/watchlist", "/liked"]) {
       assert.equal(await dialog.locator(`a[href="${href}"]`).filter({ visible: true }).count(), 1, `Expected one direct link to ${href} at ${width}px`);
     }
@@ -93,7 +99,7 @@ try {
   for (const width of [320, 1440]) {
     await page.setViewportSize({ width, height: 420 });
     const { dialog: shortDialog } = await openMenu(width);
-    const lastDestination = shortDialog.locator(width < 1024 ? 'a[href="/community"]' : 'a[href="/liked"]').filter({ visible: true });
+    const lastDestination = shortDialog.getByRole("link", { name: "Create account", exact: true });
     await lastDestination.scrollIntoViewIfNeeded();
     const menuBounds = await shortDialog.boundingBox();
     const linkBounds = await lastDestination.boundingBox();
