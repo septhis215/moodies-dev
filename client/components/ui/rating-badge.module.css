@@ -1,3 +1,10 @@
+.posterRating {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+}
+
 .newBadge {
   position: relative;
   display: inline-flex;
@@ -23,7 +30,7 @@
 .newBadge.posterRibbon {
   position: absolute;
   inset: 0.75rem 0 auto auto;
-  z-index: 10;
+  z-index: 11;
   min-height: 1.75rem;
   padding: 0.5rem 0.875rem 0.5rem 1.25rem;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0.5rem 50%);

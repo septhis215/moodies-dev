@@ -6,11 +6,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import {
-  Bookmark,
   Sparkles,
   RefreshCw,
   Shuffle,
-  BookmarkCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getMoodRecommendations, getAllMoods } from "@/app/tv/action";
@@ -19,6 +17,7 @@ import { recordAchievementActivity } from "@/lib/achievements";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { RatingBadge } from "@/components/ui/rating-badge";
+import { PosterSaveButton } from "@/components/ui/PosterSaveButton";
 
 interface Mood {
   id: string;
@@ -674,7 +673,6 @@ export default function MoodRecommendationsSection({
                               variant="colored"
                               size="sm"
                               placement="poster"
-                              className="absolute right-2 top-2"
                             />
 
                           <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
@@ -703,29 +701,12 @@ export default function MoodRecommendationsSection({
                           )}
                         </div>
                       </Link>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!isBusy) void toggleWatchlist(rec);
-                        }}
-                        disabled={isBusy}
-                        aria-label={
-                          inList
-                            ? `Remove ${rec.title} from My List`
-                            : `Add ${rec.title} to My List`
-                        }
-                        className="absolute left-2 top-2 z-20 flex h-11 w-11 items-center justify-center rounded-xl border border-white/20 bg-black/80 text-white shadow-lg backdrop-blur-md transition-colors hover:bg-[var(--brand-coral)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)] disabled:cursor-not-allowed disabled:opacity-70"
-                        aria-pressed={Boolean(inList)}
-                        style={{ borderColor: inList ? moodColor : undefined }}
-                      >
-                        {isBusy ? (
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        ) : inList ? (
-                          <BookmarkCheck className="h-4 w-4" />
-                        ) : (
-                          <Bookmark className="h-4 w-4" />
-                        )}
-                      </button>
+                      <PosterSaveButton
+                        title={rec.title}
+                        saved={Boolean(inList)}
+                        saving={isBusy}
+                        onClick={() => void toggleWatchlist(rec)}
+                      />
                     </motion.article>
                   );
                 })}

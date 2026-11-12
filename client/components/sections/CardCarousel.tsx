@@ -5,8 +5,6 @@ import { useCarouselScroll } from "@/hooks/useCarouselScroll";
 import Link from "next/link";
 import SectionHeader from "@/components/ui/SectionHeader";
 import {
-  Bookmark,
-  BookmarkCheck,
   Calendar,
   Film,
   Heart,
@@ -15,6 +13,7 @@ import {
 } from "lucide-react";
 import { tmdbImage } from "@/lib/tmdb";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
+import { PosterSaveButton } from "@/components/ui/PosterSaveButton";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -212,7 +211,7 @@ export default function CardCarousel<T extends MediaItem>({
               const type = mediaType(item);
               const href = `/${type === "tv" ? "tv" : "movies"}/${item.id}`;
               const titleText = itemTitle(item);
-              const rating = Number(item.vote_average ?? item.rating ?? 0);
+              const rating = item.vote_average ?? (item.rating == null ? null : Number(item.rating));
               const runtime = itemRuntime(item);
               const saved = isSaved(item);
               const loading = loadingId === item.id;
@@ -222,11 +221,11 @@ export default function CardCarousel<T extends MediaItem>({
                   key={`${type}-${item.id}`}
                   className="group w-[43%] min-w-0 shrink-0 snap-start sm:w-[31vw] sm:min-w-[204px] sm:max-w-[220px] md:w-[25vw] lg:w-[20vw] xl:max-w-[228px]"
                 >
-                  <div className="relative aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-colors group-hover:border-white/25 group-focus-within:border-white/25">
+                  <div className="ui-media-artwork ui-poster">
                     <Link
                       href={href}
                       aria-label={`Explore ${titleText}`}
-                      className="block h-full w-full"
+                      className="ui-card-link block h-full w-full focus-visible:-outline-offset-2"
                     >
                       <Image
                         src={itemPoster(item)}
@@ -274,9 +273,7 @@ export default function CardCarousel<T extends MediaItem>({
                         {item.genres?.length ? (
                           <div className="flex flex-wrap gap-1">
                             {item.genres.slice(0, 3).map((genre) => (
-                              <span
-                                key={genre}
-                                className="border border-white/15 px-1.5 py-0.5 text-[9px] font-medium text-white/80"
+                              <span key={genre} className="ui-label"
                               >
                                 {genre}
                               </span>
@@ -366,49 +363,20 @@ export default function CardCarousel<T extends MediaItem>({
                         ) : null}
                       </div>
                     </div>
-                    <RatingBadge
-                      rating={rating}
-                      placement="poster"
-                      variant="colored"
-                      size="sm"
-                      className="absolute right-2 top-2 z-20"
-                    />
-                    <button
-                      type="button"
+                    <RatingBadge rating={rating} placement="poster" />
+                    <PosterSaveButton
+                      title={titleText}
+                      saved={saved}
+                      saving={loading}
                       onClick={() => toggleSaved(item)}
-                      disabled={loading}
-                      className={`absolute left-2 top-2 z-20 grid h-9 w-9 place-items-center rounded-sm border border-white/25 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 ${
-                        saved
-                          ? "bg-[var(--brand-coral)] text-white"
-                          : "bg-[#0b0909]/90 text-white hover:bg-[var(--ink)] hover:text-[var(--surface-0)]"
-                      }`}
-                      aria-label={
-                        saved
-                          ? `Remove ${titleText} from My List`
-                          : `Add ${titleText} to My List`
-                      }
-                    >
-                      {loading ? (
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" />
-                      ) : saved ? (
-                        <BookmarkCheck className="h-4 w-4" />
-                      ) : (
-                        <Bookmark className="h-4 w-4" />
-                      )}
-                    </button>
+                    />
                   </div>
-                  <Link href={href} className="block">
-                    <h3 className="mt-3 line-clamp-2 text-[15px] font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                  <Link href={href} className="ui-card-link block">
+                    <h3 className="ui-poster-title">
                       {titleText}
                     </h3>
-                    <p className="mt-0.5 flex items-center gap-2 text-xs text-[var(--ink-muted)]">
-                      <span>{type === "tv" ? "Series" : "Movie"}</span>
-                      {itemYear(item) ? (
-                        <>
-                          <span aria-hidden="true">·</span>
-                          <span>{itemYear(item)}</span>
-                        </>
-                      ) : null}
+                    <p className="ui-poster-meta">
+                      {type === "tv" ? "Series" : "Movie"} · {itemYear(item) || "Date TBA"}
                     </p>
                   </Link>
                 </article>

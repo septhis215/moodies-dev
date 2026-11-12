@@ -56,7 +56,7 @@ export function RatingBadge({
   return (
     <div
       aria-label={`Rating: ${displayRating} out of 10`}
-      className={`inline-flex w-fit shrink-0 items-center rounded-md font-semibold normal-case leading-none tracking-normal tabular-nums ${sizeClasses} ${colorClasses} ${className}`}
+      className={`inline-flex w-fit shrink-0 items-center rounded-md font-semibold normal-case leading-none tracking-normal tabular-nums ${sizeClasses} ${colorClasses} ${placement === "poster" ? styles.posterRating : ""} ${className}`}
     >
       <Star
         aria-hidden="true"

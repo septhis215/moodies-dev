@@ -6,14 +6,11 @@ import {
   useMemo,
   useState,
   useTransition,
-  type MouseEvent,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowUpRight,
   Award,
-  Bookmark,
-  BookmarkCheck,
   Calendar,
   ChevronLeft,
   ChevronRight,
@@ -22,6 +19,7 @@ import {
 } from "lucide-react";
 import { tmdbImage } from "@/lib/tmdb";
 import { useWatchlist } from "@/hooks/useWatchlist";
+import { PosterSaveButton } from "@/components/ui/PosterSaveButton";
 import RatingBadge from "../ui/rating-badge";
 
 interface MediaItem {
@@ -139,13 +137,7 @@ export function CategoryContent({
   const isSaved = (item: MediaItem) =>
     isInWatchlist(item.id, getWatchType(item));
 
-  const toggleSaved = async (
-    event: MouseEvent<HTMLButtonElement>,
-    item: MediaItem,
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
-
+  const toggleSaved = async (item: MediaItem) => {
     if (!ready) {
       router.push("/auth/login");
       return;
@@ -182,33 +174,14 @@ export function CategoryContent({
       <Film className="h-3.5 w-3.5" aria-hidden="true" />
     );
 
-  const BookmarkToggle = ({ item }: { item: MediaItem }) => {
-    const saved = isSaved(item);
-    const loading = loadingIds.has(getItemKey(item));
-
-    return (
-      <button
-        type="button"
-        onClick={(event) => toggleSaved(event, item)}
-        disabled={loading}
-        aria-label={
-          saved ? `Remove ${getTitle(item)} from My List` : `Add ${getTitle(item)} to My List`
-        }
-        className={`absolute left-3 top-3 z-20 grid h-9 w-9 place-items-center rounded-sm border border-white/20 shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-60 ${saved
-            ? "bg-[var(--brand-coral)] text-white"
-            : "bg-[#0b0909]/90 text-white hover:bg-[var(--ink)] hover:text-[var(--surface-0)]"
-          }`}
-      >
-        {loading ? (
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none" />
-        ) : saved ? (
-          <BookmarkCheck className="h-4 w-4" aria-hidden="true" />
-        ) : (
-          <Bookmark className="h-4 w-4" aria-hidden="true" />
-        )}
-      </button>
-    );
-  };
+  const renderBookmark = (item: MediaItem) => (
+    <PosterSaveButton
+      title={getTitle(item)}
+      saved={isSaved(item)}
+      saving={loadingIds.has(getItemKey(item))}
+      onClick={() => toggleSaved(item)}
+    />
+  );
 
   return (
     <main className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">
@@ -246,7 +219,7 @@ export function CategoryContent({
 
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(19rem,0.85fr)] lg:gap-4">
                   <div className="group relative min-h-[19rem] overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] transition-[border-color,box-shadow] duration-200 ease-out hover:border-[var(--brand-coral)] hover:shadow-[0_18px_45px_rgba(0,0,0,0.34)] focus-within:border-[var(--brand-coral)] motion-reduce:transition-none sm:min-h-[26rem] lg:min-h-[28rem]">
-                    <BookmarkToggle item={leadItem} />
+                    {renderBookmark(leadItem)}
                     <Link
                       href={getDetailUrl(leadItem)}
                       className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]"
@@ -317,7 +290,7 @@ export function CategoryContent({
                         key={`${item.type}:${item.id}`}
                         className="group relative overflow-hidden rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] transition-[border-color,background-color,box-shadow] duration-200 ease-out hover:border-[var(--brand-coral)] hover:bg-[var(--surface-2)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.28)] motion-reduce:transition-none"
                       >
-                        <BookmarkToggle item={item} />
+                        {renderBookmark(item)}
                         <Link
                           href={getDetailUrl(item)}
                           className="grid min-h-32 grid-cols-[7.5rem_minmax(0,1fr)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)] sm:min-h-44 sm:grid-cols-1 sm:grid-rows-[minmax(7rem,1fr)_auto] lg:min-h-0 lg:grid-cols-[9rem_minmax(0,1fr)] lg:grid-rows-1"
@@ -400,7 +373,7 @@ export function CategoryContent({
                           href={getDetailUrl(item)}
                           className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--surface-0)]"
                         >
-                          <div className="relative aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-[border-color,box-shadow] duration-200 ease-out group-hover:border-[var(--brand-coral)] group-hover:shadow-[0_14px_32px_rgba(0,0,0,0.3)] motion-reduce:transition-none">
+                          <div className="ui-media-artwork ui-poster">
                             <img
                               src={getPosterUrl(item)}
                               alt={getTitle(item)}
@@ -408,13 +381,7 @@ export function CategoryContent({
                               onError={() => markImageError(item, "poster")}
                               className="h-full w-full object-cover transition-[filter] duration-300 ease-out group-hover:brightness-110 group-hover:saturate-[1.05] motion-reduce:transition-none"
                             />
-                            <RatingBadge
-                              rating={item.vote_average}
-                              variant="colored"
-                              size="sm"
-                              className="absolute right-2 top-2"
-                              placement="poster"
-                            />
+                            <RatingBadge rating={item.vote_average} placement="poster" />
                             <div
                               aria-hidden="true"
                               className="pointer-events-none absolute inset-x-0 bottom-0 hidden bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none sm:block"
@@ -429,27 +396,21 @@ export function CategoryContent({
                             </div>
                           </div>
                         </Link>
-                        <BookmarkToggle item={item} />
+                        {renderBookmark(item)}
                       </div>
 
                       <Link
                         href={getDetailUrl(item)}
                         className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--surface-0)]"
                       >
-                        <h3 className="mt-2.5 line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                        <h3 className="ui-poster-title">
                           {getTitle(item)}
                         </h3>
-                        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--ink-muted)]">
-                          <span>{getReleaseYear(item)}</span>
-                          <span aria-hidden="true">·</span>
-                          <span>{mediaLabel(item)}</span>
+                        <p className="ui-poster-meta">
+                          {mediaLabel(item)} · {getReleaseYear(item)}
                           {item.number_of_seasons ? (
                             <>
-                              <span aria-hidden="true">·</span>
-                              <span>
-                                {item.number_of_seasons} season
-                                {item.number_of_seasons === 1 ? "" : "s"}
-                              </span>
+                               · {item.number_of_seasons} season{item.number_of_seasons === 1 ? "" : "s"}
                             </>
                           ) : null}
                         </p>

@@ -2,8 +2,8 @@
 
 import { PosterSkeleton } from "@/components/loading/PageSkeleton";
 import Link from "next/link";
-import { Bookmark, BookmarkCheck, LoaderCircle } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
+import { PosterSaveButton } from "@/components/ui/PosterSaveButton";
 import RatingBadge from "@/components/ui/rating-badge";
 import { tmdbImage } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
@@ -50,55 +50,27 @@ export function MediaCard({
   const poster = item.poster_path
     ? tmdbImage(item.poster_path, "w342")
     : "/placeholder-poster.svg";
+  const metadata = [type === "tv" ? "Series" : "Movie", yearOf(item) || "Date TBA"];
 
   return (
     <article className={cn("group relative min-w-0", className)}>
-      <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-surface-1 shadow-xl shadow-black/20">
-        <Link href={href} className="block h-full focus-visible:outline-none">
+      <Link href={href} className="ui-card-link block">
+        <div className="ui-media-artwork ui-poster">
           <Image
             src={poster}
-            alt={title}
+            alt=""
             fill
             sizes="(max-width: 640px) 45vw, (max-width: 1024px) 23vw, 180px"
-            className="object-cover"
+            className="object-cover motion-safe:transition-transform motion-safe:duration-300 motion-safe:group-hover:scale-[1.025]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-black/20" />
-          <RatingBadge rating={item.vote_average} size="sm" placement="poster" className="absolute right-2.5 top-2.5" />
-          <div className="absolute inset-x-0 bottom-0 p-3">
-            <p className="line-clamp-2 text-sm font-semibold leading-5 text-white">
-              {title}
-            </p>
-            <div className="mt-1 flex items-center gap-2 text-xs text-white/55">
-              {yearOf(item) ? <span>{yearOf(item)}</span> : null}
-              {type === "tv" ? <span>Series</span> : <span>Movie</span>}
-            </div>
-          </div>
-        </Link>
-
-        {onToggleSave ? (
-          <button
-            type="button"
-            onClick={onToggleSave}
-            disabled={saving}
-            aria-label={actionLabel || (saved ? "Remove from collection" : "Save to collection")}
-            title={actionLabel || (saved ? "Remove from collection" : "Save to collection")}
-            className={cn(
-              "absolute left-2.5 top-2.5 grid h-10 w-10 place-items-center rounded-xl border text-white shadow-lg backdrop-blur transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-coral-strong",
-              saved
-                ? "border-brand-coral/40 bg-brand-coral text-white"
-                : "border-white/15 bg-black/55 hover:border-white/35 hover:bg-black/75",
-            )}
-          >
-            {saving ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-            ) : saved ? (
-              <BookmarkCheck className="h-4 w-4" aria-hidden="true" />
-            ) : (
-              <Bookmark className="h-4 w-4" aria-hidden="true" />
-            )}
-          </button>
-        ) : null}
-      </div>
+          <RatingBadge rating={item.vote_average} placement="poster" />
+        </div>
+        <h3 className="ui-poster-title">{title}</h3>
+        <p className="ui-poster-meta">{metadata.join(" · ")}</p>
+      </Link>
+      {onToggleSave && (
+        <PosterSaveButton title={title} saved={saved} saving={saving} onClick={onToggleSave} label={actionLabel} />
+      )}
       {item.reason ? (
         <p className="mt-2 line-clamp-2 text-xs leading-5 text-brand-coral-strong">
           {item.reason}
