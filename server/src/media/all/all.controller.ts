@@ -60,7 +60,10 @@ export class AllController {
     if (!userId) {
       throw new UnauthorizedException('Invalid token (no user id).');
     }
-    const parsedLimit = limit ? parseInt(limit, 20) : 25;
+    const requestedLimit = Number(limit);
+    const parsedLimit = Number.isInteger(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, 60)
+      : 40;
     return this.allService.getFavorites(userId, parsedLimit);
   }
 
@@ -105,7 +108,10 @@ export class AllController {
 
   @Get('upcoming-trailers')
   async upcomingTrailers(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 20) : 30;
+    const requestedLimit = Number(limit);
+    const parsedLimit = Number.isInteger(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, 60)
+      : 30;
     return this.allService.getUpcomingTrailers(parsedLimit);
   }
   @Get('search/suggestions')

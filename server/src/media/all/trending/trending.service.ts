@@ -864,7 +864,8 @@ export class TrendingService {
             //   2. Genre-only discover (catches popular titles in other languages)
             //   3. Top-rated endpoint (quality floor)
             //   4. Trending weekly (freshness signal)
-            // Each pool targets `limit` items so we have enough to rank against.
+            // The discovery pools share a per-type target. Keep enough candidates
+            // to rank a mixed shelf without growing discovery in step with its size.
 
             interface RawItem {
                 id: number;
@@ -921,7 +922,7 @@ export class TrendingService {
                 baseUrl: string,
                 mediaType: 'movie' | 'tv',
                 maxPages = MAX_PAGES,
-                targetCount = limit,
+                targetCount = Math.min(limit, Math.max(25, Math.ceil(limit / 2))),
             ) => {
                 for (let page = 1; page <= maxPages; page++) {
                     const pool = mediaType === 'movie' ? scoredMovies : scoredTv;

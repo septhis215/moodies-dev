@@ -4,10 +4,12 @@ import { TmdbClientService } from '../client/tmdb-client.service';
 import { RecommendationsService } from '../recommendations/recommendations.service';
 import { VideoScoringService } from '../videos/video-scoring.service';
 import { TmdbAll } from '../types/tmdb.types';
-import { CACHE_TTL, shuffleArray, getSeededRandom, seededShuffleArray } from '../utils/helpers';
-import { runWithTmdbPriority, TMDB_PRIORITY } from 'src/external-apis/services/tmdb-priority.context';
+import { shuffleArray } from '../utils/helpers';
 
 const ALLOWED_REGIONS = ['US', 'GB', 'CA', 'AU'];
+const UPCOMING_CACHE_TTL = 6 * 60 * 60;
+const UPCOMING_DISCOVERY_PAGES = 20;
+const TRAILER_BATCH_SIZE = 5;
 
 @Injectable()
 export class TrailersService {
@@ -108,6 +110,16 @@ export class TrailersService {
     }
 
     async getUpcomingTrailers(limit = 30): Promise<TmdbAll[]> {
+        const date = new Date().toISOString().slice(0, 10);
+        return this.redisService.getOrSet(
+            'all:upcoming-trailers:v1:' + date + ':' + limit,
+            UPCOMING_CACHE_TTL,
+            () => this.loadUpcomingTrailers(limit, date),
+            (items) => items.length > 0,
+        );
+    }
+
+    private async loadUpcomingTrailers(limit: number, todayStr: string): Promise<TmdbAll[]> {
         if (!this.client.token) {
             this.logger.warn('TMDB_API_KEY not set; returning empty trailers');
             return [];
@@ -115,63 +127,65 @@ export class TrailersService {
 
         try {
             const items: TmdbAll[] = [];
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
-            const maxPages = 20;
+            const seen = new Set<string>();
 
             const fetchTrailers = async (mediaType: 'movie' | 'tv') => {
-                for (let page = 1; page <= maxPages; page++) {
+                for (let page = 1; page <= UPCOMING_DISCOVERY_PAGES && items.length < limit; page++) {
                     const url = mediaType === 'movie'
                         ? `${this.client.baseUrl}/discover/movie?language=en-US&sort_by=popularity.desc&primary_release_date.gte=${todayStr}&page=${page}`
                         : `${this.client.baseUrl}/discover/tv?language=en-US&sort_by=popularity.desc&first_air_date.gte=${todayStr}&page=${page}`;
 
                     const data = await this.client.tmdb(url);
                     const results = data?.results ?? [];
+                    if (!results.length) break;
 
-                    const trailerTasks = results.map((m: any) => async () => {
+                    const trailerTasks = results.flatMap((m: any) => {
                         const rd = m.release_date ?? m.first_air_date;
-                        if (!rd || new Date(rd) < today) return null;
+                        const key = mediaType + ':' + m.id;
+                        if (!m.id || !rd || rd < todayStr || seen.has(key)) return [];
+                        seen.add(key);
 
-                        try {
-                            const [videosData, details] = await Promise.all([
-                                this.client.tmdb(`${this.client.baseUrl}/${mediaType}/${m.id}/videos?language=en-US`),
-                                this.client.tmdb(`${this.client.baseUrl}/${mediaType}/${m.id}?language=en-US`)
-                            ]);
+                        return [async () => {
+                            try {
+                                const details = await this.client.tmdb(
+                                    this.client.baseUrl + '/' + mediaType + '/' + m.id + '?language=en-US&append_to_response=videos',
+                                );
+                                const videos = details?.videos?.results ?? [];
+                                const filteredVideos = this.videoScoring.filterVideos(videos, ALLOWED_REGIONS);
+                                if (filteredVideos.length === 0) return null;
 
-                            const videos = videosData?.results || [];
-                            const filteredVideos = this.videoScoring.filterVideos(videos, ALLOWED_REGIONS);
-                            if (filteredVideos.length === 0) return null;
+                                const availableVideos = await this.videoScoring.getAvailableVideos(filteredVideos);
+                                if (availableVideos.length === 0) return null;
 
-                            const availableVideos = await this.videoScoring.getAvailableVideos(filteredVideos);
-                            if (availableVideos.length === 0) return null;
+                                const bestVideo = this.videoScoring.sortByScore(availableVideos)[0];
 
-                            const bestVideo = this.videoScoring.sortByScore(availableVideos)[0];
-
-                            return {
-                                id: m.id,
-                                title: m.title ?? m.name ?? 'Untitled',
-                                overview: m.overview ?? '',
-                                poster_path: m.poster_path ?? null,
-                                backdrop_path: m.backdrop_path ?? null,
-                                release_date: rd,
-                                vote_average: m.vote_average,
-                                trailer_key: bestVideo.key,
-                                type: mediaType,
-                                recommendations: [],
-                                runtime: mediaType === 'movie' ? details.runtime ?? null : null,
-                                number_of_episodes: mediaType === 'tv' ? details.number_of_episodes ?? null : null,
-                                genres: details.genres ? details.genres.map((g: any) => g.name) : [],
-                            } as TmdbAll;
-                        } catch {
-                            return null;
-                        }
+                                return {
+                                    id: m.id,
+                                    title: m.title ?? m.name ?? 'Untitled',
+                                    overview: m.overview ?? '',
+                                    poster_path: m.poster_path ?? null,
+                                    backdrop_path: m.backdrop_path ?? null,
+                                    release_date: rd,
+                                    vote_average: m.vote_average,
+                                    trailer_key: bestVideo.key,
+                                    type: mediaType,
+                                    recommendations: [],
+                                    runtime: mediaType === 'movie' ? details.runtime ?? null : null,
+                                    number_of_episodes: mediaType === 'tv' ? details.number_of_episodes ?? null : null,
+                                    genres: details.genres ? details.genres.map((g: any) => g.name) : [],
+                                } as TmdbAll;
+                            } catch {
+                                return null;
+                            }
+                        }];
                     });
 
-                    const pageResults = (await this.client.withConcurrencyLimit(trailerTasks))
-                        .filter((item): item is TmdbAll => item !== null);
-
-                    items.push(...pageResults);
-                    if (items.length >= limit) break;
+                    for (let start = 0; start < trailerTasks.length && items.length < limit; start += TRAILER_BATCH_SIZE) {
+                        const batch = trailerTasks.slice(start, start + TRAILER_BATCH_SIZE);
+                        const results = await this.client.withConcurrencyLimit<TmdbAll | null>(batch);
+                        items.push(...results.filter((item): item is TmdbAll => item !== null));
+                    }
+                    if (data.total_pages && page >= data.total_pages) break;
                 }
             };
 
@@ -183,21 +197,6 @@ export class TrailersService {
                     (b.release_date ? new Date(b.release_date).getTime() : Infinity)
                 )
                 .slice(0, limit);
-
-            setTimeout(() => {
-                void runWithTmdbPriority(TMDB_PRIORITY.BACKGROUND, async () => {
-                    const tasks = sorted.map(item => async () => {
-                        try {
-                            item.recommendations = await this.recommendationsService.getSmartRecommendations(item.type!, item.id, 3);
-                            return item;
-                        } catch (err) {
-                            this.logger.error(`Failed to populate recommendations for ${item.id}`, err);
-                            return item;
-                        }
-                    });
-                    await this.client.withConcurrencyLimit(tasks, 3);
-                });
-            }, 100);
 
             return sorted;
         } catch (err) {

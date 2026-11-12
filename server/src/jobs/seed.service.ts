@@ -68,7 +68,7 @@ export class SeedService {
             ['all:trending', () => this.all.getTrending(25)],
             ['all:featured', () => this.all.getFeatured(25)],
             ['all:trailers', () => this.all.getTrailers(25)],
-            ['all:upcoming-trailers', () => this.all.getUpcomingTrailers(25)],
+            ['all:upcoming-trailers', () => this.all.getUpcomingTrailers()],
             ['all:korea', () => this.all.getKoreaTrending(20)],
             ['all:people', () => this.all.getPeople(20)],
         ];

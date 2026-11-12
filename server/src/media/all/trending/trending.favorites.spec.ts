@@ -7,8 +7,9 @@ import { PrismaService } from 'src/prisma/prisma.service';
 
 function setup(
   watchlistItems: { tmdbId: number; mediaType: 'MOVIE' | 'TV' }[] = [],
+  candidateCount = 8,
 ) {
-  const candidates = Array.from({ length: 8 }, (_, index) => ({
+  const candidates = Array.from({ length: candidateCount }, (_, index) => ({
     id: index + 1,
     title: `Candidate ${index + 1}`,
     genre_ids: [18],
@@ -50,6 +51,13 @@ function setup(
 }
 
 describe('curated favorites', () => {
+  it('fills a 40-title shelf with a mix of movies and series', async () => {
+    const result = await setup([], 30).getFavorites('member', 40);
+    expect(result).toHaveLength(40);
+    expect(result.filter((item) => item.type === 'movie')).toHaveLength(20);
+    expect(result.filter((item) => item.type === 'tv')).toHaveLength(20);
+  });
+
   it('excludes saved titles before ranking, keeping movie and TV identities separate', async () => {
     const service = setup([
       { tmdbId: 1, mediaType: 'MOVIE' },
