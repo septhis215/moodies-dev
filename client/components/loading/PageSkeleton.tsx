@@ -39,9 +39,9 @@ function Controls() {
 
 export function PosterSkeleton({ landscape = false }: { landscape?: boolean }) {
   return <div className="min-w-0">
-    <Skeleton className={`${landscape ? "aspect-video" : "aspect-[2/3]"} rounded-xl`} />
-    <Skeleton className="mt-3 h-4 w-4/5" />
-    <Skeleton className="mt-2 h-3 w-1/3" />
+    <Skeleton className={`${landscape ? "aspect-video" : "ui-poster"}`} />
+    <Skeleton className="mt-2.5 h-5 w-4/5" />
+    <Skeleton className="mt-0.5 h-4 w-1/3" />
   </div>;
 }
 
@@ -64,7 +64,7 @@ export function RailSkeleton({ landscape = false }: { landscape?: boolean }) {
   </div>;
 }
 
-function Hero({ detail = false }: { detail?: boolean }) {
+export function HeroSkeleton({ detail = false }: { detail?: boolean }) {
   return <div className={detail ? "ui-shell py-10 lg:pt-36" : "landing-hero flex items-end border-b border-[var(--surface-border)] py-10 lg:pt-24"}>
     <div className={detail ? "grid gap-6 sm:grid-cols-[minmax(0,240px)_1fr] sm:gap-8" : "ui-shell w-full"}>
       {detail && <Skeleton className="aspect-[2/3] w-40 rounded-xl sm:w-full" />}
@@ -116,7 +116,7 @@ export default function PageSkeleton({ variant = "catalogue", embedded = false }
   </LoadingRegion>;
   const bare = variant === "credits" || variant === "reviews";
   return <LoadingRegion showMascot label={`Loading ${variant === "home" ? "featured stories" : variant} page`} className="min-h-screen overflow-x-clip bg-[var(--surface-0)] text-[var(--ink)]">
-    {(variant === "home" || variant === "detail") && <Hero detail={variant === "detail"} />}
+    {(variant === "home" || variant === "detail") && <HeroSkeleton detail={variant === "detail"} />}
     <div className={`ui-shell space-y-8 pb-16 ${variant === "home" || variant === "detail" ? "pt-8" : bare ? "pt-8" : "pt-8 lg:pt-28"}`}>
       <PageBody variant={variant} />
     </div>

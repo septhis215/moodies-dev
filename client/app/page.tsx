@@ -1,5 +1,5 @@
 // src/app/page.tsx
-import React from "react";
+import { Suspense } from "react";
 import type { All } from "@/types/all";
 import HeroCarousel from "@/components/hero/heroCarousel";
 import TrendingSection from "@/components/sections/TrendingSection";
@@ -8,6 +8,7 @@ import CommunityPicks from "@/components/sections/CommunityPicks";
 import { UpcomingTrailers } from "@/components/sections/UpcomingTrailers";
 import MoodDiscoverySection from "@/components/sections/MoodDiscoverySection";
 import LandingPersonalSection from "@/components/sections/LandingPersonalSection";
+import { HeroSkeleton, LoadingRegion } from "@/components/loading/PageSkeleton";
 
 async function fetchFeatured() {
   const base = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
@@ -23,11 +24,17 @@ async function fetchFeatured() {
   }
 }
 
-export default async function LandingPage() {
+async function FeaturedHero() {
   const all = await fetchFeatured();
+  return <HeroCarousel all={all} />;
+}
+
+export default function LandingPage() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[var(--surface-0)] text-[var(--ink)] [scroll-padding-top:var(--mobile-nav-safe)]">
-      <HeroCarousel all={all} />
+      <Suspense fallback={<LoadingRegion label="Loading featured titles"><HeroSkeleton /></LoadingRegion>}>
+        <FeaturedHero />
+      </Suspense>
       <LandingPersonalSection />
       <MoodDiscoverySection variant="teaser" />
       <TrendingSection />
