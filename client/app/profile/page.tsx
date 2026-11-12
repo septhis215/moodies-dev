@@ -7,6 +7,7 @@ import AchievementCollection from "@/components/achievements/AchievementCollecti
 import useAchievements from "@/hooks/useAchievements";
 import React, {
   useEffect,
+  useLayoutEffect,
   useState,
   useMemo,
   useRef,
@@ -23,7 +24,6 @@ import {
   LogOut,
   Star,
   TrendingUp,
-  Calendar,
   Search,
   Filter,
   Grid,
@@ -41,7 +41,10 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
 import { FilterDropdown } from "@/components/ui/filterdropdown";
-import { fetchMediaSummary } from "@/lib/mediaApi";
+import { fetchMediaSummary, type MediaSummary } from "@/lib/mediaApi";
+import { BadgeMascot } from "@/components/ui/BadgeMascot";
+import { MediaCard, MediaCardSkeleton } from "@/components/ui/MediaCard";
+import RatingBadge from "@/components/ui/rating-badge";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
 const MASCOT_SRC = "/images/moodies-mascot.png";
@@ -92,20 +95,20 @@ function ReviewMoodIcon({ value }: { value: string }) {
   const label = moodLabelFromValue(trimmedValue);
 
   if (!hasImage) {
-    return <span className="text-xs leading-none">{trimmedValue}</span>;
+    return <span className="text-lg leading-none">{trimmedValue}</span>;
   }
 
   return (
     <span
       title={label}
-      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-white/[0.08]"
+      className="inline-flex size-10 shrink-0 items-center justify-center sm:size-12"
     >
       <Image
         src={trimmedValue}
         alt={label}
-        width={18}
-        height={18}
-        className="h-4 w-4 object-contain"
+        width={48}
+        height={48}
+        className="size-full object-contain"
       />
     </span>
   );
@@ -133,19 +136,6 @@ type ServerUser = {
   reviewBannedUntil?: string | null;
 };
 
-type Kind = "movie" | "tv";
-type TmdbItem = {
-  id: number;
-  kind: Kind;
-  title?: string;
-  name?: string;
-  poster_path?: string | null;
-  vote_average?: number;
-  release_date?: string;
-  first_air_date?: string;
-  genre_ids?: number[];
-};
-
 type UserReview = {
   id: string;
   tmdbId: number;
@@ -171,12 +161,14 @@ export default function ProfilePage() {
 
   const [profile, setProfile] = useState<ServerUser | null>(null);
   const [watchlist, setWatchlist] = useState<Watchlist | null>(null);
-  const [tmdbItems, setTmdbItems] = useState<TmdbItem[]>([]);
+  const [loadedWatchlist, setLoadedWatchlist] = useState<Watchlist | null>(null);
+  const [tmdbItems, setTmdbItems] = useState<MediaSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"profile" | "watchlist" | "reviews">(
     "profile",
   );
   const [editOpen, setEditOpen] = useState(false);
+  const editDialogRef = useRef<HTMLDialogElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "movie" | "tv">("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -435,31 +427,27 @@ export default function ProfilePage() {
   }, [isAuthenticated, decodedUser?.id]);
 
   /* ---------------- Fetch TMDB details ---------------- */
-  const movieIds = useMemo(() => watchlist?.movieId ?? [], [watchlist]);
-  const seriesIds = useMemo(() => watchlist?.seriesId ?? [], [watchlist]);
 
   useEffect(() => {
     let alive = true;
-    const fetchTmdb = async (kind: Kind, id: string) => {
-      const summary = await fetchMediaSummary(kind, id);
-      return summary;
-    };
-
     (async () => {
       const allIds = [
-        ...movieIds.map((id) => ({ kind: "movie" as const, id })),
-        ...seriesIds.map((id) => ({ kind: "tv" as const, id })),
+        ...(watchlist?.movieId ?? []).map((id) => ({ kind: "movie" as const, id })),
+        ...(watchlist?.seriesId ?? []).map((id) => ({ kind: "tv" as const, id })),
       ];
-      const promises = allIds.map(({ kind, id }) => fetchTmdb(kind, id));
+      const promises = allIds.map(({ kind, id }) => fetchMediaSummary(kind, id));
       const results = await Promise.all(promises);
       if (!alive) return;
-      setTmdbItems(results.filter(Boolean) as TmdbItem[]);
+      setTmdbItems(results.filter((item): item is MediaSummary => item !== null));
+      setLoadedWatchlist(watchlist);
     })();
 
     return () => {
       alive = false;
     };
-  }, [movieIds, seriesIds]);
+  }, [watchlist]);
+
+  const watchlistLoading = loading || loadedWatchlist !== watchlist;
 
   const movieCount = watchlist?.movieId.length ?? 0;
   const seriesCount = watchlist?.seriesId.length ?? 0;
@@ -475,16 +463,14 @@ export default function ProfilePage() {
 
     if (searchQuery) {
       items = items.filter((item) => {
-        const title = (item.kind === "movie" ? item.title : item.name) || "";
+        const title = item.title;
         return title.toLowerCase().includes(searchQuery.toLowerCase());
       });
     }
 
     items.sort((a, b) => {
       if (sortBy === "title") {
-        const titleA = (a.kind === "movie" ? a.title : a.name) || "";
-        const titleB = (b.kind === "movie" ? b.title : b.name) || "";
-        return titleA.localeCompare(titleB);
+        return a.title.localeCompare(b.title);
       }
       if (sortBy === "rating") {
         return (b.vote_average || 0) - (a.vote_average || 0);
@@ -590,16 +576,10 @@ export default function ProfilePage() {
         : "You haven’t reviewed anything yet. Rate a movie or series and your reviews will collect here.";
 
     return (
-      <div className="border-y border-[var(--surface-border)] px-4 py-10 sm:px-8 sm:py-12">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div className="flex h-14 w-14 items-center justify-center border border-[var(--brand-coral)]/30 bg-[var(--surface-2)]">
-            {isTv ? (
-              <Tv className="h-7 w-7 text-[var(--brand-coral-strong)]" />
-            ) : (
-              <Film className="h-7 w-7 text-[var(--brand-coral-strong)]" />
-            )}
-          </div>
-          <div className="max-w-md space-y-1.5">
+      <div className="ui-panel flex flex-col items-center justify-center gap-2 px-5 py-6 text-center sm:flex-row sm:gap-8 sm:px-8 sm:text-left">
+        <BadgeMascot name="conversation-starter" className="size-36 shrink-0 sm:size-48" sizes="(max-width: 639px) 144px, 192px" />
+        <div className="max-w-md space-y-4">
+          <div className="space-y-1.5">
             <h3 className="text-xl font-bold leading-tight text-[var(--ink)]">
               {heading}
             </h3>
@@ -607,7 +587,7 @@ export default function ProfilePage() {
               {sub}
             </p>
           </div>
-          <div className="mt-1 flex flex-wrap items-center justify-center gap-2.5">
+          <div className="flex flex-wrap items-center justify-center gap-2.5 sm:justify-start">
             {!isTv && (
               <Link
                 href="/movies"
@@ -629,6 +609,23 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  useLayoutEffect(() => {
+    const dialog = editDialogRef.current;
+    if (!editOpen || !dialog) return;
+
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus({ preventScroll: true });
+      }
+    };
+  }, [editOpen, authLoading, isAuthenticated]);
 
   if (authLoading) {
     return <PageSkeleton variant="profile" />;
@@ -760,7 +757,7 @@ export default function ProfilePage() {
                 </Link>
               )}
               <button
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:bg-white/5 hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
+                className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:bg-white/5 hover:text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
                 onClick={async () => {
                   try {
                     await logout();
@@ -959,19 +956,12 @@ export default function ProfilePage() {
                     />
 
                     {/* View toggle */}
-                    <div className="flex min-h-12 items-center gap-1 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] p-1" aria-label="Watchlist layout">
+                    <div className="flex items-center gap-1" role="group" aria-label="Watchlist layout">
                       <button
                         onClick={() => setViewMode("grid")}
                         aria-label="Grid view"
                         aria-pressed={viewMode === "grid"}
-                        className={`
-        p-2 rounded-lg transition
-        ${
-          viewMode === "grid"
-            ? "bg-[var(--brand-coral)] text-white shadow-sm"
-            : "text-[var(--ink-muted)] hover:bg-white/5 hover:text-[var(--ink)]"
-        }
-      `}
+                        className="ui-filter-chip size-11 p-0"
                       >
                         <Grid className="w-4 h-4" />
                       </button>
@@ -980,14 +970,7 @@ export default function ProfilePage() {
                         onClick={() => setViewMode("list")}
                         aria-label="List view"
                         aria-pressed={viewMode === "list"}
-                        className={`
-        p-2 rounded-lg transition
-        ${
-          viewMode === "list"
-            ? "bg-[var(--brand-coral)] text-white shadow-sm"
-            : "text-[var(--ink-muted)] hover:bg-white/5 hover:text-[var(--ink)]"
-        }
-      `}
+                        className="ui-filter-chip size-11 p-0"
                       >
                         <List className="w-4 h-4" />
                       </button>
@@ -998,17 +981,17 @@ export default function ProfilePage() {
                   <div className="flex w-full gap-2 sm:hidden">
                     <button
                       onClick={() => setMobileFilterOpen(true)}
-                      className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] px-4 py-2.5 text-sm font-semibold"
+                      className="ui-secondary-action flex-1"
                     >
                       <Filter className="w-4 h-4" />
                       Filters & Sort
                     </button>
-                    <div className="flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+                    <div className="flex gap-1" role="group" aria-label="Watchlist layout">
                       <button
                         onClick={() => setViewMode("grid")}
                         aria-label="Grid view"
                         aria-pressed={viewMode === "grid"}
-                        className={`p-2 rounded-lg transition ${viewMode === "grid" ? "bg-[var(--brand-coral)]" : ""}`}
+                        className="ui-filter-chip size-11 p-0"
                       >
                         <Grid className="w-4 h-4" />
                       </button>
@@ -1016,7 +999,7 @@ export default function ProfilePage() {
                         onClick={() => setViewMode("list")}
                         aria-label="List view"
                         aria-pressed={viewMode === "list"}
-                        className={`p-2 rounded-lg transition ${viewMode === "list" ? "bg-[var(--brand-coral)]" : ""}`}
+                        className="ui-filter-chip size-11 p-0"
                       >
                         <List className="w-4 h-4" />
                       </button>
@@ -1043,75 +1026,11 @@ export default function ProfilePage() {
                     transition={{ duration: 0.2, ease: "easeInOut" }}
                     className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
                   >
-                    {loading &&
-                      Array.from({ length: 12 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="aspect-[2/3] bg-[var(--surface-2)] moodies-skeleton"
-                        />
-                      ))}
-
-                    {!loading &&
-                      filteredAndSortedItems.map((item) => {
-                        const title =
-                          item.kind === "movie" ? item.title : item.name;
-                        const href =
-                          item.kind === "movie"
-                            ? `/movies/${item.id}`
-                            : `/tv/${item.id}`;
-                        const poster = item.poster_path
-                          ? tmdbImage(item.poster_path, "w500")
-                          : "/placeholder-poster.svg";
-
-                        return (
-                          <motion.div
-                            key={`${item.kind}-${item.id}`}
-                            layout
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            whileHover={{ y: -4 }}
-                            className="group relative aspect-[2/3] cursor-pointer overflow-hidden rounded-xl border border-[var(--surface-border)] bg-zinc-900 shadow-lg transition-[border-color,box-shadow] hover:border-[var(--brand-coral)]/60 hover:shadow-2xl hover:shadow-[#e94f37]/15 sm:rounded-2xl"
-                          >
-                            <Link href={href} className="block h-full w-full">
-                              <Image
-                                src={poster}
-                                alt={title || "Poster"}
-                                fill
-                                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                                className="object-cover transition-transform duration-700 group-hover:scale-110"
-                              />
-                              <div className="absolute inset-0 bg-black/45 opacity-0 transition-opacity group-hover:opacity-100" />
-
-                              {item.vote_average && (
-                                <div className="absolute right-2 top-2 flex items-center gap-1 rounded-lg bg-black/90 px-1.5 py-1 text-xs font-semibold text-yellow-400 sm:right-3 sm:top-3 sm:gap-1.5 sm:px-2.5 sm:py-1.5">
-                                  <Star className="w-3 h-3 fill-yellow-400" />
-                                  {item.vote_average.toFixed(1)}
-                                </div>
-                              )}
-
-                              <div className="absolute left-2 top-2 rounded-lg bg-black/90 px-1.5 py-1 text-xs font-semibold sm:left-3 sm:top-3 sm:px-2.5 sm:py-1.5">
-                                {item.kind === "movie" ? (
-                                  <Film className="w-3 h-3" />
-                                ) : (
-                                  <Tv className="w-3 h-3" />
-                                )}
-                              </div>
-
-                              <div className="absolute bottom-0 left-0 right-0 bg-black/75 p-2.5 sm:p-4">
-                                <p className="text-xs sm:text-sm font-bold line-clamp-2 mb-0.5 sm:mb-1">
-                                  {title}
-                                </p>
-                                <p className="text-xs text-[var(--ink-muted)]">
-                                  {item.kind === "movie"
-                                    ? item.release_date?.split("-")[0]
-                                    : item.first_air_date?.split("-")[0]}
-                                </p>
-                              </div>
-                            </Link>
-                          </motion.div>
-                        );
-                      })}
+                    {watchlistLoading
+                      ? Array.from({ length: 12 }, (_, i) => <MediaCardSkeleton key={i} />)
+                      : filteredAndSortedItems.map((item) => (
+                          <MediaCard key={item.kind + ":" + item.id} item={item} type={item.kind} />
+                        ))}
                   </motion.div>
                 ) : (
                   <motion.div
@@ -1122,7 +1041,7 @@ export default function ProfilePage() {
                     transition={{ duration: 0.2, ease: "easeInOut" }}
                     className="space-y-2 sm:space-y-3"
                   >
-                    {loading &&
+                    {watchlistLoading &&
                       Array.from({ length: 6 }).map((_, i) => (
                         <div
                           key={i}
@@ -1130,10 +1049,9 @@ export default function ProfilePage() {
                         />
                       ))}
 
-                    {!loading &&
+                    {!watchlistLoading &&
                       filteredAndSortedItems.map((item) => {
-                        const title =
-                          item.kind === "movie" ? item.title : item.name;
+                        const title = item.title;
                         const href =
                           item.kind === "movie"
                             ? `/movies/${item.id}`
@@ -1150,18 +1068,18 @@ export default function ProfilePage() {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
                             transition={{ duration: 0.15, ease: "easeOut" }}
-                            className="group rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 transition-all hover:border-[var(--brand-coral)]/50 hover:bg-[var(--surface-2)] sm:p-4"
+                            className="ui-panel group p-3 transition-colors hover:border-[var(--brand-coral)]/50 hover:bg-[var(--surface-2)] sm:p-4"
                           >
                             <Link
                               href={href}
-                              className="flex items-center gap-3 sm:gap-4"
+                              className="ui-card-link flex items-center gap-3 sm:gap-4"
                             >
-                              <div className="relative h-[4.75rem] w-12 flex-shrink-0 overflow-hidden bg-[var(--surface-2)] sm:h-24 sm:w-16">
+                              <div className="ui-media-artwork ui-poster w-12 shrink-0 sm:w-16">
                                 <Image
                                   src={poster}
-                                  alt={title || "Poster"}
+                                  alt=""
                                   fill
-                                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                                  sizes="(max-width: 639px) 48px, 64px"
                                   className="object-cover"
                                 />
                               </div>
@@ -1170,33 +1088,8 @@ export default function ProfilePage() {
                                   {title}
                                 </h3>
                                 <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--ink-muted)] sm:gap-3 sm:text-sm">
-                                  <span className="flex items-center gap-1">
-                                    {item.kind === "movie" ? (
-                                      <Film className="w-3 h-3 sm:w-4 sm:h-4" />
-                                    ) : (
-                                      <Tv className="w-3 h-3 sm:w-4 sm:h-4" />
-                                    )}
-                                    <span className="hidden sm:inline">
-                                      {item.kind === "movie"
-                                        ? "Movie"
-                                        : "TV Series"}
-                                    </span>
-                                  </span>
-                                  {(item.release_date ||
-                                    item.first_air_date) && (
-                                    <span className="flex items-center gap-1">
-                                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                                      {item.kind === "movie"
-                                        ? item.release_date?.split("-")[0]
-                                        : item.first_air_date?.split("-")[0]}
-                                    </span>
-                                  )}
-                                  {item.vote_average && (
-                                    <span className="flex items-center gap-1 text-yellow-400 font-semibold">
-                                      <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-yellow-400" />
-                                      {item.vote_average.toFixed(1)}
-                                    </span>
-                                  )}
+                                  <span>{item.kind === "movie" ? "Movie" : "Series"} · {(item.release_date || item.first_air_date)?.slice(0, 4) || "Date TBA"}</span>
+                                  <RatingBadge rating={item.vote_average} variant="minimal" />
                                 </div>
                               </div>
                             </Link>
@@ -1207,7 +1100,7 @@ export default function ProfilePage() {
                 )}
               </AnimatePresence>
 
-              {!loading && filteredAndSortedItems.length === 0 && (
+              {!watchlistLoading && filteredAndSortedItems.length === 0 && (
                 <div className="text-center py-12 sm:py-16">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
                     <Bookmark className="h-8 w-8 text-[var(--ink-muted)] sm:h-10 sm:w-10" />
@@ -1241,7 +1134,7 @@ export default function ProfilePage() {
                   </h2>
                 </div>
                 {/* Movie / TV filter tabs */}
-                <div className="flex w-full items-center gap-1 overflow-x-auto rounded-xl border border-white/[0.07] bg-white/[0.03] p-1 mobile-native-scroll sm:w-auto sm:flex-shrink-0">
+                <div role="group" aria-label="Filter your reviews" className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                   {(["all", "MOVIE", "TV"] as const).map((f) => {
                     const label =
                       f === "all"
@@ -1256,19 +1149,17 @@ export default function ProfilePage() {
                     return (
                       <button
                         key={f}
+                        type="button"
+                        aria-pressed={reviewTypeFilter === f}
                         onClick={() => {
                           setReviewTypeFilter(f);
                           setReviewsVisible(3);
                         }}
-                        className={`min-h-9 flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all sm:flex-none ${
-                          reviewTypeFilter === f
-                            ? "bg-white/[0.08] text-white"
-                            : "text-white/30 hover:text-white/60"
-                        }`}
+                        className="ui-filter-chip flex-1 whitespace-nowrap sm:flex-none"
                       >
                         {label}
                         <span
-                          className={`ml-1.5 text-xs ${reviewTypeFilter === f ? "text-[var(--ink)]" : "text-[var(--ink-muted)]"}`}
+                          className="tabular-nums text-[var(--ink-muted)]"
                         >
                           {count}
                         </span>
@@ -1343,11 +1234,11 @@ export default function ProfilePage() {
                             return (
                               <div
                                 key={review.id}
-                                className="mb-2 grid overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.015] transition-all duration-300 hover:border-white/[0.11] hover:bg-white/[0.03] sm:mb-1.5 sm:flex"
+                                className="ui-panel mb-2 grid overflow-hidden sm:mb-1.5 sm:flex"
                               >
                                 {/* Score stripe */}
                                 <div
-                                  className="flex min-h-14 items-center justify-between gap-2 px-3 py-2 sm:w-[64px] sm:flex-shrink-0 sm:flex-col sm:justify-center sm:gap-1 sm:px-0 sm:py-7"
+                                  className="flex min-h-14 items-center justify-between gap-2 px-3 py-2 sm:w-24 sm:shrink-0 sm:flex-col sm:justify-center sm:gap-2 sm:px-2 sm:py-4"
                                   style={{ background: `${accentHex}12` }}
                                 >
                                   <div className="flex items-baseline gap-1 sm:block sm:text-center">
@@ -1362,7 +1253,7 @@ export default function ProfilePage() {
                                     </span>
                                   </div>
                                   {review.moodEmojis?.length > 0 && (
-                                    <div className="mt-0.5 flex max-w-[72px] flex-wrap justify-center gap-0.5 sm:max-w-[44px]">
+                                    <div className="flex shrink-0 items-center justify-center gap-1 sm:flex-wrap">
                                       {review.moodEmojis
                                         .slice(0, 2)
                                         .map((e, i) => (
@@ -1375,6 +1266,7 @@ export default function ProfilePage() {
                                 {/* Poster column */}
                                 <Link
                                   href={href}
+                                  aria-label={rep.tmdbTitle || "View title #" + rep.tmdbId}
                                   className="relative hidden w-[72px] flex-shrink-0 overflow-hidden border-l border-white/[0.05] sm:block"
                                 >
                                   {poster ? (
@@ -1749,14 +1641,18 @@ export default function ProfilePage() {
           )}
         </AnimatePresence>
 
-        {/* Edit Profile Modal */}
-        <AnimatePresence>
-          {editOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-end justify-center bg-black/85 p-3 sm:items-center sm:p-6"
+        {editOpen && (
+            <dialog
+              ref={editDialogRef}
+              aria-labelledby="profile-edit-heading"
+              className="fixed inset-0 m-0 flex h-dvh max-h-none w-full max-w-none items-end justify-center overflow-hidden bg-black/85 p-3 text-[var(--ink)] [&:not([open])]:hidden sm:items-center sm:p-6"
+              onCancel={(event) => {
+                event.preventDefault();
+                if (!profileSaving) {
+                  setAvatarPreview(null);
+                  setEditOpen(false);
+                }
+              }}
               onClick={() => {
                 if (!profileSaving) {
                   setAvatarPreview(null);
@@ -1764,12 +1660,8 @@ export default function ProfilePage() {
                 }
               }}
             >
-              <motion.div
-                initial={{ y: 28, opacity: 0, scale: 0.98 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 28, opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.18 }}
-                className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-t-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-6 shadow-2xl shadow-black/60 sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl sm:p-8"
+              <div
+                className="ui-overlay-enter relative max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-t-2xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-6 shadow-2xl shadow-black/60 sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl sm:p-8"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-6 flex items-start justify-between gap-4">
@@ -1787,7 +1679,7 @@ export default function ProfilePage() {
                       <p className="ui-kicker">
                         Profile tune-up
                       </p>
-                      <h2 className="text-xl font-bold sm:text-2xl">
+                      <h2 id="profile-edit-heading" className="text-xl font-bold sm:text-2xl">
                         Edit profile
                       </h2>
                     </div>
@@ -1800,7 +1692,7 @@ export default function ProfilePage() {
                         setEditOpen(false);
                       }
                     }}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:bg-white/[0.08] hover:text-white disabled:opacity-40"
+                    className="ui-secondary-action size-11 p-0 disabled:opacity-40"
                     disabled={profileSaving}
                     aria-label="Close edit profile"
                   >
@@ -1817,7 +1709,7 @@ export default function ProfilePage() {
                       <button
                         type="button"
                         onClick={() => avatarInputRef.current?.click()}
-                        className="group relative h-24 w-24 flex-shrink-0 overflow-hidden bg-[var(--surface-2)] ring-2 ring-[var(--brand-coral)]/50 transition hover:ring-[var(--brand-coral-strong)]"
+                        className="group relative h-24 w-24 shrink-0 overflow-hidden rounded-md bg-[var(--surface-2)] ring-2 ring-[var(--brand-coral)]/50 transition hover:ring-[var(--brand-coral-strong)]"
                       >
                         {avatarPreview ? (
                           <img
@@ -1881,7 +1773,7 @@ export default function ProfilePage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="flex items-center gap-2 text-sm font-semibold text-white/80">
+                      <label htmlFor="profile-display-name" className="flex items-center gap-2 text-sm font-semibold text-white/80">
                         <UserRound className="h-4 w-4 text-[var(--brand-coral-strong)]" />
                         Display name
                       </label>
@@ -1892,6 +1784,7 @@ export default function ProfilePage() {
                       </span>
                     </div>
                     <input
+                      id="profile-display-name"
                       type="text"
                       value={profileName}
                       onChange={(e) =>
@@ -1908,7 +1801,7 @@ export default function ProfilePage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="flex items-center gap-2 text-sm font-semibold text-white/80">
+                      <label htmlFor="profile-username" className="flex items-center gap-2 text-sm font-semibold text-white/80">
                         <Sparkles className="h-4 w-4 text-[var(--brand-coral-strong)]" />
                         Username
                       </label>
@@ -1923,6 +1816,7 @@ export default function ProfilePage() {
                         @
                       </span>
                       <input
+                        id="profile-username"
                         type="text"
                         value={profileUsername}
                         onChange={(e) =>
@@ -1944,11 +1838,12 @@ export default function ProfilePage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
+                    <label htmlFor="profile-email" className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
                       <Mail className="h-4 w-4 text-[var(--brand-coral-strong)]" />
                       Email
                     </label>
                     <input
+                      id="profile-email"
                       type="email"
                       value={user?.email ?? ""}
                       readOnly
@@ -2011,7 +1906,7 @@ export default function ProfilePage() {
                   </div>
 
                   {profileError && (
-                    <p className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-200">
+                    <p role="alert" className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm font-medium text-red-200">
                       {profileError}
                     </p>
                   )}
@@ -2020,7 +1915,7 @@ export default function ProfilePage() {
                 <div className="mt-7 flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:justify-end">
                   <button
                     type="button"
-                    className="order-2 w-full rounded-xl border border-white/10 px-5 py-3 font-semibold text-white/70 transition hover:bg-white/5 hover:text-white disabled:opacity-50 sm:order-1 sm:w-auto"
+                    className="ui-secondary-action order-2 w-full disabled:opacity-50 sm:order-1 sm:w-auto"
                     onClick={() => {
                       setAvatarPreview(null);
                       setEditOpen(false);
@@ -2039,10 +1934,9 @@ export default function ProfilePage() {
                     {profileSaving ? "Saving..." : "Save changes"}
                   </button>
                 </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </div>
+            </dialog>
+        )}
       </div>
       {/* Avatar Lightbox — full-screen */}
       <AnimatePresence>
