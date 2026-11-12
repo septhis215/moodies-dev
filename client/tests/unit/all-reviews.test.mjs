@@ -28,7 +28,7 @@ function harness(code, { reviews = [], authenticated = true, pathname = "/tv/123
     require(name) {
       if (name === "react/jsx-runtime") return { jsx, jsxs: jsx, Fragment: "fragment" };
       if (name === "react") return {
-        useMemo: (fn) => fn(), useEffect() {}, Suspense: "Suspense",
+        useMemo: (fn) => fn(), useEffect() {}, useLayoutEffect() {}, useRef: () => ({ current: null }), Suspense: "Suspense",
         useState(initial) {
           const index = cursor++;
           if (!(index in states)) states[index] = typeof initial === "function" ? initial() : initial;
