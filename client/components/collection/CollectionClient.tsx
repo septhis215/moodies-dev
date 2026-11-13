@@ -157,13 +157,15 @@ export default function CollectionClient() {
   return (
     <main className="min-h-screen bg-[var(--surface-0)] pb-20 pt-24 text-[var(--ink)] sm:pt-32">
       <div className="ui-shell">
-        <SectionHeader
-          as="h1"
-          title="Your collection"
-          description="Saved titles and favorites."
-        />
+        <div className="rounded-md bg-linear-to-br from-[var(--surface-1)] to-transparent px-4 py-6 sm:px-8 sm:py-9">
+          <SectionHeader
+            as="h1"
+            title="Your collection"
+            description="Saved titles and favorites."
+          />
+        </div>
 
-        <div className="mt-8 overflow-x-auto mobile-native-scroll border-b border-[var(--surface-border)]">
+        <div className="mt-4 overflow-x-auto mobile-native-scroll border-b border-[var(--surface-border)]">
           <div
             role="tablist"
             aria-label="Collection filter"

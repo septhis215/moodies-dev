@@ -1,7 +1,3 @@
-.section {
-  border-block: 1px solid var(--surface-border);
-  background: var(--surface-1);
-}
 .layout {
   display: grid;
   grid-template-areas: "choices" "recommendations" "scene";

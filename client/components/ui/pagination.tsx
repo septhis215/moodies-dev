@@ -134,7 +134,7 @@ export default function Pagination({
                     onClick={() => goTo(currentPage - 1)}
                     disabled={currentPage === 1}
                     aria-label="Previous page"
-                    className={`${btnBase} px-3 py-2 ${currentPage === 1 ? "opacity-40 cursor-not-allowed" : "bg-gray-700/60 hover:bg-gray-700/80 text-white"}`}
+                    className={`${btnBase} px-3 py-2 ${currentPage === 1 ? "opacity-40 cursor-not-allowed" : "bg-gray-700/60 hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4 text-white"}`}
                 >
                     <ChevronLeft size={16} />
                 </button> */}
@@ -151,7 +151,7 @@ export default function Pagination({
                                 key={p}
                                 onClick={() => goTo(p as number)}
                                 aria-current={p === currentPage ? "true" : undefined}
-                                className={`w-10 h-10 text-sm font-medium rounded-md shrink-0 ${p === currentPage ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md" : "bg-gray-800/60 text-gray-200 hover:bg-gray-700/80"
+                                className={`w-10 h-10 text-sm font-medium rounded-md shrink-0 ${p === currentPage ? "bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md" : "bg-gray-800/60 text-gray-200 hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4"
                                     }`}
                                 aria-label={p === currentPage ? `Page ${p}, current` : `Go to page ${p}`}
                             >
@@ -166,7 +166,7 @@ export default function Pagination({
                     onClick={() => goTo(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     aria-label="Next page"
-                    className={`${btnBase} px-3 py-2 ${currentPage === totalPages ? "opacity-40 cursor-not-allowed" : "bg-gray-700/60 hover:bg-gray-700/80 text-white"}`}
+                    className={`${btnBase} px-3 py-2 ${currentPage === totalPages ? "opacity-40 cursor-not-allowed" : "bg-gray-700/60 hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4 text-white"}`}
                 >
                     <ChevronRight size={16} />
                 </button> */}

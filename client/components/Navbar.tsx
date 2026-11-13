@@ -83,7 +83,7 @@ const accountLinks = [
 
 const focusRing =
   "outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]";
-const controlStyle = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink)] ${focusRing}`;
+const controlStyle = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md px-3 text-[0.9375rem] font-semibold ${focusRing}`;
 
 export function NavbarComponent({
   sticky = false,
@@ -95,6 +95,7 @@ export function NavbarComponent({
   const pathname = usePathname();
   const { user, isAuthenticated, logout: doLogout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState(0);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
@@ -197,7 +198,8 @@ export function NavbarComponent({
   const closeMenu = () => {
     setIsMenuOpen(false);
   };
-  const openMenu = () => {
+  const openMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setMenuAnchor(event.currentTarget.getBoundingClientRect().left);
     setIsProfileOpen(false);
     setIsMenuOpen(true);
   };
@@ -248,7 +250,7 @@ export function NavbarComponent({
       group.links.some((link) => link.href !== "/" && getCurrent(link.href)),
     );
   const destinationClass = (href: string) =>
-    `flex min-h-11 items-center rounded-md px-2 py-2 text-sm font-medium leading-5 transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink)] ${getCurrent(href) ? "bg-[var(--surface-2)] text-[var(--brand-coral-strong)]" : "text-[var(--ink)]"} ${focusRing}`;
+    `flex min-h-11 items-center rounded-md px-2 py-2 text-[0.9375rem] font-medium leading-5 ${getCurrent(href) ? "text-[var(--brand-coral-strong)]" : "text-[var(--ink)]"} ${focusRing}`;
 
   const avatar = () => (
     <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--surface-2)] text-xs font-semibold text-[var(--ink)]">
@@ -282,7 +284,9 @@ export function NavbarComponent({
         {avatar()}
         {!mobile && (
           <>
-            <span className="hidden max-w-24 truncate xl:block">{displayName}</span>
+            <span className="ui-nav-label hidden max-w-24 xl:block">
+              <span className="ui-text-reveal block truncate">{displayName}</span>
+            </span>
             <IconChevronDown
               className={`size-4 text-[var(--ink-muted)] motion-safe:transition-transform ${isOpen ? "rotate-180" : ""}`}
               aria-hidden="true"
@@ -291,7 +295,7 @@ export function NavbarComponent({
         )}
       </button>
     ) : (
-      <Link href="/auth/login" className={controlStyle}>Sign in</Link>
+      <Link href="/auth/login" className={controlStyle}><span className="ui-text-reveal ui-nav-label">Sign in</span></Link>
     );
   };
 
@@ -311,7 +315,7 @@ export function NavbarComponent({
             aria-current={getCurrent(link.href)}
             className={destinationClass(link.href)}
           >
-            {link.name}
+            <span className="ui-text-reveal ui-nav-label">{link.name}</span>
           </Link>
         </li>
       ))}
@@ -323,8 +327,11 @@ export function NavbarComponent({
       ref={dialogRef}
       id="site-menu"
       aria-labelledby="site-menu-title"
-      onCancel={closeMenu}
-      onClose={closeMenu}
+      style={{ "--menu-anchor": `${menuAnchor}px` } as React.CSSProperties}
+      onCancel={(event) => {
+        event.preventDefault();
+        closeMenu();
+      }}
       onKeyDown={(event) => {
         if (event.key !== "Tab") return;
         const controls = Array.from(
@@ -343,10 +350,10 @@ export function NavbarComponent({
       onClick={(event) => {
         if (event.target === event.currentTarget) closeMenu();
       }}
-      className="ui-overlay-enter fixed inset-0 m-0 h-dvh max-h-dvh w-full max-w-none overflow-hidden bg-[var(--surface-0)] p-0 text-[var(--ink)] backdrop:bg-black/65 lg:m-auto lg:h-fit lg:max-h-[calc(100dvh-3rem)] lg:w-[min(48rem,calc(100vw-3rem))] lg:rounded-xl lg:border lg:border-[var(--surface-border)] lg:shadow-2xl"
+      className="ui-overlay-enter fixed inset-0 m-0 h-dvh max-h-dvh w-full max-w-none overflow-hidden bg-[var(--surface-0)] p-0 text-[var(--ink)] backdrop:bg-black/50 lg:bottom-auto lg:left-[clamp(2rem,var(--menu-anchor),calc(100vw-50rem))] lg:right-auto lg:top-20 lg:h-fit lg:max-h-[calc(100dvh-6rem)] lg:w-[48rem] lg:rounded-md lg:border lg:border-[var(--surface-border)] lg:shadow-xl"
     >
-      <div className="flex h-full min-h-0 flex-col lg:h-auto lg:max-h-[calc(100dvh-3rem)]">
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--surface-border)] bg-[var(--surface-1)] px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-6">
+      <div className="flex h-full min-h-0 flex-col lg:h-auto lg:max-h-[calc(100dvh-6rem)]">
+        <div className="flex shrink-0 items-center justify-between gap-3 bg-[var(--surface-1)] px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-6 lg:px-8">
           <h2 id="site-menu-title" className="text-xl font-bold leading-tight sm:text-2xl">
             Navigation menu
           </h2>
@@ -356,27 +363,27 @@ export function NavbarComponent({
         </div>
         <nav
           aria-label="Browse Moodies"
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8"
         >
-          <ul aria-label="Main destinations" className="ui-panel grid grid-cols-2 gap-1 p-1 lg:grid-cols-4">
+          <ul aria-label="Main destinations" className="grid grid-cols-2 gap-2 lg:grid-cols-4">
             {primaryLinks.map(({ name, menuName, href, icon: Icon }) => (
               <li key={href}>
                 <Link
                   href={href}
                   onNavigate={closeMenu}
                   aria-current={getCurrent(href)}
-                  className={`${destinationClass(href)} h-full gap-2 font-semibold`}
+                  className={`${destinationClass(href)} h-full gap-2 px-3 font-semibold`}
                 >
                   <Icon className="size-5 shrink-0 text-[var(--brand-coral-strong)]" aria-hidden="true" stroke={1.7} />
-                  {menuName ?? name}
+                  <span className="ui-text-reveal ui-nav-label">{menuName ?? name}</span>
                 </Link>
               </li>
             ))}
           </ul>
           <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-4 lg:mt-6 lg:grid-cols-4 lg:gap-x-4">
             {navigationGroups.map((group) => (
-              <section key={group.title} aria-label={group.title} className="min-w-0 border-t border-[var(--surface-border)] pt-2">
-                <h3 className="px-2 text-sm font-bold leading-5 text-[var(--ink-muted)]">{group.title}</h3>
+              <section key={group.title} aria-label={group.title} className="min-w-0">
+                <h3 className="mb-1 px-2 text-xs font-bold uppercase tracking-wider text-[var(--ink-muted)]">{group.title}</h3>
                 {renderLinks(group.links)}
               </section>
             ))}
@@ -384,7 +391,7 @@ export function NavbarComponent({
           {!isAuthenticated && (
             <div className="mt-4 border-t border-[var(--surface-border)] pt-2">
               <Link href="/auth/signup" onNavigate={closeMenu} className={`${controlStyle} text-[var(--brand-coral-strong)]`}>
-                Create account
+                <span className="ui-text-reveal ui-nav-label">Create account</span>
                 <IconArrowUpRight className="size-4" aria-hidden="true" />
               </Link>
             </div>
@@ -396,9 +403,13 @@ export function NavbarComponent({
 
   return (
     <>
-      <Navbar sticky={sticky} transparent={transparent}>
-        <NavBody className="hidden lg:flex lg:py-3">
-          <NavbarLogo />
+      <Navbar
+        sticky={sticky}
+        transparent={transparent}
+        className={`backdrop-blur-none lg:backdrop-blur-none lg:[mask-image:none] lg:[-webkit-mask-image:none] ${transparent ? "" : "lg:bg-[linear-gradient(to_bottom,rgba(11,9,9,0.94),rgba(11,9,9,0.7)_62%,transparent)]"}`}
+      >
+        <NavBody className="hidden lg:flex lg:justify-start lg:gap-6 lg:py-3">
+          <NavbarLogo wordmark />
           <nav
             aria-label="Primary navigation"
             className="flex items-center gap-1"
@@ -414,9 +425,9 @@ export function NavbarComponent({
                       ? "location"
                       : undefined
                 }
-                className={`${controlStyle} ${isPrimaryActive(link.href) ? "bg-[var(--surface-2)] text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"}`}
+                className={`${controlStyle} ${isPrimaryActive(link.href) ? "text-[var(--brand-coral-strong)]" : "text-white/80"}`}
               >
-                {link.name}
+                <span className="ui-text-reveal ui-nav-label">{link.name}</span>
               </Link>
             ))}
             <button
@@ -425,13 +436,13 @@ export function NavbarComponent({
               aria-expanded={isMenuOpen}
               aria-controls="site-menu"
               aria-haspopup="dialog"
-              className={`${controlStyle} border border-[var(--surface-border)] ${isMoreActive ? "text-[var(--brand-coral-strong)]" : "text-[var(--ink-muted)]"}`}
+              className={`${controlStyle} ${isMoreActive || isMenuOpen ? "text-[var(--brand-coral-strong)]" : "text-white/80"}`}
             >
-              More
+              <span className="ui-text-reveal ui-nav-label">More</span>
               <IconChevronDown className="h-4 w-4" aria-hidden="true" />
             </button>
           </nav>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             {search}
             <span
               className="mx-1 h-6 w-px bg-[var(--surface-border)]"
@@ -440,9 +451,14 @@ export function NavbarComponent({
             {renderAccountControl()}
           </div>
         </NavBody>
-        <MobileNav visible transparent={transparent}>
+        <MobileNav
+          visible
+          transparent={transparent}
+          backdropBlur="blur(2px)"
+          className={transparent ? undefined : "bg-[var(--surface-0)]/90"}
+        >
           <MobileNavHeader>
-            <NavbarLogo />
+            <NavbarLogo wordmark />
             <div className="flex shrink-0 items-center gap-2">
               {search}
               {renderAccountControl(true)}
@@ -453,10 +469,10 @@ export function NavbarComponent({
                 aria-expanded={isMenuOpen}
                 aria-controls="site-menu"
                 aria-haspopup="dialog"
-                className={`${controlStyle} shrink-0 gap-1.5 border border-[var(--surface-border)] bg-[var(--surface-1)] px-2.5 text-[var(--ink)]`}
+                className={`${controlStyle} shrink-0 gap-1.5 px-2.5 text-[var(--ink)]`}
               >
                 <IconMenu2 className="h-5 w-5" aria-hidden="true" />
-                Menu
+                <span className="ui-text-reveal ui-nav-label">Menu</span>
               </button>
             </div>
           </MobileNavHeader>
@@ -487,7 +503,7 @@ export function NavbarComponent({
                 className={`${controlStyle} w-full justify-start px-2 text-[var(--ink-muted)] disabled:cursor-wait disabled:opacity-50`}
               >
                 <IconLogout className="h-4 w-4" aria-hidden="true" />
-                {isLoggingOut ? "Signing out…" : "Sign out"}
+                <span className="ui-text-reveal ui-nav-label">{isLoggingOut ? "Signing out…" : "Sign out"}</span>
               </button>
             </div>
           </nav>

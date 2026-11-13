@@ -84,7 +84,7 @@ export default function MoodNightPreview() {
   }, [nearby, selection, retryAttempt]);
 
   const focus = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]";
-  return <section ref={sectionRef} id="your-moods" className={`${styles.section} scroll-mt-24`} aria-labelledby="mood-shelf-heading">
+  return <section ref={sectionRef} id="your-moods" className="scroll-mt-24 bg-[var(--surface-0)]" aria-labelledby="mood-shelf-heading">
     <div className="ui-shell py-8 sm:py-10 lg:py-8">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div>

@@ -481,7 +481,7 @@ export default function SearchBarWithSuggestions({
                 }}
                 className={`flex-1 py-1.5 px-3 rounded-full text-xs font-medium transition-all ${searchMode === 'content'
                   ? 'bg-[#e94f37] text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  : 'text-gray-300 hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4'
                   }`}
               >
                 Movies & TV
@@ -495,7 +495,7 @@ export default function SearchBarWithSuggestions({
                 }}
                 className={`flex-1 py-1.5 px-3 rounded-full text-xs font-medium transition-all ${searchMode === 'person'
                   ? 'bg-[#e94f37] text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  : 'text-gray-300 hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4'
                   }`}
               >
                 People
@@ -522,8 +522,6 @@ export default function SearchBarWithSuggestions({
               <div className="space-y-2 pt-2" role="listbox" id={`${searchId}-suggestions`} aria-label="Matching titles">
                 {suggestions.map((s, idx) => {
                   const isHighlighted = idx === highlightedIndex;
-                  const accent = isHighlighted ? "before:w-1" : "before:w-0";
-                  const bgClass = isHighlighted ? "bg-[#e94f37]/10" : "hover:bg-white/3";
                   const displayTitle = s.title || s.name || 'Unknown';
                   const imagePath = s.type === 'person' ? s.profile_path : s.poster_path;
 
@@ -540,9 +538,8 @@ export default function SearchBarWithSuggestions({
                       onMouseEnter={() => setHighlightedIndex(idx)}
                       onMouseLeave={() => setHighlightedIndex(null)}
                       onClick={() => handleSuggestionClick(s)}
-                      className={`relative flex items-start gap-3 p-3 rounded-lg transition-colors duration-150 cursor-pointer ${bgClass}`}
+                      className="group relative flex cursor-pointer items-start gap-3 rounded-lg p-3"
                     >
-                      <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-10 ${accent} rounded-r-full bg-[#e94f37] transition-all`} />
 
                       <div className="relative w-12 h-16 rounded-md overflow-hidden flex-shrink-0 bg-gray-800">
                         <Image
@@ -560,7 +557,7 @@ export default function SearchBarWithSuggestions({
                       <div className="flex-1 min-w-0 pl-4">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <div className="text-sm text-white font-semibold truncate">
+                            <div className="truncate text-sm font-semibold text-white underline-offset-4 group-aria-selected:text-[var(--brand-coral-strong)] group-aria-selected:underline motion-safe:transition-colors">
                               {highlightMatch(displayTitle, value)}
                             </div>
                             {s.type === 'person' && s.known_for_department && (
@@ -626,7 +623,7 @@ export default function SearchBarWithSuggestions({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.96, height: 0 }}
                             transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                            className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-white/3 transition"
+                            className="flex items-center justify-between gap-3 p-2 rounded-md hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4 transition-colors"
                           >
                             <button
                               onClick={() => handleSearch(term, searchMode)}
@@ -640,7 +637,7 @@ export default function SearchBarWithSuggestions({
                               <button
                                 onClick={() => handleSearch(term, searchMode)}
                                 aria-label={`Run search ${term}`}
-                                className="p-2 rounded bg-white/6 hover:bg-white/9 transition"
+                                className="p-2 rounded bg-white/6 hover:text-[var(--brand-coral-strong)] transition-colors"
                                 title="Run search"
                               >
                                 <IconArrowRight size={16} className="text-gray-100" />
@@ -649,7 +646,7 @@ export default function SearchBarWithSuggestions({
                               <button
                                 onClick={() => removeHistoryItem(term)}
                                 aria-label={`Remove ${term} from history`}
-                                className="p-2 rounded hover:bg-white/6 transition"
+                                className="p-2 rounded hover:text-[var(--brand-coral-strong)] transition-colors"
                                 title="Remove"
                               >
                                 <IconX size={14} className="text-gray-400" />
@@ -727,7 +724,7 @@ export default function SearchBarWithSuggestions({
                 setOpen(!open);
               }
             }}
-            className="z-10 grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white/70 transition-colors hover:border-[#e94f37]/25 hover:bg-white/[0.075] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)]"
+            className="z-10 grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white/70 transition-colors hover:text-[var(--brand-coral-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)]"
           >
             {open && !resolvedIsMobile ? <IconX size={20} /> : <IconSearch size={20} />}
           </button>
@@ -845,7 +842,7 @@ export default function SearchBarWithSuggestions({
                       <button type="button"
                         key={`${suggestion.id}-${index}`}
                         onClick={() => { handleSuggestionClick(suggestion); setMobileOpen(false); }}
-                        className="flex w-full items-center gap-3 p-2 text-left hover:bg-white/10 rounded cursor-pointer text-white"
+                        className="flex w-full items-center gap-3 p-2 text-left hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4 rounded cursor-pointer text-white"
                       >
                         <Image
                           src={(suggestion.type === 'person' ? suggestion.profile_path : suggestion.poster_path) ? tmdbImage((suggestion.type === 'person' ? suggestion.profile_path : suggestion.poster_path)!, "w92") : suggestion.type === 'person' ? '/placeholder-person.svg' : '/placeholder-poster.svg'}
@@ -875,7 +872,7 @@ export default function SearchBarWithSuggestions({
                         <button type="button"
                           key={index}
                           onClick={() => { setMobileValue(term.title); handleSearch(term.title, mobileMode); }}
-                          className="flex w-full items-center gap-3 p-2 text-left hover:bg-white/10 rounded cursor-pointer text-white"
+                          className="flex w-full items-center gap-3 p-2 text-left hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4 rounded cursor-pointer text-white"
                         >
                           <IconTrendingUp size={16} className="text-gray-400" />
                           <span className="text-sm">{term.title}</span>

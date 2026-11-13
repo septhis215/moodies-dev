@@ -32,6 +32,7 @@ interface MobileNavProps {
   className?: string;
   visible?: boolean;
   transparent?: boolean;
+  backdropBlur?: string;
 }
 
 interface MobileNavHeaderProps {
@@ -99,7 +100,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => (
         key={item.link}
         href={item.link}
         onClick={onItemClick}
-        className="rounded-xl px-3 py-2 text-white/68 outline-none transition hover:bg-white/[0.05] hover:text-white focus-visible:ring-2 focus-visible:ring-[#e94f37]/75"
+        className="rounded-xl px-3 py-2 text-white/68 outline-none transition hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-[#e94f37]/75"
       >
         {item.name}
       </Link>
@@ -112,10 +113,11 @@ export const MobileNav = ({
   className,
   visible,
   transparent = false,
+  backdropBlur,
 }: MobileNavProps) => (
   <motion.div
     animate={{
-      backdropFilter: visible ? "blur(16px)" : "blur(10px)",
+      backdropFilter: backdropBlur ?? (visible ? "blur(16px)" : "blur(10px)"),
       boxShadow: visible
         ? "0 1px 0 rgba(255,255,255,0.06) inset, 0 10px 30px rgba(0,0,0,0.28)"
         : "none",
@@ -178,7 +180,7 @@ export const MobileNavMenu = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Close menu"
-                className="ml-auto grid min-h-11 min-w-11 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 outline-none transition hover:bg-white/[0.08] hover:text-white focus-visible:ring-2 focus-visible:ring-[#e94f37]/75"
+                className="ml-auto grid min-h-11 min-w-11 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-white/70 outline-none transition hover:text-[var(--brand-coral-strong)] focus-visible:ring-2 focus-visible:ring-[#e94f37]/75"
               >
                 <IconX className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -202,7 +204,7 @@ export const MobileNavToggle = ({
   <button
     type="button"
     onClick={onClick}
-    className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white/70 outline-none transition hover:border-[#e94f37]/25 hover:bg-white/[0.075] hover:text-white focus-visible:ring-2 focus-visible:ring-[#e94f37]/75 active:scale-95"
+    className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.045] text-white/70 outline-none transition hover:text-[var(--brand-coral-strong)] focus-visible:ring-2 focus-visible:ring-[#e94f37]/75 active:scale-95"
     aria-label={isOpen ? "Close menu" : "Open menu"}
     aria-expanded={isOpen}
   >
@@ -210,12 +212,13 @@ export const MobileNavToggle = ({
   </button>
 );
 
-export const NavbarLogo = ({ className }: { className?: string }) => (
+export const NavbarLogo = ({ className, wordmark = false }: { className?: string; wordmark?: boolean }) => (
   <Link
     href="/"
     aria-label="Moodies home"
     className={cn(
-      "relative z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl outline-none transition hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-[#e94f37]/75",
+      "relative z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl outline-none transition hover:text-[var(--brand-coral-strong)] focus-visible:ring-2 focus-visible:ring-[#e94f37]/75",
+      wordmark && "w-auto gap-1 px-1.5",
       className,
     )}
   >
@@ -224,9 +227,10 @@ export const NavbarLogo = ({ className }: { className?: string }) => (
       alt=""
       width={80}
       height={80}
-      className="h-12 w-12 max-w-none shrink-0 object-contain lg:h-16 lg:w-16"
+      className={wordmark ? "size-9 shrink-0 object-contain" : "h-12 w-12 max-w-none shrink-0 object-contain lg:h-16 lg:w-16"}
       priority
     />
+    {wordmark && <span aria-hidden="true" data-display className="hidden text-2xl font-bold leading-none text-[var(--ink)] min-[360px]:inline">Moodies</span>}
   </Link>
 );
 
@@ -245,8 +249,8 @@ export const NavbarButton = ({
     "inline-flex min-h-10 items-center rounded-xl px-4 py-2 text-sm font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-[#e94f37]/75";
   const variantClass =
     variant === "secondary"
-      ? "border border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]"
-      : "border border-[#e94f37]/30 bg-[#e94f37]/15 text-white hover:bg-[#e94f37]/22";
+      ? "border border-white/10 bg-white/[0.04] text-white hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4"
+      : "border border-[#e94f37]/30 bg-[#e94f37]/15 text-white hover:underline underline-offset-4";
 
   if (href) {
     return (
