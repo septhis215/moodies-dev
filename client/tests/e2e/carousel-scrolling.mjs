@@ -29,6 +29,7 @@ const result = await build({
       import { ComingSoonSection } from './client/components/sections/ComingSoon';
       import TrailerModal from './client/components/sections/TrailerModal';
       const items=Array.from({length:12},(_,i)=>({id:i+1,title:'Card '+(i+1),name:'Person '+(i+1),type:'movie',poster_path:null,backdrop_path:null,release_date:'2027-01-15',vote_average:8,overview:'A story of friendship.',known_for:[],trailer_key:'fixture-trailer',recommendations:[]}));
+      const upcoming=[{...items[0],id:13,name:'February release',release_date:'2027-02-01'},...items];
       window.actions=0;
       window.clicks=0;
       document.addEventListener('click',()=>window.clicks++,true);
@@ -40,7 +41,7 @@ const result = await build({
       const reviews=items.slice(0,5).map(item=>({tmdbId:item.id,mediaType:'MOVIE',title:item.title,name:'A member',avatar:'',rating:8,quote:'A thoughtful story. '.repeat(70)}));
       createRoot(document.getElementById('root')).render(new URLSearchParams(location.search).has('modal')
         ? <TrailerModal trailer={{...items[0],trailer_key:null,recommendations:items}} onClose={()=>{}} onSelectTrailer={()=>window.actions++}/>
-        : <><div id="fixture-cards"><CardCarousel title="Movies" items={items}/></div><div id="fixture-generic" className="ui-shell"><Carousel items={items} CardComponent={({show})=><a href={'/movies/'+show.id} style={{display:'block',height:220,background:'#392621'}}>{show.title}</a>}/></div><div id="fixture-people" className="ui-shell"><PeopleRail people={items}/></div><div id="fixture-curated" className="ui-shell"><CuratedShelf items={items}/></div><div id="fixture-reviews"><CommunityPicks data={reviews}/></div><div id="fixture-premiere"><Premiere data={items}/></div><div id="fixture-upcoming"><UpcomingTrailers data={items}/></div><div id="fixture-celebs"><Celebs/></div><div id="fixture-football"><Football/></div><div id="fixture-coming"><ComingSoonSection title="Coming soon" items={items} type="movies"/></div><div style={{height:'150vh'}}/></>);
+        : <><div id="fixture-cards"><CardCarousel title="Movies" items={items}/></div><div id="fixture-generic" className="ui-shell"><Carousel items={items} CardComponent={({show})=><a href={'/movies/'+show.id} style={{display:'block',height:220,background:'#392621'}}>{show.title}</a>}/></div><div id="fixture-people" className="ui-shell"><PeopleRail people={items}/></div><div id="fixture-curated" className="ui-shell"><CuratedShelf items={items}/></div><div id="fixture-reviews"><CommunityPicks data={reviews}/></div><div id="fixture-premiere"><Premiere data={items}/></div><div id="fixture-upcoming"><UpcomingTrailers data={items}/></div><div id="fixture-celebs"><Celebs/></div><div id="fixture-football"><Football/></div><div id="fixture-coming"><ComingSoonSection title="Coming soon" items={upcoming} type="movies"/></div><div style={{height:'150vh'}}/></>);
     `,
   },
   bundle: true,
@@ -140,6 +141,43 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     console.log(`Native swipes, vertical scrolling and click suppression passed at ${width}px (coming-soon becomes a grid at 640px).`);
   }
+
+  const calendar = page.getByRole("region", { name: "Coming soon", exact: true });
+  const january = calendar.getByRole("button", { name: "January 2027" });
+  const february = calendar.getByRole("button", { name: "February 2027" });
+  const releases = calendar.locator("article:visible");
+  assert.equal(await january.getAttribute("aria-pressed"), "true");
+  assert.equal(await releases.count(), 6);
+  for (const [width, label] of [[390, "Show 3 more"], [768, "Show 6 more"]]) {
+    await page.setViewportSize({ width, height: 844 });
+    const showMore = calendar.getByRole("button", { name: label });
+    const style = await showMore.evaluate(button => {
+      const bounds = button.getBoundingClientRect();
+      const row = button.parentElement.getBoundingClientRect();
+      const { backgroundColor, borderTopWidth } = getComputedStyle(button);
+      return {
+        centered: Math.abs(bounds.left + bounds.width / 2 - row.left - row.width / 2) < 1,
+        backgroundColor,
+        borderTopWidth,
+      };
+    });
+    assert.deepEqual(style, { centered: true, backgroundColor: "rgba(0, 0, 0, 0)", borderTopWidth: "0px" });
+  }
+  await calendar.getByRole("button", { name: "Show 6 more" }).click();
+  assert.equal(await releases.count(), 12);
+  await february.focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await february.getAttribute("aria-pressed"), "true");
+  assert.equal(await calendar.getByRole("status").textContent(), "February 2027 · 1 release");
+  assert.match(await releases.first().textContent(), /Mon, Feb 1.*February release/);
+  await january.click();
+  assert.equal(await releases.count(), 12);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const featuredCards = calendar.locator(".mobile-native-scroll > a");
+  const lead = await featuredCards.first().boundingBox();
+  const supporting = await featuredCards.nth(1).boundingBox();
+  assert.ok(lead.x < supporting.x && lead.height > supporting.height);
+  console.log("Release calendar month switching, date labels and paging passed.");
   for (const width of [390, 768]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto(base + "?modal=1");

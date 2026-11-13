@@ -28,6 +28,23 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
+  const checkLabelHover = async (link) => {
+    const getStyle = (element) => {
+      const { backgroundColor, borderTopWidth } = getComputedStyle(element);
+      const label = element.querySelector(".ui-text-reveal");
+      return { backgroundColor, borderTopWidth, position: getComputedStyle(label).backgroundPositionX, underlineWidth: parseFloat(getComputedStyle(label, "::after").width) };
+    };
+    await page.mouse.move(0, 0);
+    const before = await link.evaluate(getStyle);
+    await link.hover();
+    const after = await link.evaluate(getStyle);
+    assert.equal(after.backgroundColor, before.backgroundColor);
+    assert.equal(after.borderTopWidth, "0px");
+    assert.equal(before.underlineWidth, 0);
+    assert.ok(after.underlineWidth > 0);
+    assert.equal(before.position, "100%");
+    assert.equal(parseFloat(after.position), 0);
+  };
   const openMenu = async width => {
     await page.getByRole("button", { name: width >= 1024 ? "More" : "Open menu", exact: true }).click();
     const trigger = page.locator('button[aria-controls="site-menu"]').filter({ visible: true });
@@ -36,6 +53,58 @@ try {
     assert.equal(await trigger.getAttribute("aria-expanded"), "true");
     return { trigger, dialog };
   };
+  const checkHomepageBackground = async () => {
+    const background = await page.locator(".homepage-browse").evaluate((section) => {
+      const pageStyle = getComputedStyle(section.parentElement);
+      const sectionStyle = getComputedStyle(section);
+      return { pageColor: pageStyle.backgroundColor, sectionColor: sectionStyle.backgroundColor, image: sectionStyle.backgroundImage };
+    });
+    assert.equal(background.sectionColor, background.pageColor);
+    assert.equal(background.image, "none");
+    assert.equal(await page.getByRole("navigation", { name: "Browse this page" }).count(), 0);
+  };
+  const checkPopulatedHero = async (title, nextTitle) => {
+    const hero = page.getByRole("region", { name: title, exact: true });
+    await hero.getByRole("button", { name: "Next featured title" }).click();
+    await hero.getByRole("heading", { name: nextTitle, exact: true }).waitFor();
+    const posters = hero.getByRole("group", { name: "Featured posters" });
+    assert.equal(await posters.getByRole("button").first().getAttribute("aria-pressed"), "false");
+    assert.equal(await posters.getByRole("button").nth(1).getAttribute("aria-pressed"), "true");
+    await hero.getByRole("button", { name: "Previous featured title" }).click();
+  };
+  const checkUpcoming = async (title, route) => {
+    const section = page.getByRole("region", { name: title, exact: true });
+    await section.getByRole("heading", { name: "Featured releases" }).waitFor();
+    const featured = section.locator(`a.aspect-video[href^="${route}/"]`);
+    assert.equal(await featured.count(), 3);
+    const card = await featured.first().boundingBox();
+    assert.ok(card.width > card.height);
+    const month = section.getByRole("button", { name: "January 2027" });
+    assert.equal(await month.getAttribute("aria-pressed"), "true");
+    await section.getByRole("heading", { name: "Release schedule" }).waitFor();
+    const week = section.locator("details").first();
+    await week.locator("article").first().waitFor();
+    await week.locator("summary").click();
+    await week.locator("article").first().waitFor({ state: "hidden" });
+    await week.locator("summary").click();
+    await week.getByRole("button", { name: /Add .* to My List/ }).first().waitFor();
+  };
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(base, { waitUntil: "load" });
+    await checkHomepageBackground();
+    if (width >= 1024) {
+      await checkLabelHover(page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link", { name: "Movies" }));
+    }
+    const { trigger, dialog } = await openMenu(width);
+    if (width >= 1024) {
+      const mask = await trigger.evaluate((button) => getComputedStyle(button.closest(".z-\\[999\\]")).maskImage);
+      assert.equal(mask, "none", "The landing navbar should fade the artwork without masking the controls");
+      await checkLabelHover(dialog.getByRole("link", { name: "Movies", exact: true }));
+    }
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "hidden" });
+  }
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: width < 1024 ? 740 : 900 });
     await page.goto(`${base}/terms`, { waitUntil: "domcontentloaded", timeout: 120000 });
@@ -132,6 +201,15 @@ try {
     await movieMenu.locator('a[href="/movies"]').filter({ visible: true }).click();
     await page.waitForURL("**/movies", { timeout: 120000 });
     await movieMenu.waitFor({ state: "hidden" });
+    await page.getByRole("heading", { name: "Movies", exact: true, level: 1 }).waitFor();
+    await checkHomepageBackground();
+    if (process.env.HOMEPAGE_FIXTURES) {
+      for (const id of ["new-release-movies", "popular-movies", "trending-movies", "korean-movies", "action-movies", "award-winners", "animated-movies", "indie-movies"]) {
+        await page.locator(`#${id} a[href^="/movies/"]`).first().waitFor();
+      }
+      await checkPopulatedHero("Movies", "Movie 2");
+      await checkUpcoming("Coming to Theaters", "/movies");
+    }
     const { dialog: tvMenu } = await openMenu(width);
     assert.equal(await tvMenu.locator('a[href="/movies"]').filter({ visible: true }).getAttribute("aria-current"), "page");
     if (output) {
@@ -141,6 +219,13 @@ try {
     await tvMenu.locator('a[href="/tv"]').filter({ visible: true }).click();
     await page.waitForURL("**/tv", { timeout: 120000 });
     await tvMenu.waitFor({ state: "hidden" });
+    await page.getByRole("heading", { name: "TV shows", exact: true, level: 1 }).waitFor();
+    await checkHomepageBackground();
+    if (process.env.HOMEPAGE_FIXTURES) {
+      await page.locator("#trending-tv article").first().waitFor();
+      await checkPopulatedHero("TV shows", "Series 2");
+      await checkUpcoming("Premiering soon", "/tv");
+    }
     const { dialog: currentMenu } = await openMenu(width);
     assert.equal(await currentMenu.locator('a[href="/tv"]').filter({ visible: true }).getAttribute("aria-current"), "page");
     await currentMenu.locator('a[href="/movies"]').filter({ visible: true }).click();
