@@ -82,9 +82,10 @@ try {
     const delayedRecommendations = new Promise((resolve) => { releaseRecommendations = resolve; });
     await context.route("**/api/**", async (route) => {
       const path = new URL(route.request().url()).pathname;
-      if (path.endsWith("/all/upcoming-trailers")) {
+      if (path.endsWith("/all/upcoming-trailers") || path.endsWith("/all/trailers")) {
         return route.fulfill({ json: picks.map((item) => ({ ...item, trailer_key: "fixture-trailer" })) });
       }
+      if (path.endsWith("/all/batch/trailers")) return route.fulfill({ json: {} });
       if (path.endsWith("/all/trending")) {
         return route.fulfill({
           json: [
@@ -174,12 +175,30 @@ try {
         .waitFor();
       if (!member && width === 1440) {
         try {
+          for (const id of ["premiere", "upcoming"]) {
+            const card = page.locator(`#${id}`).getByRole("button", { name: "Play trailer for Personal pick 1", exact: true });
+            const icon = await card.locator("..").locator("div[aria-hidden='true']").elementHandle();
+            await card.scrollIntoViewIfNeeded();
+            await page.mouse.move(0, 0);
+            await page.waitForFunction(element => getComputedStyle(element).opacity === "0", icon);
+            await card.hover();
+            await page.waitForFunction(element => getComputedStyle(element).opacity === "1", icon);
+            await page.mouse.move(0, 0);
+            await page.waitForFunction(element => getComputedStyle(element).opacity === "0", icon);
+            await card.focus();
+            await page.waitForFunction(element => getComputedStyle(element).opacity === "1", icon);
+          }
           const play = page.locator("#upcoming").getByRole("button", { name: "Play trailer for Personal pick 1", exact: true });
           await play.click();
           const dialog = page.getByRole("dialog", { name: "Personal pick 1", exact: true });
           await dialog.waitFor({ timeout: 8000 });
+          await page.waitForFunction(element => {
+            const { x, y, width, height } = element.getBoundingClientRect();
+            return x === 0 && y === 0 && width === innerWidth && height === innerHeight;
+          }, await dialog.elementHandle());
           await page.keyboard.press("Escape");
           await dialog.waitFor({ state: "hidden" });
+          assert.ok(await play.evaluate(button => document.activeElement === button));
         } finally {
           releaseRecommendations();
         }
@@ -191,6 +210,14 @@ try {
         0,
       );
       await page.locator("#community-heading").waitFor();
+      const trending = page.locator("#trending");
+      assert.equal(await trending.evaluate((section) => getComputedStyle(section).borderBottomWidth), "0px");
+      const moodBackground = await page.locator("#your-moods").evaluate((section) => ({
+        section: getComputedStyle(section).backgroundColor,
+        page: getComputedStyle(section.closest(".homepage-browse")).backgroundColor,
+      }));
+      assert.equal(moodBackground.section, moodBackground.page);
+      assert.ok(await page.locator("#your-moods").evaluate((section) => Boolean(section.compareDocumentPosition(document.querySelector("#premiere")) & Node.DOCUMENT_POSITION_FOLLOWING)));
       if (width < 640) {
         await checkMobileRail(page.locator("#trending"), width);
       }
@@ -200,14 +227,23 @@ try {
         const bounds = await card.evaluate((element) => {
           const poster = element.querySelector(".ui-poster").getBoundingClientRect();
           const save = element.querySelector(".ui-poster-save");
+          const saveFrame = save.getBoundingClientRect();
+          const rating = element.querySelector('[aria-label^="Rating:"]').getBoundingClientRect();
+          const recommendations = [...element.querySelectorAll('a[aria-label^="View "]')].map((link) => link.getBoundingClientRect());
           return {
             titleTop: element.querySelector("h4").getBoundingClientRect().top,
-            headerBottom: save.getBoundingClientRect().bottom,
+            headerBottom: saveFrame.bottom,
+            saveCenter: saveFrame.top + saveFrame.height / 2,
+            ratingCenter: rating.top + rating.height / 2,
             posterBottom: poster.bottom,
-            lastRecommendationBottom: [...element.querySelectorAll('a[aria-label^="View "]')].at(-1).getBoundingClientRect().bottom,
+            lastRecommendationBottom: recommendations.at(-1).bottom,
+            recommendationWidth: recommendations[0].width,
           };
         });
         assert.ok(bounds.titleTop >= bounds.headerBottom, "Hover panel title overlaps the poster header");
+        assert.ok(bounds.titleTop - bounds.headerBottom < 35, "Hover panel leaves an empty band above the title");
+        assert.ok(Math.abs(bounds.saveCenter - bounds.ratingCenter) <= 1, "Save and rating controls are vertically misaligned");
+        assert.ok(bounds.recommendationWidth >= 48, "Hover recommendation artwork is too small");
         assert.ok(bounds.lastRecommendationBottom <= bounds.posterBottom, `Hover recommendations overflow the poster at ${width}px: ${JSON.stringify(bounds)}`);
         const recommendation = card.getByRole("link", { name: "View Personal pick 4" });
         await recommendation.focus();
@@ -273,6 +309,8 @@ try {
         const preview = (number) => curated.getByRole("button", { name: `Preview Personal pick ${number}`, exact: true });
         const posterStrip = curated.locator("[data-curated-rail]");
         await curated.getByRole("link", { name: "Details for Personal pick 1", exact: true }).waitFor();
+        const artwork = await preview(1).locator(":scope > span").first().boundingBox();
+        assert.ok(artwork.width > artwork.height, "Curated picks should use landscape cards");
         assert.equal(await curated.getByRole("link", { name: "Details for Personal pick 1" }).getAttribute("href"), "/movies/900");
         await preview(2).click();
         assert.equal(await preview(2).getAttribute("aria-pressed"), "true");

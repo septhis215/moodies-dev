@@ -23,9 +23,9 @@ const posterUrl = (item: All) => item.poster_path
   ? tmdbImage(item.poster_path, "w342")
   : "/placeholder-poster.svg";
 
-const featureClass = "relative isolate flex min-h-60 items-end overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] sm:min-h-72 lg:min-h-80";
-const railClass = "mobile-native-scroll scrollbar-hide flex min-w-0 snap-x snap-proximity scroll-px-1 gap-3 overflow-x-auto p-1 pb-2";
-const pickClass = "relative w-[4.75rem] shrink-0 snap-start sm:w-24";
+const featureClass = "relative isolate flex min-h-72 items-end overflow-hidden rounded-xl bg-[var(--surface-1)] sm:min-h-80 lg:min-h-96";
+const railClass = "mobile-native-scroll scrollbar-hide flex min-w-0 snap-x snap-proximity scroll-px-1 gap-2.5 overflow-x-auto p-1 pb-2 sm:gap-3";
+const pickClass = "relative w-[43%] shrink-0 snap-start sm:w-[28%] lg:w-[19%]";
 
 export function CuratedShelf({
   items,
@@ -83,21 +83,22 @@ export function CuratedShelf({
     <div className="min-w-0">
       {selected ? (
         <article className={featureClass}>
-          <div key={pickKey(selected)} className="ui-overlay-enter pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+          {(selected.backdrop_path || selected.poster_path) && <div key={pickKey(selected)} className={`ui-overlay-enter pointer-events-none absolute inset-y-0 right-0 -z-10 ${selected.backdrop_path ? "left-0 sm:left-[18%]" : "aspect-[2/3] max-w-full"}`} aria-hidden="true">
             <TmdbImage
               src={selected.backdrop_path ? tmdbImage(selected.backdrop_path, "w1280") : posterUrl(selected)}
               alt=""
               fill
-              sizes="(max-width: 1280px) 100vw, 1216px"
-              className={selected.backdrop_path ? "object-cover object-center sm:object-[center_35%]" : "object-cover object-center opacity-65 sm:object-right"}
+              sizes={selected.backdrop_path ? "(max-width: 639px) 100vw, (max-width: 1280px) 82vw, 1000px" : "256px"}
+              className="object-cover object-[center_30%]"
             />
-          </div>
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-black via-black/60 to-black/5 sm:bg-linear-to-r sm:from-black/95 sm:via-black/65 sm:to-transparent" />
-          <div className="w-full max-w-2xl p-4 sm:p-8">
+          </div>}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-t from-[var(--surface-0)] via-[var(--surface-0)]/75 to-transparent sm:bg-linear-to-r sm:via-[var(--surface-0)]/85" />
+          <div className="w-full max-w-xl p-5 sm:p-8 lg:p-10">
             <p className="text-xs font-medium text-white/80 sm:text-sm">{label}</p>
             <h3 aria-live="polite" data-display className="mt-1 line-clamp-2 text-3xl font-bold leading-none text-white [overflow-wrap:anywhere] sm:text-5xl">
               {pickTitle(selected)}
             </h3>
+            {selected.overview && <p className="mt-3 line-clamp-2 max-w-md text-sm leading-5 text-[var(--ink-muted)] sm:line-clamp-3 sm:text-base sm:leading-6">{selected.overview}</p>}
             <div className="mt-4 flex flex-wrap gap-2">
               <Link ref={detailsRef} href={`/${mediaType(selected) === "tv" ? "tv" : "movies"}/${selected.id}`} aria-label={`Details for ${pickTitle(selected)}`} className="ui-primary-action">
                 Details <ArrowRight className="size-4" aria-hidden="true" />
@@ -123,7 +124,7 @@ export function CuratedShelf({
         </div>
       )}
 
-      <div className="mb-1 mt-2 flex items-center justify-between gap-3">
+      <div className="mb-2 mt-4 flex items-center justify-between gap-2">
         <div role="group" aria-label="Filter your curated picks" className="flex min-w-0 flex-wrap gap-1">
           {filters.map(({ value, label }) => (
             <button
@@ -149,7 +150,7 @@ export function CuratedShelf({
           </div>
         )}
       </div>
-      <div id={railId} ref={containerRef} aria-label="Your curated picks" className={railClass} data-curated-rail>
+      <div id={railId} ref={containerRef} role="group" aria-label="Your curated picks" className={railClass} data-curated-rail>
         {picks.map((item, index) => {
           const key = pickKey(item);
           const title = pickTitle(item);
@@ -167,10 +168,17 @@ export function CuratedShelf({
               }}
               className={`${pickClass} group text-left text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-none aria-pressed:text-[var(--ink)]`}
             >
-              <span className="relative block aspect-[2/3] overflow-hidden rounded-md border-2 border-transparent bg-[var(--surface-2)] transition-colors group-hover:border-[var(--ink-muted)] group-focus-visible:border-[var(--brand-coral-strong)] group-aria-pressed:border-[var(--brand-coral-strong)]">
-                <TmdbImage src={tmdbImage(item.poster_path, "posterSmall") || "/placeholder-poster.svg"} alt="" fill sizes="(max-width: 639px) 76px, 96px" className="object-cover" />
+              <span className="relative block aspect-video overflow-hidden rounded-lg bg-[var(--surface-2)]">
+                {item.backdrop_path ? (
+                  <TmdbImage src={tmdbImage(item.backdrop_path, "backdropCard")} alt="" fill sizes="(max-width: 639px) 43vw, (max-width: 1023px) 28vw, 240px" className="object-cover" />
+                ) : (
+                  <span className="absolute inset-y-0 right-2 aspect-[2/3]">
+                    <TmdbImage src={tmdbImage(item.poster_path, "posterSmall") || "/placeholder-poster.svg"} alt="" fill sizes="96px" className="object-cover" />
+                  </span>
+                )}
+                <span aria-hidden="true" className="absolute inset-0 rounded-lg ring-1 ring-inset ring-white/10 group-hover:ring-white/50 group-focus-visible:ring-2 group-focus-visible:ring-[var(--brand-coral-strong)] group-aria-pressed:ring-2 group-aria-pressed:ring-[var(--brand-coral-strong)]" />
               </span>
-              <span className="mt-1 block truncate text-xs font-semibold">{title}</span>
+              <span className="mt-1.5 block truncate text-sm font-semibold">{title}</span>
             </button>
           );
         })}
@@ -187,7 +195,7 @@ export function CuratedShelfSkeleton() {
       <div aria-hidden="true" className={`${railClass} overflow-hidden`}>
         {Array.from({ length: 7 }, (_, index) => (
           <div key={index} className={`${pickClass} moodies-skeleton`}>
-            <div className="aspect-[2/3] rounded-md bg-[var(--surface-2)]" />
+            <div className="aspect-video rounded-lg bg-[var(--surface-2)]" />
             <div className="mt-1 h-4 w-4/5 rounded bg-[var(--surface-2)]" />
           </div>
         ))}
