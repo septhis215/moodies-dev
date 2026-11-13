@@ -168,7 +168,7 @@ export function TrailerShelf({ data, title, subtitle, endpoint, upcoming = false
             {trailerItems.map((item) => (
               <div
                 key={trailerKey(item)}
-                className={"relative " + cardClass}
+                className={"group/trailer relative " + cardClass}
               >
                 <button
                   type="button"
@@ -207,7 +207,10 @@ export function TrailerShelf({ data, title, subtitle, endpoint, upcoming = false
                   </div>
 
                   {item.trailer_key && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center" aria-hidden="true">
+                    <div
+                      className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center motion-safe:transition-opacity motion-safe:duration-200 motion-safe:ease-out [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/trailer:opacity-100 [@media(hover:hover)]:group-focus-within/trailer:opacity-100"
+                      aria-hidden="true"
+                    >
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-2xl sm:h-12 sm:w-12">
                         <Play
                           size={16}

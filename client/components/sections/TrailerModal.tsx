@@ -4,6 +4,7 @@ import { tmdbImage } from "@/lib/tmdb";
 import { useRouter } from "next/navigation";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Calendar,
   ChevronDown,
@@ -21,6 +22,7 @@ type TrailerItem = {
   id: number;
   title: string;
   poster_path?: string | null;
+  backdrop_path?: string | null;
   trailer_key?: string | null;
   release_date?: string | null;
   runtime?: number | null;
@@ -148,9 +150,9 @@ export default function TrailerModal({
     setIsExpanded(false);
   }, [contentType, trailer.id]);
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/88 text-white"
+      className="fixed inset-0 z-[1000] bg-black text-white"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -160,7 +162,7 @@ export default function TrailerModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="trailer-modal-title"
-        className="relative flex h-dvh w-full flex-col overflow-hidden bg-[var(--surface-0)]"
+        className="ui-overlay-enter relative flex h-dvh w-full flex-col overflow-hidden bg-[var(--surface-0)]"
       >
         <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-[var(--surface-border)] px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-6">
           <p className="min-w-0 truncate text-sm font-semibold text-[var(--ink)]">
@@ -193,8 +195,11 @@ export default function TrailerModal({
                   allowFullScreen
                 />
               ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-3 bg-neutral-950 text-gray-400">
-                  <Film className="h-12 w-12 text-gray-600" />
+                <div className="relative isolate flex h-full flex-col items-center justify-center gap-3 bg-[var(--surface-1)] text-[var(--ink-muted)]">
+                  {trailer.backdrop_path && (
+                    <Image src={tmdbImage(trailer.backdrop_path, "backdropHero")} alt="" fill sizes="(min-width: 1024px) 70vw, 100vw" className="-z-10 object-cover opacity-25" />
+                  )}
+                  <Film aria-hidden="true" className="size-8" />
                   <p className="text-sm">Trailer unavailable</p>
                 </div>
               )}
@@ -218,20 +223,17 @@ export default function TrailerModal({
           </div>
 
           {/* Details panel */}
-          <div className="relative flex min-h-0 w-full flex-1 flex-col border-t border-white/10 bg-[#0b0909] lg:h-full lg:w-80 lg:flex-none lg:border-l lg:border-t-0 xl:w-96">
+          <div className="relative flex min-h-0 w-full flex-1 flex-col border-t border-[var(--surface-border)] bg-[var(--surface-0)] lg:h-full lg:w-80 lg:flex-none lg:border-l lg:border-t-0 xl:w-96">
             <div className="flex-1 overflow-y-auto overflow-x-hidden mobile-native-scroll">
               {/* Header */}
               <div className="relative flex-shrink-0 border-b border-white/10 p-4 sm:p-5 lg:p-6">
                 <div className="flex items-start gap-3 sm:gap-4">
-                  <div
-                    className="relative aspect-[2/3] w-16 flex-shrink-0 cursor-pointer overflow-hidden rounded-sm border border-white/15 bg-white/[0.04] transition-colors hover:border-[#e94f37]/70 sm:w-24 lg:w-28"
-                    onClick={() => handleClick(trailer)}
-                  >
+                  <div className="relative aspect-[2/3] w-16 shrink-0 overflow-hidden rounded-lg bg-[var(--surface-2)] sm:w-20">
                     <Image
                       src={posterUrl}
-                      alt={trailer.title}
+                      alt=""
                       fill
-                      sizes="(max-width: 640px) 64px, (max-width: 1280px) 96px, 112px"
+                      sizes="(min-width: 640px) 80px, 64px"
                       className="object-cover"
                     />
                   </div>
@@ -240,8 +242,7 @@ export default function TrailerModal({
                   <div className="relative z-10 flex min-w-0 flex-1 flex-col">
                     <h2
                       id="trailer-modal-title"
-                      className="cursor-pointer text-xl font-bold leading-[1.1] text-white transition-colors hover:text-[#ff7a66] sm:text-2xl"
-                      onClick={() => handleClick(trailer)}
+                      className="text-2xl font-bold leading-none text-[var(--ink)] [overflow-wrap:anywhere] sm:text-3xl"
                     >
                       {trailer.title}
                     </h2>
@@ -304,7 +305,7 @@ export default function TrailerModal({
                     <div className="mt-3 flex flex-wrap gap-2 sm:mt-4">
                       <button
                         onClick={() => handleClick(trailer)}
-                        className="inline-flex min-h-10 items-center gap-2 rounded-md bg-[#e94f37] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#ff624c]"
+                        className="ui-primary-action shadow-none"
                       >
                         <ExternalLink className="h-4 w-4" />
                         Details
@@ -314,10 +315,10 @@ export default function TrailerModal({
                           href={youtubeUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/15 px-3 py-2 text-sm font-semibold text-gray-200 transition-colors hover:border-white/40 hover:bg-white/[0.06]"
+                          className="ui-secondary-action"
                         >
                           <Play className="h-4 w-4 fill-current" />
-                          Watch
+                          YouTube
                         </a>
                       )}
                     </div>
@@ -359,7 +360,7 @@ export default function TrailerModal({
                 trailer.recommendations?.length > 0 && (
                   <div className="p-4 sm:p-5 lg:p-6">
                     <div className="mb-3 flex items-center justify-between">
-                      <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">
+                      <h3 className="text-base font-semibold text-[var(--ink)]">
                         You Might Also Like
                       </h3>
                       <span className="text-xs tabular-nums text-gray-500">
@@ -456,6 +457,7 @@ export default function TrailerModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
