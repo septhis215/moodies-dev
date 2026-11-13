@@ -85,6 +85,21 @@ try {
       if (path.endsWith("/all/upcoming-trailers")) {
         return route.fulfill({ json: picks.map((item) => ({ ...item, trailer_key: "fixture-trailer" })) });
       }
+      if (path.endsWith("/all/trending")) {
+        return route.fulfill({
+          json: [
+            {
+              ...picks[0],
+              title: "A long title that wraps across two lines on a trending poster",
+              genres: ["Science Fiction", "Action & Adventure", "Documentary"],
+              runtime: 148,
+              origin_country: ["US"],
+              recommendations: picks.slice(1, 4),
+            },
+            ...picks.slice(1),
+          ],
+        });
+      }
       if (path.endsWith("/all/movie/900/recommendations")) {
         await delayedRecommendations;
         return route.fulfill({ json: [] });
@@ -178,6 +193,26 @@ try {
       await page.locator("#community-heading").waitFor();
       if (width < 640) {
         await checkMobileRail(page.locator("#trending"), width);
+      }
+      if (!member && width >= 640) {
+        const card = page.locator("#trending article").first();
+        await card.locator(".ui-poster").hover();
+        const bounds = await card.evaluate((element) => {
+          const poster = element.querySelector(".ui-poster").getBoundingClientRect();
+          const save = element.querySelector(".ui-poster-save");
+          return {
+            titleTop: element.querySelector("h4").getBoundingClientRect().top,
+            headerBottom: save.getBoundingClientRect().bottom,
+            posterBottom: poster.bottom,
+            lastRecommendationBottom: [...element.querySelectorAll('a[aria-label^="View "]')].at(-1).getBoundingClientRect().bottom,
+          };
+        });
+        assert.ok(bounds.titleTop >= bounds.headerBottom, "Hover panel title overlaps the poster header");
+        assert.ok(bounds.lastRecommendationBottom <= bounds.posterBottom, `Hover recommendations overflow the poster at ${width}px: ${JSON.stringify(bounds)}`);
+        const recommendation = card.getByRole("link", { name: "View Personal pick 4" });
+        await recommendation.focus();
+        await page.mouse.move(0, 0);
+        assert.equal(await recommendation.evaluate((link) => getComputedStyle(link).pointerEvents), "auto");
       }
       await page.locator("#your-moods button", { hasText: "Electric" }).click();
       assert.equal(

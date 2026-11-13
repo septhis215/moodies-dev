@@ -25,7 +25,7 @@ export function PosterSaveButton({
       aria-pressed={saved}
       aria-label={label ?? (saved ? `Remove ${title} from My List` : `Add ${title} to My List`)}
     >
-      <Icon className={saving ? "size-4 motion-safe:animate-spin" : "size-4"} aria-hidden="true" />
+      <Icon className={`relative size-[22px] ${saving ? "motion-safe:animate-spin" : ""}`} aria-hidden="true" />
     </button>
   );
 }

@@ -235,13 +235,13 @@ export default function CardCarousel<T extends MediaItem>({
                         className="object-cover"
                       />
                     </Link>
-                    <div className="pointer-events-none absolute inset-0 z-10 hidden grid-rows-[3.25rem_minmax(0,1fr)] bg-[#0b0909]/96 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 sm:grid">
+                    <div className="pointer-events-none absolute inset-0 z-10 hidden grid-rows-[3rem_minmax(0,1fr)] bg-[#0b0909]/96 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 sm:grid">
                       <div
                         className="border-b border-white/10"
                         aria-hidden="true"
                       />
-                      <div className="flex min-h-0 flex-col justify-end gap-2.5 overflow-hidden px-3.5 pb-3.5 pt-3">
-                        <div>
+                      <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto px-3 py-2 [&>*]:shrink-0">
+                        <div className="mt-auto">
                           <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-coral-strong)]">
                             {type === "tv" ? (
                               <Tv className="h-3 w-3" />
@@ -251,7 +251,7 @@ export default function CardCarousel<T extends MediaItem>({
                             {type === "tv" ? "Series" : "Movie"}
                           </p>
                           <Link href={href}>
-                            <h4 className="mt-1 line-clamp-2 text-[17px] font-bold leading-[1.15] text-[var(--ink)] transition-colors hover:text-[var(--brand-coral-strong)]">
+                            <h4 className="mt-1 line-clamp-2 text-[17px] font-bold leading-[1.15] wrap-anywhere text-[var(--ink)] transition-colors hover:text-[var(--brand-coral-strong)]">
                               {titleText}
                             </h4>
                           </Link>
@@ -273,8 +273,7 @@ export default function CardCarousel<T extends MediaItem>({
                         {item.genres?.length ? (
                           <div className="flex flex-wrap gap-1">
                             {item.genres.slice(0, 3).map((genre) => (
-                              <span key={genre} className="ui-label"
-                              >
+                              <span key={genre} className="ui-label px-1.5 py-0 text-[10px] leading-4">
                                 {genre}
                               </span>
                             ))}
@@ -296,13 +295,13 @@ export default function CardCarousel<T extends MediaItem>({
                         </Link>
 
                         {item.recommendations?.length ? (
-                          <div className="border-t border-white/12 pt-2.5">
-                            <p className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/75">
+                          <div className="border-t border-white/12 pt-1.5">
+                            <p className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/75">
                               <Heart className="h-3 w-3 text-[var(--brand-coral-strong)]" />
                               You might also like
                             </p>
                             <TooltipProvider delayDuration={180}>
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className="flex gap-1.5">
                                 {item.recommendations.slice(0, 3).map((rec) => {
                                   const recType = mediaType(rec);
                                   const recHref = `/${recType === "tv" ? "tv" : "movies"}/${rec.id}`;
@@ -314,7 +313,7 @@ export default function CardCarousel<T extends MediaItem>({
                                       <TooltipTrigger asChild>
                                         <Link
                                           href={recHref}
-                                          className="group/rec relative aspect-[2/3] overflow-hidden rounded-sm border border-white/15 bg-[var(--surface-2)] transition-colors hover:border-[var(--brand-coral)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-coral)]"
+                                          className="relative aspect-[2/3] w-8 overflow-hidden rounded-sm border border-white/15 bg-[var(--surface-2)] transition-colors hover:border-[var(--brand-coral)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-coral)]"
                                           aria-label={`View ${itemTitle(rec)}`}
                                         >
                                           <Image
@@ -329,7 +328,7 @@ export default function CardCarousel<T extends MediaItem>({
                                             }
                                             alt={itemTitle(rec)}
                                             fill
-                                            sizes="72px"
+                                            sizes="32px"
                                             className="object-cover"
                                           />
                                         </Link>

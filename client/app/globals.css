@@ -378,20 +378,30 @@ body {
     width: 2.75rem;
     height: 2.75rem;
     place-items: center;
+    border-radius: var(--radius-md);
+    color: white;
+  }
+
+  .ui-poster-save::before {
+    content: "";
+    position: absolute;
+    inset: 0.375rem;
     border: 1px solid rgb(255 255 255 / 25%);
     border-radius: var(--radius-md);
     background: color-mix(in srgb, var(--surface-0) 90%, transparent);
-    color: white;
-    transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+    transition: border-color 150ms ease;
   }
 
-  .ui-poster-save:hover:not(:disabled) {
+  .ui-poster-save:hover:not(:disabled)::before {
     border-color: var(--ink);
   }
 
   .ui-poster-save[aria-pressed="true"] {
-    border-color: var(--brand-coral-strong);
     color: var(--brand-coral-strong);
+  }
+
+  .ui-poster-save[aria-pressed="true"]::before {
+    border-color: currentColor;
   }
 
   .ui-filter-chip:disabled,
@@ -496,7 +506,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .ui-filter-chip,
-  .ui-poster-save,
+  .ui-poster-save::before,
   .ui-panel-interactive,
   .ui-primary-action,
   .ui-secondary-action {
