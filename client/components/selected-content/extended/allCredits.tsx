@@ -1,5 +1,7 @@
 "use client";
 
+import CustomSelect from "@/components/ui/custom-select";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, ChevronDown, Clapperboard, Film, MessageCircle, Search, Users2, X } from "lucide-react";
@@ -199,12 +201,11 @@ export default function AllCredits({ credits, info, id, highlight }: {
               {query && <button type="button" aria-label="Clear search" onClick={() => { setQuery(""); setVisibleCount(CREDIT_BATCH_SIZE); }} className={`absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-[var(--ink-muted)] hover:text-[var(--ink)] ${FOCUS}`}><X size={16} aria-hidden="true" /></button>}
             </div>
             <div className="relative">
-              <label htmlFor="credit-filter" className="sr-only">{tab === "cast" ? "Sort cast" : "Filter crew department"}</label>
-              <select id="credit-filter" value={tab === "cast" ? sortBy : department}
-                onChange={(event) => { if (tab === "cast") setSortBy(event.target.value === "name" ? "name" : "order"); else setDepartment(event.target.value); setVisibleCount(CREDIT_BATCH_SIZE); }} className={`${FIELD} appearance-none px-4 py-3 pr-10`}>
-                {tab === "cast" ? <><option value="order">Billing order</option><option value="name">Name A–Z</option></> : <><option value="">All departments</option>{departments.map((dept) => <option key={dept} value={dept}>{dept}</option>)}</>}
-              </select>
-              <ChevronDown size={16} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true" />
+              {tab === "cast" ? (
+                <CustomSelect label="Sort cast" value={sortBy} onChange={setSortBy} options={[{ value: "order", label: "Billing order" }, { value: "name", label: "Name A–Z" }]} widthClass="w-full" />
+              ) : (
+                <CustomSelect label="Filter crew department" value={department} onChange={setDepartment} options={[{ value: "", label: "All departments" }, ...departments.map((value) => ({ value, label: value }))]} widthClass="w-full" />
+              )}
             </div>
           </div>
         </div>

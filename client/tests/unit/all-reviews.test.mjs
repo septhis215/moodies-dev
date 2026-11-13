@@ -45,6 +45,7 @@ function harness(code, { reviews = [], authenticated = true, pathname = "/tv/123
       if (name === "@/app/context/ToastContext") return { useToast: () => ({ toast: (...args) => messages.push(args) }) };
       if (name === "@/hooks/useScrollToHash") return { useScrollToHash() {} };
       if (name === "@/components/Navbar") return { NavbarComponent: "Navbar" };
+      if (name === "@/components/ui/custom-select") return { default: "CustomSelect" };
       return {};
     },
   });
@@ -74,7 +75,7 @@ test("toolbar preserves latest/highest sorting and author search with reset", ()
   const ids = (nodes) => nodes.filter((n) => n.props?.id?.startsWith("review-")).map((n) => n.props.id);
   let nodes = app.render();
   assert.deepEqual(ids(nodes), ["review-newer", "review-older"]);
-  nodes.find((n) => n.type === "select").props.onChange({ target: { value: "highest" } });
+  nodes.find((n) => n.type === "CustomSelect").props.onChange("highest");
   nodes = app.render();
   assert.deepEqual(ids(nodes), ["review-older", "review-newer"]);
   nodes.find((n) => n.type === "input").props.onChange({ target: { value: "Alex" } });
@@ -195,7 +196,7 @@ test('popular sorting counts reactions, replies, and reply reactions rather than
   const inactive = { ...review('inactive', 'Sam', 10, '2026-11-11'), content: 'Very long. '.repeat(100) };
   const active = { ...review('active', 'Alex', 2, '2026-01-01'), reactionCounts: [{ type: 'LOVE', count: 2 }], replies: [{ content: 'A reply', created_at: '2026-02-01', user: { username: 'Jordan' }, reactionCounts: [{ type: 'LIKE', count: 3 }] }] };
   const app = harness(reviewsCode, { reviews: [inactive, active] });
-  app.render().find(node => node.type === 'select').props.onChange({ target: { value: 'popularity' } });
+  app.render().find(node => node.type === 'CustomSelect').props.onChange('popularity');
   const cards = app.render().filter(node => node.props.id?.startsWith('review-'));
   assert.deepEqual(cards.map(node => node.props.id), ['review-active', 'review-inactive']);
 });

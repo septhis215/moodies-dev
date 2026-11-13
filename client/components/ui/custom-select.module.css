@@ -1,14 +1,21 @@
+.label {
+  display: block;
+  margin-bottom: 0.375rem;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
 .trigger {
   display: flex;
   width: 100%;
-  min-height: 3rem;
+  min-height: 2.75rem;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   border: 1px solid var(--surface-border);
   border-radius: var(--radius-md);
   background: var(--surface-1);
-  padding: 0.75rem 1rem;
+  padding: 0.625rem 0.875rem;
   color: var(--ink);
   font-size: 0.875rem;
   font-weight: 600;
@@ -16,9 +23,26 @@
   text-align: left;
   cursor: pointer;
 }
-.trigger:hover,
+.trigger:hover:not(:disabled) > span,
+.option:hover {
+  color: var(--brand-coral-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+
 .trigger[aria-expanded="true"] {
   border-color: var(--ink-muted);
+}
+.trigger[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .trigger svg { transition: transform 160ms ease; }
+  .popup { animation: select-enter 120ms ease-out; }
+}
+@keyframes select-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .trigger:focus-visible {
   outline: 2px solid var(--brand-coral-strong);
@@ -28,10 +52,16 @@
   cursor: not-allowed;
   opacity: 0.5;
 }
+.trigger > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .popup {
-  z-index: 50;
+  z-index: 1100;
   box-sizing: border-box;
   overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--surface-border);
   border-radius: var(--radius);
   background: var(--surface-1);
@@ -55,12 +85,8 @@
   text-align: left;
   cursor: pointer;
 }
-.option:hover,
 .option:focus {
-  background: var(--surface-2);
-  color: var(--ink);
-}
-.option:focus {
+  color: var(--brand-coral-strong);
   outline: 2px solid var(--brand-coral-strong);
   outline-offset: -2px;
 }

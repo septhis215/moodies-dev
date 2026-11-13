@@ -25,6 +25,7 @@ function render(reviews, reducedMotion = false) {
       if (name === "../ReviewPreviewCard") return { ReviewPreviewCard: "ReviewPreviewCard" };
       if (name === "@/app/context/AuthProvider") return { useAuth: () => ({ isAuthenticated: true, user: { id: "me" } }) };
       if (name === "@/app/context/ToastContext") return { useToast: () => ({ toast() {} }) };
+      if (name === "@/components/ui/custom-select") return { default: "CustomSelect" };
       return {};
     },
   });
@@ -44,13 +45,13 @@ test("empty reviews show one write action and no redundant subtitle or sorting",
   const writes = nodes.filter((node) => node.type === "button" && node.props["aria-label"] === "Write a review");
   assert.equal(writes.length, 1);
   assert.match(writes[0].props.className, /ui-secondary-action/);
-  assert.equal(nodes.filter((node) => node.type === "select").length, 0);
+  assert.equal(nodes.filter((node) => node.type === "CustomSelect").length, 0);
   assert.equal(nodes.filter((node) => node.type === "p" && node.props.children === "No reviews yet").length, 1);
 });
 
 test("populated reviews have one sort control and concise actions", () => {
   const nodes = render([{ id: "one", userId: "other", rating: 8, content: "A thoughtful watch", createdAt: "2026-10-10" }]);
-  assert.equal(nodes.filter((node) => node.type === "select").length, 1);
+  assert.equal(nodes.filter((node) => node.type === "CustomSelect").length, 1);
   const write = nodes.find((node) => node.type === "button" && node.props["aria-label"] === "Write a review");
   assert.match(write.props.className, /ui-primary-action/);
   assert.equal(write.props.children[0], "Write");

@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/app/context/AuthProvider";
-import { FilterDropdown } from "@/components/ui/filterdropdown";
+import CustomSelect from "@/components/ui/custom-select";
 import { fetchMediaSummary, type MediaSummary } from "@/lib/mediaApi";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import { MediaCard, MediaCardSkeleton } from "@/components/ui/MediaCard";
@@ -935,7 +935,9 @@ export default function ProfilePage() {
 
                   {/* Desktop Filters inline */}
                   <div className="hidden items-center gap-2 sm:flex">
-                    <FilterDropdown
+                    <CustomSelect
+                      label="Filter by type"
+                      widthClass="w-36"
                       value={filterType}
                       onChange={setFilterType}
                       options={[
@@ -945,7 +947,9 @@ export default function ProfilePage() {
                       ]}
                     />
 
-                    <FilterDropdown
+                    <CustomSelect
+                      label="Sort by"
+                      widthClass="w-36"
                       value={sortBy}
                       onChange={setSortBy}
                       options={[
@@ -1533,100 +1537,25 @@ export default function ProfilePage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-                      Filter by Type
-                    </label>
-
-                    <div className="relative">
-                      <select
-                        value={filterType}
-                        onChange={(e) =>
-                          setFilterType(
-                            e.target.value as "all" | "movie" | "tv",
-                          )
-                        }
-                        className="
-        w-full appearance-none
-        px-4 py-3 pr-10
-        rounded-xl
-        bg-[var(--surface-1)]
-        border border-white/10
-        text-white
-        hover:border-white/20
-        focus:outline-none focus:ring-2 focus:ring-[var(--brand-coral)]/50
-        transition
-        cursor-pointer
-      "
-                      >
-                        <option value="all">All Types</option>
-                        <option value="movie">Movies</option>
-                        <option value="tv">TV Series</option>
-                      </select>
-
-                      {/* Arrow */}
-                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[var(--ink-muted)]">
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M6 9l6 6 6-6"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          />
-                        </svg>
-                      </div>
-                    </div>
+                    <CustomSelect
+                      label="Filter by Type"
+                      showLabel
+                      value={filterType}
+                      onChange={setFilterType}
+                      options={[{ value: "all", label: "All Types" }, { value: "movie", label: "Movies" }, { value: "tv", label: "TV Series" }]}
+                      widthClass="w-full"
+                    />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-                      Sort by
-                    </label>
-
-                    <div className="relative">
-                      <select
-                        value={sortBy}
-                        onChange={(e) =>
-                          setSortBy(
-                            e.target.value as "dateAdded" | "rating" | "title",
-                          )
-                        }
-                        className="
-        w-full appearance-none
-        px-4 py-3 pr-10
-        rounded-xl
-        bg-[var(--surface-1)]
-        border border-white/10
-        text-white
-        hover:border-white/20
-        focus:outline-none focus:ring-2 focus:ring-[var(--brand-coral)]/50
-        transition
-        cursor-pointer
-      "
-                      >
-                        <option value="dateAdded">Date Added</option>
-                        <option value="rating">Rating</option>
-                        <option value="title">Title</option>
-                      </select>
-
-                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[var(--ink-muted)]">
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                        >
-                          <path
-                            d="M6 9l6 6 6-6"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          />
-                        </svg>
-                      </div>
-                    </div>
+                    <CustomSelect
+                      label="Sort by"
+                      showLabel
+                      value={sortBy}
+                      onChange={setSortBy}
+                      options={[{ value: "dateAdded", label: "Date Added" }, { value: "rating", label: "Rating" }, { value: "title", label: "Title" }]}
+                      widthClass="w-full"
+                    />
                   </div>
                 </div>
 

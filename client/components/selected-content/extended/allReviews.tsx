@@ -1,4 +1,6 @@
 "use client";
+
+import CustomSelect from "@/components/ui/custom-select";
 import { sessionFetch } from "@/lib/auth/session";
 
 import { tmdbImage } from "@/lib/tmdb";
@@ -6,7 +8,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { ReviewComposer } from '../ReviewComposer';
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
-import { ArrowLeft, ArrowDownWideNarrow, ChevronDown, ChevronUp, Eye, Film, MessageCircle, Reply as ReplyIcon, Send, Star, Search, PenSquare, Share2, ThumbsUp, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, Eye, Film, MessageCircle, Reply as ReplyIcon, Send, Star, Search, PenSquare, Share2, ThumbsUp, X } from "lucide-react";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { AudienceMood, audienceMoodImage, audienceMoodLabel, type MoodVote } from '../AudienceMood';
@@ -717,10 +719,7 @@ export default function AllReviews({
           </div>
 
           <div className="relative shrink-0">
-            <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} aria-label="Sort reviews" className="ui-secondary-action h-11 w-full appearance-none rounded-full border-0 bg-[var(--surface-2)] pr-10 leading-none [&>option]:bg-[var(--surface-1)]">
-              <option value="latest">Latest</option><option value="highest">Highest</option><option value="popularity">Popular</option>
-            </select>
-            <ArrowDownWideNarrow className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true" />
+            <CustomSelect label="Sort reviews" value={sortBy} onChange={setSortBy} options={[{ value: "latest", label: "Latest" }, { value: "highest", label: "Highest" }, { value: "popularity", label: "Popular" }]} widthClass="w-full" />
           </div>
         </div>
       </section>

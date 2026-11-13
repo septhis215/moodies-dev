@@ -36,6 +36,7 @@ function harness(seasons = fixtures) {
         useEffect(callback) { effect = callback; },
       };
       if (name === "@/lib/tmdb") return { tmdbImage: (path) => `https://images.example${path}` };
+      if (name === "@/components/ui/custom-select") return { default: "CustomSelect" };
       return {};
     },
   });
@@ -57,12 +58,13 @@ function harness(seasons = fixtures) {
   };
 }
 const control = (nodes, label) => nodes.find((node) => node.props["aria-label"] === label);
+const seasonSelect = (nodes) => nodes.find((node) => node.type === "CustomSelect");
 const allPreviews = (nodes) => nodes.filter((node) => node.props["aria-haspopup"] === "dialog");
 const previews = (nodes) => allPreviews(nodes).filter((node) => !/(?:^|\s)hidden(?:\s|$)/.test(node.props.className));
 
 test("desktop starts with twelve episodes while mobile starts with four and no visible synopsis", () => {
   const nodes = harness().render();
-  assert.equal(control(nodes, "Choose season").props.value, 1);
+  assert.equal(seasonSelect(nodes).props.value, 1);
   assert.equal(previews(nodes).length, 4);
   assert.equal(nodes.some((node) => node.props.children === "Synopsis 1"), false);
   assert.ok(nodes.some((node) => node.props.className?.includes("grid-cols-2") && node.props.className.includes("sm:grid-cols-3")));
@@ -87,7 +89,7 @@ test("desktop reveals twelve at a time, caps the final batch, and resets indepen
   control(nodes, "Show fewer desktop episodes").props.onClick();
   assert.equal(desktopPreviews(app.render()).length, 12);
   control(app.render(), "Show more desktop episodes").props.onClick();
-  control(app.render(), "Choose season").props.onChange({ target: { value: "2" } });
+  seasonSelect(app.render()).props.onChange(2);
   nodes = app.render();
   assert.equal(desktopPreviews(nodes).length, 12);
   assert.equal(previews(nodes).length, 4);
@@ -103,7 +105,7 @@ test("mobile reveals batches, can collapse them, and resets on season selection"
   assert.equal(previews(app.render()).length, 4);
   control(app.render(), "Show more episodes").props.onClick();
   nodes = app.render();
-  control(nodes, "Choose season").props.onChange({ target: { value: "0" } });
+  seasonSelect(nodes).props.onChange(0);
   nodes = app.render();
   assert.equal(previews(nodes).length, 4);
   for (let index = 0; index < 10; index++) {
@@ -149,7 +151,7 @@ test("dialog lifecycle opens modally and restores previous body scrolling on cle
 test("empty seasons and unavailable episode bundles show graceful fallbacks", () => {
   assert.ok(harness([]).render().some((node) => node.props.children === "No season information was returned for this title."));
   const app = harness();
-  control(app.render(), "Choose season").props.onChange({ target: { value: "2" } });
+  seasonSelect(app.render()).props.onChange(2);
   const nodes = app.render();
   assert.equal(previews(nodes).length, 0);
   assert.ok(nodes.some((node) => node.props.children === "Episode details are not available yet."));
@@ -186,7 +188,7 @@ test("episode numbering appears beside the title with responsive labels, not ove
 test("specials-only titles remain usable and props are not reordered in place", () => {
   const seasons = [{ season_number: 0, episodes: [...episodes(3)].reverse() }];
   const nodes = harness(seasons).render();
-  assert.equal(control(nodes, "Choose season").props.value, 0);
+  assert.equal(seasonSelect(nodes).props.value, 0);
   assert.match(previews(nodes)[0].props["aria-label"], /episode 1:/);
   assert.equal(seasons[0].episodes[0].episode_number, 3);
 });

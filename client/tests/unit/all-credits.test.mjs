@@ -44,6 +44,7 @@ function harness(props = { credits: { cast, crew }, info, id: "1405" }) {
       if (name === "next/link") return { default: "Link" };
       if (name === "@/components/ui/TmdbImage") return { TmdbImage: "Image" };
       if (name === "@/lib/tmdb") return { tmdbImage: (path) => path || null };
+      if (name === "@/components/ui/custom-select") return { default: "CustomSelect" };
       if (name.endsWith('.module.css')) return { default: new Proxy({}, { get: (_, key) => String(key) }) };
       return {};
     },
@@ -62,7 +63,7 @@ function harness(props = { credits: { cast, crew }, info, id: "1405" }) {
 }
 const cards = (nodes) => nodes.filter((node) => node.type === "li");
 const input = (nodes) => nodes.find((node) => node.type === "input");
-const select = (nodes) => nodes.find((node) => node.type === "select");
+const select = (nodes) => nodes.find((node) => node.type === "CustomSelect");
 function switchCrew(app) {
   app.render().find((node) => node.type === "button" && node.props.children?.[1] === "Crew").props.onClick();
   return app.render();
@@ -86,7 +87,7 @@ test("TV and movie credits retain contextual navigation and responsive portrait 
 test("cast search includes aggregate TV roles and sorting never mutates input", () => {
   const app = harness();
   let nodes = app.render();
-  select(nodes).props.onChange({ target: { value: "name" } });
+  select(nodes).props.onChange("name");
   assert.deepEqual(cards(app.render()).map((node) => node.props.id), ["credit-cast-2", "credit-cast-1"]);
   assert.deepEqual(cast.map((person) => person.id), [1, 2]);
   input(app.render()).props.onChange({ target: { value: " dexter morgan " } });
@@ -103,7 +104,7 @@ test("crew search, department filtering and merged jobs preserve separate depart
   input(nodes).props.onChange({ target: { value: "screenplay" } });
   assert.deepEqual(cards(app.render()).map((node) => node.props.id), ["credit-crew-Writing-3"]);
   app.render().find((node) => node.props["aria-label"] === "Clear search").props.onClick();
-  select(app.render()).props.onChange({ target: { value: "Production" } });
+  select(app.render()).props.onChange("Production");
   nodes = app.render();
   assert.equal(cards(nodes).length, 1);
   assert.ok(nodes.some((node) => node.type === "p" && node.props.children === "Producer"));

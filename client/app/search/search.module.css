@@ -153,132 +153,6 @@
   font-weight: 700;
   line-height: 1;
 }
-.sortMenu {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-}
-.sortLabel {
-  color: var(--ink-muted);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-.sortTrigger {
-  display: inline-flex;
-  min-width: 0;
-  min-height: 44px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-md);
-  background: var(--surface-1);
-  color: var(--ink);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 150ms ease, background-color 150ms ease;
-}
-.sortTrigger > span:first-child {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.sortTrigger:hover,
-.sortTrigger[aria-expanded="true"] {
-  border-color: var(--brand-coral);
-  background: var(--surface-2);
-}
-.sortChevron {
-  display: block;
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-  border-right: 2px solid var(--brand-coral-strong);
-  border-bottom: 2px solid var(--brand-coral-strong);
-  transform: translateY(-0.2rem) rotate(45deg) scale(0.55);
-  transition: transform 150ms ease;
-}
-.sortChevronOpen {
-  transform: translateY(0.2rem) rotate(225deg) scale(0.55);
-}
-.sortPopover {
-  position: absolute;
-  z-index: 60;
-  top: calc(100% + 0.5rem);
-  right: 0;
-  width: max(100%, 12rem);
-  max-width: calc(100vw - 2rem);
-  overflow: hidden;
-  padding: 0.35rem;
-  border: 1px solid rgb(255 255 255 / 0.14);
-  border-radius: 0.5rem;
-  background: rgb(21 17 18 / 0.98);
-  box-shadow: 0 20px 55px rgb(0 0 0 / 0.55);
-  backdrop-filter: blur(18px);
-}
-.sortOption {
-  display: flex;
-  width: 100%;
-  min-height: 42px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  border: 0;
-  border-radius: 0.5rem;
-  background: transparent;
-  color: var(--ink-muted);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-}
-.sortOption:hover,
-.sortOption:focus-visible {
-  background: var(--surface-2);
-  color: var(--ink);
-}
-.sortOption[aria-selected="true"] {
-  background: rgb(240 100 75 / 0.14);
-  color: var(--brand-coral-strong);
-}
-.fieldSelectMenu {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.5rem;
-  width: 100%;
-  margin-left: 0;
-}
-.fieldSelectMenu .sortLabel {
-  color: var(--ink);
-}
-.fieldSelectMenu .sortTrigger {
-  width: 100%;
-  min-width: 0;
-  min-height: 48px;
-  border-radius: 0.625rem;
-  background: var(--surface-0);
-}
-.fieldSelectMenu .sortPopover {
-  right: auto;
-  left: 0;
-  width: 100%;
-  max-height: 17rem;
-  overflow-y: auto;
-}
-.sortCheck {
-  display: grid;
-  width: 1rem;
-  height: 1rem;
-  place-items: center;
-  flex: none;
-  color: var(--brand-coral-strong);
-  font-size: 0.875rem;
-}
 .views {
   display: flex;
   gap: 0.25rem;
@@ -756,11 +630,6 @@
     gap: 1.75rem 1rem;
   }
 }
-@media (max-width: 639px) {
-  .sortTrigger {
-    width: 100%;
-  }
-}
 @media (min-width: 768px) {
   .controls {
     grid-template-columns: minmax(0, 1fr) auto;
@@ -827,9 +696,7 @@
 @media (prefers-reduced-motion: reduce) {
   .card,
   .card h3,
-  .button,
-  .sortTrigger,
-  .sortChevron {
+  .button {
     transition: none;
   }
 }

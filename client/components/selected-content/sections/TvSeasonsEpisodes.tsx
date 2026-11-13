@@ -1,5 +1,7 @@
 "use client";
 
+import CustomSelect from "@/components/ui/custom-select";
+
 import { ChevronDown, ChevronUp, Eye, Star, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
@@ -74,22 +76,18 @@ export default function TvSeasonsEpisodes({ seasons, className = "" }: Props) {
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">Choose a season. Open an episode for its story and details.</p>
         </div>
         {season && (
-          <div className="relative w-full sm:w-56">
-            <select
-              aria-label="Choose season"
-              value={season.season_number}
-              onChange={(event) => {
-                setSeasonNumber(Number(event.target.value));
-                setVisibleCount(MOBILE_BATCH_SIZE);
-                setDesktopVisibleCount(DESKTOP_BATCH_SIZE);
-                setEpisodeNumber(null);
-              }}
-              className="ui-secondary-action h-11 w-full appearance-none pr-10 leading-none [&>option]:bg-[var(--surface-1)]"
-            >
-              {orderedSeasons.map((item) => <option key={item.season_number} value={item.season_number}>{seasonLabel(item)}</option>)}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true" />
-          </div>
+          <CustomSelect
+            label="Choose season"
+            value={season.season_number}
+            onChange={(number) => {
+              setSeasonNumber(number);
+              setVisibleCount(MOBILE_BATCH_SIZE);
+              setDesktopVisibleCount(DESKTOP_BATCH_SIZE);
+              setEpisodeNumber(null);
+            }}
+            options={orderedSeasons.map((item) => ({ value: item.season_number, label: seasonLabel(item) }))}
+            widthClass="w-full sm:w-56"
+          />
         )}
       </header>
 

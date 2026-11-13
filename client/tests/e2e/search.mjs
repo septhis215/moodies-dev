@@ -97,6 +97,17 @@ try {
   assert.ok(new URL(page.url()).searchParams.get("view") === "list");
   await page.getByRole("button", { name: "Filters", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Filters", exact: true });
+  const minimumRating = dialog.getByRole("button", { name: /^Minimum TMDB rating:/ });
+  await minimumRating.click();
+  await dialog.getByRole("option", { name: "7+ / 10", exact: true }).waitFor();
+  await page.keyboard.press("Escape");
+  assert.equal(await dialog.getByRole("listbox", { name: "Minimum TMDB rating" }).count(), 0);
+  assert.equal(await dialog.isVisible(), true);
+  await minimumRating.click();
+  await dialog.getByRole("option", { name: "7+ / 10", exact: true }).click();
+  assert.equal(await minimumRating.getAttribute("aria-label"), "Minimum TMDB rating: 7+ / 10");
+  await minimumRating.click();
+  await dialog.getByRole("option", { name: "Any rating", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "Drama", exact: true }).check();
   await dialog.getByRole("button", { name: "Apply filters", exact: true }).click();
   await page.waitForURL(/genres=Drama/);

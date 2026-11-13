@@ -1,5 +1,7 @@
 "use client";
 
+import CustomSelect from "@/components/ui/custom-select";
+
 import SectionHeader from "@/components/ui/SectionHeader";
 import { tmdbImage } from "@/lib/tmdb";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
@@ -8,7 +10,6 @@ import { ReviewComposer } from '../ReviewComposer';
 import { ReviewPreviewCard } from '../ReviewPreviewCard';
 import Link from "next/link";
 import {
-  ArrowDownWideNarrow,
   Eye,
   PenSquare,
 } from "lucide-react";
@@ -169,17 +170,7 @@ export default function ReviewsSection({
             {sorted.length > 0 ? (
               <>
                 <div className="relative">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    aria-label="Sort reviews"
-                    className="ui-secondary-action h-11 cursor-pointer appearance-none rounded-full border-0 bg-surface-2 pr-10 leading-none [&>option]:bg-[var(--surface-1)] [&>option]:text-[var(--ink)]"
-                  >
-                    <option value="latest">Latest</option>
-                    <option value="highest">Highest</option>
-                    <option value="popularity">Popular</option>
-                  </select>
-                  <ArrowDownWideNarrow className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden="true" />
+                  <CustomSelect label="Sort reviews" value={sortBy} onChange={setSortBy} options={[{ value: "latest", label: "Latest" }, { value: "highest", label: "Highest" }, { value: "popularity", label: "Popular" }]} widthClass="w-full" />
                 </div>
                 <button type="button" onClick={openModal} className="ui-primary-action rounded-full leading-none shadow-none hover:transform-none" aria-label="Write a review">
                   Write

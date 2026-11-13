@@ -120,6 +120,16 @@ try {
         exact: true,
       });
       await first.waitFor();
+      const format = page.getByRole("group", { name: "Filter by format" });
+      assert.deepEqual(await format.getByRole("button").allTextContents(), ["All", "Movies", "Series"]);
+      assert.equal(await format.evaluate((group) => getComputedStyle(group).borderTopWidth), "0px");
+      assert.equal(await format.getByRole("button", { name: "All", exact: true }).evaluate((button) => getComputedStyle(button).borderLeftWidth), "0px");
+      const sort = page.getByRole("button", { name: /^Sort titles:/ });
+      await sort.click();
+      await page.getByRole("option", { name: "Highest rated", exact: true }).click();
+      assert.equal(await sort.getAttribute("aria-label"), "Sort titles: Highest rated");
+      await sort.click();
+      await page.getByRole("option", { name: "Newest release", exact: true }).click();
       assert.equal(
         await page
           .getByText("Library reader’s collection", { exact: true })

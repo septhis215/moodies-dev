@@ -13,20 +13,22 @@ import { ChevronDown, Check } from "lucide-react";
 import styles from "./custom-select.module.css";
 
 type Option<T> = { label: string; value: T };
-interface CustomSelectProps<T extends string> {
+export interface CustomSelectProps<T extends string | number> {
   value: T;
   onChange: (value: T) => void;
-  options: Option<T>[];
+  options: readonly Option<T>[];
   label?: string;
   widthClass?: string;
+  showLabel?: boolean;
 }
 
-export default function CustomSelect<T extends string>({
+export default function CustomSelect<T extends string | number>({
   value,
   onChange,
   options,
   label,
   widthClass = "w-48",
+  showLabel = false,
 }: CustomSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<CSSProperties>({
@@ -49,17 +51,18 @@ export default function CustomSelect<T extends string>({
     function place() {
       const rect = triggerRef.current?.getBoundingClientRect();
       if (!rect) return;
+      const width = Math.min(rect.width, window.innerWidth - 16);
       const below = window.innerHeight - rect.bottom - 14;
       const above = rect.top - 14;
-      const height = Math.min(options.length * 48 + 10, 256);
+      const height = Math.min(popupRef.current?.scrollHeight ?? 256, 256);
       const upwards = below < height && above > below;
       const maxHeight = Math.max(0, Math.min(256, upwards ? above : below));
       setPosition({
         position: "fixed",
-        width: rect.width,
+        width,
         left: Math.max(
           8,
-          Math.min(rect.left, window.innerWidth - rect.width - 8),
+          Math.min(rect.left, window.innerWidth - width - 8),
         ),
         top: upwards
           ? rect.top - Math.min(height, maxHeight) - 6
@@ -76,6 +79,7 @@ export default function CustomSelect<T extends string>({
     const escape = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
+      event.stopPropagation();
       setOpen(false);
       triggerRef.current?.focus();
     };
@@ -135,6 +139,7 @@ export default function CustomSelect<T extends string>({
       ref={rootRef}
       className={`relative inline-block min-w-0 text-left ${widthClass}`}
     >
+      {showLabel && label && <span className={styles.label}>{label}</span>}
       <button
         ref={triggerRef}
         type="button"
@@ -197,7 +202,7 @@ export default function CustomSelect<T extends string>({
               </button>
             ))}
           </div>,
-          document.body,
+          rootRef.current?.closest("dialog[open]") ?? document.body,
         )}
     </div>
   );

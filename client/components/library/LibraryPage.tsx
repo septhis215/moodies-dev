@@ -1,5 +1,7 @@
 "use client";
 
+import CustomSelect from "@/components/ui/custom-select";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import type { BadgeMascotName } from "@/lib/badge-mascots";
@@ -149,36 +151,13 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
                 )}
               </div>
               <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:contents">
-                <div className="relative">
-                  <label className="sr-only" htmlFor="library-sort">
-                    Sort titles
-                  </label>
-                  <select
-                    id="library-sort"
-                    value={filters.sort}
-                    onChange={(event) =>
-                      change(
-                        "sort",
-                        event.target.value as LibraryFilters["sort"],
-                      )
-                    }
-                    className={
-                      controlClass + " w-full appearance-none pr-9 sm:w-44"
-                    }
-                  >
-                    {sorts.map((sort) => (
-                      <option key={sort.value} value={sort.value}>
-                        {sort.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--brand-coral-strong)]"
-                  >
-                    ▾
-                  </span>
-                </div>
+                <CustomSelect
+                  label="Sort titles"
+                  value={filters.sort}
+                  onChange={(sort) => change("sort", sort)}
+                  options={sorts}
+                  widthClass="w-full sm:w-44"
+                />
                 <button
                   type="button"
                   aria-expanded={expanded}
@@ -250,11 +229,11 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
                 </p>
               )}
             </div>
-            <div className="mb-6 mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-[var(--surface-border)] pb-4">
+            <div className="mb-6 mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
               <div
                 role="group"
                 aria-label="Filter by format"
-                className="flex min-w-0 flex-wrap gap-1 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-1"
+                className="flex min-w-0 flex-wrap gap-4 border-b border-[var(--surface-border)] sm:gap-6"
               >
                 {(
                   [
@@ -268,7 +247,7 @@ export default function LibraryPage({ kind }: { kind: LibraryKind }) {
                     type="button"
                     aria-pressed={filters.format === value}
                     onClick={() => change("format", value)}
-                    className="ui-filter-chip"
+                    className="min-h-11 border-b-2 border-transparent px-1 text-sm font-semibold text-[var(--ink-muted)] transition-colors hover:text-[var(--ink)] focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] aria-pressed:border-[var(--brand-coral)] aria-pressed:text-[var(--ink)]"
                   >
                     {label}
                   </button>
