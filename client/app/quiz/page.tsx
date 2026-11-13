@@ -390,22 +390,20 @@ export default function MovieQuizPage() {
         {stage === "welcome" && (
           <section
             aria-labelledby="quiz-welcome"
-            className="mx-auto grid max-w-4xl items-center gap-6 py-6 sm:grid-cols-[minmax(0,1fr)_240px] sm:py-12"
+            className="mx-auto grid max-w-6xl items-center gap-6 overflow-hidden rounded-2xl bg-[var(--surface-1)] px-6 py-8 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] sm:px-12 sm:py-14 lg:px-16 lg:py-20"
           >
             <div>
               <p className="ui-kicker">
-                Personality Quiz · a different mix every time
+                Personality quiz
               </p>
               <h1
                 id="quiz-welcome"
                 className="mt-3 text-balance text-[2.1rem] font-bold leading-[0.98] min-[390px]:text-[2.45rem] sm:text-[clamp(2.45rem,4.6vw,4rem)]"
               >
-                A little about you.
-                <br />A better next watch.
+                Find your next watch.
               </h1>
               <p className="mt-4 max-w-xl text-base leading-7 text-[var(--ink-muted)]">
-                Five essential viewing signals, drawn from a larger question
-                pool and reshuffled for every new session.
+                Answer five questions to get a shortlist of movies and series for your mood.
               </p>
               <button
                 onClick={start}
@@ -414,23 +412,20 @@ export default function MovieQuizPage() {
               >
                 Start quiz <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </button>
-              <p className="mt-4 text-xs text-[var(--ink-muted)]">
-                Playful guide, not a diagnosis.
-              </p>
               <Link
                 href="/moods"
-                className={`mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)] ${focusClass}`}
+                className={`mt-4 flex min-h-11 w-fit items-center text-sm font-semibold text-[var(--ink-muted)] ${focusClass}`}
               >
-                Browse mood tools instead
+                <span className="ui-text-reveal">Browse moods</span>
               </Link>
             </div>
             <BadgeMascot
               name="quiz-starter"
               alt="Your curious quiz guide"
               reaction="No wrong answers. Just your kind of stories."
-              sizes="(max-width: 639px) 144px, 240px"
+              sizes="(max-width: 639px) 160px, 360px"
               priority
-              className="mx-auto w-36 object-contain sm:w-60"
+              className="mx-auto w-40 object-contain sm:w-full sm:max-w-[360px]"
             />
           </section>
         )}
@@ -438,10 +433,10 @@ export default function MovieQuizPage() {
         {stage === "quiz" && (
           <section
             aria-labelledby="quiz-question"
-            className={`${styles.question} relative mx-auto max-w-2xl`}
+            className={`${styles.question} relative mx-auto max-w-4xl sm:rounded-2xl sm:bg-[var(--surface-1)] sm:px-8 sm:py-6 lg:px-12`}
           >
             <div className="flex items-center justify-between gap-4 sm:mb-5">
-              <p className="ui-kicker hidden sm:block">Your signal reel</p>
+              <p className="ui-kicker hidden sm:block">Personality quiz</p>
               <button
                 onClick={exit}
                 aria-label="Exit quiz"
@@ -462,7 +457,7 @@ export default function MovieQuizPage() {
                     disabled={answers[i] === null && i !== current}
                     aria-current={i === current ? "step" : undefined}
                     aria-label={`${signal.label}: ${choice(i)?.text ?? "not answered"}`}
-                    className={`flex min-h-11 w-full min-w-0 flex-col items-center justify-center rounded-md border px-1 py-1.5 text-left sm:min-h-20 sm:items-stretch sm:justify-between sm:px-3 sm:py-2 ${focusClass} ${i === current ? "border-[var(--brand-coral)] bg-[var(--surface-2)]" : "border-[var(--surface-border)] bg-[var(--surface-1)]"}`}
+                    className={`flex min-h-11 w-full min-w-0 flex-col items-center justify-center rounded-sm border-b-2 px-1 py-1.5 text-left sm:min-h-16 sm:items-stretch sm:justify-between sm:px-3 sm:py-2 ${focusClass} ${i === current ? "border-[var(--brand-coral)] text-[var(--brand-coral-strong)]" : "border-[var(--surface-border)]"}`}
                   >
                     <span className="flex items-center justify-between gap-1 text-xs text-[var(--ink-muted)]">
                       <span className={answers[i] !== null ? "hidden sm:inline" : ""}>{i + 1}</span>
@@ -501,7 +496,7 @@ export default function MovieQuizPage() {
               {question.hint}
             </p>
             <div
-              className={`mt-3 grid gap-2 sm:mt-5 sm:gap-3 ${question.options.length > 4 ? "grid-cols-2 sm:grid-cols-1" : ""}`}
+              className={`mt-3 grid gap-2 sm:mt-5 sm:grid-cols-2 sm:gap-3 ${question.options.length > 4 ? "grid-cols-2" : ""}`}
               role="group"
               aria-label="Answer choices"
             >
@@ -516,7 +511,7 @@ export default function MovieQuizPage() {
                       ),
                     )
                   }
-                  className={`flex min-h-12 items-center gap-2 rounded-md border px-3 py-2 text-left text-sm leading-5 transition-colors motion-reduce:transition-none sm:min-h-16 sm:gap-3 sm:px-4 sm:py-3 sm:text-base ${focusClass} ${answers[current] === i ? "border-[var(--brand-coral)] bg-[var(--surface-2)]" : "border-[var(--surface-border)] bg-[var(--surface-1)] hover:border-[var(--ink-muted)]"}`}
+                  className={`flex min-h-12 items-center gap-2 group rounded-lg border px-3 py-2 text-left text-sm leading-5 motion-safe:transition-colors sm:min-h-16 sm:gap-3 sm:px-4 sm:py-3 sm:text-base ${focusClass} ${answers[current] === i ? "border-[var(--brand-coral)] bg-[var(--surface-2)]" : "border-transparent bg-[var(--surface-2)]"}`}
                 >
                   {option.mood && (
                     <Image
@@ -527,7 +522,7 @@ export default function MovieQuizPage() {
                       className="h-7 w-7 shrink-0 object-contain sm:h-10 sm:w-10"
                     />
                   )}
-                  <span className="min-w-0 flex-1">{option.text}</span>
+                  <span className="min-w-0 flex-1"><span className="ui-text-reveal">{option.text}</span></span>
                   <Check
                     className={`h-4 w-4 shrink-0 text-[var(--brand-coral-strong)] sm:h-5 sm:w-5 ${answers[current] === i ? "" : "invisible"}`}
                     aria-hidden="true"
@@ -639,7 +634,7 @@ export default function MovieQuizPage() {
                   tabIndex={-1}
                   className="mt-2 text-balance text-3xl font-bold leading-none outline-none sm:text-4xl"
                 >
-                  Your next watch starts here.
+                  Your matches
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">
                   {choiceByCategory("feeling")?.label} ·{" "}
@@ -684,17 +679,14 @@ export default function MovieQuizPage() {
                   <>
                     <button
                       onClick={() => setSelectedMovie(topPick)}
-                      className={`group flex w-full items-start gap-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] p-4 text-left transition-colors hover:border-[var(--brand-coral)] motion-reduce:transition-none sm:gap-6 sm:p-6 ${focusClass}`}
+                      className={`group relative isolate flex min-h-60 w-full items-end overflow-hidden rounded-xl bg-[var(--surface-2)] p-5 text-left sm:min-h-80 sm:p-8 ${focusClass}`}
                     >
-                      <span className="relative block aspect-[2/3] w-20 shrink-0 overflow-hidden rounded-md sm:w-32">
-                        <Image
-                          src={posterOf(topPick)}
-                          alt=""
-                          fill
-                          sizes="(max-width: 639px) 80px, 128px"
-                          className="object-cover"
-                        />
-                      </span>
+                      {(topPick.backdrop_path || topPick.poster_path) && (
+                        <span className={topPick.backdrop_path ? "absolute inset-0 -z-20" : "absolute inset-y-0 right-0 -z-20 aspect-[2/3] max-w-full"}>
+                          <Image src={topPick.backdrop_path ? tmdbImage(topPick.backdrop_path, "backdropHero") : posterOf(topPick)} alt="" fill sizes="(min-width: 1024px) 70vw, 100vw" className="object-cover" />
+                        </span>
+                      )}
+                      <span aria-hidden="true" className="absolute inset-0 -z-10 bg-linear-to-r from-[var(--surface-0)] via-[var(--surface-0)]/90 to-[var(--surface-0)]/35" />
                       <div className="min-w-0">
                         <p className="ui-kicker">
                           {ranked && typeof topPick.matchScore === "number"
@@ -703,7 +695,7 @@ export default function MovieQuizPage() {
                         </p>
                         <h2
                           title={titleOf(topPick)}
-                          className="mt-2 line-clamp-3 break-words text-xl font-bold leading-tight sm:text-3xl"
+                          className="ui-text-reveal mt-2 line-clamp-3 break-words text-3xl font-bold leading-none sm:text-5xl"
                         >
                           {titleOf(topPick)}
                         </h2>
@@ -732,7 +724,7 @@ export default function MovieQuizPage() {
                               onClick={() => setSelectedMovie(item)}
                               className={`group min-w-0 text-left ${focusClass}`}
                             >
-                              <div className="relative aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-colors group-hover:border-[var(--brand-coral)] motion-reduce:transition-none">
+                              <div className="relative aspect-[2/3] overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-2)] transition-colors motion-reduce:transition-none">
                                 <Image
                                   src={posterOf(item)}
                                   alt=""
@@ -746,7 +738,7 @@ export default function MovieQuizPage() {
                                     placement="poster"
                                   />
                               </div>
-                              <h3 className="mt-2 min-h-10 line-clamp-2 break-words text-sm font-semibold leading-5">
+                              <h3 className="ui-text-reveal mt-2 min-h-10 line-clamp-2 break-words text-sm font-semibold leading-5">
                                 {titleOf(item)}
                               </h3>
                               <p className="mt-1 text-xs text-[var(--ink-muted)]">
