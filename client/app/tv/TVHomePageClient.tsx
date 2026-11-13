@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, Tv } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
 import type { ReactNode } from "react";
@@ -118,8 +118,7 @@ function AiringSchedule({ today }: { today: All[] }) {
           On air
         </h2>
         <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">
-          New episodes scheduled for today, arranged as a compact programming
-          list instead of another poster wall.
+          Series with new episodes scheduled today.
         </p>
       </div>
       <ScheduleColumn
@@ -129,7 +128,7 @@ function AiringSchedule({ today }: { today: All[] }) {
       />
       <Link
         href="/tv/airing/today"
-        className="mt-4 inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-[var(--ink-muted)] outline-none transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--ink)] focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]"
+        className="mt-4 inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-[var(--ink-muted)] outline-none transition-colors hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]"
       >
         View all airing today
       </Link>
@@ -158,86 +157,82 @@ export default function TVHomePageClient({
       <HomepageMediaHero
         items={marqueeItems}
         mediaType="tv"
-        icon={<Tv className="h-5 w-5" />}
-        eyebrow="Series"
-        title="What’s on tonight"
-        description="Use the marquee to choose a series, then check today’s episodes and the shows people are saving this week."
-        spotlightLabel="Selected series"
+        title="TV shows"
         mediaLabel="Series"
         primaryCta="View series"
       />
+      <div className="homepage-browse">
+        <div className="ui-shell homepage-chapter">
+          <MediaShelf
+            id="trending-tv"
+            title="Trending series"
+            items={trendingTV}
+            hrefBase="/tv"
+            watchType="series"
+            viewAllHref="/tv/trending"
+          />
 
-      <div className="ui-shell space-y-12 py-10 sm:space-y-16 sm:py-14">
-        <AiringSchedule today={airingToday} />
+          <MediaShelf
+            id="new-release-tv"
+            title="New releases"
+            items={newReleaseTV}
+            hrefBase="/tv"
+            watchType="series"
+            viewAllHref="/tv/new-releases"
+          />
 
-        <MediaShelf
-          id="trending-tv"
-          eyebrow="Most saved this week"
-          title="Trending series"
-          description="Series currently receiving the strongest audience attention on Moodies."
-          items={trendingTV}
-          hrefBase="/tv"
-          watchType="series"
-          viewAllHref="/tv/trending"
-        />
+        </div>
 
-        <MediaShelf
-          id="new-release-tv"
-          eyebrow="Recently premiered"
-          title="New releases"
-          description="Series that have recently started or returned with new episodes."
-          items={newReleaseTV}
-          hrefBase="/tv"
-          watchType="series"
-          viewAllHref="/tv/new-releases"
-        />
+        <div className="ui-shell homepage-chapter">
+          <AiringSchedule today={airingToday} />
+          <MediaShelf
+            id="airing-this-week"
+            title="Airing this week"
+            items={airingThisWeek}
+            hrefBase="/tv"
+            watchType="series"
+            viewAllHref="/tv/airing/week"
+          />
+          {upcomingSection}
+        </div>
 
-        <MediaShelf
-          id="top-rated-tv"
-          eyebrow="Audience favourites"
-          title="Top rated series"
-          description="High-scoring series with enough audience votes to earn attention."
-          items={topRatedTV}
-          hrefBase="/tv"
-          watchType="series"
-          viewAllHref="/tv/top-rated"
-        />
+        <div className="ui-shell homepage-chapter">
+          <MediaShelf
+            id="top-rated-tv"
+            eyebrow="Audience favourites"
+            title="Top rated series"
+            description="High-scoring series with enough audience votes to earn attention."
+            items={topRatedTV}
+            hrefBase="/tv"
+            watchType="series"
+            viewAllHref="/tv/top-rated"
+          />
 
-        <MediaShelf
-          id="airing-this-week"
-          eyebrow="Weekly schedule"
-          title="Airing this week"
-          description="Continuing series with episodes scheduled across the next several days."
-          items={airingThisWeek}
-          hrefBase="/tv"
-          watchType="series"
-          viewAllHref="/tv/airing/week"
-        />
+          <MediaShelf
+            id="korean-tv"
+            eyebrow="International spotlight"
+            title="K-drama collection"
+            description="Korean dramas, thrillers, romances and continuing series."
+            items={KoreanTV}
+            hrefBase="/tv"
+            watchType="series"
+            viewAllHref="/tv/k-drama"
+          />
+        </div>
 
-        <MediaShelf
-          id="korean-tv"
-          eyebrow="International spotlight"
-          title="K-drama collection"
-          description="Korean dramas, thrillers, romances and continuing series."
-          items={KoreanTV}
-          hrefBase="/tv"
-          watchType="series"
-          viewAllHref="/tv/k-drama"
-        />
+        <div className="ui-shell homepage-chapter">
+          <MoodRecommendationsSection mediaType="tv" initialMoods={moods} />
+        </div>
 
-        {communityPulseSection}
-      </div>
+        <div className="homepage-chapter">
+          <div className="ui-shell">{communityPulseSection}</div>
+          <CommunityPicks
+            data={TVReview}
+            title="Critics corner"
+            subtitle="Recent member reviews, paired with the shows they watched."
+          />
+        </div>
 
-      <CommunityPicks
-        data={TVReview}
-        title="Critics corner"
-        subtitle="Recent member reviews, paired with the shows they watched."
-      />
-
-      <div className="ui-shell space-y-12 pb-14 pt-10 sm:space-y-16">
-        {upcomingSection}
-
-        <MoodRecommendationsSection mediaType="tv" initialMoods={moods} />
       </div>
     </main>
   );

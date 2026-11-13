@@ -1,6 +1,7 @@
 // src/components/Hero/HeroThumbnail.tsx
 "use client";
 import React from "react";
+import { useIsPresent } from "framer-motion";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import type { All } from "@/types/all";
 import { tmdbImage } from "@/lib/tmdb";
@@ -8,55 +9,36 @@ import { tmdbImage } from "@/lib/tmdb";
 type Props = {
   all: All;
   active?: boolean;
+  trail: number;
   onClick?: () => void;
-  width?: number;
-  height?: number;
 };
 
 export default function HeroThumbnail({
   all,
   active,
+  trail,
   onClick,
-  width = 110,
-  height = 160,
 }: Props) {
+  const isPresent = useIsPresent();
   const src =
-    tmdbImage(all.poster_path, "w342") || tmdbImage(all.backdrop_path, "w500");
+    tmdbImage(all.poster_path, "w342") ||
+    tmdbImage(all.backdrop_path, "w500") || "/placeholder-poster.svg";
 
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`relative flex-shrink-0 cursor-pointer overflow-hidden rounded-sm border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-        active ? "border-[#ff725e]" : "border-white/15 hover:border-white/50"
-      }`}
+      disabled={!isPresent}
+      aria-hidden={!isPresent}
+      className={`relative block aspect-[2/3] cursor-pointer overflow-hidden rounded-md border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+        active ? "w-[72px] border-transparent lg:w-[min(12vw,24svh,10rem)]" : "border-white/20 hover:border-white/60"
+      } ${active ? "" : trail === 1 ? "w-14 lg:w-20" : trail === 2 ? "w-12 lg:w-16" : "w-11 lg:w-12"}`}
       aria-pressed={!!active}
       aria-label={`Show ${all.title ?? all.name ?? "featured title"}`}
-      style={{ width, height }}
     >
-      {src ? (
-        <Image
-          src={src}
-          alt={all.title ?? all.name ?? "Featured poster"}
-          fill
-          style={{ objectFit: "cover" }}
-          sizes={`${width}px`}
-        />
-      ) : (
-        <Image
-          src="/placeholder-poster.svg"
-          alt="No image"
-          fill
-          style={{ objectFit: "cover" }}
-          sizes={`${width}px`}
-        />
-      )}
+      <Image src={src} alt="" fill className="object-cover" sizes={active ? "160px" : trail > 0 ? "80px" : "48px"} />
 
-      <div
-        className={`absolute inset-0 bg-black transition-opacity ${active ? "opacity-0" : "opacity-35 hover:opacity-10"}`}
-      />
-      {active ? (
-        <span className="absolute inset-x-0 bottom-0 h-1 bg-[#ff725e]" />
-      ) : null}
+      <div aria-hidden="true" className={`absolute inset-0 bg-linear-to-t from-black/55 to-transparent to-65% motion-safe:transition-opacity ${active ? "opacity-0" : "opacity-70 hover:opacity-20"}`} />
     </button>
   );
 }

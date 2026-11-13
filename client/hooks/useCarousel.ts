@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
-export default function useCarousel({ length, intervalMs = 7000 }: { length: number; intervalMs?: number }) {
+export default function useCarousel({ length, intervalMs = 7000, autoAdvance = true }: { length: number; intervalMs?: number; autoAdvance?: boolean }) {
     const [index, setIndex] = useState(0);
     const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
 
@@ -21,14 +21,14 @@ export default function useCarousel({ length, intervalMs = 7000 }: { length: num
 
     const startTimer = useCallback(() => {
         if (timer.current) clearTimer();
-        if (length <= 1) return;
+        if (length <= 1 || !autoAdvance) return;
         timer.current = window.setInterval(() => {
             setIndex((i) => (length ? (i + 1) % length : 0));
         }, intervalMs);
-    }, [clearTimer, intervalMs, length]);
+    }, [autoAdvance, clearTimer, intervalMs, length]);
 
     useEffect(() => {
-        if (length <= 1 || prefersReducedMotion || document.visibilityState === 'hidden') return;
+        if (paused.current || prefersReducedMotion || document.visibilityState === 'hidden') return;
         startTimer();
         return () => clearTimer();
     }, [clearTimer, length, prefersReducedMotion, startTimer]);

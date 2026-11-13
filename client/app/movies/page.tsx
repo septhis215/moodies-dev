@@ -2,6 +2,7 @@ import React from "react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
 import { homepageSections } from "@/components/sections/HomepageSectionsServer";
+import { readHomepageTitles } from "@/lib/homepage-sections";
 import MoviesHomePageClient from "./MovieHomePageClient";
 
 const BASE_URL = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
@@ -81,18 +82,18 @@ async function fetchMoods() {
 }
 
 async function fetchTrendingMovies() {
-  return fetchWithFallback<All[]>("/movies/featured?limit=25", []);
+  return fetchMovieList("/movies/featured?limit=25");
 }
 
 async function fetchPopularMovies() {
-  return fetchWithFallback<All[]>("/movies/trending?limit=25", []);
+  return fetchMovieList("/movies/trending?limit=25");
 }
 
 
 
 
 async function fetchKoreanMovies() {
-  return fetchWithFallback<All[]>("/movies/koreaTrending?limit=25", []);
+  return fetchMovieList("/movies/koreaTrending?limit=25");
 }
 
 async function fetchMovieReviews() {
@@ -122,33 +123,28 @@ async function fetchMovieReviews() {
 }
 // Add to your page.tsx server component
 async function fetchAnimatedMovies() {
-  return fetchWithFallback<All[]>("/movies/animated-movies?limit=20", []);
+  return fetchMovieList("/movies/animated-movies?limit=20");
 }
 
 async function fetchActionMovies() {
-  return fetchWithFallback<All[]>("/movies/action-movies?limit=20", []);
+  return fetchMovieList("/movies/action-movies?limit=20");
 }
 
 async function fetchIndieMovies() {
-  return fetchWithFallback<All[]>("/movies/indie-movies?limit=20", []);
+  return fetchMovieList("/movies/indie-movies?limit=20");
 }
 
 async function fetchAwardWinners() {
-  return fetchWithFallback<All[]>("/movies/award-winners?limit=25", []);
+  return fetchMovieList("/movies/award-winners?limit=25");
 }
 
 
 async function fetchNewReleases() {
-  const result = await fetchWithFallback<{ data: All[] } | All[]>(
-    "/movies/new-releases?page=1&limit=30",
-    { data: [] },
-  );
+  return fetchMovieList("/movies/new-releases?page=1&limit=30");
+}
 
-  if (Array.isArray(result)) {
-    return result;
-  }
-
-  return result.data || [];
+async function fetchMovieList(endpoint: string): Promise<All[]> {
+  return readHomepageTitles(await fetchWithFallback<unknown>(endpoint, null));
 }
 
 export const metadata = {

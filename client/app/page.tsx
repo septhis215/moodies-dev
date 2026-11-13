@@ -35,12 +35,20 @@ export default function LandingPage() {
       <Suspense fallback={<LoadingRegion label="Loading featured titles"><HeroSkeleton /></LoadingRegion>}>
         <FeaturedHero />
       </Suspense>
-      <LandingPersonalSection />
-      <MoodDiscoverySection variant="teaser" />
-      <TrendingSection />
-      <PremiereHighlights />
-      <CommunityPicks />
-      <UpcomingTrailers />
+      <div className="homepage-browse">
+        <div className="homepage-chapter">
+          <TrendingSection />
+        </div>
+        <div className="homepage-chapter">
+          <LandingPersonalSection />
+          <MoodDiscoverySection variant="teaser" />
+        </div>
+        <div className="homepage-chapter">
+          <PremiereHighlights />
+          <UpcomingTrailers />
+          <CommunityPicks />
+        </div>
+      </div>
     </main>
   );
 }

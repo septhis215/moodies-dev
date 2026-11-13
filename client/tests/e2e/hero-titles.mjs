@@ -42,7 +42,7 @@ let browser;
 try {
   const result = await build({
     stdin: {
-      contents: `import React from 'react';import { createRoot } from 'react-dom/client';import LandingHero from './client/components/hero/heroCarousel';import { HomepageMediaHero } from './client/components/hero/HomepageMediaHero';const title=new URLSearchParams(location.search).get('title');const item={id:123,title,name:title,type:'movie',overview:'A story of friendship and finding a place to call home.',poster_path:new URLSearchParams(location.search).has('artwork')?'/hero-poster.jpg':null,backdrop_path:new URLSearchParams(location.search).has('artwork')?'/hero-backdrop.jpg':null,genres:['Drama'],vote_average:8.2,release_date:'2025-01-01',recommendations:[]};createRoot(document.getElementById('root')).render(<><div id="landing"><LandingHero all={[item]} /></div>{['movie','tv'].map(type=><div id={type} key={type}><HomepageMediaHero items={[{...item,type}]} mediaType={type} icon={null} eyebrow="Discover" title={type==='tv'?'TV shows':'Movies'} description="Find your next watch" spotlightLabel="Featured" mediaLabel={type==='tv'?'Series':'Movie'} /></div>)}</>);`,
+      contents: `import React from 'react';import { createRoot } from 'react-dom/client';import LandingHero from './client/components/hero/heroCarousel';import { HomepageMediaHero } from './client/components/hero/HomepageMediaHero';const title=new URLSearchParams(location.search).get('title');const item={id:123,title,name:title,type:'movie',overview:'A story of friendship and finding a place to call home.',poster_path:new URLSearchParams(location.search).has('artwork')?'/hero-poster.jpg':null,backdrop_path:new URLSearchParams(location.search).has('artwork')?'/hero-backdrop.jpg':null,genres:['Drama'],vote_average:8.2,release_date:'2025-01-01',recommendations:[]};createRoot(document.getElementById('root')).render(<><div id="landing"><LandingHero all={location.search.includes('carousel=1') ? [item, {...item, id:124, title:'Second poster'}, {...item, id:125, title:'Third poster'}, {...item, id:126, title:'Fourth poster'}] : [item]} /></div>{['movie','tv'].map(type=><div id={type} key={type}><HomepageMediaHero items={[{...item,type}]} mediaType={type} icon={null} eyebrow="Discover" title={type==='tv'?'TV shows':'Movies'} description="Find your next watch" spotlightLabel="Featured" mediaLabel={type==='tv'?'Series':'Movie'} /></div>)}</>);`,
       resolveDir: root,
       loader: "tsx",
     },
@@ -77,7 +77,7 @@ try {
             path: "image",
             namespace: "fixture",
           }));
-          api.onResolve({ filter: /^lucide-react$/ }, () => ({
+          api.onResolve({ filter: /^(lucide-react|@tabler\/icons-react)$/ }, () => ({
             path: "icons",
             namespace: "fixture",
           }));
@@ -90,7 +90,7 @@ try {
                   : args.path === "link"
                     ? "import React from 'react';export default function Link(props){return <a {...props}/>;}"
                     : args.path === "icons"
-                      ? `import React from 'react';const Icon=(props)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M5 12h14m-7-7 7 7-7 7"/></svg>;export const ArrowUpRight=Icon,ChevronLeft=Icon,ChevronRight=Icon,Play=Icon,X=Icon,Bookmark=Icon,BookmarkCheck=Icon,Film=Icon,Info=Icon,Tv=Icon,Star=Icon;`
+                      ? `import React from 'react';const Icon=(props)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M5 12h14m-7-7 7 7-7 7"/></svg>;export const ArrowUpRight=Icon,ChevronLeft=Icon,ChevronRight=Icon,IconChevronCompactLeft=Icon,IconChevronCompactRight=Icon,Play=Icon,Square=Icon,X=Icon,Bookmark=Icon,BookmarkCheck=Icon,Film=Icon,Info=Icon,Tv=Icon,Star=Icon,Volume2=Icon,VolumeX=Icon;`
                       : `import React from 'react';export default function Image({fill,unoptimized,priority,loading,sizes,style,...props}){return <img {...props} loading={loading??(priority?'eager':'lazy')} style={{...(fill?{position:'absolute',inset:0,width:'100%',height:'100%'}:{}),...style}}/>}`,
             loader: "jsx",
             resolveDir: root,
@@ -196,7 +196,7 @@ try {
       5,
     ),
   ];
-  for (const width of [320, 390, 639, 640, 768, 1024, 1280, 1366, 1440]) {
+  for (const width of [320, 390, 639, 640, 768, 1024, 1280, 1366, 1440, 1600]) {
     const height = width === 1024 ? 600 : width >= 1280 ? 720 : 900;
     await page.setViewportSize({ width, height });
     for (const [caseIndex, title] of titles.entries()) {
@@ -210,7 +210,11 @@ try {
         assert.ok(
           (await artwork.evaluate((image) => image.currentSrc)).endsWith(
             caseIndex === 0
-              ? width < 640 ? "/w500/hero-poster.jpg" : "/w1280/hero-backdrop.jpg"
+              ? width < 640
+                ? "/w500/hero-poster.jpg"
+                : id === "landing" && width >= 1600
+                  ? "/original/hero-backdrop.jpg"
+                  : "/w1280/hero-backdrop.jpg"
               : width < 640 ? "/placeholder-poster.svg" : "/placeholder-backdrop.svg",
           ),
           id + " uses the wrong hero artwork at " + width,
@@ -261,6 +265,141 @@ try {
       "Hero title limits passed for landing, movies and TV at " + width + "px.",
     );
   }
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 1440, height: 720 });
+  await page.goto(base + "?title=First%20poster&artwork=1&carousel=1");
+  const posters = page.getByRole("group", { name: "Featured posters" });
+  const first = posters.getByRole("button", { name: "Show First poster" });
+  const second = posters.getByRole("button", { name: "Show Second poster" });
+  const third = posters.getByRole("button", { name: "Show Third poster" });
+  const fourth = posters.getByRole("button", { name: "Show Fourth poster" });
+  assert.ok((await first.boundingBox()).width > (await second.boundingBox()).width * 2);
+  await second.click();
+  assert.equal(await second.getAttribute("aria-pressed"), "true");
+  assert.ok((await first.boundingBox()).x < (await second.boundingBox()).x);
+  assert.equal(await second.evaluate((button) => getComputedStyle(button).borderTopColor), "rgba(0, 0, 0, 0)");
+  assert.ok((await first.boundingBox()).width > (await third.boundingBox()).width);
+  assert.ok((await second.boundingBox()).width > (await first.boundingBox()).width);
+  assert.equal(await page.locator("#landing img").count(), 5, "The landing hero renders the backdrop and four carousel posters");
+  const navigation = page.locator("#landing").getByRole("group", { name: "Featured title navigation" });
+  const previous = navigation.getByRole("button", { name: "Previous featured title" });
+  const next = navigation.getByRole("button", { name: "Next featured title" });
+  const section = await page.locator("#landing section").boundingBox();
+  const left = await previous.boundingBox();
+  const right = await next.boundingBox();
+  assert.equal(await navigation.innerText(), "");
+  for (const arrow of [previous, next]) {
+    const icon = arrow.locator("svg");
+    assert.equal((await icon.boundingBox()).width, 44);
+    assert.equal(await icon.getAttribute("stroke-width"), "2");
+  }
+  assert.equal(left.x, section.x);
+  assert.equal(right.x + right.width, section.x + section.width);
+  for (const edge of [left, right]) {
+    assert.equal(edge.y, section.y);
+    assert.equal(edge.height, section.height);
+  }
+  await next.hover();
+  assert.equal(await next.evaluate((button) => getComputedStyle(button, "::before").opacity), "1");
+  assert.match(await next.evaluate((button) => getComputedStyle(button, "::before").backgroundImage), /radial-gradient/);
+  await next.click();
+  assert.equal(await third.getAttribute("aria-pressed"), "true");
+  assert.ok((await first.boundingBox()).width < (await second.boundingBox()).width);
+  await next.click();
+  assert.equal(await fourth.getAttribute("aria-pressed"), "true");
+  await first.waitFor({ state: "hidden" });
+  assert.ok((await second.boundingBox()).x < (await third.boundingBox()).x);
+  assert.ok((await third.boundingBox()).x < (await fourth.boundingBox()).x);
+  await previous.focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await third.getAttribute("aria-pressed"), "true");
+  assert.deepEqual(await posters.getByRole("button").evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label"))), [
+    "Show First poster", "Show Second poster", "Show Third poster", "Show Fourth poster",
+  ]);
+  assert.ok((await fourth.boundingBox()).x > (await third.boundingBox()).x);
+  const touchPage = await browser.newPage({ hasTouch: true, viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  await touchPage.goto(base + "?title=First%20poster&carousel=1");
+  const touchHero = touchPage.locator("#landing");
+  await touchHero.getByRole("button", { name: "Next featured title" }).tap();
+  await touchHero.getByRole("heading", { name: "Second poster" }).waitFor();
+  await touchPage.close();
+
+  await page.route("**/api/all/batch/trailers", (route) => {
+    assert.deepEqual(route.request().postDataJSON(), [{ type: "movie", id: 123 }]);
+    return route.fulfill({ json: { "movie-123": "fixture-key" } });
+  });
+  await page.route("https://www.youtube.com/iframe_api", (route) => route.fulfill({
+    contentType: "text/javascript",
+    body: `window.YT = { Player: class {
+      constructor(mount, options) {
+        this.frame = document.createElement('iframe');
+        mount.replaceWith(this.frame);
+        window.preview = { end: options.playerVars.end, muted: false };
+        this.options = options;
+        window.changePreviewState = (state) => {
+          this.state = state;
+          options.events.onStateChange({ data: state });
+        };
+        queueMicrotask(() => options.events.onReady({ target: this }));
+      }
+      getIframe() { return this.frame; }
+      getPlayerState() { return this.state; }
+      mute() { window.preview.muted = true; }
+      unMute() { window.preview.muted = false; }
+      playVideo() {
+        if (location.search.includes('blocked=1')) this.options.events.onAutoplayBlocked();
+        else window.changePreviewState(1);
+      }
+      destroy() { this.frame.remove(); }
+    }}; window.onYouTubeIframeAPIReady();`,
+  }));
+  for (const reducedMotion of ["no-preference", "reduce"]) {
+    await page.emulateMedia({ reducedMotion });
+    await page.goto(base + "?title=Preview&artwork=1");
+    const hero = page.locator("#landing");
+    const play = hero.getByRole("button", { name: "Play 15s preview" });
+    const cancel = hero.getByRole("button", { name: "Cancel preview" });
+    const stop = hero.getByRole("button", { name: "Stop preview" });
+    const unmute = hero.getByRole("button", { name: "Unmute preview" });
+    const mute = hero.getByRole("button", { name: "Mute preview", exact: true });
+    const frame = hero.locator('iframe[title="Featured trailer preview"]');
+    if (reducedMotion === "reduce") {
+      await play.waitFor();
+      assert.equal(await frame.count(), 0);
+      await play.click();
+    }
+    await frame.waitFor();
+    await cancel.waitFor();
+    assert.equal(await unmute.getAttribute("aria-disabled"), "true");
+    assert.equal(await hero.getByRole("group", { name: "Trailer preview controls" }).innerText(), "");
+    assert.deepEqual(await page.evaluate(() => window.preview), { end: 19, muted: true });
+    assert.equal(await frame.evaluate((iframe) => getComputedStyle(iframe.parentElement.parentElement).opacity), "0");
+    assert.equal(await frame.evaluate((iframe) => getComputedStyle(iframe).pointerEvents), "none");
+    assert.equal(await hero.getByRole("group", { name: "Featured title navigation" }).count(), 0);
+    await stop.waitFor();
+    await unmute.click();
+    assert.equal(await page.evaluate(() => window.preview.muted), false);
+    await mute.click();
+    assert.equal(await page.evaluate(() => window.preview.muted), true);
+    await page.evaluate(() => window.changePreviewState(3));
+    await cancel.waitFor();
+    assert.equal(await frame.evaluate((iframe) => getComputedStyle(iframe.parentElement.parentElement).opacity), "0");
+    await page.evaluate(() => window.changePreviewState(1));
+    await stop.waitFor();
+    await page.evaluate(() => window.changePreviewState(0));
+    await frame.waitFor({ state: "detached" });
+    await play.click();
+    await frame.waitFor();
+    await cancel.click();
+    await frame.waitFor({ state: "detached" });
+    await hero.locator("picture img").waitFor();
+  }
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto(base + "?title=Preview&artwork=1&blocked=1");
+  await page.waitForFunction(() => window.preview?.muted);
+  await page.locator('#landing iframe[title="Featured trailer preview"]').waitFor({ state: "detached" });
+  await page.locator("#landing picture img").waitFor();
+  console.log("Hero preview reveal delay, buffering, navigation, cancellation, replay, blocked autoplay and reduced motion passed.");
   assert.deepEqual(errors, []);
 } finally {
   if (browser) await browser.close();

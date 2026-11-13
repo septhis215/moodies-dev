@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Film, Ticket } from "lucide-react";
+import { Ticket } from "lucide-react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
 import type { ReactNode } from "react";
@@ -63,7 +63,7 @@ function BoxOfficeRanking({ items }: { items: All[] }) {
         </div>
         <Link
           href="/movies/box-office"
-          className="border-b border-[var(--surface-border)] pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)] transition-colors hover:border-[var(--brand-coral)] hover:text-[var(--ink)]"
+          className="border-b border-[var(--surface-border)] pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ink-muted)] transition-colors hover:text-[var(--brand-coral-strong)] hover:underline underline-offset-4"
         >
           View chart
         </Link>
@@ -72,18 +72,17 @@ function BoxOfficeRanking({ items }: { items: All[] }) {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
         <Link
           href={`/movies/${winner.id}`}
-          className="group grid min-h-72 overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:grid-cols-[210px_1fr]"
+          className="group relative isolate flex min-h-80 items-end overflow-hidden rounded-md bg-[var(--surface-1)] focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]"
         >
-          <div className="relative min-h-64 bg-[var(--surface-2)]">
-            <Image
-              src={posterFor(winner)}
-              alt={titleFor(winner)}
-              fill
-              sizes="210px"
-              className="object-cover"
-            />
-          </div>
-          <div className="flex min-w-0 flex-col p-5 sm:p-6">
+          <Image
+            src={tmdbImage(winner.backdrop_path, "backdropCard") ?? posterFor(winner)}
+            alt=""
+            fill
+            sizes="(min-width: 1024px) 640px, 100vw"
+            className="-z-10 object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:group-hover:scale-105"
+          />
+          <div className="absolute inset-0 -z-10 bg-linear-to-t from-black via-black/65 to-black/15" />
+          <div className="flex w-full min-w-0 flex-col p-5 sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <span className="text-5xl font-bold leading-none text-[var(--brand-coral-strong)]">
                 01
@@ -97,10 +96,10 @@ function BoxOfficeRanking({ items }: { items: All[] }) {
             <h3 className="mt-5 text-3xl font-bold leading-none text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
               {titleFor(winner)}
             </h3>
-            <p className="mt-2 text-xs text-[var(--ink-muted)]">
+            <p className="mt-2 text-xs text-white/75">
               {yearFor(winner)} · Current chart leader
             </p>
-            <p className="mt-4 line-clamp-4 text-sm leading-6 text-[var(--ink-muted)]">
+            <p className="mt-3 line-clamp-3 max-w-lg text-sm leading-6 text-white/80">
               {winner.overview ||
                 "The movie drawing the most attention this week."}
             </p>
@@ -167,110 +166,101 @@ export default function MoviesHomePageClient({
   return (
     <main className="min-h-screen overflow-x-clip bg-[var(--surface-0)] text-[var(--ink)]">
       <HomepageMediaHero
-        items={trendingMovies}
+        items={trendingMovies.length ? trendingMovies : popularMovies}
         mediaType="movie"
-        icon={<Film className="h-5 w-5" />}
-        eyebrow="Movies"
-        title="Tonight at the movies"
-        description="Choose a poster to update the marquee, then move into new releases, mood-led picks and the weekly chart."
-        spotlightLabel="Selected feature"
+        title="Movies"
         mediaLabel="Movie"
         primaryCta="View movie"
       />
+      <div className="homepage-browse">
+        <div className="ui-shell homepage-chapter">
+          <MediaShelf
+            id="new-release-movies"
+            title="New releases"
+            items={newReleaseMovies}
+            hrefBase="/movies"
+            watchType="movie"
+            viewAllHref="/movies/new-releases"
+          />
 
-      <div className="ui-shell space-y-12 py-10 sm:space-y-16 sm:py-14">
-        <BoxOfficeRanking items={popularMovies} />
+          <BoxOfficeRanking items={popularMovies} />
 
-        <MediaShelf
-          id="new-release-movies"
-          eyebrow="Opened recently"
-          title="New releases"
-          description="Recent movies with enough audience activity to be worth checking first."
-          items={newReleaseMovies}
-          hrefBase="/movies"
-          watchType="movie"
-          viewAllHref="/movies/new-releases"
-        />
+          <MediaShelf
+            id="trending-movies"
+            title="Featured now"
+            items={trendingMovies}
+            hrefBase="/movies"
+            watchType="movie"
+            viewAllHref="/movies/featured"
+          />
+        </div>
 
-        <MediaShelf
-          id="trending-movies"
-          eyebrow="Editorial selection"
-          title="Featured now"
-          description="Movies currently selected for the Moodies front row."
-          items={trendingMovies}
-          hrefBase="/movies"
-          watchType="movie"
-          viewAllHref="/movies/featured"
-        />
+        <div className="ui-shell homepage-chapter">{upcomingSection}</div>
 
-        <MediaShelf
-          id="korean-movies"
-          eyebrow="International spotlight"
-          title="Korean cinema"
-          description="Contemporary Korean films spanning thrillers, dramas, comedy and action."
-          items={koreanMovies}
-          hrefBase="/movies"
-          watchType="movie"
-          viewAllHref="/movies/korean-cinema"
-        />
+        <div className="ui-shell homepage-chapter">
+          <MediaShelf
+            id="korean-movies"
+            eyebrow="International spotlight"
+            title="Korean cinema"
+            description="Contemporary Korean films spanning thrillers, dramas, comedy and action."
+            items={koreanMovies}
+            hrefBase="/movies"
+            watchType="movie"
+            viewAllHref="/movies/korean-cinema"
+          />
 
-        {communityPulseSection}
+          <MediaShelf
+            id="action-movies"
+            eyebrow="High velocity"
+            title="Action-packed"
+            items={actionMovies}
+            hrefBase="/movies"
+            watchType="movie"
+            viewAllHref="/movies/action"
+          />
 
-        {upcomingSection}
-      </div>
+          <MediaShelf
+            id="award-winners"
+            eyebrow="Recognised work"
+            title="Award winners"
+            items={awardWinners}
+            hrefBase="/movies"
+            watchType="movie"
+            viewAllHref="/movies/award-winners"
+          />
 
-      <CommunityPicks
-        data={movieReviews}
-        title="Critics corner"
-        subtitle="Recent member reviews, paired with the films they watched."
-      />
+          <MediaShelf
+            id="animated-movies"
+            eyebrow="Illustrated worlds"
+            title="Animated magic"
+            items={animatedMovies}
+            hrefBase="/movies"
+            watchType="movie"
+            viewAllHref="/movies/animated"
+          />
 
-      <div className="ui-shell space-y-12 pb-14 pt-10 sm:space-y-16">
-        <MediaShelf
-          id="action-movies"
-          eyebrow="High velocity"
-          title="Action-packed"
-          description="Chases, fights and large-scale spectacle without a separate visual theme."
-          items={actionMovies}
-          hrefBase="/movies"
-          watchType="movie"
-          viewAllHref="/movies/action"
-        />
+          <MediaShelf
+            id="indie-movies"
+            eyebrow="Beyond the mainstream"
+            title="Indie spotlight"
+            description="Independent films with distinctive voices and smaller-scale stories."
+            items={indieMovies}
+            hrefBase="/movies"
+            watchType="movie"
+            viewAllHref="/movies/indie"
+          />
 
-        <MediaShelf
-          id="award-winners"
-          eyebrow="Recognised work"
-          title="Award winners"
-          description="Celebrated performances and filmmaking, marked by recognition rather than gold decoration."
-          items={awardWinners}
-          hrefBase="/movies"
-          watchType="movie"
-          viewAllHref="/movies/award-winners"
-        />
+          <MoodRecommendationsSection mediaType="movie" initialMoods={moods} />
+        </div>
 
-        <MediaShelf
-          id="animated-movies"
-          eyebrow="Illustrated worlds"
-          title="Animated magic"
-          description="Animation for every age and mood, presented with the same editorial system."
-          items={animatedMovies}
-          hrefBase="/movies"
-          watchType="movie"
-          viewAllHref="/movies/animated"
-        />
-
-        <MediaShelf
-          id="indie-movies"
-          eyebrow="Beyond the mainstream"
-          title="Indie spotlight"
-          description="Independent films with distinctive voices and smaller-scale stories."
-          items={indieMovies}
-          hrefBase="/movies"
-          watchType="movie"
-          viewAllHref="/movies/indie"
-        />
-
-        <MoodRecommendationsSection mediaType="movie" initialMoods={moods} />
+        <div className="homepage-chapter">
+          <div className="ui-shell">{communityPulseSection}</div>
+          <CommunityPicks
+            data={movieReviews}
+            title="Critics corner"
+            subtitle="Recent member reviews, paired with the films they watched."
+          />
+        </div>
       </div>
     </main>
   );

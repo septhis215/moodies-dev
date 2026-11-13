@@ -3,6 +3,11 @@ import type { CommunityPulseData } from "@/types/communityPulse";
 
 export type HomepageMediaType = "movie" | "tv";
 
+export function readHomepageTitles(payload: unknown): All[] {
+  const items = payload && typeof payload === "object" && "data" in payload ? payload.data : payload;
+  return Array.isArray(items) ? items : [];
+}
+
 export const pulseEndpoint = (type: HomepageMediaType) =>
   `/media-stats/community-pulse?mediaType=${type}&limit=5`;
 

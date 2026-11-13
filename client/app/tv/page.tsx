@@ -2,6 +2,7 @@ import React from "react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
 import { homepageSections } from "@/components/sections/HomepageSectionsServer";
+import { readHomepageTitles } from "@/lib/homepage-sections";
 import TVHomePageClient from "./TVHomePageClient";
 const BASE_URL = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
 
@@ -81,25 +82,29 @@ async function fetchMoods() {
   }
 }
 
+async function fetchTvList(endpoint: string): Promise<All[]> {
+  return readHomepageTitles(await fetchWithFallback<unknown>(endpoint, null));
+}
+
 async function fetchTrendingTV() {
-  return fetchWithFallback<All[]>("/tv/featured?limit=20", []);
+  return fetchTvList("/tv/featured?limit=20");
 }
 
 async function fetchPopularTV() {
-  return fetchWithFallback<All[]>("/tv/trending?limit=25", []);
+  return fetchTvList("/tv/trending?limit=25");
 }
 
 async function fetchTopRatedTV() {
-  return fetchWithFallback<All[]>("/tv/favorites?limit=30", []);
+  return fetchTvList("/tv/favorites?limit=30");
 }
 
 
 async function fetchKoreanTV() {
-  return fetchWithFallback<All[]>("/tv/koreaTrending?limit=20", []);
+  return fetchTvList("/tv/koreaTrending?limit=20");
 }
 
 async function fetchNewReleases() {
-  return fetchWithFallback<All[]>("/tv/new-releases?limit=30", []);
+  return fetchTvList("/tv/new-releases?limit=30");
 }
 
 async function fetchTVReviews() {
@@ -131,13 +136,13 @@ async function fetchTVReviews() {
 
 // NEW: Fetch airing today
 async function fetchAiringToday() {
-  return fetchWithFallback<All[]>("/tv/airing/today?limit=15", []);
+  return fetchTvList("/tv/airing/today?limit=15");
 }
 
 // NEW: Fetch airing this week
 
 async function fetchAiringThisWeek() {
-  return fetchWithFallback<All[]>("/tv/airing/week?limit=20", []);
+  return fetchTvList("/tv/airing/week?limit=20");
 }
 
 export const metadata = {
