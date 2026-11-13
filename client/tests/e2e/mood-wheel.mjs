@@ -93,9 +93,8 @@ try {
     assert.equal(firstRequest.searchParams.get("excludeViewed"), "true");
     assert.match(firstRequest.searchParams.get("seed"), /^\d+$/);
     const resultCard = page.getByRole("link", { name: /A cozy story/ });
-    await resultCard
-      .getByText("Why it fits: Warm family stories for a comforting night.")
-      .waitFor();
+    await resultCard.getByText("Why it fits", { exact: true }).waitFor();
+    await resultCard.getByText("Warm family stories for a comforting night.", { exact: true }).waitFor();
     await resultCard.getByText("Family · Comedy").waitFor();
     await resultCard.getByText("2024", { exact: true }).waitFor();
     const refreshed = page.waitForResponse((response) =>

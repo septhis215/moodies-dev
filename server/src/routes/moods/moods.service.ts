@@ -1006,26 +1006,19 @@ export class MoodsService {
             .filter(id => genreSet.has(id))
             .map(id => genreMap.get(id))
             .filter((name): name is string => Boolean(name));
-        const parts: string[] = [];
-
-        if (primaryNames.length > 0) {
-            parts.push(`${primaryNames.slice(0, 2).join(' and ')} as the main match`);
-        }
-
-        if (breakdown.keywordScore > 0) parts.push('matching story themes');
-        else if (secondaryNames.length > 0) parts.push(`${secondaryNames.slice(0, 2).join(' and ')} themes`);
+        const matchingGenres = [...primaryNames, ...secondaryNames].slice(0, 2);
 
         if (this.getMoodKey(mood) === 'romantic' && breakdown.romanceTextScore >= 0.5) {
-            parts.push('romantic story signals');
+            return 'A love story for a romantic mood.';
         }
 
-        if (parts.length === 0 && breakdown.genreScore >= 0.32) {
-            parts.push('compatible genre signals');
+        if (matchingGenres.length > 0) {
+            return `${matchingGenres.join(' and ')} for your ${moodName} mood.`;
         }
 
-        return parts.length > 0
-            ? `Matches your ${moodName} mood with ${parts.slice(0, 2).join(', ')}.`
-            : `Matches your ${moodName} mood with a strong overall fit.`;
+        return breakdown.keywordScore > 0
+            ? `The story’s themes suit your ${moodName} mood.`
+            : `A pick for your ${moodName} mood.`;
     }
 
     // ---------------------------------------------------------------------------

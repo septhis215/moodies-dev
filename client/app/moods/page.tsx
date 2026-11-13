@@ -640,7 +640,7 @@ export default function MoodDiscoveryWheel() {
 
       <section aria-label="Choose your mood" className="pb-5 sm:py-1">
         <div className="mx-auto grid max-w-7xl gap-4 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_390px]">
-          <div className="min-w-0 rounded-xl sm:border sm:border-white/10 sm:bg-[var(--surface-1)] sm:p-5">
+          <div className="min-w-0 rounded-xl bg-[radial-gradient(ellipse_at_center,var(--surface-1),transparent_75%)] sm:p-5">
             <div className="mb-2 flex items-center justify-between gap-3 sm:mb-4">
               <div>
                 <p className="ui-kicker">{activeCluster.label} moods</p>
@@ -668,13 +668,6 @@ export default function MoodDiscoveryWheel() {
                 data-mood-wheel
                 className="relative aspect-square w-[min(100%,340px,46svh)] sm:w-[min(100%,430px,46svh)]"
               >
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-4 rounded-full opacity-20 blur-2xl"
-                  style={{
-                    backgroundColor: selectedMood?.color ?? activeCluster.color,
-                  }}
-                />
                 <motion.div
                   className="absolute inset-0"
                   animate={{ rotate: currentRotation }}
@@ -1034,26 +1027,26 @@ export default function MoodDiscoveryWheel() {
                       initial={reducedMotion ? false : { opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: reducedMotion ? 0 : index * 0.025 }}
-                      className="group flex cursor-pointer gap-3 rounded-lg border border-white/10 bg-black/20 p-2.5 transition hover:border-white/25 hover:bg-white/[0.055] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] active:bg-white/10 sm:p-3"
+                      className="group grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2.5 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-0)] p-3 transition-colors hover:border-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)]"
                     >
-                      <span className="relative h-[5.5rem] w-14 shrink-0 overflow-hidden rounded-md bg-zinc-900 sm:h-24 sm:w-16">
+                      <span className="relative aspect-[2/3] w-12 overflow-hidden rounded-md bg-[var(--surface-2)] sm:w-14">
                         <Image
                           src={
                             rec.posterPath
                               ? tmdbImage(rec.posterPath, "w154")
                               : "/placeholder-poster.svg"
                           }
-                          alt={rec.title}
+                          alt=""
                           fill
-                          sizes="64px"
+                          sizes="(min-width: 640px) 56px, 48px"
                           className="object-cover"
                         />
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] group-hover:text-[var(--brand-coral-strong)]">
+                      <span className="min-w-0 self-center">
+                        <span className="line-clamp-2 text-base font-semibold leading-tight text-[var(--ink)] group-hover:text-[var(--brand-coral-strong)]">
                           {rec.title}
                         </span>
-                        <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--ink-muted)]">
+                        <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--ink-muted)]">
                           <span className="inline-flex items-center gap-1">
                             {rec.type === "tv" ? (
                               <Tv className="h-3 w-3" />
@@ -1077,16 +1070,19 @@ export default function MoodDiscoveryWheel() {
                             {rec.genres?.slice(0, 2).join(" · ")}
                           </span>
                         )}
-                        <span className="mt-2 block text-sm leading-6 text-[var(--ink-muted)]">
-                          {rec.reason
-                            ? `Why it fits: ${rec.reason}`
-                            : rec.overview || "No description available."}
-                        </span>
                       </span>
                       <ArrowRight
                         aria-hidden="true"
                         className="mt-1 h-4 w-4 shrink-0 text-[var(--ink-muted)] transition-colors group-hover:text-[var(--brand-coral-strong)]"
                       />
+                      {rec.reason ? (
+                        <span className="col-span-full rounded-md bg-[var(--surface-1)] px-3 py-2">
+                          <span className="block text-xs font-semibold text-[var(--brand-coral-strong)]">Why it fits</span>
+                          <span className="mt-0.5 block text-sm leading-5 text-[var(--ink-muted)]">{rec.reason}</span>
+                        </span>
+                      ) : rec.overview && (
+                        <span className="col-span-full text-sm leading-5 text-[var(--ink-muted)]">{rec.overview}</span>
+                      )}
                     </motion.a>
                   ))}
                 </motion.div>

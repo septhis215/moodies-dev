@@ -1,16 +1,16 @@
 "use client";
 
-import SectionHeader from "@/components/ui/SectionHeader";
 import { tmdbImage } from "@/lib/tmdb";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
 import {
+  Check,
   Sparkles,
   RefreshCw,
   Shuffle,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { getMoodRecommendations, getAllMoods } from "@/app/tv/action";
 import { useAuth } from "@/app/context/AuthProvider";
 import { recordAchievementActivity } from "@/lib/achievements";
@@ -65,7 +65,6 @@ interface MoodRecommendationsSectionProps {
 
 const RECOMMENDATION_LIMIT = 18;
 const DEFAULT_MOOD_COUNT = 8;
-const EXPANDED_MOOD_COUNT = 18;
 const FEATURED_MOOD_NAMES = [
   "Happy",
   "Funny",
@@ -196,30 +195,12 @@ function rotateArray<T>(items: T[], offset: number) {
   return [...items.slice(safeOffset), ...items.slice(0, safeOffset)];
 }
 
-function seededRandom(seed: number) {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
-
-function shuffleWithSeed<T>(items: T[], seed: number) {
-  const shuffled = [...items];
-
-  for (let index = shuffled.length - 1; index > 0; index--) {
-    const swapIndex = Math.floor(seededRandom(seed + index) * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [
-      shuffled[swapIndex],
-      shuffled[index],
-    ];
-  }
-
-  return shuffled;
-}
-
 export default function MoodRecommendationsSection({
   mediaType = "both",
   initialMoods,
 }: MoodRecommendationsSectionProps) {
   const router = useRouter();
+  const reducedMotion = useReducedMotion();
   const { user, isAuthenticated } = useAuth();
   const { add, remove, isInWatchlist, ready } = useWatchlist();
   const initialMoodList = useMemo(
@@ -228,7 +209,6 @@ export default function MoodRecommendationsSection({
   );
 
   const [moods, setMoods] = useState<Mood[]>(initialMoodList);
-  const [displayedMoods, setDisplayedMoods] = useState<Mood[]>([]);
   const [moodsLoading, setMoodsLoading] = useState(
     initialMoodList.length === 0,
   );
@@ -237,7 +217,7 @@ export default function MoodRecommendationsSection({
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [moodCount, setMoodCount] = useState(DEFAULT_MOOD_COUNT);
+  const [showAll, setShowAll] = useState(false);
   const [shuffleOffset, setShuffleOffset] = useState(0);
   const [watchlistStates, setWatchlistStates] = useState<
     Record<string, boolean>
@@ -247,21 +227,14 @@ export default function MoodRecommendationsSection({
   );
   const [refreshedAt, setRefreshedAt] = useState<number | null>(null);
   const requestIdRef = useRef(0);
-  const initialMoodShuffleSeed = useRef(Date.now() + Math.random());
-
-  const orderedMoods = useMemo(
-    () => shuffleWithSeed(orderMoods(moods), initialMoodShuffleSeed.current),
-    [moods],
-  );
+  const orderedMoods = useMemo(() => orderMoods(moods), [moods]);
+  const rotatedMoods = rotateArray(orderedMoods, shuffleOffset);
+  const displayedMoods = showAll ? rotatedMoods : rotatedMoods.slice(0, DEFAULT_MOOD_COUNT);
+  if (selectedMood && !displayedMoods.some((mood) => mood.id === selectedMood.id)) {
+    displayedMoods[displayedMoods.length - 1] = selectedMood;
+  }
   const toHookType = (type: "MOVIE" | "TV") =>
     (type === "TV" ? "series" : "movie") as "movie" | "series";
-
-  useEffect(() => {
-    setDisplayedMoods(
-      rotateArray(orderedMoods, shuffleOffset).slice(0, moodCount),
-    );
-  }, [moodCount, orderedMoods, shuffleOffset]);
-
   useEffect(() => {
     if (initialMoodList.length > 0) {
       setMoods(initialMoodList);
@@ -302,18 +275,6 @@ export default function MoodRecommendationsSection({
     };
   }, [initialMoodList]);
 
-  const handleShuffleMoods = () => {
-    setShuffleOffset(
-      (current) => current + Math.max(1, Math.floor(moodCount / 2)),
-    );
-  };
-
-  const toggleMoodCount = () => {
-    setMoodCount((current) =>
-      current === DEFAULT_MOOD_COUNT ? EXPANDED_MOOD_COUNT : DEFAULT_MOOD_COUNT,
-    );
-  };
-
   const fetchRecommendations = async (mood: Mood) => {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
@@ -342,10 +303,6 @@ export default function MoodRecommendationsSection({
           ? data
           : [];
 
-      if (recs.length === 0) {
-        throw new Error("No recommendations received from server");
-      }
-
       if (requestIdRef.current === requestId) {
         setRecommendations(recs);
         setRefreshedAt(Date.now());
@@ -364,6 +321,7 @@ export default function MoodRecommendationsSection({
   };
 
   const handleMoodClick = (mood: Mood) => {
+    if (mood.id === selectedMood?.id) return;
     setRefreshedAt(null);
     setSelectedMood(mood);
     if (isAuthenticated) void recordAchievementActivity({ kind: "mood", moodId: mood.id }).catch(() => {});
@@ -457,302 +415,256 @@ export default function MoodRecommendationsSection({
   return (
     <section
       id="moods"
-      className="relative mx-auto w-full max-w-7xl overflow-hidden border-t border-[var(--surface-border)] pt-6 sm:pt-7"
+      className="relative mx-auto w-full max-w-7xl pt-6 sm:pt-7"
       aria-labelledby="mood-matcher-heading"
     >
-      <SectionHeader
-        id="mood-matcher-heading"
-        title="Mood matcher"
-        description={`Pick how you feel and find ${mediaType === "tv" ? "a series" : mediaType === "movie" ? "a movie" : "something"} to watch.`}
-        className="mb-5 sm:mb-6"
-      />
+      <header className="mb-4 sm:mb-5">
+        <div className="flex flex-wrap items-center justify-between gap-x-6">
+          <h2 id="mood-matcher-heading" className="text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">
+            Mood matcher
+          </h2>
+          {!moodsLoading && moods.length > 1 && (
+            <div className="flex flex-wrap items-center gap-x-5">
+              {moods.length > DEFAULT_MOOD_COUNT && (
+                <button
+                  type="button"
+                  aria-expanded={showAll}
+                  aria-controls="mood-matcher-choices"
+                  onClick={() => setShowAll((current) => !current)}
+                  className="min-h-11 cursor-pointer rounded-sm text-sm font-semibold text-[var(--ink-muted)] underline-offset-4 hover:text-[var(--brand-coral-strong)] hover:underline focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] motion-safe:transition-colors"
+                >
+                  <span className="ui-text-reveal">{showAll ? "Show fewer moods" : "See all moods"}</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShuffleOffset((current) => current + Math.min(4, moods.length - 1))}
+                className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm text-sm font-semibold text-[var(--ink-muted)] underline-offset-4 hover:text-[var(--brand-coral-strong)] hover:underline focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] motion-safe:transition-colors"
+              >
+                <Shuffle aria-hidden="true" className="size-4" />
+                <span className="ui-text-reveal">Shuffle moods</span>
+              </button>
+            </div>
+          )}
+        </div>
+        <p className="mt-1 text-sm leading-6 text-[var(--ink-muted)]">
+          Pick how you feel and find {mediaType === "tv" ? "a series" : mediaType === "movie" ? "a movie" : "something"} to watch.
+        </p>
+      </header>
+      <div id="mood-matcher-choices" role="group" aria-label="Choose a mood" className="grid grid-cols-2 gap-2.5 md:grid-cols-4 sm:gap-3">
+        {moodsLoading
+          ? Array.from({ length: DEFAULT_MOOD_COUNT }, (_, index) => (
+              <div key={index} className="moodies-skeleton min-h-24 rounded-xl md:min-h-28" />
+            ))
+          : displayedMoods.map((mood) => {
+              const active = selectedMood?.id === mood.id;
+              return (
+                <button
+                  key={mood.id}
+                  type="button"
+                  aria-label={`Choose ${mood.name} mood`}
+                  aria-pressed={active}
+                  aria-controls={selectedMood ? "mood-matcher-results" : undefined}
+                  onClick={() => handleMoodClick(mood)}
+                  className="group relative isolate flex min-h-24 min-w-0 cursor-pointer items-end overflow-hidden rounded-xl bg-[var(--surface-1)] p-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] md:min-h-28 md:p-4"
+                >
+                  <span aria-hidden="true" className="absolute inset-0 -z-10" style={{ background: `linear-gradient(115deg, var(--surface-2) 20%, ${getMoodColor(mood)}38 100%)` }} />
+                  <span aria-hidden="true" className="pointer-events-none absolute -bottom-1 -right-1 -z-10 size-[4.5rem] opacity-90 motion-safe:transition-transform motion-safe:duration-300 motion-safe:group-hover:-translate-y-1 md:size-[6rem]">
+                    <Image src={getMoodImageSrc(mood)} alt="" fill sizes="(min-width: 768px) 96px, 72px" className="object-contain" />
+                  </span>
+                  {active && <Check aria-hidden="true" className="absolute right-3 top-3 size-4 text-[var(--brand-coral-strong)]" />}
+                  <span className="min-w-0 rounded-sm [text-shadow:0_1px_4px_var(--surface-0)] md:max-w-[70%]">
+                    <span className="ui-text-reveal block wrap-anywhere text-lg font-bold leading-tight text-[var(--ink)] underline-offset-4 group-aria-pressed:text-[var(--brand-coral-strong)] group-aria-pressed:underline md:text-xl">
+                      {mood.name}
+                    </span>
+                    <span className="mt-1 hidden line-clamp-2 text-xs leading-4 text-[var(--ink-muted)] md:block">{mood.description}</span>
+                  </span>
+                </button>
+              );
+            })}
+      </div>
 
-      <AnimatePresence mode="wait">
-        {!selectedMood && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="mb-3"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-              <p className="text-sm text-[var(--ink-muted)]">Choose a mood to see your matches.</p>
+      {selectedMood && (
+        <motion.div
+          id="mood-matcher-results"
+          initial={reducedMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="relative mt-8 isolate"
+          aria-busy={loading}
+        >
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--surface-border)] pb-4">
+            <div className="flex min-w-0 flex-1 basis-52 items-center gap-3">
+              <div className="relative h-12 w-12 shrink-0">
+                <Image src={getMoodImageSrc(selectedMood)} alt={`${selectedMood.name} mood mascot`} fill sizes="48px" className="object-contain" />
+              </div>
+              <div className="min-w-0">
+                <h3 data-display className="text-2xl font-bold leading-tight text-[var(--ink)]">
+                  {selectedMood.name} picks
+                </h3>
+                <p className="mt-1 text-sm leading-5 text-[var(--ink-muted)]" role="status">
+                  {loading ? "Finding your matches…" : error ? "Try refreshing your picks." : `${recommendations.length} picks for your mood`}
+                </p>
+              </div>
+            </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
-                  onClick={toggleMoodCount}
-                  className="min-h-11 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 py-2 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)]"
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  className="ui-secondary-action min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-55"
                 >
-                  {moodCount === DEFAULT_MOOD_COUNT
-                    ? "Show more moods"
-                    : "Show fewer"}
-                </button>
-                <button
-                  onClick={handleShuffleMoods}
-                  className="group flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-2)] px-3 py-2 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)]"
-                >
-                  <Shuffle className="h-4 w-4 text-[var(--brand-coral-strong)]" />
-                  Shuffle moods
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence mode="wait">
-        {!selectedMood ? (
-          <motion.div
-            key="mood-grid"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className={`mb-6 grid grid-cols-2 gap-2.5 sm:gap-3 ${
-              moodCount === DEFAULT_MOOD_COUNT
-                ? "sm:grid-cols-4"
-                : "sm:grid-cols-3 lg:grid-cols-6"
-            }`}
-          >
-            {moodsLoading
-              ? Array.from({ length: DEFAULT_MOOD_COUNT }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="h-24 moodies-skeleton rounded-xl border border-[var(--surface-border)] bg-white/[0.06]"
+                  <RefreshCw
+                    className={`h-4 w-4 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`}
                   />
-                ))
-              : displayedMoods.map((mood, index) => (
-                  <motion.button
-                    key={mood.id}
-                    type="button"
-                    aria-label={`Choose ${mood.name} mood`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{
-                      delay: index * 0.03,
-                      duration: 0.18,
-                    }}
-                    onClick={() => handleMoodClick(mood)}
-                    className="group relative min-h-24 min-w-0 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] p-3 text-left transition-colors hover:border-[var(--brand-coral)] hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)] motion-reduce:transition-none"
-                    style={{
-                      borderTopColor: mood.color,
-                    }}
-                  >
-                    <div className="flex h-full min-w-0 items-center gap-2.5">
-                      <div className="relative h-10 w-10 shrink-0">
-                        <Image
-                          src={getMoodImageSrc(mood)}
-                          alt={`${mood.name} mood mascot`}
-                          fill
-                          sizes="40px"
-                          className="object-contain"
-                        />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="wrap-anywhere text-sm font-semibold leading-5 text-[var(--ink)]">
-                          {mood.name}
-                        </h3>
-                        <p className="mt-1 hidden line-clamp-2 text-xs leading-5 text-[var(--ink-muted)] sm:block">
-                          {mood.description}
-                        </p>
-                      </div>
-                    </div>
-                  </motion.button>
-                ))}
-          </motion.div>
-        ) : (
-          <motion.div
-            key="recommendations"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="relative mb-8 isolate"
-            aria-busy={loading}
-          >
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--surface-border)] pb-4">
-              <div className="flex min-w-0 flex-1 basis-52 items-center gap-3">
-                <div className="relative h-12 w-12 shrink-0">
-                  <Image src={getMoodImageSrc(selectedMood)} alt={`${selectedMood.name} mood mascot`} fill sizes="48px" className="object-contain" />
-                </div>
-                <div className="min-w-0">
-                  <h3 data-display className="text-2xl font-bold leading-tight text-[var(--ink)]">
-                    {selectedMood.name} picks
-                  </h3>
-                  <p className="mt-1 text-sm leading-5 text-[var(--ink-muted)]" role="status">
-                    {loading ? "Finding your matches…" : error ? "Try refreshing your picks." : `${recommendations.length} picks for your mood`}
-                  </p>
-                </div>
+                  {loading ? "Refreshing" : "Refresh picks"}
+                </button>
               </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => setSelectedMood(null)}
-                    className="ui-secondary-action min-h-11 justify-center"
-                  >
-                    Change mood
-                  </button>
-                  <button
-                    onClick={handleRefresh}
-                    disabled={loading}
-                    className="ui-secondary-action min-h-11 justify-center disabled:cursor-not-allowed disabled:opacity-55"
-                  >
-                    <RefreshCw
-                      className={`h-4 w-4 ${loading ? "animate-spin motion-reduce:animate-none" : ""}`}
-                    />
-                    {loading ? "Refreshing" : "Refresh picks"}
-                  </button>
-                </div>
-            </div>
+          </div>
 
-            {loading ? (
-              <div aria-hidden="true" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {Array.from({ length: 12 }, (_, index) => (
-                  <div key={index} className="overflow-hidden rounded-xl border border-[var(--surface-border)]">
-                    <div className="moodies-skeleton aspect-[2/3]" />
-                    <div className="space-y-2 bg-[var(--surface-1)] p-2.5">
-                      <div className="moodies-skeleton h-4 w-3/4 rounded" />
-                      <div className="moodies-skeleton h-3 w-1/2 rounded" />
-                    </div>
+          {loading ? (
+            <div aria-hidden="true" className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+              {Array.from({ length: 12 }, (_, index) => (
+                <div key={index} className="overflow-hidden rounded-xl border border-[var(--surface-border)]">
+                  <div className="moodies-skeleton aspect-[2/3]" />
+                  <div className="space-y-2 bg-[var(--surface-1)] p-2.5">
+                    <div className="moodies-skeleton h-4 w-3/4 rounded" />
+                    <div className="moodies-skeleton h-3 w-1/2 rounded" />
                   </div>
-                ))}
-              </div>
-            ) : error ? (
-              <div className="flex items-center justify-center rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] px-4 py-8">
-                <div className="max-w-md text-center">
-                  <h3 className="mb-2 text-xl font-bold text-[var(--ink)]">
-                    Couldn’t load your picks
-                  </h3>
-                  <p role="status" className="mb-4 text-sm leading-6 text-[var(--ink-muted)]">Try again in a moment, or choose another mood.</p>
-                  <button
-                    onClick={handleRefresh}
-                    className="ui-primary-action min-h-11"
-                  >
-                    Try again
-                  </button>
                 </div>
+              ))}
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] px-4 py-8">
+              <div className="max-w-md text-center">
+                <h3 className="mb-2 text-xl font-bold text-[var(--ink)]">
+                  Couldn’t load your picks
+                </h3>
+                <p role="status" className="mb-4 text-sm leading-6 text-[var(--ink-muted)]">Try again in a moment, or choose another mood.</p>
+                <button
+                  onClick={handleRefresh}
+                  className="ui-primary-action min-h-11"
+                >
+                  Try again
+                </button>
               </div>
-            ) : recommendations.length > 0 ? (
-              <motion.div
-                key={`recommendations-${selectedMood.id}-${refreshedAt ?? 0}`}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25 }}
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
-              >
-                {recommendations.map((rec) => {
-                  const id = String(rec.tmdbId);
-                  const kind = toHookType(rec.mediaType);
-                  const inList = isInWatchlist(id, kind) ?? watchlistStates[id];
-                  const isBusy = loadingStates[id];
-                  const matchScore = getMatchScore(rec);
-                  const genres = rec.genreNames?.filter(Boolean) ?? [];
-                  const moodColor = getMoodColor(selectedMood);
+            </div>
+          ) : recommendations.length > 0 ? (
+            <motion.div
+              key={`recommendations-${selectedMood.id}-${refreshedAt ?? 0}`}
+              initial={reducedMotion ? false : { opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+            >
+              {recommendations.map((rec) => {
+                const id = String(rec.tmdbId);
+                const kind = toHookType(rec.mediaType);
+                const inList = isInWatchlist(id, kind) ?? watchlistStates[id];
+                const isBusy = loadingStates[id];
+                const matchScore = getMatchScore(rec);
+                const genres = rec.genreNames?.filter(Boolean) ?? [];
+                const moodColor = getMoodColor(selectedMood);
 
-                  return (
-                    <motion.article
-                      key={`${rec.mediaType}-${rec.tmdbId}`}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.18 }}
-                      className="relative min-w-0 overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] motion-reduce:transition-none"
+                return (
+                  <motion.article
+                    key={`${rec.mediaType}-${rec.tmdbId}`}
+                    initial={reducedMotion ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.18 }}
+                    className="relative min-w-0 overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-1)]"
+                  >
+                    <Link
+                      href={getMediaHref(rec)}
+                      className="group flex h-full flex-col rounded-xl focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral)]"
                     >
-                      <Link
-                        href={getMediaHref(rec)}
-                        className="group flex h-full flex-col rounded-xl focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-coral)]"
+                      <div
+                        className="relative aspect-[2/3] overflow-hidden bg-[var(--surface-2)]"
                       >
-                        <div
-                          className="relative aspect-[2/3] overflow-hidden bg-[var(--surface-2)]"
-                        >
-                          <Image
-                            src={getPosterUrl(rec.posterPath)}
-                            alt={rec.title}
-                            fill
-                            sizes="(max-width: 639px) 45vw, (max-width: 767px) 30vw, (max-width: 1023px) 22vw, (max-width: 1279px) 18vw, 196px"
-                            className="object-cover transition-transform duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
+                        <Image
+                          src={getPosterUrl(rec.posterPath)}
+                          alt={rec.title}
+                          fill
+                          sizes="(max-width: 639px) 45vw, (max-width: 767px) 30vw, (max-width: 1023px) 22vw, (max-width: 1279px) 18vw, 196px"
+                          className="object-cover transition-transform duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
+                        />
+
+                          <RatingBadge
+                            rating={rec.voteAverage}
+                            variant="colored"
+                            size="sm"
+                            placement="poster"
                           />
 
-                            <RatingBadge
-                              rating={rec.voteAverage}
-                              variant="colored"
-                              size="sm"
-                              placement="poster"
+                        <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/65 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-md">
+                            <span
+                              aria-hidden="true"
+                              className="h-1.5 w-1.5 rounded-full"
+                              style={{ backgroundColor: moodColor }}
                             />
-
-                          <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/65 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-md">
-                              <span
-                                aria-hidden="true"
-                                className="h-1.5 w-1.5 rounded-full"
-                                style={{ backgroundColor: moodColor }}
-                              />
-                              {matchScore}% match
-                            </span>
-                          </div>
+                            {matchScore}% match
+                          </span>
                         </div>
+                      </div>
 
-                        <div className="flex flex-1 flex-col p-2.5">
-                          <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
-                            {rec.title}
-                          </h3>
-                          <p className="mt-1 text-xs text-[var(--ink-muted)]">
-                            {getMediaLabel(rec)} · {getYear(rec.releaseDate)}
+                      <div className="flex flex-1 flex-col p-2.5">
+                        <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)] transition-colors group-hover:text-[var(--brand-coral-strong)]">
+                          {rec.title}
+                        </h3>
+                        <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                          {getMediaLabel(rec)} · {getYear(rec.releaseDate)}
+                        </p>
+                        {genres.length > 0 && (
+                          <p className="mt-1 hidden truncate text-xs text-[var(--ink-muted)] sm:block">
+                            {genres.slice(0, 2).join(" · ")}
                           </p>
-                          {genres.length > 0 && (
-                            <p className="mt-1 hidden truncate text-xs text-[var(--ink-muted)] sm:block">
-                              {genres.slice(0, 2).join(" · ")}
-                            </p>
-                          )}
-                        </div>
-                      </Link>
-                      <PosterSaveButton
-                        title={rec.title}
-                        saved={Boolean(inList)}
-                        saving={isBusy}
-                        onClick={() => void toggleWatchlist(rec)}
-                      />
-                    </motion.article>
-                  );
-                })}
-              </motion.div>
-            ) : (
-              <div className="flex items-center justify-center py-8">
-                <div className="max-w-md border border-[var(--surface-border)] bg-[var(--surface-1)] p-8 text-center">
-                  <div
-                    className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
-                    style={{
-                      backgroundColor: `${selectedMood.color}22`,
-                      color: selectedMood.color,
-                    }}
+                        )}
+                      </div>
+                    </Link>
+                    <PosterSaveButton
+                      title={rec.title}
+                      saved={Boolean(inList)}
+                      saving={isBusy}
+                      onClick={() => void toggleWatchlist(rec)}
+                    />
+                  </motion.article>
+                );
+              })}
+            </motion.div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="max-w-md border border-[var(--surface-border)] bg-[var(--surface-1)] p-8 text-center">
+                <div
+                  className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
+                  style={{
+                    backgroundColor: `${selectedMood.color}22`,
+                    color: selectedMood.color,
+                  }}
+                >
+                  <Sparkles className="h-8 w-8" />
+                </div>
+                <h3 className="mb-2 text-xl font-bold text-[var(--ink)]">
+                  No matches found
+                </h3>
+                <p className="mb-6 text-sm leading-6 text-[var(--ink-muted)]">
+                  We could not build a confident{" "}
+                  {selectedMood.name.toLowerCase()} set from the current
+                  filters. Refresh your picks or choose another mood.
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+                  <button
+                    onClick={handleRefresh}
+                    className="inline-flex items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-black text-white transition-colors"
+                    style={{ backgroundColor: selectedMood.color }}
                   >
-                    <Sparkles className="h-8 w-8" />
-                  </div>
-                  <h3 className="mb-2 text-xl font-bold text-[var(--ink)]">
-                    No matches found
-                  </h3>
-                  <p className="mb-6 text-sm leading-6 text-[var(--ink-muted)]">
-                    We could not build a confident{" "}
-                    {selectedMood.name.toLowerCase()} set from the current
-                    filters. Refresh your picks or choose another mood.
-                  </p>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-                    <button
-                      onClick={handleRefresh}
-                      className="inline-flex items-center justify-center gap-2 rounded-md px-5 py-3 text-sm font-black text-white transition-colors"
-                      style={{ backgroundColor: selectedMood.color }}
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                      Refresh Picks
-                    </button>
-                    <button
-                      onClick={() => setSelectedMood(null)}
-                      className="rounded-md border border-[var(--surface-border)] px-5 py-3 text-sm font-bold text-white transition-colors hover:border-[var(--brand-coral)]"
-                    >
-                      Change Mood
-                    </button>
-                  </div>
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh Picks
+                  </button>
                 </div>
               </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          )}
+        </motion.div>
+      )}
     </section>
   );
 }
