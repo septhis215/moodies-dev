@@ -4,6 +4,8 @@ import type { CelebrityHub } from "@/types/celebrityNews";
 import useCelebrityResource from "./useCelebrityResource";
 import CelebrityPersonCard from "./CelebrityPersonCard";
 
+const peopleLayout = "mobile-native-scroll grid auto-cols-[44%] grid-flow-col gap-4 overflow-x-auto snap-x snap-proximity pb-2 sm:auto-cols-[28%] lg:grid-flow-row lg:grid-cols-6 lg:overflow-visible lg:pb-0";
+
 export default function CelebrityTrending() {
   const { data, error, loading, retry } =
     useCelebrityResource<CelebrityHub>("/people/hub");
@@ -13,12 +15,12 @@ export default function CelebrityTrending() {
       <div
         role="status"
         aria-label="Loading trending celebrities"
-        className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6"
+        className={peopleLayout}
       >
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
-            className="moodies-skeleton aspect-[4/5] rounded-xl motion-reduce:animate-none"
+            className="moodies-skeleton aspect-[4/5] snap-start rounded-xl motion-reduce:animate-none"
           />
         ))}
       </div>
@@ -46,13 +48,14 @@ export default function CelebrityTrending() {
           Showing the last available TMDB snapshot.
         </p>
       )}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-4 lg:grid-cols-6">
+      <div className={peopleLayout}>
         {people.slice(0, 12).map((person) => (
-          <CelebrityPersonCard
-            key={person.id}
-            person={person}
-            subtitle={person.trending_title || person.known_for_department}
-          />
+          <div key={person.id} className="min-w-0 snap-start p-1">
+            <CelebrityPersonCard
+              person={person}
+              subtitle={person.trending_title || person.known_for_department}
+            />
+          </div>
         ))}
       </div>
     </>

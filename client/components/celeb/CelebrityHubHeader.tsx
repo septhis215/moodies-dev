@@ -13,25 +13,15 @@ export default function CelebrityHubHeader({
   active,
   title,
   description,
-  hero = false,
 }: {
   active: string;
   title: string;
   description: string;
-  hero?: boolean;
 }) {
   return (
     <div className="ui-shell pt-8 lg:pt-24">
-      <div className="mb-6 flex items-end justify-between gap-6 sm:mb-7">
-        <SectionHeader as="h1" title={title} description={hero ? undefined : description} />
-
-        {hero && (
-          <p className="hidden max-w-xs text-sm leading-6 text-[var(--ink-muted)] md:block">
-            {description}
-          </p>
-        )}
-      </div>
-      <div className="flex items-center justify-between gap-4 border-b border-[var(--surface-border)] pb-5">
+      <SectionHeader as="h1" title={title} description={description} className="mb-4 sm:mb-5" />
+      <div className="flex flex-wrap items-center justify-between gap-x-4">
         <nav className={styles.nav} aria-label="Celebrity hub">
           {sections.map((section) => (
             <Link
@@ -47,9 +37,10 @@ export default function CelebrityHubHeader({
           <Link
             href="/celeb/explore"
             aria-label="Search celebrities"
-            className="hidden h-11 w-11 shrink-0 place-items-center rounded-full border border-[var(--surface-border)] text-[var(--ink-muted)] hover:text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)] sm:grid"
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-sm text-sm font-semibold text-[var(--ink-muted)] underline-offset-4 hover:text-[var(--brand-coral-strong)] hover:underline focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
           >
             <Search className="h-5 w-5" aria-hidden="true" />
+            <span className="hidden sm:inline">Find people</span>
           </Link>
         )}
       </div>

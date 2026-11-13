@@ -58,7 +58,7 @@ export default function CelebrityVideoHero({
           select(index + (point.clientX < start.x ? 1 : -1));
       }}
     >
-      <div className="relative">
+      <div className={styles.heroFeature}>
         <CelebrityVideoPlayer
           key={video.id}
           video={video}
@@ -69,52 +69,52 @@ export default function CelebrityVideoHero({
             if (index < items.length - 1) select(index + 1);
           }}
         />
-      </div>
-      <div className={styles.heroInfo}>
-        <div className="min-w-0 max-w-3xl">
-          <p className="mb-2 text-xs font-semibold text-[var(--brand-coral-strong)]">
-            {video.person?.name || video.content?.title || "In the frame"}
-          </p>
-          <h2 className="line-clamp-2 text-3xl font-bold leading-tight sm:text-4xl">
-            {video.title}
-          </h2>
-          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs leading-5 text-[var(--ink-muted)]">
-            <span>{video.channel}</span>
-            {video.content && (
-              <Link
-                className="inline-flex min-h-9 items-center gap-1 font-semibold text-[var(--brand-coral-strong)] hover:underline"
-                href={`/${video.content.mediaType === "tv" ? "tv" : "movies"}/${video.content.id}`}
+        <div className={styles.heroInfo}>
+          <div className="min-w-0 max-w-3xl">
+            <p className="mb-2 text-xs font-semibold text-[var(--brand-coral-strong)]">
+              {video.person?.name || video.channel}
+            </p>
+            <h2 className="line-clamp-2 text-3xl font-bold leading-tight sm:text-4xl">
+              {video.title}
+            </h2>
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs leading-5 text-[var(--ink-muted)]">
+              {video.person && <span>{video.channel}</span>}
+              {video.content && (
+                <Link
+                  className="inline-flex min-h-9 items-center gap-1 font-semibold text-[var(--brand-coral-strong)] hover:underline"
+                  href={`/${video.content.mediaType === "tv" ? "tv" : "movies"}/${video.content.id}`}
+                >
+                  {video.content.title}
+                  <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </Link>
+              )}
+            </div>
+          </div>
+          {items.length > 1 && (
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="mr-1 hidden text-xs tabular-nums text-[var(--ink-muted)] sm:block">
+                {String(index + 1).padStart(2, "0")} /{" "}
+                {String(items.length).padStart(2, "0")}
+              </span>
+              <button
+                type="button"
+                className={styles.iconButton}
+                aria-label="Previous video"
+                onClick={() => select(index - 1)}
               >
-                {video.content.title}
-                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </Link>
-            )}
-          </div>
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className={styles.iconButton}
+                aria-label="Next video"
+                onClick={() => select(index + 1)}
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+          )}
         </div>
-        {items.length > 1 && (
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="mr-1 hidden text-xs tabular-nums text-[var(--ink-muted)] sm:block">
-              {String(index + 1).padStart(2, "0")} /{" "}
-              {String(items.length).padStart(2, "0")}
-            </span>
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label="Previous video"
-              onClick={() => select(index - 1)}
-            >
-              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className={styles.iconButton}
-              aria-label="Next video"
-              onClick={() => select(index + 1)}
-            >
-              <ChevronRight className="h-5 w-5" aria-hidden="true" />
-            </button>
-          </div>
-        )}
       </div>
       {items.length > 1 && (
         <div

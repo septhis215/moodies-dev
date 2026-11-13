@@ -166,7 +166,7 @@ export default function CelebrityNewsFeed({
           </button>
         </div>
       ) : articles.length ? (
-        <div className={styles.newsGrid}>
+        <div className={compact && !personId ? styles.newsHighlights : styles.newsGrid}>
           {articles.map((article, index) => (
             <article key={article.id} className={styles.story}>
               <a

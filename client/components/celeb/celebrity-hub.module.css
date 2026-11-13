@@ -1,31 +1,21 @@
 .nav {
   display: flex;
-  gap: 0.25rem;
-  padding: 0.375rem;
-  width: max-content;
-  max-width: 100%;
-  border: 1px solid var(--surface-border);
-  border-radius: 999px;
-  background: var(--surface-1);
+  flex-wrap: wrap;
+  gap: clamp(0.65rem, 2.5vw, 1.75rem);
 }
 .nav a {
   min-height: 44px;
-  padding: 0.75rem 1.25rem;
-  border-radius: 999px;
+  padding-block: 0.75rem;
   color: var(--ink-muted);
   font-size: 0.875rem;
   font-weight: 600;
-  transition:
-    background-color 160ms,
-    color 160ms;
+  transition: color 160ms;
 }
-.nav a:hover {
-  color: var(--ink);
-  background: var(--surface-2);
-}
+.nav a:hover,
 .nav a[aria-current="page"] {
-  color: var(--surface-0);
-  background: var(--brand-coral);
+  color: var(--brand-coral-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.3rem;
 }
 .nav a:focus-visible,
 .personCard a:focus-visible,
@@ -35,13 +25,6 @@
 }
 .personCard {
   min-width: 0;
-  border-bottom: 1px solid var(--surface-border);
-  padding-bottom: 1rem;
-  transition: border-color 160ms;
-}
-.personCard:hover,
-.personCard:focus-within {
-  border-color: var(--brand-coral);
 }
 .personOverlay {
   position: absolute;
@@ -81,10 +64,32 @@
 .touchInfo {
   display: none;
 }
-.newsGrid {
+.newsGrid,
+.newsHighlights {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 2rem 1.5rem;
+}
+.newsHighlights .story:first-child {
+  grid-column: 1 / -1;
+  grid-row: auto;
+}
+@media (min-width: 768px) {
+  .newsHighlights {
+    grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+  .newsHighlights .story:first-child {
+    grid-column: 1;
+    grid-row: span 2;
+  }
+  .newsHighlights:has(.story:nth-child(2):last-child) {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+  .newsHighlights .story:only-child {
+    grid-column: 1 / -1;
+    max-width: 48rem;
+  }
 }
 .story {
   min-width: 0;
@@ -124,10 +129,18 @@
   border-radius: 1rem;
   background: var(--surface-1);
 }
+.heroFeature {
+  display: grid;
+}
+@media (min-width: 1024px) {
+  .heroFeature {
+    grid-template-columns: minmax(0, 2.15fr) minmax(0, 1fr);
+    align-items: center;
+  }
+}
 .heroStage {
   position: relative;
-  aspect-ratio: 21 / 10;
-  min-height: 300px;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: black;
 }
@@ -140,17 +153,12 @@
   position: absolute;
   inset: 0;
 }
-.heroShade {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(0deg, rgb(0 0 0 / 0.88), transparent 50%);
-}
 .heroInfo {
   position: relative;
   padding: 1.5rem 2rem;
   display: flex;
-  align-items: end;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
   color: var(--ink);
@@ -170,10 +178,10 @@
   border-radius: 999px;
   background: rgb(0 0 0 / 0.55);
   color: white;
-  transition: background-color 160ms;
+  transition: color 160ms;
 }
 .iconButton:hover {
-  background: rgb(255 255 255 / 0.2);
+  color: var(--brand-coral-strong);
 }
 .iconButton:focus-visible {
   outline: 2px solid var(--brand-coral-strong);
@@ -193,11 +201,12 @@
   scroll-snap-align: start;
   border-radius: 0.5rem;
   padding: 0.25rem;
-  border: 1px solid transparent;
 }
-.videoStrip button[aria-pressed="true"] {
-  border-color: var(--brand-coral);
-  background: var(--surface-2);
+.videoStrip button:hover p,
+.videoStrip button[aria-pressed="true"] p {
+  color: var(--brand-coral-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
 }
 .videoStrip button:focus-visible {
   outline: 2px solid var(--brand-coral-strong);
@@ -231,16 +240,8 @@
   }
 }
 @media (max-width: 767px) {
-  .nav {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-  .nav a {
-    padding-inline: 0.5rem;
-    text-align: center;
-  }
-  .newsGrid {
+  .newsGrid,
+  .newsHighlights {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1.5rem 1rem;
   }
@@ -255,10 +256,6 @@
     font-size: 1rem;
     line-height: 1.35;
   }
-  .heroStage {
-    aspect-ratio: 16 / 9;
-    min-height: 0;
-  }
   .heroInfo {
     position: static;
     padding: 1.25rem;
@@ -268,9 +265,6 @@
   }
   .heroInfo h2 {
     font-size: 1.75rem;
-  }
-  .heroShade {
-    display: none;
   }
   .heroPlayer {
     border-radius: 0.75rem;
