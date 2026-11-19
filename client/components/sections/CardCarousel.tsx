@@ -18,6 +18,7 @@ import { RatingBadge } from "@/components/ui/rating-badge";
 import { useRouter } from "next/navigation";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
+import styles from "./CardCarousel.module.css";
 import {
   Tooltip,
   TooltipContent,
@@ -219,7 +220,7 @@ export default function CardCarousel<T extends MediaItem>({
               return (
                 <article
                   key={`${type}-${item.id}`}
-                  className="group w-[43%] min-w-0 shrink-0 snap-start sm:w-[31vw] sm:min-w-[204px] sm:max-w-[220px] md:w-[25vw] lg:w-[20vw] xl:max-w-[228px]"
+                  className={`${styles.card} group w-[43%] min-w-0 shrink-0 snap-start sm:w-[31vw] sm:min-w-[204px] sm:max-w-[220px] md:w-[25vw] lg:w-[20vw] xl:max-w-[228px]`}
                 >
                   <div className="ui-media-artwork ui-poster">
                     <Link
@@ -235,14 +236,10 @@ export default function CardCarousel<T extends MediaItem>({
                         className="object-cover"
                       />
                     </Link>
-                    <div className="pointer-events-none absolute inset-0 z-10 hidden grid-rows-[3rem_minmax(0,1fr)] bg-[#0b0909]/96 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 sm:grid">
-                      <div
-                        className="border-b border-white/10"
-                        aria-hidden="true"
-                      />
-                      <div className="flex min-h-0 flex-col gap-2 overflow-y-auto px-3 py-2 [&>*]:shrink-0">
+                    <div className={styles.details}>
+                      <div className="flex flex-col gap-1.5 px-3 py-2 [&>*]:shrink-0">
                         <Link href={href}>
-                          <h4 className="line-clamp-2 text-[17px] font-bold leading-[1.15] wrap-anywhere text-[var(--ink)] transition-colors hover:text-[var(--brand-coral-strong)]">
+                          <h4 className="line-clamp-1 text-sm font-semibold leading-5 wrap-anywhere text-[var(--ink)] transition-colors hover:text-[var(--brand-coral-strong)]">
                             {titleText}
                           </h4>
                         </Link>
@@ -269,9 +266,9 @@ export default function CardCarousel<T extends MediaItem>({
                         </div>
 
                         {item.genres?.length ? (
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="flex gap-1.5 overflow-hidden">
                             {item.genres.slice(0, 3).map((genre) => (
-                              <span key={genre} className="ui-label px-1.5 py-0 text-[10px] leading-4">
+                              <span key={genre} title={genre} className="ui-label block min-w-0 truncate px-1.5 py-0 text-[10px] leading-4">
                                 {genre}
                               </span>
                             ))}
@@ -293,13 +290,13 @@ export default function CardCarousel<T extends MediaItem>({
                         </Link>
 
                         {item.recommendations?.length ? (
-                          <div className="flex grow flex-col gap-2 border-t border-white/12 pt-2">
+                          <div className="flex flex-col gap-2 border-t border-white/12 pt-2">
                             <p className="flex items-center gap-1.5 text-xs font-semibold text-white/85">
                               <Heart className="h-3 w-3 text-[var(--brand-coral-strong)]" />
                               You might also like
                             </p>
                             <TooltipProvider delayDuration={180}>
-                              <div className="grid grow grid-cols-3 gap-2">
+                              <div className="grid grid-cols-3 gap-2">
                                 {item.recommendations.slice(0, 3).map((rec) => {
                                   const recType = mediaType(rec);
                                   const recHref = `/${recType === "tv" ? "tv" : "movies"}/${rec.id}`;
@@ -311,7 +308,7 @@ export default function CardCarousel<T extends MediaItem>({
                                       <TooltipTrigger asChild>
                                         <Link
                                           href={recHref}
-                                          className="relative min-h-12 overflow-hidden rounded-sm border border-white/15 bg-[var(--surface-2)] transition-colors hover:border-[var(--brand-coral)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-coral)]"
+                                          className="relative aspect-[2/3] overflow-hidden rounded-sm border border-white/15 bg-[var(--surface-2)] transition-colors hover:border-[var(--brand-coral)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-coral)]"
                                           aria-label={`View ${itemTitle(rec)}`}
                                         >
                                           <Image
