@@ -1,3 +1,28 @@
+.scoreBrand { display: none; }
+
+@media (width < 640px) {
+  .ratings {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    width: 100%;
+    max-width: 24rem;
+    margin-inline: auto;
+    padding-block: 1.25rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 1rem;
+    background: var(--surface-1);
+    text-align: center;
+  }
+
+  .scoreCard { min-width: 0; padding-inline: 0.75rem; }
+  .scoreCard + .scoreCard { border-left: 1px solid var(--surface-border); }
+  .scoreBrand { display: flex; height: 2.5rem; align-items: center; justify-content: center; }
+  .scoreLogo { width: 3.5rem; height: 2.5rem; object-fit: contain; }
+  /* The shared Moodies asset includes generous transparent padding. */
+  .scoreCard:first-child .scoreLogo { width: 6rem; height: 6rem; max-width: none; }
+}
+
 .actions > :global(.ui-primary-action),
 .actions > :global(.ui-secondary-action) {
   border: 0;

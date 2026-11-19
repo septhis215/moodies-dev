@@ -1,3 +1,9 @@
+export type MoodReview = {
+  id: string;
+  content: string;
+  user?: { name?: string | null; username?: string };
+};
+
 export type TrailerData = {
   iso_639_1?: string;
   iso_3166_1?: string;
