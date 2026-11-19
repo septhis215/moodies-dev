@@ -308,6 +308,18 @@ review reactions + replies + reactions to replies (one point each). Only reviews
 activity qualify; ties use newest creation date, then ID. Distinct featured previews link
 to their full review rows in one shared feed container. Popular uses the same activity
 formula, while Latest and Highest retain their own order in the full feed.
+The response also includes `moodReview` (or `null`): the most popular nonempty
+written review matching `topMoods[0]`, ranked across the whole title using the same
+activity formula, recency, and ID tie-breakers. It uses the same public-review
+filter and sanitization as the feed. The mobile detail hero shows its excerpt as
+an attributed quote below a static mood image and percentage; the quote links to
+the full review with `?highlight=<id>`. Review pages include this record even when
+it falls outside their first page. Desktop retains the interactive mood poster.
+Until the hosted API returns `moodReview`, the movie/TV detail and review server
+pages use `lib/moodReview.server.ts` to select it from existing public reviews,
+loading remaining pages when necessary. An explicit API value, including `null`,
+is authoritative; a later-page failure leaves the existing feed visible without
+claiming that a partial result is the most popular matching review.
 
 > **Caution:** `GET /search/discover` and `GET /people/discover` are backend endpoints
 > that survived the removal of the `/discover` *frontend route*. Do not delete them while

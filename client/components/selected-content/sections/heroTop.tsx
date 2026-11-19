@@ -26,6 +26,7 @@ import { tmdbImage } from "@/lib/tmdb";
 import { loadYouTubeApi, YT_PLAYER_STATE, type YouTubePlayer } from "@/lib/youtube-player";
 import type {
   MovieDetailsData,
+  MoodReview,
   TrailerData,
   TvDetailsData,
 } from "@/components/selected-content/types";
@@ -50,6 +51,7 @@ type HeroContentCardProps = {
   data?: MovieDetailsData | TvDetailsData;
   topMoods?: Array<{ emoji: string; count: number }>;
   totalMoodVotes?: number;
+  moodReview?: MoodReview | null;
   reviewStats?: { totalRatings: number; averageRating: number };
   trailers?: TrailerData[];
 };
@@ -79,10 +81,12 @@ function findDirectorOrCreator(
 
 function ScoreCard({
   label,
+  logo,
   score,
   detail,
 }: {
   label: string;
+  logo: string;
   score?: number | null;
   detail: string;
 }) {
@@ -90,8 +94,11 @@ function ScoreCard({
   const displayScore = hasScore ? score.toFixed(1) : "—";
 
   return (
-    <div>
-      <p className="text-xs font-semibold text-[var(--ink-muted)]">
+    <div className={styles.scoreCard}>
+      <div className={styles.scoreBrand}>
+        <Image src={logo} alt="" width={64} height={40} className={styles.scoreLogo} />
+      </div>
+      <p className="sr-only text-xs font-semibold text-[var(--ink-muted)] sm:not-sr-only">
         {label}
       </p>
       <p
@@ -388,6 +395,7 @@ export function HeroContentCard({
   data,
   topMoods = [],
   totalMoodVotes,
+  moodReview,
   reviewStats,
   trailers = [],
 }: HeroContentCardProps) {
@@ -433,6 +441,10 @@ export function HeroContentCard({
 
   const contentType = data?.info.content_type === "tv" ? "tv" : "movie";
   const tvInfo = contentType === "tv" && data ? (data as TvDetailsData).info : null;
+  const creditedPerson = [
+    ...(tvInfo?.created_by ?? []),
+    ...(data?.credits.crew.filter((person) => person.job === "Director") ?? []),
+  ].find((person) => person.name === mappedContent.director);
   const contentId = data?.info.id ?? content?.id ?? null;
   const reviewHref = contentId
     ? `/${contentType === "tv" ? "tv" : "movies"}/${contentId}/reviews`
@@ -532,12 +544,12 @@ export function HeroContentCard({
       </div>
 
       <div className="ui-shell relative pt-[calc(2rem+var(--mobile-nav-safe))] pb-8 sm:pt-[calc(2.5rem+var(--mobile-nav-safe))] sm:pb-10 lg:pt-[calc(3rem+6rem)] lg:pb-12">
-        <div className="grid grid-cols-[calc(min(6rem,25%)_+_4.5rem)_minmax(0,1fr)] items-start gap-x-5 gap-y-6 sm:grid-cols-[calc(min(8rem,25%)_+_4.5rem)_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-x-16 lg:gap-y-8 xl:grid-cols-[minmax(0,1fr)_18rem]">
-          <div className="col-start-1 row-start-1 lg:col-start-2 lg:row-span-2">
-            <AudienceMoodPoster poster={mappedContent.poster} title={mappedContent.title} moods={topMoods} totalVotes={totalMoodVotes} />
+        <div className="grid grid-cols-1 items-start gap-x-5 gap-y-6 sm:grid-cols-[calc(min(8rem,25%)_+_4.5rem)_minmax(0,1fr)] sm:gap-x-6 lg:grid-cols-[minmax(0,1fr)_16rem] lg:gap-x-16 lg:gap-y-8 xl:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="col-start-1 row-start-1 min-w-0 lg:col-start-2 lg:row-span-2">
+            <AudienceMoodPoster poster={mappedContent.poster} title={mappedContent.title} moods={topMoods} totalVotes={totalMoodVotes} review={moodReview} reviewHref={reviewHref} />
           </div>
 
-          <div className="col-start-2 row-start-1 min-w-0 self-center lg:col-start-1 lg:self-start">
+          <div className="col-start-1 row-start-2 min-w-0 self-center sm:col-start-2 sm:row-start-1 lg:col-start-1 lg:self-start">
             <p className="ui-kicker">{contentType === "tv" ? "Series" : "Film"}</p>
 
             <h1
@@ -563,7 +575,7 @@ export function HeroContentCard({
             </div>
           </div>
 
-          <div className="col-span-2 min-w-0 lg:col-span-1 lg:col-start-1 lg:row-start-2">
+          <div className="min-w-0 sm:col-span-2 lg:col-span-1 lg:col-start-1 lg:row-start-2">
             {mappedContent.genres.length > 0 || mappedContent.ageRating ? (
               <div className="flex flex-wrap items-start gap-2">
                 {mappedContent.genres.length > 0 ? (
@@ -586,18 +598,26 @@ export function HeroContentCard({
             {mappedContent.director && mappedContent.director !== "Unknown" ? (
               <p className="mt-3 text-sm leading-6 text-[var(--ink-muted)]">
                 {contentType === "tv" ? "Created by" : "Directed by"}{" "}
-                <span className="font-semibold text-[var(--ink)]">{mappedContent.director}</span>
+                {creditedPerson?.id ? (
+                  <Link href={`/celeb/${creditedPerson.id}`} prefetch={false} className="rounded-sm font-semibold text-[var(--ink)] underline decoration-[var(--surface-border)] underline-offset-4 hover:text-brand-coral-strong focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-coral-strong">
+                    {mappedContent.director}
+                  </Link>
+                ) : (
+                  <span className="font-semibold text-[var(--ink)]">{mappedContent.director}</span>
+                )}
               </p>
             ) : null}
 
-            <div className="mt-6 flex flex-wrap gap-x-8 gap-y-4" aria-label="Audience ratings">
+            <div className={`${styles.ratings} mt-6 flex flex-wrap gap-x-8 gap-y-4`} aria-label="Audience ratings">
               <ScoreCard
                 label="Moodies"
+                logo="/images/moodies-transparent.png"
                 score={hasReviewScore ? reviewStats?.averageRating : null}
                 detail={hasReviewScore ? `${reviewStats?.totalRatings} ratings` : "No ratings yet"}
               />
               <ScoreCard
-                label="TMDb"
+                label="TMDB"
+                logo="/images/tmdb-logo.svg"
                 score={data?.info.vote_average}
                 detail={`${fmtCount(data?.info.vote_count ?? 0)} votes`}
               />
@@ -640,7 +660,7 @@ export function HeroContentCard({
             </div>
           </div>
 
-          <div className="col-span-2 mt-2 min-w-0 lg:mt-4">
+          <div className="mt-2 min-w-0 sm:col-span-2 lg:mt-4">
             <TrailerPlayer
               trailers={trailerOptions}
               title={mappedContent.title}
