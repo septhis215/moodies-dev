@@ -25,7 +25,7 @@ import type { SnapshotFormat } from './dto/create-snapshot.dto';
 
 // Short cache for the public discovery carousels (critics corner / community
 // picks). They previously hit the DB — plus per-item TMDB fallbacks — on every
-// request; a 2-minute cache collapses that to one build per window.
+// request; a 2-minute cache collapses that to one build per window. test
 const CRITICS_CORNER_TTL = 120; // seconds
 const SNAPSHOT_SIZE = 1080;
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
