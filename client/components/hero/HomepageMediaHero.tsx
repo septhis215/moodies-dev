@@ -2,18 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Bookmark, BookmarkCheck, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { All } from "@/types/all";
 import { tmdbImage } from "@/lib/tmdb";
-import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import RatingBadge from "@/components/ui/rating-badge";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import useCarousel from "@/hooks/useCarousel";
 import { useHeroSwipe } from "@/hooks/useHeroSwipe";
 import { FeaturedPosterWave } from "./FeaturedPosterWave";
 import { HeroEdgeNavigation } from "./HeroEdgeNavigation";
+import { HeroBackdrop } from "./HeroBackdrop";
 
 type HomepageMediaHeroProps = {
   items: All[];
@@ -47,7 +47,7 @@ export function HomepageMediaHero({
   const reduceMotion = useReducedMotion();
   const { add, remove, isInWatchlist, ready } = useWatchlist();
   const [watchlistLoading, setWatchlistLoading] = useState(false);
-  const heroItems = useMemo(() => items.slice(0, 8), [items]);
+  const heroItems = useMemo(() => items.slice(0, 25), [items]);
   const {
     index: activeIndex,
     setIndex: setActiveIndex,
@@ -110,9 +110,7 @@ export function HomepageMediaHero({
 
   const selectRelative = (offset: number) => {
     if (!heroItems.length) return;
-    setActiveIndex(
-      (activeIndex + offset + heroItems.length) % heroItems.length,
-    );
+    setActiveIndex(current => (current + offset + heroItems.length) % heroItems.length);
   };
 
   return (
@@ -125,39 +123,12 @@ export function HomepageMediaHero({
       aria-labelledby={`${mediaType}-hub-heading`}
     >
       <div {...swipeHandlers} className="relative">
-        <AnimatePresence initial={false} mode="sync">
-          <motion.div
-            key={`backdrop-${featured.id}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.3, ease: "easeOut" }}
-            className="absolute inset-0"
-            style={{ touchAction: "pan-y pinch-zoom" }}
-          >
-            <picture>
-              <source
-                media="(width < 640px)"
-                srcSet={
-                  tmdbImage(featured.poster_path, "posterLarge") ??
-                  "/placeholder-poster.svg"
-                }
-              />
-              <Image
-                src={getBackdropUrl(
-                  featured.backdrop_path || featured.poster_path,
-                )}
-                alt=""
-                fill
-                loading="eager"
-                fetchPriority={activeIndex === 0 ? "high" : "auto"}
-                sizes="100vw"
-                className="object-cover object-[center_25%] sm:object-center"
-              />
-            </picture>
-            <div className="absolute inset-0 hidden bg-[radial-gradient(ellipse_at_0%_75%,rgba(8,7,7,0.9),rgba(8,7,7,0.54)_36%,transparent_72%)] sm:block" />
-          </motion.div>
-        </AnimatePresence>
+        <HeroBackdrop
+          slideKey={`${mediaType}-${featured.id}`}
+          src={getBackdropUrl(featured.backdrop_path || featured.poster_path)}
+          mobileSrc={tmdbImage(featured.poster_path, "posterLarge") ?? "/placeholder-poster.svg"}
+          priority={activeIndex === 0}
+        />
         <div aria-hidden="true" className="homepage-hero-fade pointer-events-none absolute inset-0 z-[2]" />
 
         {heroItems.length > 1 && <HeroEdgeNavigation onNavigate={selectRelative} />}
@@ -167,10 +138,10 @@ export function HomepageMediaHero({
           <div className="mt-auto grid items-end gap-6 pt-28 sm:pt-20 lg:grid-cols-[minmax(0,1fr)_auto]">
             <motion.div
               key={`copy-${featured.id}`}
-              initial={{ opacity: 0, y: reduceMotion ? 0 : 14 }}
+              initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                duration: reduceMotion ? 0 : 0.18,
+                duration: reduceMotion ? 0 : 0.32,
                 ease: "easeOut",
               }}
               className="min-w-0"

@@ -122,12 +122,14 @@ a[aria-current]:not([aria-current="false"]) .ui-nav-label::after {
 }
 
 .homepage-hero-fade {
-  background: linear-gradient(180deg, rgb(11 9 9 / 55%), transparent 30%, rgb(11 9 9 / 88%) 72%, var(--surface-0));
+  background: linear-gradient(180deg, rgb(11 9 9 / 38%), transparent 28%, rgb(11 9 9 / 60%) 72%, var(--surface-0));
 }
 
 @media (min-width: 640px) {
   .homepage-hero-fade {
-    background: linear-gradient(180deg, rgb(11 9 9 / 65%), transparent 32%, transparent 48%, rgb(11 9 9 / 82%) 85%, var(--surface-0));
+    background:
+      linear-gradient(180deg, rgb(11 9 9 / 80%) 0%, rgb(11 9 9 / 32%) 10%, transparent 26%, transparent 62%, rgb(11 9 9 / 48%) 88%, var(--surface-0)),
+      radial-gradient(ellipse at 8% 90%, rgb(11 9 9 / 82%), rgb(11 9 9 / 42%) 32%, transparent 66%);
   }
 }
 

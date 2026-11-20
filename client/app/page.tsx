@@ -13,7 +13,7 @@ import { HeroSkeleton, LoadingRegion } from "@/components/loading/PageSkeleton";
 async function fetchFeatured() {
   const base = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
   try {
-    const res = await fetch(`${base}/all/featured`, {
+    const res = await fetch(`${base}/all/featured?limit=25`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return [];

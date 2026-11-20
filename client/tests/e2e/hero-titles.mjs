@@ -42,7 +42,7 @@ let browser;
 try {
   const result = await build({
     stdin: {
-      contents: `import React from 'react';import { createRoot } from 'react-dom/client';import LandingHero from './client/components/hero/heroCarousel';import { HomepageMediaHero } from './client/components/hero/HomepageMediaHero';const title=new URLSearchParams(location.search).get('title');const item={id:123,title,name:title,type:'movie',overview:'A story of friendship and finding a place to call home.',poster_path:new URLSearchParams(location.search).has('artwork')?'/hero-poster.jpg':null,backdrop_path:new URLSearchParams(location.search).has('artwork')?'/hero-backdrop.jpg':null,genres:['Drama'],vote_average:8.2,release_date:'2025-01-01',recommendations:[]};createRoot(document.getElementById('root')).render(<><div id="landing"><LandingHero all={location.search.includes('carousel=1') ? [item, {...item, id:124, title:'Second poster'}, {...item, id:125, title:'Third poster'}, {...item, id:126, title:'Fourth poster'}] : [item]} /></div>{['movie','tv'].map(type=><div id={type} key={type}><HomepageMediaHero items={[{...item,type}]} mediaType={type} icon={null} eyebrow="Discover" title={type==='tv'?'TV shows':'Movies'} description="Find your next watch" spotlightLabel="Featured" mediaLabel={type==='tv'?'Series':'Movie'} /></div>)}</>);`,
+      contents: `import React from 'react';import { createRoot } from 'react-dom/client';import LandingHero from './client/components/hero/heroCarousel';import { HomepageMediaHero } from './client/components/hero/HomepageMediaHero';const title=new URLSearchParams(location.search).get('title');const item={id:123,title,name:title,type:'movie',overview:'A story of friendship and finding a place to call home.',poster_path:new URLSearchParams(location.search).has('artwork')?'/hero-poster.jpg':null,backdrop_path:new URLSearchParams(location.search).has('artwork')?'/hero-backdrop.jpg':null,genres:['Drama'],vote_average:8.2,release_date:'2025-01-01',recommendations:[]};createRoot(document.getElementById('root')).render(<><div id="landing"><LandingHero all={location.search.includes('carousel=1') ? [item, {...item, id:124, title:'Second poster',poster_path:'/second-poster.jpg',backdrop_path:'/second-backdrop.jpg'}, {...item, id:125, title:'Third poster'}, {...item, id:126, title:'Fourth poster'}] : [item]} /></div>{['movie','tv'].map(type=><div id={type} key={type}><HomepageMediaHero items={location.search.includes('transitions=1')?[{...item,type},{...item,type,id:124,title:'Second poster',name:'Second poster',poster_path:'/second-poster.jpg',backdrop_path:'/second-backdrop.jpg'}]:[{...item,type}]} mediaType={type} icon={null} eyebrow="Discover" title={type==='tv'?'TV shows':'Movies'} description="Find your next watch" spotlightLabel="Featured" mediaLabel={type==='tv'?'Series':'Movie'} /></div>)}</>);`,
       resolveDir: root,
       loader: "tsx",
     },
@@ -265,6 +265,55 @@ try {
       "Hero title limits passed for landing, movies and TV at " + width + "px.",
     );
   }
+  // Delayed artwork must never expose an empty background during navigation.
+  for (const width of [390, 1440]) {
+    for (const id of ["landing", "movie", "tv"]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      let release;
+      const pending = new Promise(resolve => { release = resolve; });
+      const delayArtwork = async route => {
+        await pending;
+        await route.fulfill({ contentType: "image/svg+xml", body: fixtureImage });
+      };
+      await page.route("**/second-*.jpg", delayArtwork);
+      await page.goto(base + "?title=First%20poster&artwork=1&carousel=1&transitions=1", { waitUntil: "domcontentloaded" });
+      const hero = page.locator("#" + id);
+      const background = hero.locator("[data-hero-backdrop]");
+      await background.locator("img").evaluate(image => image.decode());
+      await hero.getByRole("button", { name: "Next featured title" }).click();
+      await hero.getByRole("heading", { name: "Second poster", exact: true }).waitFor();
+      assert.equal(await background.locator(":scope > div").count(), 2);
+      assert.equal(await background.locator(":scope > div").first().evaluate(el => getComputedStyle(el).opacity), "1");
+      assert.equal(await background.locator(":scope > div").last().evaluate(el => getComputedStyle(el).opacity), "0");
+      release();
+      await page.waitForFunction(id => document.querySelector("#" + id + " [data-hero-backdrop]")?.children.length === 1, id);
+      assert.match(await background.locator("img").evaluate(img => img.currentSrc), /second-(poster|backdrop)\.jpg$/);
+      await hero.getByRole("button", { name: "Previous featured title" }).click();
+      await hero.getByRole("button", { name: "Next featured title" }).click();
+      await hero.getByRole("button", { name: "Previous featured title" }).click();
+      await page.waitForFunction(id => document.querySelector("#" + id + " [data-hero-backdrop]")?.children.length === 1, id);
+      assert.match(await background.locator("img").evaluate(img => img.currentSrc), /hero-(poster|backdrop)\.jpg$/);
+      await page.unroute("**/second-*.jpg", delayArtwork);
+    }
+  }
+  console.log("Hero load-aware crossfades and interrupted navigation passed on mobile and desktop.");
+  const failedArtwork = route => route.abort();
+  await page.route("**/second-*.jpg", failedArtwork);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(base + "?title=First%20poster&artwork=1&carousel=1&transitions=1");
+  for (const id of ["landing", "movie", "tv"]) {
+    const hero = page.locator("#" + id);
+    await hero.getByRole("button", { name: "Next featured title" }).click();
+    await page.waitForFunction(id => {
+      const background = document.querySelector("#" + id + " [data-hero-backdrop]");
+      return background?.children.length === 1 && background.querySelector("img")?.currentSrc.endsWith("/placeholder-backdrop.svg");
+    }, id);
+    assert.equal(await hero.locator("[data-hero-backdrop] > div").evaluate(el => getComputedStyle(el).opacity), "1");
+  }
+  await page.unroute("**/second-*.jpg", failedArtwork);
+  console.log("Failed hero artwork falls back without fading to black under reduced motion.");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 1440, height: 720 });
   await page.goto(base + "?title=First%20poster&artwork=1&carousel=1");

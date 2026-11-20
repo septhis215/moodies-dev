@@ -2,8 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { TmdbImage as Image } from "@/components/ui/TmdbImage";
+import { motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
   Bookmark,
@@ -19,6 +18,7 @@ import { useHeroSwipe } from "@/hooks/useHeroSwipe";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { FeaturedPosterWave } from "./FeaturedPosterWave";
 import { HeroEdgeNavigation } from "./HeroEdgeNavigation";
+import { HeroBackdrop } from "./HeroBackdrop";
 import HeroPreview from "./HeroPreview";
 import RatingBadge from "@/components/ui/rating-badge";
 
@@ -191,33 +191,13 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
       aria-label="Featured Moodies titles"
       {...swipeHandlers}
     >
-      <AnimatePresence initial={false} mode="sync">
-        <motion.div
-          key={slideKey}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{
-            duration: reduceMotion ? 0 : 0.3,
-          }}
-          className="absolute inset-0"
-        >
-          <picture>
-            <source media="(width < 640px)" srcSet={posterSrc} />
-            {wideBackdropSrc && <source media="(width >= 1600px)" srcSet={wideBackdropSrc} />}
-            <Image
-              src={backdropSrc}
-              alt=""
-              fill
-              sizes="100vw"
-              loading="eager"
-              fetchPriority={index === 0 ? "high" : "auto"}
-              aria-hidden
-              className="object-cover object-[center_25%] brightness-110 saturate-110 sm:object-center"
-            />
-          </picture>
-        </motion.div>
-      </AnimatePresence>
+      <HeroBackdrop
+        slideKey={slideKey}
+        src={backdropSrc}
+        mobileSrc={posterSrc}
+        wideSrc={wideBackdropSrc}
+        priority={index === 0}
+      />
       <HeroPreview
         key={slideKey}
         id={current.id}
@@ -228,19 +208,17 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
         onActiveChange={setPreviewActive}
       />
       <div aria-hidden="true" className="homepage-hero-fade pointer-events-none absolute inset-0 z-[2]" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-[2] hidden h-40 bg-[linear-gradient(to_bottom,rgba(8,7,7,0.88),rgba(8,7,7,0.72)_3.5rem,transparent)] lg:block" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[2] hidden bg-[radial-gradient(ellipse_at_4%_83%,rgba(8,7,7,0.96)_0%,rgba(8,7,7,0.7)_30%,transparent_70%)] sm:block" />
 
-      {all.length > 1 && <HeroEdgeNavigation onNavigate={(offset) => goToSlide(index + offset)} />}
+      {all.length > 1 && <HeroEdgeNavigation onNavigate={(offset) => setIndex(current => (current + offset + all.length) % all.length)} />}
 
       <div className="ui-shell pointer-events-none relative z-10 flex flex-col justify-end pb-5 pt-48 sm:pb-7 sm:pt-24 lg:pb-9 [&_button]:pointer-events-auto">
         <div className="grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-8">
           <motion.div
             key={slideKey}
-            initial={{ opacity: 0, y: reduceMotion ? 0 : 18 }}
+            initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{
-              duration: reduceMotion ? 0 : 0.18,
+              duration: reduceMotion ? 0 : 0.32,
               ease: "easeOut",
             }}
             className="min-w-0 max-w-[34rem] sm:max-w-2xl xl:max-w-3xl"

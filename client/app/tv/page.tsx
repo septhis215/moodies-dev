@@ -87,7 +87,7 @@ async function fetchTvList(endpoint: string): Promise<All[]> {
 }
 
 async function fetchTrendingTV() {
-  return fetchTvList("/tv/featured?limit=20");
+  return fetchTvList("/tv/featured?limit=25");
 }
 
 async function fetchPopularTV() {
