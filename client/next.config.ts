@@ -20,6 +20,9 @@ if (!apiUrl) {
 
 const nextConfig: NextConfig = {
   /* config options here */
+  experimental: {
+    agentUpgrade: "security",
+  },
   env: {
     NEXT_PUBLIC_APP_ENV: appEnv,
     NEXT_PUBLIC_API_URL: apiUrl,

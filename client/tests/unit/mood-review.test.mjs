@@ -6,9 +6,9 @@ import ts from 'typescript';
 
 const source = readFileSync(new URL('../../lib/moodReview.server.ts', import.meta.url), 'utf8');
 function load(fetch = () => { throw new Error('Unexpected fetch'); }) {
-  const module = { exports: {} };
-  vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { module, exports: module.exports, URL, fetch });
-  return module.exports.withMoodReview;
+  const testModule = { exports: {} };
+  vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, { module: testModule, exports: testModule.exports, URL, fetch });
+  return testModule.exports.withMoodReview;
 }
 const review = (id, mood = 'loved', count = 0, content = 'A memorable watch.') => ({
   id, content, moodEmojis: [mood], user: { username: 'Alex' }, createdAt: '2026-11-19', reactionCounts: [{ count }], replies: [],

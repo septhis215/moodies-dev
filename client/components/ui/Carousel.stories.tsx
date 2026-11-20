@@ -72,13 +72,13 @@ export const Navigation: Story = {
     await expect(previous).toBeEnabled();
     for (let i = 0; i < 20; i++) next.click();
     await waitFor(() => expect(next).toBeDisabled(), { timeout: 3000 });
-    expect(
+    await waitFor(() => expect(
       Math.abs(rail.scrollLeft - (rail.scrollWidth - rail.clientWidth)),
-    ).toBeLessThan(3);
+    ).toBeLessThan(3), { timeout: 3000 });
     expect(next.getBoundingClientRect().top).toBe(initialTop);
     for (let i = 0; i < 20; i++) previous.click();
     await waitFor(() => expect(previous).toBeDisabled(), { timeout: 3000 });
-    expect(rail.scrollLeft).toBeLessThan(3);
+    await waitFor(() => expect(rail.scrollLeft).toBeLessThan(3), { timeout: 3000 });
     expect(previous.getBoundingClientRect().top).toBe(initialTop);
   },
 };
@@ -97,11 +97,11 @@ export const SmallScreen: Story = {
 export const NoOverflow: Story = {
   args: { items: items.slice(0, 1) },
   play: async ({ canvas }) => {
-    await waitFor(() =>
-      expect(canvas.getByRole("button", { name: "Next cards" })).toBeDisabled(),
-    );
-    await expect(
-      canvas.getByRole("button", { name: "Previous cards" }),
-    ).toBeDisabled();
+    const card = canvas.getByRole("article");
+    await expect(card).toBeVisible();
+    const rail = card.parentElement!.parentElement!;
+    await waitFor(() => expect(rail.scrollWidth).toBeLessThanOrEqual(rail.clientWidth));
+    await expect(canvas.queryByRole("button", { name: "Next cards" })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("button", { name: "Previous cards" })).not.toBeInTheDocument();
   },
 };

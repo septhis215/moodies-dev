@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { expect, fn } from 'storybook/test';
+import { expect, fn, waitFor, within } from 'storybook/test';
 import { FilterDropdown } from './filterdropdown';
 
 const OPTIONS = [
@@ -24,9 +24,12 @@ type Story = StoryObj<typeof meta>;
 export const Closed: Story = {};
 
 export const OpensOptions: Story = {
-  play: async ({ canvas, userEvent }) => {
+  play: async ({ args, canvas, canvasElement, userEvent }) => {
     await userEvent.click(canvas.getByRole('button', { name: /all/i }));
-    await expect(canvas.getByRole('button', { name: /movies/i })).toBeInTheDocument();
+    const movies = await within(canvasElement.ownerDocument.body).findByRole('option', { name: /movies/i });
+    await waitFor(() => expect(movies).toBeVisible());
+    await userEvent.click(movies);
+    await expect(args.onChange).toHaveBeenCalledWith('movies');
   },
 };
 

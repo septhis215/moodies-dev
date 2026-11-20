@@ -54,8 +54,12 @@ try {
   if (await securityGate.isVisible({ timeout: 1_000 }).catch(() => false)) {
     console.log("Search interaction skipped because Turnstile is active in this environment.");
   } else {
-    await page.getByPlaceholder("Search for movies, series...").fill("dune");
-    await page.getByPlaceholder("Search for movies, series...").press("Enter");
+    const searchInput = page.getByRole("main").getByRole("searchbox", {
+      name: "Search movies, TV and people",
+      exact: true,
+    });
+    await searchInput.fill("dune");
+    await searchInput.press("Enter");
     await page.waitForURL(/\/search\?.*q=dune/, { timeout: 15_000 });
     assert.match(page.url(), /q=dune/);
   }
