@@ -152,7 +152,7 @@ export default function TrailerModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[1000] bg-black text-white"
+      className="fixed inset-0 z-[1000] grid place-items-center bg-black/75 text-white backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -162,7 +162,7 @@ export default function TrailerModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="trailer-modal-title"
-        className="ui-overlay-enter relative flex h-dvh w-full flex-col overflow-hidden bg-[var(--surface-0)]"
+        className="ui-overlay-enter relative flex h-[85dvh] w-[90vw] flex-col overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)] shadow-2xl sm:w-[85vw]"
       >
         <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-[var(--surface-border)] px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-6">
           <p className="min-w-0 truncate text-sm font-semibold text-[var(--ink)]">
@@ -184,7 +184,7 @@ export default function TrailerModal({
         </header>
         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           {/* Trailer player */}
-          <div className="relative aspect-video max-h-[50dvh] w-full flex-none bg-black lg:h-full lg:max-h-none lg:min-h-0 lg:w-auto lg:flex-1 lg:aspect-auto">
+          <div className="relative aspect-video max-h-[40dvh] w-full flex-none bg-black lg:h-full lg:max-h-none lg:min-h-0 lg:w-auto lg:flex-1 lg:aspect-auto">
             <div className="relative h-full w-full">
               {trailer.trailer_key ? (
                 <iframe
@@ -428,12 +428,13 @@ export default function TrailerModal({
                               )}
 
                               {/* Rating badge */}
-                              <RatingBadge
-                                rating={rec.vote_average}
-                                placement="poster"
-                                variant="colored"
-                                size="sm"
-                              />
+                              <div className="absolute right-1.5 top-1.5 z-10">
+                                <RatingBadge
+                                  rating={rec.vote_average}
+                                  variant="colored"
+                                  size="sm"
+                                />
+                              </div>
                             </div>
 
                             {/* Footer */}
