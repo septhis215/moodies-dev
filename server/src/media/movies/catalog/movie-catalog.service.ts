@@ -36,19 +36,19 @@ export class MovieCatalogService {
         maxPages: number,
         filter?: (results: any[]) => any[],
     ): Promise<any[]> {
-        const allResults: any[] = [];
+        const allResults = new Map<number, any>();
         let currentPage = 1;
 
-        while (allResults.length < minRequired && currentPage <= maxPages) {
+        while (allResults.size < minRequired && currentPage <= maxPages) {
             const data = await this.client.tmdb(urlBuilder(currentPage));
             const raw = data?.results ?? [];
             const results = filter ? filter(raw) : raw;
-            allResults.push(...results);
+            for (const item of results) allResults.set(item.id, item);
             currentPage++;
             if (results.length === 0) break;
         }
 
-        return Array.from(new Map(allResults.map((item) => [item.id, item])).values());
+        return [...allResults.values()];
     }
 
     private async cachedList<T>(

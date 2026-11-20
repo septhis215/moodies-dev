@@ -37,7 +37,7 @@ export class AllController {
 
   @Get('featured')
   async featured(@Query('limit') limit?: string) {
-    const parsedLimit = limit ? parseInt(limit, 20) : 25;
+    const parsedLimit = limit ? parseInt(limit, 10) : 25;
     return this.allService.getFeatured(parsedLimit);
   }
 

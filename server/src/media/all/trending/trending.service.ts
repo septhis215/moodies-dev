@@ -29,7 +29,8 @@ export class TrendingService {
     ) { }
 
     async getFeatured(limit = 30): Promise<TmdbAll[]> {
-        const cacheKey = `featured`;
+        limit = Math.max(1, Math.min(Math.trunc(Number(limit) || 25), 60));
+        const cacheKey = `featured:v2:${limit}`;
         const cached = await this.redisService.get(cacheKey);
         if (cached) {
             try {
@@ -43,23 +44,25 @@ export class TrendingService {
         }
 
         try {
-            const [movies, tv] = await Promise.all([
-                this.client.tmdb(
-                    `/discover/movie?sort_by=popularity.desc&include_adult=false&page=1
-                &primary_release_date.gte=${getRecentDate(60)} 
-                &without_keywords=13090,190720`
-                ),
-                this.client.tmdb(
-                    `/discover/tv?sort_by=popularity.desc&include_adult=false&page=1
-                &first_air_date.gte=${getRecentDate(60)} 
-                &without_keywords=13090,190720`
-                ),
-            ]);
-
-            const results = [...(movies?.results ?? []), ...(tv?.results ?? [])];
-            const uniqueItems = Array.from(
-                new Map(results.map((item) => [item.id, item])).values()
-            );
+            const candidates = new Map<string, any>();
+            const exhausted = new Set<string>();
+            for (let page = 1; page <= 5 && candidates.size < limit; page++) {
+                await Promise.all((['movie', 'tv'] as const).map(async type => {
+                    if (exhausted.has(type)) return;
+                    const dateField = type === 'movie' ? 'primary_release_date' : 'first_air_date';
+                    const data = await this.client.tmdb(
+                        `/discover/${type}?sort_by=popularity.desc&include_adult=false&page=${page}&${dateField}.gte=${getRecentDate(60)}&without_keywords=13090,190720`,
+                    ).catch(error => {
+                        this.logger.warn(`Featured ${type} page ${page} unavailable: ${(error as Error).message}`);
+                        return null;
+                    });
+                    const results = data?.results ?? [];
+                    for (const item of results) candidates.set(`${type}:${item.id}`, { ...item, media_type: type });
+                    if (!results.length || page >= data?.total_pages) exhausted.add(type);
+                }));
+                if (exhausted.size === 2) break;
+            }
+            const uniqueItems = [...candidates.values()];
 
             const all: TmdbAll[] = uniqueItems.map((m: any) => ({
                 id: m.id,
