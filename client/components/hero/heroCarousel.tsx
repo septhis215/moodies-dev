@@ -202,7 +202,7 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
           }}
           className="absolute inset-0"
         >
-          <picture>
+          <picture className="absolute inset-0">
             <source media="(width < 640px)" srcSet={posterSrc} />
             {wideBackdropSrc && <source media="(width >= 1600px)" srcSet={wideBackdropSrc} />}
             <Image

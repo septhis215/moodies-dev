@@ -8,7 +8,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { ReviewComposer } from '../ReviewComposer';
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import Link from "next/link";
-import { ArrowLeft, ChevronDown, ChevronUp, Eye, Film, MessageCircle, Reply as ReplyIcon, Send, Star, Search, PenSquare, Share2, ThumbsUp, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, CornerDownRight, Eye, Film, MessageCircle, Reply as ReplyIcon, Send, Star, Search, PenSquare, Share2, ThumbsUp, X } from "lucide-react";
 import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { AudienceMood, audienceMoodImage, audienceMoodLabel, type MoodVote } from '../AudienceMood';
@@ -33,7 +33,7 @@ const REACTIONS: Array<{ type: ReactionType; emoji: string; label: string }> = [
 ];
 
 // Thread utilities stay visually quiet; touch devices retain a generous hit area.
-const THREAD_ACTION_CLASS = "ui-secondary-action min-h-8 gap-1.5 border-transparent bg-transparent px-2.5 text-sm font-semibold leading-none text-[var(--ink-muted)] hover:border-[var(--surface-border)] hover:bg-[var(--surface-2)] hover:text-[var(--ink)] pointer-coarse:min-h-11";
+const THREAD_ACTION_CLASS = "ui-secondary-action min-h-8 gap-1.5 border-transparent bg-transparent px-2.5 text-sm font-semibold leading-none text-[var(--ink-muted)] hover:border-transparent hover:bg-transparent hover:text-[var(--ink)] pointer-coarse:min-h-11";
 
 function toAccentColor(rating?: number): string | null {
   if (rating == null) return null;
@@ -57,7 +57,7 @@ function MoodChip({ value }: { value?: string }) {
             className={styles.moodImage}
           />
       </span>
-      <span className="min-w-0 break-words text-base font-bold leading-none">
+      <span className="min-w-0 break-words text-sm font-semibold leading-none">
         {audienceMoodLabel(value)}
       </span>
     </span>
@@ -68,14 +68,12 @@ function ReactionBar({
   counts = [],
   myReaction,
   onReact,
-  disabled = false,
   pickerPlacement = "left",
   clickOnly = false,
 }: {
   counts?: ReactionCount[];
   myReaction?: ReactionType | null;
   onReact: (type: ReactionType) => void;
-  disabled?: boolean;
   pickerPlacement?: "left" | "right";
   clickOnly?: boolean;
 }) {
@@ -93,7 +91,7 @@ function ReactionBar({
   return (
     <div
       className="relative inline-flex min-w-0 max-w-full flex-wrap items-center gap-1.5"
-      onMouseEnter={() => !clickOnly && !disabled && setOpen(true)}
+      onMouseEnter={() => !clickOnly && setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -104,27 +102,26 @@ function ReactionBar({
     >
       <button
         type="button"
-        disabled={disabled}
         aria-label="React to this review or reply"
         aria-expanded={open}
-        onClick={() => !disabled && setOpen((value) => !value)}
-        className={`${THREAD_ACTION_CLASS} disabled:cursor-not-allowed disabled:opacity-45`}
+        onClick={() => setOpen((value) => !value)}
+        className={THREAD_ACTION_CLASS}
       >
         <span>{selected?.label ?? "React"}</span>
-        <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center leading-none" aria-hidden="true">
-          {selected ? <span className="block text-sm leading-none">{selected.emoji}</span> : <ThumbsUp className="block h-4 w-4" />}
+        <span className="inline-flex h-4.5 w-4.5 shrink-0 items-center justify-center leading-none" aria-hidden="true">
+          {selected ? <span className="block text-base leading-none">{selected.emoji}</span> : <ThumbsUp className="block h-4.5 w-4.5" />}
         </span>
       </button>
 
       {total > 0 && (
-        <span className="inline-flex items-center gap-1 text-xs font-semibold leading-none text-[var(--ink-muted)]">
+        <span className="order-first inline-flex items-center gap-1 text-xs font-semibold leading-none text-[var(--ink-muted)]">
           <span className="inline-flex items-center -space-x-1">
             {topCounts.map((item) => {
               const reaction = REACTIONS.find((r) => r.type === item.type);
               return (
                 <span
                   key={item.type}
-                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-black/50 text-xs leading-none ring-1 ring-[var(--surface-border)]"
+                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/50 text-base leading-none ring-1 ring-[var(--surface-border)]"
                   title={`${reaction?.label ?? item.type}: ${item.count}`}
                 >
                   <span className="block leading-none">{reaction?.emoji}</span>
@@ -137,7 +134,7 @@ function ReactionBar({
       )}
 
       <AnimatePresence>
-        {open && !disabled && (
+        {open && (
           <motion.div
             role="group"
             aria-label="Choose a reaction"
@@ -181,7 +178,7 @@ type Reply = {
   myReaction?: ReactionType | null;
 };
 
-type ReplyFormState = { reviewId: string; prefill: string } | null;
+type ReplyFormState = { reviewId: string; replyIndex: number | null; prefill: string } | null;
 
 type Review = {
   id: string;
@@ -251,6 +248,11 @@ function mergeReviews(reviews: Review[], featuredReviews: Review[] = []): Review
   return Array.from(new Map([...featuredReviews, ...reviews].map(review => [review.id, review])).values());
 }
 
+function replyMatchesSearch(reply: Reply, query: string): boolean {
+  return reply.content.toLowerCase().includes(query)
+    || `@${reply.user.username}`.toLowerCase().includes(query);
+}
+
 export default function AllReviews({
   reviews,
   featuredReviews,
@@ -298,15 +300,17 @@ export default function AllReviews({
 
   const featured = useMemo(() => localReviews.filter(review => reviewActivity(review) > 0).sort(byActivity).slice(0, 3), [localReviews]);
   const featuredIds = new Set(featured.map(review => review.id));
+  const searchTerm = searchQuery.trim().toLowerCase();
 
   const filteredAndSorted = useMemo(() => {
     let arr = [...localReviews];
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (searchTerm) {
       arr = arr.filter(
         (r) =>
-          r.author.toLowerCase().includes(q) ||
-          r.content.toLowerCase().includes(q),
+          r.author.toLowerCase().includes(searchTerm) ||
+          r.content.toLowerCase().includes(searchTerm) ||
+          (r.author_details?.username ? `@${r.author_details.username}` : "").toLowerCase().includes(searchTerm) ||
+          r.replies?.some(reply => replyMatchesSearch(reply, searchTerm)),
       );
     }
     switch (sortBy) {
@@ -331,7 +335,7 @@ export default function AllReviews({
         break;
     }
     return arr;
-  }, [localReviews, sortBy, searchQuery]);
+  }, [localReviews, sortBy, searchTerm]);
 
   const visibleFeatured = filteredAndSorted.filter(review => featuredIds.has(review.id)).sort(byActivity);
 
@@ -383,8 +387,8 @@ export default function AllReviews({
     }
   }, [filteredAndSorted, reducedMotion]);
 
-  const openReplyForm = (reviewId: string, prefill = "") => {
-    setShowReplyForm({ reviewId, prefill });
+  const openReplyForm = (reviewId: string, prefill = "", replyIndex: number | null = null) => {
+    setShowReplyForm({ reviewId, replyIndex, prefill });
     setReplyContent("");
   };
   const closeReplyForm = () => {
@@ -498,11 +502,11 @@ export default function AllReviews({
     currentReaction: ReactionType | null | undefined,
     nextReaction: ReactionType,
   ) => {
-    if (!replyId) return;
     if (!isAuthenticated) {
       toast("Sign in to react to replies.", "warning", 3000, "Not Logged In", null);
       return;
     }
+    if (!replyId) return;
 
     const removing = currentReaction === nextReaction;
     try {
@@ -542,6 +546,56 @@ export default function AllReviews({
         null,
       );
     }
+  };
+
+  const renderReplyForm = (reviewId: string, replyIndex: number | null) => {
+    if (!showReplyForm || showReplyForm.reviewId !== reviewId || showReplyForm.replyIndex !== replyIndex) return null;
+    return (
+      <motion.div
+        initial={reducedMotion ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: reducedMotion ? 0 : 0.18 }}
+        className={`${styles.replyForm} space-y-2`}
+      >
+        {showReplyForm?.prefill && (
+          <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-[var(--surface-2)] px-3 py-1.5">
+            <span
+              className="text-xs font-semibold"
+              style={{ color: "var(--brand-coral)" }}
+            >
+              {showReplyForm.prefill.trim()}
+            </span>
+            <span className="text-xs text-[var(--ink-muted)]">
+              replying to
+            </span>
+          </div>
+        )}
+        <textarea
+          aria-label="Your reply"
+          value={replyContent}
+          onChange={(e) => setReplyContent(e.target.value)}
+          placeholder="Write your reply…"
+          rows={2}
+          autoFocus
+          className="w-full resize-none rounded-xl border-0 bg-[var(--surface-2)] px-3 py-2.5 text-sm leading-6 text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)]"
+        />
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => closeReplyForm()}
+            className="ui-secondary-action rounded-full border-0 bg-[var(--surface-2)] leading-none"
+          >
+            Cancel <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            onClick={() => handleReplySubmit(reviewId)}
+            disabled={submittingReply}
+            className="ui-primary-action rounded-full shadow-none leading-none hover:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {submittingReply ? "Posting…" : "Post"} <Send className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      </motion.div>
+    );
   };
 
   return (
@@ -672,10 +726,7 @@ export default function AllReviews({
             const excerpt = Array.from(review.content);
             const mood = review.moodEmojis?.[0];
             return <article key={review.id} className={styles.featuredCard} data-featured-review={review.id}>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="ui-kicker">Most active</p>
-                <p className="text-xs tabular-nums text-[var(--ink-muted)]">{reviewActivity(review).toLocaleString()} {reviewActivity(review) === 1 ? 'interaction' : 'interactions'}</p>
-              </div>
+              <p className="ui-kicker">Most active</p>
               <div className={styles.featuredArt}>
                 <span className={styles.featuredRank} aria-label={`Rank ${index + 1}`}>{String(index + 1).padStart(2, '0')}</span>
                 {mood ? <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -715,8 +766,8 @@ export default function AllReviews({
             />
             <input
               type="search"
-              aria-label="Search reviews by author or content"
-              placeholder="Search reviews…"
+              aria-label="Search reviews, replies, or usernames"
+              placeholder="Search reviews, replies, or usernames"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-11 w-full rounded-full border-0 bg-[var(--surface-1)] py-2 pl-10 pr-12 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)] [&::-webkit-search-cancel-button]:appearance-none"
@@ -756,7 +807,9 @@ export default function AllReviews({
               filteredAndSorted.map((review) => {
                 const isExpanded = expandedReviews.has(review.id);
                 const shouldTruncate = review.content.length > 400;
-                const repliesExpanded = expandedReplies.has(review.id);
+                const hasReplySearchMatch = Boolean(searchTerm && review.replies?.some(reply => replyMatchesSearch(reply, searchTerm)));
+                const repliesExpanded = expandedReplies.has(review.id) || hasReplySearchMatch;
+                const replyingToReview = showReplyForm?.reviewId === review.id && showReplyForm.replyIndex === null;
                 const normalizedRating =
                   review.author_details?.rating != null
                     ? review.author_details.rating / 2
@@ -782,26 +835,26 @@ export default function AllReviews({
                   >
                     <div className={styles.header}>
                       <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-start gap-3">
+                        <div className="flex min-w-0 flex-1 basis-40 items-start gap-3">
                           <AvatarBlock
                             review={review}
                             href={profileHref}
-                            size={40}
+                            size={36}
                           />
                           <div className="min-w-0">
                             {profileHref ? (
                               <Link
                                 href={profileHref}
-                                className="block truncate text-sm font-bold text-[var(--ink)] underline-offset-4 transition-colors hover:text-[var(--brand-coral-strong)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
+                                className="block truncate text-sm font-semibold leading-5 text-[var(--ink)] underline-offset-4 transition-colors hover:text-[var(--brand-coral-strong)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
                               >
                                 {review.author}
                               </Link>
                             ) : (
-                              <p className="truncate text-sm font-bold text-[var(--ink)]">
+                              <p className="truncate text-sm font-semibold leading-5 text-[var(--ink)]">
                                 {review.author}
                               </p>
                             )}
-                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--ink-muted)]">
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 wrap-anywhere text-xs leading-4 text-[var(--ink-muted)]">
                               <span>{formatDate(review.created_at)}</span>
                               {review.updated_at && review.updated_at !== review.created_at ? (
                                 <span title={`Updated ${formatDate(review.updated_at)}`} aria-label={`Updated ${formatDate(review.updated_at)}`}>Edited</span>
@@ -815,36 +868,40 @@ export default function AllReviews({
                           </div>
                         </div>
 
-                        <div className="flex min-w-0 flex-wrap items-center gap-3">
+                        <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2">
+                          {review.moodEmojis?.[0] ? <MoodChip value={review.moodEmojis[0]} /> : null}
                           {normalizedRating !== null && (
                             <div
-                              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-base font-bold tabular-nums"
+                              role="img"
+                              aria-label={`${normalizedRating.toFixed(1)} out of 5 stars`}
+                              title={`${normalizedRating.toFixed(1)} out of 5 stars`}
+                              className="flex items-center gap-0.5 rounded-full px-2 py-1.5"
                               style={{
                                 color: accentColor!,
                                 background: `${accentColor}18`,
                               }}
                             >
-                              <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill={accentColor!}
-                                aria-hidden
-                              >
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                              </svg>
-                              {normalizedRating.toFixed(1)}
-                              <span className="text-xs font-normal text-[var(--ink-muted)]">/ 5</span>
+                              {[0, 1, 2, 3, 4].map((index) => {
+                                const fill = Math.max(0, Math.min(1, normalizedRating - index));
+                                return (
+                                  <span key={index} className="relative block size-4" aria-hidden={true}>
+                                    <Star className="size-4 fill-current opacity-20" />
+                                    <span className="absolute inset-y-0 left-0 overflow-hidden" style={{ width: `${fill * 100}%` }}>
+                                      <Star className="size-4 fill-current" />
+                                    </span>
+                                  </span>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    {/* Review text — hero */}
+                    {/* Review text */}
                     <div className={styles.story}>
                       <div className={styles.copy}>
-                      <p id={`content-${review.id}`} className="max-w-3xl whitespace-pre-wrap break-words text-base leading-7 text-[var(--ink)]">
+                      <p id={`content-${review.id}`} className="w-full whitespace-pre-wrap wrap-anywhere text-sm font-normal leading-6 text-[var(--ink)]">
                         {shouldTruncate && !isExpanded ? (
                           <>
                             {review.content.slice(0, 400)}
@@ -859,7 +916,7 @@ export default function AllReviews({
                           onClick={() => toggleExpanded(review.id)}
                           aria-expanded={isExpanded}
                           aria-controls={`content-${review.id}`}
-                          className={`${THREAD_ACTION_CLASS} mt-3`}
+                          className={`${THREAD_ACTION_CLASS} mt-1`}
                         >
                           {isExpanded ? "Show less" : "Keep reading"}
                           {isExpanded ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
@@ -868,85 +925,121 @@ export default function AllReviews({
                       </div>
                     </div>
 
+                    {/* Review actions */}
+                    <div className={styles.actions}>
+                      <div className={styles.toolbar}>
+                        {canShareReviewSnapshot && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSnapshotSource({
+                                type: "review",
+                                reviewId: review.id,
+                              })
+                            }
+                            aria-label="Share a review snapshot"
+                            className={THREAD_ACTION_CLASS}
+                          >
+                            Share <Share2 className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                        )}
+                        <div className="flex min-w-0 items-center gap-1">
+                          {review.replies && review.replies.length > 0 ? (
+                            <span className="mr-2 whitespace-nowrap text-xs font-semibold leading-4 text-[var(--ink-muted)]">
+                              {review.replies.length} {review.replies.length === 1 ? "reply" : "replies"}
+                            </span>
+                          ) : null}
+                        </div>
+                        <ReactionBar
+                          clickOnly
+                          counts={review.reactionCounts}
+                          myReaction={review.myReaction}
+                          pickerPlacement="left"
+                          onReact={(type) =>
+                            handleReviewReaction(
+                              review.id,
+                              review.myReaction,
+                              type,
+                            )
+                          }
+                        />
+                        {banStatus.banned ? (
+                          <span className="text-xs text-red-400/50">
+                            Replies suspended
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              replyingToReview
+                                ? closeReplyForm()
+                                : openReplyForm(review.id)
+                            }
+                            aria-expanded={replyingToReview}
+                            className={THREAD_ACTION_CLASS}
+                          >
+                            {replyingToReview
+                              ? "Cancel"
+                              : "Reply"}
+                            {replyingToReview ? <X className="h-4 w-4" aria-hidden="true" /> : <ReplyIcon className="h-4 w-4" aria-hidden="true" />}
+                          </button>
+                        )}
+                        {review.url && (
+                          <Link
+                            href={review.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={THREAD_ACTION_CLASS}
+                          >
+                            Original <Eye className="h-4 w-4" aria-hidden="true" />
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+
+                    {renderReplyForm(review.id, null)}
+
                     {/* Replies */}
                     {review.replies && review.replies.length > 0 && (
-                      <div className={`mx-4 mb-4 rounded-2xl bg-[var(--surface-0)] p-3 sm:mx-5 sm:p-4 ${styles.thread}`}>
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-[var(--ink-muted)]">
-                            Replies
-                          </p>
-                          <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs text-[var(--ink-muted)]">
-                            {review.replies.length}
-                          </span>
-                        </div>
-                        <div id={`replies-${review.id}`} className="relative space-y-2.5 pl-3 before:absolute before:left-0 before:top-1 before:bottom-1 before:w-px before:bg-gradient-to-b before:from-[var(--brand-coral)]/45 before:via-white/12 before:to-transparent sm:pl-4">
+                      <div className={styles.thread}>
+                        <div id={`replies-${review.id}`}>
                           {(repliesExpanded
                             ? review.replies
                             : review.replies.slice(0, 2)
                           ).map((reply, i) => {
                             const replyHref = profileHrefFor(reply.user.id);
+                            const replyingToReply = showReplyForm?.reviewId === review.id && showReplyForm.replyIndex === i;
                             return (
                               <div
                                 key={reply.id ?? i}
-                                className="relative rounded-xl bg-[var(--surface-1)] px-3 py-3"
+                                className={styles.reply}
                               >
-                                <span className="absolute -left-3 top-5 h-px w-3 bg-[var(--surface-2)] sm:-left-4 sm:w-4" />
-                                <div className="flex items-start gap-2.5">
+                                <div className="flex items-start gap-2">
+                                  <span className="mt-1 h-4 w-4 shrink-0" aria-hidden="true">
+                                    {i === 0 ? <CornerDownRight className="h-4 w-4 text-[var(--brand-coral-strong)]" /> : null}
+                                  </span>
                                   <ReplyAvatarBlock
                                     reply={reply}
                                     href={replyHref}
                                   />
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-0.5">
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                       {replyHref ? (
                                         <Link
                                           href={replyHref}
-                                          className="truncate text-xs font-semibold text-[var(--ink)] underline-offset-4 transition-colors hover:text-[var(--brand-coral-strong)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
+                                          className="truncate text-sm font-semibold leading-5 text-[var(--ink)] underline-offset-4 transition-colors hover:text-[var(--brand-coral-strong)] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral)]"
                                         >
                                           {reply.user.username}
                                         </Link>
                                       ) : (
-                                        <span className="truncate text-xs font-semibold text-[var(--ink-muted)]">
+                                        <span className="truncate text-sm font-semibold leading-5 text-[var(--ink)]">
                                           {reply.user.username}
                                         </span>
                                       )}
-                                      <span className="text-xs text-[var(--ink-muted)]">
+                                      <span className="text-xs leading-4 text-[var(--ink-muted)]">
                                         {formatDate(reply.created_at)}
                                       </span>
-                                      <ReactionBar
-                                        counts={reply.reactionCounts}
-                                        myReaction={reply.myReaction}
-                                        disabled={!isAuthenticated}
-                                        pickerPlacement="right"
-                                        onReact={(type) =>
-                                          handleReplyReaction(
-                                            review.id,
-                                            reply.id,
-                                            reply.myReaction,
-                                            type,
-                                          )
-                                        }
-                                      />
-                                      {!banStatus.banned && (
-                                        <button
-                                          onClick={() =>
-                                            showReplyForm?.reviewId ===
-                                              review.id &&
-                                            showReplyForm?.prefill ===
-                                              `@${reply.user.username} — `
-                                              ? closeReplyForm()
-                                              : openReplyForm(
-                                                  review.id,
-                                                  `@${reply.user.username} — `,
-                                                )
-                                          }
-                                          className={`${THREAD_ACTION_CLASS} ml-auto`}
-                                        >
-                                          Reply <ReplyIcon className="h-4 w-4" aria-hidden="true" />
-                                        </button>
-                                      )}
                                     </div>
-                                    <p className="mt-2 break-words text-sm leading-6 text-[var(--ink)]">
+                                    <p className="mt-1 w-full whitespace-pre-wrap wrap-anywhere text-sm font-normal leading-6 text-[var(--ink)]">
                                       {(() => {
                                         const sep = " — ";
                                         const idx = reply.content.indexOf(sep);
@@ -989,18 +1082,43 @@ export default function AllReviews({
                                           );
                                       })()}
                                     </p>
+                                    <div className={`${styles.toolbar} ${styles.replyActions}`}>
+                                      <ReactionBar
+                                        counts={reply.reactionCounts}
+                                        myReaction={reply.myReaction}
+                                        pickerPlacement="left"
+                                        onReact={(type) =>
+                                          handleReplyReaction(review.id, reply.id, reply.myReaction, type)
+                                        }
+                                      />
+                                      {!banStatus.banned && (
+                                        <button
+                                          onClick={() =>
+                                            replyingToReply
+                                              ? closeReplyForm()
+                                              : openReplyForm(review.id, `@${reply.user.username} — `, i)
+                                          }
+                                          aria-expanded={replyingToReply}
+                                          className={THREAD_ACTION_CLASS}
+                                        >
+                                          {replyingToReply ? "Cancel" : "Reply"}
+                                          {replyingToReply ? <X className="h-4 w-4" aria-hidden="true" /> : <ReplyIcon className="h-4 w-4" aria-hidden="true" />}
+                                        </button>
+                                      )}
+                                    </div>
+                                    {renderReplyForm(review.id, i)}
                                   </div>
                                 </div>
                               </div>
                             );
                           })}
                         </div>
-                        {review.replies.length > 2 && (
+                        {review.replies.length > 2 && !hasReplySearchMatch && (
                           <button
                             onClick={() => toggleReplies(review.id)}
                             aria-expanded={repliesExpanded}
                             aria-controls={`replies-${review.id}`}
-                            className={`${THREAD_ACTION_CLASS} mt-3`}
+                            className={`${THREAD_ACTION_CLASS} mt-1`}
                           >
                             {repliesExpanded ? "Show fewer replies" : `Show all ${review.replies.length} replies`}
                             {repliesExpanded ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
@@ -1009,128 +1127,6 @@ export default function AllReviews({
                       </div>
                     )}
 
-                    {/* Reply compose */}
-                    <AnimatePresence>
-                      {showReplyForm?.reviewId === review.id && (
-                        <motion.div
-                          initial={reducedMotion ? false : { opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: reducedMotion ? 0 : 0.18 }}
-                          className={`mx-4 mb-4 space-y-3 rounded-2xl bg-[var(--surface-0)] p-3 sm:mx-5 ${styles.thread}`}
-                        >
-                          {showReplyForm?.prefill && (
-                            <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-[var(--surface-2)] px-3 py-1.5">
-                              <span
-                                className="text-xs font-semibold"
-                                style={{ color: "var(--brand-coral)" }}
-                              >
-                                {showReplyForm.prefill.trim()}
-                              </span>
-                              <span className="text-xs text-[var(--ink-muted)]">
-                                replying to
-                              </span>
-                            </div>
-                          )}
-                          <textarea
-                            aria-label="Your reply"
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder="Write your reply…"
-                            rows={3}
-                            autoFocus
-                            className="w-full resize-none rounded-xl border-0 bg-[var(--surface-2)] px-3 py-2.5 text-sm leading-6 text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral)]"
-                          />
-                          <div className="flex justify-end gap-2">
-                            <button
-                              onClick={() => closeReplyForm()}
-                              className="ui-secondary-action rounded-full border-0 bg-[var(--surface-2)] leading-none"
-                            >
-                              Cancel <X className="h-4 w-4" aria-hidden="true" />
-                            </button>
-                            <button
-                              onClick={() => handleReplySubmit(review.id)}
-                              disabled={submittingReply}
-                              className="ui-primary-action rounded-full shadow-none leading-none hover:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              {submittingReply ? "Posting…" : "Post"} <Send className="h-4 w-4" aria-hidden="true" />
-                            </button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    {/* Action footer */}
-                    <div className={styles.actions}>
-                      <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-[var(--ink-muted)]">
-                        {review.moodEmojis?.[0] ? <MoodChip value={review.moodEmojis[0]} /> : null}
-                        <span>
-                          {reviewActivity(review).toLocaleString()} {reviewActivity(review) === 1 ? 'interaction' : 'interactions'}
-                        </span>
-                      </div>
-
-                      <div className={styles.toolbar}>
-                        {canShareReviewSnapshot && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setSnapshotSource({
-                                type: "review",
-                                reviewId: review.id,
-                              })
-                            }
-                            aria-label="Share a review snapshot"
-                            className={THREAD_ACTION_CLASS}
-                          >
-                            Share <Share2 className="h-4 w-4" aria-hidden="true" />
-                          </button>
-                        )}
-                        <ReactionBar
-                          clickOnly
-                          counts={review.reactionCounts}
-                          myReaction={review.myReaction}
-                          disabled={!isAuthenticated}
-                          pickerPlacement="left"
-                          onReact={(type) =>
-                            handleReviewReaction(
-                              review.id,
-                              review.myReaction,
-                              type,
-                            )
-                          }
-                        />
-                        {banStatus.banned ? (
-                          <span className="text-xs text-red-400/50">
-                            Replies suspended
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() =>
-                              showReplyForm?.reviewId === review.id
-                                ? closeReplyForm()
-                                : openReplyForm(review.id)
-                            }
-                            aria-expanded={showReplyForm?.reviewId === review.id}
-                            className={THREAD_ACTION_CLASS}
-                          >
-                            {showReplyForm?.reviewId === review.id
-                              ? "Cancel"
-                              : "Reply"}
-                            {showReplyForm?.reviewId === review.id ? <X className="h-4 w-4" aria-hidden="true" /> : <ReplyIcon className="h-4 w-4" aria-hidden="true" />}
-                          </button>
-                        )}
-                        {review.url && (
-                          <Link
-                            href={review.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={THREAD_ACTION_CLASS}
-                          >
-                            Original <Eye className="h-4 w-4" aria-hidden="true" />
-                          </Link>
-                        )}
-                      </div>
-                    </div>
                   </motion.div>
                 );
               })

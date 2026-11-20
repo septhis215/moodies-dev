@@ -226,7 +226,7 @@ export default function CardCarousel<T extends MediaItem>({
                     <IntentPrefetchLink
                       href={href}
                       aria-label={`Explore ${titleText}`}
-                      className="ui-card-link block h-full w-full focus-visible:-outline-offset-2"
+                      className="ui-card-link relative block h-full w-full focus-visible:-outline-offset-2"
                     >
                       <Image
                         src={itemPoster(item)}

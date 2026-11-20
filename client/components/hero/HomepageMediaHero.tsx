@@ -135,7 +135,7 @@ export function HomepageMediaHero({
             className="absolute inset-0"
             style={{ touchAction: "pan-y pinch-zoom" }}
           >
-            <picture>
+            <picture className="absolute inset-0">
               <source
                 media="(width < 640px)"
                 srcSet={
