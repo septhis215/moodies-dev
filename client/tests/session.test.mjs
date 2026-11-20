@@ -239,7 +239,7 @@ test("storage markers cannot change the initial server/client render", () => {
         return {};
       },
     });
-    return mod.exports.AuthProvider({ children: "page-content", initialBlockSessionBootstrap: false }).props.children;
+    return mod.exports.AuthProvider({ children: "page-content" }).props.children;
   }
   assert.equal(initialRender(false), "page-content");
   assert.equal(initialRender(true), "page-content");
