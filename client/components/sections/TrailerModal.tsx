@@ -389,10 +389,10 @@ export default function TrailerModal({
                             onClick={() => handleRecommendationSelect(rec)}
                             disabled={pendingTrailerId !== null}
                             title={rec.title}
-                            className={`group w-[calc((100%-0.75rem)/2)] min-w-0 shrink-0 snap-start overflow-hidden rounded-sm border bg-white/[0.03] text-left transition-colors hover:border-[#e94f37]/65 hover:bg-white/[0.06] disabled:cursor-wait sm:w-[calc((100%-1.5rem)/3)] lg:w-auto ${isBlocked ? "border-white/10 opacity-45" : "border-white/15"} ${isPending ? "border-[#e94f37]" : ""}`}
+                            className={`group flex w-[calc((100%-0.75rem)/2)] min-w-0 shrink-0 snap-start flex-col self-start overflow-hidden rounded-sm border bg-white/[0.03] text-left transition-colors hover:border-[#e94f37]/65 hover:bg-white/[0.06] disabled:cursor-wait sm:w-[calc((100%-1.5rem)/3)] lg:w-full ${isBlocked ? "border-white/10 opacity-45" : "border-white/15"} ${isPending ? "border-[#e94f37]" : ""}`}
                           >
                             {/* Poster */}
-                            <div className="aspect-[2/3] relative overflow-hidden">
+                            <div className="relative aspect-[2/3] w-full shrink-0 overflow-hidden">
                               <Image
                                 src={
                                   rec.poster_path
@@ -438,15 +438,15 @@ export default function TrailerModal({
                             </div>
 
                             {/* Footer */}
-                            <div className="border-t border-white/10 px-2.5 py-2.5">
-                              <p className="m-0 line-clamp-2 text-sm font-semibold leading-snug text-white/75 transition-colors group-hover:text-white">
+                            <div className="h-[5.25rem] w-full shrink-0 border-t border-white/10 px-2.5 py-2.5">
+                              <p className="m-0 h-10 line-clamp-2 text-sm font-semibold leading-5 text-white/75 transition-colors group-hover:text-white">
                                 {rec.title}
                               </p>
-                              {rec.release_date && (
-                                <p className="mt-1 text-[11px] text-white/35">
-                                  {new Date(rec.release_date).getFullYear()}
-                                </p>
-                              )}
+                              <p className="mt-1 h-4 text-[11px] leading-4 text-white/35">
+                                {rec.release_date || rec.first_air_date
+                                  ? new Date((rec.release_date || rec.first_air_date)!).getFullYear()
+                                  : ""}
+                              </p>
                             </div>
                           </button>
                         );

@@ -51,7 +51,7 @@ let browser;
 try {
   const result = await build({
     stdin: {
-      contents: `import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import Modal from './client/components/sections/TrailerModal';import {Carousel} from './client/components/ui/Carousel';const next={id:2,title:'The next trailer',trailer_key:'next1234567',overview:'A new story.',type:'tv',vote_average:8.2};const first={id:1,title:'A very long movie title for a full screen trailer experience',trailer_key:'first123456',overview:'An expansive story of friendship and finding a place to call home. '.repeat(10),recommendations:new URLSearchParams(location.search).has('single')?[next]:[next,{...next,id:3,title:'Another recommendation',vote_average:0},{...next,id:4,title:'One more recommendation',vote_average:null}],type:'movie',genres:['Drama'],runtime:120,vote_average:8.2};const cards=Array.from({length:6},(_,i)=>({...first,id:i+10,title:'Card '+i}));const Card=({show})=><article className='aspect-[2/3] w-full bg-black'>{show.title}</article>;function App(){const[open,setOpen]=useState(false);const[item,setItem]=useState(first);return <><div id='carousel-fixture'><Carousel items={cards} CardComponent={Card}/></div><button onClick={()=>{setItem(first);setOpen(true)}}>Open trailer</button>{open&&<Modal trailer={item} onClose={()=>setOpen(false)} onSelectTrailer={async(next)=>setItem(next)}/>}</>}createRoot(document.getElementById('root')).render(<App/>);`,
+      contents: `import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import Modal from './client/components/sections/TrailerModal';import {Carousel} from './client/components/ui/Carousel';const next={id:2,title:'The next trailer',trailer_key:'next1234567',overview:'A new story.',type:'tv',vote_average:8.2,release_date:'2026-01-01'};const first={id:1,title:'A very long movie title for a full screen trailer experience',trailer_key:'first123456',overview:'An expansive story of friendship and finding a place to call home. '.repeat(10),recommendations:new URLSearchParams(location.search).has('single')?[next]:[next,{...next,id:3,title:'Another recommendation with an unusually long title that needs several lines',release_date:null,vote_average:0},{...next,id:4,title:'Short',release_date:'2024-01-01',vote_average:null}],type:'movie',genres:['Drama'],runtime:120,vote_average:8.2};const cards=Array.from({length:6},(_,i)=>({...first,id:i+10,title:'Card '+i}));const Card=({show})=><article className='aspect-[2/3] w-full bg-black'>{show.title}</article>;function App(){const[open,setOpen]=useState(false);const[item,setItem]=useState(first);return <><div id='carousel-fixture'><Carousel items={cards} CardComponent={Card}/></div><button onClick={()=>{setItem(first);setOpen(true)}}>Open trailer</button>{open&&<Modal trailer={item} onClose={()=>setOpen(false)} onSelectTrailer={async(next)=>{await new Promise(resolve=>setTimeout(resolve,250));setItem(next)}}/>}</>}createRoot(document.getElementById('root')).render(<App/>);`,
       resolveDir: root,
       loader: "tsx",
     },
@@ -260,7 +260,27 @@ try {
     assert.ok(Math.abs(posterBox.x + posterBox.width - badgeBox.x - badgeBox.width - 6) <= 1, "Rating has a consistent right inset");
     assert.ok(Math.abs(badgeBox.y - posterBox.y - 6) <= 1, "Rating has a consistent top inset");
     assert.equal(await dialog.getByLabel("New title, not yet rated").count(), 1);
-    assert.equal(await dialog.getByRole("button", { name: /One more recommendation/ }).locator('[aria-label^="Rating:"]').count(), 0);
+    assert.equal(await dialog.getByRole("button", { name: /Short/ }).locator('[aria-label^="Rating:"]').count(), 0);
+    const geometry = await recommendations.locator(":scope > button").evaluateAll(cards => cards.map(card => {
+      const [poster, footer] = card.children;
+      const title = footer.querySelector("p");
+      const year = footer.querySelector("p:last-child");
+      return {
+        height: card.getBoundingClientRect().height,
+        posterHeight: poster.getBoundingClientRect().height,
+        posterOffset: poster.getBoundingClientRect().top - card.getBoundingClientRect().top,
+        footerHeight: footer.getBoundingClientRect().height,
+        titleHeight: title.getBoundingClientRect().height,
+        yearOffset: year.getBoundingClientRect().top - footer.getBoundingClientRect().top,
+      };
+    }));
+    for (const card of geometry) {
+      for (const dimension of ["height", "posterHeight", "posterOffset", "footerHeight", "titleHeight", "yearOffset"]) {
+        assert.ok(Math.abs(card[dimension] - geometry[0][dimension]) <= 1, dimension + " stays equal across short/long titles and missing years at " + width);
+      }
+    }
+    await recommendation.hover();
+    assert.ok(Math.abs((await recommendation.boundingBox()).height - geometry[0].height) <= 1, "Hover does not resize recommendation");
     if (width < 640) {
       const first = await recommendation.boundingBox();
       const second = await dialog
@@ -279,7 +299,7 @@ try {
       );
       await page.waitForTimeout(200);
       const last = await dialog
-        .getByRole("button", { name: /One more recommendation/ })
+        .getByRole("button", { name: /Short/ })
         .boundingBox();
       assert.ok(
         Math.abs(dialogBox.x + dialogBox.width - last.x - last.width - 17) < 2,
@@ -293,7 +313,10 @@ try {
       await dialog.screenshot({
         path: resolve(output, "modal-" + width + ".png"),
       });
-    await dialog.getByRole("button", { name: /The next trailer/ }).click();
+    await dialog.getByRole("button", { name: /The next trailer/ }).click();    await dialog.getByText("Loading...", { exact: true }).waitFor();
+    const pending = await recommendations.locator(":scope > button").evaluateAll(cards => cards.map(card => card.getBoundingClientRect().height));
+    for (let index = 0; index < pending.length; index++) assert.ok(Math.abs(pending[index] - geometry[index].height) <= 1, "Loading does not resize recommendations");
+
     await dialog
       .getByRole("heading", { name: "The next trailer", exact: true })
       .waitFor();
