@@ -422,19 +422,55 @@ export default function SearchResultsPage() {
           </form>
         </div>
         <section className={styles.controls} aria-label="Search controls">
-          <div className={styles.types} role="group" aria-label="Result type">
-            {TYPES.map(({ value, label }) => (
+          <div className={styles.controlsBar}>
+            <div className={styles.types} role="group" aria-label="Result type">
+              {TYPES.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={control}
+                  aria-pressed={applied.type === value}
+                  disabled={!query && value === "person"}
+                  onClick={() => commit(forType(applied, value))}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className={styles.toolbar}>
               <button
-                key={value}
+                ref={filterTrigger}
                 type="button"
-                className={control}
-                aria-pressed={applied.type === value}
-                disabled={!query && value === "person"}
-                onClick={() => commit(forType(applied, value))}
+                className={`${control} ${styles.filterButton}`}
+                aria-haspopup="dialog"
+                aria-controls="search-filters"
+                onClick={openFilters}
               >
-                {label}
+                <SlidersHorizontal size={18} aria-hidden="true" />
+                Filters
+                {constraints.length > 0 && (
+                  <span className={styles.filterCount}>{constraints.length}</span>
+                )}
               </button>
-            ))}
+              <SearchSortSelect
+                label="Sort results"
+                value={applied.sort}
+                options={[
+                  {
+                    value: "relevance",
+                    label: query ? "Most relevant" : "Popular",
+                  },
+                  ...(applied.type !== "person"
+                    ? [
+                        { value: "rating" as SearchSort, label: "Highest rated" },
+                        { value: "date" as SearchSort, label: "Newest releases" },
+                      ]
+                    : []),
+                  { value: "popularity", label: "Most popular" },
+                ]}
+                onChange={(sort) => commit({ ...applied, sort })}
+              />
+            </div>
           </div>
           {!query && (
             <p className={styles.muted}>
@@ -442,40 +478,6 @@ export default function SearchResultsPage() {
               catalogue.
             </p>
           )}
-          <div className={styles.toolbar}>
-            <button
-              ref={filterTrigger}
-              type="button"
-              className={`${control} ${styles.filterButton}`}
-              aria-haspopup="dialog"
-              aria-controls="search-filters"
-              onClick={openFilters}
-            >
-              <SlidersHorizontal size={18} aria-hidden="true" />
-              Filters
-              {constraints.length > 0 && (
-                <span className={styles.filterCount}>{constraints.length}</span>
-              )}
-            </button>
-            <SearchSortSelect
-              label="Sort results"
-              value={applied.sort}
-              options={[
-                {
-                  value: "relevance",
-                  label: query ? "Most relevant" : "Popular",
-                },
-                ...(applied.type !== "person"
-                  ? [
-                      { value: "rating" as SearchSort, label: "Highest rated" },
-                      { value: "date" as SearchSort, label: "Newest releases" },
-                    ]
-                  : []),
-                { value: "popularity", label: "Most popular" },
-              ]}
-              onChange={(sort) => commit({ ...applied, sort })}
-            />
-          </div>
           {constraints.length > 0 && (
             <div
               className={styles.constraints}
