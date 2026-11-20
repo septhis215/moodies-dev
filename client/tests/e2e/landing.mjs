@@ -195,7 +195,7 @@ try {
           await page.waitForFunction(element => {
             const { x, y, width, height } = element.getBoundingClientRect();
             return x === 0 && y === 0 && width === innerWidth && height === innerHeight;
-          }, await dialog.elementHandle());
+          }, await dialog.locator("..").elementHandle());
           await page.keyboard.press("Escape");
           await dialog.waitFor({ state: "hidden" });
           assert.ok(await play.evaluate(button => document.activeElement === button));

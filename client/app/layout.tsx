@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { bodyFont, displayFont } from "@/lib/fonts";
 import "./globals.css";
 import ClientLayout from "./client-layout";
@@ -12,16 +11,17 @@ import PerformanceMonitor from "@/components/providers/PerformanceMonitor";
 import { LoadingScreenProvider } from "@/components/loading/LoadingScreenProvider";
 import AchievementProvider from "@/components/achievements/AchievementProvider";
 
-const ACCESS_COOKIE = "mood_at";
 const SESSION_MARKER_COOKIE = "mood_session";
 const SESSION_MARKER_KEY = "moodies:session";
 const AUTH_PREHIDE_STYLE_ID = "moodies-auth-prehide";
 const AUTH_PREHIDE_SCRIPT = `
 (function () {
   try {
-    var hasMarker = window.localStorage.getItem("${SESSION_MARKER_KEY}") === "1";
+    var hasMarker = false;
+    try { hasMarker = window.localStorage.getItem("${SESSION_MARKER_KEY}") === "1"; } catch (error) {}
+    var hasCookieMarker = document.cookie.split(";").some(function (part) { return part.trim() === "${SESSION_MARKER_COOKIE}=1"; });
     var isGoogleLanding = new URLSearchParams(window.location.search).get("google_login") === "true";
-    if (!hasMarker && !isGoogleLanding) return;
+    if (!hasMarker && !hasCookieMarker && !isGoogleLanding) return;
     var style = document.createElement("style");
     style.id = "${AUTH_PREHIDE_STYLE_ID}";
     style.textContent = "body{background:#000!important}body>*{visibility:hidden!important}";
@@ -62,23 +62,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const initialBlockSessionBootstrap = Boolean(
-    cookieStore.get(ACCESS_COOKIE) ?? cookieStore.get(SESSION_MARKER_COOKIE),
-  );
-
   return (
     <html lang="en" style={{ background: "#0b0909" }} suppressHydrationWarning>
-      {!initialBlockSessionBootstrap && (
-        <head>
-          <script dangerouslySetInnerHTML={{ __html: AUTH_PREHIDE_SCRIPT }} />
-        </head>
-      )}
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: AUTH_PREHIDE_SCRIPT }} />
+      </head>
       <body
         className={`${bodyFont.variable} ${displayFont.variable} antialiased`}
         style={{ background: "#0b0909" }}
@@ -86,9 +79,7 @@ export default async function RootLayout({
         <PerformanceMonitor />
         <LoadingScreenProvider>
           <ToastProvider>
-            <AuthProvider
-              initialBlockSessionBootstrap={initialBlockSessionBootstrap}
-            >
+            <AuthProvider>
               <AchievementProvider />
               <AppErrorProvider>
                 <TurnstileGateProvider>

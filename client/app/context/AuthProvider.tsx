@@ -217,10 +217,8 @@ function writeCachedBuckets(
 /* ---------- Provider ---------- */
 export function AuthProvider({
   children,
-  initialBlockSessionBootstrap = false,
 }: {
   children: React.ReactNode;
-  initialBlockSessionBootstrap?: boolean;
 }) {
   const initialAccountId = getLastAccountId();
   const initialWatchlist = readCachedBuckets(
@@ -233,7 +231,7 @@ export function AuthProvider({
   const [loading, setLoading] = useState(true);
   // Match the server on the first render. Browser-only hints are applied after
   // hydration, otherwise React can discard the page (and input already typed).
-  const [blockSessionBootstrap, setBlockSessionBootstrap] = useState(initialBlockSessionBootstrap);
+  const [blockSessionBootstrap, setBlockSessionBootstrap] = useState(false);
   const [watchlistMovieIds, setWatchlistMovieIds] = useState<Set<string>>(
     () => initialWatchlist?.movieIds ?? new Set(),
   );
