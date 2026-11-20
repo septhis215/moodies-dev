@@ -11,6 +11,9 @@ import PerformanceMonitor from "@/components/providers/PerformanceMonitor";
 import { LoadingScreenProvider } from "@/components/loading/LoadingScreenProvider";
 import AchievementProvider from "@/components/achievements/AchievementProvider";
 
+// ISR requires persistent storage; render fresh responses on the storage-free deployment.
+export const dynamic = "force-dynamic";
+
 const SESSION_MARKER_COOKIE = "mood_session";
 const SESSION_MARKER_KEY = "moodies:session";
 const AUTH_PREHIDE_STYLE_ID = "moodies-auth-prehide";
