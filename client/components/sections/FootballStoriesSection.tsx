@@ -201,7 +201,7 @@ export default function FootballStoriesSection() {
                     disabled={!canScrollLeft || loading}
                     aria-controls={railId}
                     aria-label="Previous World Cup documentary picks"
-                    className="absolute -left-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100"
+                    className="absolute -left-5 top-1/2 z-30 -translate-y-1/2"
                   />
                   <CarouselNavButton
                     direction="next"
@@ -209,7 +209,7 @@ export default function FootballStoriesSection() {
                     disabled={!canScrollRight || loading}
                     aria-controls={railId}
                     aria-label="Next World Cup documentary picks"
-                    className="absolute -right-5 top-1/2 z-30 -translate-y-1/2 opacity-0 group-hover/carousel:opacity-100 group-focus-within/carousel:opacity-100"
+                    className="absolute -right-5 top-1/2 z-30 -translate-y-1/2"
                   />
                 </div>
                 <div

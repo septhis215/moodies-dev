@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 import CelebrityPersonCard from "./CelebrityPersonCard";
 
 type RelatedPerson = {
@@ -79,29 +79,25 @@ export default function PeopleRail({ people }: { people: RelatedPerson[] }) {
         >
           {[
             {
-              direction: -1,
+              direction: "previous" as const,
               label: "Previous related celebrities",
               enabled: edges.previous,
-              Icon: ChevronLeft,
             },
             {
-              direction: 1,
+              direction: "next" as const,
               label: "Next related celebrities",
               enabled: edges.next,
-              Icon: ChevronRight,
             },
-          ].map(({ direction, label, enabled, Icon }) => (
-            <button
+          ].map(({ direction, label, enabled }) => (
+            <CarouselNavButton
               key={direction}
-              type="button"
+              direction={direction}
               aria-label={label}
               aria-controls="related-people-rail"
               disabled={!enabled}
-              onClick={() => move(direction)}
-              className="grid h-11 w-11 place-items-center rounded-full border border-[var(--surface-border)] text-[var(--ink)] transition-colors enabled:hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-coral-strong)] disabled:cursor-default disabled:opacity-30"
-            >
-              <Icon className="h-5 w-5" aria-hidden="true" />
-            </button>
+              onClick={() => move(direction === "previous" ? -1 : 1)}
+              className="relative grid"
+            />
           ))}
         </div>
       </header>
