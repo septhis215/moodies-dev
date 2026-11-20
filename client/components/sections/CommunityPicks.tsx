@@ -7,9 +7,11 @@ import { ArrowUpRight, MessageCircle } from "lucide-react";
 import { RatingBadge } from "@/components/ui/rating-badge";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { tmdbImage } from "@/lib/tmdb";
+import { useCarouselScroll } from "@/hooks/useCarouselScroll";
+import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 import styles from "./CommunityPicks.module.css";
 
-function MobileReviewCard({ review, index, count, isActive }: { review: ReviewItem; index: number; count: number; isActive: boolean }) {
+function ReviewCard({ review, index, count, activeIndex }: { review: ReviewItem; index: number; count: number; activeIndex: number }) {
   const [expanded, setExpanded] = useState(false);
   const [overflows, setOverflows] = useState(false);
   const [avatarFailed, setAvatarFailed] = useState(false);
@@ -23,8 +25,8 @@ function MobileReviewCard({ review, index, count, isActive }: { review: ReviewIt
     : reviewPoster(review);
 
   useEffect(() => {
-    if (!isActive) setExpanded(false);
-  }, [isActive]);
+    if (activeIndex !== index) setExpanded(false);
+  }, [activeIndex, index]);
 
   useEffect(() => {
     const quote = quoteRef.current;
@@ -39,7 +41,7 @@ function MobileReviewCard({ review, index, count, isActive }: { review: ReviewIt
   return (
     <article className={styles.card} aria-label={`Review ${index + 1} of ${count}: ${mediaTitle}`}>
       <div className={styles.artwork}>
-        <Image src={artwork || "/placeholder-backdrop.svg"} alt="" fill sizes="(max-width: 640px) 100vw, 70vw" className={backdrop ? styles.backdrop : styles.posterBackdrop} />
+        <Image src={artwork || "/placeholder-backdrop.svg"} alt="" fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 70vw, 33vw" className={backdrop ? styles.backdrop : styles.posterBackdrop} />
         <div className={styles.shade} />
         <div className={styles.media}>
           <span className={styles.poster}>
@@ -76,8 +78,8 @@ function MobileReviewCard({ review, index, count, isActive }: { review: ReviewIt
   );
 }
 
-function MobileReviews({ reviews }: { reviews: ReviewItem[] }) {
-  const railRef = useRef<HTMLDivElement>(null);
+function ReviewCarousel({ reviews }: { reviews: ReviewItem[] }) {
+  const { containerRef: railRef, canScrollLeft, canScrollRight, scroll } = useCarouselScroll(reviews.length);
   const railId = useId();
   const [active, setActive] = useState(0);
   const firstDot = Math.max(0, Math.min(active - 2, reviews.length - 5));
@@ -88,6 +90,10 @@ function MobileReviews({ reviews }: { reviews: ReviewItem[] }) {
     let timer: ReturnType<typeof setTimeout>;
     const settle = () => {
       clearTimeout(timer);
+      if (rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 2) {
+        setActive(reviews.length - 1);
+        return;
+      }
       const cards = Array.from(rail.children) as HTMLElement[];
       const first = cards[0]?.offsetLeft ?? 0;
       const nearest = cards.reduce(
@@ -117,16 +123,27 @@ function MobileReviews({ reviews }: { reviews: ReviewItem[] }) {
     const card = rail?.children[index] as HTMLElement | undefined;
     const first = rail?.firstElementChild as HTMLElement | null;
     if (!rail || !card || !first) return;
+    if (rail.scrollWidth <= rail.clientWidth + 2) {
+      setActive(index);
+      return;
+    }
     rail.scrollTo({ left: card.offsetLeft - first.offsetLeft, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
   };
 
   return (
-    <div className={styles.mobile}>
-      <div ref={railRef} id={railId} className={styles.rail} role="region" aria-label="Member reviews" aria-roledescription="carousel">
-        {reviews.map((review, index) => <MobileReviewCard key={`${review.mediaType}-${review.tmdbId}-${review.user?.id || review.name}-${index}`} review={review} index={index} count={reviews.length} isActive={active === index} />)}
+    <div className={styles.carouselSection}>
+      <div className={styles.carousel}>
+        {(canScrollLeft || canScrollRight) && <div role="group" aria-label="Community review navigation" className="pointer-events-none absolute inset-0 z-20">
+          <CarouselNavButton direction="previous" aria-label="Previous community reviews" aria-controls={railId} disabled={!canScrollLeft} onClick={() => scroll(-1)} />
+          <CarouselNavButton direction="next" aria-label="Next community reviews" aria-controls={railId} disabled={!canScrollRight} onClick={() => scroll(1)} />
+        </div>}
+        <div ref={railRef} id={railId} className={styles.rail} role="region" aria-label="Member reviews" aria-roledescription="carousel">
+          {reviews.map((review, index) => <ReviewCard key={`${review.mediaType}-${review.tmdbId}-${review.user?.id || review.name}-${index}`} review={review} index={index} count={reviews.length} activeIndex={active} />)}
+        </div>
       </div>
       {reviews.length > 1 && <div className={styles.navigation}>
         <span className={styles.swipeHint}>Swipe to read</span>
+        <span className={styles.desktopHint}>Browse reviews</span>
         <div className={styles.dots} aria-label="Choose a review">
           {reviews.slice(firstDot, firstDot + 5).map((review, offset) => {
             const index = firstDot + offset;
@@ -384,17 +401,10 @@ export default function CommunityPicks({
           <div className="h-9 w-72 max-w-full moodies-skeleton rounded bg-[var(--surface-2)]" />
           <div className="h-4 w-96 max-w-full moodies-skeleton rounded bg-[var(--surface-1)]" />
         </div>
-        <div className="mb-4 h-96 moodies-skeleton rounded-2xl bg-[var(--surface-1)] lg:hidden" />
-        <div className="hidden gap-3 lg:grid lg:grid-cols-12">
-          <div className="h-[420px] moodies-skeleton rounded-md bg-[var(--surface-1)] lg:col-span-5" />
-          <div className="grid gap-3 sm:grid-cols-2 lg:col-span-7">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="h-48 moodies-skeleton rounded-md bg-[var(--surface-1)]"
-              />
-            ))}
-          </div>
+        <div aria-hidden="true" className={styles.rail}>
+          {[0, 1, 2].map(index => (
+            <div key={index} className={`${styles.card} moodies-skeleton`} />
+          ))}
         </div>
       </section>
     );
@@ -409,7 +419,6 @@ export default function CommunityPicks({
       ? ratedReviews.reduce((sum, review) => sum + (review.rating ?? 0), 0) /
         ratedReviews.length
       : null;
-  const [featuredReview, ...supportingReviews] = visibleReviews;
 
   return (
     <section
@@ -432,109 +441,7 @@ export default function CommunityPicks({
           </div>
         </div>
 
-        <MobileReviews reviews={visibleReviews} />
-        <div className="mt-5 hidden min-w-0 gap-3 sm:mt-6 lg:grid lg:grid-cols-12">
-          {featuredReview ? (
-            <IntentPrefetchLink
-              href={reviewHref(featuredReview) || "#community"}
-              className="group grid min-w-0 grid-cols-[6rem_minmax(0,1fr)] items-stretch overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:min-h-[420px] sm:grid-cols-[42%_minmax(0,1fr)] lg:col-span-5 lg:self-start lg:grid-cols-[44%_minmax(0,1fr)]"
-              aria-label={`Read the community review for ${featuredReview.movieTitle || featuredReview.title}`}
-            >
-              <div className="relative overflow-hidden bg-[var(--surface-2)]">
-                <Image
-                  src={reviewPoster(featuredReview)}
-                  alt={`${featuredReview.movieTitle || featuredReview.title} poster`}
-                  fill
-                  sizes="(max-width: 639px) 96px, (max-width: 1024px) 42vw, 220px"
-                  className="object-cover"
-                />
-              </div>
-              <blockquote className="flex min-w-0 flex-col p-4 sm:p-6">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-[var(--ink-muted)]">
-                  <span>
-                    {featuredReview.mediaType === "TV" ? "Series" : "Movie"}
-                    {featuredReview.movieYear
-                      ? ` · ${featuredReview.movieYear}`
-                      : ""}
-                  </span>
-                  <RatingBadge
-                    rating={featuredReview.rating}
-                    variant="minimal"
-                    size="md"
-                  />
-                </div>
-                <p className="mt-3 line-clamp-5 text-base font-semibold leading-6 text-[var(--ink)] sm:mt-5 sm:line-clamp-7 sm:text-xl sm:leading-7">
-                  “{featuredReview.quote}”
-                </p>
-                <footer className="mt-auto pt-4 sm:pt-6">
-                  <p className="line-clamp-2 text-lg font-bold leading-5 text-[var(--ink)]">
-                    {featuredReview.movieTitle || featuredReview.title}
-                  </p>
-                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-[var(--surface-border)] pt-4">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--surface-2)] text-[10px] font-bold text-[var(--brand-coral-strong)]">
-                        {reviewerInitials(featuredReview.name)}
-                      </span>
-                      <span className="truncate text-xs text-[var(--ink-muted)]">
-                        {featuredReview.name}
-                      </span>
-                    </div>
-                    <ArrowUpRight className="h-4 w-4 shrink-0 text-[var(--ink-muted)] transition-colors group-hover:text-[var(--brand-coral-strong)]" />
-                  </div>
-                </footer>
-              </blockquote>
-            </IntentPrefetchLink>
-          ) : null}
-
-          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:col-span-7">
-            {supportingReviews.map((review, index) => (
-              <IntentPrefetchLink
-                key={`${review.tmdbId || "review"}-${index}`}
-                href={reviewHref(review) || "#community"}
-                className="group grid min-h-44 min-w-0 grid-cols-[5rem_minmax(0,1fr)] items-stretch overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:grid-cols-[104px_minmax(0,1fr)]"
-                aria-label={`Read the community review for ${review.movieTitle || review.title}`}
-              >
-                <div className="relative overflow-hidden bg-[var(--surface-2)]">
-                  <Image
-                    src={reviewPoster(review)}
-                    alt={`${review.movieTitle || review.title} poster`}
-                    fill
-                    sizes="(max-width: 639px) 80px, 104px"
-                    className="object-cover"
-                  />
-                </div>
-                <blockquote className="flex min-w-0 flex-col p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-semibold text-[var(--ink-muted)]">
-                    <span>
-                      {review.mediaType === "TV" ? "Series" : "Movie"}
-                      {review.movieYear ? ` · ${review.movieYear}` : ""}
-                    </span>
-                    <RatingBadge rating={review.rating} variant="minimal" />
-                  </div>
-                  <p className="mt-2 line-clamp-3 text-sm leading-5 text-[var(--ink)]">
-                    “{review.quote}”
-                  </p>
-                  <footer className="mt-auto">
-                    <p className="line-clamp-1 text-sm font-bold leading-5 text-[var(--ink)]">
-                      {review.movieTitle || review.title}
-                    </p>
-                    <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[var(--surface-border)] pt-2.5">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--surface-2)] text-[9px] font-bold text-[var(--brand-coral-strong)]">
-                          {reviewerInitials(review.name)}
-                        </span>
-                        <span className="truncate text-xs text-[var(--ink-muted)]">
-                          {review.name}
-                        </span>
-                      </div>
-                      <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[var(--ink-muted)] transition-colors group-hover:text-[var(--brand-coral-strong)]" />
-                    </div>
-                  </footer>
-                </blockquote>
-              </IntentPrefetchLink>
-            ))}
-          </div>
-        </div>
+        <ReviewCarousel reviews={visibleReviews} />
       </div>
     </section>
   );

@@ -182,15 +182,33 @@ try {
     }
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(base);
-    const desktopReviews = page.locator('#fixture-reviews a[aria-label^="Read the community review for"]');
+    const desktopRail = page.locator('#fixture-reviews [aria-label="Member reviews"]');
+    const desktopReviews = desktopRail.locator(":scope > article");
     await desktopReviews.first().waitFor();
     assert.equal(await desktopReviews.count(), 20);
-    const featured = await desktopReviews.first().boundingBox();
-    const lastSupporting = await desktopReviews.last().boundingBox();
-    assert.ok(featured.height >= 420 && featured.height < 800, "Featured desktop review retains a readable independent height");
-    assert.ok(featured.y + featured.height < lastSupporting.y, "Featured review does not stretch across nineteen supporting reviews");
+    const reviewLayout = await desktopReviews.evaluateAll(cards => cards.map(card => { const box = card.getBoundingClientRect(); return { y: box.y, height: box.height, width: box.width }; }));
+    assert.ok(reviewLayout.every(card => Math.abs(card.y - reviewLayout[0].y) < 1), "All twenty desktop reviews remain in one horizontal row");
+    assert.ok(reviewLayout.every(card => card.height >= 416 && card.height < 800), "Review cards retain a bounded independent height");
+    const railWidth = await desktopRail.evaluate(element => element.clientWidth);
+    assert.ok(reviewLayout[0].width > railWidth * .3 && reviewLayout[0].width < railWidth * .35, "Desktop carousel shows three balanced cards");
+    const nextReview = page.getByRole("button", { name: "Next community reviews", exact: true });
+    const previousReview = page.getByRole("button", { name: "Previous community reviews", exact: true });
+    const collapsedRailHeight = (await desktopRail.boundingBox()).height;
+    await desktopReviews.nth(1).getByRole("button", { name: "Read more", exact: true }).click();
+    assert.ok((await desktopRail.boundingBox()).height > collapsedRailHeight + 100, "Expanding a desktop review grows its own carousel row");
+    await nextReview.click();
+    await page.waitForFunction(() => document.querySelector('#fixture-reviews [aria-label="Member reviews"]').scrollLeft > 100);
+    await desktopRail.getByRole("button", { name: "Show less", exact: true }).waitFor({ state: "hidden" });
+    assert.ok(Math.abs((await desktopRail.boundingBox()).height - collapsedRailHeight) < 1, "Changing pages collapses the expanded supporting review and restores row height");
+    await previousReview.click();
+    await page.waitForFunction(() => document.querySelector('#fixture-reviews [aria-label="Member reviews"]').scrollLeft === 0);
+    await desktopRail.evaluate(element => element.scrollTo({ left: element.scrollWidth, behavior: "instant" }));
+    await page.waitForFunction(() => document.querySelector('#fixture-reviews [aria-current="true"]')?.getAttribute("aria-label") === "Show review 20 of 20");
+    assert.match(await page.locator("#fixture-reviews").innerText(), /20 \/ 20/);
+    assert.ok((await desktopRail.boundingBox()).height < 800, "Twenty reviews do not make the section grow downwards");
+    if (screenshotDir) await page.locator("#fixture-reviews").screenshot({ path: resolve(screenshotDir, "community-20-desktop.png") });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    console.log("Twenty community reviews, moving five-dot pagination, last-review navigation and independent desktop card height passed.");
+    console.log("Twenty community reviews, moving five-dot pagination, mobile swipes and bounded three-card desktop carousel passed.");
   }
   if (!process.env.CAROUSEL_NAV_ONLY && !process.env.COMMUNITY_REVIEWS_ONLY) {
   for (const width of [320, 390, 768]) {
@@ -300,23 +318,45 @@ try {
     await page.emulateMedia({ reducedMotion });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(base);
-    for (const id of ["cards", "generic", "people", "curated", "celebs", "football", "upcoming", "premiere"]) {
-      const buttons = page.locator(`#fixture-${id} [role="group"] > button[aria-controls]`);
+    for (const id of ["cards", "generic", "people", "curated", "celebs", "football", "upcoming", "premiere", "reviews"]) {
+      const buttons = page.locator(`#fixture-${id} [role="group"] button[aria-controls]`);
       await buttons.first().waitFor();
       assert.equal(await buttons.count(), 2, `${id}: paired navigation controls`);
       for (const button of await buttons.all()) {
         const style = await button.evaluate(element => {
           const style = getComputedStyle(element);
-          const edge = getComputedStyle(element, "::before");
           const bounds = element.getBoundingClientRect();
-          return { width: bounds.width, height: bounds.height, border: style.borderTopWidth, background: style.backgroundColor, opacity: style.opacity, edge: edge.backgroundImage, edgePointerEvents: edge.pointerEvents, transition: edge.transitionDuration };
+          const iconBounds = element.querySelector("svg").getBoundingClientRect();
+          const iconStyle = getComputedStyle(element.querySelector("svg"));
+          return { width: bounds.width, height: bounds.height, border: style.borderTopWidth, background: style.backgroundColor, opacity: style.opacity, iconWidth: iconBounds.width, transition: iconStyle.transitionDuration };
         });
-        assert.deepEqual([style.width, style.height, style.border, style.background], [44, 44, "0px", "rgba(0, 0, 0, 0)"], `${id}: borderless 44px controls`);
-        assert.match(style.edge, /radial-gradient/, `${id}: soft edge gradient`);
-        assert.equal(style.edgePointerEvents, "none", `${id}: gradient cannot intercept cards`);
+        assert.deepEqual([style.width, style.height, style.border, style.background], [56, 56, "0px", "rgba(0, 0, 0, 0)"], `${id}: borderless 56px controls`);
+        assert.equal(style.iconWidth, 48, `${id}: larger 48px chevron`);
         assert.ok(Number(style.opacity) > 0, `${id}: controls remain discoverable without hover`);
         assert.equal(await button.locator("svg").getAttribute("stroke-width"), "2");
         if (reducedMotion === "reduce") assert.equal(style.transition, "0s");
+        const edge = button.locator("..");
+        if (await edge.getAttribute("data-carousel-edge")) {
+          await edge.scrollIntoViewIfNeeded();
+          const shade = await edge.evaluate(element => {
+            const bounds = element.getBoundingClientRect();
+            const container = element.parentElement.parentElement.getBoundingClientRect();
+            const shade = getComputedStyle(element.querySelector("span"));
+            const target = document.elementFromPoint(bounds.x + bounds.width / 2, Math.max(0, bounds.y) + 20);
+            return { height: bounds.height, containerHeight: container.height, y: bounds.y, containerY: container.y, x: bounds.x, right: bounds.right, containerX: container.x, containerRight: container.right, width: bounds.width, gradient: shade.backgroundImage, opacity: shade.opacity, pointerEvents: getComputedStyle(element).pointerEvents, targetIntercepted: !!target?.closest("[data-carousel-edge]"), transition: shade.transitionDuration };
+          });
+          assert.ok(Math.abs(shade.height - shade.containerHeight) < 1 && Math.abs(shade.y - shade.containerY) < 1, `${id}: fade spans carousel height`);
+          assert.ok(shade.x >= shade.containerX - 1 && shade.right <= shade.containerRight + 1 && shade.width >= 96, `${id}: broad fade remains inside carousel`);
+          assert.match(shade.gradient, /linear-gradient/);
+          assert.equal(shade.pointerEvents, "none");
+          assert.equal(shade.targetIntercepted, false, `${id}: fade allows underlying card interaction`);
+          if (await button.isDisabled()) {
+            assert.equal(shade.opacity, "0", `${id}: disabled direction does not darken edge content`);
+            await button.hover();
+            assert.equal(await edge.locator("span").evaluate(element => getComputedStyle(element).opacity), "0", `${id}: hovering a disabled direction keeps its fade hidden`);
+          }
+          if (reducedMotion === "reduce") assert.equal(shade.transition, "0s");
+        }
       }
       for (const button of await buttons.all()) {
         if (await button.isEnabled()) {
@@ -328,6 +368,9 @@ try {
     }
     const rail = page.locator("#fixture-cards .mobile-native-scroll");
     if (screenshotDir) await page.locator("#fixture-cards").screenshot({ path: resolve(screenshotDir, `controls-${reducedMotion}.png`) });
+    const actionsBeforeSave = await page.evaluate(() => window.actions);
+    await page.locator("#fixture-cards").getByRole("button", { name: /Add .* to My List/ }).first().click();
+    assert.equal(await page.evaluate(() => window.actions), actionsBeforeSave + 1, "Edge fade does not block poster save action");
     await page.getByRole("button", { name: "Scroll Movies right" }).click();
     await page.waitForFunction(() => document.querySelector("#fixture-cards .mobile-native-scroll").scrollLeft > 100);
     await page.waitForTimeout(500);

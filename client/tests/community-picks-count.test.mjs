@@ -14,6 +14,9 @@ const imports = {
   react: React,
   "react/jsx-runtime": jsxRuntime,
   "next/link": { __esModule: true, default: "a" },
+  "@/components/ui/IntentPrefetchLink": { __esModule: true, default: "a" },
+  "@/hooks/useCarouselScroll": { useCarouselScroll: () => ({ containerRef: { current: null }, canScrollLeft: false, canScrollRight: false, scroll: empty }) },
+  "@/components/ui/CarouselNavButton": { CarouselNavButton: empty },
   "@/components/ui/SectionHeader": { __esModule: true, default: empty },
   "lucide-react": { ArrowUpRight: empty, MessageCircle: empty },
   "@/components/ui/rating-badge": { RatingBadge: empty },
@@ -37,7 +40,8 @@ for (const count of [3, 20, 25]) {
     const visible = Math.min(count, 20);
     assert.match(html, new RegExp(`${visible} featured reviews`));
     assert.equal((html.match(/aria-label="Review \d+ of /g) || []).length, visible);
-    assert.equal((html.match(/aria-label="Read the community review for /g) || []).length, visible);
+    assert.equal((html.match(/aria-label="Explore Movie /g) || []).length, visible);
+    assert.equal((html.match(/aria-roledescription="carousel"/g) || []).length, 1);
     assert.ok((html.match(/aria-label="Show review /g) || []).length <= 5, "Mobile review navigation fits without 20 overflowing dots");
   });
 }
