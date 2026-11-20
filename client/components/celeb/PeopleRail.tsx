@@ -91,6 +91,7 @@ export default function PeopleRail({ people }: { people: RelatedPerson[] }) {
           ].map(({ direction, label, enabled }) => (
             <CarouselNavButton
               key={direction}
+              variant="inline"
               direction={direction}
               aria-label={label}
               aria-controls="related-people-rail"

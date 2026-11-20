@@ -126,7 +126,6 @@ export function TrailerShelf({ data, title, subtitle, endpoint, upcoming = false
                 onClick={() => scroll(-1)}
                 disabled={!canScrollLeft}
                 aria-label={`Previous ${title}`}
-                className="absolute -left-5 top-1/2 z-30 -translate-y-1/2 xl:-left-6"
               />
 
               <CarouselNavButton
@@ -135,7 +134,6 @@ export function TrailerShelf({ data, title, subtitle, endpoint, upcoming = false
                 onClick={() => scroll(1)}
                 disabled={!canScrollRight}
                 aria-label={`Next ${title}`}
-                className="absolute -right-5 top-1/2 z-30 -translate-y-1/2 xl:-right-6"
               />
             </div>
           )}

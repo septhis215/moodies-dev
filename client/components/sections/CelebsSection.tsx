@@ -169,7 +169,6 @@ export default function CelebSection() {
               disabled={!canScrollLeft}
               aria-controls={railId}
               aria-label="Previous celebrities"
-              className="absolute -left-5 top-1/2 z-30 -translate-y-1/2 xl:-left-6"
             />
 
             <CarouselNavButton
@@ -178,7 +177,6 @@ export default function CelebSection() {
               disabled={!canScrollRight}
               aria-controls={railId}
               aria-label="Next celebrities"
-              className="absolute -right-5 top-1/2 z-30 -translate-y-1/2 xl:-right-6"
             />
           </div>
           <motion.div

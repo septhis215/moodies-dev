@@ -145,8 +145,8 @@ export function CuratedShelf({
         </div>
         {(canScrollLeft || canScrollRight) && (
           <div className="flex gap-1" role="group" aria-label="Curated pick navigation">
-            <CarouselNavButton direction="previous" aria-label="Previous curated picks" aria-controls={railId} disabled={!canScrollLeft} onClick={() => scroll(-1)} />
-            <CarouselNavButton direction="next" aria-label="Next curated picks" aria-controls={railId} disabled={!canScrollRight} onClick={() => scroll(1)} />
+            <CarouselNavButton variant="inline" direction="previous" aria-label="Previous curated picks" aria-controls={railId} disabled={!canScrollLeft} onClick={() => scroll(-1)} />
+            <CarouselNavButton variant="inline" direction="next" aria-label="Next curated picks" aria-controls={railId} disabled={!canScrollRight} onClick={() => scroll(1)} />
           </div>
         )}
       </div>

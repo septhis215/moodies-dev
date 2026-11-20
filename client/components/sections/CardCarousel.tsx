@@ -191,7 +191,6 @@ export default function CardCarousel<T extends MediaItem>({
                 disabled={!canScrollLeft}
                 aria-controls={railId}
                 aria-label={`Scroll ${title} left`}
-                className="absolute -left-5 top-[42%] z-30 -translate-y-1/2 xl:-left-6"
               />
               <CarouselNavButton
                 direction="next"
@@ -199,7 +198,6 @@ export default function CardCarousel<T extends MediaItem>({
                 disabled={!canScrollRight}
                 aria-controls={railId}
                 aria-label={`Scroll ${title} right`}
-                className="absolute -right-5 top-[42%] z-30 -translate-y-1/2 xl:-right-6"
               />
             </div>
           )}

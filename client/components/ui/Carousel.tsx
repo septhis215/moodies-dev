@@ -33,14 +33,12 @@ export const Carousel = ({
             onClick={() => scroll(-1)}
             disabled={!canScrollLeft}
             aria-controls={railId}
-            className="absolute -left-5 top-1/2 z-30 -translate-y-1/2 xl:-left-6"
           />
           <CarouselNavButton
             direction="next"
             onClick={() => scroll(1)}
             disabled={!canScrollRight}
             aria-controls={railId}
-            className="absolute -right-5 top-1/2 z-30 -translate-y-1/2 xl:-right-6"
           />
         </div>
       )}
