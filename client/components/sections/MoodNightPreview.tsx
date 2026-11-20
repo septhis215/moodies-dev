@@ -92,11 +92,12 @@ export default function MoodNightPreview() {
           <h2 id="mood-shelf-heading" className="mt-2 text-3xl font-bold leading-none text-[var(--ink)] sm:text-4xl">What kind of night is this?</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--ink-muted)]">Pick a feeling. Find a story for tonight.</p>
         </div>
-        <Link href="/moods" className={`inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] ${focus}`}>Explore the mood wheel <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+        <Link href="/moods" className={`hidden min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] sm:inline-flex ${focus}`}>Explore the mood wheel <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
       </header>
       <div className={styles.layout}>
         <div className={styles.choices} role="group" aria-label="Choose a mood">
           {moodNightChoices.map(choice => <button key={choice.id} type="button" onClick={() => { if (choice.id !== selection) { setSelection(choice.id); setSelectedPick(null); setPaused(false); setMuted(true); setPlaying(false); setFailedSelection(null); } }} aria-controls="landing-mood-preview" aria-pressed={choice.id === selection} className={`ui-filter-chip ${styles.choice}`}>
+            <span className={styles.choiceMascot}><BadgeMascot name={nightMascots[choice.id]} alt="" sizes="48px" className="h-12 w-12" /></span>
             <span aria-hidden="true" className={styles.moodDot} style={{ backgroundColor: choice.color }} />{choice.label}
           </button>)}
         </div>
@@ -118,15 +119,15 @@ export default function MoodNightPreview() {
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <Link href={`/${activeItem.type === "movie" ? "movies" : "tv"}/${activeItem.id}`} className={`inline-flex min-h-11 items-center gap-2 rounded-sm text-sm font-semibold text-[var(--brand-coral-strong)] ${focus}`}>Explore {activeItem.type === "movie" ? "movie" : "series"}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
-            {activeTrailer && motionAllowed && <button type="button" onClick={() => setPaused(value => !value)} aria-pressed={paused} className={`inline-flex min-h-11 items-center gap-1.5 rounded-sm text-xs text-white ${focus}`}>{paused ? <Play className="h-3.5 w-3.5" aria-hidden="true" /> : <Pause className="h-3.5 w-3.5" aria-hidden="true" />}{paused ? "Play preview" : "Pause preview"}</button>}
-            {activeTrailer && motionAllowed && <button type="button" onClick={() => setMuted(value => !value)} aria-pressed={!muted} className={`inline-flex min-h-11 items-center gap-1.5 rounded-sm text-xs text-white ${focus}`}>{muted ? <Volume2 className="h-3.5 w-3.5" aria-hidden="true" /> : <VolumeX className="h-3.5 w-3.5" aria-hidden="true" />}{muted ? "Sound on" : "Sound off"}</button>}
+            {activeTrailer && motionAllowed && <button type="button" onClick={() => setPaused(value => !value)} aria-pressed={paused} className={`${styles.playbackControl} inline-flex min-h-11 items-center gap-1.5 rounded-sm text-xs text-white ${focus}`}>{paused ? <Play className="h-3.5 w-3.5" aria-hidden="true" /> : <Pause className="h-3.5 w-3.5" aria-hidden="true" />}<span className="sr-only sm:not-sr-only">{paused ? "Play preview" : "Pause preview"}</span></button>}
+            {activeTrailer && motionAllowed && <button type="button" onClick={() => setMuted(value => !value)} aria-pressed={!muted} className={`${styles.playbackControl} inline-flex min-h-11 items-center gap-1.5 rounded-sm text-xs text-white ${focus}`}>{muted ? <Volume2 className="h-3.5 w-3.5" aria-hidden="true" /> : <VolumeX className="h-3.5 w-3.5" aria-hidden="true" />}<span className="sr-only sm:not-sr-only">{muted ? "Sound on" : "Sound off"}</span></button>}
           </div>
         </div>}
         {!activeItem && <p className={`${styles.scenePlaceholder} text-sm text-[var(--ink-muted)]`}>{failed ? "Your next story starts with a feeling." : "Finding a story for your night…"}</p>}
       </div>
         <div id="landing-mood-preview" className={styles.recommendations}>
-          <div className="mb-4 flex min-h-16 items-center gap-3 lg:mb-3 lg:min-h-12">
-            <BadgeMascot name={nightMascots[mood.id]} alt={`${mood.label} night guide`} sizes="(min-width: 1024px) 48px, 64px" className="h-16 w-16 shrink-0 lg:h-12 lg:w-12" />
+          <div className="mb-4 flex items-center gap-3 sm:min-h-16 lg:mb-3 lg:min-h-12">
+            <BadgeMascot name={nightMascots[mood.id]} alt={`${mood.label} night guide`} sizes="(min-width: 1024px) 48px, 64px" className={`${styles.summaryMascot} h-16 w-16 shrink-0 lg:h-12 lg:w-12`} />
             <div className={styles.copy} aria-live="polite" aria-atomic="true"><h3 className="text-base font-bold text-[var(--ink)] sm:text-lg">{mood.id === "easy" || mood.id === "electric" ? "An" : "A"} {mood.label.toLowerCase()} night</h3><p className="mt-1 max-w-xl text-sm leading-6 text-[var(--ink-muted)]">{mood.note}</p></div>
           </div>
           <div aria-busy={!preview && !failed} className="min-h-28">
@@ -153,6 +154,7 @@ export default function MoodNightPreview() {
           </div>
         </div>
       </div>
+      <Link href="/moods" className={`mt-5 flex min-h-12 w-full items-center justify-between gap-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface-1)] px-4 text-sm font-semibold text-[var(--brand-coral-strong)] sm:hidden ${focus}`}>Explore the mood wheel <ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
     </div>
   </section>;
 }

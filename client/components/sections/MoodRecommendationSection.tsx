@@ -474,7 +474,7 @@ export default function MoodRecommendationsSection({
                   </span>
                   {active && <Check aria-hidden="true" className="absolute right-3 top-3 size-4 text-[var(--brand-coral-strong)]" />}
                   <span className="min-w-0 rounded-sm [text-shadow:0_1px_4px_var(--surface-0)] md:max-w-[70%]">
-                    <span className="ui-text-reveal block wrap-anywhere text-lg font-bold leading-tight text-[var(--ink)] underline-offset-4 group-aria-pressed:text-[var(--brand-coral-strong)] group-aria-pressed:underline md:text-xl">
+                    <span className="block wrap-anywhere text-lg font-bold leading-tight text-[var(--ink)] underline-offset-4 group-hover:text-[var(--brand-coral-strong)] group-aria-pressed:text-[var(--brand-coral-strong)] group-aria-pressed:underline motion-safe:transition-colors md:text-xl">
                       {mood.name}
                     </span>
                     <span className="mt-1 hidden line-clamp-2 text-xs leading-4 text-[var(--ink-muted)] md:block">{mood.description}</span>
