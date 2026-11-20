@@ -141,7 +141,7 @@ export default function MoodNightPreview() {
                   return <div key={key} className={`${styles.pickCard} ${selected ? styles.selected : ""}`}>
                     <button type="button" aria-pressed={selected} aria-label={`Preview ${item.title}${hasTrailer ? " trailer" : " artwork"}`} onClick={() => { if (!selected) { setSelectedPick(key); setPaused(false); setMuted(true); setPlaying(false); } }} className={`${styles.pick} flex w-full min-w-0 gap-2 p-3 text-left ${focus}`}>
                       <span className={styles.posterWrap}>
-                        <Image src={item.poster ? tmdbImage(item.poster, "w185") : "/placeholder-poster.svg"} alt="" width={44} height={66} className={`${styles.poster} h-16 w-11 rounded object-cover`} />
+                        <Image src={item.poster ? tmdbImage(item.poster, "w185") : "/placeholder-poster.svg"} alt="" fill sizes="(min-width: 640px) 44px, 32px" className="rounded object-cover" />
                         {hasTrailer && <span className={styles.playIcon}><Play className="h-3 w-3" aria-hidden="true" /></span>}
                       </span>
                       <span className={`${styles.pickCopy} min-w-0 self-center`}><span className={`${styles.pickTitle} line-clamp-2 text-sm font-semibold leading-5 text-[var(--ink)]`}>{item.title}</span><span className="mt-1 block text-xs text-[var(--ink-muted)]">{item.type === "movie" ? "Movie" : "Series"}</span><span className={`${styles.previewLabel} mt-2 block text-xs font-semibold`}>{selected ? "Selected" : hasTrailer ? "Preview trailer" : "Preview artwork"}</span></span>

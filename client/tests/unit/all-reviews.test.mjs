@@ -20,7 +20,7 @@ const info = { id: 123, title: "Lanterns", release_date: "2026", content_type: "
 const review = (id, author, rating, date) => ({ id, author, author_details: { rating }, content: `${author}'s thoughtful review`, created_at: date, updated_at: date, url: "" });
 
 function harness(code, { reviews = [], authenticated = true, pathname = "/tv/123/reviews", reducedMotion = false } = {}) {
-  const mod = { exports: {} }, states = [], messages = [];
+  const mod = { exports: {} }, states = [], messages = [], requests = [];
   let cursor = 0;
   const jsx = (type, props) => ({ type, props });
   vm.runInNewContext(code, {
@@ -43,13 +43,17 @@ function harness(code, { reviews = [], authenticated = true, pathname = "/tv/123
       if (name === "@/app/context/AuthProvider") return { useAuth: () => ({ isAuthenticated: authenticated, user: { id: "me" } }) };
       if (name === "@/hooks/useReviewBanStatus") return { useReviewBanStatus: () => ({ banStatus: { banned: false } }) };
       if (name === "@/app/context/ToastContext") return { useToast: () => ({ toast: (...args) => messages.push(args) }) };
+      if (name === "@/lib/auth/session") return { sessionFetch: async (...args) => {
+        requests.push(args);
+        return { ok: true, json: async () => ({ reactionCounts: [], myReaction: null }) };
+      } };
       if (name === "@/hooks/useScrollToHash") return { useScrollToHash() {} };
       if (name === "@/components/Navbar") return { NavbarComponent: "Navbar" };
       if (name === "@/components/ui/custom-select") return { default: "CustomSelect" };
       return {};
     },
   });
-  return { states, messages, render(props = { reviews, info, id: "123" }) {
+  return { states, messages, requests, render(props = { reviews, info, id: "123" }) {
     cursor = 0;
     const nodes = [];
     const walk = (node) => {
@@ -85,11 +89,124 @@ test("toolbar preserves latest/highest sorting and author search with reset", ()
   assert.equal(ids(app.render()).length, 2);
 });
 
+test("review search includes author usernames, reply text, and reply usernames with case-insensitive @handle support", () => {
+  const thread = {
+    ...review("thread", "Avery", 6, "2026-01-01"),
+    author_details: { rating: 6, username: "CinemaFan" },
+    content: "A great cast.",
+    replies: [
+      { content: "First reply", created_at: "2026-01-02", user: { username: "Sam" } },
+      { content: "Second reply", created_at: "2026-01-03", user: { username: "Lee" } },
+      { content: "The finale stayed with me. [Cut?]", created_at: "2026-01-04", user: { username: "AfterCredits" } },
+    ],
+  };
+  const app = harness(reviewsCode, { reviews: [thread, review("other", "Jordan", 10, "2026-02-01")] });
+  const search = value => {
+    app.render().find(node => node.type === "input").props.onChange({ target: { value } });
+    return app.render();
+  };
+  for (const query of ["Avery", "great CAST", "  CINEMAFAN  ", "@cinemafan", "finale", "@AFTERCREDITS", "Sam", "  [cUt?]  "]) {
+    assert.deepEqual(search(query).filter(node => node.props.id?.startsWith("review-")).map(node => node.props.id), ["review-thread"], query);
+  }
+  let nodes = search(" finale ");
+  assert.equal(nodes.filter(node => node.props.className === "reply").length, 3, "A matching reply beyond the preview is visible");
+  assert.equal(nodes.some(node => node.props.children?.[0] === "Show fewer replies"), false, "Search results do not offer an ineffective collapse action");
+  nodes.find(node => node.props["aria-label"] === "Clear search").props.onClick();
+  nodes = app.render();
+  assert.deepEqual(nodes.filter(node => node.props.id?.startsWith("review-")).map(node => node.props.id), ["review-other", "review-thread"]);
+  assert.equal(nodes.filter(node => node.props.className === "reply").length, 2, "Clearing search restores the collapsed preview");
+  nodes.find(node => node.type === "button" && node.props.children?.[0] === "Show all 3 replies").props.onClick();
+  search("finale");
+  assert.equal(search("").filter(node => node.props.className === "reply").length, 3, "Clearing search preserves a manually expanded thread");
+  assert.equal(search("   ").filter(node => node.props.id?.startsWith("review-")).length, 2);
+  assert.equal(search("missing phrase").filter(node => node.props.id?.startsWith("review-")).length, 0);
+});
+
 test("write action retains sign-in protection", () => {
   const app = harness(reviewsCode, { authenticated: false });
   app.render().find((n) => n.props["aria-label"] === "Write a review").props.onClick();
   assert.equal(app.messages.length, 1);
   assert.equal(app.messages[0][0], "Sign in to write a review.");
+});
+
+test("review ratings show five full, half, or dimmed stars with the existing color categories", () => {
+  for (const [raw, widths, color] of [
+    [0, [0, 0, 0, 0, 0], "#f87171"],
+    [1, [50, 0, 0, 0, 0], "#f87171"],
+    [2, [100, 0, 0, 0, 0], "#f87171"],
+    [5, [100, 100, 50, 0, 0], "#facc15"],
+    [8, [100, 100, 100, 100, 0], "#4ade80"],
+    [9, [100, 100, 100, 100, 50], "#4ade80"],
+    [10, [100, 100, 100, 100, 100], "#4ade80"],
+  ]) {
+    const nodes = harness(reviewsCode, { reviews: [review("stars", "Alex", raw, "2026-01-01")] }).render();
+    const rating = nodes.find(node => node.props.role === "img" && node.props["aria-label"] === `${(raw / 2).toFixed(1)} out of 5 stars`);
+    assert.ok(rating, `Accessible rating for ${raw / 2} stars`);
+    assert.equal(rating.props.style.color, color);
+    assert.equal(rating.props.children.length, 5);
+    assert.deepEqual(Array.from(rating.props.children, star => Number.parseFloat(star.props.children[1].props.style.width)), widths);
+    assert.ok(rating.props.children.every(star => star.props["aria-hidden"] === true));
+  }
+  const unrated = harness(reviewsCode, { reviews: [review("unrated", "Alex", undefined, "2026-01-01")] }).render();
+  assert.equal(unrated.some(node => node.props.role === "img" && node.props["aria-label"]?.includes("out of 5 stars")), false);
+});
+
+test("signed-out visitors can open review and reply reactions and receive a sign-in toast without a request", async () => {
+  for (const replyId of ["reply", undefined]) {
+    const item = { ...review("thread", "Alex", 8, "2026-01-01"), replies: [
+      { id: replyId, content: "I agree", created_at: "2026-01-02", user: { username: "Sam" } },
+    ] };
+    const app = harness(reviewsCode, { authenticated: false, reviews: [item] });
+    const reactions = app.render().filter(node => typeof node.props.onReact === "function");
+    assert.equal(reactions.length, 2);
+    for (const reaction of reactions) {
+      const trigger = reaction.type(reaction.props).props.children[0];
+      assert.notEqual(trigger.props.disabled, true);
+      await reaction.props.onReact("LOVE");
+    }
+    assert.deepEqual(app.messages.map(message => message.slice(0, 4)), [
+      ["Sign in to react to reviews.", "warning", 3000, "Not Logged In"],
+      ["Sign in to react to replies.", "warning", 3000, "Not Logged In"],
+    ]);
+    assert.deepEqual(app.requests, []);
+  }
+});
+
+test("one reply composer follows the selected review or reply, including replies from the same author", async () => {
+  const item = { ...review("thread", "Alex", 8, "2026-01-01"), replies: [
+    { id: "one", content: "First reply", created_at: "2026-01-02", user: { username: "Sam" } },
+    { id: "two", content: "Second reply", created_at: "2026-01-03", user: { username: "Sam" } },
+  ] };
+  const descendants = node => !node || typeof node !== "object" ? [] : [node, ...[node.props?.children].flat(Infinity).flatMap(descendants)];
+  const hasInput = node => descendants(node).some(child => child.type === "textarea");
+  const action = (nodes, label) => nodes.find(node => node.type === "button" && Array.isArray(node.props.children) && node.props.children[0]?.trim?.() === label);
+  const app = harness(reviewsCode, { reviews: [item] });
+  let nodes = app.render();
+  action(nodes, "Reply").props.onClick();
+  nodes = app.render();
+  let row = nodes.find(node => node.props.id === "review-thread");
+  const children = [row.props.children].flat(Infinity).filter(Boolean);
+  assert.ok(children.findIndex(hasInput) < children.findIndex(child => child.props?.className === "thread"), "Review composer appears before its existing replies");
+  nodes.find(node => node.type === "textarea").props.onChange({ target: { value: "Draft text" } });
+  assert.equal(app.render().find(node => node.type === "textarea").props.value, "Draft text");
+  for (const index of [0, 1]) {
+    nodes = app.render();
+    action(descendants(nodes.filter(node => node.props.className === "reply")[index]), "Reply").props.onClick();
+    nodes = app.render();
+    const replies = nodes.filter(node => node.props.className === "reply");
+    assert.equal(nodes.filter(node => node.type === "textarea").length, 1);
+    assert.equal(hasInput(replies[index]), true, "Composer is inside the selected reply");
+    assert.equal(hasInput(replies[1 - index]), false);
+    const mainActions = nodes.find(node => node.props.className === "actions");
+    assert.equal(action(descendants(mainActions), "Reply").props["aria-expanded"], false);
+  }
+  nodes.find(node => node.type === "textarea").props.onChange({ target: { value: "A useful reply." } });
+  nodes = app.render();
+  await action(nodes, "Post").props.onClick();
+  assert.equal(app.requests.length, 1);
+  assert.match(app.requests[0][0], /\/reviews\/thread\/replies$/);
+  assert.equal(JSON.parse(app.requests[0][1].body).content, "@Sam — A useful reply.");
+  assert.equal(app.render().some(node => node.type === "textarea"), false);
 });
 
 test("shared navigation appears on movie and series reviews/credits but stays hidden on auth/feed", () => {
