@@ -579,11 +579,11 @@ export default function AllReviews({
             </div>
           </nav>
 
-          <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-5 gap-y-6 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-x-8 lg:grid-cols-[minmax(0,1fr)_12rem] lg:gap-x-10">
+          <div className="grid grid-cols-1 items-center gap-x-5 gap-y-6 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-x-8 lg:grid-cols-[minmax(0,1fr)_12rem] lg:gap-x-10">
             <Link
               href={titleHref}
               aria-label={`View ${info.title} details`}
-              className="relative block aspect-[2/3] self-start overflow-hidden rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral)] lg:col-start-2 lg:row-start-1 lg:row-span-2"
+              className={`${styles.heroPoster} relative block aspect-[2/3] self-start overflow-hidden rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral)] lg:col-start-2 lg:row-start-1 lg:row-span-2`}
             >
               <Image
                 src={
@@ -593,12 +593,12 @@ export default function AllReviews({
                 }
                 alt={info.title}
                 fill
-                sizes="(min-width: 1024px) 192px, (min-width: 640px) 128px, 80px"
+                sizes="(min-width: 1024px) 192px, (min-width: 640px) 128px, 80vw"
                 className="object-cover"
               />
             </Link>
 
-            <div className="contents sm:block sm:min-w-0 lg:col-start-1 lg:row-start-1">
+            <div className="min-w-0 lg:col-start-1 lg:row-start-1">
               <div className="min-w-0">
                 <p className="ui-kicker">Audience reviews</p>
                 <h1 className="mt-2 max-w-3xl break-words text-balance text-[2.1rem] font-bold leading-[0.98] tracking-normal text-[var(--ink)] min-[390px]:text-[2.45rem] sm:text-[clamp(2.45rem,4.6vw,4rem)] sm:leading-[0.96] xl:text-[clamp(2.45rem,4.2vw,4.8rem)]">
@@ -620,17 +620,20 @@ export default function AllReviews({
                   {info.content_type === "movie" && info.runtime > 0 && <span>{info.runtime} min</span>}
                 </div>
               </div>
-              <div className="col-span-2 min-w-0 sm:mt-5">
+              <div className="mt-5 min-w-0">
                 <p className="max-w-xl text-sm leading-6 text-[var(--ink-muted)]">Every watch feels different. See what stayed with the community.</p>
                 {info.genres.length > 0 ? <div className="mt-4"><Pill variant="genre">{info.genres.map(genre => genre.name).join(' / ')}</Pill></div> : null}
               </div>
             </div>
 
-            <section aria-labelledby="audience-pulse-heading" className="col-span-2 lg:col-span-1 lg:col-start-1 lg:row-start-2">
+            <section aria-labelledby="audience-pulse-heading" className="min-w-0 sm:col-span-2 lg:col-span-1 lg:col-start-1 lg:row-start-2">
               <h2 id="audience-pulse-heading" className="sr-only">Audience ratings</h2>
-              <dl className="flex flex-wrap gap-x-10 gap-y-5">
+              <dl className={`${styles.ratings} flex flex-wrap gap-x-10 gap-y-5`}>
                 <div>
-                  <dt className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ink-muted)]"><MessageCircle className="h-4 w-4 text-[var(--brand-coral)]" aria-hidden="true" />Moodies</dt>
+                  <dt>
+                    <span className={styles.scoreBrand} aria-hidden="true"><Image src="/images/moodies-transparent.png" alt="" width={64} height={40} className={styles.scoreLogo} /></span>
+                    <span className="sr-only text-sm font-semibold text-[var(--ink-muted)] sm:not-sr-only sm:flex sm:items-center sm:gap-1.5"><MessageCircle className="h-4 w-4 text-[var(--brand-coral)]" aria-hidden="true" />Moodies</span>
+                  </dt>
                   <dd className="mt-2">
                     <span data-display className="text-3xl font-bold leading-none text-[var(--brand-coral-strong)]">{reviewStats && reviewStats.totalRatings > 0 ? reviewStats.averageRating.toFixed(1) : "—"}</span>
                     {reviewStats && reviewStats.totalRatings > 0 && <span className="ml-1 text-xs text-[var(--ink-muted)]">/ 10</span>}
@@ -638,7 +641,10 @@ export default function AllReviews({
                   </dd>
                 </div>
                 <div>
-                  <dt className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ink-muted)]"><Star className="h-4 w-4 text-[var(--brand-gold)]" aria-hidden="true" />TMDb</dt>
+                  <dt>
+                    <span className={styles.scoreBrand} aria-hidden="true"><Image src="/images/tmdb-logo.svg" alt="" width={64} height={40} className={styles.scoreLogo} /></span>
+                    <span className="sr-only text-sm font-semibold text-[var(--ink-muted)] sm:not-sr-only sm:flex sm:items-center sm:gap-1.5"><Star className="h-4 w-4 text-[var(--brand-gold)]" aria-hidden="true" />TMDb</span>
+                  </dt>
                   <dd className="mt-2">
                     <span data-display className="text-3xl font-bold leading-none text-[var(--brand-gold)]">{info.vote_count > 0 ? info.vote_average.toFixed(1) : "—"}</span>
                     {info.vote_count > 0 && <span className="ml-1 text-xs text-[var(--ink-muted)]">/ 10</span>}
