@@ -7,6 +7,7 @@ import ImageVideoCarousel from "@/components/selected-content/sections/imageVide
 import CommonCardCarousel from "@/components/sections/CommonCardCarousel";
 import DecisionPanel from "@/components/selected-content/sections/DecisionPanel";
 import { normalizeMediaDetails } from "@/lib/mediaDetails";
+import { withMoodReview } from "@/lib/moodReview.server";
 import type { MovieDetailsData } from "@/components/selected-content/types";
 
 async function fetchDetails(id: string): Promise<MovieDetailsData | null> {
@@ -64,8 +65,9 @@ async function fetchRecommendations(id: string) {
 async function fetchReviews(id: string) {
   try {
     const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
+    const url = `${base}/reviews/media/MOVIE/${id}?page=1&limit=10`;
     const res = await fetch(
-      `${base}/reviews/media/MOVIE/${id}?page=1&limit=10`,
+      url,
       {
         cache: "no-store",
       },
@@ -76,7 +78,7 @@ async function fetchReviews(id: string) {
         topMoods: [],
         pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
       };
-    return res.json();
+    return await withMoodReview(await res.json(), url);
   } catch {
     return {
       reviews: [],
@@ -158,6 +160,7 @@ export default async function MoviePage({
         data={data}
         topMoods={reviews.topMoods || []}
         totalMoodVotes={reviews.totalMoodVotes}
+        moodReview={reviews.moodReview}
         reviewStats={reviewStats}
         trailers={videos?.videos ?? []}
       />

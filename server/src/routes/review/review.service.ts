@@ -25,7 +25,7 @@ import type { SnapshotFormat } from './dto/create-snapshot.dto';
 
 // Short cache for the public discovery carousels (critics corner / community
 // picks). They previously hit the DB — plus per-item TMDB fallbacks — on every
-// request; a 2-minute cache collapses that to one build per window.
+// request; a 2-minute cache collapses that to one build per window. test
 const CRITICS_CORNER_TTL = 120; // seconds
 const SNAPSHOT_SIZE = 1080;
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
@@ -1026,25 +1026,13 @@ export class ReviewService {
         select: {
           id: true,
           createdAt: true,
+          moodEmojis: true,
+          content: true,
           _count: { select: { reactions: true, replies: true } },
           replies: { select: { _count: { select: { reactions: true } } } },
         },
       }),
     ]);
-
-    const featuredIds = activity.map(review => ({
-      id: review.id,
-      createdAt: review.createdAt,
-      score: review._count.reactions + review._count.replies + review.replies.reduce((sum, reply) => sum + reply._count.reactions, 0),
-    })).filter(review => review.score > 0).sort((a, b) =>
-      b.score - a.score || b.createdAt.getTime() - a.createdAt.getTime() || a.id.localeCompare(b.id),
-    ).slice(0, 3).map(review => review.id);
-    const missingFeaturedIds = featuredIds.filter(id => !reviews.some(review => review.id === id));
-    const additionalFeatured = missingFeaturedIds.length ? await this.prisma.review.findMany({
-      where: { ...publicWhere, id: { in: missingFeaturedIds } },
-      include,
-    }) : [];
-    const byId = new Map([...reviews, ...additionalFeatured].map(review => [review.id, review]));
 
     const allMoodEmojis = moodGroups.flatMap((group) =>
       group.moodEmojis.map((emoji) => ({ emoji, count: group._count._all })),
@@ -1061,6 +1049,27 @@ export class ReviewService {
       .sort(([, a], [, b]) => b - a)
       .map(([emoji, count]) => ({ emoji, count }));
     const topMoods = allMoods.slice(0, 3);
+    const rankedActivity = activity.map(review => ({
+      id: review.id,
+      createdAt: review.createdAt,
+      moodEmojis: review.moodEmojis,
+      content: review.content,
+      score: review._count.reactions + review._count.replies + review.replies.reduce((sum, reply) => sum + reply._count.reactions, 0),
+    })).sort((a, b) =>
+      b.score - a.score || b.createdAt.getTime() - a.createdAt.getTime() || a.id.localeCompare(b.id),
+    );
+    const featuredIds = rankedActivity.filter(review => review.score > 0).slice(0, 3).map(review => review.id);
+    const moodReviewId = topMoods.length ? rankedActivity.find(review =>
+      review.moodEmojis.includes(topMoods[0].emoji) && review.content.trim(),
+    )?.id : undefined;
+    const highlightIds = [...new Set([...featuredIds, ...(moodReviewId ? [moodReviewId] : [])])];
+    const missingIds = highlightIds.filter(id => !reviews.some(review => review.id === id));
+    const additionalReviews = missingIds.length ? await this.prisma.review.findMany({
+      where: { ...publicWhere, id: { in: missingIds } },
+      include,
+    }) : [];
+    const byId = new Map([...reviews, ...additionalReviews].map(review => [review.id, review]));
+    const moodReview = moodReviewId ? byId.get(moodReviewId) : undefined;
 
     // Convert to entities and sanitize
     const reviewEntities = reviews.map(
@@ -1071,6 +1080,7 @@ export class ReviewService {
       reviews: reviewEntities.map((r) => r.toPublic()),
       featuredReviews: featuredIds.map(id => byId.get(id)).filter(review => review !== undefined)
         .map(review => new ReviewWithRepliesEntity({ ...review, viewerId }).toPublic()),
+      moodReview: moodReview ? new ReviewWithRepliesEntity({ ...moodReview, viewerId }).toPublic() : null,
       topMoods,
       allMoods,
       totalMoodVotes: Object.values(moodCounts).reduce((sum, count) => sum + count, 0),

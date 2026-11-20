@@ -102,7 +102,7 @@ function poster({ reducedMotion = false } = {}) {
   return () => componentModule.exports.AudienceMoodPoster({
     title: "Example", poster: "/poster.jpg",
     moods: [{ emoji: "/images/review-icons/amazing.png", count: 8 }],
-  });
+  }).props.children.find((child) => child.type === "button");
 }
 
 test("hover and focus never reveal the mascot; click toggles it", () => {

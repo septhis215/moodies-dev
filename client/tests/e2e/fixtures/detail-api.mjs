@@ -44,7 +44,7 @@ export async function startDetailApi(port = 4000) {
       return reply({ snapshotType: path.startsWith('/reviews') ? 'review' : 'content', format: 'square', width: 1080, height: 1080, content: { tmdbId: 550, mediaType: path.includes('/TV/') ? 'TV' : 'MOVIE', title: 'A Different Kind of Sunday', releaseYear: '2026', typeLabel: 'Movie', posterUrl: 'http://localhost:3000/images/ironmanposter.jpeg', backdropUrl: 'http://localhost:3000/images/ironmanbg.jpg', genres: ['Drama', 'Comedy'], directors: ['Avery Park'], runtimeLabel: '1h 58m', ratingLabel: '8.2 TMDB' }, review: path.startsWith('/reviews') ? { content: reviews[0].content, username: 'Sam', rating: 8, isPrivate: true } : undefined });
     }
     if (/\/(movies|tv)\/details\//.test(path)) return reply(details(path.startsWith('/tv'), Number(path.split('/').pop())));
-    if (path.startsWith('/reviews/media/')) return path.endsWith('/stats') ? reply({ totalRatings: state.reviews, averageRating: 8.2 }) : reply({ reviews, topMoods, pagination: { page: 1, limit: 10, total: state.reviews, totalPages: 1 } });
+    if (path.startsWith('/reviews/media/')) return path.endsWith('/stats') ? reply({ totalRatings: state.reviews, averageRating: 8.2 }) : reply({ reviews, topMoods, moodReview: reviews[0], pagination: { page: 1, limit: 10, total: state.reviews, totalPages: 1 } });
     if (path.includes('/images/')) return reply({ posters: [], backdrops: [] });
     if (path.includes('/videos/')) return reply({ videos: [] });
     if (path.includes('/seasons/')) return reply({ seasons: [] });

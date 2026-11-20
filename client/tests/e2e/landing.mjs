@@ -224,6 +224,11 @@ try {
       if (!member && width >= 640) {
         const card = page.locator("#trending article").first();
         await card.locator(".ui-poster").hover();
+        await page.waitForFunction(element => {
+          const panel = element.querySelector('.ui-poster > div');
+          return panel && getComputedStyle(panel).visibility === 'visible'
+            && new DOMMatrixReadOnly(getComputedStyle(panel).transform).m42 === 0;
+        }, await card.elementHandle());
         const bounds = await card.evaluate((element) => {
           const poster = element.querySelector(".ui-poster").getBoundingClientRect();
           const save = element.querySelector(".ui-poster-save");
@@ -232,18 +237,21 @@ try {
           const recommendations = [...element.querySelectorAll('a[aria-label^="View "]')].map((link) => link.getBoundingClientRect());
           return {
             titleTop: element.querySelector("h4").getBoundingClientRect().top,
+            panelTop: element.querySelector('.ui-poster > div').getBoundingClientRect().top,
             headerBottom: saveFrame.bottom,
             saveCenter: saveFrame.top + saveFrame.height / 2,
             ratingCenter: rating.top + rating.height / 2,
             posterBottom: poster.bottom,
             lastRecommendationBottom: recommendations.at(-1).bottom,
             recommendationWidth: recommendations[0].width,
+            recommendationHeight: recommendations[0].height,
           };
         });
         assert.ok(bounds.titleTop >= bounds.headerBottom, "Hover panel title overlaps the poster header");
-        assert.ok(bounds.titleTop - bounds.headerBottom < 35, "Hover panel leaves an empty band above the title");
+        assert.ok(bounds.titleTop - bounds.panelTop < 16, "Hover panel leaves an empty band above the title");
         assert.ok(Math.abs(bounds.saveCenter - bounds.ratingCenter) <= 1, "Save and rating controls are vertically misaligned");
         assert.ok(bounds.recommendationWidth >= 48, "Hover recommendation artwork is too small");
+        assert.ok(Math.abs(bounds.recommendationWidth / bounds.recommendationHeight - 2 / 3) < .02, "Hover recommendation artwork is stretched");
         assert.ok(bounds.lastRecommendationBottom <= bounds.posterBottom, `Hover recommendations overflow the poster at ${width}px: ${JSON.stringify(bounds)}`);
         const recommendation = card.getByRole("link", { name: "View Personal pick 4" });
         await recommendation.focus();

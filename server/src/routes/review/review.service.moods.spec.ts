@@ -62,3 +62,49 @@ describe('Featured title reviews', () => {
     expect(result.pagination.total).toBe(101);
   });
 });
+
+describe('Leading mood review', () => {
+  it('selects the most popular written review of the leading mood beyond the page and featured shortlist', async () => {
+    const records = [
+      { id: 'other', moodEmojis: ['loved'], content: 'Another mood', score: 100 },
+      { id: 'empty', moodEmojis: ['amazing'], content: '   ', score: 90 },
+      { id: 'other-two', moodEmojis: ['loved'], content: 'Another popular review', score: 80 },
+      { id: 'winner', moodEmojis: ['amazing', 'loved'], content: 'A spectacular journey.', score: 12 },
+      { id: 'recent', moodEmojis: ['amazing'], content: 'A quieter review', score: 0 },
+    ].map(record => ({ ...record, createdAt: new Date('2026-11-11'), reactions: [], replies: [], userId: 'private-author-id', toxicityScore: .2, user: { id: 'author', username: 'Alex', name: 'Alex', avatarUrl: null } }));
+    const findMany = jest.fn().mockImplementation(args => Promise.resolve(args.select
+      ? records.map(review => ({ ...review, _count: { reactions: 0, replies: 0 }, replies: [{ _count: { reactions: review.score } }] }))
+      : args.where.id ? records.filter(review => args.where.id.in.includes(review.id)) : records.filter(review => review.id === 'recent')));
+    const prisma = { review: { findMany, count: jest.fn().mockResolvedValue(5), groupBy: jest.fn().mockResolvedValue([{ moodEmojis: ['amazing'], _count: { _all: 6 } }, { moodEmojis: ['loved'], _count: { _all: 4 } }]) } };
+    const service = new ReviewService(...[prisma, {}, {}, {}, {}, {}, {}] as unknown as ConstructorParameters<typeof ReviewService>);
+    const result = await service.getMediaReviews(42, 'MOVIE', 1, 1);
+    expect(result.moodReview).toMatchObject({ id: 'winner', content: 'A spectacular journey.', user: { username: 'Alex' } });
+    expect(result.moodReview).not.toHaveProperty('userId');
+    expect(result.moodReview).not.toHaveProperty('toxicityScore');
+    expect(result.featuredReviews.map(review => review.id)).toEqual(['other', 'empty', 'other-two']);
+    expect(result.reviews.map(review => review.id)).toEqual(['recent']);
+    expect(findMany).toHaveBeenCalledTimes(3);
+    expect(findMany.mock.calls[2][0].where.status).toEqual({ in: ['PUBLISHED', 'FLAGGED'] });
+  });
+
+  it('uses recency and then ID when matching reviews have no activity, and reuses the page', async () => {
+    const records = [
+      { id: 'older', createdAt: new Date('2026-01-01') },
+      { id: 'b', createdAt: new Date('2026-11-11') },
+      { id: 'a', createdAt: new Date('2026-11-11') },
+    ].map(record => ({ ...record, moodEmojis: ['amazing'], content: 'A memorable watch.', reactions: [], replies: [] }));
+    const findMany = jest.fn().mockImplementation(args => Promise.resolve(args.select
+      ? records.map(review => ({ ...review, _count: { reactions: 0, replies: 0 } })) : records));
+    const prisma = { review: { findMany, count: jest.fn().mockResolvedValue(3), groupBy: jest.fn().mockResolvedValue([{ moodEmojis: ['amazing'], _count: { _all: 3 } }]) } };
+    const service = new ReviewService(...[prisma, {}, {}, {}, {}, {}, {}] as unknown as ConstructorParameters<typeof ReviewService>);
+    const result = await service.getMediaReviews(42, 'TV');
+    expect(result.moodReview?.id).toBe('a');
+    expect(findMany).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns no quote when there are no matching written reviews', async () => {
+    const prisma = { review: { findMany: jest.fn().mockResolvedValue([]), count: jest.fn().mockResolvedValue(0), groupBy: jest.fn().mockResolvedValue([]) } };
+    const service = new ReviewService(...[prisma, {}, {}, {}, {}, {}, {}] as unknown as ConstructorParameters<typeof ReviewService>);
+    expect((await service.getMediaReviews(42, 'TV')).moodReview).toBeNull();
+  });
+});

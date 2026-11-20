@@ -1,7 +1,7 @@
 "use client";
 
 import { PosterSkeleton } from "@/components/loading/PageSkeleton";
-import Link from "next/link";
+import IntentPrefetchLink from "@/components/ui/IntentPrefetchLink";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { PosterSaveButton } from "@/components/ui/PosterSaveButton";
 import RatingBadge from "@/components/ui/rating-badge";
@@ -54,7 +54,7 @@ export function MediaCard({
 
   return (
     <article className={cn("group relative min-w-0", className)}>
-      <Link href={href} className="ui-card-link block">
+      <IntentPrefetchLink href={href} className="ui-card-link block">
         <div className="ui-media-artwork ui-poster">
           <Image
             src={poster}
@@ -67,7 +67,7 @@ export function MediaCard({
         </div>
         <h3 className="ui-poster-title">{title}</h3>
         <p className="ui-poster-meta">{metadata.join(" · ")}</p>
-      </Link>
+      </IntentPrefetchLink>
       {onToggleSave && (
         <PosterSaveButton title={title} saved={saved} saving={saving} onClick={onToggleSave} label={actionLabel} />
       )}

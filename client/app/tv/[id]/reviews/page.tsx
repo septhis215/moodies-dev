@@ -2,6 +2,7 @@
 import AllReviews from "@/components/selected-content/extended/allReviews";
 import { ReviewsPageUnavailable } from "@/components/selected-content/extended/reviewsPageStates";
 import { normalizeMediaDetails } from "@/lib/mediaDetails";
+import { withMoodReview } from "@/lib/moodReview.server";
 import type { TvDetailsData } from "@/components/selected-content/types";
 import type { Metadata } from "next";
 
@@ -44,7 +45,8 @@ type ApiReply = {
 async function fetchReviews(id: string) {
   try {
     const base = process.env.NEST_API_URL ?? "https://dev.api.moodies.tech/api";
-    const res = await fetch(`${base}/reviews/media/TV/${id}?page=1&limit=100`, {
+    const url = `${base}/reviews/media/TV/${id}?page=1&limit=100`;
+    const res = await fetch(url, {
       cache: "no-store",
     });
     if (!res.ok)
@@ -53,7 +55,7 @@ async function fetchReviews(id: string) {
         topMoods: [],
         pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
       };
-    return res.json();
+    return await withMoodReview(await res.json(), url);
   } catch {
     return {
       reviews: [],
@@ -150,6 +152,9 @@ export default async function ReviewsPage({ params }: Props) {
       })) || [],
   });
   const transformedReviews = reviewsData.reviews.map(transformReview);
+  if (reviewsData.moodReview && !reviewsData.reviews.some((review: ApiReview) => review.id === reviewsData.moodReview.id)) {
+    transformedReviews.push(transformReview(reviewsData.moodReview));
+  }
 
   return (
     <main className="min-h-screen bg-[var(--surface-0)] text-[var(--ink)]">

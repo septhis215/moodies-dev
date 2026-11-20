@@ -32,6 +32,7 @@ const result = await build({
       import TrailerModal from './client/components/sections/TrailerModal';
       const items=Array.from({length:12},(_,i)=>({id:i+1,title:'Card '+(i+1),name:'Person '+(i+1),type:'movie',poster_path:null,backdrop_path:null,release_date:'2027-01-15',vote_average:8,overview:'A story of friendship.',known_for:[],trailer_key:'fixture-trailer',recommendations:[]}));
       const upcoming=[{...items[0],id:13,name:'February release',release_date:'2027-02-01'},...items];
+      const cardItems=items.map((item,index)=>({...item,name:undefined,title:index===1?'A very long movie title that needs several lines but must keep its preview compact':item.title,poster:'/images/ironmanposter.jpeg',runtime:173,origin_country:['GB'],genres:index===1?['Science Fiction','Action & Adventure','Documentary']:['Adventure','Action','Fantasy'],recommendations:items.slice(1,4).map(rec=>({...rec,poster:'/images/ironmanposter.jpeg'}))}));
       window.actions=0;
       window.clicks=0;
       document.addEventListener('click',()=>window.clicks++,true);
@@ -43,7 +44,7 @@ const result = await build({
       const reviews=Array.from({length:20},(_,index)=>({tmdbId:index+1,mediaType:'MOVIE',title:'Card '+(index+1),name:'A member '+(index+1),avatar:'',rating:8,quote:'A thoughtful story. '.repeat(70)}));
       createRoot(document.getElementById('root')).render(new URLSearchParams(location.search).has('modal')
         ? <TrailerModal trailer={{...items[0],trailer_key:null,recommendations:items}} onClose={()=>{}} onSelectTrailer={()=>window.actions++}/>
-        : <><div id="fixture-cards"><CardCarousel title="Movies" items={items}/></div><div id="fixture-generic" className="ui-shell"><Carousel items={items} CardComponent={({show})=><a href={'/movies/'+show.id} style={{display:'block',height:220,background:'#392621'}}>{show.title}</a>}/></div><div id="fixture-people" className="ui-shell"><PeopleRail people={items}/></div><div id="fixture-curated" className="ui-shell"><CuratedShelf items={items}/></div><div id="fixture-reviews"><CommunityPicks data={reviews}/></div><div id="fixture-premiere"><Premiere data={items}/></div><div id="fixture-upcoming"><UpcomingTrailers data={items}/></div><div id="fixture-celebs"><Celebs/></div><div id="fixture-football"><Football/></div><div id="fixture-coming"><ComingSoonSection title="Coming soon" items={upcoming} type="movies"/></div><div style={{height:'150vh'}}/></>);
+        : <><div id="fixture-cards"><CardCarousel title="Movies" items={cardItems}/></div><div id="fixture-generic" className="ui-shell"><Carousel items={items} CardComponent={({show})=><a href={'/movies/'+show.id} style={{display:'block',height:220,background:'#392621'}}>{show.title}</a>}/></div><div id="fixture-people" className="ui-shell"><PeopleRail people={items}/></div><div id="fixture-curated" className="ui-shell"><CuratedShelf items={items}/></div><div id="fixture-reviews"><CommunityPicks data={reviews}/></div><div id="fixture-premiere"><Premiere data={items}/></div><div id="fixture-upcoming"><UpcomingTrailers data={items}/></div><div id="fixture-celebs"><Celebs/></div><div id="fixture-football"><Football/></div><div id="fixture-coming"><ComingSoonSection title="Coming soon" items={upcoming} type="movies"/></div><div style={{height:'150vh'}}/></>);
     `,
   },
   bundle: true,
@@ -75,11 +76,14 @@ const css = (await postcss([tailwind({ base: resolve(root, "client") })]).proces
   await readFile(resolve(root, "client/app/globals.css"), "utf8"),
   { from: resolve(root, "client/app/globals.css") },
 )).css + result.outputFiles.filter(file => file.path.endsWith(".css")).map(file => file.text).join("\n");
+const posterImage = await readFile(resolve(root, 'client/public/images/ironmanposter.jpeg'));
 const server = createServer((request, response) => {
   if (request.url === "/app.js") {
     response.setHeader("content-type", "text/javascript"); response.end(bundle);
   } else if (request.url === "/app.css") {
     response.setHeader("content-type", "text/css"); response.end(css);
+  } else if (request.url === '/images/ironmanposter.jpeg') {
+    response.setHeader('content-type', 'image/jpeg'); response.end(posterImage);
   } else if (request.url.startsWith("/placeholder-")) {
     response.setHeader("content-type", "image/svg+xml"); response.end('<svg xmlns="http://www.w3.org/2000/svg" width="342" height="513"><rect width="342" height="513" fill="#392621"/></svg>');
   } else {
@@ -91,6 +95,44 @@ const base = `http://127.0.0.1:${server.address().port}`;
 let browser;
 try {
   browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || undefined });
+  const desktop = await browser.newContext();
+  const hoverPage = await desktop.newPage();
+  const output = resolve(root, 'client/output/card-hover');
+  await mkdir(output, { recursive: true });
+  for (const width of [640, 768, 1024, 1440]) {
+    await hoverPage.setViewportSize({ width, height: 800 });
+    await hoverPage.goto(base);
+    const cards = hoverPage.locator('#fixture-cards article');
+    for (const [index, card] of [cards.first(), cards.nth(1), cards.last()].entries()) {
+      const poster = card.locator('.ui-poster');
+      await poster.scrollIntoViewIfNeeded();
+      const panel = poster.locator(':scope > div').first();
+      await panel.waitFor({ state: 'attached' });
+      assert.ok(await panel.evaluate(node => new DOMMatrixReadOnly(getComputedStyle(node).transform).m42) > 0, 'Details start below the poster for an upward reveal');
+      const before = await card.boundingBox();
+      await poster.hover();
+      await hoverPage.waitForFunction(node => new DOMMatrixReadOnly(getComputedStyle(node).transform).m42 === 0, await panel.elementHandle());
+      assert.deepEqual(await card.boundingBox(), before, 'Hover does not enlarge the card or move the rail');
+      const frame = await poster.boundingBox();
+      const details = await panel.boundingBox();
+      assert.ok(details.x >= frame.x && details.x + details.width <= frame.x + frame.width && details.y >= frame.y && details.y + details.height <= frame.y + frame.height, 'Details remain within the poster');
+      for (const rec of await panel.locator('a[aria-label^="View "]').all()) {
+        const thumb = await rec.boundingBox();
+        assert.ok(Math.abs(thumb.width / thumb.height - 2 / 3) < .02, 'Recommendation thumbnails keep their poster proportions');
+        assert.ok(thumb.y + thumb.height <= frame.y + frame.height, 'Recommendations fit inside the card');
+      }
+      await card.screenshot({ path: resolve(output, `hover-${width}-${index}.png`) });
+      const recommendation = panel.locator('a[aria-label^="View "]').last();
+      await recommendation.focus();
+      await hoverPage.mouse.move(0, 0);
+      assert.equal(await panel.evaluate(node => getComputedStyle(node).visibility), 'visible', 'Keyboard focus keeps details available');
+      assert.equal(await hoverPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'Edge-card previews do not overflow the page');
+    }
+  }
+  await hoverPage.emulateMedia({ reducedMotion: 'reduce' });
+  assert.equal(await hoverPage.locator('#fixture-cards .ui-poster > div').first().evaluate(node => getComputedStyle(node).transitionDuration), '0s');
+  await desktop.close();
+  console.log('Upward card reveal, fixed thumbnails, bounded layout and keyboard/reduced-motion checks passed.');
   const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   const errors = [];
