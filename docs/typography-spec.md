@@ -133,7 +133,8 @@ Only these four steps are in play. Anything else signals an accidental one-off.
 | Intent | Utility | Notes |
 |---|---|---|
 | Reading text | `font-normal` (400) | body, leads, descriptions |
-| Secondary emphasis | `font-medium` (500) | nav items, filter labels |
+| Secondary emphasis | `font-medium` (500) | filter labels, secondary controls |
+| Navigation destinations | `data-display text-lg font-semibold leading-tight tracking-wide` (600) | Barlow Condensed for header, menu and account destination labels; group labels and account identity keep the body font |
 | Titles | `font-semibold` (600) → `font-bold` (700) | 600 for card titles, 700 for every heading |
 | Attention text | `font-black` (900) | badges, kickers, CTA labels — **body font only** |
 

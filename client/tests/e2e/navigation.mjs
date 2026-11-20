@@ -31,8 +31,8 @@ try {
   const checkLabelHover = async (link) => {
     const getStyle = (element) => {
       const { backgroundColor, borderTopWidth } = getComputedStyle(element);
-      const label = element.querySelector(".ui-text-reveal");
-      return { backgroundColor, borderTopWidth, position: getComputedStyle(label).backgroundPositionX, underlineWidth: parseFloat(getComputedStyle(label, "::after").width) };
+      const label = element.querySelector(".ui-nav-label");
+      return { backgroundColor, borderTopWidth, color: getComputedStyle(label).color, underlineWidth: parseFloat(getComputedStyle(label, "::after").width) };
     };
     await page.mouse.move(0, 0);
     const before = await link.evaluate(getStyle);
@@ -42,8 +42,7 @@ try {
     assert.equal(after.borderTopWidth, "0px");
     assert.equal(before.underlineWidth, 0);
     assert.ok(after.underlineWidth > 0);
-    assert.equal(before.position, "100%");
-    assert.equal(parseFloat(after.position), 0);
+    assert.equal(after.color, "rgb(255, 118, 95)");
   };
   const openMenu = async width => {
     await page.getByRole("button", { name: width >= 1024 ? "More" : "Open menu", exact: true }).click();

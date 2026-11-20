@@ -83,7 +83,8 @@ const accountLinks = [
 
 const focusRing =
   "outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-coral-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-0)]";
-const controlStyle = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md px-3 text-[0.9375rem] font-semibold ${focusRing}`;
+const controlStyle = `inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md bg-transparent px-3 text-[0.9375rem] font-semibold hover:text-[var(--brand-coral-strong)] active:text-[var(--brand-coral-strong)] [-webkit-tap-highlight-color:transparent] motion-safe:transition-colors ${focusRing}`;
+const navigationLabelStyle = "ui-nav-label text-lg font-semibold leading-tight tracking-wide";
 
 export function NavbarComponent({
   sticky = false,
@@ -250,7 +251,7 @@ export function NavbarComponent({
       group.links.some((link) => link.href !== "/" && getCurrent(link.href)),
     );
   const destinationClass = (href: string) =>
-    `flex min-h-11 items-center rounded-md px-2 py-2 text-[0.9375rem] font-medium leading-5 ${getCurrent(href) ? "text-[var(--brand-coral-strong)]" : "text-[var(--ink)]"} ${focusRing}`;
+    `flex min-h-12 items-center rounded-md bg-transparent px-2 py-2 text-[0.9375rem] font-medium leading-5 hover:text-[var(--brand-coral-strong)] active:text-[var(--brand-coral-strong)] [-webkit-tap-highlight-color:transparent] motion-safe:transition-colors lg:min-h-11 ${getCurrent(href) ? "text-[var(--brand-coral-strong)]" : "text-[var(--ink)]"} ${focusRing}`;
 
   const avatar = () => (
     <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[var(--surface-2)] text-xs font-semibold text-[var(--ink)]">
@@ -295,7 +296,7 @@ export function NavbarComponent({
         )}
       </button>
     ) : (
-      <Link href="/auth/login" className={controlStyle}><span className="ui-text-reveal ui-nav-label">Sign in</span></Link>
+      <Link href="/auth/login" className={controlStyle}><span data-display className={navigationLabelStyle}>Sign in</span></Link>
     );
   };
 
@@ -315,7 +316,7 @@ export function NavbarComponent({
             aria-current={getCurrent(link.href)}
             className={destinationClass(link.href)}
           >
-            <span className="ui-text-reveal ui-nav-label">{link.name}</span>
+            <span data-display className={navigationLabelStyle}>{link.name}</span>
           </Link>
         </li>
       ))}
@@ -363,9 +364,9 @@ export function NavbarComponent({
         </div>
         <nav
           aria-label="Browse Moodies"
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6 lg:px-8"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 lg:px-8 lg:pt-4"
         >
-          <ul aria-label="Main destinations" className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <ul aria-label="Main destinations" className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-2">
             {primaryLinks.map(({ name, menuName, href, icon: Icon }) => (
               <li key={href}>
                 <Link
@@ -375,12 +376,12 @@ export function NavbarComponent({
                   className={`${destinationClass(href)} h-full gap-2 px-3 font-semibold`}
                 >
                   <Icon className="size-5 shrink-0 text-[var(--brand-coral-strong)]" aria-hidden="true" stroke={1.7} />
-                  <span className="ui-text-reveal ui-nav-label">{menuName ?? name}</span>
+                  <span data-display className={navigationLabelStyle}>{menuName ?? name}</span>
                 </Link>
               </li>
             ))}
           </ul>
-          <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-4 lg:mt-6 lg:grid-cols-4 lg:gap-x-4">
+          <div className="mt-7 grid grid-cols-1 gap-x-6 gap-y-7 sm:grid-cols-2 lg:mt-6 lg:grid-cols-4 lg:gap-x-4 lg:gap-y-4">
             {navigationGroups.map((group) => (
               <section key={group.title} aria-label={group.title} className="min-w-0">
                 <h3 className="mb-1 px-2 text-xs font-bold uppercase tracking-wider text-[var(--ink-muted)]">{group.title}</h3>
@@ -391,7 +392,7 @@ export function NavbarComponent({
           {!isAuthenticated && (
             <div className="mt-4 border-t border-[var(--surface-border)] pt-2">
               <Link href="/auth/signup" onNavigate={closeMenu} className={`${controlStyle} text-[var(--brand-coral-strong)]`}>
-                <span className="ui-text-reveal ui-nav-label">Create account</span>
+                <span data-display className={navigationLabelStyle}>Create account</span>
                 <IconArrowUpRight className="size-4" aria-hidden="true" />
               </Link>
             </div>
@@ -427,7 +428,7 @@ export function NavbarComponent({
                 }
                 className={`${controlStyle} ${isPrimaryActive(link.href) ? "text-[var(--brand-coral-strong)]" : "text-white/80"}`}
               >
-                <span className="ui-text-reveal ui-nav-label">{link.name}</span>
+                <span data-display className={navigationLabelStyle}>{link.name}</span>
               </Link>
             ))}
             <button
@@ -438,7 +439,7 @@ export function NavbarComponent({
               aria-haspopup="dialog"
               className={`${controlStyle} ${isMoreActive || isMenuOpen ? "text-[var(--brand-coral-strong)]" : "text-white/80"}`}
             >
-              <span className="ui-text-reveal ui-nav-label">More</span>
+              <span data-display className={navigationLabelStyle}>More</span>
               <IconChevronDown className="h-4 w-4" aria-hidden="true" />
             </button>
           </nav>
@@ -472,7 +473,7 @@ export function NavbarComponent({
                 className={`${controlStyle} shrink-0 gap-1.5 px-2.5 text-[var(--ink)]`}
               >
                 <IconMenu2 className="h-5 w-5" aria-hidden="true" />
-                <span className="ui-text-reveal ui-nav-label">Menu</span>
+                <span data-display className={navigationLabelStyle}>Menu</span>
               </button>
             </div>
           </MobileNavHeader>
@@ -503,7 +504,7 @@ export function NavbarComponent({
                 className={`${controlStyle} w-full justify-start px-2 text-[var(--ink-muted)] disabled:cursor-wait disabled:opacity-50`}
               >
                 <IconLogout className="h-4 w-4" aria-hidden="true" />
-                <span className="ui-text-reveal ui-nav-label">{isLoggingOut ? "Signing out…" : "Sign out"}</span>
+                <span data-display className={navigationLabelStyle}>{isLoggingOut ? "Signing out…" : "Sign out"}</span>
               </button>
             </div>
           </nav>
