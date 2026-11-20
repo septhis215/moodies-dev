@@ -47,7 +47,7 @@ try {
       await page.waitForFunction(() => !document.getElementById("moodies-auth-prehide"));
       if (hint === "google") await page.waitForURL(baseUrl + "/");
       assert.deepEqual(errors, [], `${hint}: browser errors`);
-      console.log(`${hint}: static shell and private bootstrap passed`);
+      console.log(`${hint}: public shell and private bootstrap passed`);
     } finally {
       releaseScripts(); releaseBootstrap(); await context.close();
     }
