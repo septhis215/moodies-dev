@@ -877,8 +877,8 @@ export class ReviewService {
     );
   }
 
-  async getCommunityPicks(limit = 18) {
-    const safeLimit = Math.max(1, Math.min(Number(limit) || 18, 36));
+  async getCommunityPicks(limit = 20) {
+    const safeLimit = Math.max(1, Math.min(Number(limit) || 20, 36));
     return this.redis.getOrSet(
       `reviews:community-picks:${safeLimit}`,
       CRITICS_CORNER_TTL,

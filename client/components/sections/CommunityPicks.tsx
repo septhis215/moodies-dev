@@ -80,6 +80,7 @@ function MobileReviews({ reviews }: { reviews: ReviewItem[] }) {
   const railRef = useRef<HTMLDivElement>(null);
   const railId = useId();
   const [active, setActive] = useState(0);
+  const firstDot = Math.max(0, Math.min(active - 2, reviews.length - 5));
 
   useEffect(() => {
     const rail = railRef.current;
@@ -127,7 +128,10 @@ function MobileReviews({ reviews }: { reviews: ReviewItem[] }) {
       {reviews.length > 1 && <div className={styles.navigation}>
         <span className={styles.swipeHint}>Swipe to read</span>
         <div className={styles.dots} aria-label="Choose a review">
-          {reviews.map((review, index) => <button key={`${review.tmdbId}-${index}`} type="button" aria-label={`Show review ${index + 1} of ${reviews.length}`} aria-controls={railId} aria-current={active === index ? "true" : undefined} onClick={() => selectReview(index)}><span /></button>)}
+          {reviews.slice(firstDot, firstDot + 5).map((review, offset) => {
+            const index = firstDot + offset;
+            return <button key={`${review.tmdbId}-${index}`} type="button" aria-label={`Show review ${index + 1} of ${reviews.length}`} aria-controls={railId} aria-current={active === index ? "true" : undefined} onClick={() => selectReview(index)}><span /></button>;
+          })}
         </div>
         <span className={styles.count} aria-live="polite" aria-atomic="true">{active + 1} / {reviews.length}</span>
       </div>}
@@ -353,7 +357,7 @@ export default function CommunityPicks({
       try {
         setLoading(true);
         const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
-        const path = endpoint || "/reviews/community-picks?limit=18";
+        const path = endpoint || "/reviews/community-picks?limit=20";
         const res = await fetch(`${base}${path}`, {
           next: { revalidate: 60 },
         });
@@ -398,7 +402,7 @@ export default function CommunityPicks({
 
   if (reviews.length === 0) return null;
 
-  const visibleReviews = reviews.slice(0, 5);
+  const visibleReviews = reviews.slice(0, 20);
   const ratedReviews = visibleReviews.filter((review) => review.rating !== undefined);
   const averageRating =
     ratedReviews.length > 0
@@ -419,7 +423,7 @@ export default function CommunityPicks({
 
           <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[var(--ink-muted)] lg:border-l lg:border-[var(--surface-border)] lg:pl-3">
             <MessageCircle className="h-3.5 w-3.5 text-[var(--brand-coral-strong)]" />
-            {Math.min(reviews.length, 5)} featured reviews
+            {visibleReviews.length} featured reviews
             {averageRating !== null && (
               <span className="border-l border-[var(--surface-border)] pl-2 text-[var(--brand-gold)]">
                 {averageRating.toFixed(1)} avg
@@ -433,7 +437,7 @@ export default function CommunityPicks({
           {featuredReview ? (
             <Link
               href={reviewHref(featuredReview) || "#community"}
-              className="group grid min-w-0 grid-cols-[6rem_minmax(0,1fr)] items-stretch overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:min-h-[420px] sm:grid-cols-[42%_minmax(0,1fr)] lg:col-span-5 lg:grid-cols-[44%_minmax(0,1fr)]"
+              className="group grid min-w-0 grid-cols-[6rem_minmax(0,1fr)] items-stretch overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:min-h-[420px] sm:grid-cols-[42%_minmax(0,1fr)] lg:col-span-5 lg:self-start lg:grid-cols-[44%_minmax(0,1fr)]"
               aria-label={`Read the community review for ${featuredReview.movieTitle || featuredReview.title}`}
             >
               <div className="relative overflow-hidden bg-[var(--surface-2)]">

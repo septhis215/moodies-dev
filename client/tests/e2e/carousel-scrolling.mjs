@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +10,8 @@ import { chromium } from "playwright";
 
 // Exercise real rails and CSS with native touch input, independent of API/auth.
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+const screenshotDir = process.env.CAROUSEL_SCREENSHOT_DIR;
+if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
 const result = await build({
   stdin: {
     resolveDir: root,
@@ -38,7 +40,7 @@ const result = await build({
       Element.prototype.scrollTo=function(...args){window.scrollBehaviors.push(args[0]?.behavior);return scrollTo.apply(this,args);};
       window.fetch=async()=>({ok:true,json:async()=>items});
       document.addEventListener('click',e=>{if(e.target.closest('a')){e.preventDefault();window.actions++;}});
-      const reviews=items.slice(0,5).map(item=>({tmdbId:item.id,mediaType:'MOVIE',title:item.title,name:'A member',avatar:'',rating:8,quote:'A thoughtful story. '.repeat(70)}));
+      const reviews=Array.from({length:20},(_,index)=>({tmdbId:index+1,mediaType:'MOVIE',title:'Card '+(index+1),name:'A member '+(index+1),avatar:'',rating:8,quote:'A thoughtful story. '.repeat(70)}));
       createRoot(document.getElementById('root')).render(new URLSearchParams(location.search).has('modal')
         ? <TrailerModal trailer={{...items[0],trailer_key:null,recommendations:items}} onClose={()=>{}} onSelectTrailer={()=>window.actions++}/>
         : <><div id="fixture-cards"><CardCarousel title="Movies" items={items}/></div><div id="fixture-generic" className="ui-shell"><Carousel items={items} CardComponent={({show})=><a href={'/movies/'+show.id} style={{display:'block',height:220,background:'#392621'}}>{show.title}</a>}/></div><div id="fixture-people" className="ui-shell"><PeopleRail people={items}/></div><div id="fixture-curated" className="ui-shell"><CuratedShelf items={items}/></div><div id="fixture-reviews"><CommunityPicks data={reviews}/></div><div id="fixture-premiere"><Premiere data={items}/></div><div id="fixture-upcoming"><UpcomingTrailers data={items}/></div><div id="fixture-celebs"><Celebs/></div><div id="fixture-football"><Football/></div><div id="fixture-coming"><ComingSoonSection title="Coming soon" items={upcoming} type="movies"/></div><div style={{height:'150vh'}}/></>);
@@ -104,6 +106,51 @@ try {
     await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     await page.waitForTimeout(500);
   }
+  if (!process.env.CAROUSEL_NAV_ONLY) {
+    for (const width of [320, 390]) {
+      await page.emulateMedia({ reducedMotion: width === 320 ? "reduce" : "no-preference" });
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(base);
+      const community = page.locator("#fixture-reviews");
+      const rail = community.getByRole("region", { name: "Member reviews" });
+      const dots = community.getByRole("button", { name: /Show review \d+ of 20/ });
+      await rail.waitFor();
+      assert.match(await community.innerText(), /20 featured reviews/);
+      assert.equal(await rail.locator(":scope > article").count(), 20);
+      assert.equal(await dots.count(), 5, "Twenty reviews keep at most five visible pagination controls");
+      await community.getByRole("button", { name: "Show review 5 of 20", exact: true }).click();
+      await page.waitForFunction(() => document.querySelector('#fixture-reviews [aria-current="true"]')?.getAttribute("aria-label") === "Show review 5 of 20");
+      assert.equal(await dots.count(), 5);
+      await rail.evaluate(element => element.scrollTo({ left: element.scrollWidth, behavior: "instant" }));
+      await page.waitForFunction(() => document.querySelector('#fixture-reviews [aria-current="true"]')?.getAttribute("aria-label") === "Show review 20 of 20");
+      assert.deepEqual(await dots.evaluateAll(buttons => buttons.map(button => button.getAttribute("aria-label"))), Array.from({ length: 5 }, (_, index) => `Show review ${index + 16} of 20`));
+      await community.getByRole("button", { name: "Show review 18 of 20", exact: true }).click();
+      await page.waitForFunction(() => document.querySelector('#fixture-reviews [aria-current="true"]')?.getAttribute("aria-label") === "Show review 18 of 20");
+      await community.getByRole("button", { name: "Show review 20 of 20", exact: true }).focus();
+      await page.keyboard.press("Enter");
+      await page.waitForFunction(() => document.querySelector('#fixture-reviews [aria-current="true"]')?.getAttribute("aria-label") === "Show review 20 of 20");
+      assert.match(await community.innerText(), /20 \/ 20/);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "Review pagination does not overflow the mobile page");
+      if (screenshotDir) await community.screenshot({ path: resolve(screenshotDir, `community-20-${width}.png`) });
+      await rail.evaluate(element => element.scrollIntoView({ block: "start" }));
+      const railBox = await rail.boundingBox();
+      await swipe(30, railBox.y + 100, width * .65, 0);
+      assert.notEqual(await community.locator('[aria-current="true"]').getAttribute("aria-label"), "Show review 20 of 20", "Native swiping can leave the twentieth review");
+      assert.equal(await dots.count(), 5);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(base);
+    const desktopReviews = page.locator('#fixture-reviews a[aria-label^="Read the community review for"]');
+    await desktopReviews.first().waitFor();
+    assert.equal(await desktopReviews.count(), 20);
+    const featured = await desktopReviews.first().boundingBox();
+    const lastSupporting = await desktopReviews.last().boundingBox();
+    assert.ok(featured.height >= 420 && featured.height < 800, "Featured desktop review retains a readable independent height");
+    assert.ok(featured.y + featured.height < lastSupporting.y, "Featured review does not stretch across nineteen supporting reviews");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    console.log("Twenty community reviews, moving five-dot pagination, last-review navigation and independent desktop card height passed.");
+  }
+  if (!process.env.CAROUSEL_NAV_ONLY && !process.env.COMMUNITY_REVIEWS_ONLY) {
   for (const width of [320, 390, 768]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto(base);
@@ -202,19 +249,48 @@ try {
     assert.equal(await collapse.count(), 1, "Expanded review collapsed during the swipe");
   });
   await collapse.waitFor({ state: "hidden" });
-  assert.notEqual(await page.locator('#fixture-reviews [aria-current="true"]').getAttribute("aria-label"), "Show review 1 of 5");
+  assert.notEqual(await page.locator('#fixture-reviews [aria-current="true"]').getAttribute("aria-label"), "Show review 1 of 20");
   console.log("Expanded review stays open during a swipe and collapses after settling.");
+  }
   // Desktop buttons still page the shared rails, including reduced-motion mode.
+  if (!process.env.COMMUNITY_REVIEWS_ONLY) {
   for (const reducedMotion of ["no-preference", "reduce"]) {
     await page.emulateMedia({ reducedMotion });
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(base);
+    for (const id of ["cards", "generic", "people", "curated", "celebs", "football", "upcoming", "premiere"]) {
+      const buttons = page.locator(`#fixture-${id} [role="group"] > button[aria-controls]`);
+      await buttons.first().waitFor();
+      assert.equal(await buttons.count(), 2, `${id}: paired navigation controls`);
+      for (const button of await buttons.all()) {
+        const style = await button.evaluate(element => {
+          const style = getComputedStyle(element);
+          const edge = getComputedStyle(element, "::before");
+          const bounds = element.getBoundingClientRect();
+          return { width: bounds.width, height: bounds.height, border: style.borderTopWidth, background: style.backgroundColor, opacity: style.opacity, edge: edge.backgroundImage, edgePointerEvents: edge.pointerEvents, transition: edge.transitionDuration };
+        });
+        assert.deepEqual([style.width, style.height, style.border, style.background], [44, 44, "0px", "rgba(0, 0, 0, 0)"], `${id}: borderless 44px controls`);
+        assert.match(style.edge, /radial-gradient/, `${id}: soft edge gradient`);
+        assert.equal(style.edgePointerEvents, "none", `${id}: gradient cannot intercept cards`);
+        assert.ok(Number(style.opacity) > 0, `${id}: controls remain discoverable without hover`);
+        assert.equal(await button.locator("svg").getAttribute("stroke-width"), "2");
+        if (reducedMotion === "reduce") assert.equal(style.transition, "0s");
+      }
+      for (const button of await buttons.all()) {
+        if (await button.isEnabled()) {
+          await button.focus();
+          assert.equal(await button.evaluate(element => getComputedStyle(element).outlineWidth), "2px", `${id}: visible keyboard focus`);
+          break;
+        }
+      }
+    }
     const rail = page.locator("#fixture-cards .mobile-native-scroll");
-    await page.getByRole("button", { name: "Scroll Movies right" }).click({ force: true });
+    if (screenshotDir) await page.locator("#fixture-cards").screenshot({ path: resolve(screenshotDir, `controls-${reducedMotion}.png`) });
+    await page.getByRole("button", { name: "Scroll Movies right" }).click();
     await page.waitForFunction(() => document.querySelector("#fixture-cards .mobile-native-scroll").scrollLeft > 100);
     await page.waitForTimeout(500);
-    await page.getByRole("button", { name: "Scroll Movies left" }).click({ force: true });
-    await page.waitForFunction(() => document.querySelector("#fixture-cards .mobile-native-scroll").scrollLeft < 2);
+    await page.getByRole("button", { name: "Scroll Movies left" }).click();
+    await page.waitForFunction(() => document.querySelector("#fixture-cards .mobile-native-scroll").scrollLeft === 0);
     assert.equal(await rail.evaluate(element => element.scrollLeft), 0);
     assert.equal(await page.evaluate(() => window.scrollBehaviors.at(-1)), reducedMotion === "reduce" ? "instant" : "smooth");
 
@@ -239,8 +315,9 @@ try {
       await page.waitForFunction(element => element.scrollLeft > 100, await trailerRail.elementHandle());
     }
   }
+  }
   assert.deepEqual(errors, []);
-  console.log("Desktop navigation and reduced-motion checks passed.");
+  if (!process.env.COMMUNITY_REVIEWS_ONLY) console.log("Desktop navigation and reduced-motion checks passed.");
 } finally {
   if (browser) await browser.close();
   await new Promise(done => server.close(done));
