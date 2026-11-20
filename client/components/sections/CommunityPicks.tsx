@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import Link from "next/link";
+import IntentPrefetchLink from "@/components/ui/IntentPrefetchLink";
 import SectionHeader from "@/components/ui/SectionHeader";
 import { ArrowUpRight, MessageCircle } from "lucide-react";
 import { RatingBadge } from "@/components/ui/rating-badge";
@@ -69,7 +69,7 @@ function MobileReviewCard({ review, index, count, isActive }: { review: ReviewIt
         </blockquote>
         <div className={styles.actions}>
           {overflows && <button type="button" aria-expanded={expanded} aria-controls={quoteId} onClick={() => setExpanded(value => !value)}>{expanded ? "Show less" : "Read more"}</button>}
-          {href && <Link href={href} aria-label={`Explore ${mediaTitle}`}>Explore title <ArrowUpRight size={16} aria-hidden="true" /></Link>}
+          {href && <IntentPrefetchLink href={href} aria-label={`Explore ${mediaTitle}`}>Explore title <ArrowUpRight size={16} aria-hidden="true" /></IntentPrefetchLink>}
         </div>
       </div>
     </article>
@@ -431,7 +431,7 @@ export default function CommunityPicks({
         <MobileReviews reviews={visibleReviews} />
         <div className="mt-5 hidden min-w-0 gap-3 sm:mt-6 lg:grid lg:grid-cols-12">
           {featuredReview ? (
-            <Link
+            <IntentPrefetchLink
               href={reviewHref(featuredReview) || "#community"}
               className="group grid min-w-0 grid-cols-[6rem_minmax(0,1fr)] items-stretch overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:min-h-[420px] sm:grid-cols-[42%_minmax(0,1fr)] lg:col-span-5 lg:grid-cols-[44%_minmax(0,1fr)]"
               aria-label={`Read the community review for ${featuredReview.movieTitle || featuredReview.title}`}
@@ -479,12 +479,12 @@ export default function CommunityPicks({
                   </div>
                 </footer>
               </blockquote>
-            </Link>
+            </IntentPrefetchLink>
           ) : null}
 
           <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:col-span-7">
             {supportingReviews.map((review, index) => (
-              <Link
+              <IntentPrefetchLink
                 key={`${review.tmdbId || "review"}-${index}`}
                 href={reviewHref(review) || "#community"}
                 className="group grid min-h-44 min-w-0 grid-cols-[5rem_minmax(0,1fr)] items-stretch overflow-hidden rounded-md border border-[var(--surface-border)] bg-[var(--surface-1)] transition-colors hover:border-[var(--brand-coral)] sm:grid-cols-[104px_minmax(0,1fr)]"
@@ -527,7 +527,7 @@ export default function CommunityPicks({
                     </div>
                   </footer>
                 </blockquote>
-              </Link>
+              </IntentPrefetchLink>
             ))}
           </div>
         </div>

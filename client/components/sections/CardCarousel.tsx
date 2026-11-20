@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { useCarouselScroll } from "@/hooks/useCarouselScroll";
-import Link from "next/link";
+import IntentPrefetchLink from "@/components/ui/IntentPrefetchLink";
 import SectionHeader from "@/components/ui/SectionHeader";
 import {
   Calendar,
@@ -223,7 +223,7 @@ export default function CardCarousel<T extends MediaItem>({
                   className={`${styles.card} group w-[43%] min-w-0 shrink-0 snap-start sm:w-[31vw] sm:min-w-[204px] sm:max-w-[220px] md:w-[25vw] lg:w-[20vw] xl:max-w-[228px]`}
                 >
                   <div className="ui-media-artwork ui-poster">
-                    <Link
+                    <IntentPrefetchLink
                       href={href}
                       aria-label={`Explore ${titleText}`}
                       className="ui-card-link block h-full w-full focus-visible:-outline-offset-2"
@@ -235,14 +235,14 @@ export default function CardCarousel<T extends MediaItem>({
                         sizes="(max-width: 640px) 44vw, (max-width: 1024px) 31vw, 228px"
                         className="object-cover"
                       />
-                    </Link>
+                    </IntentPrefetchLink>
                     <div className={styles.details}>
                       <div className="flex flex-col gap-1.5 px-3 py-2 [&>*]:shrink-0">
-                        <Link href={href}>
+                        <IntentPrefetchLink href={href}>
                           <h4 className="line-clamp-1 text-sm font-semibold leading-5 wrap-anywhere text-[var(--ink)] transition-colors hover:text-[var(--brand-coral-strong)]">
                             {titleText}
                           </h4>
-                        </Link>
+                        </IntentPrefetchLink>
 
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-[var(--ink-muted)]">
                           <span className="flex items-center gap-1 font-semibold uppercase tracking-[0.08em] text-[var(--brand-coral-strong)]">
@@ -281,13 +281,13 @@ export default function CardCarousel<T extends MediaItem>({
                           </p>
                         ) : null}
 
-                        <Link
+                        <IntentPrefetchLink
                           href={href}
                           className={`inline-flex min-h-8 w-full items-center justify-center gap-1.5 rounded-sm bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#0b0909] transition-colors hover:bg-[#f0e9e7] ${item.recommendations?.length ? "" : "mt-auto"}`}
                         >
                           <Info className="h-3.5 w-3.5" />
                           View details
-                        </Link>
+                        </IntentPrefetchLink>
 
                         {item.recommendations?.length ? (
                           <div className="flex flex-col gap-2 border-t border-white/12 pt-2">
@@ -306,7 +306,7 @@ export default function CardCarousel<T extends MediaItem>({
                                   return (
                                     <Tooltip key={`${recType}-${rec.id}`}>
                                       <TooltipTrigger asChild>
-                                        <Link
+                                        <IntentPrefetchLink
                                           href={recHref}
                                           className="relative aspect-[2/3] overflow-hidden rounded-sm border border-white/15 bg-[var(--surface-2)] transition-colors hover:border-[var(--brand-coral)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--brand-coral)]"
                                           aria-label={`View ${itemTitle(rec)}`}
@@ -326,7 +326,7 @@ export default function CardCarousel<T extends MediaItem>({
                                             sizes="64px"
                                             className="object-cover"
                                           />
-                                        </Link>
+                                        </IntentPrefetchLink>
                                       </TooltipTrigger>
                                       <TooltipContent
                                         side="bottom"
@@ -365,14 +365,14 @@ export default function CardCarousel<T extends MediaItem>({
                       onClick={() => toggleSaved(item)}
                     />
                   </div>
-                  <Link href={href} className="ui-card-link block">
+                  <IntentPrefetchLink href={href} className="ui-card-link block">
                     <h3 className="ui-poster-title">
                       {titleText}
                     </h3>
                     <p className="ui-poster-meta">
                       {type === "tv" ? "Series" : "Movie"} · {itemYear(item) || "Date TBA"}
                     </p>
-                  </Link>
+                  </IntentPrefetchLink>
                 </article>
               );
             })}

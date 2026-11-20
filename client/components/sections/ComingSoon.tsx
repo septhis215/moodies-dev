@@ -5,7 +5,7 @@ import { tmdbImage } from "@/lib/tmdb";
 import { LoadingRegion, SkeletonGrid } from "@/components/loading/PageSkeleton";
 import { ArrowRight, ChevronDown, Bookmark, BookmarkCheck } from "lucide-react";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
-import Link from "next/link";
+import IntentPrefetchLink from "@/components/ui/IntentPrefetchLink";
 import {
   useCallback,
   useState,
@@ -244,7 +244,7 @@ export function ComingSoonSection({
                       : "lg:col-start-2 lg:aspect-[3/1]"),
                   ].filter(Boolean).join(" ");
                   return (
-                    <Link
+                    <IntentPrefetchLink
                       key={item.id}
                       href={"/" + type + "/" + item.id}
                       className={"group relative isolate flex aspect-video min-w-0 shrink-0 snap-start items-end overflow-hidden rounded-lg bg-[var(--surface-2)] ring-1 ring-inset ring-white/10 focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)] sm:w-auto " + placement}
@@ -273,7 +273,7 @@ export function ComingSoonSection({
                         </div>
                         <ArrowRight aria-hidden="true" className="size-5 shrink-0 text-white/80 transition-colors group-hover:text-white" />
                       </div>
-                    </Link>
+                    </IntentPrefetchLink>
                   );
                 })}
               </div>
@@ -320,7 +320,7 @@ export function ComingSoonSection({
                             key={item.id}
                             className={"min-w-0 items-center gap-2 rounded-lg bg-[var(--surface-2)] p-2 " + (itemIndex < mobileCount ? "flex" : "hidden") + " " + (itemIndex < visibleCount ? "sm:flex" : "sm:hidden")}
                           >
-                            <Link
+                            <IntentPrefetchLink
                               href={"/" + type + "/" + item.id}
                               className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-sm focus-visible:outline-2 focus-visible:outline-[var(--brand-coral)]"
                             >
@@ -335,7 +335,7 @@ export function ComingSoonSection({
                                   {getTitle(item)}
                                 </span>
                               </span>
-                            </Link>
+                            </IntentPrefetchLink>
                             <button
                               type="button"
                               onClick={() => handleWatchlistToggle(item)}
