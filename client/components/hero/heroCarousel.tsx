@@ -132,7 +132,6 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
   const posterSrc =
     tmdbImage(current.poster_path, "posterLarge") ??
     tmdbImage(current.backdrop_path, "backdropCard") ?? "/placeholder-poster.svg";
-  const mobileOverview = getOverview(current, 105);
   const desktopOverview = getOverview(current, 180);
   const progress = all.length > 0 ? ((index + 1) / all.length) * 100 : 0;
 
@@ -272,10 +271,9 @@ export default function HeroCarousel({ all = [], cycleMs = 7000 }: Props) {
             </div>
 
             <p
-              className="mt-4 line-clamp-2 max-w-xl text-sm leading-6 text-white/80 sm:line-clamp-3"
+              className="mt-4 hidden max-w-xl text-sm leading-6 text-white/80 sm:line-clamp-3"
             >
-              <span className="sm:hidden">{mobileOverview}</span>
-              <span className="hidden sm:inline">{desktopOverview}</span>
+              {desktopOverview}
             </p>
 
             <div

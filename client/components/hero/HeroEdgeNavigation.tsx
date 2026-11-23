@@ -4,7 +4,7 @@ import { IconChevronCompactLeft, IconChevronCompactRight } from "@tabler/icons-r
 
 export function HeroEdgeNavigation({ onNavigate }: { onNavigate: (offset: number) => void }) {
   return (
-    <div role="group" aria-label="Featured title navigation" className="pointer-events-none absolute inset-0 z-[9]">
+    <div role="group" aria-label="Featured title navigation" className="pointer-events-none absolute inset-0 z-[9] hidden sm:block">
       {[
         { offset: -1, label: "Previous featured title", side: "left-0 before:bg-[radial-gradient(ellipse_at_left_center,black_0%,transparent_72%)]", Icon: IconChevronCompactLeft },
         { offset: 1, label: "Next featured title", side: "right-0 before:bg-[radial-gradient(ellipse_at_right_center,black_0%,transparent_72%)]", Icon: IconChevronCompactRight },

@@ -205,6 +205,7 @@ try {
         const wrapper = page.locator("#" + id);
         const heading = wrapper.locator(id === "landing" ? "h1" : "h2");
         await heading.waitFor();
+        assert.equal(await wrapper.getByText("A story of friendship and finding a place to call home.", { exact: true }).isVisible(), width >= 640, id + " synopsis visibility at " + width);
         const artwork = wrapper.locator("picture img");
         await artwork.evaluate((image) => image.decode());
         assert.ok(
@@ -279,9 +280,11 @@ try {
       await page.route("**/second-*.jpg", delayArtwork);
       await page.goto(base + "?title=First%20poster&artwork=1&carousel=1&transitions=1", { waitUntil: "domcontentloaded" });
       const hero = page.locator("#" + id);
+      assert.equal(await hero.getByRole("group", { name: "Featured title navigation", includeHidden: true }).isVisible(), width >= 640);
+      const selectPoster = async (title, direction) => hero.getByRole("button", { name: width < 640 ? `Show ${title}` : `${direction} featured title`, exact: true }).click();
       const background = hero.locator("[data-hero-backdrop]");
       await background.locator("img").evaluate(image => image.decode());
-      await hero.getByRole("button", { name: "Next featured title" }).click();
+      await selectPoster("Second poster", "Next");
       await hero.getByRole("heading", { name: "Second poster", exact: true }).waitFor();
       assert.equal(await background.locator(":scope > div").count(), 2);
       assert.equal(await background.locator(":scope > div").first().evaluate(el => getComputedStyle(el).opacity), "1");
@@ -289,9 +292,9 @@ try {
       release();
       await page.waitForFunction(id => document.querySelector("#" + id + " [data-hero-backdrop]")?.children.length === 1, id);
       assert.match(await background.locator("img").evaluate(img => img.currentSrc), /second-(poster|backdrop)\.jpg$/);
-      await hero.getByRole("button", { name: "Previous featured title" }).click();
-      await hero.getByRole("button", { name: "Next featured title" }).click();
-      await hero.getByRole("button", { name: "Previous featured title" }).click();
+      await selectPoster("First poster", "Previous");
+      await selectPoster("Second poster", "Next");
+      await selectPoster("First poster", "Previous");
       await page.waitForFunction(id => document.querySelector("#" + id + " [data-hero-backdrop]")?.children.length === 1, id);
       assert.match(await background.locator("img").evaluate(img => img.currentSrc), /hero-(poster|backdrop)\.jpg$/);
       await page.unroute("**/second-*.jpg", delayArtwork);
@@ -305,7 +308,7 @@ try {
   await page.goto(base + "?title=First%20poster&artwork=1&carousel=1&transitions=1");
   for (const id of ["landing", "movie", "tv"]) {
     const hero = page.locator("#" + id);
-    await hero.getByRole("button", { name: "Next featured title" }).click();
+    await hero.getByRole("button", { name: "Show Second poster", exact: true }).click();
     await page.waitForFunction(id => {
       const background = document.querySelector("#" + id + " [data-hero-backdrop]");
       return background?.children.length === 1 && background.querySelector("img")?.currentSrc.endsWith("/placeholder-backdrop.svg");
@@ -369,7 +372,7 @@ try {
   const touchPage = await browser.newPage({ hasTouch: true, viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
   await touchPage.goto(base + "?title=First%20poster&carousel=1");
   const touchHero = touchPage.locator("#landing");
-  await touchHero.getByRole("button", { name: "Next featured title" }).tap();
+  await touchHero.getByRole("button", { name: "Show Second poster", exact: true }).tap();
   await touchHero.getByRole("heading", { name: "Second poster" }).waitFor();
   await touchPage.close();
 

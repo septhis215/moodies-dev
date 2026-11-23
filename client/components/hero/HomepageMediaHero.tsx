@@ -164,7 +164,7 @@ export function HomepageMediaHero({
                 </h2>
 
                 <p
-                  className="mt-3 line-clamp-2 max-w-xl text-sm leading-6 text-white/72 sm:text-base"
+                  className="mt-3 hidden max-w-xl text-sm leading-6 text-white/72 sm:line-clamp-2 sm:text-base"
                 >
                   {featured.overview || "No description available."}
                 </p>
