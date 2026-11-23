@@ -304,6 +304,12 @@ try {
         name: "Previous related celebrities",
       }),
       next = page.getByRole("button", { name: "Next related celebrities" });
+    const railBox = await rail.boundingBox();
+    const previousBox = await previous.boundingBox();
+    const nextBox = await next.boundingBox();
+    assert.deepEqual([previousBox.width, previousBox.height, nextBox.width, nextBox.height], [56, 56, 56, 56], "Related people controls have equal touch targets");
+    assert.ok(Math.abs(previousBox.y + previousBox.height / 2 - (railBox.y + railBox.height / 2)) <= 1, "Arrows are centered beside the cards");
+    assert.ok(previousBox.x < railBox.x + railBox.width / 2 && nextBox.x > railBox.x + railBox.width / 2, "Arrows occupy opposite carousel edges");
     assert.equal(await previous.isDisabled(), true);
     if (width < 640) {
       assert.equal(await next.isEnabled(), true);

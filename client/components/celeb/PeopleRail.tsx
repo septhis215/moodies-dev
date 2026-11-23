@@ -72,8 +72,10 @@ export default function PeopleRail({ people }: { people: RelatedPerson[] }) {
             Connected through groups and shared projects.
           </p>
         </div>
+      </header>
+      <div className="relative">
         <div
-          className="flex shrink-0 gap-2"
+          className="pointer-events-none absolute inset-0 z-20"
           role="group"
           aria-label="Browse related celebrities"
         >
@@ -91,34 +93,33 @@ export default function PeopleRail({ people }: { people: RelatedPerson[] }) {
           ].map(({ direction, label, enabled }) => (
             <CarouselNavButton
               key={direction}
-              variant="inline"
               direction={direction}
               aria-label={label}
               aria-controls="related-people-rail"
               disabled={!enabled}
               onClick={() => move(direction === "previous" ? -1 : 1)}
-              className="relative grid"
+              className="grid w-12 lg:w-24 xl:w-28"
             />
           ))}
         </div>
-      </header>
-      <div
-        ref={rail}
-        id="related-people-rail"
-        tabIndex={0}
-        aria-label="Related celebrity profiles"
-        className="mobile-native-scroll min-w-0 snap-x snap-proximity overflow-x-auto pb-3 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
-      >
-        <ul ref={track} className="flex w-max min-w-full gap-4 sm:gap-5">
-          {people.map((person) => (
-            <li key={person.id} className="w-32 shrink-0 snap-start sm:w-40">
-              <CelebrityPersonCard
-                person={person}
-                subtitle={person.relationship || person.known_for_department}
-              />
-            </li>
-          ))}
-        </ul>
+        <div
+          ref={rail}
+          id="related-people-rail"
+          tabIndex={0}
+          aria-label="Related celebrity profiles"
+          className="mobile-native-scroll min-w-0 snap-x snap-proximity overflow-x-auto pb-3 focus-visible:outline-2 focus-visible:outline-[var(--brand-coral-strong)]"
+        >
+          <ul ref={track} className="flex w-max min-w-full gap-4 sm:gap-5">
+            {people.map((person) => (
+              <li key={person.id} className="w-32 shrink-0 snap-start sm:w-40">
+                <CelebrityPersonCard
+                  person={person}
+                  subtitle={person.relationship || person.known_for_department}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   );
