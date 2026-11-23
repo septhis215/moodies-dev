@@ -56,24 +56,22 @@ describe('CelebrityHubService', () => {
   });
   it('bounds and validates the TMDB list and shares concurrent loads', async () => {
     const people = {
-      getHubPeople: jest
-        .fn()
-        .mockResolvedValue([
-          {
-            id: 1,
-            name: 'Actor',
-            profile_path: '/portrait.jpg',
-            known_for_department: 'Acting',
-          },
-          { id: 2, name: 'Adult', adult: true },
-          { id: '3', name: 'Invalid' },
-          null,
-          ...Array.from({ length: 30 }, (_, i) => ({
-            id: i + 4,
-            name: `Person ${i}`,
-            profile_path: 'https://evil.test/a.png',
-          })),
-        ]),
+      getHubPeople: jest.fn().mockResolvedValue([
+        {
+          id: 1,
+          name: 'Actor',
+          profile_path: '/portrait.jpg',
+          known_for_department: 'Acting',
+        },
+        { id: 2, name: 'Adult', adult: true },
+        { id: '3', name: 'Invalid' },
+        null,
+        ...Array.from({ length: 30 }, (_, i) => ({
+          id: i + 4,
+          name: `Person ${i}`,
+          profile_path: 'https://evil.test/a.png',
+        })),
+      ]),
     };
     const cache = new MediaCacheService({
       get: jest.fn().mockResolvedValue(null),
@@ -86,9 +84,45 @@ describe('CelebrityHubService', () => {
     const [result] = await Promise.all([service.getHub(), service.getHub()]);
     expect(people.getHubPeople).toHaveBeenCalledTimes(1);
     expect(result.status).toBe('ready');
-    expect(result.people).toHaveLength(12);
+    expect(result.people).toHaveLength(24);
     expect(result.people[0].name).toBe('Actor');
     expect(result.people[1].profile_path).toBeNull();
+  });
+  it('fills the hub with up to 24 safe credited people using at most six trending titles', async () => {
+    const titles = Array.from({ length: 10 }, (_, index) => ({
+      id: index + 1,
+      title: `Trending film ${index}`,
+      media_type: 'movie',
+    }));
+    const request = jest.fn(async (path: string) =>
+      path === 'trending/all/week'
+        ? { results: [{ id: 99, media_type: 'movie', adult: true }, ...titles] }
+        : {
+            cast: Array.from({ length: 8 }, (_, index) => ({
+              id: Number(path.split('/')[1]) * 100 + index,
+              name: `Actor ${path}-${index}`,
+              profile_path: '/portrait.jpg',
+              popularity: 50,
+              adult: index === 0,
+            })),
+          },
+    );
+    const redis = { getOrSet: jest.fn(async (_key, _ttl, load) => load()) };
+    const result = await new PeopleService(
+      { request } as unknown as TMDBService,
+      redis as unknown as RedisService,
+    ).getHubPeople();
+    expect(result).toHaveLength(24);
+    expect(
+      result.every(
+        (person) => person.adult !== true && person.known_for[0].id <= 6,
+      ),
+    ).toBe(true);
+    expect(new Set(result.map((person) => person.id)).size).toBe(24);
+    expect(request).toHaveBeenCalledTimes(7);
+    expect(
+      request.mock.calls.some(([path]) => path.startsWith('person/')),
+    ).toBe(false);
   });
   it('reports TMDB failure without blocking other hub content', async () => {
     const people = {

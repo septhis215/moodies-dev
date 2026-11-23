@@ -8,9 +8,9 @@ const PEOPLE_VIDEOS_TTL = 60 * 60 * 4;
 const PEOPLE_MEDIA_VIDEO_TTL = 60 * 60 * 12;
 const PEOPLE_REQUEST_TIMEOUT_MS = 4500;
 const PEOPLE_DISCOVERY_TTL = 60 * 60;
-const PEOPLE_DISCOVERY_CACHE_VERSION = 'v9';
-const PEOPLE_DISCOVERY_MAX_PAGE = 8;
-const PEOPLE_DISCOVERY_SOURCE_PAGES = 30;
+const PEOPLE_DISCOVERY_CACHE_VERSION = 'v11';
+const PEOPLE_DISCOVERY_MAX_PAGE = 500;
+const PEOPLE_DISCOVERY_SOURCE_PAGE_SIZE = 20;
 const PEOPLE_DISCOVERY_ENRICH_BATCH_SIZE = 6;
 const PEOPLE_DISCOVERY_BANNED_WORDS = [
   'porn',
@@ -67,6 +67,7 @@ type DiscoveryCandidate = {
 @Injectable()
 export class PeopleService {
   private creditCache = new Map<string, any>();
+  private readonly pendingCacheLoads = new Map<string, Promise<unknown>>();
   private relatedVideoCache = new Map<
     string,
     { expires: number; data: any[] }
@@ -87,15 +88,23 @@ export class PeopleService {
     fetcher: () => Promise<T>,
     shouldCache: (value: T) => boolean = () => true,
   ): Promise<T> {
+    const existing = this.pendingCacheLoads.get(key);
+    if (existing) return existing as Promise<T>;
+    const pending = (async () => {
+      let fetched: Promise<T> | undefined;
+      const load = () => (fetched ??= Promise.resolve().then(fetcher));
+      try {
+        return await this.redisService.getOrSet(key, ttlSeconds, load, shouldCache);
+      } catch {
+        // Cache failures must not replay an attempted upstream fetch.
+        return load();
+      }
+    })();
+    this.pendingCacheLoads.set(key, pending);
     try {
-      return await this.redisService.getOrSet(
-        key,
-        ttlSeconds,
-        fetcher,
-        shouldCache,
-      );
-    } catch {
-      return fetcher();
+      return await pending;
+    } finally {
+      this.pendingCacheLoads.delete(key);
     }
   }
 
@@ -127,14 +136,15 @@ export class PeopleService {
     if (!Array.isArray(response?.results)) throw new Error('Invalid TMDB trend response');
     const titles = response.results.filter((title: any) =>
       Number.isSafeInteger(title?.id) && ['movie', 'tv'].includes(title.media_type) && !this.isAdultishKnownFor(title),
-    ).slice(0, 4);
+    ).slice(0, 6);
     const credits = await Promise.all(titles.map((title: any) => this.withTimeout(this.getTitleCreditsCached(title.id, title.media_type), 6000)));
     if (titles.length && credits.every((value) => !value)) throw new Error('TMDB credits unavailable');
     const people: any[] = [];
     const seen = new Set<number>();
     // Credit links establish why a person is featured; raw person trends often include mistagged adult performers.
     for (let index = 0; index < titles.length; index++) {
-      for (const person of (credits[index]?.cast || []).slice(0, 6)) {
+      const cast = Array.isArray(credits[index]?.cast) ? credits[index].cast : [];
+      for (const person of cast.slice(0, 8)) {
         if (!this.isSafeDiscoveryPerson(person) || seen.has(person.id)) continue;
         seen.add(person.id);
         const title = titles[index];
@@ -144,7 +154,7 @@ export class PeopleService {
         });
       }
     }
-    return people.slice(0, 12);
+    return people.slice(0, 24);
   }
 
   async getPersonDetails(id: number) {
@@ -351,55 +361,41 @@ export class PeopleService {
     limit,
   }: Required<PeopleDiscoveryOptions>) {
     const source = this.getDiscoverySource(category, query);
-    const pageOffset = (page - 1) * limit;
-    const targetCount = pageOffset + limit;
-    const lookaheadCount = targetCount + 1;
+    const response = await this.withTimeout(
+      this.fetchPeopleDiscoverySource(source, page, query),
+    );
+    if (!Array.isArray(response?.results)) {
+      throw new Error('Invalid TMDB people discovery response');
+    }
+    // A directory page owns one upstream page, so later requests cannot rerank
+    // earlier results into a different page or repeatedly scan the same people.
+    const results = response.results.slice(0, PEOPLE_DISCOVERY_SOURCE_PAGE_SIZE);
     const collected: DiscoveryCandidate[] = [];
     const seen = new Set<number>();
-    let firstResponse: any = null;
-
-    for (
-      let sourcePage = 1;
-      sourcePage <= PEOPLE_DISCOVERY_SOURCE_PAGES;
-      sourcePage++
-    ) {
-      const response = await this.fetchPeopleDiscoverySource(
-        source,
-        sourcePage,
-        query,
+    const pageCandidates = results.filter((person: any) => {
+      if (
+        !Number.isSafeInteger(person?.id) ||
+        person.id <= 0 ||
+        seen.has(person.id)
+      ) return false;
+      seen.add(person.id);
+      return (
+        this.isSafeDiscoveryPerson(person) &&
+        this.matchesDiscoveryCategory(person, category)
       );
-      if (!firstResponse) firstResponse = response;
-
-      const results = Array.isArray(response?.results) ? response.results : [];
-      if (results.length === 0) break;
-
-      const pageCandidates = results.filter((person: any) => {
-        if (!person?.id || seen.has(person.id)) return false;
-        seen.add(person.id);
-        return (
-          this.isSafeDiscoveryPerson(person) &&
-          this.matchesDiscoveryCategory(person, category)
-        );
-      });
-
-      for (const chunk of this.chunkArray(
-        pageCandidates,
-        PEOPLE_DISCOVERY_ENRICH_BATCH_SIZE,
-      )) {
-        const evaluated = await Promise.all(
-          chunk.map((person) =>
-            this.evaluateDiscoveryCandidate(person, category),
-          ),
-        );
-        collected.push(
-          ...evaluated.filter((candidate): candidate is DiscoveryCandidate =>
-            Boolean(candidate),
-          ),
-        );
-      }
-
-      if (response?.total_pages && sourcePage >= response.total_pages) break;
-      if (collected.length >= lookaheadCount) break;
+    });
+    for (const chunk of this.chunkArray(
+      pageCandidates,
+      PEOPLE_DISCOVERY_ENRICH_BATCH_SIZE,
+    )) {
+      const evaluated = await Promise.all(
+        chunk.map((person) => this.evaluateDiscoveryCandidate(person, category)),
+      );
+      collected.push(
+        ...evaluated.filter((candidate): candidate is DiscoveryCandidate =>
+          Boolean(candidate),
+        ),
+      );
     }
 
     const ranked = collected
@@ -421,22 +417,25 @@ export class PeopleService {
           category,
         ),
       );
-    const shaped = ranked.slice(pageOffset, pageOffset + limit);
-    const hasMore = ranked.length > targetCount;
+    const totalPages =
+      Number.isFinite(response.total_pages) && response.total_pages >= 0
+        ? Math.min(Math.floor(response.total_pages), PEOPLE_DISCOVERY_MAX_PAGE)
+        : page;
+    const totalResults =
+      Number.isFinite(response.total_results) && response.total_results >= 0
+        ? Math.floor(response.total_results)
+        : results.length;
 
     return {
-      results: shaped,
+      results: ranked.slice(0, limit),
       page,
-      total_pages: hasMore
-        ? Math.min(page + 1, PEOPLE_DISCOVERY_MAX_PAGE)
-        : Math.max(1, page),
-      total_results: hasMore
-        ? Math.max(Number(firstResponse?.total_results || 0), targetCount + 1)
-        : pageOffset + shaped.length,
+      // Provider totals describe source pages, before eligibility filters.
+      total_pages: totalPages,
+      total_results: totalResults,
       category,
       query,
       source,
-      has_more: hasMore && page < PEOPLE_DISCOVERY_MAX_PAGE,
+      has_more: page < totalPages,
     };
   }
 
@@ -535,7 +534,17 @@ export class PeopleService {
   ): Promise<DiscoveryCandidate | null> {
     if (!this.isSafeDiscoveryPerson(person)) return null;
 
+    const knownFor = this.scoreDiscoveryCandidate(person, null, category);
+    if (knownFor) return knownFor;
     const combinedCredits = await this.getDiscoveryCombinedCredits(person.id);
+    return this.scoreDiscoveryCandidate(person, combinedCredits, category);
+  }
+
+  private scoreDiscoveryCandidate(
+    person: any,
+    combinedCredits: any,
+    category: string,
+  ): DiscoveryCandidate | null {
     const creditPool = this.getDiscoveryCreditPool(
       person,
       combinedCredits,

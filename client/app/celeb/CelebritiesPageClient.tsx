@@ -48,7 +48,7 @@ export default function CelebritiesPageClient() {
     : "trending";
   const query = params.get("q") || "";
   const parsed = Number.parseInt(params.get("page") || "1", 10);
-  const page = Number.isFinite(parsed) ? Math.min(8, Math.max(1, parsed)) : 1;
+  const page = Number.isFinite(parsed) ? Math.min(500, Math.max(1, parsed)) : 1;
   const [search, setSearch] = useState(query);
   const [data, setData] = useState<Discovery | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -83,7 +83,7 @@ export default function CelebritiesPageClient() {
     const request = new URLSearchParams({
       category,
       page: String(page),
-      limit: "24",
+      limit: "20",
     });
     if (query.trim()) request.set("query", query.trim());
     fetch(
@@ -91,7 +91,8 @@ export default function CelebritiesPageClient() {
       {
         signal: AbortSignal.any([
           controller.signal,
-          AbortSignal.timeout(20000),
+          // A cold source page plus four bounded credit batches can exceed 20s.
+          AbortSignal.timeout(30000),
         ]),
       },
     )
@@ -113,7 +114,7 @@ export default function CelebritiesPageClient() {
       });
     return () => controller.abort();
   }, [category, page, query, attempt]);
-  const totalPages = Math.max(1, Math.min(8, data?.total_pages || page));
+  const totalPages = Math.max(1, Math.min(500, data?.total_pages || page));
   return (
     <section
       className="ui-shell pb-12 pt-6 sm:pb-16 sm:pt-8"
@@ -243,7 +244,7 @@ export default function CelebritiesPageClient() {
           </p>
         </div>
       )}
-      {status === "success" && !!data?.results.length && (
+      {status === "success" && data && (data.results.length > 0 || data.has_more || page > 1) && (
         <nav
           aria-label="Celebrity directory pages"
           className="mt-8 flex items-center justify-center gap-5 border-t border-[var(--surface-border)] pt-6"

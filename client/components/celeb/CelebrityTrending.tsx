@@ -49,7 +49,7 @@ export default function CelebrityTrending() {
         </p>
       )}
       <div className={peopleLayout}>
-        {people.slice(0, 12).map((person) => (
+        {people.map((person) => (
           <div key={person.id} className="min-w-0 snap-start p-1">
             <CelebrityPersonCard
               person={person}

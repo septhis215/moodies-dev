@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import IntentPrefetchLink from "@/components/ui/IntentPrefetchLink";
 import { ArrowUpRight, Info } from "lucide-react";
 import { TmdbImage } from "@/components/ui/TmdbImage";
 import { tmdbImage } from "@/lib/tmdb";
@@ -78,8 +78,15 @@ export default function CelebrityPersonCard({
   const [broken, setBroken] = useState(false);
   const [pending, setPending] = useState(false);
   const requested = useRef(false);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
+  function cancelHover() {
+    clearTimeout(hoverTimer.current);
+    hoverTimer.current = undefined;
+  }
   function reveal() {
-    if (requested.current) return;
+    cancelHover();
+    if (requested.current || loaded) return;
     requested.current = true;
     setPending(true);
     void loadWorks(person.id)
@@ -89,17 +96,22 @@ export default function CelebrityPersonCard({
           setLoaded(true);
         }
       })
-      .finally(() => setPending(false));
+      .finally(() => {
+        requested.current = false;
+        setPending(false);
+      });
   }
   return (
     <article
       className={styles.personCard}
-      onMouseEnter={reveal}
+      onMouseEnter={() => { hoverTimer.current = setTimeout(reveal, 250); }}
+      onMouseLeave={cancelHover}
       onFocus={reveal}
     >
       <div className="ui-media-artwork aspect-[4/5]">
-        <Link
+        <IntentPrefetchLink
           href={`/celeb/${person.id}`}
+          onMouseEnter={event => event.preventDefault()}
           className="absolute inset-0 block"
           aria-label={person.name}
         >
@@ -115,7 +127,7 @@ export default function CelebrityPersonCard({
             className="object-cover"
             onError={() => setBroken(true)}
           />
-        </Link>
+        </IntentPrefetchLink>
         <button
           type="button"
           aria-label={`Show ${person.name}'s work`}
@@ -137,9 +149,10 @@ export default function CelebrityPersonCard({
               .filter((work) => ["movie", "tv"].includes(work.media_type || ""))
               .slice(0, 2)
               .map((work) => (
-                <Link
+                <IntentPrefetchLink
                   key={`${work.media_type}-${work.id}`}
                   href={`/${work.media_type === "tv" ? "tv" : "movies"}/${work.id}`}
+                  onMouseEnter={event => event.preventDefault()}
                 >
                   <span className="line-clamp-2">
                     {work.title || work.name}
@@ -148,27 +161,28 @@ export default function CelebrityPersonCard({
                     className="h-3.5 w-3.5 shrink-0"
                     aria-hidden="true"
                   />
-                </Link>
+                </IntentPrefetchLink>
               ))}
             {!works.length &&
               (pending ? (
                 <p className="text-xs leading-5 text-white/70">Loading work…</p>
               ) : (
-                <Link href={`/celeb/${person.id}#filmography`}>
+                <IntentPrefetchLink href={`/celeb/${person.id}#filmography`} onMouseEnter={event => event.preventDefault()}>
                   Filmography
                   <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-                </Link>
+                </IntentPrefetchLink>
               ))}
           </div>
         )}
       </div>
       <h3 className="mt-3 truncate text-sm font-semibold leading-5 text-[var(--ink)]">
-        <Link
+        <IntentPrefetchLink
           href={`/celeb/${person.id}`}
+          onMouseEnter={event => event.preventDefault()}
           className="hover:text-[var(--brand-coral-strong)]"
         >
           {person.name}
-        </Link>
+        </IntentPrefetchLink>
       </h3>
       <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--ink-muted)]">
         {subtitle || person.known_for_department || "Cast"}

@@ -331,6 +331,20 @@ loading remaining pages when necessary. An explicit API value, including `null`,
 is authoritative; a later-page failure leaves the existing feed visible without
 claiming that a partial result is the most popular matching review.
 
+The celebrity directory (`/celeb/explore`) requests one TMDB source page at a time
+through `GET /people/discover`. Each source page contains up to 20 people; safety
+and category filters can reduce the displayed count. Ranking stays within that
+page, and pagination metadata describes the upstream pages, capped at TMDB's
+500-page limit. An empty filtered page can still have a next page. The celebrity
+hub presents up to 24 distinct, eligible people credited in safe trending titles.
+Discovery first evaluates the upstream `known_for` credits with the existing
+eligibility thresholds. Only insufficient profiles fetch combined credits, in
+six-wide batches bounded to the 20 source people. Concurrent identical requests
+share their result even when cache access fails; completed directory pages retain
+the one-hour Redis TTL. Celebrity cards fetch latest work after a 250ms hover or
+immediately on keyboard focus/tap. Their links avoid viewport and pointer-hover
+prefetch, while keyboard focus can warm the selected destination.
+
 > **Caution:** `GET /search/discover` and `GET /people/discover` are backend endpoints
 > that survived the removal of the `/discover` *frontend route*. Do not delete them while
 > doing navigation cleanup.

@@ -30,7 +30,7 @@ export class CelebrityHubService {
   }> {
     try {
       const result = await this.cache.get(
-        'celebrity:hub:trending:v4',
+        'celebrity:hub:trending:v5',
         900,
         async () => {
           const trending: unknown = await this.people.getHubPeople();
@@ -46,7 +46,7 @@ export class CelebrityHubService {
                 person.name.trim() &&
                 person.adult !== true,
             )
-            .slice(0, 12)
+            .slice(0, 24)
             .map((person: Record<string, unknown>) => ({
               id: Number(person.id),
               name: String(person.name),
