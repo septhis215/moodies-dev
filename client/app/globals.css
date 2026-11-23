@@ -130,7 +130,7 @@ a[aria-current]:not([aria-current="false"]) .ui-nav-label::after {
 }
 
 .homepage-hero-fade {
-  background: linear-gradient(180deg, rgb(11 9 9 / 38%), transparent 28%, rgb(11 9 9 / 60%) 72%, var(--surface-0));
+  background: linear-gradient(180deg, rgb(11 9 9 / 45%), transparent 20%, rgb(11 9 9 / 35%) 40%, rgb(11 9 9 / 88%) 72%, var(--surface-0));
 }
 
 @media (min-width: 640px) {

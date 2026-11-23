@@ -27,7 +27,7 @@ export function FeaturedPosterWave({ items: all, index, onSelect }: { items: All
     return { item: all[slideIndex], slideIndex };
   });
   return (
-    <div data-hero-selector role="group" aria-label="Featured posters" className="relative flex min-h-[108px] items-end gap-1.5 lg:min-h-[min(18vw,36svh,15rem)] lg:w-(--poster-rail-width) lg:gap-2" style={{ "--poster-rail-width": `calc(min(12vw, 24svh, 10rem) + ${railWidth}px)` } as React.CSSProperties}>
+    <div data-hero-selector role="group" aria-label="Featured posters" className="relative hidden min-h-[108px] items-end gap-1.5 sm:flex lg:min-h-[min(18vw,36svh,15rem)] lg:w-(--poster-rail-width) lg:gap-2" style={{ "--poster-rail-width": `calc(min(12vw, 24svh, 10rem) + ${railWidth}px)` } as React.CSSProperties}>
       <AnimatePresence initial={false} mode="popLayout" custom={posterTrack.direction}>
         {thumbnailWindow.map(({ item, slideIndex }, position) => (
             <motion.div

@@ -24,6 +24,7 @@ export default function HeroPreview({
   const playerHostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YouTubePlayer | null>(null);
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const desktop = useMediaQuery("(min-width: 640px)");
   const [visible, setVisible] = useState(false);
   const [requested, setRequested] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -32,7 +33,7 @@ export default function HeroPreview({
   const [resolvedKey, setResolvedKey] = useState<string | null | undefined>(
     trailerKey && /^[\w-]{11}$/.test(trailerKey) ? trailerKey : undefined,
   );
-  const active = visible && !finished && (requested || (autoPlay && !reduceMotion));
+  const active = desktop && visible && !finished && (requested || (autoPlay && !reduceMotion));
   const showingPreview = active && revealed;
   const playbackLabel = showingPreview ? "Stop preview" : active ? "Cancel preview" : "Play 15s preview";
   const soundLabel = muted ? "Unmute preview" : "Mute preview";
@@ -57,7 +58,7 @@ export default function HeroPreview({
   }, []);
 
   useEffect(() => {
-    if (!visible || resolvedKey !== undefined) return;
+    if (!desktop || !visible || resolvedKey !== undefined) return;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 4500);
     void fetch(`${API_BASE}/all/batch/trailers`, {
@@ -74,7 +75,7 @@ export default function HeroPreview({
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [id, kind, resolvedKey, visible]);
+  }, [desktop, id, kind, resolvedKey, visible]);
 
   useEffect(() => {
     const host = playerHostRef.current;
@@ -146,7 +147,7 @@ export default function HeroPreview({
       <div ref={hostRef} aria-hidden="true" className={`pointer-events-none absolute inset-0 z-[1] overflow-hidden [container-type:size] [&_iframe]:pointer-events-none ${showingPreview ? "opacity-100 transition-opacity duration-500 motion-reduce:transition-none" : "opacity-0"}`}>
         <div ref={playerHostRef} className="absolute left-1/2 top-[34%] h-[max(200px,56.25cqw,64cqh)] w-[max(356px,100cqw,113.78cqh)] -translate-x-1/2 -translate-y-1/2 sm:top-1/2 sm:h-[max(100cqh,56.25cqw)] sm:w-[max(100cqw,177.78cqh)]" />
       </div>
-      {resolvedKey && (
+      {desktop && resolvedKey && (
         <div role="group" aria-label="Trailer preview controls" className="absolute right-4 top-4 z-20 flex divide-x divide-white/20 rounded-md border border-white/20 bg-black/75 text-white sm:right-6 lg:right-8 lg:top-24">
           <button
             type="button"

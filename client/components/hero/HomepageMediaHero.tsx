@@ -211,11 +211,17 @@ export function HomepageMediaHero({
             </motion.div>
 
             {heroItems.length > 1 && (
-              <div className="self-end">
+              <div className="hidden self-end sm:block">
                 <FeaturedPosterWave items={heroItems} index={activeIndex} onSelect={setActiveIndex} />
               </div>
             )}
           </div>
+          {heroItems.length > 1 && (
+            <div className="mt-5 flex items-center justify-between text-xs text-white/65 sm:hidden">
+              <span>Swipe to explore</span>
+              <span>{activeIndex + 1}/{heroItems.length}</span>
+            </div>
+          )}
         </div>
       </div>
     </section>

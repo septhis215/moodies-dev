@@ -39,6 +39,19 @@ const server = createServer((request, response) => {
 await new Promise((done) => server.listen(0, "127.0.0.1", done));
 const base = `http://127.0.0.1:${server.address().port}`;
 let browser;
+async function swipeHero(hero, direction) {
+  await hero.locator("[data-hero-backdrop]").evaluate((element, direction) => {
+    const touch = { identifier: 1, clientX: 180, clientY: 180 };
+    for (const [type, touches, changedTouches] of [
+      ["touchstart", [touch], [touch]],
+      ["touchend", [], [{ ...touch, clientX: direction === "Next" ? 60 : 300 }]],
+    ]) {
+      const event = new Event(type, { bubbles: true });
+      Object.defineProperties(event, { touches: { value: touches }, changedTouches: { value: changedTouches } });
+      element.dispatchEvent(event);
+    }
+  }, direction);
+}
 try {
   const result = await build({
     stdin: {
@@ -281,7 +294,12 @@ try {
       await page.goto(base + "?title=First%20poster&artwork=1&carousel=1&transitions=1", { waitUntil: "domcontentloaded" });
       const hero = page.locator("#" + id);
       assert.equal(await hero.getByRole("group", { name: "Featured title navigation", includeHidden: true }).isVisible(), width >= 640);
-      const selectPoster = async (title, direction) => hero.getByRole("button", { name: width < 640 ? `Show ${title}` : `${direction} featured title`, exact: true }).click();
+      assert.equal(await hero.getByRole("group", { name: "Featured posters", includeHidden: true }).isVisible(), width >= 640);
+      const selectPoster = async (title, direction) => {
+        if (width < 640) await swipeHero(hero, direction);
+        else await hero.getByRole("button", { name: `${direction} featured title`, exact: true }).click();
+        await hero.getByRole("heading", { name: title, exact: true }).waitFor();
+      };
       const background = hero.locator("[data-hero-backdrop]");
       await background.locator("img").evaluate(image => image.decode());
       await selectPoster("Second poster", "Next");
@@ -308,7 +326,7 @@ try {
   await page.goto(base + "?title=First%20poster&artwork=1&carousel=1&transitions=1");
   for (const id of ["landing", "movie", "tv"]) {
     const hero = page.locator("#" + id);
-    await hero.getByRole("button", { name: "Show Second poster", exact: true }).click();
+    await swipeHero(hero, "Next");
     await page.waitForFunction(id => {
       const background = document.querySelector("#" + id + " [data-hero-backdrop]");
       return background?.children.length === 1 && background.querySelector("img")?.currentSrc.endsWith("/placeholder-backdrop.svg");
@@ -372,7 +390,7 @@ try {
   const touchPage = await browser.newPage({ hasTouch: true, viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
   await touchPage.goto(base + "?title=First%20poster&carousel=1");
   const touchHero = touchPage.locator("#landing");
-  await touchHero.getByRole("button", { name: "Show Second poster", exact: true }).tap();
+  await swipeHero(touchHero, "Next");
   await touchHero.getByRole("heading", { name: "Second poster" }).waitFor();
   await touchPage.close();
 
@@ -405,6 +423,20 @@ try {
       destroy() { this.frame.remove(); }
     }}; window.onYouTubeIframeAPIReady();`,
   }));
+  let mobilePreviewRequests = 0;
+  const trackPreview = request => {
+    if (/all\/batch\/trailers|youtube\.com\/(iframe_api|embed)/.test(request.url())) mobilePreviewRequests++;
+  };
+  page.on("request", trackPreview);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto(base + "?title=Mobile%20preview&artwork=1");
+  await page.waitForTimeout(600);
+  assert.equal(mobilePreviewRequests, 0, "Mobile heroes must not fetch or load trailers");
+  assert.equal(await page.getByRole("group", { name: "Trailer preview controls" }).count(), 0);
+  assert.equal(await page.locator("iframe").count(), 0);
+  page.off("request", trackPreview);
+  await page.setViewportSize({ width: 1440, height: 720 });
   for (const reducedMotion of ["no-preference", "reduce"]) {
     await page.emulateMedia({ reducedMotion });
     await page.goto(base + "?title=Preview&artwork=1");
