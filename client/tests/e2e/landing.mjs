@@ -164,6 +164,22 @@ try {
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
+    // Shelves mount only near the viewport, so the nudge repeats on every poll:
+    // a shelf can sit just outside the observer margin until hydration settles.
+    const readySection = (id) =>
+      page.waitForFunction(
+        id => {
+          const section = document.querySelector(
+            `[data-deferred-section="${id}"]`,
+          );
+          if (!section) return false;
+          if (section.dataset.sectionReady === "true") return true;
+          section.scrollIntoView({ block: "center", behavior: "instant" });
+          return false;
+        },
+        id,
+        { polling: 250 },
+      );
     for (const width of [320, 375, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(baseUrl, {
@@ -172,10 +188,8 @@ try {
       });
       // These feature checks exercise completed shelves; request timing is
       // covered separately by the section-fetching regression.
-      for (const id of ["curated-picks", "premiere", "upcoming", "community"]) {
-        await page.locator(`[data-deferred-section="${id}"]`).scrollIntoViewIfNeeded();
-        await page.waitForFunction(id => document.querySelector(`[data-deferred-section="${id}"]`)?.dataset.sectionReady === "true", id);
-      }
+      for (const id of ["curated-picks", "premiere", "upcoming", "community"])
+        await readySection(id);
       await page
         .locator(member ? "#curated-picks-heading" : "#moodies-intro-heading")
         .waitFor();
@@ -459,6 +473,7 @@ try {
         console.log(`Checking curated response ${status}`);
         favoriteStatus = status;
         await page.reload({ waitUntil: "domcontentloaded" });
+        await readySection("curated-picks");
         if (status === 400)
           await page
             .getByRole("heading", { name: "Choose your tastes" })
