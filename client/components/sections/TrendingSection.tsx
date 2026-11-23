@@ -4,16 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { All } from "@/types/all";
 import CardCarousel from "./CardCarousel";
+import { fetchSectionJson } from "@/lib/section-fetch";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
-
-async function fetchTrending(signal?: AbortSignal) {
-  const response = await fetch(`${API_BASE}/all/trending`, { signal });
-  if (!response.ok) {
-    throw new Error(`Failed to load trending titles (${response.status})`);
-  }
-  return (await response.json()) as All[];
-}
 
 interface TrendingSectionProps {
   data?: All[];
@@ -42,18 +35,10 @@ export default function TrendingSection({
     const controller = new AbortController();
     setLoading(true);
 
-    const request = endpoint
-      ? fetch(`${API_BASE}${endpoint}`, { signal: controller.signal }).then(
-          async (response) => {
-            if (!response.ok) {
-              throw new Error(
-                `Failed to load trending titles (${response.status})`,
-              );
-            }
-            return (await response.json()) as All[];
-          },
-        )
-      : fetchTrending(controller.signal);
+    const request = fetchSectionJson(`${API_BASE}${endpoint || "/all/trending"}`, controller.signal).then(data => {
+      if (!Array.isArray(data)) throw new Error("Invalid trending titles");
+      return data as All[];
+    });
 
     request
       .then(setTrending)
@@ -64,7 +49,7 @@ export default function TrendingSection({
         console.error("Error fetching trending data:", error);
         setTrending([]);
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
 
     return () => controller.abort();
   }, [data, endpoint, retryKey]);

@@ -170,6 +170,12 @@ try {
         waitUntil: "domcontentloaded",
         timeout: 120000,
       });
+      // These feature checks exercise completed shelves; request timing is
+      // covered separately by the section-fetching regression.
+      for (const id of ["curated-picks", "premiere", "upcoming", "community"]) {
+        await page.locator(`[data-deferred-section="${id}"]`).scrollIntoViewIfNeeded();
+        await page.waitForFunction(id => document.querySelector(`[data-deferred-section="${id}"]`)?.dataset.sectionReady === "true", id);
+      }
       await page
         .locator(member ? "#curated-picks-heading" : "#moodies-intro-heading")
         .waitFor();

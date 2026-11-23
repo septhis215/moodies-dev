@@ -9,6 +9,7 @@ import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 import { useRouter } from "next/navigation";
 import { useCarouselScroll } from "@/hooks/useCarouselScroll";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { fetchSectionJson } from "@/lib/section-fetch";
 
 export interface Person {
   id: number;
@@ -31,12 +32,11 @@ export interface Person {
 
 type KnownForWork = Person["known_for"][number];
 
-async function fetchPeople() {
+async function fetchPeople(signal: AbortSignal) {
   const base =
     process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
-  const res = await fetch(`${base}/all/peoples`, { next: { revalidate: 60 } });
-  if (!res.ok) return [];
-  const json = await res.json();
+  const json = await fetchSectionJson(`${base}/all/peoples`, signal);
+  if (!Array.isArray(json)) throw new Error("Invalid celebrities");
   return json as Person[];
 }
 
@@ -56,10 +56,12 @@ export default function CelebSection() {
   const GAP_PX = isSm ? 24 : 12;
 
   useEffect(() => {
-    fetchPeople()
-      .then(setCelebs)
-      .catch(() => setError("Failed to load celebrities"))
-      .finally(() => setLoading(false));
+    const controller = new AbortController();
+    fetchPeople(controller.signal)
+      .then(data => { if (!controller.signal.aborted) setCelebs(data); })
+      .catch(() => { if (!controller.signal.aborted) setError("Failed to load celebrities"); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
   }, []);
 
   const handleOpenPerson = (celeb: Person) => {

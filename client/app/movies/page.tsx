@@ -1,7 +1,4 @@
-import React from "react";
 import type { All } from "@/types/all";
-import type { ReviewItem } from "@/components/sections/CommunityPicks";
-import { homepageSections } from "@/components/sections/HomepageSectionsServer";
 import { readHomepageTitles } from "@/lib/homepage-sections";
 import MoviesHomePageClient from "./MovieHomePageClient";
 
@@ -9,30 +6,8 @@ const BASE_URL = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
 
 export const dynamic = "force-dynamic";
 
-type DbCriticReview = {
-  id: string;
-  tmdbId: number;
-  rating?: number;
-  content?: string;
-  movie?: {
-    id: number;
-    title?: string | null;
-    posterPath?: string | null;
-    backdropPath?: string | null;
-    releaseDate?: string | null;
-  };
-  user?: {
-    id: string;
-    username: string;
-    name?: string | null;
-    avatarUrl?: string | null;
-  };
-};
-
 async function fetchWithFallback<T>(endpoint: string, fallback: T): Promise<T> {
-  // Hard timeout so a slow/down backend can't hang static generation past Next's
-  // 60s page-build limit — a hiccup degrades the section to its fallback instead
-  // of failing the whole deploy.
+  // A slow backend must not hold up the hero indefinitely.
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8000);
   try {
@@ -58,91 +33,6 @@ async function fetchWithFallback<T>(endpoint: string, fallback: T): Promise<T> {
     clearTimeout(timer);
   }
 }
-async function fetchMoods() {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
-  try {
-    const res = await fetch(`${BASE_URL}/moods`, {
-      next: { revalidate: 3600 }, // Cache for 1 hour
-      signal: controller.signal,
-    });
-
-    if (!res.ok) {
-      console.error("Failed to fetch moods");
-      return [];
-    }
-
-    return res.json();
-  } catch (error) {
-    console.error("Error fetching moods:", error);
-    return [];
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function fetchTrendingMovies() {
-  return fetchMovieList("/movies/featured?limit=25");
-}
-
-async function fetchPopularMovies() {
-  return fetchMovieList("/movies/trending?limit=25");
-}
-
-
-
-
-async function fetchKoreanMovies() {
-  return fetchMovieList("/movies/koreaTrending?limit=25");
-}
-
-async function fetchMovieReviews() {
-  const reviews = await fetchWithFallback<DbCriticReview[]>(
-    "/reviews/critics-corner/movies?limit=12",
-    [],
-  );
-
-  return reviews.map((review) => {
-    const displayName =
-      review.user?.name || review.user?.username || "Moodies critic";
-
-    return {
-      quote: review.content || "No review available",
-      name: displayName,
-      title: review.movie?.title || `Movie #${review.tmdbId}`,
-      avatar: review.user?.avatarUrl || "",
-      rating: review.rating,
-      user: review.user,
-      tmdbId: review.tmdbId,
-      movieTitle: review.movie?.title || `Movie #${review.tmdbId}`,
-      moviePoster: review.movie?.posterPath || null,
-      movieBackdrop: review.movie?.backdropPath || null,
-      movieYear: review.movie?.releaseDate?.split("-")[0] || null,
-    };
-  }) satisfies ReviewItem[];
-}
-// Add to your page.tsx server component
-async function fetchAnimatedMovies() {
-  return fetchMovieList("/movies/animated-movies?limit=20");
-}
-
-async function fetchActionMovies() {
-  return fetchMovieList("/movies/action-movies?limit=20");
-}
-
-async function fetchIndieMovies() {
-  return fetchMovieList("/movies/indie-movies?limit=20");
-}
-
-async function fetchAwardWinners() {
-  return fetchMovieList("/movies/award-winners?limit=25");
-}
-
-
-async function fetchNewReleases() {
-  return fetchMovieList("/movies/new-releases?page=1&limit=30");
-}
-
 async function fetchMovieList(endpoint: string): Promise<All[]> {
   return readHomepageTitles(await fetchWithFallback<unknown>(endpoint, null));
 }
@@ -161,28 +51,15 @@ export const metadata = {
 };
 
 export default async function MoviesHomePage() {
-  const sections = homepageSections("movie");
-  const [trendingMovies, popularMovies, koreanMovies, movieReviews, animatedMovies,
-    indieMovies, awardWinners, actionMovies, moods, newReleaseMovies] = await Promise.all([
-    fetchTrendingMovies(), fetchPopularMovies(), fetchKoreanMovies(), fetchMovieReviews(),
-    fetchAnimatedMovies(), fetchIndieMovies(), fetchAwardWinners(), fetchActionMovies(),
-    fetchMoods(), fetchNewReleases(),
-  ]);
+  const trendingMovies = await fetchMovieList("/movies/featured?limit=25");
+  const popularMovies = trendingMovies.length
+    ? []
+    : await fetchMovieList("/movies/trending?limit=25");
 
   return (
     <MoviesHomePageClient
       trendingMovies={trendingMovies}
       popularMovies={popularMovies}
-      upcomingSection={sections.upcoming}
-      movieReviews={movieReviews}
-      koreanMovies={koreanMovies}
-      animatedMovies={animatedMovies}
-      indieMovies={indieMovies}
-      awardWinners={awardWinners}
-      actionMovies={actionMovies}
-      moods={moods}
-      newReleaseMovies={newReleaseMovies}
-      communityPulseSection={sections.communityPulse}
     />
   );
 }

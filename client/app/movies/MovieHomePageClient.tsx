@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Ticket } from "lucide-react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
-import type { ReactNode } from "react";
 import { tmdbImage } from "@/lib/tmdb";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import RatingBadge from "@/components/ui/rating-badge";
@@ -12,22 +11,50 @@ import { HomepageMediaHero } from "@/components/hero/HomepageMediaHero";
 import { MediaShelf } from "@/components/media/MediaShelf";
 import MoodRecommendationsSection from "@/components/sections/MoodRecommendationSection";
 import CommunityPicks from "@/components/sections/CommunityPicks";
+import { DeferredSection } from "@/components/sections/DeferredSection";
+import { DeferredSectionData } from "@/components/sections/DeferredSectionData";
+import { DeferredMediaShelf } from "@/components/sections/DeferredMediaShelf";
+import {
+  CommunityPulseClient,
+  UpcomingReleasesClient,
+} from "@/components/sections/HomepageSectionsClient";
+import { readHomepageTitles } from "@/lib/homepage-sections";
 import { useScrollToHash } from "@/hooks/useScrollToHash";
 
 type MoviesHomePageClientProps = {
   trendingMovies: All[];
   popularMovies: All[];
-  movieReviews: ReviewItem[];
-  koreanMovies: All[];
-  animatedMovies: All[];
-  indieMovies: All[];
-  awardWinners: All[];
-  actionMovies: All[];
-  moods?: unknown[];
-  newReleaseMovies: All[];
-  communityPulseSection: ReactNode;
-  upcomingSection: ReactNode;
 };
+
+type DbCriticReview = {
+  tmdbId: number;
+  rating?: number;
+  content?: string;
+  movie?: {
+    title?: string | null;
+    posterPath?: string | null;
+    backdropPath?: string | null;
+    releaseDate?: string | null;
+  };
+  user?: ReviewItem["user"];
+};
+
+function readMovieReviews(payload: unknown): ReviewItem[] {
+  if (!Array.isArray(payload)) throw new Error("Invalid movie reviews");
+  return (payload as DbCriticReview[]).map((review) => ({
+    quote: review.content || "No review available",
+    name: review.user?.name || review.user?.username || "Moodies critic",
+    title: review.movie?.title || `Movie #${review.tmdbId}`,
+    avatar: review.user?.avatarUrl || "",
+    rating: review.rating,
+    user: review.user,
+    tmdbId: review.tmdbId,
+    movieTitle: review.movie?.title || `Movie #${review.tmdbId}`,
+    moviePoster: review.movie?.posterPath || null,
+    movieBackdrop: review.movie?.backdropPath || null,
+    movieYear: review.movie?.releaseDate?.split("-")[0] || null,
+  }));
+}
 
 const titleFor = (item: All) => item.title || item.name || "Untitled";
 const yearFor = (item: All) =>
@@ -150,16 +177,6 @@ function BoxOfficeRanking({ items }: { items: All[] }) {
 export default function MoviesHomePageClient({
   trendingMovies,
   popularMovies,
-  movieReviews,
-  koreanMovies,
-  animatedMovies,
-  indieMovies,
-  awardWinners,
-  actionMovies,
-  moods,
-  newReleaseMovies,
-  communityPulseSection,
-  upcomingSection,
 }: MoviesHomePageClientProps) {
   useScrollToHash(100);
 
@@ -174,92 +191,126 @@ export default function MoviesHomePageClient({
       />
       <div className="homepage-browse">
         <div className="ui-shell homepage-chapter">
-          <MediaShelf
+          <DeferredMediaShelf
             id="new-release-movies"
             title="New releases"
-            items={newReleaseMovies}
+            endpoint="/movies/new-releases?page=1&limit=30"
             hrefBase="/movies"
             watchType="movie"
             viewAllHref="/movies/new-releases"
           />
 
-          <BoxOfficeRanking items={popularMovies} />
+          {popularMovies.length ? (
+            <DeferredSection id="popular-movies" label="Box office ranking">
+              <BoxOfficeRanking items={popularMovies} />
+            </DeferredSection>
+          ) : (
+            <DeferredSectionData
+              id="popular-movies"
+              label="Box office ranking"
+              endpoint="/movies/trending?limit=25"
+              decode={readHomepageTitles}
+            >
+              {(items) => <BoxOfficeRanking items={items} />}
+            </DeferredSectionData>
+          )}
 
-          <MediaShelf
-            id="trending-movies"
-            title="Featured now"
-            items={trendingMovies}
-            hrefBase="/movies"
-            watchType="movie"
-            viewAllHref="/movies/featured"
-          />
+          <DeferredSection id="trending-movies" label="Featured now">
+            <MediaShelf
+              id="trending-movies"
+              title="Featured now"
+              items={trendingMovies}
+              hrefBase="/movies"
+              watchType="movie"
+              viewAllHref="/movies/featured"
+            />
+          </DeferredSection>
         </div>
 
-        <div className="ui-shell homepage-chapter">{upcomingSection}</div>
+        <div className="ui-shell homepage-chapter">
+          <DeferredSection id="upcoming" label="Coming to Theaters">
+            <UpcomingReleasesClient initialData={null} mediaType="movie" />
+          </DeferredSection>
+        </div>
 
         <div className="ui-shell homepage-chapter">
-          <MediaShelf
+          <DeferredMediaShelf
             id="korean-movies"
             eyebrow="International spotlight"
             title="Korean cinema"
             description="Contemporary Korean films spanning thrillers, dramas, comedy and action."
-            items={koreanMovies}
+            endpoint="/movies/koreaTrending?limit=25"
             hrefBase="/movies"
             watchType="movie"
             viewAllHref="/movies/korean-cinema"
           />
 
-          <MediaShelf
+          <DeferredMediaShelf
             id="action-movies"
             eyebrow="High velocity"
             title="Action-packed"
-            items={actionMovies}
+            endpoint="/movies/action-movies?limit=20"
             hrefBase="/movies"
             watchType="movie"
             viewAllHref="/movies/action"
           />
 
-          <MediaShelf
+          <DeferredMediaShelf
             id="award-winners"
             eyebrow="Recognised work"
             title="Award winners"
-            items={awardWinners}
+            endpoint="/movies/award-winners?limit=25"
             hrefBase="/movies"
             watchType="movie"
             viewAllHref="/movies/award-winners"
           />
 
-          <MediaShelf
+          <DeferredMediaShelf
             id="animated-movies"
             eyebrow="Illustrated worlds"
             title="Animated magic"
-            items={animatedMovies}
+            endpoint="/movies/animated-movies?limit=20"
             hrefBase="/movies"
             watchType="movie"
             viewAllHref="/movies/animated"
           />
 
-          <MediaShelf
+          <DeferredMediaShelf
             id="indie-movies"
             eyebrow="Beyond the mainstream"
             title="Indie spotlight"
             description="Independent films with distinctive voices and smaller-scale stories."
-            items={indieMovies}
+            endpoint="/movies/indie-movies?limit=20"
             hrefBase="/movies"
             watchType="movie"
             viewAllHref="/movies/indie"
           />
 
-          <MoodRecommendationsSection mediaType="movie" initialMoods={moods} />
+          <DeferredSection id="moods" label="Find a movie for your mood">
+            <MoodRecommendationsSection mediaType="movie" />
+          </DeferredSection>
         </div>
 
         <div className="homepage-chapter">
-          <div className="ui-shell">{communityPulseSection}</div>
-          <CommunityPicks
-            data={movieReviews}
-            title="Critics corner"
-            subtitle="Recent member reviews, paired with the films they watched."
-          />
+          <div className="ui-shell">
+            <DeferredSection id="movie-community-pulse" label="Community pulse">
+              <CommunityPulseClient initialData={null} mediaType="movie" />
+            </DeferredSection>
+          </div>
+          <DeferredSectionData
+            id="community"
+            label="Critics corner"
+            endpoint="/reviews/critics-corner/movies?limit=12"
+            decode={readMovieReviews}
+          >
+            {(reviews) => (
+              <CommunityPicks
+                data={reviews}
+                title="Critics corner"
+                subtitle="Recent member reviews, paired with the films they watched."
+              />
+            )}
+          </DeferredSectionData>
         </div>
       </div>
     </main>

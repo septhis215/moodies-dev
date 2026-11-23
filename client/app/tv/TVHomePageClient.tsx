@@ -4,7 +4,6 @@ import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 import type { All } from "@/types/all";
 import type { ReviewItem } from "@/components/sections/CommunityPicks";
-import type { ReactNode } from "react";
 import { tmdbImage } from "@/lib/tmdb";
 import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import RatingBadge from "@/components/ui/rating-badge";
@@ -13,20 +12,47 @@ import { MediaShelf } from "@/components/media/MediaShelf";
 import MoodRecommendationsSection from "@/components/sections/MoodRecommendationSection";
 import CommunityPicks from "@/components/sections/CommunityPicks";
 import { useScrollToHash } from "@/hooks/useScrollToHash";
+import DeferredSection from "@/components/sections/DeferredSection";
+import DeferredSectionData from "@/components/sections/DeferredSectionData";
+import DeferredMediaShelf from "@/components/sections/DeferredMediaShelf";
+import { CommunityPulseClient, UpcomingReleasesClient } from "@/components/sections/HomepageSectionsClient";
+import { readHomepageTitles } from "@/lib/homepage-sections";
 
 type TVHomePageClientProps = {
-  trendingTV: All[];
+  trendingTV?: All[];
   popularTV: All[];
-  topRatedTV: All[];
-  KoreanTV: All[];
-  TVReview: ReviewItem[];
-  newReleaseTV: All[];
-  airingToday?: All[];
-  airingThisWeek?: All[];
-  moods?: unknown[];
-  communityPulseSection: ReactNode;
-  upcomingSection: ReactNode;
 };
+
+type DbCriticReview = {
+  tmdbId: number;
+  rating?: number;
+  content?: string;
+  tv?: {
+    title?: string | null;
+    posterPath?: string | null;
+    backdropPath?: string | null;
+    firstAirDate?: string | null;
+  };
+  user?: { id: string; username: string; name?: string | null; avatarUrl?: string | null };
+};
+
+function readTVReviews(payload: unknown): ReviewItem[] {
+  if (!Array.isArray(payload)) throw new Error("Invalid TV reviews");
+  return (payload as DbCriticReview[]).map(review => ({
+    quote: review.content || "No review available",
+    name: review.user?.name || review.user?.username || "Moodies critic",
+    title: review.tv?.title || `Series #${review.tmdbId}`,
+    avatar: review.user?.avatarUrl || "",
+    rating: review.rating,
+    user: review.user,
+    tmdbId: review.tmdbId,
+    mediaType: "TV",
+    movieTitle: review.tv?.title || `Series #${review.tmdbId}`,
+    moviePoster: review.tv?.posterPath || null,
+    movieBackdrop: review.tv?.backdropPath || null,
+    movieYear: review.tv?.firstAirDate?.split("-")[0] || null,
+  }));
+}
 
 const titleFor = (item: All) => item.name || item.title || "Untitled";
 const posterFor = (item: All) =>
@@ -137,17 +163,8 @@ function AiringSchedule({ today }: { today: All[] }) {
 }
 
 export default function TVHomePageClient({
-  trendingTV,
+  trendingTV = [],
   popularTV,
-  topRatedTV,
-  KoreanTV,
-  TVReview,
-  newReleaseTV,
-  airingToday = [],
-  airingThisWeek = [],
-  moods,
-  communityPulseSection,
-  upcomingSection,
 }: TVHomePageClientProps) {
   useScrollToHash(100);
   const marqueeItems = popularTV.length ? popularTV : trendingTV;
@@ -163,19 +180,26 @@ export default function TVHomePageClient({
       />
       <div className="homepage-browse">
         <div className="ui-shell homepage-chapter">
-          <MediaShelf
+          {trendingTV.length ? <MediaShelf
             id="trending-tv"
             title="Trending series"
             items={trendingTV}
             hrefBase="/tv"
             watchType="series"
             viewAllHref="/tv/trending"
-          />
+          /> : <DeferredMediaShelf
+            id="trending-tv"
+            title="Trending series"
+            endpoint="/tv/featured?limit=25"
+            hrefBase="/tv"
+            watchType="series"
+            viewAllHref="/tv/trending"
+          />}
 
-          <MediaShelf
+          <DeferredMediaShelf
             id="new-release-tv"
             title="New releases"
-            items={newReleaseTV}
+            endpoint="/tv/new-releases?limit=30"
             hrefBase="/tv"
             watchType="series"
             viewAllHref="/tv/new-releases"
@@ -184,36 +208,40 @@ export default function TVHomePageClient({
         </div>
 
         <div className="ui-shell homepage-chapter">
-          <AiringSchedule today={airingToday} />
-          <MediaShelf
+          <DeferredSectionData id="airing-today" label="On air" endpoint="/tv/airing/today?limit=15" decode={readHomepageTitles}>
+            {items => <AiringSchedule today={items} />}
+          </DeferredSectionData>
+          <DeferredMediaShelf
             id="airing-this-week"
             title="Airing this week"
-            items={airingThisWeek}
+            endpoint="/tv/airing/week?limit=20"
             hrefBase="/tv"
             watchType="series"
             viewAllHref="/tv/airing/week"
           />
-          {upcomingSection}
+          <DeferredSection id="upcoming" label="Premiering soon">
+            <UpcomingReleasesClient initialData={null} mediaType="tv" />
+          </DeferredSection>
         </div>
 
         <div className="ui-shell homepage-chapter">
-          <MediaShelf
+          <DeferredMediaShelf
             id="top-rated-tv"
             eyebrow="Audience favourites"
             title="Top rated series"
             description="High-scoring series with enough audience votes to earn attention."
-            items={topRatedTV}
+            endpoint="/tv/favorites?limit=30"
             hrefBase="/tv"
             watchType="series"
             viewAllHref="/tv/top-rated"
           />
 
-          <MediaShelf
+          <DeferredMediaShelf
             id="korean-tv"
             eyebrow="International spotlight"
             title="K-drama collection"
             description="Korean dramas, thrillers, romances and continuing series."
-            items={KoreanTV}
+            endpoint="/tv/koreaTrending?limit=20"
             hrefBase="/tv"
             watchType="series"
             viewAllHref="/tv/k-drama"
@@ -221,16 +249,20 @@ export default function TVHomePageClient({
         </div>
 
         <div className="ui-shell homepage-chapter">
-          <MoodRecommendationsSection mediaType="tv" initialMoods={moods} />
+          <DeferredSection id="moods" label="Mood matcher">
+            <MoodRecommendationsSection mediaType="tv" />
+          </DeferredSection>
         </div>
 
         <div className="homepage-chapter">
-          <div className="ui-shell">{communityPulseSection}</div>
-          <CommunityPicks
-            data={TVReview}
-            title="Critics corner"
-            subtitle="Recent member reviews, paired with the shows they watched."
-          />
+          <div className="ui-shell">
+            <DeferredSection id="tv-community-pulse" label="Community pulse">
+              <CommunityPulseClient initialData={null} mediaType="tv" />
+            </DeferredSection>
+          </div>
+          <DeferredSectionData id="community" label="Critics corner" endpoint="/reviews/critics-corner/tv?limit=12" decode={readTVReviews}>
+            {reviews => <CommunityPicks data={reviews} title="Critics corner" subtitle="Recent member reviews, paired with the shows they watched." />}
+          </DeferredSectionData>
         </div>
 
       </div>

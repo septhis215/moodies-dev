@@ -135,6 +135,16 @@ client/
 
 - Server components fetch the Nest API directly with `NEST_API_URL`; client components
   must use `NEXT_PUBLIC_API_URL`. These are **not interchangeable** — see §6.
+- Movie and TV homepages fetch only their 25-title hero on the server, with a
+  conditional fallback. Lower shelves use `DeferredSection` and mount within
+  400px of the viewport; section hash links also activate them. Reuse hero or
+  supplied section data instead of fetching it again.
+- Public client section GETs use `lib/section-fetch.ts`: at most three active
+  requests, shared pending work by URL, and a 30-second deadline starting on
+  admission. Consumers cancel independently; the last cancellation aborts the
+  transport. Successful responses are not retained in an additional client
+  cache. Personalized requests keep their existing authenticated transport and
+  stay out of this public, credential-free pool.
 - Data fetching is split three ways and all three are live: server-component `fetch` with
   `revalidate`, TanStack Query in client components, and Next server actions
   (`app/movies/action.ts`, `app/tv/action.ts`, `app/movies/action/page.tsx` is a *route*,

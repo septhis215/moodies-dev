@@ -9,6 +9,7 @@ import { BadgeMascot } from "@/components/ui/BadgeMascot";
 import { tmdbImage } from "@/lib/tmdb";
 import MoodTrailerBackdrop from "./MoodTrailerBackdrop";
 import styles from "./MoodNightPreview.module.css";
+import { fetchSectionJson } from "@/lib/section-fetch";
 import { moodNightChoices, parseNightPreview, selectNightPreview } from "./mood-night-data";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api").replace(/\/$/, "");
@@ -68,9 +69,7 @@ export default function MoodNightPreview() {
     const load = async () => {
       try {
         // One database-backed response contains both picks and the selected trailer.
-        const response = await fetch(`${API_BASE}/moods/night-preview/${selection}`, { signal: controller.signal });
-        if (!response.ok) throw new Error("Preview unavailable");
-        const data = parseNightPreview(await response.json());
+        const data = parseNightPreview(await fetchSectionJson(`${API_BASE}/moods/night-preview/${selection}`, controller.signal));
         if (!data.items.length) throw new Error("Preview unavailable");
         if (cancelled) return;
         cache.current.set(selection, data);

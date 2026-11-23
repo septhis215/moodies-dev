@@ -9,6 +9,7 @@ import { UpcomingTrailers } from "@/components/sections/UpcomingTrailers";
 import MoodDiscoverySection from "@/components/sections/MoodDiscoverySection";
 import LandingPersonalSection from "@/components/sections/LandingPersonalSection";
 import { HeroSkeleton, LoadingRegion } from "@/components/loading/PageSkeleton";
+import DeferredSection from "@/components/sections/DeferredSection";
 
 async function fetchFeatured() {
   const base = process.env.NEST_API_URL || "https://dev.api.moodies.tech/api";
@@ -40,13 +41,13 @@ export default function LandingPage() {
           <TrendingSection />
         </div>
         <div className="homepage-chapter">
-          <LandingPersonalSection />
+          <DeferredSection id="curated-picks" label="Curated for you" keepAnchor><LandingPersonalSection /></DeferredSection>
           <MoodDiscoverySection variant="teaser" />
         </div>
         <div className="homepage-chapter">
-          <PremiereHighlights />
-          <UpcomingTrailers />
-          <CommunityPicks />
+          <DeferredSection id="premiere" label="Fresh Off the Screen"><PremiereHighlights /></DeferredSection>
+          <DeferredSection id="upcoming" label="Coming Soon"><UpcomingTrailers /></DeferredSection>
+          <DeferredSection id="community" label="Community picks worth a look"><CommunityPicks /></DeferredSection>
         </div>
       </div>
     </main>

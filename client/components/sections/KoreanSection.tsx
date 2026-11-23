@@ -3,15 +3,12 @@
 import CardCarousel from "./CardCarousel";
 import { useEffect, useState } from "react";
 import type { All } from "@/types/all";
+import { fetchSectionJson } from "@/lib/section-fetch";
 
 // Default fetch function for backwards compatibility
-async function fetchKoreaTrending() {
+async function fetchKoreaTrending(signal: AbortSignal) {
   const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
-  const res = await fetch(`${base}/all/koreaTrending`, {
-    next: { revalidate: 60 },
-  });
-  if (!res.ok) return [];
-  const json = await res.json();
+  const json = await fetchSectionJson(`${base}/all/koreaTrending`, signal);
   return json as All[];
 }
 
@@ -40,6 +37,7 @@ export default function KoreaTrendingSection({
     }
 
     // Otherwise fetch data
+    const controller = new AbortController();
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -48,25 +46,24 @@ export default function KoreaTrendingSection({
         if (endpoint) {
           const base =
             process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
-          const res = await fetch(`${base}${endpoint}`, {
-            next: { revalidate: 60 },
-          });
-          if (!res.ok) throw new Error("Failed to fetch");
-          result = await res.json();
+          result = await fetchSectionJson(`${base}${endpoint}`, controller.signal) as All[];
         } else {
-          result = await fetchKoreaTrending();
+          result = await fetchKoreaTrending(controller.signal);
         }
 
-        setKoreaTrending(result);
+        if (!Array.isArray(result)) throw new Error("Invalid Korean titles");
+        if (!controller.signal.aborted) setKoreaTrending(result);
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error("Error fetching Korea trending data:", error);
         setKoreaTrending([]);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
     fetchData();
+    return () => controller.abort();
   }, [data, endpoint]);
 
   if (loading) {

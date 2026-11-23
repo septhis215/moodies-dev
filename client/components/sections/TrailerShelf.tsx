@@ -12,6 +12,7 @@ import { TmdbImage as Image } from "@/components/ui/TmdbImage";
 import { useCarouselScroll } from "@/hooks/useCarouselScroll";
 import { tmdbImage } from "@/lib/tmdb";
 import type { All } from "@/types/all";
+import { fetchSectionJson } from "@/lib/section-fetch";
 
 const TrailerModal = dynamic(() => import("./TrailerModal"), { ssr: false });
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
@@ -64,10 +65,8 @@ export function TrailerShelf({ data, title, subtitle, endpoint, upcoming = false
     const controller = new AbortController();
     setLoading(true);
     setError(false);
-    fetch(API_BASE + endpoint, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        const items = await response.json();
+    fetchSectionJson(API_BASE + endpoint, controller.signal)
+      .then(items => {
         if (!Array.isArray(items)) throw new Error("Invalid trailer list");
         if (!controller.signal.aborted) setTrailers(items);
       })

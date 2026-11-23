@@ -10,6 +10,7 @@ import { tmdbImage } from "@/lib/tmdb";
 import { useCarouselScroll } from "@/hooks/useCarouselScroll";
 import { CarouselNavButton } from "@/components/ui/CarouselNavButton";
 import styles from "./CommunityPicks.module.css";
+import { fetchSectionJson } from "@/lib/section-fetch";
 
 function ReviewCard({ review, index, count, activeIndex }: { review: ReviewItem; index: number; count: number; activeIndex: number }) {
   const [expanded, setExpanded] = useState(false);
@@ -376,27 +377,25 @@ export default function CommunityPicks({
       return;
     }
 
+    const controller = new AbortController();
     const fetchData = async () => {
       try {
         setLoading(true);
         const base = process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
         const path = endpoint || "/reviews/community-picks?limit=20";
-        const res = await fetch(`${base}${path}`, {
-          next: { revalidate: 60 },
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch reviews");
-        const result = (await res.json()) as MoodiesReviewResponse;
-        setReviews(normalizeReviewResponse(result));
+        const result = await fetchSectionJson(`${base}${path}`, controller.signal) as MoodiesReviewResponse;
+        if (!controller.signal.aborted) setReviews(normalizeReviewResponse(result));
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error("Error fetching reviews:", error);
         setReviews([]);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
     fetchData();
+    return () => controller.abort();
   }, [data, endpoint]);
 
   if (loading) {

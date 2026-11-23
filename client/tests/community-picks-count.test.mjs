@@ -22,6 +22,7 @@ const imports = {
   "@/components/ui/rating-badge": { RatingBadge: empty },
   "@/components/ui/TmdbImage": { TmdbImage: empty },
   "@/lib/tmdb": { tmdbImage: path => path },
+  "@/lib/section-fetch": { fetchSectionJson: async () => [] },
   "./CommunityPicks.module.css": { __esModule: true, default: new Proxy({}, { get: (_target, key) => key }) },
 };
 const module = { exports: {} };

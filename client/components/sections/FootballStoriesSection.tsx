@@ -1,4 +1,5 @@
 "use client";
+import { fetchSectionJson } from "@/lib/section-fetch";
 
 import { tmdbImage } from "@/lib/tmdb";
 import { useEffect, useId, useMemo, useState } from "react";
@@ -75,6 +76,7 @@ export default function FootballStoriesSection() {
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
 
     async function loadFootballStories() {
       try {
@@ -82,18 +84,13 @@ export default function FootballStoriesSection() {
         setHasError(false);
         const base =
           process.env.NEXT_PUBLIC_API_URL || "https://dev.api.moodies.tech/api";
-        const res = await fetch(
+        const json = await fetchSectionJson(
           `${base}/all/football-stories?limit=25&rankingMode=world-cup-docs&language=en-US&region=US`,
-          {
-            next: { revalidate: 60 },
-          },
-        );
-
-        if (!res.ok) throw new Error("Failed to fetch football stories");
-
-        const json = (await res.json()) as FootballStory[];
+          controller.signal,
+        ) as FootballStory[];
         if (active) setItems(Array.isArray(json) ? json : []);
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error("Error fetching football stories:", error);
         if (active) {
           setHasError(true);
@@ -108,6 +105,7 @@ export default function FootballStoriesSection() {
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, []);
 
