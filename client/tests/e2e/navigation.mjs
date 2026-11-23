@@ -108,16 +108,21 @@ try {
     await page.setViewportSize({ width, height: width < 1024 ? 740 : 900 });
     await page.goto(`${base}/terms`, { waitUntil: "domcontentloaded", timeout: 120000 });
     const signIn = page.getByRole("link", { name: /^Sign in(?: to Moodies)?$/ }).filter({ visible: true });
-    await signIn.waitFor();
     if (width < 1024) {
-      const target = await signIn.boundingBox();
-      assert.ok(target.width >= 44 && target.height >= 44, "Mobile sign-in keeps a 44px touch target");
-      assert.equal((await signIn.textContent()).trim(), "", "Mobile sign-in uses an icon");
-      assert.equal(await signIn.locator('svg[aria-hidden="true"]').count(), 1);
+      await page.getByRole("button", { name: "Open menu", exact: true }).waitFor();
+      assert.equal(await signIn.count(), 0, "Sign-in stays inside the closed mobile menu");
+      assert.equal(await page.getByRole("button", { name: "Open search", exact: true }).count(), 0, "Search stays inside the mobile menu");
     } else {
+      await signIn.waitFor();
       assert.equal((await signIn.textContent()).trim(), "Sign in");
     }
     const { trigger, dialog } = await openMenu(width);
+    if (width < 1024) {
+      const menuSignIn = dialog.getByRole("link", { name: "Sign in", exact: true });
+      assert.equal(await menuSignIn.getAttribute("href"), "/auth/login");
+      assert.ok((await menuSignIn.boundingBox()).height >= 44);
+      assert.equal(await dialog.getByRole("link", { name: "Search", exact: true }).getAttribute("href"), "/search");
+    }
     const shortcuts = dialog.getByRole("list", { name: "Main destinations" });
     assert.deepEqual(await shortcuts.getByRole("link").allTextContents(), ["Movies", "TV shows", "Explore moods", "Video feed"]);
     const library = dialog.getByRole("region", { name: "Your library" });
@@ -193,6 +198,15 @@ try {
 
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
+    if (width < 1024) {
+      const { dialog: searchMenu } = await openMenu(width);
+      await searchMenu.getByRole("link", { name: "Search", exact: true }).click();
+      await page.waitForURL("**/search");
+      await searchMenu.waitFor({ state: "hidden" });
+      await page.waitForFunction(() => document.body.style.overflow !== "hidden");
+      await page.goto(`${base}/terms`);
+      continue;
+    }
     await page.getByRole("button", { name: "Open search", exact: true }).click();
     const search = page.getByRole(width < 768 ? "searchbox" : "combobox", { name: "Search movies and series", exact: true });
     await search.waitFor();
@@ -253,15 +267,31 @@ try {
   await page.keyboard.press("Escape");
   await accountLinks.waitFor({ state: "hidden" });
   await page.setViewportSize({ width: 390, height: 900 });
-  await account.click();
-  await accountLinks.getByText("Movie explorer", { exact: true }).waitFor();
-  await accountLinks.getByRole("button", { name: "Sign out", exact: true }).waitFor();
-  const mobileAccountBounds = await accountLinks.boundingBox();
-  assert.ok(mobileAccountBounds.x >= 0 && mobileAccountBounds.x + mobileAccountBounds.width <= 390);
-  await page.keyboard.press("Escape");
-  await accountLinks.waitFor({ state: "hidden" });
-  assert.ok(await account.evaluate(element => element === document.activeElement));
+  assert.equal(await account.isVisible(), false, "Mobile header has no account button");
+  const { trigger: mobileTrigger, dialog: mobileMenu } = await openMenu(390);
+  const mobileAccount = mobileMenu.getByRole("region", { name: "Your account", exact: true });
+  await mobileAccount.getByText("Movie explorer", { exact: true }).waitFor();
+  assert.equal(await mobileAccount.getByRole("link", { name: "My profile", exact: true }).getAttribute("href"), "/profile");
+  assert.equal(await mobileMenu.locator('a[href="/watchlist"]').count(), 1, "Mobile account doesn't duplicate library destinations");
+  failLogout = true;
+  await mobileAccount.getByRole("button", { name: "Sign out", exact: true }).click();
+  await mobileMenu.waitFor({ state: "hidden" });
+  await page.getByText("Could not sign out. Please try again.", { exact: true }).waitFor();
+  assert.ok(await mobileTrigger.evaluate(element => element === document.activeElement));
+  failLogout = false;
+  await mobileTrigger.click();
+  await mobileAccount.getByRole("button", { name: "Sign out", exact: true }).click();
+  await mobileMenu.waitFor({ state: "hidden" });
+  await mobileTrigger.click();
+  const mobileSignIn = mobileMenu.getByRole("link", { name: "Sign in", exact: true });
+  await mobileSignIn.waitFor();
+  await mobileSignIn.click();
+  await page.waitForURL("**/auth/login");
+  await mobileMenu.waitFor({ state: "hidden" });
+  await page.goto(`${base}/terms`);
+  signedIn = true;
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.reload();
   await account.click();
   await accountLinks.waitFor();
   await page.setViewportSize({ width: 1100, height: 900 });
@@ -278,7 +308,7 @@ try {
   await accountLinks.waitFor();
   await accountLinks.getByRole("button", { name: "Sign out", exact: true }).click();
   await page.getByRole("link", { name: "Sign in", exact: true }).filter({ visible: true }).waitFor();
-  assert.equal(logoutRequests, 2);
+  assert.equal(logoutRequests, 4);
   assert.deepEqual(errors, []);
   console.log("Account navigation, logout, and breakpoint cleanup passed.");
 } finally { await browser.close(); }

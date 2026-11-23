@@ -13,7 +13,7 @@ import {
   IconMenu2,
   IconMoodSmile,
   IconMovie,
-  IconLogin2,
+  IconSearch,
   IconPlayerPlay,
   IconX,
 } from "@tabler/icons-react";
@@ -101,7 +101,7 @@ export function NavbarComponent({
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0, mobile: false });
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, right: 0 });
   const dialogRef = useRef<HTMLDialogElement>(null);
   const accountTriggerRef = useRef<HTMLButtonElement>(null);
   const accountContentRef = useRef<HTMLElement>(null);
@@ -205,13 +205,12 @@ export function NavbarComponent({
     setIsProfileOpen(false);
     setIsMenuOpen(true);
   };
-  const toggleAccount = (trigger: HTMLButtonElement, mobile: boolean) => {
+  const toggleAccount = (trigger: HTMLButtonElement) => {
     accountTriggerRef.current = trigger;
     const rect = trigger.getBoundingClientRect();
     setDropdownPosition({
       top: rect.bottom + 6,
       right: Math.max(8, window.innerWidth - rect.right),
-      mobile,
     });
     setIsProfileOpen((open) => !open);
   };
@@ -272,33 +271,29 @@ export function NavbarComponent({
     </span>
   );
 
-  const renderAccountControl = (mobile = false) => {
-    const isOpen = isProfileOpen && dropdownPosition.mobile === mobile;
+  const renderAccountControl = () => {
+    const isOpen = isProfileOpen;
     return isAuthenticated ? (
       <button
         type="button"
         aria-label="Account"
         aria-expanded={isOpen}
         aria-controls={isOpen ? "account-navigation" : undefined}
-        onClick={(event) => toggleAccount(event.currentTarget, mobile)}
-        className={`${controlStyle} ${mobile ? "size-11 p-0" : "pl-1.5 pr-2"} text-[var(--ink)]`}
+        onClick={(event) => toggleAccount(event.currentTarget)}
+        className={`${controlStyle} pl-1.5 pr-2 text-[var(--ink)]`}
       >
         {avatar()}
-        {!mobile && (
-          <>
-            <span className="ui-nav-label hidden max-w-24 xl:block">
-              <span className="ui-text-reveal block truncate">{displayName}</span>
-            </span>
-            <IconChevronDown
-              className={`size-4 text-[var(--ink-muted)] motion-safe:transition-transform ${isOpen ? "rotate-180" : ""}`}
-              aria-hidden="true"
-            />
-          </>
-        )}
+        <span className="ui-nav-label hidden max-w-24 xl:block">
+          <span className="ui-text-reveal block truncate">{displayName}</span>
+        </span>
+        <IconChevronDown
+          className={`size-4 text-[var(--ink-muted)] motion-safe:transition-transform ${isOpen ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        />
       </button>
     ) : (
-      <Link href="/auth/login" aria-label="Sign in" title={mobile ? "Sign in" : undefined} className={`${controlStyle} ${mobile ? "size-11 shrink-0 p-0" : ""}`}>
-        {mobile ? <IconLogin2 className="size-5" aria-hidden="true" /> : <span data-display className={navigationLabelStyle}>Sign in</span>}
+      <Link href="/auth/login" aria-label="Sign in" className={controlStyle}>
+        <span data-display className={navigationLabelStyle}>Sign in</span>
       </Link>
     );
   };
@@ -340,7 +335,7 @@ export function NavbarComponent({
         if (event.key !== "Tab") return;
         const controls = Array.from(
           event.currentTarget.querySelectorAll<HTMLElement>("a[href], button"),
-        );
+        ).filter(control => control.getClientRects().length > 0 && !control.matches(":disabled"));
         const first = controls[0];
         const last = controls[controls.length - 1];
         if (event.shiftKey && document.activeElement === first) {
@@ -369,6 +364,10 @@ export function NavbarComponent({
           aria-label="Browse Moodies"
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 lg:px-8 lg:pt-4"
         >
+          <Link href="/search" onNavigate={closeMenu} className={`${destinationClass("/search")} mb-5 gap-3 border border-[var(--surface-border)] bg-[var(--surface-1)] px-3 lg:hidden`}>
+            <IconSearch className="size-5 shrink-0 text-[var(--brand-coral-strong)]" aria-hidden="true" />
+            <span data-display className={navigationLabelStyle}>Search</span>
+          </Link>
           <ul aria-label="Main destinations" className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-2">
             {primaryLinks.map(({ name, menuName, href, icon: Icon }) => (
               <li key={href}>
@@ -392,8 +391,24 @@ export function NavbarComponent({
               </section>
             ))}
           </div>
+          {isAuthenticated && (
+            <section aria-label="Your account" className="mt-5 border-t border-[var(--surface-border)] pt-3 lg:hidden">
+              <div className="flex min-w-0 items-center gap-3 px-2 py-2">
+                {avatar()}
+                <p className="truncate text-sm font-semibold">{displayName}</p>
+              </div>
+              {renderLinks(accountLinks.filter(link => link.href === "/profile"))}
+              <button type="button" disabled={isLoggingOut} onClick={() => void logout()} className={`${controlStyle} w-full justify-start px-2 text-[var(--ink-muted)] disabled:cursor-wait disabled:opacity-50`}>
+                <IconLogout className="size-4" aria-hidden="true" />
+                <span data-display className={navigationLabelStyle}>{isLoggingOut ? "Signing out…" : "Sign out"}</span>
+              </button>
+            </section>
+          )}
           {!isAuthenticated && (
             <div className="mt-4 border-t border-[var(--surface-border)] pt-2">
+              <Link href="/auth/login" onNavigate={closeMenu} className={`${controlStyle} lg:hidden`}>
+                <span data-display className={navigationLabelStyle}>Sign in</span>
+              </Link>
               <Link href="/auth/signup" onNavigate={closeMenu} className={`${controlStyle} text-[var(--brand-coral-strong)]`}>
                 <span data-display className={navigationLabelStyle}>Create account</span>
                 <IconArrowUpRight className="size-4" aria-hidden="true" />
@@ -464,8 +479,6 @@ export function NavbarComponent({
           <MobileNavHeader>
             <NavbarLogo wordmark />
             <div className="flex shrink-0 items-center gap-2">
-              {search}
-              {renderAccountControl(true)}
               <button
                 type="button"
                 onClick={openMenu}
