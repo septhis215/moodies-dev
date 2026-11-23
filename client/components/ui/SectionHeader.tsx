@@ -42,8 +42,8 @@ export function SectionHeader({
           )}
         >
           {titleHref ? (
-            <Link href={titleHref} className="rounded-sm underline-offset-4 hover:text-[var(--brand-coral-strong)] hover:underline motion-safe:transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)]">
-              {title}
+            <Link href={titleHref} className="rounded-sm hover:text-[var(--brand-coral-strong)] focus-visible:text-[var(--brand-coral-strong)] motion-safe:transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)]">
+              <span className="ui-nav-label inline-block max-w-full">{title}</span>
             </Link>
           ) : title}
         </Heading>
@@ -56,9 +56,9 @@ export function SectionHeader({
       {href ? (
         <Link
           href={href}
-          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm text-sm font-semibold text-[var(--ink-muted)] underline-offset-4 hover:text-[var(--brand-coral-strong)] hover:underline motion-safe:transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)]"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-sm text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--brand-coral-strong)] focus-visible:text-[var(--brand-coral-strong)] motion-safe:transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--brand-coral-strong)]"
         >
-          {linkLabel}
+          <span className="ui-nav-label">{linkLabel}</span>
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       ) : null}

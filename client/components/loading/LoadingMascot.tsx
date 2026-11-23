@@ -1,12 +1,5 @@
 import styles from "./LoadingMascot.module.css";
-import type { CSSProperties } from "react";
-
-const posterMoods = [
-  ["inspirational", "western", "funny", "thrilling", "documentary"],
-  ["whimsy", "mind-bending", "nostalgic", "romantic", "bittersweet"],
-  ["sci-fi", "chaos", "epic", "horror", "dark", "gritty"],
-  ["serenity", "happy", "chill", "cozy", "sad"],
-];
+const posterMoods = ["inspirational", "mind-bending", "cozy", "serenity"];
 
 /** Full-screen visual; the loading provider owns announcements and dismissal. */
 export default function LoadingMascot() {
@@ -15,17 +8,13 @@ export default function LoadingMascot() {
       <div className={styles.ambient} />
       <div className={styles.stage} data-loading-mascot>
         <div className={styles.header}>
-          <span className={styles.loadingTitle}>Loading</span>
+          <span data-display className={styles.loadingTitle}>Loading Moodies</span>
         </div>
         <div className={styles.scene}>
           <div className={styles.gallery}>
-            {posterMoods.map((moods) => (
-              <div key={moods[0]} className={styles.poster}>
-                <div className={styles.posterArt} style={Object.fromEntries(
-                  Array.from({ length: 6 }, (_, index) => [
-                    `--poster-${index}`, `url("/images/moods/${moods[index % moods.length]}.png")`,
-                  ]),
-                ) as CSSProperties} />
+            {posterMoods.map((mood) => (
+              <div key={mood} className={styles.poster}>
+                <div className={styles.posterArt} style={{ backgroundImage: `url("/images/moods/${mood}.png")` }} />
                 <div className={styles.posterLines}><span /><span /></div>
               </div>
             ))}
@@ -51,9 +40,9 @@ export default function LoadingMascot() {
             </div>
           </div>
         </div>
-        <p className={styles.title}>Your next story is on its way</p>
+        <p className={styles.title}>Getting your page ready</p>
         <div className={styles.footer}>
-          <span>Finding something for your mood</span>
+          <span>Thanks for your patience</span>
           <span className={styles.dots}>
             <i />
             <i />

@@ -5,7 +5,7 @@
   z-index: 1000000;
   min-height: 100dvh;
   display: grid;
-  place-items: center;
+  place-items: safe center;
   overflow: auto;
   padding: calc(1rem + env(safe-area-inset-top))
     calc(1rem + env(safe-area-inset-right))
@@ -40,7 +40,6 @@
   gap: 0.75rem;
 }
 .loadingTitle {
-  font-family: var(--font-display), sans-serif;
   font-size: 2rem;
   font-weight: 700;
   color: var(--ink);
@@ -74,7 +73,7 @@
 .poster:nth-child(2) { transform: rotate(6deg) translateY(-1rem); animation-delay: -3s; }
 .poster:nth-child(3) { transform: rotate(-5deg) translateY(0.75rem); animation-delay: -5s; }
 .poster:nth-child(4) { transform: rotate(10deg) translateY(-0.5rem); animation-delay: -1s; }
-.posterArt { position: absolute; inset: 8% 5% 25%; background-image: var(--poster-0); background-size: contain; background-position: center; background-repeat: no-repeat; filter: saturate(0.55); animation: posterReel 30s step-end infinite; }
+.posterArt { position: absolute; inset: 8% 5% 25%; background-size: contain; background-position: center; background-repeat: no-repeat; filter: saturate(0.55); }
 .posterLines { position: absolute; left: 15%; right: 15%; bottom: 12%; display: grid; gap: 0.4rem; }
 .posterLines span { height: 2px; border-radius: 2px; background: rgb(245 241 237 / 20%); }
 .posterLines span:last-child { width: 60%; }
@@ -223,14 +222,6 @@
 }
 @keyframes posterDrift {
   to { translate: 0 -0.65rem; }
-}
-@keyframes posterReel {
-  0%, 100% { background-image: var(--poster-0); }
-  16.667% { background-image: var(--poster-1); }
-  33.333% { background-image: var(--poster-2); }
-  50% { background-image: var(--poster-3); }
-  66.667% { background-image: var(--poster-4); }
-  83.333% { background-image: var(--poster-5); }
 }
 @keyframes floatIcon {
   to { translate: 0 -0.5rem; opacity: 0.5; }
