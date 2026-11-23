@@ -107,7 +107,16 @@ try {
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: width < 1024 ? 740 : 900 });
     await page.goto(`${base}/terms`, { waitUntil: "domcontentloaded", timeout: 120000 });
-    await page.getByRole("link", { name: /^Sign in(?: to Moodies)?$/ }).filter({ visible: true }).waitFor();
+    const signIn = page.getByRole("link", { name: /^Sign in(?: to Moodies)?$/ }).filter({ visible: true });
+    await signIn.waitFor();
+    if (width < 1024) {
+      const target = await signIn.boundingBox();
+      assert.ok(target.width >= 44 && target.height >= 44, "Mobile sign-in keeps a 44px touch target");
+      assert.equal((await signIn.textContent()).trim(), "", "Mobile sign-in uses an icon");
+      assert.equal(await signIn.locator('svg[aria-hidden="true"]').count(), 1);
+    } else {
+      assert.equal((await signIn.textContent()).trim(), "Sign in");
+    }
     const { trigger, dialog } = await openMenu(width);
     const shortcuts = dialog.getByRole("list", { name: "Main destinations" });
     assert.deepEqual(await shortcuts.getByRole("link").allTextContents(), ["Movies", "TV shows", "Explore moods", "Video feed"]);

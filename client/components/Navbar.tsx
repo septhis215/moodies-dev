@@ -13,6 +13,7 @@ import {
   IconMenu2,
   IconMoodSmile,
   IconMovie,
+  IconLogin2,
   IconPlayerPlay,
   IconX,
 } from "@tabler/icons-react";
@@ -296,7 +297,9 @@ export function NavbarComponent({
         )}
       </button>
     ) : (
-      <Link href="/auth/login" className={controlStyle}><span data-display className={navigationLabelStyle}>Sign in</span></Link>
+      <Link href="/auth/login" aria-label="Sign in" title={mobile ? "Sign in" : undefined} className={`${controlStyle} ${mobile ? "size-11 shrink-0 p-0" : ""}`}>
+        {mobile ? <IconLogin2 className="size-5" aria-hidden="true" /> : <span data-display className={navigationLabelStyle}>Sign in</span>}
+      </Link>
     );
   };
 
