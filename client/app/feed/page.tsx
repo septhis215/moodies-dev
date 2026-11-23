@@ -597,8 +597,8 @@ export default function VideoFeedPage() {
   }, [autoplayBlocked]);
 
   useEffect(() => {
-    gatesClearRef.current = feedVisible && !panelOpen && !manuallyPaused;
-  }, [feedVisible, panelOpen, manuallyPaused]);
+    gatesClearRef.current = feedVisible && !panelOpen && !isMobileFullscreen && !manuallyPaused;
+  }, [feedVisible, panelOpen, isMobileFullscreen, manuallyPaused]);
 
   // ── PLAYER CONTROL LAYER ──────────────────────────────────────
   // Every playback signal comes from the YouTube IFrame API. The feed no longer
@@ -675,7 +675,7 @@ export default function VideoFeedPage() {
 
   const playActiveVideo = useCallback(
     (force = false) => {
-      if (!currentVideo || !feedVisible || panelOpen) return;
+      if (!currentVideo || !feedVisible || panelOpen || isMobileFullscreen) return;
       if (manuallyPausedRef.current && !force) return;
       // A video the browser blocked only restarts from a real gesture; retrying
       // from an effect just bounces off the same autoplay policy.
@@ -686,7 +686,7 @@ export default function VideoFeedPage() {
       setAutoplayBlocked(false);
       player.playVideo();
     },
-    [currentVideo, feedVisible, panelOpen],
+    [currentVideo, feedVisible, panelOpen, isMobileFullscreen],
   );
 
   /**
@@ -861,7 +861,7 @@ export default function VideoFeedPage() {
   // autoplay. Opening the panel pauses; closing it resumes.
   useEffect(() => {
     if (!currentVideo) return;
-    if (!feedVisible || panelOpen) {
+    if (!feedVisible || panelOpen || isMobileFullscreen) {
       pauseActiveVideo();
       return;
     }
@@ -873,6 +873,7 @@ export default function VideoFeedPage() {
     currentVideo,
     feedVisible,
     panelOpen,
+    isMobileFullscreen,
     pauseActiveVideo,
     playActiveVideo,
   ]);
@@ -956,13 +957,14 @@ export default function VideoFeedPage() {
   // player with native controls, opened from a tap, so the autoplay policy is
   // satisfied by that gesture instead of being fought.
   const fullscreenIframeSrc = currentVideo?.primary_video?.key
-    ? `https://www.youtube.com/embed/${currentVideo.primary_video.key}?autoplay=1&controls=1&fs=0&iv_load_policy=3&modestbranding=1&rel=0&playsinline=1&mute=${muted ? 1 : 0}&vq=hd1080`
+    ? `https://www.youtube.com/embed/${currentVideo.primary_video.key}?autoplay=1&controls=1&fs=0&iv_load_policy=3&modestbranding=1&rel=0&playsinline=1&mute=1&vq=hd1080`
     : "";
 
   const openMobileFullscreen = () => {
     if (!currentVideo || !isLandscapeVideo) return;
     wasPlayingBeforeFullscreenRef.current =
       isPlayingRef.current && !manuallyPausedRef.current;
+    gatesClearRef.current = false;
     pauseActiveVideo();
     setIsMobileFullscreen(true);
   };
@@ -1004,7 +1006,7 @@ export default function VideoFeedPage() {
     videoFrameSizeClassName,
   );
 
-  const playbackAllowed = feedVisible && !panelOpen && !manuallyPaused;
+  const playbackAllowed = feedVisible && !panelOpen && !isMobileFullscreen && !manuallyPaused;
 
   return (
     <div
@@ -1023,10 +1025,10 @@ export default function VideoFeedPage() {
         transition={{ duration: 0.45, ease: "easeOut" }}
         className="pointer-events-none fixed left-0 right-0 top-0 z-50 bg-gradient-to-b from-black/60 via-black/25 to-transparent px-3 pb-10 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-14"
       >
-        <div className="mx-auto grid w-full max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2">
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-1 sm:gap-2">
           <Link
             href="/"
-            className="pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/25 shadow-xl shadow-black/25 backdrop-blur-xl transition hover:border-white/25 hover:bg-black/40 sm:h-11 sm:w-11"
+            className="pointer-events-auto flex size-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-black/25 shadow-xl shadow-black/25 backdrop-blur-xl transition hover:border-white/25 hover:bg-black/40"
           >
             <Image
               src="/images/moodies-transparent.png"
@@ -1038,14 +1040,14 @@ export default function VideoFeedPage() {
           </Link>
 
           <div className="flex min-w-0 justify-center">
-            <div className="pointer-events-auto grid w-full max-w-[21rem] grid-cols-2 gap-1 rounded-full border border-white/15 bg-black/25 p-1 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/35 sm:max-w-[24rem]">
+            <div className="pointer-events-auto grid grid-cols-2 gap-1 rounded-full border border-white/15 bg-black/25 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/35 sm:w-full sm:max-w-[24rem] sm:p-1">
               {feedTabs.map((tab) => (
                 <motion.button
                   key={tab.value}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => setActiveCategory(tab.value)}
                   className={cn(
-                    "relative min-h-9 overflow-hidden rounded-full px-2 py-1.5 text-left transition-colors duration-200 sm:min-h-10 sm:px-3",
+                    "relative size-11 overflow-hidden rounded-full px-2 py-1.5 text-left transition-colors duration-200 sm:w-auto sm:px-3",
                     activeCategory === tab.value
                       ? "text-white"
                       : "text-white/55 hover:bg-white/[0.04] hover:text-white/85",
@@ -1084,13 +1086,13 @@ export default function VideoFeedPage() {
             </div>
           </div>
 
-          <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full border border-white/15 bg-black/25 p-1 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/35">
+          <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full border border-white/15 bg-black/25 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/35 sm:p-1">
             <motion.button
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.93 }}
               onClick={() => resetFeed("refresh")}
               disabled={loading}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
+              className="flex size-11 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Refresh feed"
             >
               <RefreshCw
@@ -1100,21 +1102,19 @@ export default function VideoFeedPage() {
                 )}
               />
             </motion.button>
-            <Link href="/search" prefetch>
-              <motion.button
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.93 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white sm:h-9 sm:w-9"
-                aria-label="Search"
-              >
-                <Search className="h-4 w-4 sm:h-5 sm:w-5" />
-              </motion.button>
+            <Link
+              href="/search"
+              prefetch
+              className="flex size-11 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white"
+              aria-label="Search"
+            >
+              <Search className="h-4 w-4 sm:h-5 sm:w-5" />
             </Link>
             <motion.button
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.93 }}
               onClick={() => router.push("/profile")}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white sm:h-9 sm:w-9"
+              className="flex size-11 items-center justify-center rounded-full text-white/70 transition-all hover:bg-white/10 hover:text-white"
               aria-label="Profile"
             >
               <User className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -1172,6 +1172,7 @@ export default function VideoFeedPage() {
                     </div>
                   )}
                   <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.10),transparent_58%)] mix-blend-screen" />
+                  {/* Keep mobile captions above the title and rating footer. */}
                   <FeedVideoPlayer
                     videoKey={currentVideo.primary_video.key}
                     reloadKey={playerReloadKey}
@@ -1180,7 +1181,7 @@ export default function VideoFeedPage() {
                     onStatus={handlePlayerStatus}
                     attachPlayer={attachPlayer}
                     title={videoTitle || `video-${currentVideo.id}`}
-                    className="absolute inset-0 h-full w-full bg-black brightness-[1.08] contrast-[1.08] saturate-[1.12]"
+                    className="absolute inset-x-0 bottom-[12rem] top-0 w-full bg-black brightness-[1.08] contrast-[1.08] saturate-[1.12] lg:bottom-0"
                   />
                   {/*
                    * The feed keeps ownership of every gesture: the player host is
@@ -1238,6 +1239,12 @@ export default function VideoFeedPage() {
                           </button>
                           <a
                             href={`https://www.youtube.com/watch?v=${currentVideo.primary_video.key}`}
+                            onClick={() => {
+                              manuallyPausedRef.current = true;
+                              gatesClearRef.current = false;
+                              setManuallyPaused(true);
+                              pauseActiveVideo();
+                            }}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex min-h-11 items-center rounded-full border border-white/20 px-4 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white"
@@ -1771,7 +1778,7 @@ function FeedVideoPlayer({
         player = await createYouTubePlayer(host, {
           videoId: videoKey,
           playerVars: {
-            autoplay: 1,
+            autoplay: 0,
             // Keep the iframe muted through onReady; audio is gesture-only.
             mute: 1,
             controls: 0,

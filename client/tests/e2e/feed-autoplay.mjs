@@ -67,6 +67,27 @@ try {
   });
   await page.goto(`${process.env.BASE_URL || "http://127.0.0.1:3000"}/feed`);
   await page.getByRole("button", { name: "Tap for sound", exact: true }).waitFor();
+  console.log("Feed ready; checking mobile controls, captions and fullscreen.");
+  const controls = page.locator("nav").getByRole("button").or(page.locator('nav a[href="/"]')).or(page.locator('nav a[href="/search"]'));
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const control of await controls.all()) {
+      const box = await control.boundingBox();
+      assert.equal(box.width, 44, "Feed navigation hit areas must be 44px wide");
+      assert.equal(box.height, 44, "Feed navigation hit areas must be 44px high");
+      assert.ok(box.x >= 0 && box.x + box.width <= width, "Feed navigation must fit narrow screens");
+    }
+  }
+  const playerBox = await page.locator('iframe[title="Feed fixture 1"]').boundingBox();
+  const titleBox = await page.getByRole("heading", { name: "Feed fixture 1", exact: true }).boundingBox();
+  assert.ok(playerBox.y + playerBox.height <= titleBox.y, "Mobile metadata must remain outside the video caption area");
+  await page.getByRole("button", { name: "Open landscape video fullscreen", exact: true }).click();
+  await page.getByRole("dialog", { name: "Fullscreen video", exact: true }).waitFor();
+  await page.waitForTimeout(800);
+  assert.equal(await page.evaluate(() => window.feedPlayers.at(-1).state), 2, "Inline player must remain paused while fullscreen is open");
+  await page.getByRole("button", { name: "Exit fullscreen video", exact: true }).click();
+  await page.waitForFunction(() => window.feedPlayers.at(-1).state === 1);
+  console.log("Mobile controls, captions and fullscreen pause passed.");
   assert.equal(await page.evaluate(() => window.feedPlayers.at(-1).muted), true);
   await page.getByRole("button", { name: "Unmute", exact: true }).click();
   await page.getByRole("button", { name: "Sound", exact: true }).waitFor();
@@ -117,6 +138,18 @@ try {
     }
   });
   await page.getByRole("heading", { name: "Feed fixture 1", exact: true }).waitFor();
+  await page.waitForFunction(() => window.feedPlayers.at(-1)?.options.videoId === "abcdefghijk" && window.feedPlayers.at(-1).state === 1);
+  await page.waitForTimeout(350);
+  console.log("Feed gestures passed; checking external playback handoff.");
+  await page.evaluate(() => window.feedPlayers.at(-1).options.events.onError({ data: 101 }));
+  const externalPlayer = page.getByRole("link", { name: "Open YouTube", exact: true });
+  // Keep this regression offline while exercising the real transition handler.
+  await externalPlayer.evaluate(link => {
+    link.addEventListener("click", event => event.preventDefault());
+    link.click();
+  });
+  await page.waitForTimeout(800);
+  assert.equal(await page.evaluate(() => window.feedPlayers.at(-1).state), 2, "Opening YouTube must leave inline playback paused");
   console.log("WebKit iPhone Feed passed: live drag, swipe autoplay, keyboard and wheel navigation, and gesture audio (mock YouTube API).");
 } finally {
   await browser.close();
