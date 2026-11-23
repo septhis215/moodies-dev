@@ -33,6 +33,14 @@
 .dots span { width: .375rem; height: .375rem; border-radius: 50%; background: var(--surface-border); transition: background-color .2s; }
 .dots button[aria-current="true"] span { width: 1rem; border-radius: .25rem; background: var(--brand-coral); }
 .count { grid-column: 2; grid-row: 1; font-size: .75rem; font-variant-numeric: tabular-nums; }
+@media (max-width: 639px) {
+  .rail { scroll-snap-type: x mandatory; }
+  .card { height: 29rem; }
+  .body { min-height: 0; }
+  .quote { flex: 1; min-height: 0; overflow: hidden; }
+  .quoteExpanded { overflow-y: auto; overscroll-behavior-y: contain; }
+  .excerpt { max-height: 100%; }
+}
 @media (min-width: 640px) {
   .rail { margin-inline: -1.5rem; padding-inline: 1.5rem; scroll-padding-inline: 1.5rem; }
   .card { flex-basis: 75%; }

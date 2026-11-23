@@ -51,7 +51,7 @@ let browser;
 try {
   const result = await build({
     stdin: {
-      contents: `import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import Modal from './client/components/sections/TrailerModal';import {Carousel} from './client/components/ui/Carousel';const next={id:2,title:'The next trailer',trailer_key:'next1234567',overview:'A new story.',type:'tv',vote_average:8.2,release_date:'2026-01-01'};const first={id:1,title:'A very long movie title for a full screen trailer experience',trailer_key:'first123456',overview:'An expansive story of friendship and finding a place to call home. '.repeat(10),recommendations:new URLSearchParams(location.search).has('single')?[next]:[next,{...next,id:3,title:'Another recommendation with an unusually long title that needs several lines',release_date:null,vote_average:0},{...next,id:4,title:'Short',release_date:'2024-01-01',vote_average:null}],type:'movie',genres:['Drama'],runtime:120,vote_average:8.2};const cards=Array.from({length:6},(_,i)=>({...first,id:i+10,title:'Card '+i}));const Card=({show})=><article className='aspect-[2/3] w-full bg-black'>{show.title}</article>;function App(){const[open,setOpen]=useState(false);const[item,setItem]=useState(first);return <><div id='carousel-fixture'><Carousel items={cards} CardComponent={Card}/></div><button onClick={()=>{setItem(first);setOpen(true)}}>Open trailer</button>{open&&<Modal trailer={item} onClose={()=>setOpen(false)} onSelectTrailer={async(next)=>{await new Promise(resolve=>setTimeout(resolve,250));setItem(next)}}/>}</>}createRoot(document.getElementById('root')).render(<App/>);`,
+      contents: `import React,{useState} from 'react';import {createRoot} from 'react-dom/client';import Modal from './client/components/sections/TrailerModal';import CommunityPicks from './client/components/sections/CommunityPicks';import {Carousel} from './client/components/ui/Carousel';const next={id:2,title:'The next trailer',trailer_key:'next1234567',overview:'A new story.',type:'tv',vote_average:8.2,release_date:'2026-01-01'};const first={id:1,title:'A very long movie title for a full screen trailer experience',trailer_key:'first123456',overview:'An expansive story of friendship and finding a place to call home. '.repeat(10),recommendations:new URLSearchParams(location.search).has('single')?[next]:[next,{...next,id:3,title:'Another recommendation with an unusually long title that needs several lines',release_date:null,vote_average:0},{...next,id:4,title:'Short',release_date:'2024-01-01',vote_average:null}],type:'movie',genres:['Drama'],runtime:120,vote_average:8.2};const cards=Array.from({length:6},(_,i)=>({...first,id:i+10,title:'Card '+i}));const reviews=Array.from({length:7},(_,i)=>({quote:i%2?'A short review.':'A long, thoughtful review with enough detail to fill the entire card. '.repeat(40),name:'Member '+i,title:'Review title '+i,tmdbId:i+1,avatar:'',rating:8,mediaType:'MOVIE'}));const Card=({show})=><article className='aspect-[2/3] w-full bg-black'>{show.title}</article>;function App(){const[open,setOpen]=useState(false);const[item,setItem]=useState(first);return <><div id='community-fixture'><CommunityPicks data={reviews}/></div><div id='carousel-fixture'><Carousel items={cards} CardComponent={Card}/></div><button onClick={()=>{setItem(first);setOpen(true)}}>Open trailer</button>{open&&<Modal trailer={item} onClose={()=>setOpen(false)} onSelectTrailer={async(next)=>{await new Promise(resolve=>setTimeout(resolve,250));setItem(next)}}/>}</>}createRoot(document.getElementById('root')).render(<App/>);`,
       resolveDir: root,
       loader: "tsx",
     },
@@ -99,7 +99,7 @@ try {
                   : args.path === "link"
                     ? "import React from 'react';export default function Link(props){return <a {...props}/>;}"
                     : args.path === "icons"
-                      ? `import React from 'react';const Icon=(props)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M5 12h14m-7-7 7 7-7 7"/></svg>;export const ArrowUpRight=Icon,ChevronLeft=Icon,ChevronRight=Icon,Play=Icon,X=Icon,Bookmark=Icon,BookmarkCheck=Icon,Film=Icon,Info=Icon,Tv=Icon,Star=Icon,Calendar=Icon,ChevronDown=Icon,Clock=Icon,ExternalLink=Icon,Loader2=Icon;`
+                      ? `import React from 'react';const Icon=(props)=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}><path d="M5 12h14m-7-7 7 7-7 7"/></svg>;export const ArrowRight=Icon,MessageCircle=Icon,ArrowUpRight=Icon,ChevronLeft=Icon,ChevronRight=Icon,Play=Icon,X=Icon,Bookmark=Icon,BookmarkCheck=Icon,Film=Icon,Info=Icon,Tv=Icon,Star=Icon,Calendar=Icon,ChevronDown=Icon,Clock=Icon,ExternalLink=Icon,Loader2=Icon;`
                       : `import React from 'react';export default function Image({fill,unoptimized,priority,sizes,style,...props}){return <img {...props} loading={priority?'eager':'lazy'} style={{...(fill?{position:'absolute',inset:0,width:'100%',height:'100%'}:{}),...style}}/>}`,
             loader: "jsx",
             resolveDir: root,
@@ -200,6 +200,40 @@ try {
   ]) {
     await page.setViewportSize({ width, height });
     await page.goto(base);
+    if (width < 640) {
+      const community = page.locator("#community-fixture");
+      const rail = community.getByRole("region", { name: "Member reviews" });
+      const cards = rail.locator("article");
+      const sizes = await cards.evaluateAll(elements => elements.map(element => {
+        const { width, height } = element.getBoundingClientRect();
+        return { width, height };
+      }));
+      assert.ok(sizes.every(size => Math.abs(size.width - sizes[0].width) <= 1 && Math.abs(size.height - sizes[0].height) <= 1), "Mobile reviews have fixed, equal sizes");
+      await cards.first().getByRole("button", { name: "Read more" }).click();
+      assert.ok(Math.abs((await cards.first().boundingBox()).height - sizes[0].height) <= 1, "Expanding a review preserves mobile card height");
+      const quote = cards.first().getByLabel("Full review by Member 0");
+      assert.ok(await quote.evaluate(element => element.scrollHeight > element.clientHeight && getComputedStyle(element).overflowY === "auto"), "Full review scrolls within its card");
+      await community.getByRole("button", { name: "Show review 3 of 7" }).click();
+      await page.waitForFunction(() => document.querySelector('#community-fixture [aria-live="polite"]').textContent === "3 / 7");
+      assert.equal(await community.getByRole("button", { name: "Show review 3 of 7" }).getAttribute("aria-current"), "true");
+      const cdp = await page.context().newCDPSession(page);
+      await rail.scrollIntoViewIfNeeded();
+      const box = await rail.boundingBox();
+      const x = box.x + box.width * .8;
+      const y = box.y + Math.min(box.height / 2, 120);
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
+      for (let step = 1; step <= 8; step++) {
+        await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: x - box.width * .65 * step / 8, y }] });
+        await page.waitForTimeout(20);
+      }
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+      await page.waitForFunction(() => Number(document.querySelector('#community-fixture [aria-live="polite"]').textContent.split('/')[0]) >= 4);
+      await cdp.detach();
+      await rail.evaluate(element => element.scrollTo({ left: element.scrollWidth, behavior: "instant" }));
+      await page.waitForFunction(() => document.querySelector('#community-fixture [aria-live="polite"]').textContent === "7 / 7");
+      assert.ok(Math.abs((await cards.last().boundingBox()).height - sizes[0].height) <= 1);
+      console.log("Fixed review cards, expanded text, touch swipe and counter passed at " + width + "px.");
+    }
     if (width < 640 && !process.env.TRAILER_MODAL_ONLY) {
       const rail = page.locator('#carousel-fixture [class*="overflow-x-auto"]');
       const first = await rail.locator(":scope > div").nth(0).boundingBox();
@@ -232,8 +266,13 @@ try {
     assert.ok(closeBox.width >= 44 && closeBox.height >= 44);
     assert.ok(Math.abs(dialogBox.x * 2 + dialogBox.width - width) <= 1, "Dialog is horizontally centered");
     assert.ok(Math.abs(dialogBox.y * 2 + dialogBox.height - height) <= 1, "Dialog is vertically centered");
-    assert.ok(dialogBox.width >= width * 0.8 && dialogBox.width <= width * 0.9 + 1, "Dialog uses 80–90% of viewport width");
-    assert.ok(Math.abs(dialogBox.height - height * 0.85) <= 1, "Dialog uses 85% of viewport height");
+    if (width < 640) {
+      assert.ok(Math.abs(dialogBox.width - width) <= 1 && Math.abs(dialogBox.height - height) <= 1, "Mobile dialog fills the viewport");
+      assert.equal(await dialog.evaluate(element => getComputedStyle(element).borderRadius), "0px");
+    } else {
+      assert.ok(dialogBox.width >= width * 0.8 && dialogBox.width <= width * 0.9 + 1, "Dialog uses 80–90% of viewport width");
+      assert.ok(Math.abs(dialogBox.height - height * 0.85) <= 1, "Dialog uses 85% of viewport height");
+    }
     assert.ok(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -354,7 +393,7 @@ try {
     await close.click();
     await dialog.waitFor({ state: "hidden" });
     console.log(
-      "Inset trailer modal, compact ratings and mobile close controls passed at " +
+      "Responsive trailer modal, compact ratings and mobile close controls passed at " +
         width +
         "x" +
         height +

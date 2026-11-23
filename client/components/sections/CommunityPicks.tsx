@@ -66,7 +66,7 @@ function ReviewCard({ review, index, count, activeIndex }: { review: ReviewItem;
           </div>
           <RatingBadge rating={review.rating} variant="minimal" />
         </div>
-        <blockquote className={styles.quote}>
+        <blockquote className={`${styles.quote} ${expanded ? styles.quoteExpanded : ""}`} tabIndex={expanded ? 0 : undefined} aria-label={expanded ? `Full review by ${review.name}` : undefined}>
           <p ref={quoteRef} id={quoteId} className={expanded ? undefined : styles.excerpt}>“{review.quote}”</p>
         </blockquote>
         <div className={styles.actions}>
@@ -87,9 +87,12 @@ function ReviewCarousel({ reviews }: { reviews: ReviewItem[] }) {
   useEffect(() => {
     const rail = railRef.current;
     if (!rail) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const settle = () => {
-      clearTimeout(timer);
+    let frame = 0;
+    const updateActive = () => {
+      if (rail.scrollWidth <= rail.clientWidth + 2) {
+        setActive(0);
+        return;
+      }
       if (rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 2) {
         setActive(reviews.length - 1);
         return;
@@ -104,17 +107,20 @@ function ReviewCarousel({ reviews }: { reviews: ReviewItem[] }) {
       );
       setActive(nearest);
     };
-    // Keep expanded reviews stable while the finger and momentum move the rail.
     const onScroll = () => {
-      clearTimeout(timer);
-      timer = setTimeout(settle, 180);
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(updateActive);
     };
+    const observer = new ResizeObserver(onScroll);
+    observer.observe(rail);
+    updateActive();
     rail.addEventListener("scroll", onScroll, { passive: true });
-    rail.addEventListener("scrollend", settle);
+    rail.addEventListener("scrollend", updateActive);
     return () => {
-      clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      observer.disconnect();
       rail.removeEventListener("scroll", onScroll);
-      rail.removeEventListener("scrollend", settle);
+      rail.removeEventListener("scrollend", updateActive);
     };
   }, [reviews]);
 

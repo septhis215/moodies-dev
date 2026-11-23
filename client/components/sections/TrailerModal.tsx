@@ -162,7 +162,7 @@ export default function TrailerModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="trailer-modal-title"
-        className="ui-overlay-enter relative flex h-[85dvh] w-[90vw] flex-col overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface-0)] shadow-2xl sm:w-[85vw]"
+        className="ui-overlay-enter relative flex h-dvh w-full flex-col overflow-hidden bg-[var(--surface-0)] shadow-2xl sm:h-[85dvh] sm:w-[85vw] sm:rounded-xl sm:border sm:border-[var(--surface-border)]"
       >
         <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-[var(--surface-border)] px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-6">
           <p className="min-w-0 truncate text-sm font-semibold text-[var(--ink)]">
@@ -224,7 +224,7 @@ export default function TrailerModal({
 
           {/* Details panel */}
           <div className="relative flex min-h-0 w-full flex-1 flex-col border-t border-[var(--surface-border)] bg-[var(--surface-0)] lg:h-full lg:w-80 lg:flex-none lg:border-l lg:border-t-0 xl:w-96">
-            <div className="flex-1 overflow-y-auto overflow-x-hidden mobile-native-scroll">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom)] mobile-native-scroll">
               {/* Header */}
               <div className="relative flex-shrink-0 border-b border-white/10 p-4 sm:p-5 lg:p-6">
                 <div className="flex items-start gap-3 sm:gap-4">
