@@ -61,9 +61,19 @@ try {
               mediaType: "movie",
               voteAverage: 8.1,
               overview: "A story to suit your night.",
-              reason: "Warm family stories for a comforting night.",
+              reason: "Family and Animation for your cozy mood.",
               releaseDate: "2024-03-12",
               genreNames: ["Family", "Comedy"],
+            },
+            {
+              tmdbId: 101,
+              title: `A different ${moodId} story`,
+              mediaType: "tv",
+              voteAverage: 7.8,
+              overview: "Another story to suit your night.",
+              reason: "Family and Animation for your cozy mood.",
+              releaseDate: "2025-01-02",
+              genreNames: ["Family", "Animation"],
             },
           ],
         },
@@ -93,8 +103,13 @@ try {
     assert.equal(firstRequest.searchParams.get("excludeViewed"), "true");
     assert.match(firstRequest.searchParams.get("seed"), /^\d+$/);
     const resultCard = page.getByRole("link", { name: /A cozy story/ });
-    await resultCard.getByText("Why it fits", { exact: true }).waitFor();
-    await resultCard.getByText("Warm family stories for a comforting night.", { exact: true }).waitFor();
+    assert.equal(await page.getByText("Why it fits", { exact: true }).count(), 0, "Generic reasons do not add repeated card panels");
+    assert.equal(await page.getByText("Family and Animation for your cozy mood.", { exact: true }).count(), 0);
+    assert.equal(await resultCard.getAttribute("href"), "/movies/100");
+    const seriesCard = page.getByRole("link", { name: /A different cozy story/ });
+    assert.equal(await seriesCard.getAttribute("href"), "/tv/101");
+    await seriesCard.getByText("Family · Animation", { exact: true }).waitFor();
+    await resultCard.getByText("8.1", { exact: true }).waitFor();
     await resultCard.getByText("Family · Comedy").waitFor();
     await resultCard.getByText("2024", { exact: true }).waitFor();
     const refreshed = page.waitForResponse((response) =>

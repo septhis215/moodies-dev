@@ -1075,14 +1075,6 @@ export default function MoodDiscoveryWheel() {
                         aria-hidden="true"
                         className="mt-1 h-4 w-4 shrink-0 text-[var(--ink-muted)] transition-colors group-hover:text-[var(--brand-coral-strong)]"
                       />
-                      {rec.reason ? (
-                        <span className="col-span-full rounded-md bg-[var(--surface-1)] px-3 py-2">
-                          <span className="block text-xs font-semibold text-[var(--brand-coral-strong)]">Why it fits</span>
-                          <span className="mt-0.5 block text-sm leading-5 text-[var(--ink-muted)]">{rec.reason}</span>
-                        </span>
-                      ) : rec.overview && (
-                        <span className="col-span-full text-sm leading-5 text-[var(--ink-muted)]">{rec.overview}</span>
-                      )}
                     </motion.a>
                   ))}
                 </motion.div>
