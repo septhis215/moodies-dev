@@ -27,6 +27,7 @@ coverage/
 .qoder-scratch/
 /output/playwright/
 /output/achievements/
+/output/toast-preview/
 /client/output/
 
 # Logs
