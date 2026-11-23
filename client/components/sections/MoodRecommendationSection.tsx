@@ -351,7 +351,6 @@ export default function MoodRecommendationsSection({
         await remove(id, kind, {
           title: rec.title,
           posterUrl: getPosterUrl(rec.posterPath),
-          variant: "info",
           duration: 3500,
         });
         setWatchlistStates((prev) => ({ ...prev, [id]: false }));
@@ -359,7 +358,6 @@ export default function MoodRecommendationsSection({
         await add(id, kind, {
           title: rec.title,
           posterUrl: getPosterUrl(rec.posterPath),
-          variant: "info",
           duration: 3500,
         });
         setWatchlistStates((prev) => ({ ...prev, [id]: true }));

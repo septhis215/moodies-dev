@@ -31,6 +31,34 @@ export const Warning: Story = {
   },
 };
 
+export const Info: Story = {
+  args: { variant: 'info', message: 'Removed from your watchlist.' },
+};
+
+export const Error: Story = {
+  args: { variant: 'error', message: 'Could not save your changes. Please try again.' },
+};
+
+export const Loading: Story = {
+  args: { variant: 'info', loading: true, duration: null, message: 'Saving your list…' },
+};
+
+export const WithAction: Story = {
+  args: {
+    variant: 'info',
+    message: 'Removed from your watchlist.',
+    action: { label: 'Undo', onClick: fn() },
+  },
+};
+
+export const LongMessage: Story = {
+  args: {
+    variant: 'warning',
+    title: 'Your changes have not been saved',
+    message: 'The connection was interrupted. Please try again when you are back online. Your current changes are still on this page.',
+  },
+};
+
 export const WithPoster: Story = {
   args: {
     title: 'Saved',

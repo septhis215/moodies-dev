@@ -10,11 +10,12 @@ No new toast library was installed. The project already had a custom `Toast` com
 
 ## Notification presentation
 
-- Dark cards use the shared Moodies surface and text tokens, a subtle status-tinted background and border, and distinct status icons. An optional media poster renders under the message; the Moodies logo and user avatar are never used.
+- Compact cards use a flat raised Moodies surface, neutral border, restrained shadow, and a plain severity icon. The message leads; a title appears only when the caller supplies one. Default severity labels remain available to screen readers. An optional media thumbnail sits beside the copy; the Moodies logo and user avatar are never used.
 - Notifications appear at the top right, with safe-area spacing and a viewport-width layout below the navigation on phones. Long stacks scroll within the available screen height.
 - Titles and messages wrap. Dismiss and action controls have 44px targets and visible keyboard focus; Escape dismisses a toast while focus is inside it.
 - Default durations are 4.5 seconds for success, 5 for info, 6 for warnings, and 8 for errors. Loading notifications remain persistent. Hovering or focusing controls pauses dismissal until both hover and focus have left the notification. Updating a notification resets its timer.
 - Each toast owns its status/alert announcement; the stack does not add a second live region. Reduced-motion preferences disable entrance and spinner animation.
+- Viewport and card styles share `Toast.module.css`; the root renderer does not inject a separate global stylesheet. The existing queue, deduplication, durations, action callbacks, and pause/resume behavior are unchanged.
 
 Context7 was used before implementation:
 

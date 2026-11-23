@@ -49,13 +49,11 @@ export default function CommonCardCarousel({
       if (isCurrentlyInWatchlist) {
         await remove(String(itemId), toWatchType(), {
           title,
-          variant: "info",
           duration: 3500,
         });
       } else {
         await add(String(itemId), toWatchType(), {
           title,
-          variant: "info",
           duration: 3500,
         });
       }

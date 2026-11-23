@@ -482,7 +482,6 @@ export function HeroContentCard({
       const options = {
         title: mappedContent.title,
         posterUrl: mappedContent.poster,
-        variant: "info" as const,
         duration: 3500,
       };
       if (inWatchlist) {

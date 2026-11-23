@@ -160,7 +160,6 @@ export function ComingSoonSection({
       await toggle(String(itemId), watchType, {
         title: getTitle(item),
         posterUrl: posterGetter(item),
-        variant: "info",
         duration: 3500,
       });
     } catch (error) {

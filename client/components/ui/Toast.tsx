@@ -60,11 +60,6 @@ const VARIANT_META: Record<
   },
 };
 
-function defaultTitle(variant: ToastVariant, loading: boolean) {
-  if (loading) return "Working on it";
-  return VARIANT_META[variant].label;
-}
-
 const Toast: React.FC<ToastProps> = ({
   message,
   onClose,
@@ -86,7 +81,6 @@ const Toast: React.FC<ToastProps> = ({
 
   const meta = VARIANT_META[variant] ?? VARIANT_META.info;
   const Icon = loading ? Loader2 : meta.icon;
-  const displayTitle = title || defaultTitle(variant, loading);
 
   const clearTimer = React.useCallback(() => {
     if (timeoutRef.current !== null) {
@@ -159,8 +153,10 @@ const Toast: React.FC<ToastProps> = ({
         }
       }}
       data-variant={variant}
+      data-loading={loading || undefined}
       className={styles.toast}
     >
+      <span className="sr-only">{loading ? "Loading" : meta.label}: </span>
       <div className={styles.icon} aria-hidden="true">
         <Icon className={cn("h-5 w-5", loading && styles.spinner)} />
       </div>
@@ -185,7 +181,7 @@ const Toast: React.FC<ToastProps> = ({
           </div>
         )}
         <div className={styles.copy}>
-          <div className={styles.title}>{displayTitle}</div>
+          {title && <div className={styles.title}>{title}</div>}
           <div className={styles.message}>{message}</div>
           {action && (
             <button
