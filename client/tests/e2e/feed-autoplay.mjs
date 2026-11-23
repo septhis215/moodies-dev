@@ -21,6 +21,8 @@ try {
           this.state = -1;
           this.calls = [];
           this.frame = document.createElement("iframe");
+          this.frame.style.width = options.width;
+          this.frame.style.height = options.height;
           this.frame.src = "about:blank";
           host.replaceWith(this.frame);
           window.feedPlayers.push(this);
@@ -73,14 +75,24 @@ try {
     await page.setViewportSize({ width, height: 844 });
     for (const control of await controls.all()) {
       const box = await control.boundingBox();
-      assert.equal(box.width, 44, "Feed navigation hit areas must be 44px wide");
+      const isTab = await control.evaluate(element => element.tagName === "BUTTON" && !element.hasAttribute("aria-label"));
+      assert.ok(isTab ? box.width > 44 : box.width === 44, "Feed tabs expand while utility controls stay compact");
       assert.equal(box.height, 44, "Feed navigation hit areas must be 44px high");
       assert.ok(box.x >= 0 && box.x + box.width <= width, "Feed navigation must fit narrow screens");
     }
   }
   const playerBox = await page.locator('iframe[title="Feed fixture 1"]').boundingBox();
   const titleBox = await page.getByRole("heading", { name: "Feed fixture 1", exact: true }).boundingBox();
+  assert.ok(Math.abs(playerBox.x + playerBox.width / 2 - page.viewportSize().width / 2) <= 1, "Mobile video is horizontally centered");
+  assert.ok(Math.abs(playerBox.y + playerBox.height / 2 - page.viewportSize().height / 2) <= 1, "Mobile video is vertically centered");
   assert.ok(playerBox.y + playerBox.height <= titleBox.y, "Mobile metadata must remain outside the video caption area");
+  await page.setViewportSize({ width: 844, height: 390 });
+  const landscapePlayer = await page.locator('iframe[title="Feed fixture 1"]').boundingBox();
+  const landscapeTitle = await page.getByRole("heading", { name: "Feed fixture 1", exact: true }).boundingBox();
+  assert.ok(Math.abs(landscapePlayer.y + landscapePlayer.height / 2 - 195) <= 1, "Landscape video remains vertically centered");
+  assert.ok(landscapePlayer.height >= 199, `Landscape video meets YouTube's minimum player height: ${landscapePlayer.height}`);
+  assert.ok(landscapePlayer.y + landscapePlayer.height <= landscapeTitle.y, "Landscape captions remain clear of metadata");
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Open landscape video fullscreen", exact: true }).click();
   await page.getByRole("dialog", { name: "Fullscreen video", exact: true }).waitFor();
   await page.waitForTimeout(800);
@@ -95,6 +107,7 @@ try {
 
   const feed = page.locator('div[class*="overscroll-none"]').first();
   const initialPlayerCount = await page.evaluate(() => window.feedPlayers.length);
+  const initialPlayerTop = (await page.locator('iframe[title="Feed fixture 1"]').boundingBox()).y;
   const touch = (type, property, x, y) => feed.evaluate((element, { type, property, x, y }) => {
     const event = new Event(type, { bubbles: true, cancelable: true });
     Object.defineProperty(event, property, { value: [{ clientX: x, clientY: y }] });
@@ -103,8 +116,9 @@ try {
   }, { type, property, x, y });
   await touch("touchstart", "touches", 120, 600);
   await touch("touchmove", "touches", 120, 520);
-  await page.waitForFunction(() =>
-    document.querySelector('iframe[title="Feed fixture 1"]')?.getBoundingClientRect().top < -10,
+  await page.waitForFunction(initialTop =>
+    document.querySelector('iframe[title="Feed fixture 1"]')?.getBoundingClientRect().top < initialTop - 10,
+    initialPlayerTop,
   );
   assert.equal(await page.evaluate(() => window.feedPlayers.length), initialPlayerCount, "Dragging must keep the active player mounted");
   assert.equal(await touch("touchend", "changedTouches", 120, 200), true);

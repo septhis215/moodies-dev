@@ -3,6 +3,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Short mobile screens keep YouTube's 200px minimum without covering captions. */
+@media (width < 1024px) and (height <= 500px) {
+  :root .feed-mobile-player { inset-block: calc((100svh - 200px) / 2); }
+  :root .feed-video-meta { padding-top: 0; padding-bottom: max(.5rem, env(safe-area-inset-bottom)); }
+  :root .feed-video-meta > div:first-child { display: none; }
+  :root .feed-video-meta h2 { -webkit-line-clamp: 1; margin-bottom: .25rem; font-size: 1.25rem; line-height: 1.25; }
+}
+
 /* A quiet warm shimmer, using transform so each frame avoids layout work. */
 .moodies-skeleton {
   position: relative;

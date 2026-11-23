@@ -1023,7 +1023,7 @@ export default function VideoFeedPage() {
         initial={{ y: -56, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
-        className="pointer-events-none fixed left-0 right-0 top-0 z-50 bg-gradient-to-b from-black/60 via-black/25 to-transparent px-3 pb-10 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-14"
+        className="pointer-events-none fixed left-0 right-0 top-0 z-50 bg-gradient-to-b from-black/60 via-black/25 to-transparent px-2 pb-10 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5 sm:pb-14"
       >
         <div className="mx-auto grid w-full max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-1 sm:gap-2">
           <Link
@@ -1040,14 +1040,14 @@ export default function VideoFeedPage() {
           </Link>
 
           <div className="flex min-w-0 justify-center">
-            <div className="pointer-events-auto grid grid-cols-2 gap-1 rounded-full border border-white/15 bg-black/25 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/35 sm:w-full sm:max-w-[24rem] sm:p-1">
+            <div className="pointer-events-auto grid w-full max-w-[24rem] grid-cols-2 gap-1 rounded-full border border-white/15 bg-black/25 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/35 sm:p-1">
               {feedTabs.map((tab) => (
                 <motion.button
                   key={tab.value}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => setActiveCategory(tab.value)}
                   className={cn(
-                    "relative size-11 overflow-hidden rounded-full px-2 py-1.5 text-left transition-colors duration-200 sm:w-auto sm:px-3",
+                    "relative h-11 min-w-0 overflow-hidden rounded-full px-2 py-1.5 text-left transition-colors duration-200 sm:px-3",
                     activeCategory === tab.value
                       ? "text-white"
                       : "text-white/55 hover:bg-white/[0.04] hover:text-white/85",
@@ -1086,7 +1086,7 @@ export default function VideoFeedPage() {
             </div>
           </div>
 
-          <div className="pointer-events-auto flex shrink-0 items-center gap-1 rounded-full border border-white/15 bg-black/25 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/35 sm:p-1">
+          <div className="pointer-events-auto flex shrink-0 items-center gap-0 rounded-full border border-white/15 bg-black/25 shadow-xl shadow-black/25 backdrop-blur-xl transition-colors hover:bg-black/35 sm:gap-1 sm:p-1">
             <motion.button
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.93 }}
@@ -1172,7 +1172,7 @@ export default function VideoFeedPage() {
                     </div>
                   )}
                   <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.10),transparent_58%)] mix-blend-screen" />
-                  {/* Keep mobile captions above the title and rating footer. */}
+                  {/* Equal mobile insets center playback and leave caption clearance. */}
                   <FeedVideoPlayer
                     videoKey={currentVideo.primary_video.key}
                     reloadKey={playerReloadKey}
@@ -1181,7 +1181,7 @@ export default function VideoFeedPage() {
                     onStatus={handlePlayerStatus}
                     attachPlayer={attachPlayer}
                     title={videoTitle || `video-${currentVideo.id}`}
-                    className="absolute inset-x-0 bottom-[12rem] top-0 w-full bg-black brightness-[1.08] contrast-[1.08] saturate-[1.12] lg:bottom-0"
+                    className="feed-mobile-player absolute inset-x-0 inset-y-[min(12rem,35svh)] w-full bg-black brightness-[1.08] contrast-[1.08] saturate-[1.12] lg:inset-y-0"
                   />
                   {/*
                    * The feed keeps ownership of every gesture: the player host is
@@ -1285,7 +1285,7 @@ export default function VideoFeedPage() {
                   <div className="absolute inset-x-0 bottom-0 h-[38%] max-h-72 bg-gradient-to-t from-black/65 via-black/20 via-[35%] to-transparent" />
 
                   {/* Content */}
-                  <div className="relative w-full px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pr-20 pt-36 sm:px-6 sm:pb-7 sm:pr-28 sm:pt-40 lg:max-w-5xl lg:px-10 lg:pb-10 lg:pr-36">
+                  <div className="feed-video-meta relative w-full px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pr-20 pt-36 sm:px-6 sm:pb-7 sm:pr-28 sm:pt-40 lg:max-w-5xl lg:px-10 lg:pb-10 lg:pr-36">
                     <div className="mb-2 flex items-center gap-2.5">
                       <span className="h-1.5 w-1.5 rounded-full bg-[#ff725e] shadow-[0_0_10px_rgba(255,114,94,0.8)]" />
                       <span className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-white/80">
@@ -1777,6 +1777,8 @@ function FeedVideoPlayer({
       try {
         player = await createYouTubePlayer(host, {
           videoId: videoKey,
+          width: "100%",
+          height: "100%",
           playerVars: {
             autoplay: 0,
             // Keep the iframe muted through onReady; audio is gesture-only.

@@ -87,6 +87,8 @@ test("new clips stay muted through readiness even after sound was enabled on the
   assert.equal(feed.config.playerVars.mute, 1);
   assert.equal(feed.config.playerVars.autoplay, 0, "Start through onReady after iframe permissions are configured");
   assert.equal(feed.config.playerVars.playsinline, 1);
+  assert.equal(feed.config.width, "100%", "Player fills its responsive container");
+  assert.equal(feed.config.height, "100%", "Player fills its responsive container");
   assert.equal(feed.config.playerVars.origin, "https://moodies.test");
   assert.match(feed.attributes.get("allow"), /autoplay/);
   feed.state(1);
