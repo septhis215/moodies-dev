@@ -45,6 +45,9 @@ try {
     assert.equal(after.color, "rgb(255, 118, 95)");
   };
   const openMenu = async width => {
+    // The trigger is server-rendered, so wait for React to attach its handler.
+    await page.waitForFunction(() => [...document.querySelectorAll('button[aria-controls="site-menu"]')]
+      .some(button => Object.keys(button).some(key => key.startsWith("__reactProps"))));
     await page.getByRole("button", { name: width >= 1024 ? "More" : "Open menu", exact: true }).click();
     const trigger = page.locator('button[aria-controls="site-menu"]').filter({ visible: true });
     const dialog = page.getByRole("dialog", { name: "Navigation menu", exact: true });
