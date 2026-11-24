@@ -382,21 +382,6 @@
   height: 9rem;
   aspect-ratio: auto;
 }
-.pagination button {
-  border: 1px solid var(--surface-border);
-  background: var(--surface-1);
-  color: var(--ink-muted);
-  box-shadow: none;
-}
-.pagination button:hover {
-  background: var(--surface-2);
-  color: var(--ink);
-}
-.pagination button[aria-current="true"] {
-  border-color: var(--brand-coral);
-  background: var(--brand-coral);
-  color: white;
-}
 .drawer {
   inset: 0;
   margin: 0;

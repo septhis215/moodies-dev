@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import SectionHeader from "@/components/ui/SectionHeader";
+import Pagination from "@/components/ui/pagination";
 import {
-  useMemo,
   useState,
   useTransition,
 } from "react";
@@ -12,8 +12,6 @@ import {
   ArrowUpRight,
   Award,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   Film,
   Tv,
 } from "lucide-react";
@@ -51,8 +49,6 @@ interface CategoryContentProps {
   subtitle?: string;
 }
 
-const PAGE_WINDOW = 5;
-
 export function CategoryContent({
   data,
   currentPage,
@@ -73,13 +69,6 @@ export function CategoryContent({
   const leadItem = data[0];
   const supportingItems = data.slice(1, 3);
   const restItems = data.slice(3);
-
-  const visiblePages = useMemo(() => {
-    const pageCount = Math.min(totalPages, PAGE_WINDOW);
-    const lastStart = Math.max(1, totalPages - pageCount + 1);
-    const start = Math.min(Math.max(1, currentPage - 2), lastStart);
-    return Array.from({ length: pageCount }, (_, index) => start + index);
-  }, [currentPage, totalPages]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
@@ -433,57 +422,14 @@ export function CategoryContent({
           </div>
 
           {totalPages > 1 ? (
-            <nav
-              className="mt-10 flex items-center justify-center gap-3 border-t border-[var(--surface-border)] pt-6 sm:mt-12 sm:gap-4 sm:pt-8"
-              aria-label="Collection pages"
-            >
-              <button
-                type="button"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1 || isPending}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-md border border-[var(--surface-border)] px-3 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Previous page"
-              >
-                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                <span className="hidden sm:inline">Previous</span>
-              </button>
-
-              <span className="min-w-20 text-center text-sm font-semibold text-[var(--ink-muted)] sm:hidden">
-                {currentPage} / {totalPages}
-              </span>
-
-              <div className="hidden items-center gap-2 sm:flex">
-                {visiblePages.map((pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    type="button"
-                    onClick={() => handlePageChange(pageNumber)}
-                    disabled={isPending}
-                    aria-current={
-                      pageNumber === currentPage ? "page" : undefined
-                    }
-                    aria-label={`Page ${pageNumber}`}
-                    className={`inline-flex h-11 w-11 items-center justify-center rounded-md border text-sm font-bold transition-colors disabled:cursor-not-allowed ${pageNumber === currentPage
-                        ? "border-[var(--brand-coral)] bg-[var(--brand-coral)] text-white"
-                        : "border-[var(--surface-border)] text-[var(--ink-muted)] hover:border-[var(--brand-coral)] hover:text-[var(--ink)]"
-                      }`}
-                  >
-                    {pageNumber}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages || isPending}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-md border border-[var(--surface-border)] px-3 text-sm font-semibold text-[var(--ink)] transition-colors hover:border-[var(--brand-coral)] hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Next page"
-              >
-                <span className="hidden sm:inline">Next</span>
-                <ChevronRight className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </nav>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              disabled={isPending}
+              ariaLabel="Collection pages"
+              className="mt-10 border-t border-[var(--surface-border)] pt-6 sm:mt-12 sm:pt-8"
+            />
           ) : null}
 
           {data.length === 0 ? (

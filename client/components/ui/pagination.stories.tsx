@@ -20,7 +20,7 @@ export const MiddlePage: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('button', { name: /page 4, current/i })).toHaveAttribute(
       'aria-current',
-      'true',
+      'page',
     );
   },
 };
@@ -36,5 +36,13 @@ export const LastPage: Story = {
   args: {
     currentPage: 12,
     totalPages: 12,
+  },
+};
+
+export const Pending: Story = {
+  args: { disabled: true },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+    await expect(canvas.getByRole('button', { name: 'Next page' })).toBeDisabled();
   },
 };
