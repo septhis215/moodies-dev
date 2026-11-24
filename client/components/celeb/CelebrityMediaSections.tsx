@@ -298,13 +298,15 @@ export default function CelebrityMediaSections({
                 ))}
               </div>
               {videos.length > videoLimit && (
-                <button
-                  type="button"
-                  className="ui-secondary-action"
-                  onClick={() => setVideoLimit((value) => value + 8)}
-                >
-                  View more moments ({videos.length - videoLimit})
-                </button>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    className="ui-secondary-action"
+                    onClick={() => setVideoLimit((value) => value + 8)}
+                  >
+                    View more moments ({videos.length - videoLimit})
+                  </button>
+                </div>
               )}
             </>
           ) : (
@@ -441,13 +443,15 @@ export default function CelebrityMediaSections({
                 ))}
               </div>
               {photos.length > photoLimit && (
-                <button
-                  type="button"
-                  className="ui-secondary-action"
-                  onClick={() => setPhotoLimit((value) => value + 5)}
-                >
-                  Load more photos ({photos.length - photoLimit})
-                </button>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    className="ui-secondary-action"
+                    onClick={() => setPhotoLimit((value) => value + 5)}
+                  >
+                    Load more photos ({photos.length - photoLimit})
+                  </button>
+                </div>
               )}
             </>
           ) : loading || !started ? (

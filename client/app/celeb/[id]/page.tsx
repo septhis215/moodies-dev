@@ -661,7 +661,7 @@ export default function CelebrityDetailPage({
           <SectionHeading id="person-news-heading" title="In the news">
             <Link
               href={`/celeb/${person.id}/news`}
-              className="ui-secondary-action"
+              className="ui-secondary-action ml-auto"
             >
               All news
             </Link>
@@ -684,15 +684,17 @@ export default function CelebrityDetailPage({
                   "A biography isn’t available yet. Explore their credits and connected profiles below."}
               </p>
               {biography && biography.length > 350 && (
-                <button
-                  type="button"
-                  aria-expanded={bioExpanded}
-                  aria-controls="celebrity-biography"
-                  onClick={() => setBioExpanded((value) => !value)}
-                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--brand-coral-strong)]"
-                >
-                  {bioExpanded ? "Read less" : "Read full biography"}
-                </button>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    aria-expanded={bioExpanded}
+                    aria-controls="celebrity-biography"
+                    onClick={() => setBioExpanded((value) => !value)}
+                    className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--brand-coral-strong)]"
+                  >
+                    {bioExpanded ? "Read less" : "Read full biography"}
+                  </button>
+                </div>
               )}
             </div>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm leading-6 lg:grid-cols-1">
@@ -741,7 +743,7 @@ export default function CelebrityDetailPage({
           <SectionHeading id="known-for-heading" title="Known for">
             <a
               href="#filmography"
-              className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              className="ml-auto inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--ink-muted)] hover:text-[var(--ink)]"
             >
               All credits
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
@@ -837,7 +839,7 @@ export default function CelebrityDetailPage({
                 {visibleCount < filtered.length && (
                   <button
                     type="button"
-                    className="ui-secondary-action"
+                    className="ui-secondary-action ml-auto"
                     onClick={() => setVisibleCount((value) => value + 12)}
                   >
                     Show more credits
@@ -850,17 +852,19 @@ export default function CelebrityDetailPage({
               <p className="text-sm text-[var(--ink-muted)]">
                 No credits match this search.
               </p>
-              <button
-                type="button"
-                className="ui-secondary-action mt-3"
-                onClick={() => {
-                  setQuery("");
-                  setSelectedTab("all");
-                  setVisibleCount(12);
-                }}
-              >
-                Reset filters
-              </button>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="ui-secondary-action mt-3"
+                  onClick={() => {
+                    setQuery("");
+                    setSelectedTab("all");
+                    setVisibleCount(12);
+                  }}
+                >
+                  Reset filters
+                </button>
+              </div>
             </div>
           )}
         </section>
